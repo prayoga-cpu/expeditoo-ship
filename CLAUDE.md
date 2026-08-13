@@ -17,7 +17,7 @@ leftover from v1 and should be removed, not extended.
 
 `ROADMAP.md` is the product source of truth. Read it before planning anything.
 
-**Current status:** mid Phase A (bidding core). See §"Where things stand".
+**Current status:** Phase A functionally complete, Phase B wired. See §"Where Things Stand".
 
 ---
 
@@ -67,7 +67,8 @@ Payout to carrier, two-way review
 | `user_roles` | Many-to-many; seven roles |
 
 `listings.origin` (`direct` \| `expedion`) and `listings.external_ref` are the
-bridge to the sibling Expedion product. Columns exist; the bridge itself is Phase B.
+bridge to the sibling Expedion product. Both legs are wired: escalation creates a
+listing, and shipment status writes back so the Expedion client sees progress.
 
 **Roles (7):** `shipper`, `carrier`, `driver`, `operator`, `support`, `finance`,
 `admin`. A `driver` executes shipments and never sees prices, offers or payouts.
