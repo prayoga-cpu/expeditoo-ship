@@ -79,7 +79,7 @@ export const emailService = {
     orderId: string,
     deliveryAddress: string
   ) {
-    const paymentUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://expeditoo.com"}/checkout/${orderId}`;
+    const paymentUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://expeditoo.com"}/deliveries/${orderId}`;
 
     const emailHtml = await render(
       OrderConfirmationEmail({

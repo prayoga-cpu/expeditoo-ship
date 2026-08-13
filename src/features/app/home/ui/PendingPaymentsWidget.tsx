@@ -41,7 +41,7 @@ export function PendingPaymentsWidget() {
                         </p>
                         <div className="mt-3 flex flex-wrap gap-2">
                             {pendingPayments.slice(0, 2).map((payment) => (
-                                <Link key={payment.id} href={`/checkout/${payment.id}`}>
+                                <Link key={payment.id} href={`/deliveries/${payment.id}`}>
                                     <Button
                                         variant="outline"
                                         size="sm"

@@ -17,7 +17,6 @@ export async function proxy(req: NextRequest) {
     "/messages",
     "/deliveries",
     "/create",
-    "/checkout",
     "/notifications",
   ];
 

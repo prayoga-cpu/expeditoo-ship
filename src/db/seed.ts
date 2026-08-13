@@ -14,12 +14,21 @@ async function seed() {
 
   console.log("🌱 Seeding categories...");
 
+  // What is being moved, not what is being sold. A shipper picks one of
+  // these when posting a job, and drivers filter the board by them.
   const categoryData = [
-    { id: "electronics", name: "Electronics", slug: "electronics" },
-    { id: "furniture", name: "Furniture", slug: "furniture" },
-    { id: "clothing", name: "Clothing", slug: "clothing" },
+    { id: "furniture_moving", name: "Furniture & moving", slug: "furniture-moving" },
+    { id: "appliances", name: "Appliances", slug: "appliances" },
+    { id: "pallets_freight", name: "Pallets & freight", slug: "pallets-freight" },
+    { id: "construction", name: "Construction materials", slug: "construction-materials" },
     { id: "vehicles", name: "Vehicles", slug: "vehicles" },
-    { id: "others", name: "Others", slug: "others" },
+    { id: "machinery", name: "Machinery & equipment", slug: "machinery" },
+    { id: "fragile_artwork", name: "Fragile & artwork", slug: "fragile-artwork" },
+    { id: "documents_parcels", name: "Documents & parcels", slug: "documents-parcels" },
+    { id: "refrigerated", name: "Refrigerated", slug: "refrigerated" },
+    { id: "bulk_goods", name: "Bulk goods", slug: "bulk-goods" },
+    { id: "animals", name: "Animals", slug: "animals" },
+    { id: "other", name: "Other", slug: "other" },
   ];
 
   try {
