@@ -3,6 +3,11 @@ import { shipmentsDal } from "@/server/dal/shipments.dal";
 import { carriersDal } from "@/server/dal/carriers.dal";
 import { listingsDal } from "@/server/dal/listings.dal";
 import { notificationsService } from "@/server/services/notifications.service";
+import {
+  expedionBridgeService,
+  notifyExpedion,
+} from "@/server/services/expedion-bridge.service";
+import { paymentsService } from "@/server/services/payments.service";
 import type {
   ShipmentStatusType,
   ActorRoleType,
@@ -142,6 +147,7 @@ export const shipmentService = {
     );
 
     await notify(driverId, "shipment_assigned", "New delivery assigned", shipmentId);
+    reportToExpedion(ownership.listingId, "ASSIGNED");
 
     return updated;
   },
@@ -173,6 +179,7 @@ export const shipmentService = {
 
     if (next === "DELIVERED") {
       await listingsDal.update(ownership.listingId, { status: "completed" });
+      await settleDelivery(shipmentId, ownership.carrierId);
     }
 
     await notify(
@@ -181,6 +188,7 @@ export const shipmentService = {
       `Delivery ${next.toLowerCase().replace("_", " ")}`,
       shipmentId
     );
+    reportToExpedion(ownership.listingId, next);
 
     return updated;
   },
@@ -208,6 +216,7 @@ export const shipmentService = {
       party
     );
     await listingsDal.update(ownership.listingId, { status: "completed" });
+    await settleDelivery(shipmentId, ownership.carrierId);
 
     await notify(
       ownership.shipperId,
@@ -215,6 +224,7 @@ export const shipmentService = {
       "Delivered - proof of delivery available",
       shipmentId
     );
+    reportToExpedion(ownership.listingId, "DELIVERED");
 
     return updated;
   },
@@ -237,6 +247,12 @@ export const shipmentService = {
       throw err("INVALID_STATUS_TRANSITION", 409);
     }
 
+    // The money was only ever held, so cancelling releases it rather than
+    // refunding a charge that never completed.
+    await paymentsService
+      .releaseForShipment(shipmentId)
+      .catch((e) => console.error("payment release failed", e));
+
     const updated = await shipmentsDal.cancel(shipmentId, reason);
     await this.recordEvent(
       shipmentId,
@@ -247,6 +263,7 @@ export const shipmentService = {
       reason
     );
     await listingsDal.update(ownership.listingId, { status: "cancelled" });
+    reportToExpedion(ownership.listingId, "CANCELLED");
 
     return updated;
   },
@@ -298,4 +315,37 @@ async function notify(
       data: { shipmentId },
     })
     .catch((e) => console.error(`${type} notification failed`, e));
+}
+
+/**
+ * Delivery is the moment the held funds become the platform's to take, and the
+ * moment the carrier is owed. Both are recorded here rather than left to a
+ * webhook, so a delivery is never marked complete with the money unaccounted
+ * for.
+ *
+ * Failures are logged rather than thrown: the goods genuinely arrived, and
+ * refusing to record that because Stripe was briefly unreachable would be
+ * worse than a payment that needs re-running.
+ */
+async function settleDelivery(shipmentId: string, carrierId: string) {
+  try {
+    await paymentsService.captureForShipment(shipmentId);
+    await paymentsService.schedulePayout(shipmentId, carrierId);
+  } catch (error) {
+    console.error(`Settlement failed for shipment ${shipmentId}`, error);
+  }
+}
+
+/**
+ * Mirrors a shipment's progress back to Expedion when the job came from there,
+ * so the original client sees "retrait en cours" without leaving their app
+ * (ROADMAP.md §3).
+ *
+ * Fire-and-forget: a bridge outage must never undo a delivery that actually
+ * happened. No-op for direct listings.
+ */
+function reportToExpedion(listingId: string, shipmentStatus: string): void {
+  notifyExpedion(
+    expedionBridgeService.onShipmentStatus({ listingId, shipmentStatus })
+  );
 }
