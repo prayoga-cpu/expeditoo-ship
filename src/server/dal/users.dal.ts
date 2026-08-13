@@ -365,3 +365,16 @@ export async function getUsersByRole(role: string) {
 
   return roleRecords.map((record) => record.user);
 }
+
+/**
+ * Denormalised rating on the user row, refreshed after each review so listing
+ * and offer queries can sort by reputation without joining the reviews table.
+ */
+export async function updateUserRating(userId: string, rating: number) {
+  const [result] = await db
+    .update(user)
+    .set({ rating, updatedAt: new Date() })
+    .where(eq(user.id, userId))
+    .returning();
+  return result;
+}

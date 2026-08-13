@@ -4,28 +4,20 @@ import { z } from "zod";
 // Create Review DTO
 // ========================================
 
-export const createReviewSchema = z
-  .object({
-    targetUserId: z.string().min(1, "Target user ID is required"),
-    listingId: z.string().min(1).optional(),
-    shipmentId: z.string().min(1).optional(),
-    rating: z
-      .number()
-      .int()
-      .min(1, "Rating must be at least 1")
-      .max(5, "Rating must be at most 5"),
-    comment: z.string().max(1000).optional(),
-  })
-  .refine(
-    (data) => {
-      // XOR: Either listingId or shipmentId must be present, but not both (or neither)
-      return (!!data.listingId && !data.shipmentId) || (!data.listingId && !!data.shipmentId);
-    },
-    {
-      message: "Review must be associated with either a listing OR a shipment",
-      path: ["listingId"], // Attach error to listingId
-    }
-  );
+/**
+ * A review is always about a completed delivery, so it hangs off the shipment.
+ * The listing is derived from it server-side rather than supplied, which keeps
+ * the two from ever disagreeing.
+ */
+export const createReviewSchema = z.object({
+  shipmentId: z.string().min(1, "Shipment ID is required"),
+  rating: z
+    .number()
+    .int()
+    .min(1, "Rating must be at least 1")
+    .max(5, "Rating must be at most 5"),
+  comment: z.string().max(1000).optional(),
+});
 
 export type CreateReviewInput = z.infer<typeof createReviewSchema>;
 
@@ -36,10 +28,7 @@ export type CreateReviewInput = z.infer<typeof createReviewSchema>;
 export const reviewsQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(50).default(10),
-  type: z
-    .enum(["all", "buyer", "seller", "driver", "client"])
-    .optional()
-    .default("all"),
+  type: z.enum(["all", "shipper", "carrier"]).optional().default("all"),
 });
 
 export type ReviewsQuery = z.infer<typeof reviewsQuerySchema>;

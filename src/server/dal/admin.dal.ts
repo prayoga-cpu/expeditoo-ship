@@ -1,6 +1,5 @@
 import { db } from "@/db";
 import { user, userRoles, listings, shipments } from "@/db/schema";
-import { earnings } from "@/db/schema/earnings";
 import { payments } from "@/db/schema/payments";
 import { eq, sql, and, ne, gte, lt, desc, or } from "drizzle-orm";
 
@@ -40,7 +39,7 @@ export async function getActiveDriversCount(): Promise<number> {
   const result = await db
     .select({ count: sql<number>`count(DISTINCT ${userRoles.userId})` })
     .from(userRoles)
-    .where(eq(userRoles.role, "transporter"));
+    .where(eq(userRoles.role, "carrier"));
 
   return Number(result[0]?.count) || 0;
 }
@@ -64,9 +63,9 @@ export async function getPendingDeliveriesCount(): Promise<number> {
  */
 export async function getTotalGMV(): Promise<number> {
   const result = await db
-    .select({ total: sql<number>`COALESCE(SUM(${listings.currentPrice}), 0)` })
-    .from(listings)
-    .where(eq(listings.status, "sold"));
+    .select({ total: sql<number>`COALESCE(SUM(${shipments.priceCents}), 0)` })
+    .from(shipments)
+    .where(eq(shipments.status, "DELIVERED"));
 
   return Number(result[0]?.total) || 0;
 }
@@ -82,13 +81,13 @@ export async function getMonthlyGMV(
   const endDate = new Date(year, month, 1);
 
   const result = await db
-    .select({ total: sql<number>`COALESCE(SUM(${listings.currentPrice}), 0)` })
-    .from(listings)
+    .select({ total: sql<number>`COALESCE(SUM(${shipments.priceCents}), 0)` })
+    .from(shipments)
     .where(
       and(
-        eq(listings.status, "sold"),
-        gte(listings.updatedAt, startDate),
-        lt(listings.updatedAt, endDate)
+        eq(shipments.status, "DELIVERED"),
+        gte(shipments.updatedAt, startDate),
+        lt(shipments.updatedAt, endDate)
       )
     );
 
@@ -102,10 +101,10 @@ export async function getMonthlyGMV(
 export async function getTotalAppFees(): Promise<number> {
   const result = await db
     .select({
-      total: sql<number>`COALESCE(SUM(${payments.applicationFeeAmount}), 0)`,
+      total: sql<number>`COALESCE(SUM(${payments.commissionCents}), 0)`,
     })
     .from(payments)
-    .where(eq(payments.status, "succeeded"));
+    .where(eq(payments.status, "captured"));
 
   return Number(result[0]?.total) || 0;
 }
@@ -122,12 +121,12 @@ export async function getMonthlyAppFees(
 
   const result = await db
     .select({
-      total: sql<number>`COALESCE(SUM(${payments.applicationFeeAmount}), 0)`,
+      total: sql<number>`COALESCE(SUM(${payments.commissionCents}), 0)`,
     })
     .from(payments)
     .where(
       and(
-        eq(payments.status, "succeeded"),
+        eq(payments.status, "captured"),
         gte(payments.createdAt, startDate),
         lt(payments.createdAt, endDate)
       )
@@ -169,7 +168,7 @@ export async function getMonthlyNewDriversCount(
     .from(userRoles)
     .where(
       and(
-        eq(userRoles.role, "transporter"),
+        eq(userRoles.role, "carrier"),
         gte(userRoles.assignedAt, startDate),
         lt(userRoles.assignedAt, endDate)
       )
@@ -223,7 +222,7 @@ export async function getRecentUsers(limit: number = 5) {
 export async function getRecentListings(limit: number = 5) {
   return db.query.listings.findMany({
     with: {
-      seller: true,
+      shipper: true,
     },
     orderBy: desc(listings.createdAt),
     limit,

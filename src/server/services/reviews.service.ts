@@ -1,253 +1,195 @@
 import { nanoid } from "nanoid";
-import { reviewsDal } from "../dal/reviews.dal";
-import { listingsDal } from "../dal/listings.dal";
-import { auctionsDAL } from "../dal/auctions.dal";
-import { shipmentsDal } from "../dal/shipments.dal";
-import { ordersDal } from "../dal/orders.dal";
-import {
-  createReviewSchema,
-  type CreateReviewInput,
-  type ReviewsQuery,
-} from "../dto/reviews.dto";
+import { reviewsDal } from "@/server/dal/reviews.dal";
+import { shipmentsDal } from "@/server/dal/shipments.dal";
+import { carriersDal } from "@/server/dal/carriers.dal";
+import * as usersDal from "@/server/dal/users.dal";
+import type {
+  CreateReviewInput,
+  ReviewsQuery,
+} from "@/server/dto/reviews.dto";
 import type { ReviewRole } from "@/db/schema/reviews";
 
-export const reviewsService = {
-  /**
-   * Create a new review
-   * Supports:
-   * - Buyer -> Seller (Listing)
-   * - Seller -> Buyer (Listing)
-   * - Client -> Driver (Shipment)
-   * - Driver -> Client (Shipment)
-   */
-  async createReview(authorId: string, data: CreateReviewInput) {
-    // Validate input
-    const validated = createReviewSchema.parse(data);
+// ========================================
+// Errors
+// ========================================
 
-    // Check if check exists
-    const exists = await reviewsDal.checkExists(
-      authorId,
-      validated.listingId,
-      validated.shipmentId
+export class ReviewError extends Error {
+  constructor(
+    readonly code: string,
+    readonly status: number,
+    message?: string
+  ) {
+    super(message ?? code);
+    this.name = "ReviewError";
+  }
+}
+
+const err = (code: string, status: number) => new ReviewError(code, status);
+
+// ========================================
+// Eligibility
+// ========================================
+
+interface Counterparty {
+  role: ReviewRole;
+  targetUserId: string;
+  listingId: string;
+}
+
+/**
+ * Reviews run both ways between the two parties to a delivery
+ * (ROADMAP.md §8 Phase C). Only those two may write one, only after the goods
+ * actually arrived, and only once each.
+ *
+ * A driver is not a party here: they execute the run for the carrier, and the
+ * carrier's reputation is what the shipper is rating.
+ */
+async function resolveCounterparty(
+  shipmentId: string,
+  authorId: string
+): Promise<Counterparty> {
+  const shipment = await shipmentsDal.getOwnership(shipmentId);
+  if (!shipment) throw err("SHIPMENT_NOT_FOUND", 404);
+
+  if (shipment.status !== "DELIVERED") {
+    throw err("SHIPMENT_NOT_DELIVERED", 409);
+  }
+
+  if (shipment.shipperId === authorId) {
+    return {
+      role: "shipper",
+      targetUserId: shipment.carrierId,
+      listingId: shipment.listingId,
+    };
+  }
+
+  if (shipment.carrierId === authorId) {
+    return {
+      role: "carrier",
+      targetUserId: shipment.shipperId,
+      listingId: shipment.listingId,
+    };
+  }
+
+  throw err("NOT_A_PARTY_TO_SHIPMENT", 403);
+}
+
+// ========================================
+// Service
+// ========================================
+
+export const reviewsService = {
+  async createReview(authorId: string, data: CreateReviewInput) {
+    const { role, targetUserId, listingId } = await resolveCounterparty(
+      data.shipmentId,
+      authorId
     );
 
-    if (exists) {
-      throw new Error("ALREADY_REVIEWED: You have already reviewed this transaction");
-    }
+    const already = await reviewsDal.checkExists(
+      authorId,
+      undefined,
+      data.shipmentId
+    );
+    if (already) throw err("ALREADY_REVIEWED", 409);
 
-    let role: ReviewRole;
-
-    // ==========================================
-    // Creating Review for Listing (Item Sale)
-    // ==========================================
-    if (validated.listingId) {
-      const listing = await listingsDal.getById(validated.listingId);
-      if (!listing) {
-        throw new Error("LISTING_NOT_FOUND: Listing not found");
-      }
-
-      // Determine Winner/Buyer
-      let buyerId = listing.winnerId;
-      if (!buyerId) {
-        const highestBid = await auctionsDAL.getHighestBid(listing.id);
-        buyerId = highestBid?.bidderId || null;
-      }
-
-      // Check Status
-      const isCompleted = listing.status === "sold" || listing.status === "ended";
-      if (!isCompleted) {
-        // Double check orders if listing status is lagging
-        const order = await ordersDal.getByListingId(listing.id);
-        if (!order || (order.status !== "delivered" && order.status !== "paid")) {
-          throw new Error("TRANSACTION_NOT_COMPLETE: Listing/Order is not completed");
-        }
-      }
-
-      // Determine Role
-      if (authorId === buyerId) {
-        role = "buyer";
-        if (validated.targetUserId !== listing.sellerId) {
-          throw new Error("INVALID_TARGET: Buyer must review Seller");
-        }
-      } else if (authorId === listing.sellerId) {
-        role = "seller";
-        if (validated.targetUserId !== buyerId) {
-          throw new Error("INVALID_TARGET: Seller must review Buyer");
-        }
-      } else {
-        throw new Error("NOT_AUTHORIZED: You are not a participant in this transaction");
-      }
-    }
-    // ==========================================
-    // Creating Review for Shipment (Delivery)
-    // ==========================================
-    else if (validated.shipmentId) {
-      const shipment = await shipmentsDal.getById(validated.shipmentId);
-      if (!shipment) {
-        throw new Error("SHIPMENT_NOT_FOUND: Shipment not found");
-      }
-
-      // Check Status
-      if (shipment.status !== "DELIVERED") {
-        throw new Error("SHIPMENT_NOT_COMPLETE: Shipment must be delivered first");
-      }
-
-      // Determine Role
-      if (authorId === shipment.userId) {
-        // Client reviewing Driver
-        role = "client";
-        if (validated.targetUserId !== shipment.driverId) {
-          throw new Error("INVALID_TARGET: Client must review Driver");
-        }
-      } else if (authorId === shipment.driverId) {
-        // Driver reviewing Client
-        role = "driver";
-        if (validated.targetUserId !== shipment.userId) {
-          throw new Error("INVALID_TARGET: Driver must review Client");
-        }
-      } else {
-        throw new Error("NOT_AUTHORIZED: You are not a participant in this shipment");
-      }
-    } else {
-      throw new Error("INVALID_CONTEXT: Must provide listingId or shipmentId");
-    }
-
-    // Create the review
     const review = await reviewsDal.create({
       id: nanoid(),
-      authorId: authorId,
-      targetUserId: validated.targetUserId,
-      listingId: validated.listingId,
-      shipmentId: validated.shipmentId,
-      role: role,
-      rating: validated.rating,
-      comment: validated.comment,
+      authorId,
+      targetUserId,
+      listingId,
+      shipmentId: data.shipmentId,
+      role,
+      rating: data.rating,
+      comment: data.comment ?? null,
     });
+
+    await this.refreshAggregates(targetUserId);
 
     return review;
   },
 
   /**
-   * Get reviews received by a user
+   * Tells the UI whether to offer a review button, and why not when it should
+   * not - the caller gets a reason rather than a bare false.
    */
+  async canReview(authorId: string, shipmentId: string) {
+    try {
+      const { role, targetUserId } = await resolveCounterparty(
+        shipmentId,
+        authorId
+      );
+      const already = await reviewsDal.checkExists(
+        authorId,
+        undefined,
+        shipmentId
+      );
+
+      return already
+        ? { canReview: false, reason: "ALREADY_REVIEWED" as const }
+        : { canReview: true, role, targetUserId };
+    } catch (error) {
+      if (error instanceof ReviewError) {
+        return { canReview: false, reason: error.code };
+      }
+      throw error;
+    }
+  },
+
   async getUserReviews(userId: string, query: ReviewsQuery) {
-    const { items, total } = await reviewsDal.getByTargetUser(userId, {
+    return await reviewsDal.getByTargetUser(userId, {
       page: query.page,
       limit: query.limit,
+      role: query.type === "all" ? undefined : query.type,
     });
-
-    return {
-      items,
-      total,
-      page: query.page,
-      limit: query.limit,
-      totalPages: Math.ceil(total / query.limit),
-    };
   },
 
-  /**
-   * Get reviews written by a user
-   */
   async getAuthoredReviews(authorId: string, query: ReviewsQuery) {
-    const { items, total } = await reviewsDal.getByAuthor(authorId, {
+    return await reviewsDal.getByAuthor(authorId, {
       page: query.page,
       limit: query.limit,
     });
-
-    return {
-      items,
-      total,
-      page: query.page,
-      limit: query.limit,
-      totalPages: Math.ceil(total / query.limit),
-    };
   },
 
-  /**
-   * Get rating statistics for a user
-   */
-  async getUserStats(userId: string) {
-    return await reviewsDal.getStats(userId);
-  },
-
-  /**
-   * Get a single review by ID
-   */
-  async getReviewById(id: string) {
-    return await reviewsDal.getById(id);
-  },
-
-  /**
-   * Delete a review (only by author)
-   */
-  async deleteReview(id: string, userId: string) {
-    // Check if user is the author
-    const authorId = await reviewsDal.getAuthorId(id);
-    if (!authorId) {
-      throw new Error("REVIEW_NOT_FOUND: Review not found");
-    }
-    if (authorId !== userId) {
-      throw new Error("NOT_AUTHORIZED: You can only delete your own reviews");
-    }
-
-    return await reviewsDal.delete(id);
-  },
-
-  /**
-   * Get reviews for a specific listing
-   */
   async getListingReviews(listingId: string) {
     return await reviewsDal.getByListing(listingId);
   },
 
+  async getReviewById(id: string) {
+    const review = await reviewsDal.getById(id);
+    if (!review) throw err("REVIEW_NOT_FOUND", 404);
+    return review;
+  },
+
+  async getUserStats(userId: string) {
+    return await reviewsDal.getStats(userId);
+  },
+
+  async deleteReview(id: string, requesterId: string, isAdmin = false) {
+    const authorId = await reviewsDal.getAuthorId(id);
+    if (!authorId) throw err("REVIEW_NOT_FOUND", 404);
+    if (!isAdmin && authorId !== requesterId) throw err("FORBIDDEN", 403);
+
+    const review = await reviewsDal.getById(id);
+    await reviewsDal.delete(id);
+
+    if (review) await this.refreshAggregates(review.targetUserId);
+  },
+
   /**
-   * Check if user can review a listing or shipment
+   * Ratings are denormalised onto the user and, for carriers, onto the carrier
+   * company - browsing offers would otherwise aggregate reviews per row.
    */
-  async canReview(userId: string, context: { listingId?: string, shipmentId?: string }) {
-    // Check existence
-    const exists = await reviewsDal.checkExists(userId, context.listingId, context.shipmentId);
-    if (exists) {
-      return { canReview: false, reason: "Already reviewed" };
+  async refreshAggregates(userId: string) {
+    const stats = await reviewsDal.getStats(userId);
+
+    await usersDal.updateUserRating(userId, stats.average);
+
+    const carrier = await carriersDal.getByUserId(userId);
+    if (carrier) {
+      await carriersDal.update(carrier.id, {
+        averageRating: stats.average,
+        totalRatings: stats.total,
+      });
     }
-
-    if (context.listingId) {
-      const listing = await listingsDal.getById(context.listingId);
-      if (!listing) return { canReview: false, reason: "Listing not found" };
-
-      // Check completion
-      if (listing.status !== 'sold' && listing.status !== 'ended') {
-        // Check order fallback
-        const order = await ordersDal.getByListingId(listing.id);
-        if (!order || (order.status !== "delivered" && order.status !== "paid")) {
-          return { canReview: false, reason: "Transaction not complete" };
-        }
-      }
-
-      // Check participation
-      let buyerId = listing.winnerId;
-      if (!buyerId) {
-        const highestBid = await auctionsDAL.getHighestBid(listing.id);
-        buyerId = highestBid?.bidderId || null;
-      }
-
-      if (userId === buyerId) return { canReview: true, role: 'buyer' };
-      if (userId === listing.sellerId) return { canReview: true, role: 'seller' };
-
-      return { canReview: false, reason: "Not a participant" };
-    }
-
-    if (context.shipmentId) {
-      const shipment = await shipmentsDal.getById(context.shipmentId);
-      if (!shipment) return { canReview: false, reason: "Shipment not found" };
-
-      if (shipment.status !== 'DELIVERED') return { canReview: false, reason: "Shipment not delivered" };
-
-      if (userId === shipment.userId) return { canReview: true, role: 'client' };
-      if (userId === shipment.driverId) return { canReview: true, role: 'driver' };
-
-      return { canReview: false, reason: "Not a participant" };
-    }
-
-    return { canReview: false, reason: "No context provided" };
   },
 };

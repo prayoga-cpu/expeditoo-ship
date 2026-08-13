@@ -140,9 +140,9 @@ export const messagesDAL = {
                 title: true,
               },
               with: {
-                images: {
+                photos: {
                   limit: 1,
-                  orderBy: (images, { asc }) => [asc(images.order)],
+                  orderBy: (photos, { asc }) => [asc(photos.order)],
                 },
               },
             },
@@ -242,7 +242,7 @@ export const messagesDAL = {
         },
         listing: {
           with: {
-            images: {
+            photos: {
               limit: 1,
             }
           }

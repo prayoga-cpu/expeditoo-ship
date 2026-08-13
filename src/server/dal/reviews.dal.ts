@@ -39,12 +39,18 @@ export const reviewsDal = {
    */
   async getByTargetUser(
     userId: string,
-    options: { page: number; limit: number }
+    options: { page: number; limit: number; role?: "shipper" | "carrier" }
   ) {
     const offset = (options.page - 1) * options.limit;
 
+    // `role` records which side wrote the review, so filtering by it separates
+    // "how this user performs as a carrier" from "as a shipper".
+    const where = options.role
+      ? and(eq(reviews.targetUserId, userId), eq(reviews.role, options.role))
+      : eq(reviews.targetUserId, userId);
+
     const items = await db.query.reviews.findMany({
-      where: eq(reviews.targetUserId, userId),
+      where,
       with: {
         author: {
           columns: { id: true, name: true, image: true },
@@ -61,11 +67,11 @@ export const reviewsDal = {
       offset: offset,
     });
 
-    // Get total count
+    // Counted with the same predicate, so the total matches the filtered page.
     const [countResult] = await db
       .select({ count: count() })
       .from(reviews)
-      .where(eq(reviews.targetUserId, userId));
+      .where(where);
 
     return {
       items,
