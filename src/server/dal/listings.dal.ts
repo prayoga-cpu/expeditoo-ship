@@ -1,256 +1,99 @@
 import { db } from "@/db";
 import {
   listings,
-  listingImages,
+  photos,
   type InsertListing,
-  type InsertListingImage,
+  type InsertPhoto,
+  type ListingStatus,
 } from "@/db/schema/listings";
-import { user } from "@/db/schema/users";
-import { eq, type SQL, sql } from "drizzle-orm";
+import { shipments, type InsertShipment } from "@/db/schema/shipments";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gte,
+  lte,
+  lt,
+  sql,
+  count,
+  type SQL,
+} from "drizzle-orm";
+
+type Executor = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+export interface BrowseFilters {
+  categoryId?: string;
+  q?: string;
+  nearLat?: number;
+  nearLng?: number;
+  radiusKm?: number;
+  minBudget?: number;
+  maxBudget?: number;
+  pickupFrom?: Date;
+  pickupUntil?: Date;
+  maxWeightKg?: number;
+  sort?: string;
+  page: number;
+  limit: number;
+}
+
+/**
+ * Great-circle distance in km between a listing's pickup point and a target,
+ * as a SQL expression. Good enough for marketplace radius filtering; PostGIS
+ * would be the move if this ever needs to be exact.
+ */
+const distanceKmSql = (lat: number, lng: number): SQL<number> =>
+  sql<number>`(
+    6371 * acos(
+      least(1, greatest(-1,
+        cos(radians(${lat})) * cos(radians(${listings.pickupLat}))
+        * cos(radians(${listings.pickupLng}) - radians(${lng}))
+        + sin(radians(${lat})) * sin(radians(${listings.pickupLat}))
+      ))
+    )
+  )`;
 
 export const listingsDal = {
-  async create(data: InsertListing) {
-    const [result] = await db.insert(listings).values(data).returning();
+  async create(data: InsertListing, tx: Executor = db) {
+    const [result] = await tx.insert(listings).values(data).returning();
     return result;
   },
 
-  async addImages(images: InsertListingImage[]) {
-    if (images.length === 0) return [];
-    return await db.insert(listingImages).values(images).returning();
-  },
-
-  async getById(id: string) {
-    return await db.query.listings.findFirst({
+  async getById(id: string, tx: Executor = db) {
+    return await tx.query.listings.findFirst({
       where: eq(listings.id, id),
-      with: {
-        images: true,
-        seller: true,
-        category: true,
-      },
+      with: { photos: true, shipper: true, category: true },
     });
   },
 
-  async getBySellerId(sellerId: string) {
-    return await db.query.listings.findMany({
-      where: eq(listings.sellerId, sellerId),
-      with: {
-        images: true,
-        category: true,
-      },
-      orderBy: (listings, { desc }) => [desc(listings.createdAt)],
-    });
-  },
-
-  async getAllPublic(filters?: {
-    search?: string;
-    category?: string;
-    priceMin?: number;
-    priceMax?: number;
-    sortBy?: string;
-    sizes?: string[]; // Already split array
-    minRating?: number;
-    minReputation?: number;
-    lat?: number;
-    lng?: number;
-    radiusKm?: number;
-    page?: number;
-    limit?: number;
-  }) {
-    const { and, or, like, gte, lte, inArray, desc, asc, sql, count } = await import(
-      "drizzle-orm"
-    );
-
-    const page = filters?.page ?? 1;
-    const limit = filters?.limit ?? 20;
-    const offset = (page - 1) * limit;
-
-    // Build where conditions
-    const conditions: (SQL | undefined)[] = [eq(listings.status, "active")];
-
-    // Search filter (PostgreSQL Full-Text Search)
-    let rankSql: SQL | undefined;
-    if (filters?.search?.trim()) {
-      const searchTerms = filters.search.trim();
-      const searchQuery = sql`websearch_to_tsquery('french', ${searchTerms})`;
-      const searchVector = sql`to_tsvector('french', ${listings.title} || ' ' || ${listings.description})`;
-
-      conditions.push(sql`${searchVector} @@ ${searchQuery}`);
-      rankSql = sql`ts_rank(${searchVector}, ${searchQuery})`;
-    }
-
-    // Category filter
-    if (filters?.category) {
-      conditions.push(eq(listings.categoryId, filters.category));
-    }
-
-    // Price range filter
-    if (filters?.priceMin !== undefined) {
-      conditions.push(gte(listings.currentPrice, filters.priceMin * 100));
-    }
-    if (filters?.priceMax !== undefined) {
-      conditions.push(lte(listings.currentPrice, filters.priceMax * 100));
-    }
-
-    // Size filter
-    if (filters?.sizes && filters.sizes.length > 0) {
-      const validSizes = filters.sizes as any[];
-      conditions.push(inArray(listings.size, validSizes));
-    }
-
-    // --- New Filters ---
-
-    // Rating & Reputation (Seller)
-    if (filters?.minRating) {
-      conditions.push(gte(user.rating, filters.minRating));
-    }
-
-    if (filters?.minReputation) {
-      conditions.push(gte(user.reputationScore, filters.minReputation));
-    }
-
-    // Distance (PostGIS)
-    let distanceSql: SQL | undefined;
-    if (filters?.lat && filters?.lng) {
-      const userPoint = sql`ST_MakePoint(${filters.lng}, ${filters.lat})::geography`;
-      const listingPoint = sql`ST_MakePoint(${listings.lng}, ${listings.lat})::geography`;
-
-      if (filters.radiusKm) {
-        conditions.push(sql`ST_DWithin(${listingPoint}, ${userPoint}, ${filters.radiusKm * 1000})`);
-      }
-
-      distanceSql = sql`ST_Distance(${listingPoint}, ${userPoint})`;
-    }
-
-    const whereClause = and(...conditions);
-
-    // --- Get total count ---
-    const [countResult] = await db
-      .select({ count: count() })
+  /** Locks the listing for the accept transaction. */
+  async getByIdForUpdate(id: string, tx: Executor) {
+    const [result] = await tx
+      .select()
       .from(listings)
-      .leftJoin(user, eq(listings.sellerId, user.id))
-      .where(whereClause);
-    const totalCount = countResult?.count ?? 0;
-
-    // --- Step 1: Query IDs matching filters with pagination ---
-    const query = db
-      .select({ id: listings.id })
-      .from(listings)
-      .leftJoin(user, eq(listings.sellerId, user.id));
-
-    // Build order by
-    let orderBy: SQL[] = [];
-    const sortBy = filters?.sortBy;
-
-    if (sortBy === "newest") orderBy = [desc(listings.createdAt)];
-    else if (sortBy === "price_low") orderBy = [asc(listings.currentPrice)];
-    else if (sortBy === "price_high") orderBy = [desc(listings.currentPrice)];
-    else if (sortBy === "ending_soon") orderBy = [asc(listings.endsAt)];
-    else if (sortBy === "distance" && distanceSql) orderBy = [asc(distanceSql)];
-    else if (rankSql) orderBy = [desc(rankSql)];
-    else orderBy = [asc(listings.endsAt)]; // Default fallback
-
-    const matchedDocs = await query
-      .where(whereClause)
-      .orderBy(...orderBy)
-      .limit(limit)
-      .offset(offset);
-
-    if (matchedDocs.length === 0) {
-      return {
-        data: [],
-        pagination: {
-          page,
-          limit,
-          totalCount,
-          totalPages: Math.ceil(totalCount / limit),
-          hasMore: false,
-        },
-      };
-    }
-
-    const ids = matchedDocs.map(d => d.id);
-
-    // --- Step 2: Fetch Full Data ---
-    const data = await db.query.listings.findMany({
-      where: inArray(listings.id, ids),
-      with: {
-        images: {
-          orderBy: (images, { asc }) => [asc(images.order)],
-        },
-        seller: {
-          columns: {
-            id: true,
-            name: true,
-            image: true,
-            isVerified: true,
-          },
-        },
-        category: true,
-      },
-    });
-
-    // Sort in memory to match matchDocs order
-    const orderMap = new Map(ids.map((id, index) => [id, index]));
-    data.sort((a: { id: string }, b: { id: string }) => (orderMap.get(a.id) ?? 0) - (orderMap.get(b.id) ?? 0));
-
-    return {
-      data,
-      pagination: {
-        page,
-        limit,
-        totalCount,
-        totalPages: Math.ceil(totalCount / limit),
-        hasMore: page * limit < totalCount,
-      },
-    };
+      .where(eq(listings.id, id))
+      .for("update");
+    return result;
   },
 
-  async updateStatus(
-    id: string,
-    status: "active" | "sold" | "ended" | "cancelled",
-    endsAt?: Date,
-    winnerId?: string | null
+  async getByShipperId(
+    shipperId: string,
+    status?: ListingStatus,
+    tx: Executor = db
   ) {
-    const updateData: {
-      status: "active" | "sold" | "ended" | "cancelled";
-      updatedAt: Date;
-      endsAt?: Date;
-      winnerId?: string | null;
-    } = { status, updatedAt: new Date() };
-    if (endsAt) {
-      updateData.endsAt = endsAt;
-    }
-    if (winnerId !== undefined) {
-      updateData.winnerId = winnerId;
-    }
+    const conditions = [eq(listings.shipperId, shipperId)];
+    if (status) conditions.push(eq(listings.status, status));
 
-    const [result] = await db
-      .update(listings)
-      .set(updateData)
-      .where(eq(listings.id, id))
-      .returning();
-    return result;
-  },
-
-  async delete(id: string) {
-    // Images are cascade deleted due to schema definition
-    const [result] = await db
-      .delete(listings)
-      .where(eq(listings.id, id))
-      .returning();
-    return result;
-  },
-
-  async getOwner(id: string) {
-    const result = await db.query.listings.findFirst({
-      where: eq(listings.id, id),
-      columns: { sellerId: true },
+    return await tx.query.listings.findMany({
+      where: and(...conditions),
+      with: { photos: true, category: true },
+      orderBy: [desc(listings.createdAt)],
     });
-    return result?.sellerId;
   },
 
-  async update(id: string, data: Partial<InsertListing>) {
-    const [result] = await db
+  async update(id: string, data: Partial<InsertListing>, tx: Executor = db) {
+    const [result] = await tx
       .update(listings)
       .set({ ...data, updatedAt: new Date() })
       .where(eq(listings.id, id))
@@ -258,65 +101,117 @@ export const listingsDal = {
     return result;
   },
 
-  async deleteImagesByListingId(listingId: string) {
-    await db
-      .delete(listingImages)
-      .where(eq(listingImages.listingId, listingId));
+  async delete(id: string, tx: Executor = db) {
+    await tx.delete(listings).where(eq(listings.id, id));
   },
 
-  async getAllForAdmin() {
-    const { desc } = await import("drizzle-orm");
+  /** Marketplace browse. Only open jobs are ever returned here. */
+  async browse(filters: BrowseFilters, tx: Executor = db) {
+    const conditions: (SQL | undefined)[] = [
+      eq(listings.status, "open"),
+      gte(listings.expiresAt, new Date()),
+    ];
 
-    return await db.query.listings.findMany({
-      with: {
-        images: {
-          orderBy: (images, { asc }) => [asc(images.order)],
-          limit: 1,
-        },
-        seller: {
-          columns: {
-            id: true,
-            name: true,
-            email: true,
-            image: true,
-          },
-        },
-        category: true,
-      },
-      orderBy: [desc(listings.createdAt)],
-      limit: 100,
+    if (filters.categoryId) {
+      conditions.push(eq(listings.categoryId, filters.categoryId));
+    }
+    if (filters.q) {
+      conditions.push(
+        sql`to_tsvector('french', ${listings.title} || ' ' || ${listings.description})
+            @@ plainto_tsquery('french', ${filters.q})`
+      );
+    }
+    if (filters.minBudget !== undefined) {
+      conditions.push(gte(listings.budgetCents, filters.minBudget));
+    }
+    if (filters.maxBudget !== undefined) {
+      conditions.push(lte(listings.budgetCents, filters.maxBudget));
+    }
+    if (filters.pickupFrom) {
+      conditions.push(gte(listings.pickupUntil, filters.pickupFrom));
+    }
+    if (filters.pickupUntil) {
+      conditions.push(lte(listings.pickupFrom, filters.pickupUntil));
+    }
+    if (filters.maxWeightKg !== undefined) {
+      conditions.push(lte(listings.weightKg, filters.maxWeightKg));
+    }
+
+    const hasGeo =
+      filters.nearLat !== undefined &&
+      filters.nearLng !== undefined &&
+      filters.radiusKm !== undefined;
+
+    if (hasGeo) {
+      conditions.push(
+        lte(distanceKmSql(filters.nearLat!, filters.nearLng!), filters.radiusKm!)
+      );
+    }
+
+    const where = and(...conditions);
+    const orderBy = {
+      created_desc: [desc(listings.createdAt)],
+      budget_desc: [desc(listings.budgetCents)],
+      budget_asc: [asc(listings.budgetCents)],
+      pickup_asc: [asc(listings.pickupFrom)],
+      distance_asc: hasGeo
+        ? [asc(distanceKmSql(filters.nearLat!, filters.nearLng!))]
+        : [desc(listings.createdAt)],
+    }[filters.sort ?? "created_desc"] ?? [desc(listings.createdAt)];
+
+    const items = await tx.query.listings.findMany({
+      where,
+      with: { photos: true, category: true, shipper: true },
+      orderBy,
+      limit: filters.limit,
+      offset: (filters.page - 1) * filters.limit,
+    });
+
+    const [totals] = await tx
+      .select({ total: count(listings.id) })
+      .from(listings)
+      .where(where);
+
+    return { items, total: Number(totals?.total ?? 0) };
+  },
+
+  /** Open jobs past their window, for the expiry cron. */
+  async findExpired(now: Date, tx: Executor = db) {
+    return await tx.query.listings.findMany({
+      where: and(eq(listings.status, "open"), lt(listings.expiresAt, now)),
     });
   },
-  async incrementView(id: string) {
-    const { sql } = await import("drizzle-orm");
-    await db
+
+  async incrementViews(id: string, tx: Executor = db) {
+    await tx
       .update(listings)
       .set({ views: sql`${listings.views} + 1` })
       .where(eq(listings.id, id));
   },
 
-  /**
-   * Get category counts for faceted search
-   */
-  async getCategoryCounts() {
-    const { count, eq } = await import("drizzle-orm");
-    const { categories } = await import("@/db/schema/listings");
+  // ---- Photos ----
 
-    const results = await db
-      .select({
-        categoryId: listings.categoryId,
-        categoryName: categories.name,
-        count: count(),
-      })
-      .from(listings)
-      .leftJoin(categories, eq(listings.categoryId, categories.id))
-      .where(eq(listings.status, "active"))
-      .groupBy(listings.categoryId, categories.name);
+  async addPhotos(rows: InsertPhoto[], tx: Executor = db) {
+    if (rows.length === 0) return [];
+    return await tx.insert(photos).values(rows).returning();
+  },
 
-    return results.map((r) => ({
-      id: r.categoryId,
-      name: r.categoryName || "Uncategorized",
-      count: Number(r.count),
-    }));
+  async deletePhotos(listingId: string, tx: Executor = db) {
+    await tx.delete(photos).where(eq(photos.listingId, listingId));
+  },
+
+  // ---- Shipment handoff ----
+  // The award transaction creates the shipment alongside the listing update,
+  // so those writes live here rather than crossing into the shipments DAL.
+
+  async createShipment(data: InsertShipment, tx: Executor = db) {
+    const [result] = await tx.insert(shipments).values(data).returning();
+    return result;
+  },
+
+  async getShipmentByOfferId(offerId: string, tx: Executor = db) {
+    return await tx.query.shipments.findFirst({
+      where: eq(shipments.offerId, offerId),
+    });
   },
 };

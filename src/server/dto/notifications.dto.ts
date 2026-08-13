@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const NotificationTypeEnum = z.enum([
-  "bid",
+  "offer",
   "listing",
   "message",
   "delivery",
@@ -29,6 +29,7 @@ export const CreateNotificationSchema = z.object({
   type: z.string(), // Allow any string type for flexibility
   title: z.string().min(1),
   message: z.string().min(1), // Changed from description to match DB schema
+  linkUrl: z.string().optional(), // Where the notification takes the user
   data: z.unknown().optional(),
 });
 
