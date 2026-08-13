@@ -361,16 +361,18 @@ describe("offersService.acceptOffer", () => {
       { status: "awarded", acceptedOfferId: "offer-1" },
       expect.anything()
     );
-    expect(result.shipment.carrierId).toBe("carrier-1");
-    expect(result.shipment.priceCents).toBe(18_000);
+    expect(result.shipment).toBeDefined();
+    expect(result.shipment!.carrierId).toBe("carrier-1");
+    expect(result.shipment!.priceCents).toBe(18_000);
     expect(result.alreadyAccepted).toBe(false);
   });
 
   it("copies the route onto the shipment so later edits cannot rewrite it", async () => {
     const { shipment } = await offersService.acceptOffer("shipper-1", "offer-1");
 
-    expect(shipment.pickupAddress).toBe("1 rue de Rivoli");
-    expect(shipment.dropoffAddress).toBe("2 place Bellecour");
+    expect(shipment).toBeDefined();
+    expect(shipment!.pickupAddress).toBe("1 rue de Rivoli");
+    expect(shipment!.dropoffAddress).toBe("2 place Bellecour");
   });
 
   it("only lets the job's own shipper accept", async () => {
