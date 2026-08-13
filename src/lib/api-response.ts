@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { OfferError } from "@/server/services/offers.service";
 import { ListingError } from "@/server/services/listings.service";
+import { ShipmentError } from "@/server/services/shipment.service";
+import { CarrierError } from "@/server/services/carrier.service";
 
 /**
  * Shared response shape for the REST layer.
@@ -26,7 +28,12 @@ export const unauthorised = () =>
   fail("UNAUTHENTICATED", "Authentication required", 401);
 
 export function handleError(error: unknown, context: string) {
-  if (error instanceof OfferError || error instanceof ListingError) {
+  if (
+    error instanceof OfferError ||
+    error instanceof ListingError ||
+    error instanceof ShipmentError ||
+    error instanceof CarrierError
+  ) {
     return fail(error.code, error.message, error.status);
   }
 

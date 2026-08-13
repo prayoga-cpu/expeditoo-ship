@@ -4,6 +4,10 @@ import { offersDal } from "@/server/dal/offers.dal";
 import { listingsDal } from "@/server/dal/listings.dal";
 import { carriersDal } from "@/server/dal/carriers.dal";
 import { notificationsService } from "@/server/services/notifications.service";
+import {
+  expedionBridgeService,
+  notifyExpedion,
+} from "@/server/services/expedion-bridge.service";
 import type { CreateOfferInput } from "@/server/dto/offers.dto";
 import type { Listing } from "@/db/schema/listings";
 import type { Offer } from "@/db/schema/offers";
@@ -198,6 +202,17 @@ export const offersService = {
     }
 
     const result = await this.commitAward(offerId, listing.id);
+
+    // A job that arrived from Expedion has a buyer waiting in that app to see
+    // which carrier won. No-op for `direct` listings, and never allowed to
+    // fail the award it is reporting on.
+    notifyExpedion(
+      expedionBridgeService.onOfferAccepted({
+        listingId: listing.id,
+        carrierId: existing.carrierId,
+        priceCents: existing.priceCents,
+      })
+    );
 
     return { ...result, alreadyAccepted: false };
   },

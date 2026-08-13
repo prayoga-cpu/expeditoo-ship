@@ -10,3 +10,4 @@ export * from "./notifications";
 export * from "./addresses";
 export * from "./invoices";
 export * from "./search-analytics";
+export * from "./expedion";
