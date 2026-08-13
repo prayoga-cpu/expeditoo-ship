@@ -1,45 +1,16 @@
-import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 import { listingsService } from "@/server/services/listings.service";
+import { ok, unauthorised, handleError } from "@/lib/api-response";
 
-/**
- * GET /api/users/me/listings
- * Get listings owned by the current user
- */
-export async function GET(req: NextRequest) {
+/** GET /api/users/me/listings — alias of /api/listings/me. */
+export async function GET() {
   try {
-    const session = await auth.api.getSession({
-      headers: req.headers,
-    });
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session) return unauthorised();
 
-    if (!session) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: { code: "UNAUTHORIZED", message: "Unauthorized" },
-        },
-        { status: 401 }
-      );
-    }
-
-    const listings = await listingsService.getListingsBySeller(session.user.id);
-
-    return NextResponse.json({
-      success: true,
-      data: listings,
-    });
+    return ok(await listingsService.getMyListings(session.user.id));
   } catch (error) {
-    console.error("[API] GET /api/users/me/listings error:", error);
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to fetch listings",
-        },
-      },
-      { status: 500 }
-    );
+    return handleError(error, "Get my listings");
   }
 }

@@ -1,7 +1,3 @@
-/**
- * Listing feature UI components exports
- * Following rules.md - clean feature exports
- */
-
-export { ListingDetail } from "./ListingDetail";
+export { JobDetail } from "./JobDetail";
+export { OfferCard } from "./OfferCard";
 export { ListingReviews } from "./ListingReviews";

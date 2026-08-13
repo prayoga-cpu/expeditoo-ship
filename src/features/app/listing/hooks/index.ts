@@ -1,6 +1,2 @@
-/**
- * Listing hooks exports
- */
-
-export * from "./useListingDetail";
+export * from "./useJobDetail";
 export * from "./useListingReviews";

@@ -36,7 +36,7 @@ export async function GET() {
         const allPayments = await db
             .select({
                 id: payments.id,
-                amount: payments.amount,
+                amount: payments.amountCents,
                 currency: payments.currency,
                 status: payments.status,
                 stripePaymentIntentId: payments.stripePaymentIntentId,

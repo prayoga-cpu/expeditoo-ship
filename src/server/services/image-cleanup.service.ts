@@ -2,7 +2,7 @@ import { db } from "@/db";
 import {
   user,
   categories,
-  listingImages,
+  photos,
   shipments,
   shipmentEvents,
 } from "@/db/schema";
@@ -66,7 +66,7 @@ export class ImageCleanupService {
     console.log(`Scanned ${cats.length} categories`);
 
     // 3. Listing Images
-    const lImages = await db.select({ url: listingImages.url }).from(listingImages);
+    const lImages = await db.select({ url: photos.url }).from(photos);
     lImages.forEach((i) => addUrl(i.url));
     console.log(`Scanned ${lImages.length} listing images`);
 

@@ -78,7 +78,7 @@ export const paymentsDal = {
     /**
      * Update payment status
      */
-    async updateStatus(id: string, status: "pending" | "succeeded" | "failed" | "refunded") {
+    async updateStatus(id: string, status: "pending" | "captured" | "failed" | "refunded") {
         const [updated] = await db
             .update(payments)
             .set({

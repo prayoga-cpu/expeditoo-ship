@@ -4,5 +4,4 @@
  */
 
 export { Checkout } from "./Checkout";
-export { WonCheckout } from "./WonCheckout";
 export { ShippingEstimate } from "./ShippingEstimate";

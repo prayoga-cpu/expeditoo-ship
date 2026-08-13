@@ -33,7 +33,7 @@ export const invoicesService = {
         const invoice = await invoicesDal.create({
             paymentId: payment.id,
             userId: payment.userId,
-            amount: payment.amount,
+            amount: payment.amountCents,
             currency: payment.currency,
         });
 

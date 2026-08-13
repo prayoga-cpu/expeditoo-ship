@@ -1,14 +1,14 @@
-import { use } from "react";
-import { AuctionDetail } from "@/features/app/auction/ui";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
+import { JobDetail } from "@/features/app/listing/ui";
 
-export default function ListingDetailPage({
-  params,
-}: {
+interface PageProps {
   params: Promise<{ id: string }>;
-}) {
-  const { id } = use(params);
+}
 
-  // TODO: Determine if listing is auction or standard listing based on ID or data
-  // For now, rendering AuctionDetail as requested for testing realtime features
-  return <AuctionDetail id={id} />;
+export default async function ListingPage({ params }: PageProps) {
+  const { id } = await params;
+  const session = await auth.api.getSession({ headers: await headers() });
+
+  return <JobDetail listingId={id} viewerId={session?.user.id ?? null} />;
 }

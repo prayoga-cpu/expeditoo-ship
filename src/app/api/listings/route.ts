@@ -1,110 +1,41 @@
-import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { createListingSchema } from "@/server/dto/listings.dto";
-import { listingsService } from "@/server/services/listings.service";
 import { headers } from "next/headers";
+import { listingsService } from "@/server/services/listings.service";
+import {
+  createListingSchema,
+  browseListingsQuerySchema,
+} from "@/server/dto/listings.dto";
+import { ok, unauthorised, handleError } from "@/lib/api-response";
 
-export async function POST(req: Request) {
+/**
+ * GET /api/listings
+ * Marketplace browse. Only open jobs, visible to anyone.
+ */
+export async function GET(req: Request) {
   try {
-    const session = await auth.api.getSession({
-      headers: await headers(),
-    });
-
-    if (!session) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: { code: "UNAUTHORIZED", message: "Unauthorized" },
-        },
-        { status: 401 }
-      );
-    }
-
-    const body = await req.json();
-    const validation = createListingSchema.safeParse(body);
-
-    if (!validation.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Invalid request data",
-            details: validation.error.format(),
-          },
-        },
-        { status: 400 }
-      );
-    }
-
-    const listing = await listingsService.createListing(
-      session.user.id,
-      validation.data
+    const query = browseListingsQuerySchema.parse(
+      Object.fromEntries(new URL(req.url).searchParams)
     );
 
-    return NextResponse.json({ success: true, data: listing }, { status: 201 });
+    return ok(await listingsService.browse(query));
   } catch (error) {
-    console.error("Create listing error:", error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: "INTERNAL_SERVER_ERROR",
-          message:
-            error instanceof Error ? error.message : "Internal server error",
-        },
-      },
-      { status: 500 }
-    );
+    return handleError(error, "Browse listings");
   }
 }
 
-export async function GET(_req: Request) {
+/**
+ * POST /api/listings
+ * Post a transport job, as a draft or straight to the marketplace.
+ */
+export async function POST(req: Request) {
   try {
-    const session = await auth.api.getSession({
-      headers: await headers(),
-    });
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session) return unauthorised();
 
-    if (!session) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: { code: "UNAUTHORIZED", message: "Unauthorized" },
-        },
-        { status: 401 }
-      );
-    }
+    const data = createListingSchema.parse(await req.json());
 
-    const listings = await listingsService.getListingsBySeller(session.user.id);
-
-    // Sanitize data: If status is sold/ended but endsAt is in future, override it to now
-    // This fixes stale data from before the manual end fix
-    const sanitizedListings = listings.map((listing) => {
-      if (
-        (listing.status === "sold" || listing.status === "ended") &&
-        listing.endsAt &&
-        new Date(listing.endsAt) > new Date()
-      ) {
-        return {
-          ...listing,
-          endsAt: new Date(), // Set to now so it shows as ended
-        };
-      }
-      return listing;
-    });
-
-    return NextResponse.json({ success: true, data: sanitizedListings });
+    return ok(await listingsService.createListing(session.user.id, data), 201);
   } catch (error) {
-    console.error("Get listings error:", error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Internal server error",
-        },
-      },
-      { status: 500 }
-    );
+    return handleError(error, "Create listing");
   }
 }

@@ -1,4 +1,3 @@
-export * from "./auctions.api";
 export {
     fetchAddresses,
     fetchAddressById,

@@ -1,26 +1,20 @@
-import { NextRequest, NextResponse } from "next/server";
-import { listingsService } from "@/server/services/listings.service";
+import { listingsDal } from "@/server/dal/listings.dal";
+import { ok, handleError } from "@/lib/api-response";
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+interface RouteParams {
+  params: Promise<{ id: string }>;
+}
+
+/**
+ * GET /api/users/:id/listings
+ * A user's public job history - open jobs only, so drafts and cancellations
+ * stay private.
+ */
+export async function GET(_req: Request, { params }: RouteParams) {
   try {
     const { id } = await params;
-    const listings = await listingsService.getListingsBySeller(id);
-
-    return NextResponse.json({ success: true, data: listings });
+    return ok(await listingsDal.getByShipperId(id, "open"));
   } catch (error) {
-    console.error("Error fetching user listings:", error);
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: { 
-          code: "INTERNAL_SERVER_ERROR", 
-          message: "Internal Server Error" 
-        } 
-      },
-      { status: 500 }
-    );
+    return handleError(error, "Get user listings");
   }
 }

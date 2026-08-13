@@ -186,7 +186,7 @@ export async function getRecentActivity(): Promise<ActivityItem[]> {
 
   // Map new listings to activity items
   for (const listing of recentListings) {
-    const sellerName = listing.seller?.name || "Unknown Seller";
+    const sellerName = listing.shipper?.name || "Unknown Seller";
     activities.push({
       id: listing.id,
       user: sellerName,

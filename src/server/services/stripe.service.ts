@@ -1,4 +1,3 @@
-import { earningsService } from "@/server/services/earnings.service";
 import { db } from "@/db";
 import { user } from "@/db/schema/users";
 import { payments } from "@/db/schema/payments";
@@ -159,11 +158,11 @@ export const stripeService = {
         const paymentIntent = event.data.object as Stripe.PaymentIntent;
         const transferGroup = paymentIntent.transfer_group;
 
-        if (paymentIntent.status === "succeeded" && transferGroup) {
+        if (paymentIntent.status === "captured" && transferGroup) {
           // Update local payment status
           await db
             .update(payments)
-            .set({ status: "succeeded" })
+            .set({ status: "captured" })
             .where(eq(payments.stripePaymentIntentId, paymentIntent.id));
 
           // Trigger transfers (Seller + Driver)
