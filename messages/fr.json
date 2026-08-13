@@ -78,7 +78,10 @@
       "backToApp": "Retour à l'app",
       "createAuction": "Créer une enchère",
       "shipmentTracking": "Suivi d'expédition",
-      "myBids": "Mes offres"
+      "myBids": "Mes offres",
+      "jobs": "Missions",
+      "myOffers": "Mes offres",
+      "deliveries": "Livraisons"
     },
     "categories": {
       "electronics": "Électronique",

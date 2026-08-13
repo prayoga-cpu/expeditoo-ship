@@ -41,7 +41,10 @@
       "backToApp": "Back to App",
       "createAuction": "Create Auction",
       "shipmentTracking": "Shipment Tracking",
-      "myBids": "My Bids"
+      "myBids": "My Bids",
+      "jobs": "Jobs",
+      "myOffers": "My offers",
+      "deliveries": "Deliveries"
     },
     "categories": {
       "electronics": "Electronics",

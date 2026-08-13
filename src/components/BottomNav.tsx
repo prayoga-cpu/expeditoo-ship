@@ -3,7 +3,15 @@
 import type React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Calendar, Plus, MessageCircle, User } from "lucide-react";
+import {
+  Home,
+  Calendar,
+  Plus,
+  MessageCircle,
+  User,
+  Gavel,
+  Truck,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
 
@@ -15,28 +23,67 @@ interface NavItem {
 }
 
 import { useUnreadMessages } from "@/features/app/messages/hooks";
+import { useAuth } from "@/lib/auth-context";
 
 export function BottomNav() {
   const pathname = usePathname();
   const { unreadCount } = useUnreadMessages();
   const t = useTranslations("common.navigation");
+  const { user } = useAuth();
 
-  const navItems: NavItem[] = [
-    { href: "/home", labelKey: "home", icon: <Home className="w-5 h-5" /> },
-    {
-      href: "/deliveries",
-      labelKey: "shipments",
-      icon: <Calendar className="w-5 h-5" />,
-    },
-    { href: "/create", labelKey: "create", icon: <Plus className="w-5 h-5" /> },
-    {
-      href: "/messages",
-      labelKey: "messages",
-      icon: <MessageCircle className="w-5 h-5" />,
-      badge: unreadCount > 0 ? unreadCount : undefined,
-    },
-    { href: "/profile", labelKey: "account", icon: <User className="w-5 h-5" /> },
-  ];
+  // Roles come from the session; a user who both ships and drives sees the
+  // driver bar, since that is the side with the time-sensitive work.
+  const roles = (user as { roles?: string[] } | null)?.roles ?? [];
+  const isDriver = roles.includes("carrier") || roles.includes("driver");
+
+  const messages: NavItem = {
+    href: "/messages",
+    labelKey: "messages",
+    icon: <MessageCircle className="w-5 h-5" />,
+    badge: unreadCount > 0 ? unreadCount : undefined,
+  };
+  const account: NavItem = {
+    href: "/profile",
+    labelKey: "account",
+    icon: <User className="w-5 h-5" />,
+  };
+
+  /**
+   * One bar cannot serve both sides of the marketplace: a shipper's primary
+   * action is posting a job, a driver's is finding one and tracking what they
+   * won. Drivers get the board and their offers; shippers get the post button.
+   */
+  const navItems: NavItem[] = isDriver
+    ? [
+        { href: "/home", labelKey: "jobs", icon: <Home className="w-5 h-5" /> },
+        {
+          href: "/carrier/offers",
+          labelKey: "myOffers",
+          icon: <Gavel className="w-5 h-5" />,
+        },
+        {
+          href: "/deliveries",
+          labelKey: "deliveries",
+          icon: <Truck className="w-5 h-5" />,
+        },
+        messages,
+        account,
+      ]
+    : [
+        { href: "/home", labelKey: "home", icon: <Home className="w-5 h-5" /> },
+        {
+          href: "/deliveries",
+          labelKey: "shipments",
+          icon: <Calendar className="w-5 h-5" />,
+        },
+        {
+          href: "/create",
+          labelKey: "create",
+          icon: <Plus className="w-5 h-5" />,
+        },
+        messages,
+        account,
+      ];
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border/50 xl:hidden pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] h-[88px]">

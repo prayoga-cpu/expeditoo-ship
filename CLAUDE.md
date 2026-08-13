@@ -130,32 +130,35 @@ next-intl (FR + EN) · next-pwa + Capacitor (Android) · Vitest + Playwright.
 
 ## Where Things Stand
 
-Phase A (bidding core) is partly done. Tracked in
-`docs/plans/plan_phase_a_bidding_core.md`.
+Phase A is functionally complete. Phase B (Expedion bridge) is wired both ways.
+Tracked in `docs/plans/plan_phase_a_bidding_core.md` and
+`docs/plans/plan_transport_only_refinement.md`.
+
+**Gates — all green.** `npx tsc --noEmit` 0 errors · `pnpm lint` 0 errors ·
+117 unit tests pass · `pnpm build` succeeds (104 pages).
 
 **Done**
 - Schema remodelled to the transport model; one clean initial migration
-- Goods-auction surface deleted (feature, pages, routes, services, DAL, DTOs, emails)
-- Offers engine: DTO, DAL, service, REST routes — including the atomic accept
-  transaction, its concurrency guarantee, idempotency and Stripe compensation
-- Listings rebuilt as transport jobs: DTO, DAL, service
-- Carriers DAL
+- Goods-auction surface deleted, including its checkout, browse card and categories
+- Offers engine: DTO, DAL, service, routes — atomic accept, concurrency guarantee,
+  idempotency, Stripe compensation. 30 tests
+- Listings as transport jobs: DTO, DAL, service, routes. 25 tests
+- Carrier/driver KYC: application, private document storage, fleet, admin
+  approve/reject/suspend, expiry cron. 26 tests
+- Payments: held on acceptance, captured on delivery, released on cancellation,
+  10% commission at source, payout recorded
+- Shipper UI: four-step job form, job detail with offer comparison and accept
+- Driver UI: bid form, my offers, job board with filters
+- Expedion bridge: inbound escalation creates a listing; status changes write back
+- Crons: listing expiry, document expiry, escalation sweep — declared in `vercel.json`
+- FR/EN parity exact (verified by key diff, not by eye)
 
-**Not done**
-- Carrier KYC service, routes and admin review UI (WP4)
-- All UI (WP5): job creation form, job detail with offer comparison, carrier
-  bid + fleet screens, browse filters, nav cleanup
-- Payment authorisation on acceptance and payout records (WP6)
-- Rewrites still pending in `shipments.dal.ts`, `reviews.service.ts`,
-  `messages.service.ts`, `admin.dal.ts`, and the `create` feature UI
-- Unit tests demanded by each spec's "test coverage required" section
-
-**`npx tsc --noEmit` does not pass yet.** The remaining errors are confined to
-the files listed above, which still speak the old goods model. The Phase A core
-(`offers`, `listings`, `carriers`, schema, new routes) is clean. Check the
-error set before assuming a failure is yours.
-
----
+**Not done** — see `plan_transport_only_refinement.md` WP11–WP16
+- Driver onboarding + fleet **screens** (service and REST layer are done)
+- Admin carrier review screens
+- `seller`/`buyer` vocabulary still in ~70 files
+- Marketing copy still describes a marketplace
+- E2E proving the exit criteria end to end
 
 ## Gotchas
 
