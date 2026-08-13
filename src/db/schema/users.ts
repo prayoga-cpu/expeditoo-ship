@@ -15,33 +15,28 @@ import { reviews } from "./reviews";
 // ========================================
 // User Roles Enum
 // ========================================
+// Seven roles per docs/specs/roles_spec.md. The carrier company is separate
+// from the drivers it employs, and back-office duties are split out of admin
+// so support and finance staff never hold full access.
 
 export const userRoleEnum = pgEnum("user_role", [
-  "buyer",
-  "seller",
-  "auctioneer",
-  "transporter",
+  "shipper",
+  "carrier",
+  "driver",
   "operator",
+  "support",
+  "finance",
   "admin",
 ]);
 
 export type UserRoleEnum =
-  | "buyer"
-  | "seller"
-  | "auctioneer"
-  | "transporter"
+  | "shipper"
+  | "carrier"
+  | "driver"
   | "operator"
+  | "support"
+  | "finance"
   | "admin";
-
-// ========================================
-// Application Status Enum
-// ========================================
-
-export const applicationStatusEnum = pgEnum("application_status", [
-  "PENDING",
-  "APPROVED",
-  "REJECTED",
-]);
 
 // ========================================
 // Stripe Account Status Enum
@@ -60,9 +55,9 @@ export const stripeAccountStatusEnum = pgEnum("stripe_account_status", [
 export interface UserPreferences {
   notifications: {
     email: {
-      auctionResults: boolean;
-      outbid: boolean;
-      orderConfirmation: boolean;
+      offerReceived: boolean;
+      offerAccepted: boolean;
+      offerRejected: boolean;
       paymentConfirmation: boolean;
       shipmentUpdates: boolean;
       invoiceReady: boolean;
@@ -70,9 +65,9 @@ export interface UserPreferences {
       security: boolean;
     };
     inApp: {
-      auctionResults: boolean;
-      outbid: boolean;
-      orderConfirmation: boolean;
+      offerReceived: boolean;
+      offerAccepted: boolean;
+      offerRejected: boolean;
       paymentConfirmation: boolean;
       shipmentUpdates: boolean;
       invoiceReady: boolean;
@@ -84,9 +79,9 @@ export interface UserPreferences {
 export const defaultPreferences: UserPreferences = {
   notifications: {
     email: {
-      auctionResults: true,
-      outbid: true,
-      orderConfirmation: true,
+      offerReceived: true,
+      offerAccepted: true,
+      offerRejected: true,
       paymentConfirmation: true,
       shipmentUpdates: true,
       invoiceReady: true,
@@ -94,9 +89,9 @@ export const defaultPreferences: UserPreferences = {
       security: true,
     },
     inApp: {
-      auctionResults: true,
-      outbid: true,
-      orderConfirmation: true,
+      offerReceived: true,
+      offerAccepted: true,
+      offerRejected: true,
       paymentConfirmation: true,
       shipmentUpdates: true,
       invoiceReady: true,
@@ -109,42 +104,45 @@ export const defaultPreferences: UserPreferences = {
 // Users Table (Better Auth Standard)
 // ========================================
 
-export const user = pgTable("user", {
-  id: text("id").primaryKey(),
-  name: text("name").notNull(),
-  email: text("email").notNull().unique(),
-  emailVerified: boolean("email_verified").default(false).notNull(),
-  image: text("image"),
-  banned: boolean("banned").default(false).notNull(),
-  rating: doublePrecision("rating").default(0).notNull(),
-  reputationScore: integer("reputation_score").default(0).notNull(),
+export const user = pgTable(
+  "user",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    email: text("email").notNull().unique(),
+    emailVerified: boolean("email_verified").default(false).notNull(),
+    image: text("image"),
+    banned: boolean("banned").default(false).notNull(),
+    rating: doublePrecision("rating").default(0).notNull(),
+    reputationScore: integer("reputation_score").default(0).notNull(),
 
-  // Stripe Connect
-  stripeAccountId: text("stripe_account_id"),
-  stripeAccountStatus: stripeAccountStatusEnum("stripe_account_status").default(
-    "pending"
-  ),
-  stripeCustomerId: text("stripe_customer_id"),
+    // Stripe Connect
+    stripeAccountId: text("stripe_account_id"),
+    stripeAccountStatus: stripeAccountStatusEnum(
+      "stripe_account_status"
+    ).default("pending"),
+    stripeCustomerId: text("stripe_customer_id"),
 
-  // JSONB Preferences Column
-  preferences: jsonb("preferences")
-    .$type<UserPreferences>()
-    .default(defaultPreferences)
-    .notNull(),
+    // JSONB Preferences Column
+    preferences: jsonb("preferences")
+      .$type<UserPreferences>()
+      .default(defaultPreferences)
+      .notNull(),
 
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
-    .defaultNow()
-    .$onUpdate(() => new Date())
-    .notNull(),
-  isVerified: boolean("is_verified").default(false).notNull(),
-},
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+    isVerified: boolean("is_verified").default(false).notNull(),
+  },
   (table) => {
     return [
       index("user_rating_idx").on(table.rating),
       index("user_reputation_idx").on(table.reputationScore),
     ];
-  });
+  }
+);
 
 // ========================================
 // Sessions Table (Better Auth Standard)
@@ -220,43 +218,25 @@ export const verification = pgTable(
 // ========================================
 // User Roles Table (Custom - Many-to-Many)
 // ========================================
+// A user may hold several roles; a carrier who also ships is normal.
 
-export const userRoles = pgTable("user_roles", {
-  id: text("id").primaryKey(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
-  role: userRoleEnum("role").notNull(),
-  assignedAt: timestamp("assigned_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  assignedBy: text("assigned_by").references(() => user.id, {
-    onDelete: "set null",
-  }),
-});
-
-// ========================================
-// Driver Applications Table
-// ========================================
-
-export const driverApplications = pgTable("driver_applications", {
-  id: text("id").primaryKey(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
-  status: applicationStatusEnum("status").default("PENDING").notNull(),
-  vehicleType: text("vehicle_type").notNull(),
-  vehiclePlate: text("vehicle_plate").notNull(),
-  licenseNumber: text("license_number").notNull(),
-  siret: text("siret").notNull(),
-  companyName: text("company_name"),
-  proposalRate: text("proposal_rate"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
-    .defaultNow()
-    .$onUpdate(() => new Date())
-    .notNull(),
-});
+export const userRoles = pgTable(
+  "user_roles",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    role: userRoleEnum("role").notNull(),
+    assignedAt: timestamp("assigned_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    assignedBy: text("assigned_by").references(() => user.id, {
+      onDelete: "set null",
+    }),
+  },
+  (table) => [index("user_roles_user_idx").on(table.userId)]
+);
 
 // ========================================
 // Relations
@@ -268,7 +248,6 @@ export const userRelations = relations(user, ({ many }) => ({
   }),
   sessions: many(session),
   accounts: many(account),
-  driverApplications: many(driverApplications),
   // Reviews relations (bidirectional with reviews schema)
   reviewsReceived: many(reviews, {
     relationName: "targetUserToReviews",
@@ -305,16 +284,6 @@ export const userRolesRelations = relations(userRoles, ({ one }) => ({
   }),
 }));
 
-export const driverApplicationsRelations = relations(
-  driverApplications,
-  ({ one }) => ({
-    user: one(user, {
-      fields: [driverApplications.userId],
-      references: [user.id],
-    }),
-  })
-);
-
 // ========================================
 // Type Exports
 // ========================================
@@ -333,6 +302,3 @@ export type InsertAccount = typeof account.$inferInsert;
 
 export type Verification = typeof verification.$inferSelect;
 export type InsertVerification = typeof verification.$inferInsert;
-
-export type DriverApplication = typeof driverApplications.$inferSelect;
-export type InsertDriverApplication = typeof driverApplications.$inferInsert;

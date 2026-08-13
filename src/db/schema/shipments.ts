@@ -10,14 +10,16 @@ import {
 import { relations } from "drizzle-orm";
 import { user } from "./users";
 import { listings } from "./listings";
+import { offers } from "./offers";
 
 // ========================================
 // Shipment Status Enum
 // ========================================
+// A shipment is the execution record, created when the shipper accepts an
+// offer. Everything before that lives on the listing.
 
 export const shipmentStatusEnum = pgEnum("shipment_status", [
   "PENDING",
-  "PRICE_PROPOSED",
   "ASSIGNED",
   "PICKED_UP",
   "IN_TRANSIT",
@@ -33,41 +35,50 @@ export const shipments = pgTable(
   "shipments",
   {
     id: text("id").primaryKey(),
-    userId: text("user_id")
+
+    // Provenance: the job and the winning bid.
+    listingId: text("listing_id")
+      .notNull()
+      .references(() => listings.id, { onDelete: "cascade" }),
+    offerId: text("offer_id")
+      .notNull()
+      .references(() => offers.id, { onDelete: "restrict" }),
+
+    // Parties
+    shipperId: text("shipper_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    listingId: text("listing_id").references(() => listings.id, {
-      onDelete: "set null",
-    }),
+    carrierId: text("carrier_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    // The carrier's employee actually doing the run. Null until dispatched.
     driverId: text("driver_id").references(() => user.id, {
       onDelete: "set null",
     }),
+
     status: shipmentStatusEnum("status").default("PENDING").notNull(),
 
-    // Origin
-    originLat: doublePrecision("origin_lat").notNull(),
-    originLng: doublePrecision("origin_lng").notNull(),
-    originAddress: text("origin_address").notNull(),
+    // Route, copied from the listing so the record stays truthful even if the
+    // listing is later edited.
+    pickupLat: doublePrecision("pickup_lat").notNull(),
+    pickupLng: doublePrecision("pickup_lng").notNull(),
+    pickupAddress: text("pickup_address").notNull(),
+    dropoffLat: doublePrecision("dropoff_lat").notNull(),
+    dropoffLng: doublePrecision("dropoff_lng").notNull(),
+    dropoffAddress: text("dropoff_address").notNull(),
 
-    // Destination
-    destinationLat: doublePrecision("destination_lat").notNull(),
-    destinationLng: doublePrecision("destination_lng").notNull(),
-    destinationAddress: text("destination_address").notNull(),
+    // Agreed terms, from the accepted offer.
+    priceCents: integer("price_cents").notNull(),
+    scheduledPickup: timestamp("scheduled_pickup"),
+    scheduledDelivery: timestamp("scheduled_delivery"),
 
-    // Package Details
-    packageWeight: doublePrecision("package_weight"),
-    packageDimensions: text("package_dimensions"),
-    packageDescription: text("package_description"),
-
-    // Scheduling & Pricing
-    scheduledDate: timestamp("scheduled_date"),
-    price: integer("price"),
-
-    // Proof of Delivery
+    // Proof of delivery
     proofOfDeliveryUrl: text("proof_of_delivery_url"),
+    pickedUpAt: timestamp("picked_up_at"),
     deliveredAt: timestamp("delivered_at"),
+    cancelledAt: timestamp("cancelled_at"),
+    cancellationReason: text("cancellation_reason"),
 
-    // Timestamps
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
@@ -75,36 +86,11 @@ export const shipments = pgTable(
       .notNull(),
   },
   (table) => [
-    index("shipment_user_idx").on(table.userId),
+    index("shipment_listing_idx").on(table.listingId),
+    index("shipment_shipper_idx").on(table.shipperId),
+    index("shipment_carrier_idx").on(table.carrierId),
     index("shipment_driver_idx").on(table.driverId),
     index("shipment_status_idx").on(table.status),
-  ]
-);
-
-// ========================================
-// Shipment Proposals Table
-// ========================================
-
-export const shipmentProposals = pgTable(
-  "shipment_proposals",
-  {
-    id: text("id").primaryKey(),
-    shipmentId: text("shipment_id")
-      .notNull()
-      .references(() => shipments.id, { onDelete: "cascade" }),
-    driverId: text("driver_id")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
-    price: integer("price").notNull(),
-    estimatedPickup: timestamp("estimated_pickup"),
-    estimatedDelivery: timestamp("estimated_delivery"),
-    message: text("message"),
-    status: text("status").default("pending"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-  },
-  (table) => [
-    index("proposal_shipment_idx").on(table.shipmentId),
-    index("proposal_driver_idx").on(table.driverId),
   ]
 );
 
@@ -114,9 +100,10 @@ export const shipmentProposals = pgTable(
 
 export const actorRoleEnum = pgEnum("actor_role", [
   "system",
+  "shipper",
+  "carrier",
   "driver",
-  "buyer",
-  "seller",
+  "operator",
   "admin",
 ]);
 
@@ -133,10 +120,13 @@ export const shipmentEvents = pgTable(
       .references(() => shipments.id, { onDelete: "cascade" }),
     status: shipmentStatusEnum("status").notNull(),
     previousStatus: shipmentStatusEnum("previous_status"),
-    actorId: text("actor_id").references(() => user.id, { onDelete: "set null" }),
+    actorId: text("actor_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
     actorRole: actorRoleEnum("actor_role").notNull(),
     note: text("note"),
-    metadata: text("metadata"), // JSON string for flexibility (GPS coords, photo URL, etc)
+    // JSON string for flexibility (GPS coords, photo URL, etc).
+    metadata: text("metadata"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [
@@ -150,51 +140,42 @@ export const shipmentEvents = pgTable(
 // ========================================
 
 export const shipmentsRelations = relations(shipments, ({ one, many }) => ({
-  user: one(user, {
-    fields: [shipments.userId],
-    references: [user.id],
-    relationName: "userToShipments",
-  }),
   listing: one(listings, {
     fields: [shipments.listingId],
     references: [listings.id],
+  }),
+  offer: one(offers, {
+    fields: [shipments.offerId],
+    references: [offers.id],
+  }),
+  shipper: one(user, {
+    fields: [shipments.shipperId],
+    references: [user.id],
+    relationName: "shipperToShipments",
+  }),
+  carrier: one(user, {
+    fields: [shipments.carrierId],
+    references: [user.id],
+    relationName: "carrierToShipments",
   }),
   driver: one(user, {
     fields: [shipments.driverId],
     references: [user.id],
     relationName: "driverToShipments",
   }),
-  proposals: many(shipmentProposals),
   events: many(shipmentEvents),
 }));
 
-export const shipmentProposalsRelations = relations(
-  shipmentProposals,
-  ({ one }) => ({
-    shipment: one(shipments, {
-      fields: [shipmentProposals.shipmentId],
-      references: [shipments.id],
-    }),
-    driver: one(user, {
-      fields: [shipmentProposals.driverId],
-      references: [user.id],
-    }),
-  })
-);
-
-export const shipmentEventsRelations = relations(
-  shipmentEvents,
-  ({ one }) => ({
-    shipment: one(shipments, {
-      fields: [shipmentEvents.shipmentId],
-      references: [shipments.id],
-    }),
-    actor: one(user, {
-      fields: [shipmentEvents.actorId],
-      references: [user.id],
-    }),
-  })
-);
+export const shipmentEventsRelations = relations(shipmentEvents, ({ one }) => ({
+  shipment: one(shipments, {
+    fields: [shipmentEvents.shipmentId],
+    references: [shipments.id],
+  }),
+  actor: one(user, {
+    fields: [shipmentEvents.actorId],
+    references: [user.id],
+  }),
+}));
 
 // ========================================
 // Type Exports
@@ -203,14 +184,8 @@ export const shipmentEventsRelations = relations(
 export type Shipment = typeof shipments.$inferSelect;
 export type InsertShipment = typeof shipments.$inferInsert;
 
-export type ShipmentProposal = typeof shipmentProposals.$inferSelect;
-export type InsertShipmentProposal = typeof shipmentProposals.$inferInsert;
-
 export type ShipmentEvent = typeof shipmentEvents.$inferSelect;
 export type InsertShipmentEvent = typeof shipmentEvents.$inferInsert;
 
-// Status type
-export type ShipmentStatusType = typeof shipmentStatusEnum.enumValues[number];
-
-// Actor role type
-export type ActorRoleType = typeof actorRoleEnum.enumValues[number];
+export type ShipmentStatusType = (typeof shipmentStatusEnum.enumValues)[number];
+export type ActorRoleType = (typeof actorRoleEnum.enumValues)[number];

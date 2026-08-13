@@ -8,12 +8,9 @@ import { shipments } from "./shipments";
 // Reviews Table
 // ========================================
 
-export const reviewRoleEnum = pgEnum("review_role", [
-  "buyer",
-  "seller",
-  "driver",
-  "client",
-]);
+// Reviews run both ways between the two parties to a delivery
+// (ROADMAP.md §8 Phase C). The role records which side wrote the review.
+export const reviewRoleEnum = pgEnum("review_role", ["shipper", "carrier"]);
 
 export type ReviewRole = typeof reviewRoleEnum.enumValues[number];
 
