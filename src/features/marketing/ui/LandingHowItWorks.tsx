@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Gavel, Package, Search, Truck, ChevronRight } from "lucide-react";
+import { Package, Search, Truck, ChevronRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 export function LandingHowItWorks() {
@@ -39,7 +39,7 @@ export function LandingHowItWorks() {
       description: t("courier.step1.desc"),
     },
     {
-      icon: Gavel,
+      icon: Truck,
       title: t("courier.step2.title"),
       description: t("courier.step2.desc"),
     },
@@ -55,41 +55,12 @@ export function LandingHowItWorks() {
     },
   ];
 
-  const auctionSteps = [
-    {
-      icon: Search,
-      title: t("auction.step1.title"),
-      description: t("auction.step1.desc"),
-    },
-    {
-      icon: Gavel,
-      title: t("auction.step2.title"),
-      description: t("auction.step2.desc"),
-    },
-    {
-      icon: Package,
-      title: t("auction.step3.title"),
-      description: t("auction.step3.desc"),
-    },
-    {
-      icon: Truck,
-      title: t("auction.step4.title"),
-      description: t("auction.step4.desc"),
-    },
-  ];
-
   const tabs = [
     { id: "sender", label: t("tabs.sender"), icon: Package },
     { id: "courier", label: t("tabs.courier"), icon: Truck },
-    { id: "auction", label: t("tabs.auction"), icon: Gavel },
   ];
 
-  const steps =
-    activeTab === "sender"
-      ? senderSteps
-      : activeTab === "courier"
-        ? courierSteps
-        : auctionSteps;
+  const steps = activeTab === "sender" ? senderSteps : courierSteps;
 
   return (
     <div className="relative py-24 bg-linear-to-br from-muted/30 via-background to-primary/5 overflow-hidden">

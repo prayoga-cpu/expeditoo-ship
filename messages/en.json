@@ -1,80 +1,5 @@
 {
   "common": {
-    "errors": {
-      "loadFailed": "Failed to load data"
-    }
-  },
-  "bids": {
-    "title": "My Bids",
-    "tabs": {
-      "active": "Active",
-      "ended": "Ended"
-    },
-    "status": {
-      "winning": "Winning",
-      "outbid": "Outbid",
-      "won": "Won",
-      "lost": "Lost"
-    },
-    "card": {
-      "yourBid": "Your Bid",
-      "highest": "Highest",
-      "ended": "Ended"
-    },
-    "actions": {
-      "browse": "Browse Auctions",
-      "view": "View",
-      "bidAgain": "Bid Again",
-      "checkout": "Checkout",
-      "viewOrder": "View Order",
-      "rateSeller": "Rate Seller",
-      "reviewed": "Reviewed"
-    },
-    "empty": {
-      "activeTitle": "No active bids",
-      "activeDesc": "You don't have any active bids at the moment.",
-      "endedTitle": "No ended bids",
-      "endedDesc": "You haven't won or lost any auctions yet."
-    }
-  },
-  "checkout": {
-    "title": "Secure Checkout",
-    "steps": {
-      "address": "Shipping Address",
-      "payment": "Payment Method"
-    },
-    "loadingAddresses": "Loading delivery details...",
-    "errors": {
-      "loadAddresses": "Could not load addresses"
-    },
-    "retry": "Retry",
-    "noAddresses": {
-      "title": "No shipping address",
-      "subtitle": "Add an address to receive your item"
-    },
-    "addAddress": "Select Address",
-    "addNewAddress": "Add New Address",
-    "default": "Default",
-    "orderSummary": "Order Summary",
-    "summary": {
-      "auctionWin": "Auction Item",
-      "itemPrice": "Winning Bid",
-      "shippingFee": "Shipping",
-      "platformFee": "Service Fee"
-    },
-    "total": "Total Due",
-    "emailReceipt": {
-      "label": "Email for Receipt",
-      "placeholder": "name@example.com",
-      "hint": "We will send payment confirmation here"
-    },
-    "security": "Encrypted & Secure Payment via Stripe",
-    "actions": {
-      "continue": "Proceed to Payment",
-      "back": "Go Back"
-    }
-  },
-  "common": {
     "buttons": {
       "save": "Save",
       "cancel": "Cancel",
@@ -148,7 +73,8 @@
       "networkError": "Connection error",
       "notFound": "Not found",
       "unauthorized": "Unauthorized",
-      "tryAgain": "Please try again"
+      "tryAgain": "Please try again",
+      "loadFailed": "Failed to load"
     },
     "time": {
       "now": "Now",
@@ -157,6 +83,43 @@
       "daysAgo": "{count} days ago",
       "hoursAgo": "{count} hours ago",
       "minutesAgo": "{count} minutes ago"
+    }
+  },
+  "checkout": {
+    "title": "Secure Checkout",
+    "steps": {
+      "address": "Shipping Address",
+      "payment": "Payment Method"
+    },
+    "loadingAddresses": "Loading delivery details...",
+    "errors": {
+      "loadAddresses": "Could not load addresses"
+    },
+    "retry": "Retry",
+    "noAddresses": {
+      "title": "No shipping address",
+      "subtitle": "Add an address to receive your item"
+    },
+    "addAddress": "Select Address",
+    "addNewAddress": "Add New Address",
+    "default": "Default",
+    "orderSummary": "Order Summary",
+    "summary": {
+      "auctionWin": "Auction Item",
+      "itemPrice": "Winning Bid",
+      "shippingFee": "Shipping",
+      "platformFee": "Service Fee"
+    },
+    "total": "Total Due",
+    "emailReceipt": {
+      "label": "Email for Receipt",
+      "placeholder": "name@example.com",
+      "hint": "We will send payment confirmation here"
+    },
+    "security": "Encrypted & Secure Payment via Stripe",
+    "actions": {
+      "continue": "Proceed to Payment",
+      "back": "Go Back"
     }
   },
   "auth": {
@@ -670,99 +633,6 @@
       "CANCELLED": "Cancelled"
     }
   },
-  "auction": {
-    "title": "Auction",
-    "currentBid": "Current Bid",
-    "startingPrice": "Starting Price",
-    "yourBid": "Your Bid",
-    "placeBid": "Place Bid",
-    "placingBid": "Placing Bid...",
-    "minBid": "Minimum Bid",
-    "timeLeft": "Time Left",
-    "ends": "Ends",
-    "bids": "bids",
-    "noBids": "No bids",
-    "youAreWinning": "You're winning!",
-    "youAreOutbid": "You've been outbid",
-    "auctionEnded": "Auction ended",
-    "sold": "Sold",
-    "unsold": "Unsold",
-    "description": "Description",
-    "pickupLocation": "Pickup Location",
-    "bidHistory": "Bid History",
-    "status": {
-      "live": "Live Auction",
-      "sold": "Sold",
-      "ended": "Ended",
-      "cancelled": "Cancelled",
-      "secure": "Secure bidding"
-    },
-    "condition": {
-      "new": "New",
-      "used_like_new": "Used - Like New",
-      "used_good": "Used - Good",
-      "used_fair": "Used - Fair"
-    },
-    "category": {
-      "electronics": "Electronics",
-      "furniture": "Furniture",
-      "clothing": "Clothing",
-      "vehicles": "Vehicles",
-      "others": "Others"
-    },
-    "detail": {
-      "soldTitle": "Auction Sold!",
-      "soldDesc": "This item has been sold to the winning bidder",
-      "winningBid": "Winning Bid",
-      "winner": "Winner",
-      "highestBidder": "Highest Bidder",
-      "endedTitle": "Auction Ended",
-      "endedNoBids": "This auction ended with no bids",
-      "endedWithBids": "This auction has ended",
-      "finalBid": "Final Bid",
-      "startPrice": "Starting Price",
-      "cancelledTitle": "Auction Cancelled",
-      "cancelledDesc": "This auction was cancelled by the seller",
-      "originalPrice": "Original Price",
-      "reviews": "{count} reviews",
-      "chat": "Chat",
-      "viewProfile": "View Profile",
-      "noBidsYet": "No bids yet. Be the first to bid!",
-      "noBidsPlaced": "No bids were placed on this auction",
-      "ownListing": "This is your listing",
-      "cannotBid": "You cannot bid on your own auction",
-      "currentBid": "Current Bid",
-      "endsIn": "Ends in",
-      "soldFor": "Sold for {amount}",
-      "endedAt": "Ended at {amount}",
-      "endedNoBidsMobile": "Ended with no bids",
-      "cancelledMobile": "Auction Cancelled"
-    },
-    "errors": {
-      "loginToChat": "Please login to chat with seller",
-      "chatSelf": "You cannot chat with yourself",
-      "generic": "Something went wrong"
-    },
-    "buyNow": {
-      "label": "Buy Now",
-      "price": "Buy Now Price"
-    },
-    "autoBid": {
-      "title": "Set Auto-Bid",
-      "description": "Let us automatically bid for you up to your maximum amount",
-      "currentBid": "Current Bid",
-      "maxBidLabel": "Your Maximum Bid",
-      "maxBidHint": "Suggested: €{suggested} or higher",
-      "incrementLabel": "Bid Increment",
-      "howItWorks": "How it works",
-      "howItWorksDesc": "We'll automatically place the minimum bid needed to keep you winning, up to your maximum.",
-      "warning": "You'll be immediately outbid if someone bids higher than your max.",
-      "cancel": "Cancel",
-      "confirm": "Enable Auto-Bid",
-      "enabled": "Auto-Bid Active",
-      "maxReached": "Max bid reached"
-    }
-  },
   "listing": {
     "title": "Listing",
     "price": "Price",
@@ -1205,8 +1075,7 @@
       "title": "How it works?",
       "tabs": {
         "sender": "I'm sending",
-        "courier": "I'm carrying",
-        "auction": "Auctions"
+        "courier": "I'm carrying"
       },
       "sender": {
         "step1": {
@@ -1242,24 +1111,6 @@
         "step4": {
           "title": "Deliver and get paid",
           "desc": "Deliver the item and receive your payment."
-        }
-      },
-      "auction": {
-        "step1": {
-          "title": "Discover items",
-          "desc": "Browse our auctions to find unique items."
-        },
-        "step2": {
-          "title": "Place your bid",
-          "desc": "Place your bid and compete with other users."
-        },
-        "step3": {
-          "title": "Win and pay",
-          "desc": "If you win the auction, pay for the item securely."
-        },
-        "step4": {
-          "title": "Get it delivered",
-          "desc": "Get your winnings delivered by our trusted couriers."
         }
       }
     },
@@ -1509,246 +1360,6 @@
       "dashboard": "Dashboard",
       "users": "Users",
       "listing": "Listings",
-      "supportChats": "Support",
-      "driver": "Drivers",
-      "shipment": "Shipments",
-      "payments": "Payments",
-      "profile": "Profile"
-    },
-    "table": {
-      "total": "total rows",
-      "rowsPerPage": "Rows per page",
-      "pageOf": "Page {current} of {total}",
-      "goToFirst": "Go to first page",
-      "goToPrevious": "Go to previous page",
-      "goToNext": "Go to next page",
-      "goToLast": "Go to last page",
-      "searchPlaceholder": "Search...",
-      "clearFilters": "Clear filters",
-      "noResults": "No results found"
-    },
-    "support": {
-      "title": "Support Chats",
-      "subtitle": "Manage user support requests",
-      "refresh": "Refresh",
-      "searchPlaceholder": "Search by name or email...",
-      "tabs": {
-        "all": "All",
-        "unread": "Unread"
-      },
-      "empty": {
-        "unreadTitle": "No unread support chats",
-        "unreadDesc": "All support chats have been read",
-        "allTitle": "No support requests yet",
-        "allDesc": "Users can start a support chat from the Help page"
-      },
-      "time": {
-        "justNow": "Just now",
-        "minAgo": "{count}m ago",
-        "hoursAgo": "{count}h ago",
-        "yesterday": "Yesterday",
-        "daysAgo": "{count}d ago",
-        "noMessages": "No messages yet"
-      }
-    },
-    "dashboard": {
-      "title": "Admin Dashboard",
-      "subtitle": "Manage your platform",
-      "searchPlaceholder": "Search...",
-      "revenue": "Revenue",
-      "users": "Users",
-      "drivers": "Drivers",
-      "listings": "Listings",
-      "stats": {
-        "fromLastMonth": "{value} from last month",
-        "error": "Failed to load",
-        "failedChart": "Failed to load chart",
-        "failedActivity": "Failed to load activity",
-        "noActivity": "No recent activity",
-        "recentActivity": "Recent Activity"
-      },
-      "time": {
-        "justNow": "Just now",
-        "minAgo": "{count}m ago",
-        "hoursAgo": "{count}h ago",
-        "daysAgo": "{count}d ago"
-      }
-    },
-    "users": {
-      "title": "User Management",
-      "subtitle": "Manage platform users",
-      "table": {
-        "user": "User",
-        "name": "Name",
-        "email": "Email",
-        "role": "Role",
-        "status": "Status",
-        "joined": "Joined",
-        "joinDate": "Join Date",
-        "actions": "Actions",
-        "searchPlaceholder": "Search users...",
-        "empty": "No users found"
-      },
-      "actions": {
-        "view": "View",
-        "viewProfile": "View Profile",
-        "manageRoles": "Manage Roles",
-        "edit": "Edit",
-        "delete": "Delete",
-        "removeDriver": "Remove Driver",
-        "suspend": "Suspend",
-        "activate": "Activate",
-        "ban": "Ban",
-        "unban": "Unban"
-      },
-      "dialogs": {
-        "deleteTitle": "Delete User",
-        "deleteDescription": "Are you sure you want to delete this user?",
-        "banTitle": "Ban User",
-        "banDescription": "Are you sure you want to ban this user?",
-        "suspendTitle": "Suspend User",
-        "suspendDesc": "Are you sure you want to suspend {name}?",
-        "activateTitle": "Activate User",
-        "activateDesc": "Are you sure you want to activate {name}?",
-        "removeDriverTitle": "Remove Driver",
-        "removeDriverDesc": "Are you sure you want to remove driver status from {name}?",
-        "cancel": "Cancel",
-        "suspend": "Suspend",
-        "remove": "Remove"
-      },
-      "messages": {
-        "deleteSuccess": "User deleted successfully",
-        "banSuccess": "User banned successfully",
-        "unbanSuccess": "User unbanned successfully"
-      }
-    },
-    "listings": {
-      "title": "Listings Management",
-      "subtitle": "Manage platform listings",
-      "table": {
-        "title": "Title",
-        "seller": "Seller",
-        "price": "Price",
-        "status": "Status",
-        "views": "Views",
-        "viewsCount": "{count} views",
-        "created": "Created",
-        "actions": "Actions",
-        "view": "View",
-        "viewDetails": "View Details",
-        "edit": "Edit",
-        "delete": "Delete",
-        "searchPlaceholder": "Search listings...",
-        "empty": "No listings found"
-      },
-      "dialogs": {
-        "deleteTitle": "Are you sure?",
-        "deleteDescription": "This action cannot be undone. This will permanently delete the listing.",
-        "cancel": "Cancel",
-        "delete": "Delete",
-        "processing": "Deleting..."
-      }
-    },
-    "drivers": {
-      "title": "Driver Management",
-      "subtitle": "Manage driver applications",
-      "status": {
-        "pending": "Pending",
-        "approved": "Approved",
-        "rejected": "Rejected"
-      },
-      "table": {
-        "applicant": "Applicant",
-        "vehicle": "Vehicle",
-        "licensePlate": "License Plate",
-        "siret": "SIRET",
-        "date": "Date",
-        "name": "Name",
-        "email": "Email",
-        "phone": "Phone",
-        "status": "Status",
-        "applied": "Applied",
-        "actions": "Actions",
-        "approve": "Approve",
-        "reject": "Reject",
-        "view": "View",
-        "verified": "Verified",
-        "pending": "Pending",
-        "empty": "No pending applications",
-        "searchPlaceholder": "Search applications..."
-      }
-    },
-    "detail": {
-      "title": "Application Details",
-      "applicant": "Applicant",
-      "submissionDate": "Submission Date",
-      "currentStatus": "Current Status",
-      "vehicleInfo": "Vehicle & Company Information",
-      "vehicleType": "Vehicle Type",
-      "licensePlate": "License Plate",
-      "licenseNumber": "License Number",
-      "siret": "SIRET",
-      "companyName": "Company Name",
-      "proposal": "Proposal / Note",
-      "close": "Close",
-      "reject": "Reject",
-      "approve": "Approve",
-      "approvedTitle": "Application Approved",
-      "rejectedTitle": "Application Rejected",
-      "pending": "Pending",
-      "statusUpdatedDesc": "The application status has been updated.",
-      "error": "Error",
-      "errorDesc": "An error occurred while updating."
-    }
-  },
-  "shipments": {
-    "title": "Shipments Management",
-    "subtitle": "Manage platform shipments",
-    "table": {
-      "id": "ID",
-      "title": "Title",
-      "from": "From",
-      "to": "To",
-      "route": "Route",
-      "status": "Status",
-      "proposals": "Proposals",
-      "price": "Price",
-      "driver": "Driver",
-      "created": "Created",
-      "actions": "Actions",
-      "assign": "Assign Driver",
-      "view": "View",
-      "searchPlaceholder": "Search shipments...",
-      "empty": "No pending shipments found"
-    }
-  },
-  "reviews": {
-    "title": "Reviews",
-    "buyer": "Buyer",
-    "seller": "Seller",
-    "helpful": "Helpful",
-    "report": "Report",
-    "modal": {
-      "title": "Rate {name}",
-      "description": "Share your experience with this user. Your feedback helps build trust in our community.",
-      "ratingLabel": "Rating",
-      "commentLabel": "Additional Comments (Optional)",
-      "commentPlaceholder": "Describe your experience...",
-      "submit": "Submit Review",
-      "submitting": "Submitting...",
-      "cancel": "Cancel",
-      "errors": {
-        "ratingRequired": "Please select at least 1 star",
-        "commentTooLong": "Comment is too long"
-      }
-    }
-  },
-  "admin": {
-    "panelTitle": "Admin Panel",
-    "navigation": {
-      "dashboard": "Dashboard",
-      "users": "Users",
-      "listing": "Listings",
       "driver": "Drivers",
       "shipment": "Shipments",
       "payments": "Payments",
@@ -1764,7 +1375,8 @@
       "goToNext": "Go to next page",
       "goToLast": "Go to last page",
       "searchPlaceholder": "Search...",
-      "clearFilters": "Clear filters"
+      "clearFilters": "Clear filters",
+      "rowsSelected": "{selected} of {total} row(s) selected"
     },
     "dashboard": {
       "title": "Dashboard",
@@ -1992,6 +1604,27 @@
       "cancel": "Cancel",
       "assigning": "Assigning...",
       "acceptAssign": "Accept Proposal & Assign"
+    }
+  },
+  "reviews": {
+    "title": "Reviews",
+    "buyer": "Buyer",
+    "seller": "Seller",
+    "helpful": "Helpful",
+    "report": "Report",
+    "modal": {
+      "title": "Rate {name}",
+      "description": "Share your experience with this user. Your feedback helps build trust in our community.",
+      "ratingLabel": "Rating",
+      "commentLabel": "Additional Comments (Optional)",
+      "commentPlaceholder": "Describe your experience...",
+      "submit": "Submit Review",
+      "submitting": "Submitting...",
+      "cancel": "Cancel",
+      "errors": {
+        "ratingRequired": "Please select at least 1 star",
+        "commentTooLong": "Comment is too long"
+      }
     }
   }
 }

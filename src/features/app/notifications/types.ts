@@ -7,11 +7,17 @@ import type React from "react";
 
 export type NotificationType =
   | "message"
-  | "bid"
+  | "offer_received"
+  | "offer_accepted"
+  | "offer_rejected"
+  | "offer_invalidated"
+  | "listing_expired"
   | "delivery"
   | "review"
   | "payment"
   | "listing"
+  | "carrier_application"
+  | "shipment_update"
   | "shipment_assigned";
 
 export type NotificationTab = "all" | "unread" | "message";

@@ -6,7 +6,7 @@ import { useState, useCallback } from "react";
 import { useAdminListings } from "@/features/app/admin/hooks/useAdminListings";
 import { PageLoader } from "@/components/ui/page-loader";
 import { useTranslations } from "next-intl";
-import { AuctionDetail } from "@/features/app/auction/ui";
+import { JobDetail } from "@/features/app/listing/ui";
 
 export default function ListingsPage() {
   const {
@@ -33,10 +33,7 @@ export default function ListingsPage() {
 
   if (selectedListingId) {
     return (
-      <AuctionDetail
-        id={selectedListingId}
-        onBack={() => setSelectedListingId(null)}
-      />
+      <JobDetail listingId={selectedListingId} viewerId={null} />
     );
   }
 

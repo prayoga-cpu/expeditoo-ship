@@ -79,7 +79,7 @@ async function globalSetup(config: FullConfig) {
       console.log(`✅ ${account.name} SAVED to ${account.name}.json`);
       
     } catch (error) {
-      console.error(`❌ FAILED ${account.name}:`, error.message);
+      console.error(`❌ FAILED ${account.name}:`, (error as Error).message);
       
       // Capture failure screenshot
       const screenshotPath = path.join(process.cwd(), 'testing', 'results', `auth-fail-${account.name}.png`);

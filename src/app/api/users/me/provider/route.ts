@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
 
     // Get user's accounts to check provider
     const accounts = await db
-      .select({ providerId: account.providerId })
+      .select({ providerId: account.providerId, password: account.password })
       .from(account)
       .where(eq(account.userId, session.user.id));
 

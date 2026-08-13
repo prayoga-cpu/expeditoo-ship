@@ -1,38 +1,4 @@
 {
-
-  "bids": {
-    "title": "Mes Enchères",
-    "tabs": {
-      "active": "Actives",
-      "ended": "Terminées"
-    },
-    "status": {
-      "winning": "Gagnant",
-      "outbid": "Surenchéri",
-      "won": "Gagné",
-      "lost": "Perdu"
-    },
-    "card": {
-      "yourBid": "Votre Offre",
-      "highest": "Plus haute",
-      "ended": "Terminé"
-    },
-    "actions": {
-      "browse": "Parcourir",
-      "view": "Voir",
-      "bidAgain": "Enchérir à nouveau",
-      "checkout": "Payer",
-      "viewOrder": "Voir la commande",
-      "rateSeller": "Noter le vendeur",
-      "reviewed": "Noté"
-    },
-    "empty": {
-      "activeTitle": "Aucune enchère active",
-      "activeDesc": "Vous n'avez aucune enchère active pour le moment.",
-      "endedTitle": "Aucune enchère terminée",
-      "endedDesc": "Vous n'avez pas encore gagné ou perdu d'enchères."
-    }
-  },
   "checkout": {
     "title": "Secure Checkout",
     "steps": {
@@ -237,7 +203,11 @@
     "search": {
       "placeholder": "Rechercher par titre ou description...",
       "button": "Rechercher",
-      "noResults": "Aucun résultat trouvé"
+      "noResults": "Aucun résultat trouvé",
+      "clearRecent": "Effacer",
+      "noSuggestions": "Aucune suggestion",
+      "popularSearches": "Recherches populaires",
+      "recentSearches": "Recherches récentes"
     },
     "filters": {
       "title": "Filtres",
@@ -264,7 +234,8 @@
       "nearMe": "À proximité",
       "switch2D": "Passer en vue 2D",
       "switch3D": "Passer en vue 3D",
-      "myLocation": "Ma position"
+      "myLocation": "Ma position",
+      "locationError": "Impossible de vous localiser"
     },
     "states": {
       "error": "Échec du chargement des annonces. Veuillez réessayer.",
@@ -279,6 +250,11 @@
       "placeBid": "Enchérir",
       "bids": "offres",
       "bid": "offre"
+    },
+    "widgets": {
+      "more": "de plus",
+      "pendingCount": "{count, plural, =1 {# paiement en attente} other {# paiements en attente}}",
+      "pendingPayments": "Paiements en attente"
     }
   },
   "profile": {
@@ -471,6 +447,59 @@
         "seller": "Vendeur"
       },
       "empty": "Aucun avis disponible pour cet utilisateur"
+    },
+    "analytics": {
+      "avgOrderValue": "Valeur moyenne",
+      "avgTime": "Durée moyenne",
+      "deliveries": "Livraisons",
+      "earnings": "Revenus",
+      "fromLastMonth": "vs mois dernier",
+      "rating": "Note",
+      "recentDeliveries": "Livraisons récentes",
+      "recentPurchases": "Commandes récentes",
+      "revenue": "Chiffre d'affaires",
+      "revenueOverTime": "Chiffre d'affaires dans le temps",
+      "sales": "ventes",
+      "spending": "Dépenses",
+      "spendingOverTime": "Dépenses dans le temps",
+      "status": {
+        "delivered": "Livré",
+        "pending": "En attente",
+        "shipped": "Expédié"
+      },
+      "thisMonth": "ce mois-ci",
+      "topSellingItems": "Trajets les plus demandés",
+      "totalDistance": "Distance",
+      "totalEarnings": "Revenus",
+      "totalOrders": "Total des commandes",
+      "totalRevenue": "Chiffre d'affaires total",
+      "totalSales": "Total des ventes",
+      "totalSpent": "Total dépensé",
+      "weeklyEarnings": "Revenus hebdomadaires"
+    },
+    "invoices": {
+      "columns": {
+        "actions": "Actions",
+        "amount": "Montant",
+        "date": "Date",
+        "invoice": "Facture",
+        "status": "Statut"
+      },
+      "description": "Consultez et téléchargez vos factures de paiement",
+      "download": "Télécharger le PDF",
+      "empty": "Aucune facture",
+      "emptyDesc": "Vos factures apparaîtront ici après votre première commande.",
+      "error": "Échec du chargement des factures",
+      "errorDesc": "Réessayez plus tard ou contactez le support.",
+      "loading": "Chargement des factures…",
+      "status": {
+        "draft": "Brouillon",
+        "issued": "Émise",
+        "paid": "Payée",
+        "void": "Annulée"
+      },
+      "title": "Factures",
+      "view": "Voir"
     }
   },
   "settings": {
@@ -583,7 +612,8 @@
       "cancelling": "Annulation en cours...",
       "rateDriver": "Noter le chauffeur",
       "rateClient": "Noter le client",
-      "reviewed": "Noté"
+      "reviewed": "Noté",
+      "modifyShipment": "Modifier"
     },
     "dialogs": {
       "cancel": {
@@ -601,97 +631,6 @@
       "IN_TRANSIT": "En transit",
       "DELIVERED": "Livré",
       "CANCELLED": "Annulé"
-    }
-  },
-  "auction": {
-    "title": "Enchère",
-    "currentBid": "Enchère actuelle",
-    "startingPrice": "Prix de départ",
-    "yourBid": "Votre enchère",
-    "placeBid": "Enchérir",
-    "placingBid": "Enchère en cours...",
-    "minBid": "Enchère minimum",
-    "timeLeft": "Temps restant",
-    "ends": "Se termine",
-    "bids": "enchères",
-    "noBids": "Aucune enchère",
-    "youAreWinning": "Vous êtes en tête !",
-    "youAreOutbid": "Vous avez été surenchéri",
-    "auctionEnded": "Enchère terminée",
-    "sold": "Vendu",
-    "unsold": "Non vendu",
-    "description": "Description",
-    "pickupLocation": "Lieu de retrait",
-    "bidHistory": "Historique des enchères",
-    "status": {
-      "live": "Enchère en cours",
-      "sold": "Vendu",
-      "ended": "Terminé",
-      "cancelled": "Annulé",
-      "secure": "Enchère sécurisée"
-    },
-    "condition": {
-      "new": "Neuf",
-      "used_like_new": "Occasion - Comme neuf",
-      "used_good": "Occasion - Bon état",
-      "used_fair": "Occasion - État correct"
-    },
-    "category": {
-      "electronics": "Électronique",
-      "furniture": "Meubles",
-      "clothing": "Vêtements",
-      "vehicles": "Véhicules",
-      "others": "Autres"
-    },
-    "detail": {
-      "soldTitle": "Enchère Vendue !",
-      "soldDesc": "Cet article a été vendu au meilleur enchérisseur",
-      "winningBid": "Enchère Gagnante",
-      "winner": "Gagnant",
-      "highestBidder": "Meilleur Enchérisseur",
-      "endedTitle": "Enchère Terminée",
-      "endedNoBids": "Cette enchère s'est terminée sans offre",
-      "endedWithBids": "Cette enchère est terminée",
-      "finalBid": "Enchère Finale",
-      "startPrice": "Prix de départ",
-      "cancelledTitle": "Enchère Annulée",
-      "cancelledDesc": "Cette enchère a été annulée par le vendeur",
-      "originalPrice": "Prix d'origine",
-      "reviews": "{count} avis",
-      "chat": "Discuter",
-      "viewProfile": "Voir le profil",
-      "noBidsYet": "Pas encore d'offre. Soyez le premier !",
-      "noBidsPlaced": "Aucune offre n'a été placée sur cette enchère",
-      "ownListing": "Ceci est votre annonce",
-      "cannotBid": "Vous ne pouvez pas enchérir sur votre propre enchère",
-      "currentBid": "Enchère actuelle",
-      "endsIn": "Se termine dans",
-      "soldFor": "Vendu pour {amount}",
-      "endedAt": "Terminé à {amount}",
-      "endedNoBidsMobile": "Terminé sans offre",
-      "cancelledMobile": "Enchère Annulée"
-    },
-    "buyNow": {
-      "label": "Acheter maintenant"
-    },
-    "autoBid": {
-      "title": "Enchère auto",
-      "description": "Laissez notre système enchérir pour vous jusqu'à votre montant maximum.",
-      "currentBid": "Enchère actuelle",
-      "maxBidLabel": "Votre enchère maximum",
-      "maxBidHint": "Le montant maximum que vous êtes prêt à payer",
-      "incrementLabel": "Incrément d'enchère",
-      "howItWorks": "Comment ça marche ?",
-      "howItWorksDesc": "Nous enchérissons automatiquement juste assez pour vous garder en tête, jusqu'à votre maximum. Si quelqu'un enchérit plus haut que votre maximum, nous vous préviendrons.",
-      "warning": "En plaçant une enchère automatique, vous vous engagez à acheter cet article si vous gagnez.",
-      "confirm": "Confirmer l'enchère auto",
-      "cancel": "Annuler"
-    },
-    "cancel": "Annuler",
-    "errors": {
-      "loginToChat": "Veuillez vous connecter pour discuter avec le vendeur",
-      "chatSelf": "Vous ne pouvez pas discuter avec vous-même",
-      "generic": "Une erreur s'est produite"
     }
   },
   "listing": {
@@ -988,7 +927,8 @@
           "title": "Aucune expédition",
           "description": "Aucune expédition disponible trouvée correspondant à vos critères."
         }
-      }
+      },
+      "defaultTitle": "Expédition"
     },
     "shipmentDetail": {
       "notFound": "Expédition introuvable",
@@ -1052,7 +992,8 @@
       "priceRequired": "Le prix est requis",
       "successMessage": "Proposition soumise avec succès !",
       "alreadySubmitted": "Vous avez déjà soumis une proposition pour cette expédition.",
-      "errorMessage": "Échec de la soumission de la proposition. Veuillez réessayer."
+      "errorMessage": "Échec de la soumission de la proposition. Veuillez réessayer.",
+      "pickDate": "Choisir une date"
     },
     "apply": {
       "title": "Devenir chauffeur",
@@ -1151,8 +1092,7 @@
       "title": "Comment ça marche ?",
       "tabs": {
         "sender": "J'expédie",
-        "courier": "Je transporte",
-        "auction": "Enchères"
+        "courier": "Je transporte"
       },
       "sender": {
         "step1": {
@@ -1188,24 +1128,6 @@
         "step4": {
           "title": "Livrez et soyez payé",
           "desc": "Livrez l'objet et recevez votre paiement."
-        }
-      },
-      "auction": {
-        "step1": {
-          "title": "Découvrez des objets",
-          "desc": "Parcourez nos enchères pour trouver des objets uniques."
-        },
-        "step2": {
-          "title": "Placez votre enchère",
-          "desc": "Enchérissez et rivalisez avec d'autres utilisateurs."
-        },
-        "step3": {
-          "title": "Gagnez et payez",
-          "desc": "Si vous remportez l'enchère, payez l'objet en toute sécurité."
-        },
-        "step4": {
-          "title": "Faites-vous livrer",
-          "desc": "Faites livrer vos gains par nos transporteurs de confiance."
         }
       }
     },
@@ -1438,226 +1360,6 @@
       "dashboard": "Tableau de bord",
       "users": "Utilisateurs",
       "listing": "Annonces",
-      "supportChats": "Support",
-      "driver": "Chauffeurs",
-      "shipment": "Expéditions",
-      "payments": "Paiements",
-      "profile": "Profil"
-    },
-    "support": {
-      "title": "Chats de Support",
-      "subtitle": "Gérer les demandes de support utilisateur",
-      "refresh": "Actualiser",
-      "searchPlaceholder": "Rechercher par nom ou email...",
-      "tabs": {
-        "all": "Tous",
-        "unread": "Non lus"
-      },
-      "empty": {
-        "unreadTitle": "Aucun chat non lu",
-        "unreadDesc": "Tous les chats ont été lus",
-        "allTitle": "Aucune demande de support",
-        "allDesc": "Les utilisateurs peuvent démarrer un chat depuis la page Aide"
-      },
-      "time": {
-        "justNow": "À l'instant",
-        "minAgo": "Il y a {count}m",
-        "hoursAgo": "Il y a {count}h",
-        "yesterday": "Hier",
-        "daysAgo": "Il y a {count}j",
-        "noMessages": "Pas encore de messages"
-      }
-    },
-    "dashboard": {
-      "title": "Tableau de bord administrateur",
-      "subtitle": "Gérez votre plateforme",
-      "searchPlaceholder": "Rechercher...",
-      "revenue": "Revenus",
-      "users": "Utilisateurs",
-      "drivers": "Chauffeurs",
-      "listings": "Annonces",
-      "stats": {
-        "fromLastMonth": "{value} par rapport au mois dernier",
-        "error": "Échec du chargement",
-        "failedChart": "Échec du chargement du graphique",
-        "failedActivity": "Échec du chargement de l'activité",
-        "noActivity": "Aucune activité récente",
-        "recentActivity": "Activité récente"
-      },
-      "time": {
-        "justNow": "À l'instant",
-        "minAgo": "Il y a {count}m",
-        "hoursAgo": "Il y a {count}h",
-        "daysAgo": "Il y a {count}j"
-      }
-    },
-    "users": {
-      "title": "Gestion des utilisateurs",
-      "subtitle": "Gérer les utilisateurs de la plateforme",
-      "table": {
-        "user": "Utilisateur",
-        "name": "Nom",
-        "email": "Email",
-        "role": "Rôle",
-        "status": "Statut",
-        "joined": "Inscrit",
-        "joinDate": "Date d'inscription",
-        "actions": "Actions"
-      },
-      "actions": {
-        "view": "Voir",
-        "viewProfile": "Voir le profil",
-        "edit": "Modifier",
-        "delete": "Supprimer",
-        "removeDriver": "Retirer chauffeur",
-        "suspend": "Suspendre",
-        "activate": "Activer",
-        "ban": "Bannir",
-        "unban": "Débannir"
-      },
-      "dialogs": {
-        "deleteTitle": "Supprimer l'utilisateur",
-        "deleteDescription": "Êtes-vous sûr de vouloir supprimer cet utilisateur ?",
-        "banTitle": "Bannir l'utilisateur",
-        "banDescription": "Êtes-vous sûr de vouloir bannir cet utilisateur ?",
-        "suspendTitle": "Suspendre l'utilisateur",
-        "suspendDesc": "Êtes-vous sûr de vouloir suspendre {name} ?",
-        "activateTitle": "Activer l'utilisateur",
-        "activateDesc": "Êtes-vous sûr de vouloir activer {name} ?",
-        "removeDriverTitle": "Retirer le chauffeur",
-        "removeDriverDesc": "Êtes-vous sûr de vouloir retirer le statut de chauffeur de {name} ?",
-        "cancel": "Annuler",
-        "suspend": "Suspendre",
-        "remove": "Retirer"
-      },
-      "messages": {
-        "deleteSuccess": "Utilisateur supprimé avec succès",
-        "banSuccess": "Utilisateur banni avec succès",
-        "unbanSuccess": "Utilisateur débanni avec succès"
-      }
-    },
-    "listings": {
-      "title": "Gestion des annonces",
-      "subtitle": "Gérer les annonces de la plateforme",
-      "table": {
-        "title": "Titre",
-        "seller": "Vendeur",
-        "price": "Prix",
-        "status": "Statut",
-        "views": "Vues",
-        "viewsCount": "{count} vues",
-        "created": "Créé",
-        "actions": "Actions",
-        "view": "Voir",
-        "viewDetails": "Voir les détails",
-        "edit": "Modifier",
-        "delete": "Supprimer"
-      },
-      "dialogs": {
-        "deleteTitle": "Êtes-vous sûr ?",
-        "deleteDescription": "Cette action est irréversible. Cela supprimera définitivement l'annonce.",
-        "cancel": "Annuler",
-        "delete": "Supprimer",
-        "processing": "Suppression..."
-      }
-    },
-    "drivers": {
-      "title": "Gestion des chauffeurs",
-      "subtitle": "Gérer les candidatures de chauffeurs",
-      "status": {
-        "pending": "En attente",
-        "approved": "Approuvé",
-        "rejected": "Rejeté"
-      },
-      "table": {
-        "applicant": "Candidat",
-        "vehicle": "Véhicule",
-        "licensePlate": "Plaque d'immatriculation",
-        "siret": "SIRET",
-        "date": "Date",
-        "name": "Nom",
-        "email": "Email",
-        "phone": "Téléphone",
-        "status": "Statut",
-        "applied": "Candidature",
-        "actions": "Actions",
-        "approve": "Approuver",
-        "reject": "Rejeter",
-        "view": "Voir",
-        "verified": "Vérifié",
-        "pending": "En attente",
-        "empty": "Aucune candidature en attente"
-      },
-      "detail": {
-        "title": "Détails de la Candidature",
-        "applicant": "Candidat",
-        "submissionDate": "Date de soumission",
-        "currentStatus": "Statut Actuel",
-        "vehicleInfo": "Informations Véhicule & Entreprise",
-        "vehicleType": "Type de Véhicule",
-        "licensePlate": "Plaque d'immatriculation",
-        "licenseNumber": "Numéro de Permis",
-        "siret": "SIRET",
-        "companyName": "Nom de l'entreprise",
-        "proposal": "Proposition / Note",
-        "close": "Fermer",
-        "reject": "Rejeter",
-        "approve": "Approuver",
-        "approvedTitle": "Candidature Approuvée",
-        "rejectedTitle": "Candidature Rejetée",
-        "pending": "En attente",
-        "statusUpdatedDesc": "Le statut de la candidature a été mis à jour.",
-        "error": "Erreur",
-        "errorDesc": "Une erreur est survenue lors de la mise à jour."
-      }
-    },
-    "shipments": {
-      "title": "Gestion des expéditions",
-      "subtitle": "Gérer les expéditions de la plateforme",
-      "table": {
-        "id": "ID",
-        "title": "Titre",
-        "from": "De",
-        "to": "À",
-        "route": "Itinéraire",
-        "status": "Statut",
-      "proposals": "Propositions",
-      "price": "Prix",
-        "driver": "Chauffeur",
-        "created": "Créé",
-        "actions": "Actions",
-        "assign": "Assigner un chauffeur",
-        "view": "Voir"
-      }
-    }
-  },
-  "reviews": {
-    "title": "Avis",
-    "buyer": "Acheteur",
-    "seller": "Vendeur",
-    "helpful": "Utile",
-    "report": "Signaler",
-    "modal": {
-      "title": "Noter {name}",
-      "description": "Partagez votre expérience avec cet utilisateur. Vos commentaires aident à bâtir la confiance dans notre communauté.",
-      "ratingLabel": "Note",
-      "commentLabel": "Commentaires supplémentaires (Optionnel)",
-      "commentPlaceholder": "Décrivez votre expérience...",
-      "submit": "Soumettre l'avis",
-      "submitting": "Envoi...",
-      "cancel": "Annuler",
-      "errors": {
-        "ratingRequired": "Veuillez sélectionner au moins 1 étoile",
-        "commentTooLong": "Le commentaire est trop long"
-      }
-    }
-  },
-  "admin": {
-    "panelTitle": "Panneau d'administration",
-    "navigation": {
-      "dashboard": "Tableau de bord",
-      "users": "Utilisateurs",
-      "listing": "Annonces",
       "driver": "Chauffeurs",
       "shipment": "Expéditions",
       "payments": "Paiements",
@@ -1867,6 +1569,27 @@
         "cancel": "Annuler",
         "processing": "Traitement...",
         "confirm": "Confirmer le remboursement"
+      }
+    }
+  },
+  "reviews": {
+    "title": "Avis",
+    "buyer": "Acheteur",
+    "seller": "Vendeur",
+    "helpful": "Utile",
+    "report": "Signaler",
+    "modal": {
+      "title": "Noter {name}",
+      "description": "Partagez votre expérience avec cet utilisateur. Vos commentaires aident à bâtir la confiance dans notre communauté.",
+      "ratingLabel": "Note",
+      "commentLabel": "Commentaires supplémentaires (Optionnel)",
+      "commentPlaceholder": "Décrivez votre expérience...",
+      "submit": "Soumettre l'avis",
+      "submitting": "Envoi...",
+      "cancel": "Annuler",
+      "errors": {
+        "ratingRequired": "Veuillez sélectionner au moins 1 étoile",
+        "commentTooLong": "Le commentaire est trop long"
       }
     }
   },

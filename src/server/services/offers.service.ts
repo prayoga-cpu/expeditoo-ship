@@ -4,6 +4,7 @@ import { offersDal } from "@/server/dal/offers.dal";
 import { listingsDal } from "@/server/dal/listings.dal";
 import { carriersDal } from "@/server/dal/carriers.dal";
 import { notificationsService } from "@/server/services/notifications.service";
+import { paymentsService } from "@/server/services/payments.service";
 import {
   expedionBridgeService,
   notifyExpedion,
@@ -203,6 +204,28 @@ export const offersService = {
 
     const result = await this.commitAward(offerId, listing.id);
 
+    // Stripe is called after the commit, never inside it: an HTTP call holding
+    // a row lock open would block every other accept on this listing.
+    let payment;
+    try {
+      payment = await paymentsService.authoriseForShipment({
+        shipperId: shipperUserId,
+        shipmentId: result.shipment.id,
+        listingId: listing.id,
+        amountCents: existing.priceCents,
+        stripeCustomerId: listing.shipper?.stripeCustomerId ?? null,
+      });
+    } catch (cause) {
+      // The award is undone so the job returns to the marketplace with every
+      // bid intact, rather than sitting awarded but unfunded.
+      await this.compensateFailedAward(
+        listing.id,
+        offerId,
+        result.rejectedOffers.map((o) => o.id)
+      );
+      throw cause;
+    }
+
     // A job that arrived from Expedion has a buyer waiting in that app to see
     // which carrier won. No-op for `direct` listings, and never allowed to
     // fail the award it is reporting on.
@@ -214,7 +237,9 @@ export const offersService = {
       })
     );
 
-    return { ...result, alreadyAccepted: false };
+    await notifyAwardOutcome(existing, result.rejectedOffers, listing.title);
+
+    return { ...result, payment, alreadyAccepted: false };
   },
 
   /**
@@ -355,4 +380,40 @@ function sortOffers<T extends { carrier?: { rating?: number } }>(
   return [...rows].sort(
     (a, b) => (b.carrier?.rating ?? 0) - (a.carrier?.rating ?? 0)
   );
+}
+
+/**
+ * Tells the winner they won and every other bidder that they did not. Losing
+ * silently is the worst outcome for a carrier who is holding capacity open.
+ */
+async function notifyAwardOutcome(
+  winner: { carrierId: string; listingId: string },
+  rejected: { carrierId: string }[],
+  jobTitle: string
+) {
+  await Promise.all([
+    notificationsService
+      .createNotification({
+        userId: winner.carrierId,
+        type: "offer_accepted",
+        title: "Your offer was accepted",
+        message: `You won the job "${jobTitle}".`,
+        linkUrl: `/listing/${winner.listingId}`,
+        data: { listingId: winner.listingId },
+      })
+      .catch((e) => console.error("offer_accepted notification failed", e)),
+
+    ...rejected.map((offer) =>
+      notificationsService
+        .createNotification({
+          userId: offer.carrierId,
+          type: "offer_rejected",
+          title: "Another carrier was selected",
+          message: `The shipper chose a different offer for "${jobTitle}".`,
+          linkUrl: `/listing/${winner.listingId}`,
+          data: { listingId: winner.listingId },
+        })
+        .catch((e) => console.error("offer_rejected notification failed", e))
+    ),
+  ]);
 }

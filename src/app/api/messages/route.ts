@@ -25,7 +25,7 @@ export async function POST(req: Request) {
     const result = await messagesService.sendMessage(
       session.user.id, 
       validated,
-      { name: session.user.name, image: session.user.image }
+      { name: session.user.name, image: session.user.image ?? null }
     );
 
     return NextResponse.json({

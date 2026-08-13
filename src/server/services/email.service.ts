@@ -1,11 +1,7 @@
 import { resend, EMAIL_FROM } from "@/lib/email";
 import { SendEmailSchema, type SendEmailInput } from "@/server/dto/email.dto";
 import { WelcomeEmail } from "@/server/emails/WelcomeEmail";
-import { AuctionWinEmail } from "@/server/emails/AuctionWinEmail";
-import { AuctionEndedSellerEmail } from "@/server/emails/AuctionEndedSellerEmail";
-import { AuctionLostEmail } from "@/server/emails/AuctionLostEmail";
 import { PaymentReceiptEmail } from "@/server/emails/PaymentReceiptEmail";
-import { ItemPaidSellerEmail } from "@/server/emails/ItemPaidSellerEmail";
 import { ShipmentAssignedEmail } from "@/server/emails/ShipmentAssignedEmail";
 import { OrderConfirmationEmail } from "@/server/emails/OrderConfirmationEmail";
 import { ShipmentUpdateEmail } from "@/server/emails/ShipmentUpdateEmail";
@@ -66,96 +62,8 @@ export const emailService = {
     });
   },
 
-  /**
-   * Send Auction Win Email to winner
-   * Called immediately when auction ends and has a winner
-   */
-  async sendAuctionWinEmail(
-    to: string,
-    winnerName: string,
-    itemTitle: string,
-    winningAmount: number, // in cents
-    listingId: string
-  ) {
-    const checkoutUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://expeditoo.com"}/checkout/won/${listingId}`;
 
-    const emailHtml = await render(
-      AuctionWinEmail({
-        winnerName,
-        itemTitle,
-        winningAmount,
-        checkoutUrl,
-      })
-    );
 
-    return this.sendEmail({
-      to,
-      subject: `🎉 Congratulations! You won the auction for "${itemTitle}"`,
-      html: emailHtml,
-    });
-  },
-
-  /**
-   * Send Auction Ended Email to seller
-   * Called when auction ends (with or without winner)
-   */
-  async sendAuctionEndedSellerEmail(
-    to: string,
-    sellerName: string,
-    itemTitle: string,
-    hasWinner: boolean,
-    listingId: string,
-    winnerName?: string,
-    winningAmount?: number // in cents
-  ) {
-    const emailHtml = await render(
-      AuctionEndedSellerEmail({
-        sellerName,
-        itemTitle,
-        hasWinner,
-        winnerName,
-        winningAmount,
-        listingId,
-      })
-    );
-
-    const subject = hasWinner
-      ? `🎊 Your auction "${itemTitle}" has been sold!`
-      : `Your auction "${itemTitle}" has ended`;
-
-    return this.sendEmail({
-      to,
-      subject,
-      html: emailHtml,
-    });
-  },
-
-  /**
-   * Send Auction Lost Email to outbid bidders
-   * Called when auction ends for each losing bidder
-   */
-  async sendAuctionLostEmail(
-    to: string,
-    bidderName: string,
-    itemTitle: string,
-    yourHighestBid: number, // in cents
-    winningBid: number // in cents
-  ) {
-    const emailHtml = await render(
-      AuctionLostEmail({
-        bidderName,
-        itemTitle,
-        yourHighestBid,
-        winningBid,
-      })
-    );
-
-    return this.sendEmail({
-      to,
-      subject: `Auction ended - "${itemTitle}"`,
-      html: emailHtml,
-    });
-  },
 
   /**
    * Send Order Confirmation Email to buyer
@@ -226,32 +134,6 @@ export const emailService = {
     });
   },
 
-  /**
-   * Send Item Paid Email to seller
-   * Called when buyer confirms payment
-   */
-  async sendItemPaidSellerEmail(
-    to: string,
-    sellerName: string,
-    itemTitle: string,
-    salePrice: number, // in cents
-    orderId: string
-  ) {
-    const emailHtml = await render(
-      ItemPaidSellerEmail({
-        sellerName,
-        itemTitle,
-        salePrice,
-        orderId,
-      })
-    );
-
-    return this.sendEmail({
-      to,
-      subject: `💰 Payment Received - "${itemTitle}"`,
-      html: emailHtml,
-    });
-  },
 
   /**
    * Send Shipment Assigned Email to driver

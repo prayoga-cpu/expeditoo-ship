@@ -38,7 +38,7 @@ describe('userService', () => {
         });
 
         it('should throw if user not found', async () => {
-            vi.mocked(usersDAL.getUserById).mockResolvedValue(null);
+            vi.mocked(usersDAL.getUserById).mockResolvedValue(undefined);
             await expect(userService.getProfile('1')).rejects.toThrow('User not found');
         });
     });
@@ -51,8 +51,8 @@ describe('userService', () => {
             };
             vi.mocked(usersDAL.getUserById).mockResolvedValue(mockUser as any);
 
-            await userService.updatePreferences('1', { 
-                notifications: { email: { marketing: false } as any } 
+            await userService.updatePreferences('1', {
+                notifications: { email: { marketing: false } } as never,
             });
 
             expect(usersDAL.updateUser).toHaveBeenCalledWith('1', {

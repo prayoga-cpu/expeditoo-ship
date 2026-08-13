@@ -29,7 +29,9 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(url: string, init?: RequestInit): Promise<T> {
+type FetchInit = NonNullable<Parameters<typeof fetch>[1]>;
+
+async function request<T>(url: string, init?: FetchInit): Promise<T> {
   const res = await fetch(url, {
     ...init,
     headers: {

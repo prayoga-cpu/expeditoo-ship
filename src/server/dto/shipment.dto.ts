@@ -13,8 +13,7 @@ export const VALID_STATUS_TRANSITIONS: Record<
   ShipmentStatusType,
   ShipmentStatusType[]
 > = {
-  PENDING: ["PRICE_PROPOSED", "CANCELLED"],
-  PRICE_PROPOSED: ["ASSIGNED", "CANCELLED"],
+  PENDING: ["ASSIGNED", "CANCELLED"],
   ASSIGNED: ["PICKED_UP", "IN_TRANSIT", "DELIVERED", "CANCELLED"], // Relaxed for flexibility
   PICKED_UP: ["IN_TRANSIT", "DELIVERED", "CANCELLED"],
   IN_TRANSIT: ["DELIVERED", "PICKED_UP"], // Allow rollback if mistake
@@ -325,7 +324,6 @@ export function isValidStatusTransition(
 export function getStatusLabel(status: ShipmentStatusType): string {
   const labels: Record<ShipmentStatusType, string> = {
     PENDING: "deliveries.events.PENDING",
-    PRICE_PROPOSED: "deliveries.events.PRICE_PROPOSED",
     ASSIGNED: "deliveries.events.ASSIGNED",
     PICKED_UP: "deliveries.events.PICKED_UP",
     IN_TRANSIT: "deliveries.events.IN_TRANSIT",

@@ -8,7 +8,7 @@ import { DriverLayout } from "@/features/app/driver/ui";
 async function isDriver(userId: string) {
   const role = await db.query.userRoles.findFirst({
     where: (roles, { and, eq }) =>
-      and(eq(roles.userId, userId), eq(roles.role, "transporter")),
+      and(eq(roles.userId, userId), eq(roles.role, "driver")),
   });
   return !!role;
 }

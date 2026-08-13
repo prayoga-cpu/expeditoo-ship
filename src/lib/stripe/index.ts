@@ -12,6 +12,7 @@ if (!STRIPE_SECRET_KEY) {
  * Using API version compatible with the installed SDK.
  */
 export const stripe = new Stripe(STRIPE_SECRET_KEY, {
-  apiVersion: "2024-12-18.acacia", // Updated to latest stable or use exact version from package
+  // Left unset so the SDK uses the version it was built against; pinning a
+  // string here drifts out of sync with the installed package.
   typescript: true,
 });

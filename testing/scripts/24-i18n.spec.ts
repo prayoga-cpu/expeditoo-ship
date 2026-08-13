@@ -20,11 +20,10 @@ test.describe('Internationalization (i18n)', () => {
 
         test('I18N-002: French content available', async ({ page }) => {
             // Set French locale
-            await page.goto('/', {
-                headers: {
-                    'Accept-Language': 'fr-FR,fr;q=0.9',
-                },
+            await page.setExtraHTTPHeaders({
+                'Accept-Language': 'fr-FR,fr;q=0.9',
             });
+            await page.goto('/');
             await page.waitForLoadState('domcontentloaded');
             await page.waitForTimeout(1000);
 
@@ -38,11 +37,10 @@ test.describe('Internationalization (i18n)', () => {
         });
 
         test('I18N-003: English content available', async ({ page }) => {
-            await page.goto('/', {
-                headers: {
-                    'Accept-Language': 'en-US,en;q=0.9',
-                },
+            await page.setExtraHTTPHeaders({
+                'Accept-Language': 'en-US,en;q=0.9',
             });
+            await page.goto('/');
             await page.waitForLoadState('domcontentloaded');
 
             // Should show some English text

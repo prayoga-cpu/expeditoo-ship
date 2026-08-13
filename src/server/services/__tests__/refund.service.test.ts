@@ -55,7 +55,7 @@ describe('refundService', () => {
         });
 
         it('should throw if payment not found', async () => {
-            vi.mocked(db.query.payments.findFirst).mockResolvedValue(null);
+            vi.mocked(db.query.payments.findFirst).mockResolvedValue(undefined);
             await expect(refundService.processRefund('pay-99'))
                 .rejects.toThrow('Payment not found');
         });

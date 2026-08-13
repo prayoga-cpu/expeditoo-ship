@@ -128,7 +128,7 @@ function num(value: unknown): number | null {
   const s = text(value);
   if (s === null) return null;
   // Airtable free-text often carries units and comma decimals: "120,5 cm".
-  const cleaned = s.replace(",", ".").replace(/[^0-9.\-]/g, "");
+  const cleaned = s.replace(",", ".").replace(/[^0-9.-]/g, "");
   const n = Number(cleaned);
   return Number.isFinite(n) ? n : null;
 }

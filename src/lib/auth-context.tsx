@@ -19,7 +19,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const authValue: AuthContextType = {
     session: data?.session ?? null,
-    user: data?.user ?? null,
+    // better-auth's client session type omits the additionalFields declared
+    // in src/lib/auth.ts (isVerified, banned, stripe*), even though the runtime
+    // payload carries them. The cast bridges that gap in one place.
+    user: (data?.user as User | undefined) ?? null,
     isAuthenticated: !!data,
     isLoading: isPending,
   };

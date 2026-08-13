@@ -34,7 +34,7 @@ interface CreateReviewModalProps {
     targetUserId: string;
     targetUserName?: string;
     listingId?: string;
-    shipmentId?: string;
+    shipmentId: string;
 }
 
 export function CreateReviewModal({
@@ -62,11 +62,9 @@ export function CreateReviewModal({
     const onSubmit = (data: ReviewFormValues) => {
         createReview(
             {
-                targetUserId,
+                shipmentId,
                 rating: data.rating,
                 comment: data.comment,
-                listingId,
-                shipmentId,
             },
             {
                 onSuccess: () => {

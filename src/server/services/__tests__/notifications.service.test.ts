@@ -58,7 +58,7 @@ describe('notificationsService', () => {
             });
             vi.mocked(notificationsDal.countUnread).mockResolvedValue(5);
 
-            const result = await notificationsService.getUserNotifications('user-1', { limit: 10, offset: 0 });
+            const result = await notificationsService.getUserNotifications('user-1', { limit: 10, offset: 0, filter: 'all' });
 
             expect(result.meta.unreadCount).toBe(5);
             expect(notificationsDal.getByUserId).toHaveBeenCalled();

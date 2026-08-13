@@ -18,6 +18,7 @@ import { PageLoader } from "@/components/ui/page-loader";
 import { LottieLoader } from "@/components/ui/lottie-loader";
 import { useTranslations } from "next-intl";
 import { Reviews } from "./Reviews";
+import { startConversation } from "@/features/app/messages/api/conversations.api";
 
 interface PublicUser {
   id: string;
@@ -150,7 +151,7 @@ export function PublicProfile({
 
     try {
       setIsMessageLoading(true);
-      const { conversationId } = await initChat({ recipientId: id });
+      const { conversationId } = await startConversation(id);
       router.push(`/messages/${conversationId}`);
     } catch (error) {
       console.error("Message error:", error);

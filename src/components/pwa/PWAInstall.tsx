@@ -4,24 +4,8 @@ import React, { useEffect, useRef } from "react";
 // @ts-ignore
 import type { PWAInstallElement } from "@khmyznikov/pwa-install";
 
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      "pwa-install": React.DetailedHTMLProps<
-        React.HTMLAttributes<HTMLElement> & {
-          "manifest-url"?: string;
-          name?: string;
-          description?: string;
-          icon?: string;
-          "manual-apple"?: boolean;
-          "manual-chrome"?: boolean;
-          "disable-chrome"?: boolean;
-        },
-        HTMLElement
-      >;
-    }
-  }
-}
+// The <pwa-install> JSX typing ships with @khmyznikov/pwa-install; declaring
+// a second one here collides with it.
 
 export function PWAInstall() {
   const pwaInstallRef = useRef<PWAInstallElement | null>(null);

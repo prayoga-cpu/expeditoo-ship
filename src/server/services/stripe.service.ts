@@ -1,4 +1,6 @@
 import { db } from "@/db";
+import { shipmentsDal } from "@/server/dal/shipments.dal";
+import { paymentsService } from "@/server/services/payments.service";
 import { user } from "@/db/schema/users";
 import { payments } from "@/db/schema/payments";
 import { stripe } from "@/lib/stripe";
@@ -158,7 +160,7 @@ export const stripeService = {
         const paymentIntent = event.data.object as Stripe.PaymentIntent;
         const transferGroup = paymentIntent.transfer_group;
 
-        if (paymentIntent.status === "captured" && transferGroup) {
+        if (transferGroup) {
           // Update local payment status
           await db
             .update(payments)
@@ -167,7 +169,7 @@ export const stripeService = {
 
           // Trigger transfers (Seller + Driver)
           // NOTE: This logic might move to a separate function triggered here
-          await this.processSplitTransfers(paymentIntent);
+          await this.recordCarrierPayout(paymentIntent);
         }
         break;
       }
@@ -219,77 +221,26 @@ export const stripeService = {
   },
 
   /**
-   * Process Split Transfers after Payment Success
-   * "Separate Charges and Transfers" flow
+   * Records the carrier's payout once the held funds are captured.
+   *
+   * The goods model split one payment between a seller and a driver. A
+   * transport job has a single counterparty, so what remains is the job price
+   * less the platform commission, which was held at source.
    */
-  async processSplitTransfers(paymentIntent: Stripe.PaymentIntent) {
-    // We need metadata to know who gets what
-    const {
-      orderId,
-      sellerId,
-      driverId,
-      sellerStripeId,
-      driverStripeId,
-      itemAmount,
-      shippingAmount,
-    } = paymentIntent.metadata;
-
-    if (!orderId) return; // Should not happen if metadata is set correctly
-
-    // 1. Transfer to Seller (Item Cost)
-    if (sellerStripeId && itemAmount) {
-      try {
-        const transfer = await stripe.transfers.create({
-          amount: parseInt(itemAmount),
-          currency: paymentIntent.currency,
-          destination: sellerStripeId,
-          transfer_group: paymentIntent.transfer_group as string,
-          metadata: { orderId, type: "item_cost" },
-        });
-
-        // Record Earning in DB
-        if (sellerId) {
-          await earningsService.recordEarning({
-            userId: sellerId,
-            orderId,
-            amount: parseInt(itemAmount),
-            source: "sale",
-            description: "Item sale revenue",
-            stripeTransferId: transfer.id,
-          });
-        }
-      } catch (err) {
-        console.error("Seller transfer failed", err);
-        // Log failure for manual retry
-      }
+  async recordCarrierPayout(paymentIntent: Stripe.PaymentIntent) {
+    const shipmentId = paymentIntent.metadata?.shipmentId;
+    if (!shipmentId) {
+      console.error("payment_intent without shipmentId", paymentIntent.id);
+      return;
     }
 
-    // 2. Transfer to Driver (Shipping Cost)
-    if (driverStripeId && shippingAmount) {
-      try {
-        const transfer = await stripe.transfers.create({
-          amount: parseInt(shippingAmount),
-          currency: paymentIntent.currency,
-          destination: driverStripeId,
-          transfer_group: paymentIntent.transfer_group as string,
-          metadata: { orderId, type: "shipping_cost" },
-        });
-
-        // Record Earning in DB
-        if (driverId) {
-          await earningsService.recordEarning({
-            userId: driverId,
-            orderId,
-            amount: parseInt(shippingAmount),
-            source: "delivery",
-            description: "Delivery service revenue",
-            stripeTransferId: transfer.id,
-          });
-        }
-      } catch (err) {
-        console.error("Driver transfer failed", err);
-      }
+    const shipment = await shipmentsDal.getOwnership(shipmentId);
+    if (!shipment) {
+      console.error("payment_intent for unknown shipment", shipmentId);
+      return;
     }
+
+    await paymentsService.schedulePayout(shipmentId, shipment.carrierId);
   },
   /**
    * List Saved Payment Methods

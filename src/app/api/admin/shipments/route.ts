@@ -43,7 +43,7 @@ export async function GET(_req: Request) {
         const allShipments = await db.query.shipments.findMany({
             orderBy: [desc(shipments.createdAt)],
             with: {
-                user: {
+                shipper: {
                     columns: {
                         id: true,
                         name: true,
@@ -62,9 +62,10 @@ export async function GET(_req: Request) {
                         title: true,
                     },
                 },
-                proposals: {
+                offer: {
                     columns: {
                         id: true,
+                        priceCents: true,
                     },
                 },
             },

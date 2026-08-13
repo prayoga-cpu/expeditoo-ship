@@ -11,6 +11,9 @@ export default defineConfig({
     env: {
       STRIPE_SECRET_KEY: 'sk_test_mock_key',
       NEXT_PUBLIC_APP_URL: 'http://localhost:3000',
+      // src/db/index.ts throws at import time without this. Nothing connects
+      // during unit tests - the DAL is mocked - but the module is still loaded.
+      POSTGRES_URL: 'postgresql://test:test@localhost:5432/test',
     },
     coverage: {
       reporter: ['text', 'json', 'html'],

@@ -48,7 +48,7 @@ describe('invoicesService', () => {
             vi.mocked(paymentsDal.getById).mockResolvedValue({ 
                 id: 'p1', userId: 'u1', amount: 1000, currency: 'eur' 
             } as any);
-            vi.mocked(invoicesDal.getByPaymentId).mockResolvedValue(null);
+            vi.mocked(invoicesDal.getByPaymentId).mockResolvedValue(undefined);
             vi.mocked(usersDal.getUserById).mockResolvedValue({ 
                 id: 'u1', preferences: {} 
             } as any);

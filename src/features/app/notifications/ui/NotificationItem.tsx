@@ -9,10 +9,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
+import type { NotificationType } from "../types";
 
 interface NotificationItemProps {
   id: string;
-  type: "message" | "bid" | "delivery" | "review" | "payment" | "listing";
+  type: NotificationType;
   title: string;
   description: string;
   timestamp: string;
@@ -27,14 +28,20 @@ interface NotificationItemProps {
   onDismiss?: () => void;
 }
 
-const typeColors = {
-  message: "bg-blue-100 text-blue-800",
-  bid: "bg-purple-100 text-purple-800",
-  delivery: "bg-green-100 text-green-800",
-  review: "bg-yellow-100 text-yellow-800",
-  payment: "bg-emerald-100 text-emerald-800",
-  listing: "bg-pink-100 text-pink-800",
-  shipment_assigned: "bg-indigo-100 text-indigo-800",
+const typeColors: Record<NotificationType, string> = {
+  message: "bg-primary/10 text-primary",
+  offer_received: "bg-primary/10 text-primary",
+  offer_accepted: "bg-success/15 text-success",
+  offer_rejected: "bg-muted text-muted-foreground",
+  offer_invalidated: "bg-warning/15 text-warning",
+  listing_expired: "bg-warning/15 text-warning",
+  listing: "bg-primary/10 text-primary",
+  delivery: "bg-success/15 text-success",
+  shipment_update: "bg-success/15 text-success",
+  shipment_assigned: "bg-primary/10 text-primary",
+  carrier_application: "bg-warning/15 text-warning",
+  review: "bg-warning/15 text-warning",
+  payment: "bg-success/15 text-success",
 };
 
 export function NotificationItem({
