@@ -1,0 +1,1 @@
+ALTER TABLE "conversations" ADD COLUMN "type" text DEFAULT 'LISTING' NOT NULL;

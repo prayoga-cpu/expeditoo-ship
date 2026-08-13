@@ -1,0 +1,285 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* Primary: Professional Blue */
+  --primary: oklch(0.55 0.2 258);
+  --primary-foreground: oklch(1 0 0);
+
+  /* Accents: Refined palette */
+  --accent-green: oklch(0.68 0.14 155);
+  --accent-orange: oklch(0.7 0.18 45);
+  --accent-red: oklch(0.62 0.22 18);
+
+  /* Neutrals: Clean hierarchy */
+  --background: oklch(0.99 0 250);
+  --foreground: oklch(0.15 0.02 250);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.15 0.02 250);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.15 0.02 250);
+  --muted: oklch(0.88 0.01 250);
+  --muted-foreground: oklch(0.52 0.02 250);
+  --border: oklch(0.95 0.01 250);
+  --input: oklch(0.98 0.01 250);
+
+  /* System colors */
+  --destructive: oklch(0.62 0.22 18);
+  --destructive-foreground: oklch(1 0 0);
+  --success: var(--accent-green);
+  --warning: oklch(0.68 0.18 70);
+
+  --radius: 0.5rem;
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.15 0.02 250);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: var(--accent-green);
+  --sidebar-accent-foreground: oklch(0.15 0.02 250);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--primary);
+}
+
+.dark {
+  --background: oklch(0.1 0.02 250);
+  --foreground: oklch(0.95 0.02 250);
+  --card: oklch(0.18 0.02 250);
+  --card-foreground: oklch(0.95 0.02 250);
+  --popover: oklch(0.18 0.02 250);
+  --popover-foreground: oklch(0.95 0.02 250);
+  --muted: oklch(0.35 0.02 250);
+  --muted-foreground: oklch(0.65 0.02 250);
+  --border: oklch(0.28 0.02 250);
+  --input: oklch(0.22 0.02 250);
+  --sidebar: oklch(0.18 0.02 250);
+  --sidebar-foreground: oklch(0.95 0.02 250);
+}
+
+@theme inline {
+  --font-sans: var(--font-jakarta), "Geist", "Geist Fallback";
+  --font-mono: var(--font-mono), "Geist Mono", "Geist Mono Fallback";
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--muted);
+  --color-secondary-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--primary);
+  --color-accent-foreground: var(--primary-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--primary);
+  --color-chart-1: var(--primary);
+  --color-chart-2: var(--accent-green);
+  --color-chart-3: var(--accent-orange);
+  --color-chart-4: var(--warning);
+  --color-chart-5: var(--accent-red);
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 4px);
+  --radius-xl: calc(var(--radius) + 8px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+    scrollbar-width: thin;
+    scrollbar-color: var(--muted) transparent;
+    /* Smooth theme transitions */
+    transition-property: background-color, border-color, color, fill, stroke;
+    transition-duration: 200ms;
+    transition-timing-function: ease-in-out;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-bold;
+  }
+
+  /* Custom Scrollbar Styling */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--muted);
+    border-radius: 20px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+    transition: background-color 0.2s ease;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--muted-foreground);
+  }
+}
+
+/* Enhanced animations and transitions for professional feel */
+@layer utilities {
+  .card-shadow {
+    @apply shadow-sm hover:shadow-md transition-shadow duration-200;
+  }
+
+  .safe-area-inset {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  /* Smooth fade-in animation */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Smooth scale animation for cards */
+  @keyframes scaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  /* Tab underline animation */
+  @keyframes slideUnderline {
+    from {
+      transform: scaleX(0);
+      transform-origin: left;
+    }
+    to {
+      transform: scaleX(1);
+      transform-origin: left;
+    }
+  }
+
+  /* Added slide-up animation for page transitions */
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.3s ease-out;
+  }
+
+  .animate-slide-underline {
+    animation: slideUnderline 0.3s ease-out;
+  }
+
+  /* Added slide-up animation class */
+  .animate-slide-up {
+    animation: slideUp 0.3s ease-out;
+  }
+
+  /* Gradient shift animation for CTA backgrounds */
+  @keyframes gradient-shift {
+    0%,
+    100% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+  }
+
+  .animate-gradient-shift {
+    background-size: 200% 200%;
+    animation: gradient-shift 8s ease infinite;
+  }
+
+  /* Shimmer effect for buttons */
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+
+  .transition-smooth {
+    @apply transition-all duration-200 ease-out;
+  }
+}
+
+/* Leaflet Customization */
+.leaflet-popup-content-wrapper {
+  @apply bg-background/95 backdrop-blur-md border border-border/50 shadow-xl rounded-xl p-0 overflow-hidden;
+}
+
+.leaflet-popup-content {
+  @apply m-0 w-auto;
+}
+
+.leaflet-popup-tip {
+  @apply bg-background/95;
+}
+
+.leaflet-container {
+  @apply font-sans;
+}
+
+/* Hide Leaflet attribution prefix if desired, but keeping copyright is good practice */
+.leaflet-control-attribution {
+  @apply bg-background/50 backdrop-blur text-muted-foreground;
+}
+
+/* MapLibre Styling - Positron (light) and Dark are already monochrome */
+/* Only apply subtle adjustments for consistency */
+.maplibregl-canvas-container,
+.maplibregl-canvas {
+  filter: contrast(1.05);
+}
+
+/* Ensure markers remain colorful on top of map */
+.maplibregl-marker {
+  filter: none !important;
+}

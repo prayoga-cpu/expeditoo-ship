@@ -1,0 +1,1997 @@
+{
+  "common": {
+    "errors": {
+      "loadFailed": "Failed to load data"
+    }
+  },
+  "bids": {
+    "title": "My Bids",
+    "tabs": {
+      "active": "Active",
+      "ended": "Ended"
+    },
+    "status": {
+      "winning": "Winning",
+      "outbid": "Outbid",
+      "won": "Won",
+      "lost": "Lost"
+    },
+    "card": {
+      "yourBid": "Your Bid",
+      "highest": "Highest",
+      "ended": "Ended"
+    },
+    "actions": {
+      "browse": "Browse Auctions",
+      "view": "View",
+      "bidAgain": "Bid Again",
+      "checkout": "Checkout",
+      "viewOrder": "View Order",
+      "rateSeller": "Rate Seller",
+      "reviewed": "Reviewed"
+    },
+    "empty": {
+      "activeTitle": "No active bids",
+      "activeDesc": "You don't have any active bids at the moment.",
+      "endedTitle": "No ended bids",
+      "endedDesc": "You haven't won or lost any auctions yet."
+    }
+  },
+  "checkout": {
+    "title": "Secure Checkout",
+    "steps": {
+      "address": "Shipping Address",
+      "payment": "Payment Method"
+    },
+    "loadingAddresses": "Loading delivery details...",
+    "errors": {
+      "loadAddresses": "Could not load addresses"
+    },
+    "retry": "Retry",
+    "noAddresses": {
+      "title": "No shipping address",
+      "subtitle": "Add an address to receive your item"
+    },
+    "addAddress": "Select Address",
+    "addNewAddress": "Add New Address",
+    "default": "Default",
+    "orderSummary": "Order Summary",
+    "summary": {
+      "auctionWin": "Auction Item",
+      "itemPrice": "Winning Bid",
+      "shippingFee": "Shipping",
+      "platformFee": "Service Fee"
+    },
+    "total": "Total Due",
+    "emailReceipt": {
+      "label": "Email for Receipt",
+      "placeholder": "name@example.com",
+      "hint": "We will send payment confirmation here"
+    },
+    "security": "Encrypted & Secure Payment via Stripe",
+    "actions": {
+      "continue": "Proceed to Payment",
+      "back": "Go Back"
+    }
+  },
+  "common": {
+    "buttons": {
+      "save": "Save",
+      "cancel": "Cancel",
+      "submit": "Submit",
+      "close": "Close",
+      "back": "Back",
+      "next": "Next",
+      "add": "Add",
+      "edit": "Edit",
+      "delete": "Delete",
+      "confirm": "Confirm",
+      "search": "Search",
+      "filter": "Filter",
+      "clear": "Clear",
+      "apply": "Apply",
+      "loading": "Loading...",
+      "viewAll": "View all",
+      "seeMore": "See more",
+      "addNew": "Add new"
+    },
+    "units": {
+      "cm": "cm",
+      "kg": "kg",
+      "euro": "€"
+    },
+    "formats": {
+      "pricePlaceholder": "0.00"
+    },
+    "navigation": {
+      "home": "Home",
+      "shipments": "Shipments",
+      "create": "Create",
+      "messages": "Messages",
+      "account": "Account",
+      "profile": "Profile",
+      "settings": "Settings",
+      "notifications": "Notifications",
+      "logout": "Logout",
+      "backToApp": "Back to App",
+      "createAuction": "Create Auction",
+      "shipmentTracking": "Shipment Tracking",
+      "myBids": "My Bids"
+    },
+    "categories": {
+      "electronics": "Electronics",
+      "furniture": "Furniture",
+      "clothing": "Clothing",
+      "vehicles": "Vehicles",
+      "documents": "Documents",
+      "sports": "Sports",
+      "books": "Books",
+      "others": "others",
+      "general": "General",
+      "appliances": "Appliances",
+      "music": "Music",
+      "pets": "Pets"
+    },
+    "status": {
+      "active": "Active",
+      "pending": "Pending",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "inProgress": "In Progress",
+      "accepted": "Accepted",
+      "picked_up": "Picked Up",
+      "in_transit": "In Transit",
+      "delivered": "Delivered"
+    },
+    "errors": {
+      "generic": "An error occurred",
+      "networkError": "Connection error",
+      "notFound": "Not found",
+      "unauthorized": "Unauthorized",
+      "tryAgain": "Please try again"
+    },
+    "time": {
+      "now": "Now",
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "daysAgo": "{count} days ago",
+      "hoursAgo": "{count} hours ago",
+      "minutesAgo": "{count} minutes ago"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Welcome back",
+      "subtitle": "Sign in to your EXPEDITOO account",
+      "email": "Email address",
+      "password": "Password",
+      "forgotPassword": "Forgot password?",
+      "rememberMe": "Remember me for 7 days",
+      "submit": "Sign In",
+      "orContinueWith": "Or continue with",
+      "signInWithGoogle": "Sign in with Google",
+      "noAccount": "Don't have an account?",
+      "signUp": "Sign up",
+      "loading": "Signing in...",
+      "errors": {
+        "emailRequired": "Email is required",
+        "emailInvalid": "Please enter a valid email",
+        "passwordRequired": "Password is required"
+      },
+      "emailVerified": "Email verified successfully!",
+      "emailVerifiedDesc": "You can now sign in to your account."
+    },
+    "register": {
+      "title": "Create your account",
+      "subtitle": "Join EXPEDITOO to start shipping and bidding",
+      "name": "Full name",
+      "email": "Email address",
+      "password": "Password",
+      "confirmPassword": "Confirm password",
+      "passwordHint": "Must be at least 8 characters",
+      "submit": "Create Account",
+      "orContinueWith": "Or continue with",
+      "signUpWithGoogle": "Sign up with Google",
+      "hasAccount": "Already have an account?",
+      "signIn": "Sign in",
+      "loading": "Creating account...",
+      "terms": "By signing up, you agree to our",
+      "termsOfService": "Terms of Service",
+      "and": "and",
+      "privacyPolicy": "Privacy Policy",
+      "placeholderName": "John Doe",
+      "placeholderEmail": "you@example.com",
+      "errors": {
+        "nameRequired": "Full name is required",
+        "emailRequired": "Email is required",
+        "emailInvalid": "Please enter a valid email",
+        "passwordMin": "Password must be at least 8 characters",
+        "passwordMismatch": "Passwords do not match"
+      }
+    },
+    "forgotPassword": {
+      "title": "Forgot password?",
+      "subtitle": "Enter your email and we'll send you a reset link",
+      "email": "Email address",
+      "submit": "Send reset link",
+      "backToLogin": "Back to login",
+      "success": "Check your email for a reset link"
+    },
+    "resetPassword": {
+      "title": "Reset password",
+      "subtitle": "Enter your new password",
+      "password": "New password",
+      "confirmPassword": "Confirm new password",
+      "submit": "Reset password",
+      "success": "Password reset successfully"
+    },
+    "verifyEmail": {
+      "title": "Verify your email",
+      "subtitle": "We've sent a verification link to your email",
+      "resend": "Resend verification email",
+      "resending": "Sending...",
+      "resent": "Verification email sent!",
+      "backToLogin": "Back to login"
+    }
+  },
+  "home": {
+    "title": "Active Auctions",
+    "subtitle": "Browse and place your bid on delivery opportunities",
+    "search": {
+      "placeholder": "Search by title or description...",
+      "button": "Search",
+      "noResults": "No results found",
+      "recentSearches": "Recent Searches",
+      "clearRecent": "Clear",
+      "popularSearches": "Popular Searches",
+      "noSuggestions": "No suggestions"
+    },
+    "filters": {
+      "title": "Filters",
+      "sortBy": "Sort By",
+      "sortOptions": {
+        "endingSoon": "Ending Soon",
+        "newest": "Newest",
+        "priceLow": "Price: Low to High",
+        "priceHigh": "Price: High to Low"
+      },
+      "priceRange": "Price Range",
+      "min": "Min",
+      "max": "Max",
+      "size": "Size",
+      "all": "All",
+      "auctions": "Auctions",
+      "directSales": "Direct Sales",
+      "category": "Category",
+      "price": "Price",
+      "condition": "Condition"
+    },
+    "map": {
+      "title": "Map View",
+      "nearMe": "Near Me",
+      "switch2D": "Switch to 2D View",
+      "switch3D": "Switch to 3D View",
+      "myLocation": "Go to my location",
+      "locationError": "Unable to get your location"
+    },
+    "states": {
+      "error": "Failed to load listings. Please try again.",
+      "empty": "No active auctions found.",
+      "emptyDesc": "Try adjusting your filters to see more results.",
+      "retry": "Retry",
+      "clearFilters": "Clear Filters"
+    },
+    "actions": {
+      "refresh": "Refresh",
+      "refreshing": "Refreshing...",
+      "placeBid": "Place Bid",
+      "bids": "bids",
+      "bid": "bid"
+    },
+    "widgets": {
+      "pendingPayments": "Pending Payments",
+      "pendingCount": "{count, plural, =1 {# payment pending} other {# payments pending}}",
+      "more": "more"
+    }
+  },
+  "profile": {
+    "public": {
+      "notFound": "User Not Found",
+      "notFoundDesc": "The user you are looking for does not exist.",
+      "goBack": "Go Back",
+      "back": "Back",
+      "reviews": "{count} reviews",
+      "joined": "Joined {date}",
+      "activeListings": "Active Listings",
+      "message": "Message",
+      "noListings": "No Active Listings",
+      "noListingsDesc": "This user has no items for sale right now.",
+      "loginToMessage": "Please login to send a message",
+      "selfMessage": "You cannot message yourself",
+      "messageError": "Something went wrong"
+    },
+    "title": "Profile",
+    "header": {
+      "reviews": "reviews",
+      "settings": "Settings",
+      "logout": "Logout"
+    },
+    "quickLinks": {
+      "title": "Quick Links",
+      "myAuctions": "My Auctions",
+      "myBids": "My Bids",
+      "earnings": "Earnings",
+      "myReviews": "My Reviews",
+      "paymentMethods": "Payment Methods",
+      "contactHelp": "Contact & Help",
+      "adminDashboard": "Admin Dashboard",
+      "adminUsers": "User Management",
+      "adminPayments": "Payments",
+      "adminSupport": "Support Chats",
+      "driverSupport": "Driver Support",
+      "driverDashboard": "Driver Dashboard",
+      "becomeDriver": "Become a Driver"
+    },
+    "myAuctions": {
+      "title": "My Auctions",
+      "tabs": {
+        "active": "Active",
+        "past": "Past"
+      },
+      "newAuction": "New Auction",
+      "card": {
+        "currentBid": "Current Bid",
+        "bids": "Bids",
+        "views": "Views",
+        "ended": "Ended",
+        "ends": "Ends"
+      },
+      "actions": {
+        "viewDetails": "View Details",
+        "edit": "Edit Auction",
+        "end": "End Auction",
+        "repost": "Repost Auction",
+        "delete": "Delete"
+      },
+      "empty": {
+        "noActive": "No active auctions",
+        "noActiveDesc": "You don't have any active auctions at the moment.",
+        "noPast": "No past auctions",
+        "noPastDesc": "You haven't listed any auctions yet.",
+        "startSelling": "Start Selling"
+      },
+      "toast": {
+        "endSuccess": "Auction ended successfully",
+        "deleteSuccess": "Auction deleted successfully",
+        "repostSuccess": "Auction reposted successfully"
+      },
+      "dialogs": {
+        "end": {
+          "title": "End Auction?",
+          "description": "Are you sure you want to end this auction early? This action cannot be undone. The auction will be moved to your past auctions.",
+          "confirm": "End Auction"
+        },
+        "delete": {
+          "title": "Delete Auction?",
+          "description": "Are you sure you want to delete \"{title}\"? This action cannot be undone and will permanently remove the auction and all its data.",
+          "confirm": "Delete"
+        },
+        "repost": {
+          "title": "Repost Auction",
+          "description": "Create a new auction with the same details. Select how long the new auction should run.",
+          "durationLabel": "Auction Duration",
+          "confirm": "Repost Auction",
+          "durations": {
+            "1": "1 day",
+            "3": "3 days",
+            "5": "5 days",
+            "7": "7 days",
+            "14": "14 days",
+            "30": "30 days"
+          }
+        },
+        "cancel": "Cancel"
+      }
+    },
+    "address": {
+      "title": "Address",
+      "noAddress": "No address set. Add an address to receive shipments.",
+      "addAddress": "Add Address",
+      "editAddress": "Edit Address",
+      "form": {
+        "label": "Label",
+        "labelPlaceholder": "e.g. Home, Office",
+        "street": "Street Address",
+        "streetPlaceholder": "123 Main St",
+        "city": "City",
+        "cityPlaceholder": "Paris",
+        "zip": "ZIP Code",
+        "zipPlaceholder": "75001",
+        "country": "Country",
+        "countryPlaceholder": "France",
+        "details": "Additional Details",
+        "detailsPlaceholder": "Floor number, apartment number, building color, gate code, etc.",
+        "detailsHelp": "Help the courier find you easily",
+        "default": "Set as default address",
+        "save": "Save Address",
+        "update": "Update Address",
+        "saving": "Saving...",
+        "pinLocation": "Please pin a location on the map to continue"
+      },
+      "map": {
+        "searchPlaceholder": "Search location in France...",
+        "clickToPin": "Click on the map to pin location",
+        "gettingAddress": "Getting address..."
+      },
+      "errors": {
+        "outsideFrance": "This location is outside France. Delivery is only available in France.",
+        "notFound": "Could not find address for this location.",
+        "generic": "Error getting address. Please try again."
+      }
+    },
+    "paymentMethods": {
+      "title": "Payment Methods",
+      "description": "Manage your saved cards for faster checkout.",
+      "addNew": "Add New",
+      "cardNumber": "Card Number",
+      "expiryDate": "Expiry Date",
+      "addCard": "Add Card",
+      "expires": "Expires",
+      "savedCards": "Saved Cards",
+      "emptyTitle": "No cards saved yet",
+      "emptyDesc": "Add a card to make your checkout faster and easier.",
+      "addFirst": "Add First Card",
+      "confirmDelete": "Are you sure you want to remove this card?",
+      "deleteSuccess": "Card removed successfully",
+      "deleteError": "Failed to remove card",
+      "loadError": "Failed to load payment methods"
+    },
+    "payout": {
+      "title": "Payout Configuration",
+      "status": {
+        "active": "Active",
+        "pending": "Pending Setup",
+        "notConnected": "Not Connected"
+      },
+      "description": {
+        "active": "Your payout account is set up and ready to receive funds from sales/deliveries.",
+        "inactive": "To receive payments for items you sell or deliveries you make, you must connect your Stripe account."
+      },
+      "button": {
+        "continue": "Continue Setup",
+        "connect": "Connect Payout Account"
+      }
+    },
+    "picture": {
+      "title": "Profile Picture",
+      "upload": "Upload New Photo",
+      "remove": "Remove Photo"
+    },
+    "analytics": {
+      "totalRevenue": "Total Revenue",
+      "totalSales": "Total Sales",
+      "avgOrderValue": "Avg. Order Value",
+      "fromLastMonth": "from last month",
+      "revenueOverTime": "Revenue Over Time",
+      "revenue": "Revenue",
+      "topSellingItems": "Top Selling Items",
+      "sales": "sales",
+      "totalSpent": "Total Spent",
+      "totalOrders": "Total Orders",
+      "thisMonth": "this month",
+      "spendingOverTime": "Spending Over Time",
+      "spending": "Spending",
+      "recentPurchases": "Recent Purchases",
+      "status": {
+        "delivered": "Delivered",
+        "shipped": "Shipped",
+        "pending": "Pending"
+      },
+      "totalEarnings": "Earnings",
+      "deliveries": "Deliveries",
+      "totalDistance": "Distance",
+      "avgTime": "Avg. Time",
+      "rating": "Rating",
+      "weeklyEarnings": "Weekly Earnings",
+      "earnings": "Earnings",
+      "recentDeliveries": "Recent Deliveries"
+    },
+    "invoices": {
+      "title": "Invoices",
+      "description": "View and download your payment invoices",
+      "empty": "No invoices yet",
+      "emptyDesc": "Your invoices will appear here after your first purchase.",
+      "loading": "Loading invoices...",
+      "error": "Failed to load invoices",
+      "errorDesc": "Please try again later or contact support.",
+      "columns": {
+        "invoice": "Invoice",
+        "date": "Date",
+        "amount": "Amount",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "status": {
+        "draft": "Draft",
+        "issued": "Issued",
+        "paid": "Paid",
+        "void": "Void"
+      },
+      "download": "Download PDF",
+      "view": "View"
+    },
+    "reviews": {
+      "title": "Reviews & Ratings",
+      "summary": {
+        "totalReviews": "{count} reviews"
+      },
+      "tabs": {
+        "all": "All",
+        "buyer": "Buyer",
+        "seller": "Seller"
+      },
+      "card": {
+        "helpful": "Helpful",
+        "report": "Report",
+        "buyer": "Buyer",
+        "seller": "Seller"
+      },
+      "empty": "No reviews available for this user"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "theme": {
+      "title": "Theme",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    },
+    "language": {
+      "title": "Language"
+    },
+    "notifications": {
+      "title": "Email Notifications",
+      "description": "Choose which emails you'd like to receive from EXPEDITOO.",
+      "auctionResults": {
+        "title": "Auction Results",
+        "description": "Win/lose notifications and auction end updates"
+      },
+      "accountSecurity": {
+        "title": "Account & Security",
+        "description": "Welcome messages, password resets, and verifications"
+      }
+    },
+    "dangerZone": {
+      "title": "Danger Zone",
+      "deleteAccount": "Delete my account",
+      "deleteDialog": {
+        "title": "Delete account",
+        "description": "This action cannot be undone. All your data will be permanently deleted.",
+        "cancel": "Cancel",
+        "delete": "Delete"
+      }
+    }
+  },
+  "messages": {
+    "title": "Messages",
+    "search": "Search messages...",
+    "tabs": {
+      "all": "All",
+      "unread": "Unread",
+      "inbox": "Inbox"
+    },
+    "empty": {
+      "title": "No messages yet",
+      "description": "When you contact a user, your conversation will appear here."
+    },
+    "detail": {
+      "noRatings": "No ratings yet",
+      "aboutListing": "About Listing",
+      "newMessage": "New message",
+      "typeMessage": "Type a message...",
+      "loading": "Loading...",
+      "unknown": "Unknown",
+      "you": "You"
+    },
+    "item": {
+      "noListing": "No listing"
+    },
+    "time": {
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "daysAgo": "{count} days ago"
+    },
+    "input": {
+      "placeholder": "Type a message..."
+    }
+  },
+  "deliveries": {
+    "title": "Shipments",
+    "tabs": {
+      "all": "All",
+      "active": "Active",
+      "completed": "Completed",
+      "noIncoming": "No active deliveries",
+      "noIncomingDesc": "Your active deliveries will appear here.",
+      "noOutgoing": "No completed deliveries",
+      "noOutgoingDesc": "Your completed deliveries will appear here."
+    },
+    "status": {
+      "pending": "Pending",
+      "confirmed": "Confirmed",
+      "pickedUp": "Picked Up",
+      "inTransit": "In Transit",
+      "delivered": "Delivered",
+      "cancelled": "Cancelled"
+    },
+    "card": {
+      "scheduled": "Scheduled: {date}",
+      "created": "Created: {date}",
+      "defaultTitle": "Shipment",
+      "awaitingDriver": "Awaiting driver"
+    },
+    "details": {
+      "from": "From",
+      "to": "To",
+      "weight": "Weight",
+      "dimensions": "Dimensions",
+      "price": "Price",
+      "driver": "Driver",
+      "estimatedDelivery": "Estimated Delivery",
+      "reviews": "{count} reviews"
+    },
+    "buttons": {
+      "contactDriver": "Contact Driver",
+      "cancelShipment": "Cancel Shipment",
+      "modifyShipment": "Modify",
+      "keepShipment": "Keep Shipment",
+      "confirmCancellation": "Confirm Cancellation",
+      "cancelling": "Cancelling...",
+      "rateDriver": "Rate Driver",
+      "rateClient": "Rate Client",
+      "reviewed": "Reviewed"
+    },
+    "dialogs": {
+      "cancel": {
+        "title": "Cancel Shipment",
+        "description": "Are you sure you want to cancel this shipment? This action cannot be undone.",
+        "reasonLabel": "Reason for cancellation",
+        "reasonPlaceholder": "Please explain why you need to cancel..."
+      }
+    },
+    "events": {
+      "PENDING": "Shipment created",
+      "PRICE_PROPOSED": "Price proposed",
+      "ASSIGNED": "Driver assigned",
+      "PICKED_UP": "Package picked up",
+      "IN_TRANSIT": "In transit",
+      "DELIVERED": "Delivered",
+      "CANCELLED": "Cancelled"
+    }
+  },
+  "auction": {
+    "title": "Auction",
+    "currentBid": "Current Bid",
+    "startingPrice": "Starting Price",
+    "yourBid": "Your Bid",
+    "placeBid": "Place Bid",
+    "placingBid": "Placing Bid...",
+    "minBid": "Minimum Bid",
+    "timeLeft": "Time Left",
+    "ends": "Ends",
+    "bids": "bids",
+    "noBids": "No bids",
+    "youAreWinning": "You're winning!",
+    "youAreOutbid": "You've been outbid",
+    "auctionEnded": "Auction ended",
+    "sold": "Sold",
+    "unsold": "Unsold",
+    "description": "Description",
+    "pickupLocation": "Pickup Location",
+    "bidHistory": "Bid History",
+    "status": {
+      "live": "Live Auction",
+      "sold": "Sold",
+      "ended": "Ended",
+      "cancelled": "Cancelled",
+      "secure": "Secure bidding"
+    },
+    "condition": {
+      "new": "New",
+      "used_like_new": "Used - Like New",
+      "used_good": "Used - Good",
+      "used_fair": "Used - Fair"
+    },
+    "category": {
+      "electronics": "Electronics",
+      "furniture": "Furniture",
+      "clothing": "Clothing",
+      "vehicles": "Vehicles",
+      "others": "Others"
+    },
+    "detail": {
+      "soldTitle": "Auction Sold!",
+      "soldDesc": "This item has been sold to the winning bidder",
+      "winningBid": "Winning Bid",
+      "winner": "Winner",
+      "highestBidder": "Highest Bidder",
+      "endedTitle": "Auction Ended",
+      "endedNoBids": "This auction ended with no bids",
+      "endedWithBids": "This auction has ended",
+      "finalBid": "Final Bid",
+      "startPrice": "Starting Price",
+      "cancelledTitle": "Auction Cancelled",
+      "cancelledDesc": "This auction was cancelled by the seller",
+      "originalPrice": "Original Price",
+      "reviews": "{count} reviews",
+      "chat": "Chat",
+      "viewProfile": "View Profile",
+      "noBidsYet": "No bids yet. Be the first to bid!",
+      "noBidsPlaced": "No bids were placed on this auction",
+      "ownListing": "This is your listing",
+      "cannotBid": "You cannot bid on your own auction",
+      "currentBid": "Current Bid",
+      "endsIn": "Ends in",
+      "soldFor": "Sold for {amount}",
+      "endedAt": "Ended at {amount}",
+      "endedNoBidsMobile": "Ended with no bids",
+      "cancelledMobile": "Auction Cancelled"
+    },
+    "errors": {
+      "loginToChat": "Please login to chat with seller",
+      "chatSelf": "You cannot chat with yourself",
+      "generic": "Something went wrong"
+    },
+    "buyNow": {
+      "label": "Buy Now",
+      "price": "Buy Now Price"
+    },
+    "autoBid": {
+      "title": "Set Auto-Bid",
+      "description": "Let us automatically bid for you up to your maximum amount",
+      "currentBid": "Current Bid",
+      "maxBidLabel": "Your Maximum Bid",
+      "maxBidHint": "Suggested: €{suggested} or higher",
+      "incrementLabel": "Bid Increment",
+      "howItWorks": "How it works",
+      "howItWorksDesc": "We'll automatically place the minimum bid needed to keep you winning, up to your maximum.",
+      "warning": "You'll be immediately outbid if someone bids higher than your max.",
+      "cancel": "Cancel",
+      "confirm": "Enable Auto-Bid",
+      "enabled": "Auto-Bid Active",
+      "maxReached": "Max bid reached"
+    }
+  },
+  "listing": {
+    "title": "Listing",
+    "price": "Price",
+    "condition": "Condition",
+    "category": "Category",
+    "description": "Description",
+    "seller": "Seller",
+    "location": "Location",
+    "postedOn": "Posted on",
+    "buyNow": "Buy Now",
+    "makeOffer": "Make an Offer",
+    "addToCart": "Add to Cart",
+    "contactSeller": "Contact Seller",
+    "writeReview": "Write a Review",
+    "conditions": {
+      "new": "New",
+      "likeNew": "Like New",
+      "good": "Good",
+      "acceptable": "Acceptable"
+    },
+    "reviews": "{count} reviews",
+    "reviewsTitle": "Buyer Reviews",
+    "noReviews": "No reviews available for this listing",
+    "from": "From",
+    "to": "To",
+    "quantity": "Quantity",
+    "size": "Size",
+    "weight": "Weight",
+    "dimensions": "Dimensions",
+    "moreInfo": "More Information",
+    "info": {
+      "handling": "No handling assistance",
+      "signature": "Signature not required",
+      "packaging": "No custom packaging included"
+    }
+  },
+  "create": {
+    "titleNew": "New Listing",
+    "titleEdit": "Edit Listing",
+    "steps": {
+      "item": "Item",
+      "logistics": "Logistics",
+      "summary": "Summary"
+    },
+    "map": {
+      "searchPlaceholder": "Search location in France...",
+      "outsideFrance": "This location is outside France. Pickup is only available in France.",
+      "notFound": "Could not find address for this location.",
+      "error": "Error getting address. Please try again.",
+      "updating": "Updating address..."
+    },
+    "success": {
+      "title": "Auction Created Successfully!",
+      "description": "Your auction listing has been published and is now live. Share the link below to start receiving bids.",
+      "auctionId": "Auction ID:",
+      "status": "Status:",
+      "active": "Active",
+      "shareTitle": "Share Your Auction",
+      "viewAuction": "View Auction",
+      "shareAuction": "Share Auction",
+      "backHome": "Back to Home",
+      "nextSteps": "Next steps:",
+      "nextStepsDesc": "You'll receive notifications when users place bids on your auction. You can manage your auction from the \"My Deliveries\" section."
+    },
+    "dropzone": {
+      "title": "Add photos",
+      "subtitle": "Drag and drop or click to upload",
+      "uploading": "Uploading {count} photo(s)",
+      "uploadError": "Failed to upload photos",
+      "takePhoto": "Take a photo"
+    },
+    "slip": {
+      "title": "Upload purchase slip",
+      "subtitle": "Drag and drop or click to upload",
+      "invalidFile": "Please upload an image file",
+      "processError": "Failed to process purchase slip. Please try again."
+    },
+    "photos": {
+      "title": "Photos",
+      "aiFeature": {
+        "new": "New!",
+        "badge": "AI",
+        "label": "Purchase Slip Upload",
+        "description": "Upload a purchase slip and AI will extract all data automatically.",
+        "estimateLabel": "AI Price Estimate"
+      }
+    },
+    "ai": {
+      "title": "AI Price Recommendation",
+      "loading": "Analyzing your item...",
+      "analyzePhotos": "Product photos",
+      "analyzeDetails": "Item details",
+      "analyzeMarket": "Market trends",
+      "startingBid": "Starting Bid",
+      "buyNowPrice": "Buy Now Price",
+      "useThis": "Use This",
+      "applied": "Applied",
+      "confidence": "Confidence",
+      "refresh": "Refresh",
+      "error": "Unable to generate recommendation",
+      "errorRetry": "Try Again",
+      "manualEntry": "Please enter your prices manually below.",
+      "noSlipDesc": "Get AI-powered price recommendations based on your item details.",
+      "readyWithSlip": "Ready to analyze with purchase slip data!",
+      "getRecommendation": "Get AI Recommendation",
+      "recommended": "AI Recommended",
+      "reasoning": {
+        "volume": "Volume: {volume} cm³ × {price}/cm³ = {total}.",
+        "weight": "Weight: {weight} kg × {price}/kg = {total}.",
+        "estimatedTotal": "Estimated total: {total}.",
+        "usingSlipPrice": "Using price from slip: {total}.",
+        "minPrice": "Adjusted to minimum: {total}.",
+        "maxPrice": "Adjusted to maximum: {total}."
+      }
+    },
+    "form": {
+      "quantity": "Quantity",
+      "title": "Title",
+      "titlePlaceholder": "Ex: Sofa, armchair, etc...",
+      "category": "Category",
+      "selectCategory": "Select a category",
+      "condition": "Condition",
+      "selectCondition": "Select condition",
+      "selectDuration": "Select duration",
+      "weight": {
+        "label": "Weight Estimator",
+        "placeholder": "Choose a weight range",
+        "ranges": {
+          "0_5": "0 - 5 kg",
+          "5_10": "5 - 10 kg",
+          "10_25": "10 - 25 kg",
+          "25_50": "25 - 50 kg",
+          "50_plus": "50+ kg"
+        }
+      },
+      "dimensions": {
+        "label": "Dimensions (Required)",
+        "length": "Length",
+        "width": "Width",
+        "height": "Height"
+      },
+      "size": {
+        "label": "Estimated Size",
+        "xs": "XS (Phone, Keys)",
+        "s": "S (Shoebox)",
+        "m": "M (Suitcase)",
+        "l": "L (Bicycle)",
+        "xl": "XL (Furniture)",
+        "xxl": "XXL (Vehicle)",
+        "placeholder": "Enter dimensions to see size"
+      },
+      "description": "Description",
+      "descriptionPlaceholder": "Describe your item...",
+      "additionalInfo": {
+        "label": "Additional Information",
+        "warning": "This info is public. Do not share personal details like phone or email.",
+        "placeholder": "Describe your item in detail (condition, history, defects, etc.)"
+      }
+    },
+    "logistics": {
+      "pickup": "Pickup Address",
+      "delivery": "Delivery Address (Optional)",
+      "info": "Information",
+      "searchMap": "Search or click on the map to set the pickup location. Address details will be filled automatically.",
+      "addressDetails": "Address Details",
+      "street": "Street Address",
+      "city": "City",
+      "postalCode": "Postal Code",
+      "country": "Country"
+    },
+    "pricing": {
+      "type": "Sale Type",
+      "auction": "Auction",
+      "fixed": "Fixed Price",
+      "startingPrice": "Starting Price",
+      "reservePrice": "Reserve Price",
+      "buyNowPrice": "Buy Now Price",
+      "minIncrease": "Bid Increment",
+      "duration": {
+        "label": "Auction Duration"
+      },
+      "days": "{count, plural, =1 {day} other {days}}",
+      "optional": "(Optional)"
+    },
+    "summary": {
+      "itemDetails": "Item Details",
+      "logistics": "Logistics",
+      "pricing": "Pricing & Conditions",
+      "location": "Location"
+    },
+    "buttons": {
+      "back": "Back",
+      "next": "Next",
+      "submit": "Publish Listing",
+      "update": "Update Listing"
+    },
+    "messages": {
+      "uploadPhoto": "Please upload at least one photo",
+      "creating": "Creating listing...",
+      "created": "Listing created successfully!",
+      "createError": "Failed to create listing",
+      "updating": "Updating listing...",
+      "updated": "Listing updated successfully!",
+      "updateError": "Failed to update listing"
+    },
+    "validation": {
+      "titleMin": "Title must be at least 3 characters",
+      "categoryRequired": "Category is required",
+      "lengthPositive": "Length must be positive",
+      "widthPositive": "Width must be positive",
+      "heightPositive": "Height must be positive",
+      "weightRequired": "Weight is required",
+      "addressRequired": "Address is required",
+      "cityRequired": "City is required",
+      "postalCodeRequired": "Postal code is required",
+      "countryRequired": "Country is required",
+      "startingBidMin": "Starting bid must be 0 or more",
+      "durationRequired": "Duration is required",
+      "descriptionMin": "Description must be at least 10 characters"
+    }
+  },
+  "wallet": {
+    "title": "Wallet",
+    "balance": "Balance",
+    "transactions": "Transactions",
+    "withdraw": "Withdraw",
+    "deposit": "Deposit",
+    "history": {
+      "title": "History",
+      "purchase": "Purchase",
+      "sale": "Sale",
+      "refund": "Refund",
+      "withdrawal": "Withdrawal"
+    }
+  },
+  "driver": {
+    "title": "Driver",
+    "panelTitle": "Driver Panel",
+    "navigation": {
+      "dashboard": "Dashboard",
+      "shipments": "Shipments",
+      "messages": "Messages",
+      "profile": "Profile"
+    },
+    "dashboard": {
+      "title": "Driver Dashboard",
+      "availableJobs": "Find shipments and manage your deliveries",
+      "myDeliveries": "My Deliveries",
+      "earnings": "Earnings",
+      "stats": {
+        "totalDeliveries": "Total Deliveries",
+        "completedShipments": "Completed shipments",
+        "totalEarnings": "Total Earnings",
+        "fromDeliveries": "From completed deliveries",
+        "successRate": "Success Rate",
+        "basedOnAssignments": "Based on {count} assignments"
+      },
+      "activeDeliveries": {
+        "title": "Active Deliveries",
+        "empty": "No active deliveries at the moment.",
+        "earnings": "Earnings",
+        "details": "Details",
+        "defaultTitle": "Shipment"
+      }
+    },
+    "shipments": {
+      "title": "Shipments",
+      "defaultTitle": "Shipment",
+      "subtitle": "Browse and bid on available shipments",
+      "tabs": {
+        "available": "Available Shipments",
+        "myShipments": "My Shipments"
+      },
+      "empty": {
+        "title": "No shipments",
+        "description": "No shipments found matching your criteria."
+      },
+      "filters": {
+        "placeholder": "Filter by status",
+        "all": "All",
+        "waiting": "Waiting",
+        "approved": "Approved",
+        "active": "Active",
+        "completed": "Done",
+        "cancelled": "Cancelled"
+      },
+      "proposals": {
+        "title": "Available Shipments",
+        "searchPlaceholder": "Search by city...",
+        "viewAndPropose": "View & Propose",
+        "defaultTitle": "Shipment",
+        "empty": {
+          "title": "No shipments",
+          "description": "No available shipments found matching your criteria."
+        }
+      }
+    },
+    "shipmentDetail": {
+      "notFound": "Shipment not found",
+      "goBack": "Go Back",
+      "shipmentNumber": "Shipment #",
+      "shipmentDetails": "Shipment Details",
+      "budget": "Budget",
+      "route": "Route",
+      "pickup": "Pickup",
+      "dropoff": "Dropoff",
+      "date": "Date",
+      "weight": "Weight",
+      "dimensions": "Dimensions",
+      "description": "Description",
+      "flexible": "Flexible"
+    },
+    "actions": {
+      "status": "Status",
+      "actions": "Actions",
+      "proposalSubmitted": "Proposal Submitted",
+      "proposalSubmittedDesc": "You have submitted a proposal for this shipment. Wait for the sender to review it.",
+      "backToShipments": "Back to Shipments",
+      "awaitingPayment": "Awaiting Payment",
+      "awaitingPaymentDesc": "You have been assigned to this shipment. The buyer must complete payment before you can pick up the package.",
+      "confirmPickup": "Confirm Pickup",
+      "updating": "Updating...",
+      "paymentNotConfirmed": "If payment is not yet confirmed, the button above will show an error.",
+      "navigateToPickup": "Navigate to Pickup",
+      "navigateToDropoff": "Navigate to Dropoff",
+      "inTransit": "In Transit",
+      "inTransitDesc": "Package is in transit. Update status when delivered.",
+      "startJourney": "Start Journey",
+      "confirmDelivery": "Confirm Delivery",
+      "uploadProof": "Upload Proof of Delivery",
+      "deliveryCompleted": "Delivery Completed",
+      "deliveryCompletedDesc": "Great job! This shipment has been delivered."
+    },
+    "proposalForm": {
+      "submitProposal": "Submit Proposal",
+      "referencePrice": "Reference Price",
+      "suggested": "Suggested",
+      "baseDistance": "Base + Distance",
+      "weightVolume": "Weight + Volume",
+      "platformFee": "Platform Fee",
+      "useThisPrice": "Use This Price",
+      "use": "Use",
+      "unableToCalculate": "Unable to calculate reference price",
+      "yourPrice": "Your Price",
+      "yourProposedPrice": "Your Proposed Price (€)",
+      "priceDescription": "Enter your price. Consider the reference price above.",
+      "estimatedDelivery": "Estimated Delivery",
+      "estimatedDeliveryOptional": "Estimated Delivery (Optional)",
+      "estimatedDeliveryDate": "Estimated Delivery Date (Optional)",
+      "deliveryDescription": "When do you estimate to deliver? This helps the buyer plan.",
+      "notes": "Notes (Optional)",
+      "notesPlaceholder": "Add any additional details or conditions...",
+      "submitting": "Submitting...",
+      "submit": "Submit Proposal",
+      "cancel": "Cancel",
+      "cancelGoBack": "Cancel / Go Back",
+      "priceRequired": "Price is required",
+      "successMessage": "Proposal submitted successfully!",
+      "alreadySubmitted": "You have already submitted a proposal for this shipment.",
+      "errorMessage": "Failed to submit proposal. Please try again.",
+      "pickDate": "Pick a date"
+    },
+    "apply": {
+      "title": "Become a Driver",
+      "description": "Join our network of transporters and start earning money.",
+      "requirements": "Requirements",
+      "submit": "Submit Application"
+    }
+  },
+  "marketing": {
+    "navbar": {
+      "login": "Sign In",
+      "signup": "Sign Up",
+      "getStarted": "Get Started",
+      "openApp": "Open App"
+    },
+    "hero": {
+      "badge": "Now available in France",
+      "titleLine1": "Bid, Ship and Win.",
+      "titleLine2": "Your All-in-One Marketplace.",
+      "subtitle": "Seamlessly ship your packages and discover amazing deals in our auctions. Expeditoo is the ultimate platform for logistics and online bidding in France.",
+      "primaryCta": "Send a parcel",
+      "secondaryCta": "Explore Auctions",
+      "trustedBy": "Trusted by 15,000+ users across France",
+      "rating": "4.9/5 average rating",
+      "form": {
+        "from": "From",
+        "to": "To",
+        "placeholder": "City or address",
+        "cta": "Get a Price"
+      }
+    },
+    "stats": {
+      "deliveries": "Deliveries Completed",
+      "drivers": "Verified Drivers",
+      "auctions": "Active Auctions",
+      "users": "Satisfied Users"
+    },
+    "whatToShip": {
+      "badge": "Categories",
+      "title": "What you can ship",
+      "subtitle": "From small parcels to bulky items, find a courier for anything.\nDiscover these items and more in our auctions!",
+      "items": {
+        "furniture": {
+          "name": "Furniture",
+          "desc": "Sofas, tables, chairs & more"
+        },
+        "carParts": {
+          "name": "Car Parts",
+          "desc": "Wheels, engines & accessories"
+        },
+        "electronics": {
+          "name": "Electronics",
+          "desc": "Gadgets & tech devices"
+        },
+        "appliances": {
+          "name": "Appliances",
+          "desc": "Home appliances"
+        },
+        "sports": {
+          "name": "Sports",
+          "desc": "Sports equipment"
+        },
+        "music": {
+          "name": "Music",
+          "desc": "Instruments & audio"
+        },
+        "pets": {
+          "name": "Pets",
+          "desc": "Pet supplies"
+        },
+        "more": {
+          "name": "And More...",
+          "desc": "Anything else you need"
+        }
+      }
+    },
+    "howItWorks": {
+      "badge": "Simple Process",
+      "title": "How it works?",
+      "tabs": {
+        "sender": "I'm sending",
+        "courier": "I'm carrying",
+        "auction": "Auctions"
+      },
+      "sender": {
+        "step1": {
+          "title": "Post your ad",
+          "desc": "Describe what you need to send in a few clicks."
+        },
+        "step2": {
+          "title": "Choose a courier",
+          "desc": "Receive proposals from couriers and choose the one you prefer."
+        },
+        "step3": {
+          "title": "Arrange the details",
+          "desc": "Chat with the courier to arrange the pickup and delivery."
+        },
+        "step4": {
+          "title": "Receive your item",
+          "desc": "Your item is delivered to its destination safely."
+        }
+      },
+      "courier": {
+        "step1": {
+          "title": "Find a shipment",
+          "desc": "Find shipments on your route."
+        },
+        "step2": {
+          "title": "Make a proposal",
+          "desc": "Propose a price to the sender."
+        },
+        "step3": {
+          "title": "Arrange the details",
+          "desc": "Chat with the sender to arrange the pickup and delivery."
+        },
+        "step4": {
+          "title": "Deliver and get paid",
+          "desc": "Deliver the item and receive your payment."
+        }
+      },
+      "auction": {
+        "step1": {
+          "title": "Discover items",
+          "desc": "Browse our auctions to find unique items."
+        },
+        "step2": {
+          "title": "Place your bid",
+          "desc": "Place your bid and compete with other users."
+        },
+        "step3": {
+          "title": "Win and pay",
+          "desc": "If you win the auction, pay for the item securely."
+        },
+        "step4": {
+          "title": "Get it delivered",
+          "desc": "Get your winnings delivered by our trusted couriers."
+        }
+      }
+    },
+    "advantages": {
+      "badge": "Features",
+      "title": "Why choose Expeditoo?",
+      "items": {
+        "economic": {
+          "title": "Economical",
+          "description": "Up to 70% cheaper than traditional carriers"
+        },
+        "ecological": {
+          "title": "Ecological",
+          "description": "Optimize existing routes and reduce carbon footprint"
+        },
+        "secure": {
+          "title": "Secure",
+          "description": "Secure payments and included insurance"
+        },
+        "community": {
+          "title": "Community",
+          "description": "Join a trusted community"
+        }
+      }
+    },
+    "showcase": {
+      "badge": "See It In Action",
+      "title": "Experience Expeditoo",
+      "subtitle": "Discover how our platform makes shipping and auctions seamless across France",
+      "features": {
+        "smart": {
+          "title": "Smart Auction Bidding",
+          "desc": "Place bids and track auctions in real-time"
+        },
+        "msg": {
+          "title": "Instant Messaging",
+          "desc": "Chat directly with sellers and couriers"
+        },
+        "track": {
+          "title": "Delivery Progress",
+          "desc": "Track pickup and delivery status updates"
+        }
+      },
+      "ui": {
+        "liveAuction": "Live Auction",
+        "delivered": "Package Delivered",
+        "justNow": "Just now",
+        "mobileApp": "Mobile App"
+      },
+      "cta": {
+        "start": "Get Started Free",
+        "demo": "Watch Demo"
+      }
+    },
+    "testimonials": {
+      "badge": "Testimonials",
+      "title": "Loved by Thousands",
+      "subtitle": "See what our French community has to say about their experience",
+      "items": {
+        "sarah": {
+          "name": "Sarah L.",
+          "role": "Frequent Seller",
+          "comment": "Incredibly simple and effective! I sent a large piece of furniture across France without any hassle. The couriers are professional and the tracking is excellent.",
+          "highlight": "50+ successful deliveries"
+        },
+        "michel": {
+          "name": "Michel D.",
+          "role": "Verified Courier",
+          "comment": "As a courier, Expeditoo has been a game-changer. I can easily find shipments on my routes and make extra money. The payment system is quick and reliable.",
+          "highlight": "€2,000+ earned monthly"
+        },
+        "julie": {
+          "name": "Julie P.",
+          "role": "Auction Winner",
+          "comment": "Found amazing deals on vintage furniture. The bidding system is intuitive and the items always arrive in perfect condition. Highly recommend!",
+          "highlight": "20+ auctions won"
+        }
+      }
+    },
+    "cta": {
+      "badge": "Start for free today",
+      "title": "Ready to Revolutionize Your Logistics?",
+      "subtitle": "Join thousands of users shipping and trading with EXPEDITOO across France. No credit card required.",
+      "button": "Get Started Free",
+      "trustText": "Trusted by 15,000+ users in France • No credit card required • Cancel anytime"
+    },
+    "footer": {
+      "tagline": "The future of logistics in France, today.",
+      "availableIn": "Available exclusively in France 🇫🇷",
+      "rights": "All rights reserved.",
+      "product": {
+        "title": "Product",
+        "features": "Features",
+        "auctions": "Auctions",
+        "shipping": "Shipping",
+        "pricing": "Pricing"
+      },
+      "company": {
+        "title": "Company",
+        "about": "About",
+        "careers": "Careers",
+        "blog": "Blog",
+        "press": "Press"
+      },
+      "support": {
+        "title": "Support",
+        "help": "Help Center",
+        "contact": "Contact",
+        "faq": "FAQ",
+        "community": "Community"
+      },
+      "legal": {
+        "title": "Legal",
+        "terms": "Terms of Service",
+        "privacy": "Privacy Policy",
+        "cookie": "Cookie Policy"
+      }
+    },
+    "pricing": {
+      "title": "Transparent Pricing",
+      "subtitle": "Choose the plan that fits your needs. Whether you're selling items or delivering them, we have a clear structure for you.",
+      "disclaimer": "Indicative pricing - Subject to final confirmation",
+      "sellers": {
+        "title": "For Sellers",
+        "subtitle": "List your items for auction or direct sale",
+        "planTitle": "Commission Model",
+        "planDesc": "Pay only when you sell",
+        "price": "5%",
+        "priceUnit": "/ sale",
+        "features": {
+          "unlimited": "Unlimited listings",
+          "auction": "Auction & Fixed Price support",
+          "support": "Basic support",
+          "payments": "Secure payments"
+        },
+        "cta": "Start Selling",
+        "mostPopular": "MOST POPULAR"
+      },
+      "drivers": {
+        "title": "For Drivers",
+        "subtitle": "Earn money delivering shipments",
+        "planTitle": "Transporter Plan",
+        "planDesc": "Professional tools for logistics",
+        "price": "10%",
+        "priceUnit": "/ job",
+        "features": {
+          "allRequests": "Access to all shipment requests",
+          "tools": "Route optimization tools",
+          "payout": "Instant payout eligibility",
+          "badge": "Verified Driver Badge"
+        },
+        "cta": "Become a Driver"
+      },
+      "detailed": {
+        "title": "Detailed Fee Structure (Indicative)",
+        "headers": {
+          "feature": "Feature",
+          "saver": "Saver",
+          "priority": "Priority"
+        },
+        "rows": {
+          "duration": {
+            "name": "Listing Duration",
+            "col1": "7 Days",
+            "col2": "30 Days"
+          },
+          "photos": {
+            "name": "Photos",
+            "col1": "Up to 5",
+            "col2": "Up to 20"
+          },
+          "cap": {
+            "name": "Commission Cap",
+            "col1": "€50 max",
+            "col2": "€200 max"
+          },
+          "highlighting": {
+            "name": "Highlighting",
+            "col1": "-",
+            "col2": "Included"
+          }
+        },
+        "footer": "* This table is for illustrative purposes. Final pricing structure is currently being updated."
+      }
+    }
+  },
+  "help": {
+    "title": "Help & Support",
+    "subtitle": "Find answers to common questions or contact our support team.",
+    "emailSupport": {
+      "title": "Email Support",
+      "description": "Get in touch with our support team via email. We usually respond within 24 hours."
+    },
+    "phoneSupport": {
+      "title": "Phone Support",
+      "description": "Need urgent help? Call our support line available Mon-Fri, 9am-5pm."
+    },
+    "faq": {
+      "title": "Frequently Asked Questions",
+      "q1": {
+        "question": "How do I track my shipment?",
+        "answer": "You can track your shipment by going to the \"Deliveries\" section in your dashboard. Click on the specific shipment to view its current status and timeline."
+      },
+      "q2": {
+        "question": "How does the auction bidding work?",
+        "answer": "When you place a bid, you are committing to buy the item if you win. The auction ends when the timer runs out. If a bid is placed in the last few minutes, the timer may extend (soft close) to allow other bidders to respond."
+      },
+      "q3": {
+        "question": "Can I cancel a shipment?",
+        "answer": "You can cancel a shipment request as long as it hasn't been picked up by a driver. Go to the shipment details page and look for the \"Cancel\" option. Cancellation fees may apply if a driver has already been assigned."
+      },
+      "q4": {
+        "question": "How do I contact a seller?",
+        "answer": "You can message a seller directly from the item listing page or from your \"Messages\" dashboard. All communication should stay within the platform for your safety."
+      },
+      "q5": {
+        "question": "What payment methods are accepted?",
+        "answer": "We accept all major credit and debit cards via our secure payment partner, Stripe. We do not store your card details directly on our servers."
+      }
+    },
+    "stillNeedHelp": {
+      "title": "Still need help?",
+      "description": "Our support team is always ready to assist you with any issues you may encounter.",
+      "chatButton": "Chat with Support"
+    }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "markAllRead": "Mark all as read",
+    "empty": {
+      "title": "No notifications yet",
+      "description": "We'll notify you when something important happens."
+    },
+    "types": {
+      "message": "Message",
+      "bid": "Bid",
+      "delivery": "Delivery",
+      "review": "Review",
+      "payment": "Payment",
+      "listing": "Listing",
+      "shipment_assigned": "Shipment Assigned"
+    }
+  },
+  "admin": {
+    "panelTitle": "Admin Panel",
+    "navigation": {
+      "dashboard": "Dashboard",
+      "users": "Users",
+      "listing": "Listings",
+      "supportChats": "Support",
+      "driver": "Drivers",
+      "shipment": "Shipments",
+      "payments": "Payments",
+      "profile": "Profile"
+    },
+    "table": {
+      "total": "total rows",
+      "rowsPerPage": "Rows per page",
+      "pageOf": "Page {current} of {total}",
+      "goToFirst": "Go to first page",
+      "goToPrevious": "Go to previous page",
+      "goToNext": "Go to next page",
+      "goToLast": "Go to last page",
+      "searchPlaceholder": "Search...",
+      "clearFilters": "Clear filters",
+      "noResults": "No results found"
+    },
+    "support": {
+      "title": "Support Chats",
+      "subtitle": "Manage user support requests",
+      "refresh": "Refresh",
+      "searchPlaceholder": "Search by name or email...",
+      "tabs": {
+        "all": "All",
+        "unread": "Unread"
+      },
+      "empty": {
+        "unreadTitle": "No unread support chats",
+        "unreadDesc": "All support chats have been read",
+        "allTitle": "No support requests yet",
+        "allDesc": "Users can start a support chat from the Help page"
+      },
+      "time": {
+        "justNow": "Just now",
+        "minAgo": "{count}m ago",
+        "hoursAgo": "{count}h ago",
+        "yesterday": "Yesterday",
+        "daysAgo": "{count}d ago",
+        "noMessages": "No messages yet"
+      }
+    },
+    "dashboard": {
+      "title": "Admin Dashboard",
+      "subtitle": "Manage your platform",
+      "searchPlaceholder": "Search...",
+      "revenue": "Revenue",
+      "users": "Users",
+      "drivers": "Drivers",
+      "listings": "Listings",
+      "stats": {
+        "fromLastMonth": "{value} from last month",
+        "error": "Failed to load",
+        "failedChart": "Failed to load chart",
+        "failedActivity": "Failed to load activity",
+        "noActivity": "No recent activity",
+        "recentActivity": "Recent Activity"
+      },
+      "time": {
+        "justNow": "Just now",
+        "minAgo": "{count}m ago",
+        "hoursAgo": "{count}h ago",
+        "daysAgo": "{count}d ago"
+      }
+    },
+    "users": {
+      "title": "User Management",
+      "subtitle": "Manage platform users",
+      "table": {
+        "user": "User",
+        "name": "Name",
+        "email": "Email",
+        "role": "Role",
+        "status": "Status",
+        "joined": "Joined",
+        "joinDate": "Join Date",
+        "actions": "Actions",
+        "searchPlaceholder": "Search users...",
+        "empty": "No users found"
+      },
+      "actions": {
+        "view": "View",
+        "viewProfile": "View Profile",
+        "manageRoles": "Manage Roles",
+        "edit": "Edit",
+        "delete": "Delete",
+        "removeDriver": "Remove Driver",
+        "suspend": "Suspend",
+        "activate": "Activate",
+        "ban": "Ban",
+        "unban": "Unban"
+      },
+      "dialogs": {
+        "deleteTitle": "Delete User",
+        "deleteDescription": "Are you sure you want to delete this user?",
+        "banTitle": "Ban User",
+        "banDescription": "Are you sure you want to ban this user?",
+        "suspendTitle": "Suspend User",
+        "suspendDesc": "Are you sure you want to suspend {name}?",
+        "activateTitle": "Activate User",
+        "activateDesc": "Are you sure you want to activate {name}?",
+        "removeDriverTitle": "Remove Driver",
+        "removeDriverDesc": "Are you sure you want to remove driver status from {name}?",
+        "cancel": "Cancel",
+        "suspend": "Suspend",
+        "remove": "Remove"
+      },
+      "messages": {
+        "deleteSuccess": "User deleted successfully",
+        "banSuccess": "User banned successfully",
+        "unbanSuccess": "User unbanned successfully"
+      }
+    },
+    "listings": {
+      "title": "Listings Management",
+      "subtitle": "Manage platform listings",
+      "table": {
+        "title": "Title",
+        "seller": "Seller",
+        "price": "Price",
+        "status": "Status",
+        "views": "Views",
+        "viewsCount": "{count} views",
+        "created": "Created",
+        "actions": "Actions",
+        "view": "View",
+        "viewDetails": "View Details",
+        "edit": "Edit",
+        "delete": "Delete",
+        "searchPlaceholder": "Search listings...",
+        "empty": "No listings found"
+      },
+      "dialogs": {
+        "deleteTitle": "Are you sure?",
+        "deleteDescription": "This action cannot be undone. This will permanently delete the listing.",
+        "cancel": "Cancel",
+        "delete": "Delete",
+        "processing": "Deleting..."
+      }
+    },
+    "drivers": {
+      "title": "Driver Management",
+      "subtitle": "Manage driver applications",
+      "status": {
+        "pending": "Pending",
+        "approved": "Approved",
+        "rejected": "Rejected"
+      },
+      "table": {
+        "applicant": "Applicant",
+        "vehicle": "Vehicle",
+        "licensePlate": "License Plate",
+        "siret": "SIRET",
+        "date": "Date",
+        "name": "Name",
+        "email": "Email",
+        "phone": "Phone",
+        "status": "Status",
+        "applied": "Applied",
+        "actions": "Actions",
+        "approve": "Approve",
+        "reject": "Reject",
+        "view": "View",
+        "verified": "Verified",
+        "pending": "Pending",
+        "empty": "No pending applications",
+        "searchPlaceholder": "Search applications..."
+      }
+    },
+    "detail": {
+      "title": "Application Details",
+      "applicant": "Applicant",
+      "submissionDate": "Submission Date",
+      "currentStatus": "Current Status",
+      "vehicleInfo": "Vehicle & Company Information",
+      "vehicleType": "Vehicle Type",
+      "licensePlate": "License Plate",
+      "licenseNumber": "License Number",
+      "siret": "SIRET",
+      "companyName": "Company Name",
+      "proposal": "Proposal / Note",
+      "close": "Close",
+      "reject": "Reject",
+      "approve": "Approve",
+      "approvedTitle": "Application Approved",
+      "rejectedTitle": "Application Rejected",
+      "pending": "Pending",
+      "statusUpdatedDesc": "The application status has been updated.",
+      "error": "Error",
+      "errorDesc": "An error occurred while updating."
+    }
+  },
+  "shipments": {
+    "title": "Shipments Management",
+    "subtitle": "Manage platform shipments",
+    "table": {
+      "id": "ID",
+      "title": "Title",
+      "from": "From",
+      "to": "To",
+      "route": "Route",
+      "status": "Status",
+      "proposals": "Proposals",
+      "price": "Price",
+      "driver": "Driver",
+      "created": "Created",
+      "actions": "Actions",
+      "assign": "Assign Driver",
+      "view": "View",
+      "searchPlaceholder": "Search shipments...",
+      "empty": "No pending shipments found"
+    }
+  },
+  "reviews": {
+    "title": "Reviews",
+    "buyer": "Buyer",
+    "seller": "Seller",
+    "helpful": "Helpful",
+    "report": "Report",
+    "modal": {
+      "title": "Rate {name}",
+      "description": "Share your experience with this user. Your feedback helps build trust in our community.",
+      "ratingLabel": "Rating",
+      "commentLabel": "Additional Comments (Optional)",
+      "commentPlaceholder": "Describe your experience...",
+      "submit": "Submit Review",
+      "submitting": "Submitting...",
+      "cancel": "Cancel",
+      "errors": {
+        "ratingRequired": "Please select at least 1 star",
+        "commentTooLong": "Comment is too long"
+      }
+    }
+  },
+  "admin": {
+    "panelTitle": "Admin Panel",
+    "navigation": {
+      "dashboard": "Dashboard",
+      "users": "Users",
+      "listing": "Listings",
+      "driver": "Drivers",
+      "shipment": "Shipments",
+      "payments": "Payments",
+      "supportChats": "Support Chats",
+      "profile": "Profile"
+    },
+    "table": {
+      "total": "total",
+      "rowsPerPage": "Rows per page",
+      "pageOf": "Page {current} of {total}",
+      "goToFirst": "Go to first page",
+      "goToPrevious": "Go to previous page",
+      "goToNext": "Go to next page",
+      "goToLast": "Go to last page",
+      "searchPlaceholder": "Search...",
+      "clearFilters": "Clear filters"
+    },
+    "dashboard": {
+      "title": "Dashboard",
+      "subtitle": "Overview of your platform",
+      "revenue": "Revenue",
+      "users": "Users",
+      "drivers": "Drivers",
+      "listings": "Listings",
+      "time": {
+        "justNow": "Just now",
+        "minAgo": "{count} min ago",
+        "hoursAgo": "{count} hours ago",
+        "daysAgo": "{count} days ago",
+        "yesterday": "Yesterday"
+      },
+      "stats": {
+        "error": "Failed to load",
+        "failedChart": "Failed to load chart",
+        "recentActivity": "Recent Activity",
+        "failedActivity": "Failed to load activity",
+        "noActivity": "No recent activity",
+        "fromLastMonth": "from last month"
+      }
+    },
+    "users": {
+      "title": "Users",
+      "subtitle": "Manage all users",
+      "table": {
+        "searchPlaceholder": "Search users...",
+        "name": "Name",
+        "status": "Status",
+        "joinDate": "Join Date",
+        "role": "Role",
+        "actions": "Actions"
+      },
+      "actions": {
+        "manageRoles": "Manage Roles",
+        "viewProfile": "View Profile",
+        "removeDriver": "Remove Driver",
+        "activate": "Activate",
+        "suspend": "Suspend",
+        "delete": "Delete"
+      },
+      "dialogs": {
+        "suspendTitle": "Suspend User",
+        "suspendDesc": "Are you sure you want to suspend {name}? They will not be able to access the platform.",
+        "activateTitle": "Activate User",
+        "activateDesc": "Are you sure you want to activate {name}? They will regain access to the platform.",
+        "removeDriverTitle": "Remove Driver Status",
+        "removeDriverDesc": "Are you sure you want to remove driver status from {name}?",
+        "cancel": "Cancel",
+        "suspend": "Suspend",
+        "activate": "Activate",
+        "remove": "Remove",
+        "processing": "Processing..."
+      },
+      "messages": {
+        "suspended": "User Suspended",
+        "suspendedDesc": "{name} has been suspended",
+        "activated": "User Activated",
+        "activatedDesc": "{name} has been activated",
+        "error": "Error",
+        "errorDesc": "Failed to update user status"
+      }
+    },
+    "listings": {
+      "title": "Listings",
+      "subtitle": "Manage all listings",
+      "table": {
+        "searchPlaceholder": "Search listings...",
+        "title": "Title",
+        "seller": "Seller",
+        "price": "Price",
+        "status": "Status",
+        "views": "Views",
+        "created": "Created",
+        "actions": "Actions",
+        "viewDetails": "View Details",
+        "delete": "Delete"
+      },
+      "dialogs": {
+        "deleteTitle": "Delete Listing",
+        "deleteDescription": "Are you sure you want to delete this listing? This action cannot be undone.",
+        "cancel": "Cancel",
+        "delete": "Delete",
+        "processing": "Deleting..."
+      }
+    },
+    "drivers": {
+      "title": "Drivers",
+      "subtitle": "Manage drivers and applications",
+      "table": {
+        "applicant": "Applicant",
+        "vehicle": "Vehicle",
+        "licensePlate": "License Plate",
+        "siret": "SIRET",
+        "verified": "Verified",
+        "pending": "Pending",
+        "date": "Date",
+        "status": "Status",
+        "actions": "Actions",
+        "searchPlaceholder": "Search applications..."
+      },
+      "detail": {
+        "title": "Application Details",
+        "applicant": "Applicant",
+        "submissionDate": "Submission Date",
+        "currentStatus": "Current Status",
+        "approve": "Approve",
+        "reject": "Reject",
+        "pending": "Pending",
+        "vehicleInfo": "Vehicle Information",
+        "vehicleType": "Vehicle Type",
+        "licensePlate": "License Plate",
+        "licenseNumber": "License Number",
+        "siret": "SIRET",
+        "companyName": "Company Name",
+        "proposal": "Proposal",
+        "close": "Close",
+        "approvedTitle": "Application Approved",
+        "rejectedTitle": "Application Rejected",
+        "statusUpdatedDesc": "Status has been updated",
+        "error": "Error",
+        "errorDesc": "Failed to update status"
+      }
+    },
+    "support": {
+      "title": "Support Chats",
+      "subtitle": "Manage customer support conversations",
+      "refresh": "Refresh",
+      "searchPlaceholder": "Search by name or email...",
+      "tabs": {
+        "all": "All",
+        "unread": "Unread"
+      },
+      "empty": {
+        "allTitle": "No conversations",
+        "allDesc": "No support conversations yet",
+        "unreadTitle": "No unread messages",
+        "unreadDesc": "All messages have been read"
+      },
+      "time": {
+        "noMessages": "No messages",
+        "justNow": "Just now",
+        "yesterday": "Yesterday"
+      }
+    },
+    "roles": {
+      "title": "Manage User Role",
+      "description": "Assign a new role to",
+      "currentRole": "Current role:",
+      "selectPlaceholder": "Select new role to assign",
+      "buyer": "User",
+      "transporter": "Driver",
+      "admin": "Admin",
+      "note": "Note: This will add the selected role to the user. Users can have multiple roles.",
+      "cancel": "Cancel",
+      "assigning": "Assigning...",
+      "assignRole": "Assign Role"
+    },
+    "payments": {
+      "title": "Payments",
+      "subtitle": "Manage all payments and refunds",
+      "table": {
+        "id": "ID",
+        "user": "User",
+        "amount": "Amount",
+        "status": "Status",
+        "date": "Date",
+        "actions": "Actions",
+        "searchPlaceholder": "Search by user..."
+      },
+      "status": {
+        "pending": "Pending",
+        "succeeded": "Succeeded",
+        "failed": "Failed",
+        "refunded": "Refunded"
+      },
+      "actions": {
+        "processRefund": "Process Refund",
+        "cannotRefund": "Cannot Refund"
+      },
+      "refundDialog": {
+        "title": "Process Refund",
+        "description": "This will refund the payment and update its status. This action cannot be undone.",
+        "reasonLabel": "Refund Reason",
+        "requestedByCustomer": "Requested by Customer",
+        "duplicate": "Duplicate Payment",
+        "fraudulent": "Fraudulent",
+        "cancel": "Cancel",
+        "processing": "Processing...",
+        "confirm": "Confirm Refund"
+      }
+    }
+  },
+  "shipments": {
+    "title": "Shipments Management",
+    "subtitle": "Manage and assign pending shipments",
+    "table": {
+      "id": "ID",
+      "title": "Title",
+      "route": "Route",
+      "status": "Status",
+      "proposals": "Proposals",
+      "price": "Price",
+      "created": "Created",
+      "actions": "Actions",
+      "assign": "Assign",
+      "searchPlaceholder": "Search shipments..."
+    },
+    "proposalsDialog": {
+      "title": "Driver Proposals",
+      "description": "Review proposals from drivers for shipment #{id}",
+      "shipmentDetails": "Shipment Details",
+      "titleLabel": "Title",
+      "routeLabel": "Route",
+      "targetPrice": "Target Price",
+      "proposalsCount": "Proposals ({count})",
+      "actionRequired": "Action Required",
+      "waitingProposals": "Waiting for proposals",
+      "loadingProposals": "Loading proposals...",
+      "noProposals": "No proposals yet",
+      "noProposalsDesc": "Wait for drivers to submit their proposals for this shipment.",
+      "vsTarget": "vs target",
+      "cancel": "Cancel",
+      "assigning": "Assigning...",
+      "acceptAssign": "Accept Proposal & Assign"
+    }
+  }
+}

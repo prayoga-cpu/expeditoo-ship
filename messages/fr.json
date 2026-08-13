@@ -1,0 +1,1907 @@
+{
+
+  "bids": {
+    "title": "Mes Enchères",
+    "tabs": {
+      "active": "Actives",
+      "ended": "Terminées"
+    },
+    "status": {
+      "winning": "Gagnant",
+      "outbid": "Surenchéri",
+      "won": "Gagné",
+      "lost": "Perdu"
+    },
+    "card": {
+      "yourBid": "Votre Offre",
+      "highest": "Plus haute",
+      "ended": "Terminé"
+    },
+    "actions": {
+      "browse": "Parcourir",
+      "view": "Voir",
+      "bidAgain": "Enchérir à nouveau",
+      "checkout": "Payer",
+      "viewOrder": "Voir la commande",
+      "rateSeller": "Noter le vendeur",
+      "reviewed": "Noté"
+    },
+    "empty": {
+      "activeTitle": "Aucune enchère active",
+      "activeDesc": "Vous n'avez aucune enchère active pour le moment.",
+      "endedTitle": "Aucune enchère terminée",
+      "endedDesc": "Vous n'avez pas encore gagné ou perdu d'enchères."
+    }
+  },
+  "checkout": {
+    "title": "Secure Checkout",
+    "steps": {
+      "address": "Shipping Address",
+      "payment": "Payment Method"
+    },
+    "loadingAddresses": "Loading delivery details...",
+    "errors": {
+      "loadAddresses": "Could not load addresses"
+    },
+    "retry": "Retry",
+    "noAddresses": {
+      "title": "No shipping address",
+      "subtitle": "Add an address to receive your item"
+    },
+    "addAddress": "Select Address",
+    "addNewAddress": "Add New Address",
+    "default": "Default",
+    "orderSummary": "Order Summary",
+    "summary": {
+      "auctionWin": "Auction Item",
+      "itemPrice": "Winning Bid",
+      "shippingFee": "Shipping",
+      "platformFee": "Service Fee"
+    },
+    "total": "Total Due",
+    "emailReceipt": {
+      "label": "Email for Receipt",
+      "placeholder": "name@example.com",
+      "hint": "We will send payment confirmation here"
+    },
+    "security": "Encrypted & Secure Payment via Stripe",
+    "actions": {
+      "continue": "Proceed to Payment",
+      "back": "Go Back"
+    }
+  },
+  "common": {
+    "buttons": {
+      "save": "Enregistrer",
+      "cancel": "Annuler",
+      "submit": "Soumettre",
+      "close": "Fermer",
+      "back": "Retour",
+      "next": "Suivant",
+      "add": "Ajouter",
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "confirm": "Confirmer",
+      "search": "Rechercher",
+      "filter": "Filtrer",
+      "clear": "Effacer",
+      "apply": "Appliquer",
+      "loading": "Chargement...",
+      "viewAll": "Voir tout",
+      "seeMore": "Voir plus",
+      "addNew": "Ajouter nouveau"
+    },
+    "units": {
+      "cm": "cm",
+      "kg": "kg",
+      "euro": "€"
+    },
+    "formats": {
+      "pricePlaceholder": "0,00"
+    },
+    "navigation": {
+      "home": "Accueil",
+      "shipments": "Expéditions",
+      "create": "Créer",
+      "messages": "Messages",
+      "account": "Compte",
+      "profile": "Profil",
+      "settings": "Paramètres",
+      "notifications": "Notifications",
+      "logout": "Déconnexion",
+      "backToApp": "Retour à l'app",
+      "createAuction": "Créer une enchère",
+      "shipmentTracking": "Suivi d'expédition",
+      "myBids": "Mes offres"
+    },
+    "categories": {
+      "electronics": "Électronique",
+      "furniture": "Meubles",
+      "clothing": "Vêtements",
+      "vehicles": "Véhicules",
+      "documents": "Documents",
+      "sports": "Sports",
+      "books": "Livres",
+      "others": "Autres",
+      "general": "Général",
+      "appliances": "Électroménager",
+      "music": "Musique",
+      "pets": "Animaux"
+    },
+    "status": {
+      "active": "Actif",
+      "pending": "En attente",
+      "completed": "Terminé",
+      "cancelled": "Annulé",
+      "inProgress": "En cours",
+      "accepted": "Accepté",
+      "picked_up": "Récupéré",
+      "in_transit": "En transit",
+      "delivered": "Livré"
+    },
+    "errors": {
+      "loadFailed": "Échec du chargement des données",
+      "generic": "Une erreur est survenue",
+      "networkError": "Erreur de connexion",
+      "notFound": "Non trouvé",
+      "unauthorized": "Non autorisé",
+      "tryAgain": "Veuillez réessayer"
+    },
+    "time": {
+      "now": "Maintenant",
+      "today": "Aujourd'hui",
+      "yesterday": "Hier",
+      "daysAgo": "il y a {count} jours",
+      "hoursAgo": "il y a {count} heures",
+      "minutesAgo": "il y a {count} minutes"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Bon retour",
+      "subtitle": "Connectez-vous à votre compte EXPEDITOO",
+      "email": "Adresse e-mail",
+      "password": "Mot de passe",
+      "forgotPassword": "Mot de passe oublié ?",
+      "rememberMe": "Se souvenir de moi pendant 7 jours",
+      "submit": "Se connecter",
+      "orContinueWith": "Ou continuer avec",
+      "signInWithGoogle": "Se connecter avec Google",
+      "noAccount": "Pas encore de compte ?",
+      "signUp": "S'inscrire",
+      "loading": "Connexion en cours...",
+      "errors": {
+        "emailRequired": "L'email est requis",
+        "emailInvalid": "Veuillez entrer un email valide",
+        "passwordRequired": "Le mot de passe est requis"
+      },
+      "emailVerified": "Email vérifié avec succès !",
+      "emailVerifiedDesc": "Vous pouvez maintenant vous connecter."
+    },
+    "register": {
+      "title": "Créer votre compte",
+      "subtitle": "Rejoignez EXPEDITOO pour expédier et enchérir",
+      "name": "Nom complet",
+      "email": "Adresse e-mail",
+      "password": "Mot de passe",
+      "confirmPassword": "Confirmer le mot de passe",
+      "passwordHint": "Au moins 8 caractères",
+      "submit": "Créer un compte",
+      "orContinueWith": "Ou continuer avec",
+      "signUpWithGoogle": "S'inscrire avec Google",
+      "hasAccount": "Déjà un compte ?",
+      "signIn": "Se connecter",
+      "loading": "Création du compte...",
+      "terms": "En vous inscrivant, vous acceptez nos",
+      "termsOfService": "Conditions d'utilisation",
+      "and": "et notre",
+      "privacyPolicy": "Politique de confidentialité",
+      "placeholderName": "Jean Dupont",
+      "placeholderEmail": "vous@exemple.com",
+      "errors": {
+        "nameRequired": "Le nom complet est requis",
+        "emailRequired": "L'email est requis",
+        "emailInvalid": "Veuillez entrer un email valide",
+        "passwordMin": "Le mot de passe doit contenir au moins 8 caractères",
+        "passwordMismatch": "Les mots de passe ne correspondent pas"
+      }
+    },
+    "forgotPassword": {
+      "title": "Mot de passe oublié ?",
+      "subtitle": "Entrez votre email et nous vous enverrons un lien de réinitialisation",
+      "email": "Adresse e-mail",
+      "submit": "Envoyer le lien",
+      "backToLogin": "Retour à la connexion",
+      "success": "Vérifiez votre email pour le lien de réinitialisation"
+    },
+    "resetPassword": {
+      "title": "Réinitialiser le mot de passe",
+      "subtitle": "Entrez votre nouveau mot de passe",
+      "password": "Nouveau mot de passe",
+      "confirmPassword": "Confirmer le nouveau mot de passe",
+      "submit": "Réinitialiser",
+      "success": "Mot de passe réinitialisé avec succès"
+    },
+    "verifyEmail": {
+      "title": "Vérifiez votre email",
+      "subtitle": "Nous avons envoyé un lien de vérification à votre email",
+      "resend": "Renvoyer l'email de vérification",
+      "resending": "Envoi en cours...",
+      "resent": "Email de vérification envoyé !",
+      "backToLogin": "Retour à la connexion"
+    }
+  },
+  "home": {
+    "title": "Enchères actives",
+    "subtitle": "Parcourez et enchérissez sur les opportunités de livraison",
+    "search": {
+      "placeholder": "Rechercher par titre ou description...",
+      "button": "Rechercher",
+      "noResults": "Aucun résultat trouvé"
+    },
+    "filters": {
+      "title": "Filtres",
+      "sortBy": "Trier par",
+      "sortOptions": {
+        "endingSoon": "Se termine bientôt",
+        "newest": "Plus récents",
+        "priceLow": "Prix : Croissant",
+        "priceHigh": "Prix : Décroissant"
+      },
+      "priceRange": "Fourchette de prix",
+      "min": "Min",
+      "max": "Max",
+      "size": "Taille",
+      "all": "Tout",
+      "auctions": "Enchères",
+      "directSales": "Ventes directes",
+      "category": "Catégorie",
+      "price": "Prix",
+      "condition": "État"
+    },
+    "map": {
+      "title": "Vue carte",
+      "nearMe": "À proximité",
+      "switch2D": "Passer en vue 2D",
+      "switch3D": "Passer en vue 3D",
+      "myLocation": "Ma position"
+    },
+    "states": {
+      "error": "Échec du chargement des annonces. Veuillez réessayer.",
+      "empty": "Aucune enchère active trouvée.",
+      "emptyDesc": "Essayez de modifier vos filtres pour voir plus de résultats.",
+      "retry": "Réessayer",
+      "clearFilters": "Effacer les filtres"
+    },
+    "actions": {
+      "refresh": "Actualiser",
+      "refreshing": "Actualisation...",
+      "placeBid": "Enchérir",
+      "bids": "offres",
+      "bid": "offre"
+    }
+  },
+  "profile": {
+    "public": {
+      "notFound": "Utilisateur non trouvé",
+      "notFoundDesc": "L'utilisateur que vous recherchez n'existe pas.",
+      "goBack": "Retourner",
+      "back": "Retour",
+      "reviews": "{count} avis",
+      "joined": "Membre depuis {date}",
+      "activeListings": "Annonces actives",
+      "message": "Message",
+      "noListings": "Aucune annonce active",
+      "noListingsDesc": "Cet utilisateur n'a aucun article en vente pour le moment.",
+      "loginToMessage": "Veuillez vous connecter pour envoyer un message",
+      "selfMessage": "Vous ne pouvez pas vous envoyer de message",
+      "messageError": "Une erreur est survenue"
+    },
+    "title": "Profil",
+    "header": {
+      "reviews": "avis",
+      "settings": "Paramètres",
+      "logout": "Déconnexion"
+    },
+    "quickLinks": {
+      "title": "Liens rapides",
+      "myAuctions": "Mes enchères",
+      "myBids": "Mes offres",
+      "earnings": "Revenus",
+      "myReviews": "Mes avis",
+      "paymentMethods": "Moyens de paiement",
+      "contactHelp": "Contact & Aide",
+      "adminDashboard": "Tableau de bord admin",
+      "adminUsers": "Gestion des utilisateurs",
+      "adminPayments": "Paiements",
+      "adminSupport": "Chats de support",
+      "driverSupport": "Support Chauffeur",
+      "driverDashboard": "Tableau de bord chauffeur",
+      "becomeDriver": "Devenir chauffeur"
+    },
+    "myAuctions": {
+      "title": "Mes enchères",
+      "tabs": {
+        "active": "Actives",
+        "past": "Passées"
+      },
+      "newAuction": "Nouvelle enchère",
+      "card": {
+        "currentBid": "Enchère actuelle",
+        "bids": "Offres",
+        "views": "Vues",
+        "ended": "Terminée le",
+        "ends": "Se termine"
+      },
+      "actions": {
+        "viewDetails": "Voir les détails",
+        "edit": "Modifier l'enchère",
+        "end": "Terminer l'enchère",
+        "repost": "Republier l'enchère",
+        "delete": "Supprimer"
+      },
+      "empty": {
+        "noActive": "Aucune enchère active",
+        "noActiveDesc": "Vous n'avez aucune enchère active pour le moment.",
+        "noPast": "Aucune enchère passée",
+        "noPastDesc": "Vous n'avez encore publié aucune enchère.",
+        "startSelling": "Commencer à vendre"
+      },
+      "toast": {
+        "endSuccess": "Enchère terminée avec succès",
+        "deleteSuccess": "Enchère supprimée avec succès",
+        "repostSuccess": "Enchère republiée avec succès"
+      },
+      "dialogs": {
+        "end": {
+          "title": "Terminer l'enchère ?",
+          "description": "Êtes-vous sûr de vouloir terminer cette enchère plus tôt ? Cette action est irréversible. L'enchère sera déplacée vers vos enchères passées.",
+          "confirm": "Terminer l'enchère"
+        },
+        "delete": {
+          "title": "Supprimer l'enchère ?",
+          "description": "Êtes-vous sûr de vouloir supprimer \"{title}\" ? Cette action est irréversible et supprimera définitivement l'enchère ainsi que toutes ses données.",
+          "confirm": "Supprimer"
+        },
+        "repost": {
+          "title": "Republier l'enchère",
+          "description": "Créer une nouvelle enchère avec les mêmes détails. Choisissez la durée de la nouvelle enchère.",
+          "durationLabel": "Durée de l'enchère",
+          "confirm": "Republier l'enchère",
+          "durations": {
+            "1": "1 jour",
+            "3": "3 jours",
+            "5": "5 jours",
+            "7": "7 jours",
+            "14": "14 jours",
+            "30": "30 jours"
+          }
+        },
+        "cancel": "Annuler"
+      }
+    },
+    "address": {
+      "title": "Adresse",
+      "noAddress": "Aucune adresse définie. Ajoutez une adresse pour recevoir des envois.",
+      "addAddress": "Ajouter une adresse",
+      "editAddress": "Modifier l'adresse",
+      "form": {
+        "label": "Libellé",
+        "labelPlaceholder": "ex: Domicile, Bureau",
+        "street": "Adresse",
+        "streetPlaceholder": "123 Rue Principale",
+        "city": "Ville",
+        "cityPlaceholder": "Paris",
+        "zip": "Code Postal",
+        "zipPlaceholder": "75001",
+        "country": "Pays",
+        "countryPlaceholder": "France",
+        "details": "Complément d'adresse",
+        "detailsPlaceholder": "Étage, numéro d'appartement, digicode, etc.",
+        "detailsHelp": "Aidez le livreur à vous trouver facilement",
+        "default": "Définir comme adresse par défaut",
+        "save": "Enregistrer l'adresse",
+        "update": "Mettre à jour",
+        "saving": "Enregistrement...",
+        "pinLocation": "Veuillez épingler un lieu sur la carte pour continuer"
+      },
+      "map": {
+        "searchPlaceholder": "Rechercher un lieu en France...",
+        "clickToPin": "Cliquez sur la carte pour épingler",
+        "gettingAddress": "Récupération de l'adresse..."
+      },
+      "errors": {
+        "outsideFrance": "Ce lieu est en dehors de la France. La livraison est uniquement disponible en France.",
+        "notFound": "Adresse introuvable pour ce lieu.",
+        "generic": "Erreur lors de la récupération de l'adresse. Veuillez réessayer."
+      }
+    },
+    "paymentMethods": {
+      "title": "Moyens de paiement",
+      "description": "Gérez vos cartes enregistrées pour un paiement plus rapide.",
+      "addNew": "Ajouter nouveau",
+      "cardNumber": "Numéro de carte",
+      "expiryDate": "Date d'expiration",
+      "addCard": "Ajouter la carte",
+      "expires": "Expire le",
+      "savedCards": "Cartes enregistrées",
+      "emptyTitle": "Aucune carte enregistrée",
+      "emptyDesc": "Ajoutez une carte pour payer plus rapidement.",
+      "addFirst": "Ajouter une carte",
+      "confirmDelete": "Êtes-vous sûr de vouloir supprimer cette carte ?",
+      "deleteSuccess": "Carte supprimée avec succès",
+      "deleteError": "Échec de la suppression de la carte",
+      "loadError": "Échec du chargement des moyens de paiement"
+    },
+    "payout": {
+      "title": "Configuration des virements",
+      "status": {
+        "active": "Actif",
+        "pending": "Configuration en attente",
+        "notConnected": "Non connecté"
+      },
+      "description": {
+        "active": "Votre compte de virement est configuré et prêt à recevoir les fonds de vos ventes/livraisons.",
+        "inactive": "Pour recevoir les paiements de vos articles vendus ou de vos livraisons, vous devez connecter votre compte Stripe."
+      },
+      "button": {
+        "continue": "Continuer la configuration",
+        "connect": "Connecter le compte de virement"
+      }
+    },
+    "picture": {
+      "title": "Photo de profil",
+      "upload": "Télécharger une nouvelle photo",
+      "remove": "Supprimer la photo"
+    },
+    "reviews": {
+      "title": "Avis et évaluations",
+      "summary": {
+        "totalReviews": "{count} avis"
+      },
+      "tabs": {
+        "all": "Tous",
+        "buyer": "Acheteur",
+        "seller": "Vendeur"
+      },
+      "card": {
+        "helpful": "Utile",
+        "report": "Signaler",
+        "buyer": "Acheteur",
+        "seller": "Vendeur"
+      },
+      "empty": "Aucun avis disponible pour cet utilisateur"
+    }
+  },
+  "settings": {
+    "title": "Paramètres",
+    "theme": {
+      "title": "Thème",
+      "light": "Clair",
+      "dark": "Sombre",
+      "system": "Système"
+    },
+    "language": {
+      "title": "Langue"
+    },
+    "notifications": {
+      "title": "Notifications par email",
+      "description": "Choisissez les emails que vous souhaitez recevoir d'EXPEDITOO.",
+      "auctionResults": {
+        "title": "Résultats d'enchères",
+        "description": "Notifications de gain/perte et mises à jour de fin d'enchère"
+      },
+      "accountSecurity": {
+        "title": "Compte & Sécurité",
+        "description": "Messages de bienvenue, réinitialisations de mot de passe et vérifications"
+      }
+    },
+    "dangerZone": {
+      "title": "Zone dangereuse",
+      "deleteAccount": "Supprimer mon compte",
+      "deleteDialog": {
+        "title": "Supprimer le compte",
+        "description": "Cette action est irréversible. Toutes vos données seront définitivement supprimées.",
+        "cancel": "Annuler",
+        "delete": "Supprimer"
+      }
+    }
+  },
+  "messages": {
+    "title": "Messages",
+    "tabs": {
+      "all": "Tous",
+      "unread": "Non lus",
+      "inbox": "Boîte de réception"
+    },
+    "search": "Rechercher des messages...",
+    "empty": {
+      "title": "Aucun message",
+      "description": "Lorsque vous contactez un utilisateur, votre conversation apparaîtra ici."
+    },
+    "detail": {
+      "noRatings": "Aucun avis",
+      "aboutListing": "À propos de l'annonce",
+      "newMessage": "Nouveau message",
+      "typeMessage": "Écrivez un message...",
+      "loading": "Chargement...",
+      "unknown": "Inconnu",
+      "you": "Vous"
+    },
+    "item": {
+      "noListing": "Aucune annonce"
+    },
+    "time": {
+      "today": "Aujourd'hui",
+      "yesterday": "Hier",
+      "daysAgo": "Il y a {count} jours"
+    },
+    "input": {
+      "placeholder": "Tapez un message..."
+    }
+  },
+  "deliveries": {
+    "title": "Expéditions",
+    "tabs": {
+      "all": "Toutes",
+      "active": "Actives",
+      "completed": "Terminées",
+      "noIncoming": "Aucune livraison active",
+      "noIncomingDesc": "Vos livraisons actives apparaîtront ici.",
+      "noOutgoing": "Aucune livraison terminée",
+      "noOutgoingDesc": "Vos livraisons terminées apparaîtront ici."
+    },
+    "status": {
+      "pending": "En attente",
+      "confirmed": "Confirmé",
+      "pickedUp": "Récupéré",
+      "inTransit": "En transit",
+      "delivered": "Livré",
+      "cancelled": "Annulé"
+    },
+    "card": {
+      "scheduled": "Prévu : {date}",
+      "created": "Créé : {date}",
+      "defaultTitle": "Livraison",
+      "awaitingDriver": "En attente d'un chauffeur"
+    },
+    "details": {
+      "from": "De",
+      "to": "À",
+      "weight": "Poids",
+      "dimensions": "Dimensions",
+      "price": "Prix",
+      "driver": "Chauffeur",
+      "estimatedDelivery": "Livraison estimée",
+      "reviews": "{count} avis"
+    },
+    "buttons": {
+      "contactDriver": "Contacter le chauffeur",
+      "cancelShipment": "Annuler la livraison",
+      "keepShipment": "Garder la livraison",
+      "confirmCancellation": "Confirmer l'annulation",
+      "cancelling": "Annulation en cours...",
+      "rateDriver": "Noter le chauffeur",
+      "rateClient": "Noter le client",
+      "reviewed": "Noté"
+    },
+    "dialogs": {
+      "cancel": {
+        "title": "Annuler la livraison",
+        "description": "Êtes-vous sûr de vouloir annuler cette livraison ? Cette action est irréversible.",
+        "reasonLabel": "Raison de l'annulation",
+        "reasonPlaceholder": "Veuillez expliquer pourquoi vous devez annuler..."
+      }
+    },
+    "events": {
+      "PENDING": "Livraison créée",
+      "PRICE_PROPOSED": "Prix proposé",
+      "ASSIGNED": "Chauffeur assigné",
+      "PICKED_UP": "Colis récupéré",
+      "IN_TRANSIT": "En transit",
+      "DELIVERED": "Livré",
+      "CANCELLED": "Annulé"
+    }
+  },
+  "auction": {
+    "title": "Enchère",
+    "currentBid": "Enchère actuelle",
+    "startingPrice": "Prix de départ",
+    "yourBid": "Votre enchère",
+    "placeBid": "Enchérir",
+    "placingBid": "Enchère en cours...",
+    "minBid": "Enchère minimum",
+    "timeLeft": "Temps restant",
+    "ends": "Se termine",
+    "bids": "enchères",
+    "noBids": "Aucune enchère",
+    "youAreWinning": "Vous êtes en tête !",
+    "youAreOutbid": "Vous avez été surenchéri",
+    "auctionEnded": "Enchère terminée",
+    "sold": "Vendu",
+    "unsold": "Non vendu",
+    "description": "Description",
+    "pickupLocation": "Lieu de retrait",
+    "bidHistory": "Historique des enchères",
+    "status": {
+      "live": "Enchère en cours",
+      "sold": "Vendu",
+      "ended": "Terminé",
+      "cancelled": "Annulé",
+      "secure": "Enchère sécurisée"
+    },
+    "condition": {
+      "new": "Neuf",
+      "used_like_new": "Occasion - Comme neuf",
+      "used_good": "Occasion - Bon état",
+      "used_fair": "Occasion - État correct"
+    },
+    "category": {
+      "electronics": "Électronique",
+      "furniture": "Meubles",
+      "clothing": "Vêtements",
+      "vehicles": "Véhicules",
+      "others": "Autres"
+    },
+    "detail": {
+      "soldTitle": "Enchère Vendue !",
+      "soldDesc": "Cet article a été vendu au meilleur enchérisseur",
+      "winningBid": "Enchère Gagnante",
+      "winner": "Gagnant",
+      "highestBidder": "Meilleur Enchérisseur",
+      "endedTitle": "Enchère Terminée",
+      "endedNoBids": "Cette enchère s'est terminée sans offre",
+      "endedWithBids": "Cette enchère est terminée",
+      "finalBid": "Enchère Finale",
+      "startPrice": "Prix de départ",
+      "cancelledTitle": "Enchère Annulée",
+      "cancelledDesc": "Cette enchère a été annulée par le vendeur",
+      "originalPrice": "Prix d'origine",
+      "reviews": "{count} avis",
+      "chat": "Discuter",
+      "viewProfile": "Voir le profil",
+      "noBidsYet": "Pas encore d'offre. Soyez le premier !",
+      "noBidsPlaced": "Aucune offre n'a été placée sur cette enchère",
+      "ownListing": "Ceci est votre annonce",
+      "cannotBid": "Vous ne pouvez pas enchérir sur votre propre enchère",
+      "currentBid": "Enchère actuelle",
+      "endsIn": "Se termine dans",
+      "soldFor": "Vendu pour {amount}",
+      "endedAt": "Terminé à {amount}",
+      "endedNoBidsMobile": "Terminé sans offre",
+      "cancelledMobile": "Enchère Annulée"
+    },
+    "buyNow": {
+      "label": "Acheter maintenant"
+    },
+    "autoBid": {
+      "title": "Enchère auto",
+      "description": "Laissez notre système enchérir pour vous jusqu'à votre montant maximum.",
+      "currentBid": "Enchère actuelle",
+      "maxBidLabel": "Votre enchère maximum",
+      "maxBidHint": "Le montant maximum que vous êtes prêt à payer",
+      "incrementLabel": "Incrément d'enchère",
+      "howItWorks": "Comment ça marche ?",
+      "howItWorksDesc": "Nous enchérissons automatiquement juste assez pour vous garder en tête, jusqu'à votre maximum. Si quelqu'un enchérit plus haut que votre maximum, nous vous préviendrons.",
+      "warning": "En plaçant une enchère automatique, vous vous engagez à acheter cet article si vous gagnez.",
+      "confirm": "Confirmer l'enchère auto",
+      "cancel": "Annuler"
+    },
+    "cancel": "Annuler",
+    "errors": {
+      "loginToChat": "Veuillez vous connecter pour discuter avec le vendeur",
+      "chatSelf": "Vous ne pouvez pas discuter avec vous-même",
+      "generic": "Une erreur s'est produite"
+    }
+  },
+  "listing": {
+    "title": "Annonce",
+    "price": "Prix",
+    "condition": "État",
+    "category": "Catégorie",
+    "description": "Description",
+    "seller": "Vendeur",
+    "location": "Localisation",
+    "postedOn": "Publié le",
+    "buyNow": "Acheter maintenant",
+    "makeOffer": "Faire une offre",
+    "addToCart": "Ajouter au panier",
+    "contactSeller": "Contacter le vendeur",
+    "writeReview": "Écrire un avis",
+    "conditions": {
+      "new": "Neuf",
+      "likeNew": "Comme neuf",
+      "good": "Bon état",
+      "acceptable": "Acceptable"
+    },
+    "reviews": "{count} avis",
+    "reviewsTitle": "Avis des acheteurs",
+    "noReviews": "Aucun avis disponible pour cette annonce",
+    "from": "De",
+    "to": "À",
+    "quantity": "Quantité",
+    "size": "Taille",
+    "weight": "Poids",
+    "dimensions": "Dimensions",
+    "moreInfo": "Plus d'informations",
+    "info": {
+      "handling": "Pas d'aide à la manutention",
+      "signature": "Signature non requise",
+      "packaging": "Emballage personnalisé non inclus"
+    }
+  },
+  "create": {
+    "titleNew": "Nouvelle annonce",
+    "titleEdit": "Modifier l'annonce",
+    "steps": {
+      "item": "Article",
+      "logistics": "Logistique",
+      "summary": "Résumé"
+    },
+    "map": {
+      "searchPlaceholder": "Rechercher un lieu en France...",
+      "outsideFrance": "Ce lieu est hors de France. Le retrait est uniquement disponible en France.",
+      "notFound": "Impossible de trouver une adresse pour ce lieu.",
+      "error": "Erreur lors de la récupération de l'adresse. Veuillez réessayer.",
+      "updating": "Mise à jour de l'adresse..."
+    },
+    "success": {
+      "title": "Enchère créée avec succès !",
+      "description": "Votre annonce d'enchère a été publiée et est maintenant en ligne. Partagez le lien ci-dessous pour commencer à recevoir des offres.",
+      "auctionId": "ID Enchère :",
+      "status": "Statut :",
+      "active": "Active",
+      "shareTitle": "Partager votre enchère",
+      "viewAuction": "Voir l'enchère",
+      "shareAuction": "Partager l'enchère",
+      "backHome": "Retour à l'accueil",
+      "nextSteps": "Prochaines étapes :",
+      "nextStepsDesc": "Vous recevrez des notifications lorsque les utilisateurs enchériront sur votre annonce. Vous pouvez gérer votre enchère depuis la section \"Mes Expéditions\"."
+    },
+    "dropzone": {
+      "title": "Ajouter des photos",
+      "subtitle": "Glisser-déposer ou cliquer pour télécharger",
+      "uploading": "Téléchargement de {count} photo(s)",
+      "uploadError": "Échec du téléchargement des photos",
+      "takePhoto": "Prendre une photo"
+    },
+    "slip": {
+      "title": "Télécharger un reçu",
+      "subtitle": "Glisser-déposer ou cliquer pour télécharger",
+      "invalidFile": "Veuillez télécharger un fichier image",
+      "processError": "Échec du traitement du reçu. Veuillez réessayer."
+    },
+    "photos": {
+      "title": "Photos",
+      "aiFeature": {
+        "new": "Nouveau !",
+        "badge": "IA",
+        "label": "Téléchargement du bon d'achat",
+        "description": "Téléchargez un bon d'achat et l'IA extraira toutes les données automatiquement.",
+        "estimateLabel": "Estimation de prix par IA"
+      }
+    },
+    "ai": {
+      "title": "Recommandation de prix IA",
+      "loading": "Analyse de votre article...",
+      "analyzePhotos": "Photos du produit",
+      "analyzeDetails": "Détails de l'article",
+      "analyzeMarket": "Tendances du marché",
+      "startingBid": "Enchère de départ",
+      "buyNowPrice": "Prix d'achat immédiat",
+      "useThis": "Utiliser",
+      "applied": "Appliqué",
+      "confidence": "Confiance",
+      "refresh": "Actualiser",
+      "error": "Impossible de générer la recommandation",
+      "errorRetry": "Réessayer",
+      "manualEntry": "Veuillez entrer vos prix manuellement ci-dessous.",
+      "noSlipDesc": "Obtenez des recommandations de prix par IA basées sur les détails de votre article.",
+      "readyWithSlip": "Prêt à analyser avec les données du reçu !",
+      "getRecommendation": "Obtenir la recommandation IA",
+      "recommended": "Recommandé par IA",
+      "reasoning": {
+        "volume": "Volume : {volume} cm³ × {price}/cm³ = {total}.",
+        "weight": "Poids : {weight} kg × {price}/kg = {total}.",
+        "estimatedTotal": "Total estimé : {total}.",
+        "usingSlipPrice": "Prix du reçu utilisé : {total}.",
+        "minPrice": "Ajusté au minimum : {total}.",
+        "maxPrice": "Ajusté au maximum : {total}."
+      }
+    },
+    "form": {
+      "quantity": "Quantité",
+      "title": "Titre",
+      "titlePlaceholder": "Ex: Canapé, fauteuil, etc...",
+      "category": "Catégorie",
+      "selectCategory": "Sélectionner une catégorie",
+      "condition": "État",
+      "selectCondition": "Sélectionner l'état",
+      "selectDuration": "Sélectionner la durée",
+      "weight": {
+        "label": "Poids estimateur",
+        "placeholder": "Choisir une tranche de poids",
+        "ranges": {
+          "0_5": "0 - 5 kg",
+          "5_10": "5 - 10 kg",
+          "10_25": "10 - 25 kg",
+          "25_50": "25 - 50 kg",
+          "50_plus": "50+ kg"
+        }
+      },
+      "dimensions": {
+        "label": "Dimensions (Requis)",
+        "length": "Longueur",
+        "width": "Largeur",
+        "height": "Hauteur"
+      },
+      "size": {
+        "label": "Taille estimée",
+        "xs": "XS (Téléphone, Clés)",
+        "s": "S (Boîte à chaussures)",
+        "m": "M (Valise)",
+        "l": "L (Vélo)",
+        "xl": "XL (Meubles)",
+        "xxl": "XXL (Véhicule)",
+        "placeholder": "Entrez les dimensions pour voir la taille"
+      },
+      "description": "Description",
+      "descriptionPlaceholder": "Décrivez votre article...",
+      "additionalInfo": {
+        "label": "Informations supplémentaires",
+        "warning": "Ces informations sont publiques. Ne partagez pas de données personnelles comme téléphone ou email.",
+        "placeholder": "Décrivez votre article en détail (état, histoire, défauts, etc.)"
+      }
+    },
+    "logistics": {
+      "pickup": "Adresse de retrait",
+      "delivery": "Adresse de livraison (Optionnel)",
+      "info": "Informations",
+      "searchMap": "Rechercher ou cliquer sur la carte pour définir le lieu de retrait. Les détails de l'adresse seront remplis automatiquement.",
+      "addressDetails": "Détails de l'adresse",
+      "street": "Rue",
+      "city": "Ville",
+      "postalCode": "Code postal",
+      "country": "Pays"
+    },
+    "pricing": {
+      "type": "Type de vente",
+      "auction": "Enchère",
+      "fixed": "Prix fixe",
+      "startingPrice": "Prix de départ",
+      "reservePrice": "Prix de réserve",
+      "buyNowPrice": "Prix d'achat immédiat",
+      "minIncrease": "Palier d'enchère",
+      "duration": {
+        "label": "Durée de l'enchère"
+      },
+      "days": "{count, plural, =1 {jour} other {jours}}",
+      "optional": "(Optionnel)"
+    },
+    "summary": {
+      "itemDetails": "Détails de l'article",
+      "logistics": "Logistique",
+      "pricing": "Prix & Conditions",
+      "location": "Localisation"
+    },
+    "buttons": {
+      "back": "Retour",
+      "next": "Suivant",
+      "submit": "Publier l'annonce",
+      "update": "Mettre à jour l'annonce"
+    },
+    "messages": {
+      "uploadPhoto": "Veuillez télécharger au moins une photo",
+      "creating": "Création de l'annonce...",
+      "created": "Annonce créée avec succès !",
+      "createError": "Échec de la création de l'annonce",
+      "updating": "Mise à jour de l'annonce...",
+      "updated": "Annonce mise à jour avec succès !",
+      "updateError": "Échec de la mise à jour de l'annonce"
+    },
+    "validation": {
+      "titleMin": "Le titre doit contenir au moins 3 caractères",
+      "categoryRequired": "La catégorie est requise",
+      "lengthPositive": "La longueur doit être positive",
+      "widthPositive": "La largeur doit être positive",
+      "heightPositive": "La hauteur doit être positive",
+      "weightRequired": "Le poids est requis",
+      "addressRequired": "L'adresse est requise",
+      "cityRequired": "La ville est requise",
+      "postalCodeRequired": "Le code postal est requis",
+      "countryRequired": "Le pays est requis",
+      "startingBidMin": "L'enchère de départ doit être de 0 ou plus",
+      "durationRequired": "La durée est requise",
+      "descriptionMin": "La description doit contenir au moins 10 caractères"
+    }
+  },
+  "wallet": {
+    "title": "Portefeuille",
+    "balance": "Solde",
+    "transactions": "Transactions",
+    "withdraw": "Retirer",
+    "deposit": "Déposer",
+    "history": {
+      "title": "Historique",
+      "purchase": "Achat",
+      "sale": "Vente",
+      "refund": "Remboursement",
+      "withdrawal": "Retrait"
+    }
+  },
+  "driver": {
+    "title": "Chauffeur",
+    "panelTitle": "Espace Chauffeur",
+    "navigation": {
+      "dashboard": "Tableau de bord",
+      "shipments": "Expéditions",
+      "messages": "Messages",
+      "profile": "Profil"
+    },
+    "dashboard": {
+      "title": "Tableau de bord chauffeur",
+      "availableJobs": "Trouvez des expéditions et gérez vos livraisons",
+      "myDeliveries": "Mes livraisons",
+      "earnings": "Gains",
+      "stats": {
+        "totalDeliveries": "Total Livraisons",
+        "completedShipments": "Expéditions terminées",
+        "totalEarnings": "Gains Totaux",
+        "fromDeliveries": "Des livraisons terminées",
+        "successRate": "Taux de Succès",
+        "basedOnAssignments": "Basé sur {count} missions"
+      },
+      "activeDeliveries": {
+        "title": "Livraisons Actives",
+        "empty": "Aucune livraison active pour le moment.",
+        "earnings": "Gains",
+        "details": "Détails",
+        "defaultTitle": "Expédition"
+      }
+    },
+    "shipments": {
+      "title": "Expéditions",
+      "subtitle": "Parcourir et enchérir sur les expéditions disponibles",
+      "tabs": {
+        "available": "Expéditions disponibles",
+        "myShipments": "Mes expéditions"
+      },
+      "empty": {
+        "title": "Aucune expédition",
+        "description": "Aucune expédition trouvée correspondant à vos critères."
+      },
+      "filters": {
+        "placeholder": "Filtrer par statut",
+        "all": "Tout",
+        "waiting": "En attente",
+        "approved": "Approuvé",
+        "active": "Actif",
+        "completed": "Terminé",
+        "cancelled": "Annulé"
+      },
+      "proposals": {
+        "title": "Expéditions Disponibles",
+        "searchPlaceholder": "Rechercher une ville...",
+        "viewAndPropose": "Voir et Proposer",
+        "defaultTitle": "Expédition",
+        "empty": {
+          "title": "Aucune expédition",
+          "description": "Aucune expédition disponible trouvée correspondant à vos critères."
+        }
+      }
+    },
+    "shipmentDetail": {
+      "notFound": "Expédition introuvable",
+      "goBack": "Retour",
+      "shipmentNumber": "Expédition #",
+      "shipmentDetails": "Détails de l'expédition",
+      "budget": "Budget",
+      "route": "Itinéraire",
+      "pickup": "Retrait",
+      "dropoff": "Livraison",
+      "date": "Date",
+      "weight": "Poids",
+      "dimensions": "Dimensions",
+      "description": "Description",
+      "flexible": "Flexible"
+    },
+    "actions": {
+      "status": "Statut",
+      "actions": "Actions",
+      "proposalSubmitted": "Proposition soumise",
+      "proposalSubmittedDesc": "Vous avez soumis une proposition pour cette expédition. Attendez que l'expéditeur l'examine.",
+      "backToShipments": "Retour aux expéditions",
+      "awaitingPayment": "En attente de paiement",
+      "awaitingPaymentDesc": "Vous avez été assigné à cette expédition. L'acheteur doit effectuer le paiement avant que vous puissiez récupérer le colis.",
+      "confirmPickup": "Confirmer le retrait",
+      "updating": "Mise à jour...",
+      "paymentNotConfirmed": "Si le paiement n'est pas encore confirmé, le bouton ci-dessus affichera une erreur.",
+      "navigateToPickup": "Naviguer vers le retrait",
+      "navigateToDropoff": "Naviguer vers la livraison",
+      "inTransit": "En transit",
+      "inTransitDesc": "Le colis est en transit. Mettez à jour le statut une fois livré.",
+      "startJourney": "Démarrer le trajet",
+      "confirmDelivery": "Confirmer la livraison",
+      "uploadProof": "Télécharger la preuve de livraison",
+      "deliveryCompleted": "Livraison terminée",
+      "deliveryCompletedDesc": "Excellent travail ! Cette expédition a été livrée."
+    },
+    "proposalForm": {
+      "submitProposal": "Soumettre une proposition",
+      "referencePrice": "Prix de référence",
+      "suggested": "Suggéré",
+      "baseDistance": "Base + Distance",
+      "weightVolume": "Poids + Volume",
+      "platformFee": "Frais de plateforme",
+      "useThisPrice": "Utiliser ce prix",
+      "use": "Utiliser",
+      "unableToCalculate": "Impossible de calculer le prix de référence",
+      "yourPrice": "Votre prix",
+      "yourProposedPrice": "Votre prix proposé (€)",
+      "priceDescription": "Entrez votre prix. Considérez le prix de référence ci-dessus.",
+      "estimatedDelivery": "Livraison estimée",
+      "estimatedDeliveryOptional": "Livraison estimée (Optionnel)",
+      "estimatedDeliveryDate": "Date de livraison estimée (Optionnel)",
+      "deliveryDescription": "Quand estimez-vous livrer ? Cela aide l'acheteur à planifier.",
+      "notes": "Notes (Optionnel)",
+      "notesPlaceholder": "Ajoutez des détails ou conditions supplémentaires...",
+      "submitting": "Envoi en cours...",
+      "submit": "Soumettre la proposition",
+      "cancel": "Annuler",
+      "cancelGoBack": "Annuler / Retour",
+      "priceRequired": "Le prix est requis",
+      "successMessage": "Proposition soumise avec succès !",
+      "alreadySubmitted": "Vous avez déjà soumis une proposition pour cette expédition.",
+      "errorMessage": "Échec de la soumission de la proposition. Veuillez réessayer."
+    },
+    "apply": {
+      "title": "Devenir chauffeur",
+      "description": "Rejoignez notre réseau de transporteurs et commencez à gagner de l'argent.",
+      "requirements": "Prérequis",
+      "submit": "Soumettre ma candidature"
+    }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "markAllRead": "Tout marquer comme lu",
+    "empty": {
+      "title": "Aucune notification",
+      "description": "Vous êtes à jour !"
+    },
+    "types": {
+      "message": "Message",
+      "bid": "Enchère",
+      "delivery": "Livraison",
+      "review": "Avis",
+      "payment": "Paiement",
+      "listing": "Annonce",
+      "shipment_assigned": "Livraison assignée"
+    }
+  },
+  "marketing": {
+    "navbar": {
+      "login": "Connexion",
+      "signup": "S'inscrire",
+      "getStarted": "Commencer",
+      "openApp": "Ouvrir l'application"
+    },
+    "hero": {
+      "badge": "Maintenant disponible en France",
+      "titleLine1": "Enchérissez, Expédiez et Gagnez.",
+      "titleLine2": "Votre Marketplace Tout-en-un.",
+      "subtitle": "Expédiez vos colis en toute simplicité et découvrez des offres incroyables dans nos enchères. Expeditoo est la plateforme ultime pour la logistique et les enchères en ligne en France.",
+      "primaryCta": "Envoyer un colis",
+      "secondaryCta": "Explorer les enchères",
+      "trustedBy": "Recommandé par +15 000 utilisateurs en France",
+      "rating": "Note moyenne de 4.9/5",
+      "form": {
+        "from": "De",
+        "to": "À",
+        "placeholder": "Ville ou adresse",
+        "cta": "Obtenir un prix"
+      }
+    },
+    "stats": {
+      "deliveries": "Livraisons effectuées",
+      "drivers": "Chauffeurs vérifiés",
+      "auctions": "Enchères actives",
+      "users": "Utilisateurs satisfaits"
+    },
+    "whatToShip": {
+      "badge": "Catégories",
+      "title": "Ce que vous pouvez expédier",
+      "subtitle": "Des petits colis aux objets volumineux, trouvez un transporteur pour tout.\nDécouvrez ces articles et plus encore dans nos enchères !",
+      "items": {
+        "furniture": {
+          "name": "Meubles",
+          "desc": "Canapés, tables, chaises et plus"
+        },
+        "carParts": {
+          "name": "Pièces Auto",
+          "desc": "Roues, moteurs et accessoires"
+        },
+        "electronics": {
+          "name": "Électronique",
+          "desc": "Gadgets et appareils tech"
+        },
+        "appliances": {
+          "name": "Électroménager",
+          "desc": "Appareils pour la maison"
+        },
+        "sports": {
+          "name": "Sports",
+          "desc": "Équipement sportif"
+        },
+        "music": {
+          "name": "Musique",
+          "desc": "Instruments et audio"
+        },
+        "pets": {
+          "name": "Animaux",
+          "desc": "Fournitures pour animaux"
+        },
+        "more": {
+          "name": "Et plus...",
+          "desc": "Tout ce dont vous avez besoin"
+        }
+      }
+    },
+    "howItWorks": {
+      "badge": "Processus Simple",
+      "title": "Comment ça marche ?",
+      "tabs": {
+        "sender": "J'expédie",
+        "courier": "Je transporte",
+        "auction": "Enchères"
+      },
+      "sender": {
+        "step1": {
+          "title": "Publiez votre annonce",
+          "desc": "Décrivez ce que vous devez envoyer en quelques clics."
+        },
+        "step2": {
+          "title": "Choisissez un transporteur",
+          "desc": "Recevez des propositions de transporteurs et choisissez celle que vous préférez."
+        },
+        "step3": {
+          "title": "Organisez les détails",
+          "desc": "Discutez avec le transporteur pour organiser le retrait et la livraison."
+        },
+        "step4": {
+          "title": "Recevez votre objet",
+          "desc": "Votre objet est livré à destination en toute sécurité."
+        }
+      },
+      "courier": {
+        "step1": {
+          "title": "Trouvez un transport",
+          "desc": "Trouvez des expéditions sur votre trajet."
+        },
+        "step2": {
+          "title": "Faites une proposition",
+          "desc": "Proposez un prix à l'expéditeur."
+        },
+        "step3": {
+          "title": "Organisez les détails",
+          "desc": "Discutez avec l'expéditeur pour organiser le transport."
+        },
+        "step4": {
+          "title": "Livrez et soyez payé",
+          "desc": "Livrez l'objet et recevez votre paiement."
+        }
+      },
+      "auction": {
+        "step1": {
+          "title": "Découvrez des objets",
+          "desc": "Parcourez nos enchères pour trouver des objets uniques."
+        },
+        "step2": {
+          "title": "Placez votre enchère",
+          "desc": "Enchérissez et rivalisez avec d'autres utilisateurs."
+        },
+        "step3": {
+          "title": "Gagnez et payez",
+          "desc": "Si vous remportez l'enchère, payez l'objet en toute sécurité."
+        },
+        "step4": {
+          "title": "Faites-vous livrer",
+          "desc": "Faites livrer vos gains par nos transporteurs de confiance."
+        }
+      }
+    },
+    "advantages": {
+      "badge": "Fonctionnalités",
+      "title": "Pourquoi choisir Expeditoo ?",
+      "items": {
+        "economic": {
+          "title": "Économique",
+          "description": "Jusqu'à 70% moins cher que les transporteurs traditionnels"
+        },
+        "ecological": {
+          "title": "Écologique",
+          "description": "Optimisez les trajets existants et réduisez l'empreinte carbone"
+        },
+        "secure": {
+          "title": "Sécurisé",
+          "description": "Paiements sécurisés et assurance incluse"
+        },
+        "community": {
+          "title": "Communauté",
+          "description": "Rejoignez une communauté de confiance"
+        }
+      }
+    },
+    "showcase": {
+      "badge": "Voir en action",
+      "title": "L'expérience Expeditoo",
+      "subtitle": "Découvrez comment notre plateforme rend l'expédition et les enchères fluides partout en France",
+      "features": {
+        "smart": {
+          "title": "Enchères Intelligentes",
+          "desc": "Enchérissez et suivez les enchères en temps réel"
+        },
+        "msg": {
+          "title": "Messagerie Instantanée",
+          "desc": "Discutez directement avec les vendeurs et transporteurs"
+        },
+        "track": {
+          "title": "Suivi de Livraison",
+          "desc": "Suivez les mises à jour de retrait et de livraison"
+        }
+      },
+      "ui": {
+        "liveAuction": "Enchère en direct",
+        "delivered": "Colis livré",
+        "justNow": "À l'instant",
+        "mobileApp": "App Mobile"
+      },
+      "cta": {
+        "start": "Commencer gratuitement",
+        "demo": "Voir la démo"
+      }
+    },
+    "testimonials": {
+      "badge": "Témoignages",
+      "title": "Aimé par des Milliers",
+      "subtitle": "Découvrez ce que notre communauté française dit de son expérience",
+      "items": {
+        "sarah": {
+          "name": "Sarah L.",
+          "role": "Vendeuse Fréquente",
+          "comment": "Incroyablement simple et efficace ! J'ai envoyé un gros meuble à travers la France sans aucun souci. Les transporteurs sont professionnels et le suivi est excellent.",
+          "highlight": "50+ livraisons réussies"
+        },
+        "michel": {
+          "name": "Michel D.",
+          "role": "Transporteur Vérifié",
+          "comment": "En tant que transporteur, Expeditoo a changé la donne. Je peux facilement trouver des chargements sur mes trajets et gagner un revenu supplémentaire.",
+          "highlight": "2 000€+ gagnés/mois"
+        },
+        "julie": {
+          "name": "Julie P.",
+          "role": "Gagnante d'Enchères",
+          "comment": "J'ai trouvé des offres incroyables sur des meubles vintage. Le système d'enchères est intuitif et les objets arrivent toujours en parfait état.",
+          "highlight": "20+ enchères remportées"
+        }
+      }
+    },
+    "cta": {
+      "badge": "Commencez gratuitement aujourd'hui",
+      "title": "Prêt à Révolutionner Votre Logistique ?",
+      "subtitle": "Rejoignez des milliers d'utilisateurs qui expédient et échangent avec EXPEDITOO partout en France. Sans carte de crédit.",
+      "button": "Commencer Gratuitement",
+      "trustText": "Recommandé par +15 000 utilisateurs en France • Pas de carte requise • Annulez à tout moment"
+    },
+    "footer": {
+      "tagline": "L'avenir de la logistique en France, aujourd'hui.",
+      "availableIn": "Disponible exclusivement en France 🇫🇷",
+      "rights": "Tous droits réservés.",
+      "product": {
+        "title": "Produit",
+        "features": "Fonctionnalités",
+        "auctions": "Enchères",
+        "shipping": "Expédition",
+        "pricing": "Tarifs"
+      },
+      "company": {
+        "title": "Entreprise",
+        "about": "À propos",
+        "careers": "Carrières",
+        "blog": "Blog",
+        "press": "Presse"
+      },
+      "support": {
+        "title": "Support",
+        "help": "Centre d'aide",
+        "contact": "Contact",
+        "faq": "FAQ",
+        "community": "Communauté"
+      },
+      "legal": {
+        "title": "Légal",
+        "terms": "Conditions d'utilisation",
+        "privacy": "Politique de confidentialité",
+        "cookie": "Politique des cookies"
+      }
+    },
+    "pricing": {
+      "title": "Tarification Transparente",
+      "subtitle": "Choisissez le plan qui correspond à vos besoins. Que vous vendiez des articles ou les livriez, nous avons une structure claire pour vous.",
+      "disclaimer": "Prix indicatifs - Sujets à confirmation finale",
+      "sellers": {
+        "title": "Pour les Vendeurs",
+        "subtitle": "Listez vos articles aux enchères ou en vente directe",
+        "planTitle": "Modèle à la Commission",
+        "planDesc": "Payez uniquement quand vous vendez",
+        "price": "5%",
+        "priceUnit": "/ vente",
+        "features": {
+          "unlimited": "Annonces illimitées",
+          "auction": "Support Enchères & Prix Fixe",
+          "support": "Support de base",
+          "payments": "Paiements sécurisés"
+        },
+        "cta": "Commencer à Vendre",
+        "mostPopular": "LE PLUS POPULAIRE"
+      },
+      "drivers": {
+        "title": "Pour les Transporteurs",
+        "subtitle": "Gagnez de l'argent en livrant des colis",
+        "planTitle": "Plan Transporteur",
+        "planDesc": "Outils professionnels pour la logistique",
+        "price": "10%",
+        "priceUnit": "/ course",
+        "features": {
+          "allRequests": "Accès à toutes les demandes d'expédition",
+          "tools": "Outils d'optimisation d'itinéraire",
+          "payout": "Éligibilité au paiement instantané",
+          "badge": "Badge Conducteur Vérifié"
+        },
+        "cta": "Devenir Transporteur"
+      },
+      "detailed": {
+        "title": "Structure Tarifaire Détaillée (Indicatif)",
+        "headers": {
+          "feature": "Fonctionnalité",
+          "saver": "Éco",
+          "priority": "Prioritaire"
+        },
+        "rows": {
+          "duration": {
+            "name": "Durée de l'annonce",
+            "col1": "7 Jours",
+            "col2": "30 Jours"
+          },
+          "photos": {
+            "name": "Photos",
+            "col1": "Jusqu'à 5",
+            "col2": "Jusqu'à 20"
+          },
+          "cap": {
+            "name": "Plafond de Commission",
+            "col1": "50€ max",
+            "col2": "200€ max"
+          },
+          "highlighting": {
+            "name": "Mise en avant",
+            "col1": "-",
+            "col2": "Inclus"
+          }
+        },
+        "footer": "* Ce tableau est à titre illustratif. La structure tarifaire finale est en cours de mise à jour."
+      }
+    }
+  },
+  "help": {
+    "title": "Aide & Support",
+    "subtitle": "Trouvez des réponses aux questions courantes ou contactez notre équipe support.",
+    "emailSupport": {
+      "title": "Support par email",
+      "description": "Contactez notre équipe support par email. Nous répondons généralement sous 24 heures."
+    },
+    "phoneSupport": {
+      "title": "Support téléphonique",
+      "description": "Besoin d'aide urgente ? Appelez notre ligne support disponible Lun-Ven, 9h-17h."
+    },
+    "faq": {
+      "title": "Questions fréquentes",
+      "q1": {
+        "question": "Comment suivre mon envoi ?",
+        "answer": "Vous pouvez suivre votre envoi en allant dans la section \"Expéditions\" de votre tableau de bord. Cliquez sur l'envoi spécifique pour voir son statut actuel et sa chronologie."
+      },
+      "q2": {
+        "question": "Comment fonctionnent les enchères ?",
+        "answer": "Lorsque vous placez une enchère, vous vous engagez à acheter l'article si vous gagnez. L'enchère se termine lorsque le minuteur expire. Si une enchère est placée dans les dernières minutes, le minuteur peut être prolongé (clôture douce) pour permettre aux autres enchérisseurs de répondre."
+      },
+      "q3": {
+        "question": "Puis-je annuler un envoi ?",
+        "answer": "Vous pouvez annuler une demande d'envoi tant qu'elle n'a pas été récupérée par un chauffeur. Allez sur la page de détails de l'envoi et cherchez l'option \"Annuler\". Des frais d'annulation peuvent s'appliquer si un chauffeur a déjà été assigné."
+      },
+      "q4": {
+        "question": "Comment contacter un vendeur ?",
+        "answer": "Vous pouvez envoyer un message à un vendeur directement depuis la page de l'annonce ou depuis votre tableau de bord \"Messages\". Toute communication doit rester sur la plateforme pour votre sécurité."
+      },
+      "q5": {
+        "question": "Quels moyens de paiement sont acceptés ?",
+        "answer": "Nous acceptons toutes les principales cartes de crédit et de débit via notre partenaire de paiement sécurisé, Stripe. Nous ne stockons pas directement vos informations de carte sur nos serveurs."
+      }
+    },
+    "stillNeedHelp": {
+      "title": "Besoin d'aide ?",
+      "description": "Notre équipe support est toujours prête à vous aider avec tout problème que vous pourriez rencontrer.",
+      "chatButton": "Discuter avec le Support"
+    }
+  },
+  "admin": {
+    "panelTitle": "Panneau d'administration",
+    "navigation": {
+      "dashboard": "Tableau de bord",
+      "users": "Utilisateurs",
+      "listing": "Annonces",
+      "supportChats": "Support",
+      "driver": "Chauffeurs",
+      "shipment": "Expéditions",
+      "payments": "Paiements",
+      "profile": "Profil"
+    },
+    "support": {
+      "title": "Chats de Support",
+      "subtitle": "Gérer les demandes de support utilisateur",
+      "refresh": "Actualiser",
+      "searchPlaceholder": "Rechercher par nom ou email...",
+      "tabs": {
+        "all": "Tous",
+        "unread": "Non lus"
+      },
+      "empty": {
+        "unreadTitle": "Aucun chat non lu",
+        "unreadDesc": "Tous les chats ont été lus",
+        "allTitle": "Aucune demande de support",
+        "allDesc": "Les utilisateurs peuvent démarrer un chat depuis la page Aide"
+      },
+      "time": {
+        "justNow": "À l'instant",
+        "minAgo": "Il y a {count}m",
+        "hoursAgo": "Il y a {count}h",
+        "yesterday": "Hier",
+        "daysAgo": "Il y a {count}j",
+        "noMessages": "Pas encore de messages"
+      }
+    },
+    "dashboard": {
+      "title": "Tableau de bord administrateur",
+      "subtitle": "Gérez votre plateforme",
+      "searchPlaceholder": "Rechercher...",
+      "revenue": "Revenus",
+      "users": "Utilisateurs",
+      "drivers": "Chauffeurs",
+      "listings": "Annonces",
+      "stats": {
+        "fromLastMonth": "{value} par rapport au mois dernier",
+        "error": "Échec du chargement",
+        "failedChart": "Échec du chargement du graphique",
+        "failedActivity": "Échec du chargement de l'activité",
+        "noActivity": "Aucune activité récente",
+        "recentActivity": "Activité récente"
+      },
+      "time": {
+        "justNow": "À l'instant",
+        "minAgo": "Il y a {count}m",
+        "hoursAgo": "Il y a {count}h",
+        "daysAgo": "Il y a {count}j"
+      }
+    },
+    "users": {
+      "title": "Gestion des utilisateurs",
+      "subtitle": "Gérer les utilisateurs de la plateforme",
+      "table": {
+        "user": "Utilisateur",
+        "name": "Nom",
+        "email": "Email",
+        "role": "Rôle",
+        "status": "Statut",
+        "joined": "Inscrit",
+        "joinDate": "Date d'inscription",
+        "actions": "Actions"
+      },
+      "actions": {
+        "view": "Voir",
+        "viewProfile": "Voir le profil",
+        "edit": "Modifier",
+        "delete": "Supprimer",
+        "removeDriver": "Retirer chauffeur",
+        "suspend": "Suspendre",
+        "activate": "Activer",
+        "ban": "Bannir",
+        "unban": "Débannir"
+      },
+      "dialogs": {
+        "deleteTitle": "Supprimer l'utilisateur",
+        "deleteDescription": "Êtes-vous sûr de vouloir supprimer cet utilisateur ?",
+        "banTitle": "Bannir l'utilisateur",
+        "banDescription": "Êtes-vous sûr de vouloir bannir cet utilisateur ?",
+        "suspendTitle": "Suspendre l'utilisateur",
+        "suspendDesc": "Êtes-vous sûr de vouloir suspendre {name} ?",
+        "activateTitle": "Activer l'utilisateur",
+        "activateDesc": "Êtes-vous sûr de vouloir activer {name} ?",
+        "removeDriverTitle": "Retirer le chauffeur",
+        "removeDriverDesc": "Êtes-vous sûr de vouloir retirer le statut de chauffeur de {name} ?",
+        "cancel": "Annuler",
+        "suspend": "Suspendre",
+        "remove": "Retirer"
+      },
+      "messages": {
+        "deleteSuccess": "Utilisateur supprimé avec succès",
+        "banSuccess": "Utilisateur banni avec succès",
+        "unbanSuccess": "Utilisateur débanni avec succès"
+      }
+    },
+    "listings": {
+      "title": "Gestion des annonces",
+      "subtitle": "Gérer les annonces de la plateforme",
+      "table": {
+        "title": "Titre",
+        "seller": "Vendeur",
+        "price": "Prix",
+        "status": "Statut",
+        "views": "Vues",
+        "viewsCount": "{count} vues",
+        "created": "Créé",
+        "actions": "Actions",
+        "view": "Voir",
+        "viewDetails": "Voir les détails",
+        "edit": "Modifier",
+        "delete": "Supprimer"
+      },
+      "dialogs": {
+        "deleteTitle": "Êtes-vous sûr ?",
+        "deleteDescription": "Cette action est irréversible. Cela supprimera définitivement l'annonce.",
+        "cancel": "Annuler",
+        "delete": "Supprimer",
+        "processing": "Suppression..."
+      }
+    },
+    "drivers": {
+      "title": "Gestion des chauffeurs",
+      "subtitle": "Gérer les candidatures de chauffeurs",
+      "status": {
+        "pending": "En attente",
+        "approved": "Approuvé",
+        "rejected": "Rejeté"
+      },
+      "table": {
+        "applicant": "Candidat",
+        "vehicle": "Véhicule",
+        "licensePlate": "Plaque d'immatriculation",
+        "siret": "SIRET",
+        "date": "Date",
+        "name": "Nom",
+        "email": "Email",
+        "phone": "Téléphone",
+        "status": "Statut",
+        "applied": "Candidature",
+        "actions": "Actions",
+        "approve": "Approuver",
+        "reject": "Rejeter",
+        "view": "Voir",
+        "verified": "Vérifié",
+        "pending": "En attente",
+        "empty": "Aucune candidature en attente"
+      },
+      "detail": {
+        "title": "Détails de la Candidature",
+        "applicant": "Candidat",
+        "submissionDate": "Date de soumission",
+        "currentStatus": "Statut Actuel",
+        "vehicleInfo": "Informations Véhicule & Entreprise",
+        "vehicleType": "Type de Véhicule",
+        "licensePlate": "Plaque d'immatriculation",
+        "licenseNumber": "Numéro de Permis",
+        "siret": "SIRET",
+        "companyName": "Nom de l'entreprise",
+        "proposal": "Proposition / Note",
+        "close": "Fermer",
+        "reject": "Rejeter",
+        "approve": "Approuver",
+        "approvedTitle": "Candidature Approuvée",
+        "rejectedTitle": "Candidature Rejetée",
+        "pending": "En attente",
+        "statusUpdatedDesc": "Le statut de la candidature a été mis à jour.",
+        "error": "Erreur",
+        "errorDesc": "Une erreur est survenue lors de la mise à jour."
+      }
+    },
+    "shipments": {
+      "title": "Gestion des expéditions",
+      "subtitle": "Gérer les expéditions de la plateforme",
+      "table": {
+        "id": "ID",
+        "title": "Titre",
+        "from": "De",
+        "to": "À",
+        "route": "Itinéraire",
+        "status": "Statut",
+      "proposals": "Propositions",
+      "price": "Prix",
+        "driver": "Chauffeur",
+        "created": "Créé",
+        "actions": "Actions",
+        "assign": "Assigner un chauffeur",
+        "view": "Voir"
+      }
+    }
+  },
+  "reviews": {
+    "title": "Avis",
+    "buyer": "Acheteur",
+    "seller": "Vendeur",
+    "helpful": "Utile",
+    "report": "Signaler",
+    "modal": {
+      "title": "Noter {name}",
+      "description": "Partagez votre expérience avec cet utilisateur. Vos commentaires aident à bâtir la confiance dans notre communauté.",
+      "ratingLabel": "Note",
+      "commentLabel": "Commentaires supplémentaires (Optionnel)",
+      "commentPlaceholder": "Décrivez votre expérience...",
+      "submit": "Soumettre l'avis",
+      "submitting": "Envoi...",
+      "cancel": "Annuler",
+      "errors": {
+        "ratingRequired": "Veuillez sélectionner au moins 1 étoile",
+        "commentTooLong": "Le commentaire est trop long"
+      }
+    }
+  },
+  "admin": {
+    "panelTitle": "Panneau d'administration",
+    "navigation": {
+      "dashboard": "Tableau de bord",
+      "users": "Utilisateurs",
+      "listing": "Annonces",
+      "driver": "Chauffeurs",
+      "shipment": "Expéditions",
+      "payments": "Paiements",
+      "supportChats": "Chats de support",
+      "profile": "Profil"
+    },
+    "table": {
+      "rowsSelected": "{count} sur {total} ligne(s) sélectionnée(s)",
+      "total": "total",
+      "rowsPerPage": "Lignes par page",
+      "pageOf": "Page {current} sur {total}",
+      "goToFirst": "Aller à la première page",
+      "goToPrevious": "Aller à la page précédente",
+      "goToNext": "Aller à la page suivante",
+      "goToLast": "Aller à la dernière page",
+      "searchPlaceholder": "Rechercher...",
+      "clearFilters": "Effacer les filtres"
+    },
+    "dashboard": {
+      "title": "Tableau de bord",
+      "subtitle": "Vue d'ensemble de votre plateforme",
+      "revenue": "Revenus",
+      "users": "Utilisateurs",
+      "drivers": "Chauffeurs",
+      "listings": "Annonces",
+      "time": {
+        "justNow": "À l'instant",
+        "minAgo": "il y a {count} min",
+        "hoursAgo": "il y a {count} heures",
+        "daysAgo": "il y a {count} jours",
+        "yesterday": "Hier"
+      },
+      "stats": {
+        "error": "Échec du chargement",
+        "failedChart": "Échec du chargement du graphique",
+        "recentActivity": "Activité récente",
+        "failedActivity": "Échec du chargement de l'activité",
+        "noActivity": "Aucune activité récente",
+        "fromLastMonth": "par rapport au mois dernier"
+      }
+    },
+    "users": {
+      "title": "Utilisateurs",
+      "subtitle": "Gérer tous les utilisateurs",
+      "table": {
+        "searchPlaceholder": "Rechercher des utilisateurs...",
+        "name": "Nom",
+        "status": "Statut",
+        "joinDate": "Date d'inscription",
+        "role": "Rôle",
+        "actions": "Actions"
+      },
+      "actions": {
+        "manageRoles": "Gérer les rôles",
+        "viewProfile": "Voir le profil",
+        "removeDriver": "Retirer le chauffeur",
+        "activate": "Activer",
+        "suspend": "Suspendre",
+        "delete": "Supprimer"
+      },
+      "dialogs": {
+        "suspendTitle": "Suspendre l'utilisateur",
+        "suspendDesc": "Êtes-vous sûr de vouloir suspendre {name} ? Il ne pourra plus accéder à la plateforme.",
+        "activateTitle": "Activer l'utilisateur",
+        "activateDesc": "Êtes-vous sûr de vouloir activer {name} ? Il retrouvera l'accès à la plateforme.",
+        "removeDriverTitle": "Retirer le statut de chauffeur",
+        "removeDriverDesc": "Êtes-vous sûr de vouloir retirer le statut de chauffeur de {name} ?",
+        "cancel": "Annuler",
+        "suspend": "Suspendre",
+        "activate": "Activer",
+        "remove": "Retirer",
+        "processing": "Traitement..."
+      },
+      "messages": {
+        "suspended": "Utilisateur suspendu",
+        "suspendedDesc": "{name} a été suspendu",
+        "activated": "Utilisateur activé",
+        "activatedDesc": "{name} a été activé",
+        "error": "Erreur",
+        "errorDesc": "Échec de la mise à jour du statut"
+      }
+    },
+    "listings": {
+      "title": "Annonces",
+      "subtitle": "Gérer toutes les annonces",
+      "table": {
+        "searchPlaceholder": "Rechercher des annonces...",
+        "title": "Titre",
+        "seller": "Vendeur",
+        "price": "Prix",
+        "status": "Statut",
+        "views": "Vues",
+        "created": "Créé",
+        "actions": "Actions",
+        "viewDetails": "Voir les détails",
+        "delete": "Supprimer"
+      },
+      "dialogs": {
+        "deleteTitle": "Supprimer l'annonce",
+        "deleteDescription": "Êtes-vous sûr de vouloir supprimer cette annonce ? Cette action est irréversible.",
+        "cancel": "Annuler",
+        "delete": "Supprimer",
+        "processing": "Suppression..."
+      }
+    },
+    "drivers": {
+      "title": "Chauffeurs",
+      "subtitle": "Gérer les chauffeurs et les candidatures",
+      "table": {
+        "applicant": "Candidat",
+        "vehicle": "Véhicule",
+        "licensePlate": "Plaque d'immatriculation",
+        "siret": "SIRET",
+        "verified": "Vérifié",
+        "pending": "En attente",
+        "date": "Date",
+        "status": "Statut",
+        "actions": "Actions",
+        "searchPlaceholder": "Rechercher des candidatures..."
+      },
+      "detail": {
+        "title": "Détails de la candidature",
+        "applicant": "Candidat",
+        "submissionDate": "Date de soumission",
+        "currentStatus": "Statut actuel",
+        "approve": "Approuver",
+        "reject": "Rejeter",
+        "pending": "En attente",
+        "vehicleInfo": "Informations sur le véhicule",
+        "vehicleType": "Type de véhicule",
+        "licensePlate": "Plaque d'immatriculation",
+        "licenseNumber": "Numéro de permis",
+        "siret": "SIRET",
+        "companyName": "Nom de l'entreprise",
+        "proposal": "Proposition",
+        "close": "Fermer",
+        "approvedTitle": "Candidature approuvée",
+        "rejectedTitle": "Candidature rejetée",
+        "statusUpdatedDesc": "Le statut a été mis à jour",
+        "error": "Erreur",
+        "errorDesc": "Échec de la mise à jour du statut"
+      }
+    },
+    "support": {
+      "title": "Chats de support",
+      "subtitle": "Gérer les conversations de support client",
+      "refresh": "Actualiser",
+      "searchPlaceholder": "Rechercher par nom ou email...",
+      "tabs": {
+        "all": "Tous",
+        "unread": "Non lus"
+      },
+      "empty": {
+        "allTitle": "Aucune conversation",
+        "allDesc": "Aucune conversation de support pour le moment",
+        "unreadTitle": "Aucun message non lu",
+        "unreadDesc": "Tous les messages ont été lus"
+      },
+      "time": {
+        "noMessages": "Aucun message",
+        "justNow": "À l'instant",
+        "yesterday": "Hier"
+      }
+    },
+    "roles": {
+      "title": "Gérer le rôle de l'utilisateur",
+      "description": "Attribuer un nouveau rôle à",
+      "currentRole": "Rôle actuel :",
+      "selectPlaceholder": "Sélectionner un nouveau rôle",
+      "buyer": "Utilisateur",
+      "transporter": "Chauffeur",
+      "admin": "Admin",
+      "note": "Note : Cela ajoutera le rôle sélectionné à l'utilisateur. Les utilisateurs peuvent avoir plusieurs rôles.",
+      "cancel": "Annuler",
+      "assigning": "Attribution...",
+      "assignRole": "Attribuer le rôle"
+    },
+    "payments": {
+      "title": "Paiements",
+      "subtitle": "Gérer tous les paiements et remboursements",
+      "table": {
+        "id": "ID",
+        "user": "Utilisateur",
+        "amount": "Montant",
+        "status": "Statut",
+        "date": "Date",
+        "actions": "Actions",
+        "searchPlaceholder": "Rechercher par utilisateur..."
+      },
+      "status": {
+        "pending": "En attente",
+        "succeeded": "Réussi",
+        "failed": "Échoué",
+        "refunded": "Remboursé"
+      },
+      "actions": {
+        "processRefund": "Traiter le remboursement",
+        "cannotRefund": "Remboursement impossible"
+      },
+      "refundDialog": {
+        "title": "Traiter le remboursement",
+        "description": "Cela remboursera le paiement et mettra à jour son statut. Cette action est irréversible.",
+        "reasonLabel": "Raison du remboursement",
+        "requestedByCustomer": "Demandé par le client",
+        "duplicate": "Paiement en double",
+        "fraudulent": "Frauduleux",
+        "cancel": "Annuler",
+        "processing": "Traitement...",
+        "confirm": "Confirmer le remboursement"
+      }
+    }
+  },
+  "shipments": {
+    "title": "Gestion des expéditions",
+    "subtitle": "Gérer et assigner les expéditions en attente",
+    "table": {
+      "id": "ID",
+      "title": "Titre",
+      "route": "Itinéraire",
+      "status": "Statut",
+      "proposals": "Propositions",
+      "price": "Prix",
+      "created": "Créé",
+      "actions": "Actions",
+      "assign": "Assigner",
+      "searchPlaceholder": "Rechercher des expéditions..."
+    },
+    "proposalsDialog": {
+      "title": "Propositions des chauffeurs",
+      "description": "Examiner les propositions des chauffeurs pour l'expédition #{id}",
+      "shipmentDetails": "Détails de l'expédition",
+      "titleLabel": "Titre",
+      "routeLabel": "Itinéraire",
+      "targetPrice": "Prix cible",
+      "proposalsCount": "Propositions ({count})",
+      "actionRequired": "Action requise",
+      "waitingProposals": "En attente de propositions",
+      "loadingProposals": "Chargement des propositions...",
+      "noProposals": "Aucune proposition",
+      "noProposalsDesc": "Attendez que les chauffeurs soumettent leurs propositions pour cette expédition.",
+      "vsTarget": "vs cible",
+      "cancel": "Annuler",
+      "assigning": "Attribution...",
+      "acceptAssign": "Accepter et assigner"
+    }
+  }
+}
