@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ListingCard } from "@/features/app/home/ui/ListingCard";
-import { Listing } from "@/features/app/home/types";
+import { JobCard } from "@/features/app/home/ui/JobCard";
+import type { BoardJob } from "@/features/app/home/types";
 import { Calendar, Package, Star, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
 import { useRouter } from "next/navigation";
@@ -71,43 +71,18 @@ async function fetchPublicUser(id: string): Promise<PublicUser> {
   return fetchedUser;
 }
 
-async function fetchUserListings(id: string): Promise<Listing[]> {
+async function fetchUserListings(id: string): Promise<BoardJob[]> {
   const res = await fetch(`/api/users/${id}/listings`);
   const data = await res.json();
 
-  if (!data.success) {
-    return [];
-  }
+  if (!data.success) return [];
 
-  const now = new Date();
-  return data.data
-    .map((item: ApiListingItem) => ({
-      id: item.id,
-      title: item.title,
-      currentBid: (item.currentPrice || item.startPrice || 0) / 100,
-      imageUrl: item.images?.[0]?.url || "https://placehold.co/600x400",
-      deadline:
-        item.endsAt || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-      category: item.category?.name || "Item",
-      size: item.size || "M",
-      bids: 0,
-      origin: {
-        city: item.city || "Unknown",
-        lat: item.lat || 0,
-        lng: item.lng || 0,
-      },
-      destination: {
-        city: "Anywhere",
-        lat: 0,
-        lng: 0,
-      },
-      distance: "Local",
-      status: item.status,
-    }))
-    .filter((listing: Listing) => {
-      const expiryDate = new Date(listing.deadline);
-      return listing.status === "active" && expiryDate > now;
-    });
+  // The endpoint already returns open jobs only; this guards against one whose
+  // bidding window lapsed between the query and the render.
+  const now = Date.now();
+  return (data.data as BoardJob[]).filter(
+    (job) => new Date(job.expiresAt).getTime() > now
+  );
 }
 
 export function PublicProfile({
@@ -272,10 +247,9 @@ export function PublicProfile({
         {listings.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {listings.map((listing) => (
-              <ListingCard
+              <JobCard
                 key={listing.id}
-                listing={listing}
-                onClick={() => router.push(`/listing/${listing.id}`)}
+                job={listing}
               />
             ))}
           </div>

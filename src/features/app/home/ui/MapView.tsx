@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import type { Listing } from "../types";
+import type { BoardJob } from "../types";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // Dynamically import the MapComponent with no SSR
@@ -11,7 +11,7 @@ const MapComponent = dynamic(() => import("./MapComponent"), {
 });
 
 interface MapViewProps {
-  listings: Listing[];
+  listings: BoardJob[];
   onListingClick: (id: string) => void;
 }
 

@@ -1,39 +1,45 @@
 /**
- * Home feature types
- * Following rules.md - type definitions for home feature
+ * Job board types.
+ *
+ * The board shows transport jobs open for bidding, so a row is a route with a
+ * load and a budget - not an item with a price.
  */
 
-export interface Listing {
-  id: string;
-  title: string;
-  description: string;
-  imageUrl: string;
-  category: string;
-  currentBid: number;
-  bids: number;
-  origin: {
-    city: string;
-    zip: string;
-    lat: number;
-    lng: number;
-  };
-  destination: {
-    city: string;
-    zip: string;
-    lat: number;
-    lng: number;
-  };
-  deadline: string; // ISO string for easier sorting
-  createdAt: string; // ISO string
-  size: string;
-  distance: string;
-  status: "active" | "hot";
+import type { Job } from "@/features/app/listing/types";
+
+export type BoardJob = Job & {
+  /** Set for a signed-in driver, so the board can mark work already bid on. */
+  hasBid?: boolean;
+};
+
+export interface JobFilters {
+  q: string;
+  categoryId: string | null;
+  /** Euros, as entered; converted to cents at the API boundary. */
+  minBudget: number | null;
+  maxBudget: number | null;
+  maxWeightKg: number | null;
+  nearLat: number | null;
+  nearLng: number | null;
+  radiusKm: number | null;
+  sort: JobSort;
 }
 
-export interface Filters {
-  search: string;
-  category: string | null;
-  priceRange: [number, number];
-  sortBy: "ending_soon" | "newest" | "price_low" | "price_high" | null;
-  sizes: string[]; // Keeping this as it might be useful
-}
+export type JobSort =
+  | "created_desc"
+  | "budget_desc"
+  | "budget_asc"
+  | "pickup_asc"
+  | "distance_asc";
+
+export const DEFAULT_JOB_FILTERS: JobFilters = {
+  q: "",
+  categoryId: null,
+  minBudget: null,
+  maxBudget: null,
+  maxWeightKg: null,
+  nearLat: null,
+  nearLng: null,
+  radiusKm: null,
+  sort: "created_desc",
+};

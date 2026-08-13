@@ -5,7 +5,7 @@ import Map, { Marker, MapRef } from "react-map-gl/maplibre";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useTheme } from "next-themes";
-import { Listing } from "../types";
+import { BoardJob } from "../types";
 import { Box, Map as MapIcon, Locate } from "lucide-react";
 import { LottieLoader } from "@/components/ui/lottie-loader";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 interface MapComponentProps {
-  listings: Listing[];
+  listings: BoardJob[];
   onListingClick: (id: string) => void;
 }
 
@@ -101,7 +101,7 @@ export default function MapComponent({
     // Generate a spatial key for the current listings
     // We sort by ID to ensure order doesn't matter
     const currentKey = listings
-      .map((l) => `${l.id}-${l.origin.lat}-${l.origin.lng}`)
+      .map((l) => `${l.id}-${l.pickupLat}-${l.pickupLng}`)
       .sort()
       .join(",");
 
@@ -110,7 +110,7 @@ export default function MapComponent({
     if (currentKey !== prevListingsKey.current) {
       const bounds = new maplibregl.LngLatBounds();
       listings.forEach((listing) => {
-        bounds.extend([listing.origin.lng, listing.origin.lat]);
+        bounds.extend([listing.pickupLng, listing.pickupLat]);
       });
 
       if (!bounds.isEmpty()) {
@@ -140,8 +140,8 @@ export default function MapComponent({
         {listings.map((listing) => (
           <Marker
             key={listing.id}
-            longitude={listing.origin.lng}
-            latitude={listing.origin.lat}
+            longitude={listing.pickupLng}
+            latitude={listing.pickupLat}
             anchor="bottom"
             style={{ zIndex: hoveredId === listing.id ? 100 : 1 }}
             onClick={(e) => {
@@ -171,7 +171,7 @@ export default function MapComponent({
                   )}
                 >
                   <img
-                    src={listing.imageUrl}
+                    src={listing.photos?.[0]?.url}
                     alt={listing.title}
                     className="w-full h-full object-cover"
                   />
@@ -188,7 +188,7 @@ export default function MapComponent({
                     {t("actions.bid")}
                   </span>
                   <span className="text-sm font-bold leading-none">
-                    €{listing.currentBid}
+                    €{listing.budgetCents}
                   </span>
                 </div>
               </div>
