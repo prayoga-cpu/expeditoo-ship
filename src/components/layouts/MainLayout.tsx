@@ -17,7 +17,7 @@ import {
   PlusCircle,
   MessageSquare,
   User,
-  Gavel,
+  ClipboardList,
 } from "lucide-react";
 
 interface MainLayoutProps {
@@ -52,9 +52,11 @@ export function MainLayout({ children }: MainLayoutProps) {
       badge: unreadCount > 0 ? unreadCount : undefined, // Add badge
     },
     {
-      href: "/my-bids",
-      label: t("myBids"),
-      icon: Gavel,
+      // Was /my-bids, a route that never existed. The shipper's own jobs
+      // live at /listings/me.
+      href: "/listings/me",
+      label: t("myJobs"),
+      icon: ClipboardList,
     },
     {
       href: "/profile",

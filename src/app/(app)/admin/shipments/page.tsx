@@ -1,39 +1,19 @@
 "use client";
 
 import { DeliveriesTable } from "@/features/app/admin/ui/DeliveriesTable";
-import { ShipmentProposalsDialog } from "@/features/app/admin/ui/ShipmentProposalsDialog";
 import { usePendingShipments } from "@/features/app/admin/hooks/useAdminShipments";
 import { AlertCircle, Truck } from "lucide-react";
-import { useState, useCallback } from "react";
-import type { PendingDelivery } from "@/features/app/admin/types";
 import { PageLoader } from "@/components/ui/page-loader";
 import { useTranslations } from "next-intl";
 
+/**
+ * Read-only oversight of shipments in flight. Admins no longer pick the
+ * carrier: the shipper accepts an offer and the carrier takes the job itself,
+ * so the table's assign action has nothing to open.
+ */
 export default function ShipmentsPage() {
-  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
-  const [selectedDelivery, setSelectedDelivery] =
-    useState<PendingDelivery | null>(null);
   const { data: pendingDeliveries, isLoading, error } = usePendingShipments();
   const t = useTranslations("shipments");
-
-  const handleAssignClick = useCallback((delivery: PendingDelivery) => {
-    setSelectedDelivery(delivery);
-    setAssignDialogOpen(true);
-  }, []);
-
-  const handleAssignDriver = useCallback(
-    async (driverId: string) => {
-      // TODO: Implement actual driver assignment API call
-      console.log(
-        "Assigning driver",
-        driverId,
-        "to shipment",
-        selectedDelivery?.id
-      );
-      setAssignDialogOpen(false);
-    },
-    [selectedDelivery?.id]
-  );
 
   if (isLoading) {
     return <PageLoader variant="admin" />;
@@ -60,15 +40,10 @@ export default function ShipmentsPage() {
 
       <DeliveriesTable
         deliveries={pendingDeliveries || []}
-        onAssignClick={handleAssignClick}
+        // The proposals dialog behind this action is gone; the column itself
+        // should follow in DeliveriesTable rather than reopen a stub here.
+        onAssignClick={() => undefined}
         className="flex-1 min-h-0 flex flex-col"
-      />
-
-      <ShipmentProposalsDialog
-        open={assignDialogOpen}
-        onOpenChange={setAssignDialogOpen}
-        onAssign={handleAssignDriver}
-        delivery={selectedDelivery}
       />
     </div>
   );

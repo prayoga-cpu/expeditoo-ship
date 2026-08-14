@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useTranslations } from "next-intl";
 import { isValidPlate } from "@/lib/french-identifiers";
-import { VEHICLE_TYPES } from "@/server/dto/carrier.dto";
+import { VEHICLE_TYPES } from "@/lib/carrier-constants";
 import { Button } from "@/components/ui/button";
 import {
   Card,

@@ -5,6 +5,7 @@ import { db } from "@/db";
 import * as schema from "@/db/schema";
 import {
   handlePostSignup,
+  sendPasswordResetEmail,
   sendVerificationEmail,
 } from "@/server/services/auth.service";
 import { getUserRoles } from "@/server/services/user.service";
@@ -40,7 +41,11 @@ const options = {
       // Send password reset email. This callback previously sat under
       // `emailVerification`, where Better Auth never reads it — it belongs
       // here, and `satisfies BetterAuthOptions` now enforces that.
-      await sendVerificationEmail(user.email, url);
+      //
+      // Reset has its own mail path: the verification one sends a "verify your
+      // account" subject and overwrites `callbackURL` with `/signin`, which
+      // would take the user anywhere but the reset form.
+      await sendPasswordResetEmail(user.email, url);
     },
   },
 

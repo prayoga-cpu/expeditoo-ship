@@ -9,6 +9,7 @@ import {
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { ApiError } from "@/lib/fetcher";
+import { useAuth } from "@/lib/auth-context";
 import {
   driverShipmentsApi,
   type DriverShipmentStatus,
@@ -66,6 +67,8 @@ function useActionErrorMessage() {
         return t("notFound");
       case "CANNOT_UPLOAD_POD":
         return t("podNotInTransit");
+      case "DRIVER_NOT_IN_FLEET":
+        return t("notInFleet");
       default:
         return error instanceof Error ? error.message : t("generic");
     }
@@ -75,6 +78,36 @@ function useActionErrorMessage() {
 function invalidateShipment(queryClient: QueryClient, shipmentId: string) {
   queryClient.invalidateQueries({ queryKey: ["driver-shipment", shipmentId] });
   queryClient.invalidateQueries({ queryKey: ["driver-shipments"] });
+}
+
+/**
+ * Claim a PENDING run for oneself, the PENDING → ASSIGNED step that otherwise
+ * has no caller. Most carriers in this market drive their own jobs, so the
+ * driver nominated is always the viewer; the service still checks that they
+ * belong to the winning carrier's fleet.
+ */
+export function useAssignSelfToShipment(shipmentId: string) {
+  const queryClient = useQueryClient();
+  const t = useTranslations("driver.actions");
+  const messageFor = useActionErrorMessage();
+  const { user } = useAuth();
+  const viewerId = user?.id ?? null;
+
+  const mutation = useMutation({
+    mutationFn: () => {
+      if (!viewerId) {
+        throw new ApiError("NO_SESSION", "Not signed in", 401);
+      }
+      return driverShipmentsApi.assign(shipmentId, viewerId);
+    },
+    onSuccess: () => {
+      toast.success(t("jobStarted"));
+      invalidateShipment(queryClient, shipmentId);
+    },
+    onError: (error) => toast.error(messageFor(error)),
+  });
+
+  return { ...mutation, canAssign: viewerId !== null };
 }
 
 /** Advance the run along the legal path enforced by the shipment service. */

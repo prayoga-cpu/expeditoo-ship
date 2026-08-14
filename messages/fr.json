@@ -83,7 +83,8 @@
       "myOffers": "Mes offres",
       "deliveries": "Livraisons",
       "fleet": "Flotte",
-      "application": "Dossier"
+      "application": "Dossier",
+      "myJobs": "Mes missions"
     },
     "categories": {
       "electronics": "Électronique",
@@ -990,8 +991,15 @@
         "notFound": "Livraison introuvable.",
         "podNotInTransit": "La preuve de livraison ne peut être ajoutée qu'en transit.",
         "invalidFile": "La preuve de livraison doit être une photo.",
-        "generic": "Une erreur est survenue. Veuillez réessayer."
-      }
+        "generic": "Une erreur est survenue. Veuillez réessayer.",
+        "notInFleet": "Vous n'êtes pas enregistré comme chauffeur de ce transporteur."
+      },
+      "unassignedTitle": "Mission remportée, non démarrée",
+      "unassignedDesc": "Cette course est la vôtre. Prenez-la en charge pour débloquer le retrait et la livraison.",
+      "startJob": "Démarrer cette mission",
+      "startingJob": "Démarrage...",
+      "startJobHint": "La course vous sera attribuée. Conduire soi-même est la norme ; un chauffeur de votre flotte pourra la reprendre ensuite.",
+      "jobStarted": "Mission démarrée. Rendez-vous à l'adresse de retrait."
     },
     "apply": {
       "title": "Devenir chauffeur",
@@ -1741,6 +1749,33 @@
         "flatbed": "Plateau",
         "refrigerated": "Frigorifique"
       }
+    },
+    "toasts": {
+      "saved": "Enregistré",
+      "saveFailed": "Enregistrement impossible",
+      "siretTaken": "Ce SIRET est déjà rattaché à un autre compte transporteur",
+      "submitted": "Candidature envoyée pour examen",
+      "submitFailed": "Envoi impossible",
+      "incomplete": "Votre candidature est incomplète",
+      "incompleteDescription": "Vérifiez les éléments signalés ci-dessous.",
+      "withdrawn": "Candidature retirée — elle est de nouveau modifiable",
+      "withdrawFailed": "Retrait impossible",
+      "bankingSaved": "Coordonnées bancaires enregistrées",
+      "bankingInvalid": "Vérifiez le format de l'IBAN et du BIC",
+      "bankingFailed": "Enregistrement des coordonnées bancaires impossible",
+      "documentOpenFailed": "Ouverture du document impossible",
+      "documentUploaded": "Document envoyé",
+      "documentTypeUnsupported": "Seuls les fichiers PDF, JPEG et PNG sont acceptés",
+      "documentTooLarge": "Ce fichier dépasse 10 Mo",
+      "documentAlreadyExpired": "Ce document est déjà expiré",
+      "uploadFailed": "Échec de l'envoi",
+      "vehicleAdded": "Véhicule ajouté",
+      "vehicleInvalid": "Vérifiez le format d'immatriculation (AB-123-CD) et le poids",
+      "vehicleAddFailed": "Ajout du véhicule impossible",
+      "vehicleUpdateFailed": "Mise à jour du véhicule impossible",
+      "vehicleRemoved": "Véhicule supprimé",
+      "vehicleInUse": "Ce véhicule est engagé sur une offre en cours. Désactivez-le plutôt.",
+      "vehicleRemoveFailed": "Suppression du véhicule impossible"
     }
   },
   "myJobs": {

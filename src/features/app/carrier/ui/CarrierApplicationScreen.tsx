@@ -11,7 +11,7 @@ import {
   ShieldAlert,
   Truck,
 } from "lucide-react";
-import { REQUIRED_DOCUMENT_KINDS } from "@/server/dto/carrier.dto";
+import { REQUIRED_DOCUMENT_KINDS } from "@/lib/carrier-constants";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";

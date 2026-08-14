@@ -71,19 +71,66 @@ function partyFor(
 }
 
 /**
+ * The cargo facts the driver screen renders (driver/shipments/[id]). Anything
+ * outside this list - `budgetCents` above all - stays server-side.
+ */
+const DRIVER_LISTING_FIELDS = [
+  "id",
+  "title",
+  "description",
+  "status",
+  "weightKg",
+  "lengthCm",
+  "widthCm",
+  "heightCm",
+  "quantity",
+  "isFragile",
+  "needsHelp",
+] as const;
+
+/** A party reduced to what an avatar and a name need, nothing more. */
+const DRIVER_PARTY_FIELDS = ["id", "name", "image"] as const;
+
+/** Allow-list projection: unknown and future columns are dropped by default. */
+function project<K extends string>(
+  value: unknown,
+  fields: readonly K[]
+): Record<K, unknown> | null {
+  if (!value || typeof value !== "object") return null;
+  const source = value as Record<string, unknown>;
+  return Object.fromEntries(fields.map((f) => [f, source[f]])) as Record<
+    K,
+    unknown
+  >;
+}
+
+/**
  * A driver executes the run and is never shown the commercial terms
  * (docs/specs/roles_spec.md §3). Stripping happens here rather than in the UI,
  * because hiding a field in a component still ships it over the wire.
+ *
+ * The DAL loads each party as a full user row (it is permission-blind by
+ * design), so the relations are projected down as well: an unprojected
+ * `shipper` carries the email, the Stripe ids, the ban flag and the
+ * preferences JSON, and an unprojected `listing` carries `budgetCents`.
  */
 function redactForDriver<T extends Record<string, unknown>>(
   shipment: T,
   party: Party
-): T {
+): T | Record<string, unknown> {
   if (party !== "driver") return shipment;
-  const { priceCents, offer, ...safe } = shipment as Record<string, unknown>;
+  const { priceCents, offer, listing, shipper, carrier, driver, ...safe } =
+    shipment as Record<string, unknown>;
   void priceCents;
   void offer;
-  return safe as T;
+
+  return {
+    ...safe,
+    listing: project(listing, DRIVER_LISTING_FIELDS),
+    shipper: project(shipper, DRIVER_PARTY_FIELDS),
+    carrier: project(carrier, DRIVER_PARTY_FIELDS),
+    driver: project(driver, DRIVER_PARTY_FIELDS),
+  };
 }
 
 // ========================================

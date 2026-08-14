@@ -28,8 +28,13 @@
   /* System colors */
   --destructive: oklch(0.62 0.22 18);
   --destructive-foreground: oklch(1 0 0);
-  --success: var(--accent-green);
-  --warning: oklch(0.68 0.18 70);
+  /* Success/warning are their own tokens, not aliases of the accent ramp:
+     they carry text as often as they carry a surface, so light mode needs a
+     darker step than `--accent-green` to stay readable on `--background`. */
+  --success: oklch(0.58 0.15 155);
+  --success-foreground: oklch(1 0 0);
+  --warning: oklch(0.62 0.16 70);
+  --warning-foreground: oklch(0.2 0.05 70);
 
   --radius: 0.5rem;
   --sidebar: oklch(1 0 0);
@@ -55,6 +60,11 @@
   --input: oklch(0.22 0.02 250);
   --sidebar: oklch(0.18 0.02 250);
   --sidebar-foreground: oklch(0.95 0.02 250);
+  /* Lifted so the same utilities read on a near-black background. */
+  --success: oklch(0.72 0.15 155);
+  --success-foreground: oklch(1 0 0);
+  --warning: oklch(0.8 0.15 75);
+  --warning-foreground: oklch(0.18 0.04 70);
 }
 
 /* ── Landing surface ────────────────────────────────────────────────────
@@ -164,6 +174,13 @@
   --color-accent-foreground: var(--primary-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  /* Without these two pairs Tailwind v4 emits nothing for bg-success,
+     text-warning and friends - the tokens on :root are invisible to the
+     utility generator until they are named here. */
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--primary);

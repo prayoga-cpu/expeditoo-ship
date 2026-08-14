@@ -8,58 +8,30 @@ import {
   VAT_PATTERN,
   POSTAL_CODE_PATTERN,
 } from "@/lib/french-identifiers";
+import {
+  VEHICLE_TYPES,
+  DOCUMENT_KINDS,
+  ACCEPTED_DOCUMENT_MIME_TYPES,
+  MAX_DOCUMENT_BYTES,
+} from "@/lib/carrier-constants";
 
 // ========================================
 // Carrier DTO
 // ========================================
 // See docs/specs/carrier_kyc_spec.md §3.
 
-export const VEHICLE_TYPES = [
-  "motorcycle",
-  "car",
-  "van",
-  "truck_3_5t",
-  "truck_7_5t",
-  "truck_19t",
-  "semi_trailer",
-  "flatbed",
-  "refrigerated",
-] as const;
-
-export const DOCUMENT_KINDS = [
-  "cni_recto",
-  "cni_verso",
-  "driving_licence",
-  "kbis",
-  "insurance_certificate",
-  "transport_licence",
-  "rib",
-] as const;
-
-/** Every application must carry these before it can be submitted. */
-export const REQUIRED_DOCUMENT_KINDS = [
-  "cni_recto",
-  "cni_verso",
-  "driving_licence",
-  "kbis",
-  "insurance_certificate",
-  "rib",
-] as const;
-
-/** Documents that go stale and drive the expiry cron. */
-export const EXPIRING_DOCUMENT_KINDS = [
-  "driving_licence",
-  "insurance_certificate",
-  "transport_licence",
-] as const;
-
-export const ACCEPTED_DOCUMENT_MIME_TYPES = [
-  "application/pdf",
-  "image/jpeg",
-  "image/png",
-] as const;
-
-export const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;
+/**
+ * The vocabulary itself lives in `@/lib/carrier-constants` so the carrier
+ * screens can share it without pulling a server module into the client bundle.
+ */
+export {
+  VEHICLE_TYPES,
+  DOCUMENT_KINDS,
+  REQUIRED_DOCUMENT_KINDS,
+  EXPIRING_DOCUMENT_KINDS,
+  ACCEPTED_DOCUMENT_MIME_TYPES,
+  MAX_DOCUMENT_BYTES,
+} from "@/lib/carrier-constants";
 
 export const upsertCarrierSchema = z.object({
   companyName: z.string().min(2).max(200),

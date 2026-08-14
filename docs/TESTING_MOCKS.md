@@ -91,7 +91,26 @@ driven by build-time defines with safe defaults.
 
 ---
 
-## 4. Known gaps left standing (not mocked — just not done)
+## 4. Solo-carrier self-assignment
+
+Approving a carrier grants the `carrier` **and** `driver` roles and enrols the owner
+as a driver in their own fleet (`carrier.service.ts` → `enrolAsOwnDriver`). That pair
+is what lets the carrier who wins a job reach `/driver/*` and pass `assignDriver`'s
+fleet check, so they can press **Start job** on a `PENDING` shipment and walk it to
+delivered.
+
+It is the honest model for a market of owner-drivers, but it is not a fleet feature:
+for real multi-driver carriers, replace it with a driver invite flow that grants the
+role and the fleet link to the *invitee*, and stop enrolling the owner automatically.
+Marked with `TODO(EXPEDITOO-TESTING)` at the helper.
+
+**Legacy carriers:** anyone approved before this change holds neither the driver role
+nor a fleet link. Re-approving them backfills it — every write in the helper is
+idempotent, so the already-approved branch runs the enrolment and returns.
+
+---
+
+## 5. Known gaps left standing (not mocked — just not done)
 
 - **Payouts stop at `scheduled`.** `executePayout` has no callers and banking details
   are never forwarded to Stripe (`carrier.service.ts` TODO). Carriers have no earnings

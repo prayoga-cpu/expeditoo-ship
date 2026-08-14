@@ -46,7 +46,8 @@
       "myOffers": "My offers",
       "deliveries": "Deliveries",
       "fleet": "Fleet",
-      "application": "Application"
+      "application": "Application",
+      "myJobs": "My jobs"
     },
     "categories": {
       "electronics": "Electronics",
@@ -990,8 +991,15 @@
         "notFound": "Delivery not found.",
         "podNotInTransit": "Proof of delivery can only be added while in transit.",
         "invalidFile": "The proof of delivery must be a photo.",
-        "generic": "Something went wrong. Please try again."
-      }
+        "generic": "Something went wrong. Please try again.",
+        "notInFleet": "You are not registered as a driver for this carrier."
+      },
+      "unassignedTitle": "Job won, not started",
+      "unassignedDesc": "This job is yours. Take it on to unlock pickup and delivery.",
+      "startJob": "Start this job",
+      "startingJob": "Starting...",
+      "startJobHint": "This assigns the run to you. Driving it yourself is the norm; a fleet driver can take it over later.",
+      "jobStarted": "Job started. Head to the pickup address."
     },
     "apply": {
       "title": "Become a Driver",
@@ -1741,6 +1749,33 @@
         "flatbed": "Flatbed",
         "refrigerated": "Refrigerated"
       }
+    },
+    "toasts": {
+      "saved": "Saved",
+      "saveFailed": "Could not save",
+      "siretTaken": "That SIRET already belongs to another carrier account",
+      "submitted": "Application submitted for review",
+      "submitFailed": "Could not submit",
+      "incomplete": "Your application is incomplete",
+      "incompleteDescription": "Check the highlighted items below.",
+      "withdrawn": "Application withdrawn — it is editable again",
+      "withdrawFailed": "Could not withdraw",
+      "bankingSaved": "Banking details saved",
+      "bankingInvalid": "Check the IBAN and BIC formats",
+      "bankingFailed": "Could not save banking details",
+      "documentOpenFailed": "Could not open the document",
+      "documentUploaded": "Document uploaded",
+      "documentTypeUnsupported": "Only PDF, JPEG and PNG are accepted",
+      "documentTooLarge": "That file is over 10 MB",
+      "documentAlreadyExpired": "That document has already expired",
+      "uploadFailed": "Upload failed",
+      "vehicleAdded": "Vehicle added",
+      "vehicleInvalid": "Check the plate format (AB-123-CD) and weight",
+      "vehicleAddFailed": "Could not add vehicle",
+      "vehicleUpdateFailed": "Could not update vehicle",
+      "vehicleRemoved": "Vehicle removed",
+      "vehicleInUse": "This vehicle backs a live offer. Deactivate it instead.",
+      "vehicleRemoveFailed": "Could not remove vehicle"
     }
   },
   "myJobs": {

@@ -1,8 +1,14 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { carrierApi, type CarrierProfileInput, type VehicleInput } from "../api/carrier.api";
+import {
+  carrierApi,
+  type CarrierApplication,
+  type CarrierProfileInput,
+  type VehicleInput,
+} from "../api/carrier.api";
 import { ApiError } from "@/lib/fetcher";
 
 const carrierKeys = {
@@ -10,31 +16,54 @@ const carrierKeys = {
   vehicles: ["carrier", "vehicles"] as const,
 };
 
+type Translate = (key: string) => string;
+
+/**
+ * Picks the message for a failed mutation: a translated one when the server
+ * sent a code we have wording for, otherwise the server's own sentence, and a
+ * translated fallback when there is nothing useful to show.
+ */
+function describe(
+  error: unknown,
+  t: Translate,
+  fallbackKey: string,
+  codeKeys: Record<string, string> = {}
+): string {
+  const code = error instanceof ApiError ? error.code : "";
+  const key = codeKeys[code];
+  if (key) return t(key);
+  if (error instanceof Error && error.message) return error.message;
+  return t(fallbackKey);
+}
+
+/**
+ * A user with no carrier row yet is a normal state, not an error: the REST
+ * layer answers with no payload, which React Query would reject as `undefined`,
+ * so it is normalised to `null` and the screen renders the apply view.
+ */
 export function useCarrierApplication() {
-  return useQuery({
+  return useQuery<CarrierApplication | null>({
     queryKey: carrierKeys.application,
-    queryFn: () => carrierApi.getApplication(),
+    queryFn: async () => (await carrierApi.getApplication()) ?? null,
     retry: false,
   });
 }
 
 export function useSaveCarrierProfile() {
   const queryClient = useQueryClient();
+  const t = useTranslations("carrier.toasts");
 
   return useMutation({
     mutationFn: (input: CarrierProfileInput) => carrierApi.saveProfile(input),
     onSuccess: () => {
-      toast.success("Saved");
+      toast.success(t("saved"));
       queryClient.invalidateQueries({ queryKey: carrierKeys.application });
     },
     onError: (error) => {
-      const code = error instanceof ApiError ? error.code : "";
       toast.error(
-        code === "SIRET_ALREADY_REGISTERED"
-          ? "That SIRET already belongs to another carrier account"
-          : error instanceof Error
-            ? error.message
-            : "Could not save"
+        describe(error, t, "saveFailed", {
+          SIRET_ALREADY_REGISTERED: "siretTaken",
+        })
       );
     },
   });
@@ -46,58 +75,58 @@ export function useSaveCarrierProfile() {
  */
 export function useSubmitApplication() {
   const queryClient = useQueryClient();
+  const t = useTranslations("carrier.toasts");
 
   return useMutation({
     mutationFn: () => carrierApi.submit(),
     onSuccess: () => {
-      toast.success("Application submitted for review");
+      toast.success(t("submitted"));
       queryClient.invalidateQueries({ queryKey: carrierKeys.application });
     },
     onError: (error) => {
       if (error instanceof ApiError && error.code === "INCOMPLETE_APPLICATION") {
-        toast.error("Your application is incomplete", {
-          description: "Check the highlighted items below.",
+        toast.error(t("incomplete"), {
+          description: t("incompleteDescription"),
         });
         return;
       }
-      toast.error(error instanceof Error ? error.message : "Could not submit");
+      toast.error(describe(error, t, "submitFailed"));
     },
   });
 }
 
 export function useWithdrawApplication() {
   const queryClient = useQueryClient();
+  const t = useTranslations("carrier.toasts");
 
   return useMutation({
     mutationFn: () => carrierApi.withdraw(),
     onSuccess: () => {
-      toast.success("Application withdrawn — it is editable again");
+      toast.success(t("withdrawn"));
       queryClient.invalidateQueries({ queryKey: carrierKeys.application });
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "Could not withdraw");
+      toast.error(describe(error, t, "withdrawFailed"));
     },
   });
 }
 
 export function useSetBanking() {
   const queryClient = useQueryClient();
+  const t = useTranslations("carrier.toasts");
 
   return useMutation({
     mutationFn: ({ iban, bic }: { iban: string; bic: string }) =>
       carrierApi.setBanking(iban, bic),
     onSuccess: () => {
-      toast.success("Banking details saved");
+      toast.success(t("bankingSaved"));
       queryClient.invalidateQueries({ queryKey: carrierKeys.application });
     },
     onError: (error) => {
-      const code = error instanceof ApiError ? error.code : "";
       toast.error(
-        code === "VALIDATION_ERROR"
-          ? "Check the IBAN and BIC formats"
-          : error instanceof Error
-            ? error.message
-            : "Could not save banking details"
+        describe(error, t, "bankingFailed", {
+          VALIDATION_ERROR: "bankingInvalid",
+        })
       );
     },
   });
@@ -105,21 +134,22 @@ export function useSetBanking() {
 
 /** Documents are private: viewing means fetching a short-lived signed URL. */
 export function useViewDocument() {
+  const t = useTranslations("carrier.toasts");
+
   return useMutation({
     mutationFn: (id: string) => carrierApi.viewDocument(id),
     onSuccess: ({ url }) => {
       window.open(url, "_blank", "noopener,noreferrer");
     },
     onError: (error) => {
-      toast.error(
-        error instanceof Error ? error.message : "Could not open the document"
-      );
+      toast.error(describe(error, t, "documentOpenFailed"));
     },
   });
 }
 
 export function useUploadDocument() {
   const queryClient = useQueryClient();
+  const t = useTranslations("carrier.toasts");
 
   return useMutation({
     mutationFn: ({
@@ -132,22 +162,17 @@ export function useUploadDocument() {
       expiresAt?: string;
     }) => carrierApi.uploadDocument(kind, file, expiresAt),
     onSuccess: () => {
-      toast.success("Document uploaded");
+      toast.success(t("documentUploaded"));
       queryClient.invalidateQueries({ queryKey: carrierKeys.application });
     },
     onError: (error) => {
-      const code = error instanceof ApiError ? error.code : "";
-      const message =
-        code === "UNSUPPORTED_DOCUMENT_TYPE"
-          ? "Only PDF, JPEG and PNG are accepted"
-          : code === "DOCUMENT_TOO_LARGE"
-            ? "That file is over 10 MB"
-            : code === "DOCUMENT_ALREADY_EXPIRED"
-              ? "That document has already expired"
-              : error instanceof Error
-                ? error.message
-                : "Upload failed";
-      toast.error(message);
+      toast.error(
+        describe(error, t, "uploadFailed", {
+          UNSUPPORTED_DOCUMENT_TYPE: "documentTypeUnsupported",
+          DOCUMENT_TOO_LARGE: "documentTooLarge",
+          DOCUMENT_ALREADY_EXPIRED: "documentAlreadyExpired",
+        })
+      );
     },
   });
 }
@@ -161,22 +186,20 @@ export function useVehicles() {
 
 export function useAddVehicle() {
   const queryClient = useQueryClient();
+  const t = useTranslations("carrier.toasts");
 
   return useMutation({
     mutationFn: (input: VehicleInput) => carrierApi.addVehicle(input),
     onSuccess: () => {
-      toast.success("Vehicle added");
+      toast.success(t("vehicleAdded"));
       queryClient.invalidateQueries({ queryKey: carrierKeys.vehicles });
       queryClient.invalidateQueries({ queryKey: carrierKeys.application });
     },
     onError: (error) => {
-      const code = error instanceof ApiError ? error.code : "";
       toast.error(
-        code === "VALIDATION_ERROR"
-          ? "Check the plate format (AB-123-CD) and weight"
-          : error instanceof Error
-            ? error.message
-            : "Could not add vehicle"
+        describe(error, t, "vehicleAddFailed", {
+          VALIDATION_ERROR: "vehicleInvalid",
+        })
       );
     },
   });
@@ -184,6 +207,7 @@ export function useAddVehicle() {
 
 export function useToggleVehicleActive() {
   const queryClient = useQueryClient();
+  const t = useTranslations("carrier.toasts");
 
   return useMutation({
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
@@ -192,31 +216,27 @@ export function useToggleVehicleActive() {
       queryClient.invalidateQueries({ queryKey: carrierKeys.vehicles });
     },
     onError: (error) => {
-      toast.error(
-        error instanceof Error ? error.message : "Could not update vehicle"
-      );
+      toast.error(describe(error, t, "vehicleUpdateFailed"));
     },
   });
 }
 
 export function useDeleteVehicle() {
   const queryClient = useQueryClient();
+  const t = useTranslations("carrier.toasts");
 
   return useMutation({
     mutationFn: (id: string) => carrierApi.deleteVehicle(id),
     onSuccess: () => {
-      toast.success("Vehicle removed");
+      toast.success(t("vehicleRemoved"));
       queryClient.invalidateQueries({ queryKey: carrierKeys.vehicles });
     },
     onError: (error) => {
       // A vehicle backing a live offer cannot be deleted; the DB blocks it.
-      const code = error instanceof ApiError ? error.code : "";
       toast.error(
-        code === "VEHICLE_IN_USE"
-          ? "This vehicle backs a live offer. Deactivate it instead."
-          : error instanceof Error
-            ? error.message
-            : "Could not remove vehicle"
+        describe(error, t, "vehicleRemoveFailed", {
+          VEHICLE_IN_USE: "vehicleInUse",
+        })
       );
     },
   });

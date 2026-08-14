@@ -8,7 +8,16 @@ import { useDriverShipments } from "../hooks/useDriverShipments";
 import { ShipmentStatusBadge } from "./ShipmentStatusBadge";
 import { useTranslations } from "next-intl";
 
-const ACTIVE_STATUSES = ["ASSIGNED", "PICKED_UP", "IN_TRANSIT"] as const;
+/**
+ * PENDING belongs here: a job the carrier has just won lands unassigned, and
+ * the dashboard is where they claim it. Leaving it out hid freshly won work.
+ */
+const ACTIVE_STATUSES = [
+  "PENDING",
+  "ASSIGNED",
+  "PICKED_UP",
+  "IN_TRANSIT",
+] as const;
 
 export function ActiveShipments() {
   const t = useTranslations("driver.dashboard.activeDeliveries");

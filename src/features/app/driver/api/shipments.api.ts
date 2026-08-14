@@ -78,6 +78,14 @@ export const driverShipmentsApi = {
 
   get: (id: string) => api.get<DriverShipmentDetail>(`/api/shipments/${id}`),
 
+  /**
+   * Claim a run that is still PENDING. The route takes the driver's user id
+   * explicitly because a carrier may nominate anyone in its fleet; this surface
+   * always passes the viewer's own id (see `useAssignSelfToShipment`).
+   */
+  assign: (id: string, driverId: string) =>
+    api.post<DriverShipment>(`/api/shipments/${id}/assign`, { driverId }),
+
   updateStatus: (id: string, status: DriverShipmentStatus, note?: string) =>
     api.patch<DriverShipment>(`/api/shipments/${id}/status`, { status, note }),
 

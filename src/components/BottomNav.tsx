@@ -80,15 +80,16 @@ export function BottomNav() {
     account,
   ];
 
+  /**
+   * A driver never sees offers or prices (roles_spec.md), and
+   * /api/carrier/offers answers FORBIDDEN_NOT_CARRIER to one - so their
+   * second slot is the run they are actually executing, on the driver
+   * surface that carries the status actions and proof of delivery.
+   */
   const driverItems: NavItem[] = [
     { href: "/home", labelKey: "jobs", icon: <Home className="w-5 h-5" /> },
     {
-      href: "/carrier/offers",
-      labelKey: "myOffers",
-      icon: <Gavel className="w-5 h-5" />,
-    },
-    {
-      href: "/deliveries",
+      href: "/driver/shipments",
       labelKey: "deliveries",
       icon: <Truck className="w-5 h-5" />,
     },
@@ -98,6 +99,11 @@ export function BottomNav() {
 
   const shipperItems: NavItem[] = [
     { href: "/home", labelKey: "home", icon: <Home className="w-5 h-5" /> },
+    {
+      href: "/listings/me",
+      labelKey: "myJobs",
+      icon: <FileText className="w-5 h-5" />,
+    },
     {
       href: "/deliveries",
       labelKey: "shipments",

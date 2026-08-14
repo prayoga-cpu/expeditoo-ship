@@ -125,27 +125,21 @@ export async function resendVerificationEmail(email: string) {
 // ========================================
 
 /**
- * Send password reset email
+ * Send password reset email.
+ *
+ * `resetUrl` is Better Auth's own reset link and is sent verbatim: its
+ * `callbackURL` already carries the `/reset-password` destination the client
+ * asked for (useAuthActions.requestPasswordReset), and rewriting it — as the
+ * verification path does — would strand the user on a page with no token.
+ *
+ * @param email - User's email address
+ * @param resetUrl - Reset URL with token (provided by Better Auth)
  */
-export async function sendPasswordResetEmail(email: string) {
-  // Check if user exists
-  const user = await usersDAL.getUserByEmail(email);
-
-  if (!user) {
-    // Don't reveal if email exists (security)
-    return {
-      success: true,
-      message:
-        "If an account exists with this email, a password reset link has been sent.",
-    };
-  }
-
-  // Generate reset token (better-auth will handle this)
-  // For now, just send email with placeholder
-  const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL}/reset-password?email=${encodeURIComponent(email)}`;
-
+export async function sendPasswordResetEmail(email: string, resetUrl: string) {
   try {
-    const userName = user.name?.split(" ")[0] || "there";
+    // Get user name for personalization
+    const user = await usersDAL.getUserByEmail(email);
+    const userName = user?.name?.split(" ")[0] || "there";
 
     // Determine recipient based on environment
     const isDevelopment = process.env.NODE_ENV !== "production";
@@ -161,13 +155,8 @@ export async function sendPasswordResetEmail(email: string) {
     });
   } catch (error) {
     console.error("[Auth Service] Failed to send password reset email:", error);
+    // Don't throw - a mail failure must not surface whether the account exists
   }
-
-  return {
-    success: true,
-    message:
-      "If an account exists with this email, a password reset link has been sent.",
-  };
 }
 
 // ========================================

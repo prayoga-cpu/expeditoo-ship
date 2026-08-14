@@ -134,6 +134,40 @@ export async function userHasRole(userId: string, role: string): Promise<boolean
   return Number(result[0]?.count) > 0;
 }
 
+type Executor = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/**
+ * Idempotent, transaction-aware role grant. `assignRole` throws on a repeat,
+ * which is wrong for a flow that grants several roles at once and has to stay
+ * re-runnable; here an existing grant counts as success. There is no unique
+ * constraint on (user_id, role), so the check is a read inside the caller's
+ * transaction rather than an upsert.
+ */
+export async function assignRoleIfMissing(
+  userId: string,
+  role: UserRoleEnum,
+  assignedBy: string | null,
+  tx: Executor = db
+) {
+  const existing = await tx.query.userRoles.findFirst({
+    where: and(eq(userRoles.userId, userId), eq(userRoles.role, role)),
+  });
+  if (existing) return existing;
+
+  const [granted] = await tx
+    .insert(userRoles)
+    .values({
+      id: crypto.randomUUID(),
+      userId,
+      role,
+      assignedBy,
+      assignedAt: new Date(),
+    })
+    .returning();
+
+  return granted;
+}
+
 /**
  * Assign role to user
  */

@@ -34,6 +34,36 @@ export class CarrierError extends Error {
 const err = (code: string, status: number, message?: string) =>
   new CarrierError(code, status, message);
 
+/**
+ * Enrols a carrier's owner as a driver in their own fleet.
+ *
+ * In this market most carriers drive themselves, and without both the driver
+ * role and the fleet link the carrier who wins a job can neither reach
+ * `/driver` nor pass `assignDriver`'s fleet check. Every write here is
+ * idempotent, so approving twice enrols once.
+ */
+// TODO(EXPEDITOO-TESTING): solo-carrier self-assignment — for real multi-driver
+// fleets, replace this with a driver invite flow that grants the role and the
+// fleet link to the invitee, and stop enrolling the owner automatically.
+async function enrolAsOwnDriver(
+  carrier: Carrier,
+  adminId: string,
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0]
+) {
+  await usersDal.assignRoleIfMissing(carrier.userId, "carrier", adminId, tx);
+  await usersDal.assignRoleIfMissing(carrier.userId, "driver", adminId, tx);
+  await carriersDal.upsertDriverLink(
+    {
+      id: nanoid(),
+      carrierId: carrier.id,
+      userId: carrier.userId,
+      isActive: true,
+      acceptedAt: new Date(),
+    },
+    tx
+  );
+}
+
 // ========================================
 // Submission gate
 // ========================================
@@ -240,13 +270,23 @@ export const carrierService = {
   },
 
   /**
-   * Approving grants the carrier role and unlocks bidding. Idempotent: a
-   * second approval is a no-op rather than a duplicate role grant.
+   * Approving unlocks bidding *and* execution. Beyond the carrier role it
+   * enrols the owner as a driver in their own fleet: in this market most
+   * carriers drive themselves, and without that pair the carrier who wins a
+   * job can neither reach /driver nor pass the fleet check on assignment.
+   * Idempotent: a second approval is a no-op rather than a duplicate grant.
    */
   async approve(adminId: string, carrierId: string) {
     const carrier = await carriersDal.getById(carrierId);
     if (!carrier) throw err("CARRIER_NOT_FOUND", 404);
-    if (carrier.status === "approved") return carrier;
+
+    // Carriers approved before self-enrolment existed hold neither the driver
+    // role nor a fleet link, so re-approving them is the backfill. Both writes
+    // are idempotent, which is what lets this run on an already-approved row.
+    if (carrier.status === "approved") {
+      await db.transaction((tx) => enrolAsOwnDriver(carrier, adminId, tx));
+      return carrier;
+    }
 
     const approved = await db.transaction(async (tx) => {
       const updated = await carriersDal.update(
@@ -260,10 +300,10 @@ export const carrierService = {
         tx
       );
       await carriersDal.setAllDocumentsAccepted(carrierId, tx);
+      await enrolAsOwnDriver(carrier, adminId, tx);
+
       return updated;
     });
-
-    await usersDal.assignRole(carrier.userId, "carrier", adminId);
 
     await notifyCarrier(
       carrier.userId,

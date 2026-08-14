@@ -6,6 +6,7 @@ import {
   carrierDrivers,
   type InsertCarrier,
   type InsertCarrierDocument,
+  type InsertCarrierDriver,
   type InsertVehicle,
   type CarrierStatus,
 } from "@/db/schema/carriers";
@@ -149,6 +150,26 @@ export const carriersDal = {
       where: eq(carrierDrivers.carrierId, carrierId),
       with: { user: true },
     });
+  },
+
+  /**
+   * Idempotent fleet membership. Re-linking a driver the carrier had removed
+   * reactivates the existing row rather than colliding with the
+   * (carrier_id, user_id) unique constraint.
+   */
+  async upsertDriverLink(data: InsertCarrierDriver, tx: Executor = db) {
+    const [result] = await tx
+      .insert(carrierDrivers)
+      .values(data)
+      .onConflictDoUpdate({
+        target: [carrierDrivers.carrierId, carrierDrivers.userId],
+        set: {
+          isActive: true,
+          acceptedAt: data.acceptedAt ?? new Date(),
+        },
+      })
+      .returning();
+    return result;
   },
 
   async getDriverLink(userId: string, tx: Executor = db) {

@@ -17,6 +17,7 @@ import {
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import {
+  useAssignSelfToShipment,
   useUpdateShipmentStatus,
   useUploadProofOfDelivery,
 } from "../hooks/useDriverShipments";
@@ -24,7 +25,9 @@ import type { DriverShipment } from "../api/shipments.api";
 
 /**
  * The driver's controls for a run. Buttons mirror the legal transitions of the
- * shipment service exactly: ASSIGNED → PICKED_UP → IN_TRANSIT → DELIVERED.
+ * shipment service exactly: PENDING → ASSIGNED → PICKED_UP → IN_TRANSIT →
+ * DELIVERED. The first step is a self-assignment, because the carrier who won
+ * the job is normally the person who will drive it.
  * Proof of delivery is the preferred way to close the run; a photo-less
  * DELIVERED transition stays available so a broken camera never blocks a
  * delivery.
@@ -64,6 +67,8 @@ export function ShipmentActions({
 
 function ActionsForStatus({ shipment }: { shipment: ActionableShipment }) {
   switch (shipment.status) {
+    case "PENDING":
+      return <PendingActions shipment={shipment} />;
     case "ASSIGNED":
       return <AssignedActions shipment={shipment} />;
     case "PICKED_UP":
@@ -80,6 +85,38 @@ function ActionsForStatus({ shipment }: { shipment: ActionableShipment }) {
 }
 
 // ---- Per-status blocks ----
+
+/**
+ * The run has been paid for but nobody is on it yet. Claiming it is the only
+ * way a solo carrier reaches the rest of the flow, so it is the primary action.
+ */
+function PendingActions({ shipment }: { shipment: ActionableShipment }) {
+  const t = useTranslations("driver.actions");
+  const assignSelf = useAssignSelfToShipment(shipment.id);
+
+  return (
+    <div className="space-y-4">
+      <StatusBanner
+        tone="muted"
+        icon={Clock}
+        title={t("unassignedTitle")}
+        description={t("unassignedDesc")}
+      />
+      <Button
+        className="w-full gap-2"
+        size="lg"
+        onClick={() => assignSelf.mutate()}
+        disabled={assignSelf.isPending || !assignSelf.canAssign}
+      >
+        <Truck className="w-5 h-5" />
+        {assignSelf.isPending ? t("startingJob") : t("startJob")}
+      </Button>
+      <p className="text-xs text-center text-muted-foreground">
+        {t("startJobHint")}
+      </p>
+    </div>
+  );
+}
 
 function AssignedActions({ shipment }: { shipment: ActionableShipment }) {
   const t = useTranslations("driver.actions");

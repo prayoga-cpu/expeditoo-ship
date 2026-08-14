@@ -8,7 +8,7 @@ import {
   DOCUMENT_KINDS,
   REQUIRED_DOCUMENT_KINDS,
   EXPIRING_DOCUMENT_KINDS,
-} from "@/server/dto/carrier.dto";
+} from "@/lib/carrier-constants";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {

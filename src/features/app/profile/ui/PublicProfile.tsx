@@ -115,7 +115,7 @@ export function PublicProfile({
   const handleMessage = async () => {
     if (!currentUser) {
       toast.error(t("loginToMessage"));
-      router.push("/auth/login"); // Assuming this is the login route
+      router.push("/signin");
       return;
     }
 
