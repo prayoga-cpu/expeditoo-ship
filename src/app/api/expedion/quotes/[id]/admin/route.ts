@@ -18,7 +18,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    requireExpedionAdmin(req);
+    await requireExpedionAdmin(req);
     const { id } = await params;
     const input = adminUpdateExpedionQuoteSchema.parse(await req.json());
     const quote = await expedionService.adminUpdate(id, input);

@@ -35,7 +35,7 @@ const extractSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    const caller = requireExpedionCaller(req);
+    const caller = await requireExpedionCaller(req);
     const input = extractSchema.parse(await req.json());
 
     const outcome = await expedionExtractionService.extract({

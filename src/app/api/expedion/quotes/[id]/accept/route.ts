@@ -19,7 +19,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const caller = requireExpedionCaller(req);
+    const caller = await requireExpedionCaller(req);
     const { id } = await params;
     const input = acceptExpedionQuoteSchema.parse(await req.json());
     const quote = await expedionService.acceptQuote(id, caller, input);

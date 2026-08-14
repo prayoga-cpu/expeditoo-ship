@@ -16,6 +16,23 @@ import type {
   InsertExpedionQuote,
 } from "@/db/schema/expedion";
 
+/**
+ * Who is asking, as far as this service is concerned.
+ *
+ * Declared structurally rather than imported from `@/lib/expedion-auth` so the
+ * service does not pull in Better Auth — and through it the database adapter —
+ * merely to name a shape. `ExpedionCaller` satisfies this by structure.
+ *
+ * `userId` is a Better Auth user id for session callers and a Firebase UID for
+ * legacy shared-key callers. It is compared against
+ * `expedion_quotes.firebase_uid`, whose name predates the migration and now
+ * means "owner".
+ */
+export interface ExpedionCallerIdentity {
+  userId: string;
+  isAdmin: boolean;
+}
+
 // ========================================
 // Errors
 // ========================================
@@ -182,10 +199,10 @@ function toInsert(
 // ========================================
 
 export const expedionService = {
-  async createQuote(firebaseUid: string, input: CreateExpedionQuoteInput) {
+  async createQuote(ownerId: string, input: CreateExpedionQuoteInput) {
     const quote = await db.transaction(async (tx) => {
       const created = await expedionDal.create(
-        toInsert(firebaseUid, input),
+        toInsert(ownerId, input),
         tx
       );
       await expedionDal.addEvent(
@@ -194,7 +211,7 @@ export const expedionService = {
           quoteId: created.id,
           status: "pending",
           actor: "client",
-          actorId: firebaseUid,
+          actorId: ownerId,
           message: "Demande de devis reçue",
         },
         tx
@@ -211,10 +228,10 @@ export const expedionService = {
     return quote;
   },
 
-  async getQuote(id: string, caller: { firebaseUid: string; isAdmin: boolean }) {
+  async getQuote(id: string, caller: ExpedionCallerIdentity) {
     const quote = await expedionDal.getById(id);
     if (!quote) throw err("QUOTE_NOT_FOUND", 404);
-    if (!caller.isAdmin && quote.firebaseUid !== caller.firebaseUid) {
+    if (!caller.isAdmin && quote.firebaseUid !== caller.userId) {
       // 404 rather than 403: a non-owner should not learn the id exists.
       throw err("QUOTE_NOT_FOUND", 404);
     }
@@ -227,7 +244,7 @@ export const expedionService = {
 
   async updateQuote(
     id: string,
-    caller: { firebaseUid: string; isAdmin: boolean },
+    caller: ExpedionCallerIdentity,
     input: UpdateExpedionQuoteInput
   ) {
     const quote = await this.getQuote(id, caller);
@@ -375,7 +392,7 @@ export const expedionService = {
 
   async acceptQuote(
     id: string,
-    caller: { firebaseUid: string; isAdmin: boolean },
+    caller: ExpedionCallerIdentity,
     input: AcceptExpedionQuoteInput
   ) {
     const quote = await this.getQuote(id, caller);
@@ -406,7 +423,7 @@ export const expedionService = {
           quoteId: id,
           status: "accepted",
           actor: "client",
-          actorId: caller.firebaseUid,
+          actorId: caller.userId,
           message: "Devis accepté par le client",
           metadata: { kind: input.kind, priceCents: price },
         },
@@ -516,7 +533,7 @@ export const expedionService = {
     return updated;
   },
 
-  async listEvents(id: string, caller: { firebaseUid: string; isAdmin: boolean }) {
+  async listEvents(id: string, caller: ExpedionCallerIdentity) {
     await this.getQuote(id, caller);
     return await expedionDal.listEvents(id);
   },

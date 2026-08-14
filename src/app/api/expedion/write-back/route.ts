@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   try {
-    requireExpedionAdmin(req);
+    await requireExpedionAdmin(req);
     const input = expedionWriteBackSchema.parse(await req.json());
     const quote = await expedionBridgeService.writeBack(input);
     return NextResponse.json({ success: true, data: quote });

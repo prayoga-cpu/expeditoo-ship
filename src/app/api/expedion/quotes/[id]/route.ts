@@ -20,7 +20,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const caller = requireExpedionCaller(req);
+    const caller = await requireExpedionCaller(req);
     const { id } = await params;
     const quote = await expedionService.getQuote(id, caller);
     return NextResponse.json({ success: true, data: quote });
@@ -34,7 +34,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const caller = requireExpedionCaller(req);
+    const caller = await requireExpedionCaller(req);
     const { id } = await params;
     const input = updateExpedionQuoteSchema.parse(await req.json());
     const quote = await expedionService.updateQuote(id, caller, input);

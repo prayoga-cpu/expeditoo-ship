@@ -18,7 +18,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const caller = requireExpedionAdmin(req);
+    const caller = await requireExpedionAdmin(req);
     const { id } = await params;
 
     const { quote, listing } = await expedionEscalationService.escalate(id, {
@@ -28,7 +28,7 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      data: { quote, listingId: listing.id, escalatedBy: caller.firebaseUid },
+      data: { quote, listingId: listing.id, escalatedBy: caller.userId },
     });
   } catch (error) {
     return expedionErrorResponse(error);

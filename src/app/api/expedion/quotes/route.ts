@@ -23,7 +23,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   try {
-    const caller = requireExpedionCaller(req);
+    const caller = await requireExpedionCaller(req);
     const { searchParams } = new URL(req.url);
 
     const filters = listExpedionQuotesSchema.parse({
@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
     const { rows, total } = await expedionService.listQuotes({
       ...filters,
       // Admins may sweep the whole table; everyone else sees only their own.
-      firebaseUid: caller.isAdmin ? undefined : caller.firebaseUid,
+      firebaseUid: caller.isAdmin ? undefined : caller.userId,
     });
 
     return NextResponse.json({
@@ -57,11 +57,11 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const caller = requireExpedionCaller(req);
+    const caller = await requireExpedionCaller(req);
     const body = await req.json();
     const input = createExpedionQuoteSchema.parse(body);
 
-    const quote = await expedionService.createQuote(caller.firebaseUid, input);
+    const quote = await expedionService.createQuote(caller.userId, input);
 
     return NextResponse.json({ success: true, data: quote }, { status: 201 });
   } catch (error) {
