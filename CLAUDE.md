@@ -163,7 +163,9 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
 - Auth: default role `shipper` assigned once for both email and OAuth signup; roles
   surfaced to the session via `customSession`, so role-aware navigation works
 - Expedion bridge: inbound escalation creates a listing; status changes write back
-- Crons: listing expiry, document expiry, escalation sweep — declared in `vercel.json`
+- Crons: listing expiry, document expiry, escalation sweep, image cleanup — driven by
+  `.github/workflows/scheduled-jobs.yml`, not Vercel Cron (Hobby caps crons at 2/project,
+  once per day). Needs repo variable `APP_URL` and repo secret `CRON_SECRET`.
 - FR/EN parity exact (verified by key diff, not by eye)
 
 **Not done** — see `plan_transport_only_refinement.md` WP11–WP16 and `docs/TESTING_MOCKS.md`

@@ -1,0 +1,98 @@
+name: Scheduled jobs
+
+# Vercel Cron is not usable here: Hobby projects are capped at 2 cron jobs and
+# at one run per day, which cannot express the 10- and 15-minute sweeps the
+# offers engine and the Expedion bridge depend on. GitHub Actions drives the
+# same endpoints instead, authenticating with the same CRON_SECRET bearer that
+# `src/lib/cron-auth.ts` expects from Vercel Cron.
+#
+# Requires, in repo Settings:
+#   - Variables → APP_URL       e.g. https://expeditoo.vercel.app  (no trailing slash)
+#   - Secrets   → CRON_SECRET   the same value set in the Vercel project env
+#
+# Caveat: GitHub delays scheduled runs under load (minutes, occasionally more),
+# and disables schedules after 60 days without repo activity. The jobs are
+# sweeps, not deadlines, so lateness is tolerable — silence is not. A failed
+# curl fails the workflow so the run shows up red.
+
+on:
+  schedule:
+    - cron: "*/15 * * * *" # expire-listings
+    - cron: "*/10 * * * *" # expedion-escalate
+    - cron: "0 6 * * *" # carrier-documents
+    - cron: "0 3 * * 0" # cleanup-images
+  workflow_dispatch:
+    inputs:
+      job:
+        description: Job to run now
+        required: true
+        type: choice
+        options:
+          - expire-listings
+          - expedion-escalate
+          - carrier-documents
+          - cleanup-images
+
+# A long sweep must never overlap the next tick of the same sweep.
+concurrency:
+  group: scheduled-jobs-${{ github.event.schedule || inputs.job }}
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Resolve endpoint
+        id: target
+        env:
+          SCHEDULE: ${{ github.event.schedule }}
+          MANUAL: ${{ inputs.job }}
+        run: |
+          set -euo pipefail
+          case "${MANUAL:-$SCHEDULE}" in
+            "expire-listings"    | "*/15 * * * *") path="/api/cron/expire-listings" ;;
+            "expedion-escalate"  | "*/10 * * * *") path="/api/cron/expedion-escalate" ;;
+            "carrier-documents"  | "0 6 * * *")    path="/api/cron/carrier-documents" ;;
+            "cleanup-images"     | "0 3 * * 0")    path="/api/cron/cleanup-images?dryRun=false" ;;
+            *) echo "::error::No endpoint mapped to trigger '${MANUAL:-$SCHEDULE}'"; exit 1 ;;
+          esac
+          echo "path=$path" >> "$GITHUB_OUTPUT"
+
+      - name: Invoke
+        env:
+          APP_URL: ${{ vars.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          PATH_SUFFIX: ${{ steps.target.outputs.path }}
+        run: |
+          set -euo pipefail
+          if [ -z "${APP_URL:-}" ]; then
+            echo "::error::Repo variable APP_URL is unset"; exit 1
+          fi
+          if [ -z "${CRON_SECRET:-}" ]; then
+            echo "::error::Repo secret CRON_SECRET is unset"; exit 1
+          fi
+
+          echo "GET ${APP_URL}${PATH_SUFFIX}"
+
+          # Deliberately no --retry. curl's --retry treats 5xx as transient and
+          # replays the request; these jobs send mail and move money-adjacent
+          # state, so a 5xx that followed partial work would get doubled. curl
+          # has no "retry connection errors but not 5xx" mode, so retry is off
+          # entirely: a failure stays failed and the next tick picks it up (or
+          # re-run this workflow by hand for the daily/weekly jobs).
+          status=$(curl --silent --show-error --location \
+            --max-time 300 \
+            --header "Authorization: Bearer ${CRON_SECRET}" \
+            --output response.json \
+            --write-out "%{http_code}" \
+            "${APP_URL}${PATH_SUFFIX}")
+
+          echo "HTTP $status"
+          cat response.json || true
+          echo
+
+          if [ "$status" != "200" ]; then
+            echo "::error::${PATH_SUFFIX} returned HTTP $status"
+            exit 1
+          fi
