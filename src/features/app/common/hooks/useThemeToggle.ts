@@ -27,7 +27,10 @@ export function useThemeToggle(): UseThemeToggleReturn {
     setMounted(true);
   }, []);
 
-  const currentTheme = (theme || "light") as Theme;
+  // `theme` is undefined until next-themes has read storage; fall back to the
+  // provider's default rather than to "light", which would tick the wrong row
+  // for that first frame.
+  const currentTheme = (theme || "system") as Theme;
 
   const setTheme = (newTheme: Theme) => {
     setNextTheme(newTheme);

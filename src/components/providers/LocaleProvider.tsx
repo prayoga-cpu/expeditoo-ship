@@ -5,7 +5,7 @@ import { NextIntlClientProvider } from "next-intl";
 import {
     type Locale,
     defaultLocale,
-    getStoredLocale,
+    getInitialLocale,
     setStoredLocale,
     isValidLocale,
 } from "@/i18n/config";
@@ -47,10 +47,10 @@ export function LocaleProvider({ children }: LocaleProviderProps) {
     const [locale, setLocaleState] = useState<Locale>(defaultLocale);
     const [isLoading, setIsLoading] = useState(true);
 
-    // Initialize locale from localStorage
+    // Runs on mount because both sources — localStorage and the device
+    // language — only exist on the client.
     useEffect(() => {
-        const storedLocale = getStoredLocale();
-        setLocaleState(storedLocale);
+        setLocaleState(getInitialLocale());
         setIsLoading(false);
     }, []);
 
