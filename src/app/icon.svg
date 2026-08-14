@@ -1,0 +1,6 @@
+<svg viewBox="0 0 120 120" width="120" height="120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Expeditoo">
+  <rect width="120" height="120" rx="26" fill="#0052FF"/>
+  <rect x="26" y="26" width="68" height="68" rx="20" fill="#FFFFFF"/>
+  <circle cx="60" cy="60" r="19" fill="#08090B"/>
+  <path d="M54 49 L67 60 L54 71" stroke="#FFFFFF" stroke-width="6.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

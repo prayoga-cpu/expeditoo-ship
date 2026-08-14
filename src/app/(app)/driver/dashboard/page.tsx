@@ -23,7 +23,7 @@ export default function DriverDashboardPage() {
           <Truck className="w-8 h-8 text-primary" />
           {t("title")}
         </h1>
-        <p className="text-muted-foreground">{t("availableJobs")}</p>
+        <p className="text-muted-foreground">{t("subtitle")}</p>
       </div>
 
       {/* Stats Overview */}

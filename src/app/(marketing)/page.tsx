@@ -1,33 +1,29 @@
 import {
+  LandingBanner,
   LandingNavbar,
-  LandingFooter,
   LandingHero,
-  LandingStats,
   LandingHowItWorks,
-  LandingWhatToShip,
-  LandingTestimonials,
+  LandingJobBoard,
   LandingAdvantages,
-  LandingShowcase,
+  LandingPlatform,
+  LandingTestimonials,
   LandingCTA,
-  FloatingLanguageSwitcher,
+  LandingFooter,
 } from "@/features/marketing/ui";
 
 export default function LandingPage() {
   return (
-    <main className="relative bg-linear-to-br from-background via-background to-primary/5">
+    <main className="lp min-h-screen">
+      <LandingBanner />
       <LandingNavbar />
-      <section>
-        <LandingHero />
-        <LandingStats />
-        <LandingHowItWorks />
-        <LandingWhatToShip />
-        <LandingAdvantages />
-        <LandingShowcase />
-        <LandingTestimonials />
-        <LandingCTA />
-      </section>
+      <LandingHero />
+      <LandingHowItWorks />
+      <LandingJobBoard />
+      <LandingAdvantages />
+      <LandingPlatform />
+      <LandingTestimonials />
+      <LandingCTA />
       <LandingFooter />
-      <FloatingLanguageSwitcher />
     </main>
   );
 }

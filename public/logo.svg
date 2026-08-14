@@ -1,0 +1,5 @@
+<svg viewBox="0 0 120 120" width="120" height="120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Expeditoo">
+  <rect width="120" height="120" rx="34" fill="#0052FF"/>
+  <circle cx="60" cy="60" r="32" fill="#08090B"/>
+  <path d="M53 46 L68 60 L53 74" stroke="#0052FF" stroke-width="9" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

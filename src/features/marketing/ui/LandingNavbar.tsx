@@ -1,64 +1,60 @@
 "use client";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { motion, useScroll, useMotionValueEvent } from "framer-motion";
-import { Package } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
+
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/lib/auth-context";
+import { BrandWordmark } from "@/components/ui/brand-mark";
+import { LandingLangToggle, LandingThemeToggle } from "./LandingControls";
+import { LP_BTN_PRIMARY } from "./styles";
+
+const NAV_LINKS = [
+  { href: "/#how", key: "howItWorks" },
+  { href: "/#courses", key: "jobs" },
+  { href: "/#platform", key: "platform" },
+] as const;
 
 export function LandingNavbar() {
-  const router = useRouter();
-  const { scrollY } = useScroll();
-  const [scrolled, setScrolled] = useState(false);
   const t = useTranslations("marketing.navbar");
-  const { isAuthenticated, isLoading } = useAuth();
-
-  useMotionValueEvent(scrollY, "change", (latest) => {
-    setScrolled(latest > 50);
-  });
+  const { isAuthenticated } = useAuth();
 
   return (
-    <motion.header
-      initial={{ y: -100 }}
-      animate={{ y: 0 }}
-      transition={{ duration: 0.5 }}
-      className={cn(
-        "fixed top-0 z-40 w-full transition-all duration-300",
-        scrolled ? "backdrop-blur-sm" : "bg-transparent"
-      )}
-    >
-      <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
-            <Package className="w-6 h-6 text-primary-foreground" />
-          </div>
-          <span className="text-xl font-bold text-foreground">EXPEDITOO</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <ThemeToggle />
-          {isLoading ? (
-            <div className="w-24 h-9 bg-muted animate-pulse rounded-full" />
-          ) : isAuthenticated ? (
-            <Button
-              onClick={() => router.push("/home")}
-              className="rounded-full bg-primary hover:bg-primary/90 text-primary-foreground transition-all duration-300"
+    <header className="lp sticky top-0 z-50 border-b border-[var(--lp-line)] bg-[var(--lp-headbg)] backdrop-blur-[14px]">
+      {/* The design is specified at desktop width; below `md` the control
+          cluster no longer fits one line, so the bar wraps to two rows. */}
+      <div className="mx-auto flex w-full max-w-[1180px] flex-wrap items-center gap-x-[22px] gap-y-2 px-5 py-3 sm:px-8 md:h-[66px] md:flex-nowrap md:py-0">
+        <Link href="/#top" className="flex flex-none items-center">
+          <BrandWordmark size={32} />
+        </Link>
+
+        <nav className="hidden min-w-0 flex-auto items-center gap-4 md:flex">
+          {NAV_LINKS.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="text-[14.5px] whitespace-nowrap text-[var(--lp-muted)]"
             >
-              {t("openApp")}
-            </Button>
-          ) : (
-            <Button
-              onClick={() => router.push("/signin")}
-              className="rounded-full bg-primary hover:bg-primary/90 text-primary-foreground transition-all duration-300"
-            >
-              {t("login")}
-            </Button>
-          )}
+              {t(link.key)}
+            </Link>
+          ))}
+        </nav>
+
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-3 whitespace-nowrap md:flex-nowrap">
+          <LandingLangToggle />
+          <LandingThemeToggle />
+          <Link
+            href={isAuthenticated ? "/home" : "/signin"}
+            className="hidden text-[14.5px] text-[var(--lp-muted)] sm:block"
+          >
+            {isAuthenticated ? t("openApp") : t("login")}
+          </Link>
+          <Link
+            href="/signup"
+            className={`${LP_BTN_PRIMARY} px-[18px] py-[9px] text-[14.5px]`}
+          >
+            {t("becomeCarrier")}
+          </Link>
         </div>
       </div>
-    </motion.header>
+    </header>
   );
 }
-

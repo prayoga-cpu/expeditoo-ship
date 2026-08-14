@@ -1,9 +1,10 @@
 export {
-  fetchShipments,
-  fetchShipmentDetail,
-  updateShipmentStatus,
-  cancelShipment,
-  type ShipmentListItem,
-  type ShipmentDetail,
-  type FetchShipmentsParams,
-} from "./shipments.api";
+  deliveriesApi,
+  type Shipment,
+  type ShipmentWithEvents,
+  type ShipmentEvent,
+  type ShipmentParty,
+  type ShipmentStatus,
+  type ShipmentsPage,
+  type ListShipmentsParams,
+} from "./deliveries.api";

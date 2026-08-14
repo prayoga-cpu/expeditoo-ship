@@ -57,6 +57,94 @@
   --sidebar-foreground: oklch(0.95 0.02 250);
 }
 
+/* ── Landing surface ────────────────────────────────────────────────────
+   The marketing pages carry their own palette, self-contained under `.lp`
+   so it never leaks into the app tokens above. Every landing component
+   root carries the class, so nesting is expected and harmless. */
+.lp {
+  --lp-bg: #f4f5f8;
+  --lp-bg2: #ffffff;
+  --lp-line: rgba(12, 18, 28, 0.1);
+  --lp-line2: rgba(12, 18, 28, 0.18);
+  --lp-text: #111419;
+  --lp-muted: #4e5866;
+  --lp-dim: #69737f;
+  --lp-faint: #8a93a0;
+  --lp-chip: rgba(12, 18, 28, 0.04);
+  --lp-input: #f4f5f8;
+  --lp-headbg: rgba(255, 255, 255, 0.86);
+  --lp-glow: radial-gradient(
+    ellipse at center,
+    rgba(0, 82, 255, 0.1),
+    rgba(244, 245, 248, 0) 70%
+  );
+  --lp-stripebg: #ebedf1;
+  --lp-stripe: repeating-linear-gradient(
+    135deg,
+    rgba(12, 18, 28, 0.05) 0 2px,
+    transparent 2px 11px
+  );
+  --lp-shadow: 0 30px 60px -38px rgba(15, 23, 40, 0.35);
+  --lp-amber: #c27b00;
+  --lp-ambertext: #8a5800;
+  --lp-ambersub: #8a6e3e;
+  --lp-bluetext: #0043d6;
+  --lp-bluesub: #44506e;
+  --lp-bluelink: #0047e1;
+  --lp-green: #0e8a5f;
+  --lp-greenbg: rgba(14, 138, 95, 0.1);
+  --lp-red: #c2413b;
+
+  background: var(--lp-bg);
+  color: var(--lp-text);
+  font-family: var(--font-geist), "Helvetica Neue", Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.dark .lp {
+  --lp-bg: #08090b;
+  --lp-bg2: #0e1014;
+  --lp-line: rgba(255, 255, 255, 0.08);
+  --lp-line2: rgba(255, 255, 255, 0.14);
+  --lp-text: #edeff3;
+  --lp-muted: #98a1ae;
+  --lp-dim: #6c7480;
+  --lp-faint: #5a6270;
+  --lp-chip: rgba(255, 255, 255, 0.04);
+  --lp-input: #08090b;
+  --lp-headbg: rgba(8, 9, 11, 0.82);
+  --lp-glow: radial-gradient(
+    ellipse at center,
+    rgba(0, 82, 255, 0.2),
+    rgba(8, 9, 11, 0) 70%
+  );
+  --lp-stripebg: #0b0d11;
+  --lp-stripe: repeating-linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.045) 0 2px,
+    transparent 2px 11px
+  );
+  --lp-shadow: 0 40px 80px -40px rgba(0, 0, 0, 0.9);
+  --lp-amber: #ffa91f;
+  --lp-ambertext: #ffc46a;
+  --lp-ambersub: #a79371;
+  --lp-bluetext: #8fb4ff;
+  --lp-bluesub: #7c8aa8;
+  --lp-bluelink: #3d7bff;
+  --lp-green: #2fbf87;
+  --lp-greenbg: rgba(47, 191, 135, 0.13);
+  --lp-red: #ff7a7a;
+}
+
+.lp a:hover {
+  color: #3d7bff;
+}
+
+.lp input::placeholder {
+  color: #7a8290;
+  opacity: 0.7;
+}
+
 @theme inline {
   --font-sans: var(--font-jakarta), "Geist", "Geist Fallback";
   --font-mono: var(--font-mono), "Geist Mono", "Geist Mono Fallback";

@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Users, FileText, Truck } from "lucide-react";
 
 import { UsersTable } from "@/features/app/admin/ui/UsersTable";
-import { DriverApplicationsList } from "@/features/app/admin/ui/DriverApplicationsList";
+import { CarrierApplicationsList } from "@/features/app/admin/ui/CarrierApplicationsList";
 import { useAdminDrivers } from "@/features/app/admin/hooks/useAdminDrivers";
 import { PageLoader } from "@/components/ui/page-loader";
 import { useTranslations } from "next-intl";
@@ -83,7 +83,7 @@ export default function DriversPage() {
         </TabsContent>
 
         <TabsContent value="applications" className="space-y-4 data-[state=inactive]:hidden">
-          <DriverApplicationsList tableMinHeight="40vh" />
+          <CarrierApplicationsList tableMinHeight="40vh" />
         </TabsContent>
       </Tabs>
     </div>

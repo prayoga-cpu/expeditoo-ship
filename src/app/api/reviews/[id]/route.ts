@@ -1,102 +1,39 @@
-import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { reviewsService } from "@/server/services/reviews.service";
+import { ok, unauthorised, handleError } from "@/lib/api-response";
+
+interface RouteParams {
+  params: Promise<{ id: string }>;
+}
 
 /**
- * GET /api/reviews/[id]
- * Get a single review by ID
+ * GET /api/reviews/:id
+ * A single review.
  */
-export async function GET(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(_req: Request, { params }: RouteParams) {
   try {
     const { id } = await params;
-    const review = await reviewsService.getReviewById(id);
-
-    if (!review) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: { code: "NOT_FOUND", message: "Review not found" },
-        },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json({ success: true, data: review });
+    return ok(await reviewsService.getReviewById(id));
   } catch (error) {
-    console.error("Get review error:", error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: { code: "INTERNAL_SERVER_ERROR", message: "Internal server error" },
-      },
-      { status: 500 }
-    );
+    return handleError(error, "Get review");
   }
 }
 
 /**
- * DELETE /api/reviews/[id]
- * Delete own review
+ * DELETE /api/reviews/:id
+ * Delete own review.
  */
-export async function DELETE(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(_req: Request, { params }: RouteParams) {
   try {
-    const session = await auth.api.getSession({
-      headers: await headers(),
-    });
-
-    if (!session) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: { code: "UNAUTHORIZED", message: "Unauthorized" },
-        },
-        { status: 401 }
-      );
-    }
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session) return unauthorised();
 
     const { id } = await params;
-    const deleted = await reviewsService.deleteReview(id, session.user.id);
+    await reviewsService.deleteReview(id, session.user.id);
 
-    return NextResponse.json({ success: true, data: deleted });
+    return ok({ deleted: true });
   } catch (error) {
-    console.error("Delete review error:", error);
-
-    const message =
-      error instanceof Error ? error.message : "Internal server error";
-
-    if (message.startsWith("REVIEW_NOT_FOUND:")) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: { code: "NOT_FOUND", message: message.split(": ")[1] },
-        },
-        { status: 404 }
-      );
-    }
-
-    if (message.startsWith("NOT_AUTHORIZED:")) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: { code: "FORBIDDEN", message: message.split(": ")[1] },
-        },
-        { status: 403 }
-      );
-    }
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: { code: "INTERNAL_SERVER_ERROR", message: "Internal server error" },
-      },
-      { status: 500 }
-    );
+    return handleError(error, "Delete review");
   }
 }

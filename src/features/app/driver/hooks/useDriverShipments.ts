@@ -1,75 +1,41 @@
-import { useQuery } from "@tanstack/react-query";
-import { useTabState } from "@/features/app/common/hooks";
-import {
-  fetchShipments,
-  fetchShipmentDetail,
-  type ShipmentListItem,
-} from "@/features/app/deliveries/api";
+"use client";
 
-export type DriverShipmentTab = "available" | "my-shipments";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from "@tanstack/react-query";
+import { toast } from "sonner";
+import { useTranslations } from "next-intl";
+import { ApiError } from "@/lib/fetcher";
+import {
+  driverShipmentsApi,
+  type DriverShipmentStatus,
+} from "../api/shipments.api";
+
+/** One page is plenty: a driver's live workload is a handful of runs. */
+const LIST_LIMIT = 50;
 
 /**
- * Custom hook for managing driver shipments
+ * Every shipment the driver is a party to. The API scopes the list to the
+ * caller, so no role parameter is needed (or accepted).
  */
 export function useDriverShipments() {
-  const { activeTab, setActiveTab } =
-    useTabState<DriverShipmentTab>("available");
-
-  // Fetch available shipments (PENDING)
-  const {
-    data: availableData,
-    isLoading: isLoadingAvailable,
-    isError: isErrorAvailable,
-    error: errorAvailable,
-  } = useQuery({
-    queryKey: ["shipments", "available"],
-    queryFn: () => fetchShipments({ type: "available" }),
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ["driver-shipments"],
+    queryFn: () => driverShipmentsApi.list({ limit: LIST_LIMIT }),
   });
-
-  // Fetch my shipments (assigned to driver)
-  const {
-    data: myShipmentsData,
-    isLoading: isLoadingMyShipments,
-    isError: isErrorMyShipments,
-    error: errorMyShipments,
-  } = useQuery({
-    queryKey: ["shipments", "driver"],
-    queryFn: () => fetchShipments({ type: "driver" }),
-  });
-
-  // Fetch my proposals (shipments I've bid on but not yet assigned)
-  const { data: myProposalsData, isLoading: isLoadingProposals } = useQuery({
-    queryKey: ["shipments", "proposals"],
-    queryFn: () => fetchShipments({ type: "proposals" }),
-  });
-
-  // Combine assigned shipments and proposals with deduplication
-  const allShipments = [
-    ...(myShipmentsData?.data || []),
-    ...(myProposalsData?.data || []),
-  ];
-
-  const uniqueShipmentsMap = new Map<string, ShipmentListItem>();
-  allShipments.forEach((shipment) => {
-    uniqueShipmentsMap.set(shipment.id, shipment);
-  });
-
-  const combinedShipments = Array.from(uniqueShipmentsMap.values());
 
   return {
-    activeTab,
-    setActiveTab,
-    availableShipments: availableData?.data || [],
-    myShipments: combinedShipments,
-    isLoading: isLoadingAvailable || isLoadingMyShipments || isLoadingProposals,
-    isError: isErrorAvailable || isErrorMyShipments,
-    error: (errorAvailable || errorMyShipments) as Error | null,
+    shipments: data?.items ?? [],
+    total: data?.total ?? 0,
+    isLoading,
+    isError,
+    error: error as Error | null,
   };
 }
 
-/**
- * Custom hook for fetching single shipment detail for driver
- */
 export function useDriverShipmentDetail(id: string) {
   const {
     data: shipment,
@@ -77,15 +43,75 @@ export function useDriverShipmentDetail(id: string) {
     isError,
     error,
   } = useQuery({
-    queryKey: ["shipment", id],
-    queryFn: () => fetchShipmentDetail(id),
+    queryKey: ["driver-shipment", id],
+    queryFn: () => driverShipmentsApi.get(id),
     enabled: !!id,
   });
 
-  return {
-    shipment,
-    isLoading,
-    isError,
-    error: error as Error | null,
+  return { shipment, isLoading, isError, error: error as Error | null };
+}
+
+/** Maps the service's error codes to something a driver can act on. */
+function useActionErrorMessage() {
+  const t = useTranslations("driver.actions.errors");
+
+  return (error: unknown) => {
+    const code = error instanceof ApiError ? error.code : "";
+    switch (code) {
+      case "INVALID_STATUS_TRANSITION":
+        return t("staleStatus");
+      case "FORBIDDEN":
+        return t("forbidden");
+      case "SHIPMENT_NOT_FOUND":
+        return t("notFound");
+      case "CANNOT_UPLOAD_POD":
+        return t("podNotInTransit");
+      default:
+        return error instanceof Error ? error.message : t("generic");
+    }
   };
+}
+
+function invalidateShipment(queryClient: QueryClient, shipmentId: string) {
+  queryClient.invalidateQueries({ queryKey: ["driver-shipment", shipmentId] });
+  queryClient.invalidateQueries({ queryKey: ["driver-shipments"] });
+}
+
+/** Advance the run along the legal path enforced by the shipment service. */
+export function useUpdateShipmentStatus(shipmentId: string) {
+  const queryClient = useQueryClient();
+  const t = useTranslations("driver.actions");
+  const messageFor = useActionErrorMessage();
+
+  return useMutation({
+    mutationFn: (input: { status: DriverShipmentStatus; note?: string }) =>
+      driverShipmentsApi.updateStatus(shipmentId, input.status, input.note),
+    onSuccess: () => {
+      toast.success(t("statusUpdated"));
+      invalidateShipment(queryClient, shipmentId);
+    },
+    onError: (error) => toast.error(messageFor(error)),
+  });
+}
+
+/**
+ * Proof of delivery in two legs: the photo goes to storage first, then its URL
+ * is attached to the shipment, which also closes the run as DELIVERED.
+ */
+export function useUploadProofOfDelivery(shipmentId: string) {
+  const queryClient = useQueryClient();
+  const t = useTranslations("driver.actions");
+  const messageFor = useActionErrorMessage();
+
+  return useMutation({
+    mutationFn: async (file: File) => {
+      const { url } = await driverShipmentsApi.uploadPodPhoto(file);
+      return driverShipmentsApi.submitProofOfDelivery(shipmentId, url);
+    },
+    onSuccess: () => {
+      toast.success(t("proofUploaded"));
+      invalidateShipment(queryClient, shipmentId);
+    },
+    onError: (error) => toast.error(messageFor(error)),
+  });
 }

@@ -395,7 +395,7 @@ function QuickLinks({ userRoles }: { userRoles?: string[] }) {
   const pathname = usePathname();
   const isAdmin = userRoles?.includes("admin");
   const isDriver =
-    userRoles?.includes("transporter") || userRoles?.includes("driver");
+    userRoles?.includes("carrier") || userRoles?.includes("driver");
 
   const isAdminProfile = pathname?.startsWith("/admin");
   const isDriverProfile = pathname?.startsWith("/driver");

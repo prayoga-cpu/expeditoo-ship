@@ -1,6 +1,5 @@
 "use client";
 
-import { Package } from "lucide-react";
 import { useSplash } from "../hooks/useSplash";
 
 export function Splash() {
@@ -19,8 +18,18 @@ export function Splash() {
         {/* Logo with animation */}
         <div className="relative">
           <div className="absolute inset-0 bg-white/20 rounded-3xl blur-xl animate-pulse" />
+          {/* The app-icon treatment of the mark, at splash scale. */}
           <div className="relative bg-white rounded-3xl p-8 shadow-2xl animate-scale-in">
-            <Package className="w-20 h-20 text-blue-600" strokeWidth={2} />
+            <span className="flex h-20 w-20 items-center justify-center rounded-full bg-[#08090B]">
+              <span
+                className="box-border block h-7 w-7"
+                style={{
+                  borderTop: "5px solid #FFFFFF",
+                  borderRight: "5px solid #FFFFFF",
+                  transform: "rotate(45deg) translate(-2px, 2px)",
+                }}
+              />
+            </span>
           </div>
         </div>
 

@@ -23,6 +23,7 @@ import {
 import { CenteredEmptyState } from "@/components/ui/centered-empty-state";
 import { PageLoader } from "@/components/ui/page-loader";
 import { useJobDetail, useJobOffers, useAcceptOffer } from "../hooks/useJobDetail";
+import { JobBidSection } from "./JobBidSection";
 import { OfferCard } from "./OfferCard";
 import type { Job } from "../types";
 
@@ -149,6 +150,8 @@ export function JobDetail({ listingId, viewerId }: JobDetailProps) {
           onAccept={(id) => acceptOffer.mutate(id)}
         />
       </section>
+
+      <JobBidSection job={job} viewerId={viewerId} />
     </div>
   );
 }

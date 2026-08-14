@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { BrandMark } from "@/components/ui/brand-mark";
 
 interface AppSidebarHeaderProps {
   /**
@@ -25,7 +26,8 @@ export function AppSidebarHeader({
   return (
     <div className={cn("flex flex-col", className)}>
       <div className="flex items-center justify-start px-6 h-[57px] shrink-0">
-        <Link href={href}>
+        <Link href={href} className="flex items-center gap-2.5">
+          <BrandMark size={28} />
           <h1 className="text-2xl font-bold text-primary">EXPEDITOO</h1>
         </Link>
       </div>

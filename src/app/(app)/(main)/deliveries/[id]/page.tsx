@@ -1,15 +1,22 @@
 "use client";
 
 import { use, useState } from "react";
-import { DeliveryDetail } from "@/features/app/deliveries/ui";
-import { useDeliveryDetail, useCancelShipment } from "@/features/app/deliveries/hooks";
-import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { PackageX } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { PageLoader } from "@/components/ui/page-loader";
+import { CenteredEmptyState } from "@/components/ui/centered-empty-state";
+import { DeliveryDetail } from "@/features/app/deliveries/ui";
+import {
+  useDeliveryDetail,
+  useCancelShipment,
+} from "@/features/app/deliveries/hooks";
 import { useAuth } from "@/lib/auth-context";
 
 /**
- * Delivery Detail page - Orchestration layer
- * Follows SOLID principle - uses hooks for business logic, passes data to UI components
+ * Delivery detail page - orchestration only. Data and mapping live in the
+ * hooks, presentation in the feature UI.
  */
 export default function DeliveryDetailPage({
   params,
@@ -17,21 +24,18 @@ export default function DeliveryDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const t = useTranslations("deliveries");
   const router = useRouter();
   const { user } = useAuth();
-  const { delivery, isLoading } = useDeliveryDetail(id);
-  const { mutate: cancelShipment, isPending: isCancelling } = useCancelShipment();
+  const { delivery, isLoading, error } = useDeliveryDetail(id);
+  const cancelShipment = useCancelShipment();
   const [isContacting, setIsContacting] = useState(false);
 
-  const handleContactDriver = async () => {
-    if (!delivery?.driver.id) {
-      toast.error("No driver assigned yet");
-      return;
-    }
+  const handleContact = async () => {
+    if (!delivery) return;
 
     if (!user) {
-      toast.error("Please login to contact driver");
-      router.push("/auth/login");
+      router.push("/signin");
       return;
     }
 
@@ -41,9 +45,8 @@ export default function DeliveryDetailPage({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          recipientId: delivery.driver.id,
-          // Only include listingId if shipment has an associated listing
-          ...(delivery.listingId && { listingId: delivery.listingId })
+          recipientId: delivery.counterpart.id,
+          listingId: delivery.listingId,
         }),
       });
 
@@ -52,42 +55,35 @@ export default function DeliveryDetailPage({
       if (data.success) {
         router.push(`/messages/${data.data.conversationId}`);
       } else {
-        toast.error(data.error?.message || "Failed to start conversation");
+        toast.error(data.error?.message || t("errors.contactFailed"));
       }
-    } catch (error) {
-      console.error("Chat init error:", error);
-      toast.error("Something went wrong");
+    } catch (err) {
+      console.error("Chat init error:", err);
+      toast.error(t("errors.contactFailed"));
     } finally {
       setIsContacting(false);
     }
   };
 
-  const handleCancelShipment = (reason: string) => {
-    cancelShipment(
-      { id, reason },
-      {
-        onSuccess: () => {
-          // Toast will be handled globally or we can add it here
-          // For now just refresh or let the query invalidation handle it
-        },
-      }
-    );
-  };
-
-  if (isLoading) {
-    return <div className="p-8 text-center">Loading...</div>;
-  }
+  if (isLoading) return <PageLoader />;
 
   if (!delivery) {
-    return <div className="p-8 text-center">Shipment not found</div>;
+    return (
+      <CenteredEmptyState
+        variant="page"
+        icon={PackageX}
+        title={t("errors.notFound")}
+        description={error ?? t("errors.notFoundDesc")}
+      />
+    );
   }
 
   return (
     <DeliveryDetail
       delivery={delivery}
-      onContactDriver={handleContactDriver}
-      onCancelShipment={handleCancelShipment}
-      isCancelling={isCancelling}
+      onContact={handleContact}
+      onCancel={(reason) => cancelShipment.mutate({ id, reason })}
+      isCancelling={cancelShipment.isPending}
       isContacting={isContacting}
     />
   );

@@ -65,6 +65,59 @@ export function useSubmitApplication() {
   });
 }
 
+export function useWithdrawApplication() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => carrierApi.withdraw(),
+    onSuccess: () => {
+      toast.success("Application withdrawn — it is editable again");
+      queryClient.invalidateQueries({ queryKey: carrierKeys.application });
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Could not withdraw");
+    },
+  });
+}
+
+export function useSetBanking() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ iban, bic }: { iban: string; bic: string }) =>
+      carrierApi.setBanking(iban, bic),
+    onSuccess: () => {
+      toast.success("Banking details saved");
+      queryClient.invalidateQueries({ queryKey: carrierKeys.application });
+    },
+    onError: (error) => {
+      const code = error instanceof ApiError ? error.code : "";
+      toast.error(
+        code === "VALIDATION_ERROR"
+          ? "Check the IBAN and BIC formats"
+          : error instanceof Error
+            ? error.message
+            : "Could not save banking details"
+      );
+    },
+  });
+}
+
+/** Documents are private: viewing means fetching a short-lived signed URL. */
+export function useViewDocument() {
+  return useMutation({
+    mutationFn: (id: string) => carrierApi.viewDocument(id),
+    onSuccess: ({ url }) => {
+      window.open(url, "_blank", "noopener,noreferrer");
+    },
+    onError: (error) => {
+      toast.error(
+        error instanceof Error ? error.message : "Could not open the document"
+      );
+    },
+  });
+}
+
 export function useUploadDocument() {
   const queryClient = useQueryClient();
 
@@ -124,6 +177,23 @@ export function useAddVehicle() {
           : error instanceof Error
             ? error.message
             : "Could not add vehicle"
+      );
+    },
+  });
+}
+
+export function useToggleVehicleActive() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
+      carrierApi.updateVehicle(id, { isActive }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: carrierKeys.vehicles });
+    },
+    onError: (error) => {
+      toast.error(
+        error instanceof Error ? error.message : "Could not update vehicle"
       );
     },
   });

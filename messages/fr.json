@@ -81,7 +81,9 @@
       "myBids": "Mes offres",
       "jobs": "Missions",
       "myOffers": "Mes offres",
-      "deliveries": "Livraisons"
+      "deliveries": "Livraisons",
+      "fleet": "Flotte",
+      "application": "Dossier"
     },
     "categories": {
       "electronics": "Électronique",
@@ -575,48 +577,40 @@
   "deliveries": {
     "title": "Expéditions",
     "tabs": {
-      "all": "Toutes",
       "active": "Actives",
-      "completed": "Terminées",
-      "noIncoming": "Aucune livraison active",
-      "noIncomingDesc": "Vos livraisons actives apparaîtront ici.",
-      "noOutgoing": "Aucune livraison terminée",
-      "noOutgoingDesc": "Vos livraisons terminées apparaîtront ici."
-    },
-    "status": {
-      "pending": "En attente",
-      "confirmed": "Confirmé",
-      "pickedUp": "Récupéré",
-      "inTransit": "En transit",
-      "delivered": "Livré",
-      "cancelled": "Annulé"
+      "past": "Historique",
+      "noActive": "Aucune livraison en cours",
+      "noActiveDesc": "Vos expéditions en cours apparaîtront ici dès qu'un transporteur sera sélectionné.",
+      "noPast": "Aucune livraison passée",
+      "noPastDesc": "Vos expéditions livrées ou annulées apparaîtront ici."
     },
     "card": {
       "scheduled": "Prévu : {date}",
       "created": "Créé : {date}",
-      "defaultTitle": "Livraison",
-      "awaitingDriver": "En attente d'un chauffeur"
+      "defaultTitle": "Livraison"
     },
     "details": {
-      "from": "De",
-      "to": "À",
-      "weight": "Poids",
-      "dimensions": "Dimensions",
-      "price": "Prix",
       "driver": "Chauffeur",
-      "estimatedDelivery": "Livraison estimée",
-      "reviews": "{count} avis"
+      "agreedPrice": "Prix convenu",
+      "tracking": "Suivi",
+      "route": "Trajet",
+      "pickup": "Enlèvement",
+      "dropoff": "Livraison",
+      "carrier": "Transporteur",
+      "shipper": "Expéditeur",
+      "cancellationReason": "Motif d'annulation",
+      "proofOfDelivery": "Voir la preuve de livraison"
     },
     "buttons": {
-      "contactDriver": "Contacter le chauffeur",
       "cancelShipment": "Annuler la livraison",
       "keepShipment": "Garder la livraison",
       "confirmCancellation": "Confirmer l'annulation",
       "cancelling": "Annulation en cours...",
-      "rateDriver": "Noter le chauffeur",
-      "rateClient": "Noter le client",
       "reviewed": "Noté",
-      "modifyShipment": "Modifier"
+      "contactCarrier": "Contacter le transporteur",
+      "contactShipper": "Contacter l'expéditeur",
+      "rateCarrier": "Noter le transporteur",
+      "rateShipper": "Noter l'expéditeur"
     },
     "dialogs": {
       "cancel": {
@@ -628,12 +622,30 @@
     },
     "events": {
       "PENDING": "Livraison créée",
-      "PRICE_PROPOSED": "Prix proposé",
       "ASSIGNED": "Chauffeur assigné",
       "PICKED_UP": "Colis récupéré",
       "IN_TRANSIT": "En transit",
       "DELIVERED": "Livré",
       "CANCELLED": "Annulé"
+    },
+    "errors": {
+      "loadFailed": "Impossible de charger vos livraisons",
+      "contactFailed": "Impossible de démarrer la conversation",
+      "notFound": "Expédition introuvable",
+      "notFoundDesc": "Cette expédition n'existe pas ou vous n'y avez pas accès."
+    },
+    "shipmentStatus": {
+      "PENDING": "En attente",
+      "ASSIGNED": "Assignée",
+      "PICKED_UP": "Enlevée",
+      "IN_TRANSIT": "En transit",
+      "DELIVERED": "Livrée",
+      "CANCELLED": "Annulée"
+    },
+    "cancelFeedback": {
+      "success": "Expédition annulée — le paiement retenu a été libéré",
+      "requiresSupport": "La marchandise est déjà en route — contactez le support pour annuler",
+      "failed": "Impossible d'annuler l'expédition"
     }
   },
   "listing": {
@@ -670,6 +682,14 @@
       "handling": "Pas d'aide à la manutention",
       "signature": "Signature non requise",
       "packaging": "Emballage personnalisé non inclus"
+    },
+    "bid": {
+      "becomeCarrierTitle": "Envie d'encherir sur ce type de mission ?",
+      "becomeCarrierDescription": "Les transporteurs se disputent le prix et le delai, et l'expediteur choisit le gagnant. Postulez une fois, puis encherissez sur toutes les missions.",
+      "becomeCarrierCta": "Devenir transporteur",
+      "notApprovedTitle": "Votre candidature transporteur n'est pas encore approuvee",
+      "notApprovedDescription": "Les offres se debloquent des qu'un operateur approuve votre candidature. Consultez son statut pour voir ce qu'il manque.",
+      "notApprovedCta": "Voir ma candidature"
     }
   },
   "create": {
@@ -882,32 +902,26 @@
     },
     "dashboard": {
       "title": "Tableau de bord chauffeur",
-      "availableJobs": "Trouvez des expéditions et gérez vos livraisons",
-      "myDeliveries": "Mes livraisons",
-      "earnings": "Gains",
       "stats": {
-        "totalDeliveries": "Total Livraisons",
-        "completedShipments": "Expéditions terminées",
-        "totalEarnings": "Gains Totaux",
-        "fromDeliveries": "Des livraisons terminées",
-        "successRate": "Taux de Succès",
-        "basedOnAssignments": "Basé sur {count} missions"
+        "assigned": "À récupérer",
+        "assignedHint": "Courses qui vous sont assignées",
+        "inProgress": "En route",
+        "inProgressHint": "Récupérées ou en transit",
+        "delivered": "Livrées",
+        "deliveredHint": "Courses terminées"
       },
       "activeDeliveries": {
         "title": "Livraisons Actives",
         "empty": "Aucune livraison active pour le moment.",
-        "earnings": "Gains",
         "details": "Détails",
-        "defaultTitle": "Expédition"
-      }
+        "defaultTitle": "Expédition",
+        "flexible": "Flexible"
+      },
+      "subtitle": "Vos livraisons assignées en un coup d'œil"
     },
     "shipments": {
       "title": "Expéditions",
-      "subtitle": "Parcourir et enchérir sur les expéditions disponibles",
-      "tabs": {
-        "available": "Expéditions disponibles",
-        "myShipments": "Mes expéditions"
-      },
+      "subtitle": "Suivez et mettez à jour vos livraisons assignées",
       "empty": {
         "title": "Aucune expédition",
         "description": "Aucune expédition trouvée correspondant à vos critères."
@@ -915,94 +929,83 @@
       "filters": {
         "placeholder": "Filtrer par statut",
         "all": "Tout",
-        "waiting": "En attente",
-        "approved": "Approuvé",
         "active": "Actif",
         "completed": "Terminé",
-        "cancelled": "Annulé"
+        "cancelled": "Annulé",
+        "assigned": "Assignées"
       },
-      "proposals": {
-        "title": "Expéditions Disponibles",
-        "searchPlaceholder": "Rechercher une ville...",
-        "viewAndPropose": "Voir et Proposer",
-        "defaultTitle": "Expédition",
-        "empty": {
-          "title": "Aucune expédition",
-          "description": "Aucune expédition disponible trouvée correspondant à vos critères."
-        }
-      },
-      "defaultTitle": "Expédition"
+      "defaultTitle": "Expédition",
+      "flexible": "Flexible"
     },
     "shipmentDetail": {
       "notFound": "Expédition introuvable",
       "goBack": "Retour",
       "shipmentNumber": "Expédition #",
       "shipmentDetails": "Détails de l'expédition",
-      "budget": "Budget",
       "route": "Itinéraire",
       "pickup": "Retrait",
       "dropoff": "Livraison",
-      "date": "Date",
       "weight": "Poids",
       "dimensions": "Dimensions",
       "description": "Description",
-      "flexible": "Flexible"
+      "flexible": "Flexible",
+      "scheduledPickup": "Retrait prévu",
+      "scheduledDelivery": "Livraison prévue",
+      "cargo": "Chargement",
+      "quantity": "Quantité",
+      "fragile": "Fragile",
+      "needsHelp": "Aide au chargement requise",
+      "timeline": "Historique",
+      "cancellationReason": "Motif d'annulation"
     },
     "actions": {
-      "status": "Statut",
       "actions": "Actions",
-      "proposalSubmitted": "Proposition soumise",
-      "proposalSubmittedDesc": "Vous avez soumis une proposition pour cette expédition. Attendez que l'expéditeur l'examine.",
-      "backToShipments": "Retour aux expéditions",
-      "awaitingPayment": "En attente de paiement",
-      "awaitingPaymentDesc": "Vous avez été assigné à cette expédition. L'acheteur doit effectuer le paiement avant que vous puissiez récupérer le colis.",
       "confirmPickup": "Confirmer le retrait",
       "updating": "Mise à jour...",
-      "paymentNotConfirmed": "Si le paiement n'est pas encore confirmé, le bouton ci-dessus affichera une erreur.",
       "navigateToPickup": "Naviguer vers le retrait",
       "navigateToDropoff": "Naviguer vers la livraison",
       "inTransit": "En transit",
       "inTransitDesc": "Le colis est en transit. Mettez à jour le statut une fois livré.",
-      "startJourney": "Démarrer le trajet",
-      "confirmDelivery": "Confirmer la livraison",
-      "uploadProof": "Télécharger la preuve de livraison",
       "deliveryCompleted": "Livraison terminée",
-      "deliveryCompletedDesc": "Excellent travail ! Cette expédition a été livrée."
-    },
-    "proposalForm": {
-      "submitProposal": "Soumettre une proposition",
-      "referencePrice": "Prix de référence",
-      "suggested": "Suggéré",
-      "baseDistance": "Base + Distance",
-      "weightVolume": "Poids + Volume",
-      "platformFee": "Frais de plateforme",
-      "useThisPrice": "Utiliser ce prix",
-      "use": "Utiliser",
-      "unableToCalculate": "Impossible de calculer le prix de référence",
-      "yourPrice": "Votre prix",
-      "yourProposedPrice": "Votre prix proposé (€)",
-      "priceDescription": "Entrez votre prix. Considérez le prix de référence ci-dessus.",
-      "estimatedDelivery": "Livraison estimée",
-      "estimatedDeliveryOptional": "Livraison estimée (Optionnel)",
-      "estimatedDeliveryDate": "Date de livraison estimée (Optionnel)",
-      "deliveryDescription": "Quand estimez-vous livrer ? Cela aide l'acheteur à planifier.",
-      "notes": "Notes (Optionnel)",
-      "notesPlaceholder": "Ajoutez des détails ou conditions supplémentaires...",
-      "submitting": "Envoi en cours...",
-      "submit": "Soumettre la proposition",
-      "cancel": "Annuler",
-      "cancelGoBack": "Annuler / Retour",
-      "priceRequired": "Le prix est requis",
-      "successMessage": "Proposition soumise avec succès !",
-      "alreadySubmitted": "Vous avez déjà soumis une proposition pour cette expédition.",
-      "errorMessage": "Échec de la soumission de la proposition. Veuillez réessayer.",
-      "pickDate": "Choisir une date"
+      "deliveryCompletedDesc": "Excellent travail ! Cette expédition a été livrée.",
+      "pendingTitle": "En attente d'affectation",
+      "pendingDesc": "Cette course ne vous a pas encore été assignée.",
+      "assignedTitle": "Prête pour le retrait",
+      "assignedDesc": "Rendez-vous à l'adresse de retrait et confirmez une fois le chargement à bord.",
+      "pickedUpTitle": "Chargement à bord",
+      "pickedUpDesc": "Démarrez la course en quittant le lieu de retrait.",
+      "startTransit": "Démarrer le transport",
+      "deliverWithPhoto": "Confirmer la livraison avec photo",
+      "markDelivered": "Marquer livrée sans photo",
+      "podHint": "Une photo du chargement livré clôture la course et vous protège en cas de litige.",
+      "uploadingProof": "Envoi de la preuve...",
+      "proofUploaded": "Livraison confirmée",
+      "statusUpdated": "Statut mis à jour",
+      "viewProof": "Voir la preuve de livraison",
+      "cancelledTitle": "Livraison annulée",
+      "cancelledDesc": "Cette course a été annulée. Aucune action n'est requise.",
+      "errors": {
+        "staleStatus": "Cette livraison a évolué. Actualisez pour voir son état actuel.",
+        "forbidden": "Vous n'êtes pas autorisé à mettre à jour cette livraison.",
+        "notFound": "Livraison introuvable.",
+        "podNotInTransit": "La preuve de livraison ne peut être ajoutée qu'en transit.",
+        "invalidFile": "La preuve de livraison doit être une photo.",
+        "generic": "Une erreur est survenue. Veuillez réessayer."
+      }
     },
     "apply": {
       "title": "Devenir chauffeur",
       "description": "Rejoignez notre réseau de transporteurs et commencez à gagner de l'argent.",
       "requirements": "Prérequis",
       "submit": "Soumettre ma candidature"
+    },
+    "status": {
+      "PENDING": "En attente",
+      "ASSIGNED": "Assignée",
+      "PICKED_UP": "Récupérée",
+      "IN_TRANSIT": "En transit",
+      "DELIVERED": "Livrée",
+      "CANCELLED": "Annulée"
     }
   },
   "notifications": {
@@ -1023,298 +1026,171 @@
     }
   },
   "marketing": {
+    "banner": {
+      "text": "Vous achetez en salle des ventes ? Vos lots voyagent avec Expedion, notre app acheteur.",
+      "cta": "Ouvrir Expedion →"
+    },
     "navbar": {
+      "howItWorks": "Comment ça marche",
+      "jobs": "Courses",
+      "platform": "Plateforme",
       "login": "Connexion",
-      "signup": "S'inscrire",
-      "getStarted": "Commencer",
-      "openApp": "Ouvrir l'application"
+      "openApp": "Ouvrir l'app",
+      "becomeCarrier": "Devenir transporteur",
+      "themeLabel": "Thème",
+      "langLabel": "Langue",
+      "themeLight": "Clair",
+      "themeDark": "Sombre",
+      "themeSystem": "Système"
     },
     "hero": {
-      "badge": "Maintenant disponible en France",
-      "titleLine1": "Enchérissez, Expédiez et Gagnez.",
-      "titleLine2": "Votre Marketplace Tout-en-un.",
-      "subtitle": "Expédiez vos colis en toute simplicité et découvrez des offres incroyables dans nos enchères. Expeditoo est la plateforme ultime pour la logistique et les enchères en ligne en France.",
-      "primaryCta": "Envoyer un colis",
-      "secondaryCta": "Explorer les enchères",
-      "trustedBy": "Recommandé par +15 000 utilisateurs en France",
-      "rating": "Note moyenne de 4.9/5",
-      "form": {
-        "from": "De",
-        "to": "À",
-        "placeholder": "Ville ou adresse",
-        "cta": "Obtenir un prix"
-      }
+      "badge": "Le réseau de transporteurs du groupe Expedion",
+      "titleLine1": "Les courses viennent à vous.",
+      "titleLine2": "Vous fixez le prix.",
+      "subtitle": "Quand la flotte d'Expedion est complète, la course est publiée ici automatiquement. Enchérissez votre prix, remportez le trajet, livrez, soyez payé sous 7 jours. Zéro prospection.",
+      "step1": "Une course se libère",
+      "step2": "Vous enchérissez à la baisse",
+      "step3": "Livrez, payé sous 7 j",
+      "primaryCta": "Rejoindre le réseau",
+      "secondaryCta": "Voir les courses ouvertes"
+    },
+    "bidCard": {
+      "fromExpedion": "DEPUIS EXPEDION",
+      "closes": "FERME",
+      "item": "Commode Louis XV, 62 kg",
+      "details": "Enlèvement avant le 22 août · 3e étage, ascenseur · emballé par Expedion",
+      "bestOffer": "Meilleure offre",
+      "yourOffer": "Votre offre",
+      "offers": "Offres",
+      "leading": "Votre offre est en tête",
+      "bidCta": "Enchérir, tout compris",
+      "bidInputLabel": "Votre offre en euros",
+      "insured": "ASSURÉ PAR EXPEDION · PAYÉ SOUS 7 JOURS"
     },
     "stats": {
-      "deliveries": "Livraisons effectuées",
-      "drivers": "Chauffeurs vérifiés",
-      "auctions": "Enchères actives",
-      "users": "Utilisateurs satisfaits"
-    },
-    "whatToShip": {
-      "badge": "Catégories",
-      "title": "Ce que vous pouvez expédier",
-      "subtitle": "Des petits colis aux objets volumineux, trouvez un transporteur pour tout.\nDécouvrez ces articles et plus encore dans nos enchères !",
-      "items": {
-        "furniture": {
-          "name": "Meubles",
-          "desc": "Canapés, tables, chaises et plus"
-        },
-        "carParts": {
-          "name": "Pièces Auto",
-          "desc": "Roues, moteurs et accessoires"
-        },
-        "electronics": {
-          "name": "Électronique",
-          "desc": "Gadgets et appareils tech"
-        },
-        "appliances": {
-          "name": "Électroménager",
-          "desc": "Appareils pour la maison"
-        },
-        "sports": {
-          "name": "Sports",
-          "desc": "Équipement sportif"
-        },
-        "music": {
-          "name": "Musique",
-          "desc": "Instruments et audio"
-        },
-        "pets": {
-          "name": "Animaux",
-          "desc": "Fournitures pour animaux"
-        },
-        "more": {
-          "name": "Et plus...",
-          "desc": "Tout ce dont vous avez besoin"
-        }
-      }
+      "jobsPerMonth": "Courses publiées par mois",
+      "timeToAward": "Délai moyen d'attribution",
+      "emptyKm": "De kilomètres à vide",
+      "guaranteedPayment": "Paiement garanti"
     },
     "howItWorks": {
-      "badge": "Processus Simple",
-      "title": "Comment ça marche ?",
-      "tabs": {
-        "sender": "J'expédie",
-        "courier": "Je transporte"
+      "eyebrow": "COMMENT ÇA MARCHE",
+      "title": "Une seule source de courses : les commandes Expedion",
+      "intro": "Pas de place de marché à écumer, pas d'enchères d'objets. Chaque course est une expédition Expedion réelle, emballée et assurée, que notre flotte n'a pas pu prendre.",
+      "step1": {
+        "title": "Une course est publiée automatiquement",
+        "desc": "Un client a commandé sur Expedion et aucun chauffeur du réseau n'est libre. Trajet, gabarit, photos et échéance sont déjà dans l'annonce."
       },
-      "sender": {
-        "step1": {
-          "title": "Publiez votre annonce",
-          "desc": "Décrivez ce que vous devez envoyer en quelques clics."
-        },
-        "step2": {
-          "title": "Choisissez un transporteur",
-          "desc": "Recevez des propositions de transporteurs et choisissez celle que vous préférez."
-        },
-        "step3": {
-          "title": "Organisez les détails",
-          "desc": "Discutez avec le transporteur pour organiser le retrait et la livraison."
-        },
-        "step4": {
-          "title": "Recevez votre objet",
-          "desc": "Votre objet est livré à destination en toute sécurité."
-        }
+      "step2": {
+        "title": "Vous enchérissez votre prix",
+        "desc": "Enchère inversée : l'offre sérieuse la plus basse mène. Proposez ce que vaut le trajet pour vous, tout compris."
       },
-      "courier": {
-        "step1": {
-          "title": "Trouvez un transport",
-          "desc": "Trouvez des expéditions sur votre trajet."
-        },
-        "step2": {
-          "title": "Faites une proposition",
-          "desc": "Proposez un prix à l'expéditeur."
-        },
-        "step3": {
-          "title": "Organisez les détails",
-          "desc": "Discutez avec l'expéditeur pour organiser le transport."
-        },
-        "step4": {
-          "title": "Livrez et soyez payé",
-          "desc": "Livrez l'objet et recevez votre paiement."
-        }
+      "step3": {
+        "title": "Le client choisit, ou Expedion choisit",
+        "desc": "À la fermeture, le transporteur retenu est réservé instantanément. Le créneau d'enlèvement est déjà bloqué auprès de la maison de ventes."
+      },
+      "step4": {
+        "title": "Livrez, un seul suivi",
+        "desc": "Vos étapes alimentent le suivi que l'acheteur voit dans Expedion. Preuve de livraison déposée, paiement sous 7 jours."
+      }
+    },
+    "jobBoard": {
+      "eyebrow": "OUVERTES EN CE MOMENT",
+      "title": "Le tableau du jour",
+      "joinCta": "Rejoindre pour voir les 27 courses →",
+      "bestOffer": "Meilleure offre",
+      "closes": "FERME {time}",
+      "bid": "Enchérir",
+      "anonymised": "Annonces anonymisées. Les adresses complètes se débloquent une fois votre compte vérifié.",
+      "jobs": {
+        "one": "Commode Louis XV, 62 kg",
+        "two": "Paire de fauteuils, 34 kg",
+        "three": "Miroir doré, fragile, 18 kg"
       }
     },
     "advantages": {
-      "badge": "Fonctionnalités",
-      "title": "Pourquoi choisir Expeditoo ?",
-      "items": {
-        "economic": {
-          "title": "Économique",
-          "description": "Jusqu'à 70% moins cher que les transporteurs traditionnels"
-        },
-        "ecological": {
-          "title": "Écologique",
-          "description": "Optimisez les trajets existants et réduisez l'empreinte carbone"
-        },
-        "secure": {
-          "title": "Sécurisé",
-          "description": "Paiements sécurisés et assurance incluse"
-        },
-        "community": {
-          "title": "Communauté",
-          "description": "Rejoignez une communauté de confiance"
-        }
+      "eyebrow": "POURQUOI LES TRANSPORTEURS RESTENT",
+      "title": "Des camions pleins, sans démarchage",
+      "item1": {
+        "title": "Remplissez vos retours",
+        "desc": "Filtrez les courses sur vos trajets existants. Un retour Bordeaux–Paris cesse d'être des kilomètres à vide."
+      },
+      "item2": {
+        "title": "Des clients déjà signés",
+        "desc": "Expedion vend, chiffre et emballe. Vous ne négociez jamais avec le client final, vous roulez."
+      },
+      "item3": {
+        "title": "Payé sous 7 jours",
+        "desc": "C'est le groupe qui vous paie, pas le client. Preuve de livraison déposée, virement envoyé, garanti."
+      },
+      "item4": {
+        "title": "Assurance déjà en place",
+        "desc": "Les lots sont couverts ad valorem par Expedion de l'enlèvement à la signature. Votre responsabilité est cadrée aux CGV."
       }
     },
-    "showcase": {
-      "badge": "Voir en action",
-      "title": "L'expérience Expeditoo",
-      "subtitle": "Découvrez comment notre plateforme rend l'expédition et les enchères fluides partout en France",
-      "features": {
-        "smart": {
-          "title": "Enchères Intelligentes",
-          "desc": "Enchérissez et suivez les enchères en temps réel"
-        },
-        "msg": {
-          "title": "Messagerie Instantanée",
-          "desc": "Discutez directement avec les vendeurs et transporteurs"
-        },
-        "track": {
-          "title": "Suivi de Livraison",
-          "desc": "Suivez les mises à jour de retrait et de livraison"
-        }
+    "platform": {
+      "eyebrow": "PLATEFORME 100 % WEB",
+      "title": "Ouvrez un onglet, enchérissez. Rien à installer.",
+      "intro": "Expeditoo est une application web moderne (Next.js). Pour un métier de transporteur, ce choix est délibéré :",
+      "point1": {
+        "title": "Partout, tout de suite.",
+        "desc": "Téléphone en cabine, PC du dépôt, portable du dispatcheur : la même adresse, pas d'app store, pas de version à mettre à jour."
       },
-      "ui": {
-        "liveAuction": "Enchère en direct",
-        "delivered": "Colis livré",
-        "justNow": "À l'instant",
-        "mobileApp": "App Mobile"
+      "point2": {
+        "title": "Enchères en temps réel.",
+        "desc": "Les offres se rafraîchissent côté serveur à la seconde où elles tombent — ce que vous voyez est l'état réel du tableau."
       },
-      "cta": {
-        "start": "Commencer gratuitement",
-        "demo": "Voir la démo"
+      "point3": {
+        "title": "Rapide même en 3G.",
+        "desc": "Les pages sont rendues côté serveur (SSR) : le tableau se charge lisible en moins d'une seconde sur une aire d'autoroute."
+      },
+      "point4": {
+        "title": "Facile à partager.",
+        "desc": "Une course est un lien. Transférez-le à un collègue, il la voit sans compte."
+      },
+      "note": "Vos clients, eux, passent par l'app mobile Expedion (Flutter, iOS + Android).",
+      "noteCta": "Voir Expedion →",
+      "preview": {
+        "board": "TABLEAU DES COURSES",
+        "live": "EN DIRECT",
+        "accepted": "Offre acceptée — {route} pour {price}",
+        "caption": "Aperçu illustratif — données fictives, pas de courses réelles."
       }
     },
     "testimonials": {
-      "badge": "Témoignages",
-      "title": "Aimé par des Milliers",
-      "subtitle": "Découvrez ce que notre communauté française dit de son expérience",
-      "items": {
-        "sarah": {
-          "name": "Sarah L.",
-          "role": "Vendeuse Fréquente",
-          "comment": "Incroyablement simple et efficace ! J'ai envoyé un gros meuble à travers la France sans aucun souci. Les transporteurs sont professionnels et le suivi est excellent.",
-          "highlight": "50+ livraisons réussies"
-        },
-        "michel": {
-          "name": "Michel D.",
-          "role": "Transporteur Vérifié",
-          "comment": "En tant que transporteur, Expeditoo a changé la donne. Je peux facilement trouver des chargements sur mes trajets et gagner un revenu supplémentaire.",
-          "highlight": "2 000€+ gagnés/mois"
-        },
-        "julie": {
-          "name": "Julie P.",
-          "role": "Gagnante d'Enchères",
-          "comment": "J'ai trouvé des offres incroyables sur des meubles vintage. Le système d'enchères est intuitif et les objets arrivent toujours en parfait état.",
-          "highlight": "20+ enchères remportées"
-        }
+      "one": {
+        "quote": "« Mes retours Paris–Bordeaux roulaient à vide. Maintenant je regarde le tableau le dimanche soir et la semaine est calée. »",
+        "author": "Transports Vidal",
+        "role": "Transporteur, Gironde · 214 courses"
+      },
+      "two": {
+        "quote": "« Tout arrive emballé et photographié par Expedion. On charge, on roule, on est payé dans la semaine. »",
+        "author": "Sophie L.",
+        "role": "Chauffeure indépendante, Orléans · 88 courses"
       }
     },
     "cta": {
-      "badge": "Commencez gratuitement aujourd'hui",
-      "title": "Prêt à Révolutionner Votre Logistique ?",
-      "subtitle": "Rejoignez des milliers d'utilisateurs qui expédient et échangent avec EXPEDITOO partout en France. Sans carte de crédit.",
-      "button": "Commencer Gratuitement",
-      "trustText": "Recommandé par +15 000 utilisateurs en France • Pas de carte requise • Annulez à tout moment"
+      "title": "Vérifié en 24 heures. En course le jour même.",
+      "subtitle": "Kbis, assurance, licence : trois documents à déposer et votre premier tableau s'ouvre.",
+      "primary": "Devenir transporteur"
     },
     "footer": {
-      "tagline": "L'avenir de la logistique en France, aujourd'hui.",
-      "availableIn": "Disponible exclusivement en France 🇫🇷",
-      "rights": "Tous droits réservés.",
-      "product": {
-        "title": "Produit",
-        "features": "Fonctionnalités",
-        "auctions": "Enchères",
-        "shipping": "Expédition",
-        "pricing": "Tarifs"
-      },
-      "company": {
-        "title": "Entreprise",
-        "about": "À propos",
-        "careers": "Carrières",
-        "blog": "Blog",
-        "press": "Presse"
-      },
-      "support": {
-        "title": "Support",
-        "help": "Centre d'aide",
-        "contact": "Contact",
-        "faq": "FAQ",
-        "community": "Communauté"
-      },
-      "legal": {
-        "title": "Légal",
-        "terms": "Conditions d'utilisation",
-        "privacy": "Politique de confidentialité",
-        "cookie": "Politique des cookies"
-      }
-    },
-    "pricing": {
-      "title": "Tarification Transparente",
-      "subtitle": "Choisissez le plan qui correspond à vos besoins. Que vous vendiez des articles ou les livriez, nous avons une structure claire pour vous.",
-      "disclaimer": "Prix indicatifs - Sujets à confirmation finale",
-      "sellers": {
-        "title": "Pour les Vendeurs",
-        "subtitle": "Listez vos articles aux enchères ou en vente directe",
-        "planTitle": "Modèle à la Commission",
-        "planDesc": "Payez uniquement quand vous vendez",
-        "price": "5%",
-        "priceUnit": "/ vente",
-        "features": {
-          "unlimited": "Annonces illimitées",
-          "auction": "Support Enchères & Prix Fixe",
-          "support": "Support de base",
-          "payments": "Paiements sécurisés"
-        },
-        "cta": "Commencer à Vendre",
-        "mostPopular": "LE PLUS POPULAIRE"
-      },
-      "drivers": {
-        "title": "Pour les Transporteurs",
-        "subtitle": "Gagnez de l'argent en livrant des colis",
-        "planTitle": "Plan Transporteur",
-        "planDesc": "Outils professionnels pour la logistique",
-        "price": "10%",
-        "priceUnit": "/ course",
-        "features": {
-          "allRequests": "Accès à toutes les demandes d'expédition",
-          "tools": "Outils d'optimisation d'itinéraire",
-          "payout": "Éligibilité au paiement instantané",
-          "badge": "Badge Conducteur Vérifié"
-        },
-        "cta": "Devenir Transporteur"
-      },
-      "detailed": {
-        "title": "Structure Tarifaire Détaillée (Indicatif)",
-        "headers": {
-          "feature": "Fonctionnalité",
-          "saver": "Éco",
-          "priority": "Prioritaire"
-        },
-        "rows": {
-          "duration": {
-            "name": "Durée de l'annonce",
-            "col1": "7 Jours",
-            "col2": "30 Jours"
-          },
-          "photos": {
-            "name": "Photos",
-            "col1": "Jusqu'à 5",
-            "col2": "Jusqu'à 20"
-          },
-          "cap": {
-            "name": "Plafond de Commission",
-            "col1": "50€ max",
-            "col2": "200€ max"
-          },
-          "highlighting": {
-            "name": "Mise en avant",
-            "col1": "-",
-            "col2": "Inclus"
-          }
-        },
-        "footer": "* Ce tableau est à titre illustratif. La structure tarifaire finale est en cours de mise à jour."
-      }
+      "tagline": "Le réseau de transporteurs du groupe Expedion. Des expéditions de ventes aux enchères, enchéries par des transporteurs vérifiés.",
+      "carriers": "Transporteurs",
+      "openJobs": "Courses ouvertes",
+      "howItWorks": "Comment ça marche",
+      "verification": "Vérification",
+      "platform": "Plateforme",
+      "group": "Groupe",
+      "expedionBuyers": "Expedion — acheteurs",
+      "auctionHouses": "Maisons de ventes",
+      "contact": "Contact",
+      "legal": "Légal",
+      "terms": "CGV",
+      "legalNotice": "Mentions légales",
+      "privacy": "Politique de confidentialité",
+      "copyright": "© 2026 Expeditoo — Groupe Expedion",
+      "sameGroup": "Expedion et Expeditoo appartiennent au même groupe"
     }
   },
   "help": {
@@ -1470,41 +1346,7 @@
     },
     "drivers": {
       "title": "Chauffeurs",
-      "subtitle": "Gérer les chauffeurs et les candidatures",
-      "table": {
-        "applicant": "Candidat",
-        "vehicle": "Véhicule",
-        "licensePlate": "Plaque d'immatriculation",
-        "siret": "SIRET",
-        "verified": "Vérifié",
-        "pending": "En attente",
-        "date": "Date",
-        "status": "Statut",
-        "actions": "Actions",
-        "searchPlaceholder": "Rechercher des candidatures..."
-      },
-      "detail": {
-        "title": "Détails de la candidature",
-        "applicant": "Candidat",
-        "submissionDate": "Date de soumission",
-        "currentStatus": "Statut actuel",
-        "approve": "Approuver",
-        "reject": "Rejeter",
-        "pending": "En attente",
-        "vehicleInfo": "Informations sur le véhicule",
-        "vehicleType": "Type de véhicule",
-        "licensePlate": "Plaque d'immatriculation",
-        "licenseNumber": "Numéro de permis",
-        "siret": "SIRET",
-        "companyName": "Nom de l'entreprise",
-        "proposal": "Proposition",
-        "close": "Fermer",
-        "approvedTitle": "Candidature approuvée",
-        "rejectedTitle": "Candidature rejetée",
-        "statusUpdatedDesc": "Le statut a été mis à jour",
-        "error": "Erreur",
-        "errorDesc": "Échec de la mise à jour du statut"
-      }
+      "subtitle": "Gérer les chauffeurs et les candidatures"
     },
     "support": {
       "title": "Chats de support",
@@ -1524,7 +1366,10 @@
       "time": {
         "noMessages": "Aucun message",
         "justNow": "À l'instant",
-        "yesterday": "Hier"
+        "yesterday": "Hier",
+        "minAgo": "il y a {count} min",
+        "hoursAgo": "il y a {count} h",
+        "daysAgo": "il y a {count} j"
       }
     },
     "roles": {
@@ -1572,6 +1417,107 @@
         "cancel": "Annuler",
         "processing": "Traitement...",
         "confirm": "Confirmer le remboursement"
+      }
+    },
+    "carriers": {
+      "title": "Candidatures transporteurs",
+      "subtitle": "Examinez les candidatures et gérez les comptes des transporteurs",
+      "table": {
+        "company": "Entreprise",
+        "applicant": "Candidat",
+        "city": "Ville",
+        "fleet": "Flotte",
+        "vehicleCount": "{count, plural, =0 {Aucun véhicule} one {# véhicule} other {# véhicules}}",
+        "documents": "Documents",
+        "documentCount": "{count, plural, =0 {Aucun document} one {# document} other {# documents}}",
+        "date": "Date",
+        "status": "Statut",
+        "actions": "Actions",
+        "searchPlaceholder": "Rechercher par entreprise, SIRET ou candidat...",
+        "filterLabel": "Filtrer par statut",
+        "empty": {
+          "title": "Aucune candidature",
+          "description": "Aucune candidature de transporteur avec ce statut."
+        }
+      },
+      "status": {
+        "draft": "Brouillon",
+        "submitted": "Soumise",
+        "under_review": "En cours d'examen",
+        "approved": "Approuvée",
+        "rejected": "Refusée",
+        "suspended": "Suspendue"
+      },
+      "detail": {
+        "title": "Candidature transporteur",
+        "applicant": "Candidat",
+        "submissionDate": "Date de soumission",
+        "currentStatus": "Statut actuel",
+        "company": "Entreprise",
+        "companyName": "Raison sociale",
+        "siret": "SIRET",
+        "vatNumber": "Numéro de TVA",
+        "legalForm": "Forme juridique",
+        "contactPhone": "Téléphone",
+        "address": "Adresse",
+        "banking": "Coordonnées bancaires",
+        "iban": "IBAN",
+        "bic": "BIC",
+        "notProvided": "Non renseigné",
+        "fleet": "Flotte",
+        "noVehicles": "Aucun véhicule déclaré",
+        "inactive": "Inactif",
+        "maxWeight": "{weight} kg max",
+        "documents": "Documents",
+        "noDocuments": "Aucun document téléversé",
+        "view": "Voir",
+        "expiresOn": "Expire le {date}",
+        "documentStatus": {
+          "pending": "En attente",
+          "accepted": "Accepté",
+          "rejected": "Refusé"
+        },
+        "rejectionReason": "Motif du refus",
+        "suspensionReason": "Motif de la suspension",
+        "approve": "Approuver",
+        "reject": "Refuser",
+        "suspend": "Suspendre",
+        "close": "Fermer",
+        "cancel": "Annuler",
+        "confirmReject": "Confirmer le refus",
+        "confirmSuspend": "Confirmer la suspension",
+        "rejectReasonLabel": "Motif du refus (transmis au transporteur)",
+        "suspendReasonLabel": "Motif de la suspension (transmis au transporteur)",
+        "reasonPlaceholder": "Expliquez la décision...",
+        "documentOpenFailed": "Impossible d'ouvrir le document"
+      },
+      "vehicleTypes": {
+        "motorcycle": "Moto",
+        "car": "Voiture",
+        "van": "Fourgon",
+        "truck_3_5t": "Camion 3,5 t",
+        "truck_7_5t": "Camion 7,5 t",
+        "truck_19t": "Camion 19 t",
+        "semi_trailer": "Semi-remorque",
+        "flatbed": "Plateau",
+        "refrigerated": "Frigorifique"
+      },
+      "documentKinds": {
+        "cni_recto": "CNI (recto)",
+        "cni_verso": "CNI (verso)",
+        "driving_licence": "Permis de conduire",
+        "kbis": "Extrait KBIS",
+        "insurance_certificate": "Attestation d'assurance",
+        "transport_licence": "Licence de transport",
+        "rib": "RIB"
+      },
+      "toasts": {
+        "approved": "Candidature approuvée",
+        "rejected": "Candidature refusée",
+        "suspended": "Transporteur suspendu",
+        "approveFailed": "Échec de l'approbation : {message}",
+        "rejectFailed": "Échec du refus : {message}",
+        "suspendFailed": "Échec de la suspension : {message}"
       }
     }
   },
@@ -1628,6 +1574,196 @@
       "cancel": "Annuler",
       "assigning": "Attribution...",
       "acceptAssign": "Accepter et assigner"
+    }
+  },
+  "carrier": {
+    "application": {
+      "title": "Dossier transporteur",
+      "subtitle": "Complétez votre dossier pour commencer à répondre aux offres de transport.",
+      "withdraw": "Retirer et modifier",
+      "withdrawing": "Retrait…",
+      "manageFleet": "Gérer ma flotte",
+      "form": {
+        "title": "Informations de l'entreprise",
+        "description": "L'identité légale de votre société de transport.",
+        "companyName": "Raison sociale",
+        "siret": "SIRET",
+        "vatNumber": "Numéro de TVA (optionnel)",
+        "legalForm": "Forme juridique (optionnelle)",
+        "contactPhone": "Téléphone de contact",
+        "addressLine": "Adresse",
+        "city": "Ville",
+        "postalCode": "Code postal",
+        "bio": "À propos de votre société (optionnel)",
+        "bioPlaceholder": "Trajets, spécialités, années d'expérience…",
+        "save": "Enregistrer",
+        "saving": "Enregistrement…",
+        "errors": {
+          "companyName": "Au moins 2 caractères",
+          "siret": "Saisissez un SIRET valide (14 chiffres)",
+          "vat": "Format FRXX123456789",
+          "phone": "Saisissez un numéro de téléphone français valide",
+          "addressLine": "L'adresse est requise",
+          "city": "La ville est requise",
+          "postalCode": "5 chiffres"
+        }
+      },
+      "banner": {
+        "reasonLabel": "Motif",
+        "submitted": {
+          "title": "Dossier envoyé",
+          "description": "Notre équipe examine votre dossier. Vous serez notifié de la décision."
+        },
+        "under_review": {
+          "title": "En cours d'examen",
+          "description": "Notre équipe examine votre dossier de plus près."
+        },
+        "approved": {
+          "title": "Vous êtes un transporteur approuvé",
+          "description": "Vous pouvez répondre aux offres. Gardez vos documents à jour."
+        },
+        "rejected": {
+          "title": "Dossier refusé",
+          "description": "Corrigez les points ci-dessous puis renvoyez votre dossier."
+        },
+        "suspended": {
+          "title": "Compte suspendu",
+          "description": "Les enchères sont suspendues. Contactez le support pour plus de détails."
+        }
+      },
+      "summary": {
+        "company": "Société",
+        "siret": "SIRET",
+        "phone": "Téléphone",
+        "address": "Adresse"
+      },
+      "documents": {
+        "title": "Justificatifs",
+        "description": "Vos fichiers restent privés et ne sont consultés que par notre équipe.",
+        "optionalTag": "(optionnel)",
+        "view": "Voir",
+        "upload": "Téléverser",
+        "replace": "Remplacer",
+        "uploading": "Envoi…",
+        "missing": "Pas encore téléversé",
+        "expiryLabel": "Date d'expiration",
+        "expires": "Expire le {date}",
+        "status": {
+          "pending": "En attente",
+          "accepted": "Accepté",
+          "rejected": "Refusé"
+        },
+        "kinds": {
+          "cni_recto": "CNI — recto",
+          "cni_verso": "CNI — verso",
+          "driving_licence": "Permis de conduire",
+          "kbis": "Extrait Kbis",
+          "insurance_certificate": "Attestation d'assurance",
+          "transport_licence": "Licence de transport",
+          "rib": "RIB"
+        }
+      },
+      "banking": {
+        "title": "Coordonnées bancaires",
+        "description": "Utilisées pour vous payer après chaque livraison. Nous ne conservons que les 4 derniers caractères.",
+        "onFile": "Enregistré : IBAN ····{iban} · BIC ····{bic}",
+        "iban": "IBAN",
+        "bic": "BIC",
+        "save": "Enregistrer",
+        "replace": "Remplacer",
+        "saving": "Enregistrement…",
+        "errors": {
+          "iban": "Saisissez un IBAN valide",
+          "bic": "Saisissez un BIC valide"
+        }
+      },
+      "checklist": {
+        "title": "Avant de pouvoir soumettre",
+        "documents": "Tous les documents requis téléversés",
+        "banking": "Coordonnées bancaires enregistrées",
+        "vehicle": "Au moins un véhicule dans votre flotte",
+        "goToFleet": "Gérer la flotte",
+        "submit": "Soumettre pour examen",
+        "submitting": "Envoi…"
+      }
+    },
+    "fleet": {
+      "title": "Ma flotte",
+      "subtitle": "Les véhicules avec lesquels vous pouvez répondre aux offres.",
+      "addVehicle": "Ajouter un véhicule",
+      "active": "Actif",
+      "inactive": "Inactif",
+      "activate": "Activer",
+      "deactivate": "Désactiver",
+      "remove": "Supprimer",
+      "capacity": "{kg} kg",
+      "dimensions": "{length} × {width} × {height} cm",
+      "empty": {
+        "title": "Aucun véhicule pour le moment",
+        "description": "Ajoutez votre premier véhicule pour compléter votre dossier transporteur."
+      },
+      "needApplication": {
+        "title": "Commencez d'abord votre dossier transporteur",
+        "description": "Votre flotte est rattachée à votre dossier transporteur.",
+        "cta": "Commencer mon dossier"
+      },
+      "form": {
+        "title": "Nouveau véhicule",
+        "type": "Type",
+        "typePlaceholder": "Sélectionnez un type",
+        "plate": "Immatriculation",
+        "make": "Marque (optionnelle)",
+        "model": "Modèle (optionnel)",
+        "year": "Année (optionnelle)",
+        "maxWeightKg": "Charge max (kg)",
+        "maxLengthCm": "Longueur max (cm, optionnelle)",
+        "maxWidthCm": "Largeur max (cm, optionnelle)",
+        "maxHeightCm": "Hauteur max (cm, optionnelle)",
+        "cancel": "Annuler",
+        "submit": "Ajouter le véhicule",
+        "saving": "Ajout…",
+        "errors": {
+          "type": "Choisissez un type de véhicule",
+          "plate": "Format AB-123-CD",
+          "weight": "Entre 1 et 44 000 kg",
+          "year": "Saisissez une année valide",
+          "dimension": "Saisissez un nombre positif"
+        }
+      },
+      "types": {
+        "motorcycle": "Moto",
+        "car": "Voiture",
+        "van": "Fourgon",
+        "truck_3_5t": "Camion 3,5 t",
+        "truck_7_5t": "Camion 7,5 t",
+        "truck_19t": "Camion 19 t",
+        "semi_trailer": "Semi-remorque",
+        "flatbed": "Plateau",
+        "refrigerated": "Frigorifique"
+      }
+    }
+  },
+  "myJobs": {
+    "title": "Mes demandes",
+    "postJob": "Publier une demande",
+    "empty": "Aucune demande pour l'instant",
+    "emptyDesc": "Publiez une demande de transport et les transporteurs commenceront à enchérir.",
+    "emptyFiltered": "Aucune demande avec ce statut",
+    "emptyFilteredDesc": "Essayez un autre filtre de statut.",
+    "loadFailed": "Impossible de charger vos demandes",
+    "offers": "{count, plural, =0 {Aucune offre} one {# offre} other {# offres}}",
+    "posted": "Publiée le {date}",
+    "filters": {
+      "all": "Tous les statuts"
+    },
+    "status": {
+      "draft": "Brouillon",
+      "open": "Ouverte",
+      "awarded": "Attribuée",
+      "in_progress": "En cours",
+      "completed": "Terminée",
+      "cancelled": "Annulée",
+      "expired": "Expirée"
     }
   }
 }

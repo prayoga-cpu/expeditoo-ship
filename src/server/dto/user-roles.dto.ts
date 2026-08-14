@@ -4,11 +4,12 @@ import { z } from "zod";
  * User roles enum matching database schema
  */
 export const UserRoleSchema = z.enum([
-  "buyer",
-  "seller",
-  "auctioneer",
-  "transporter",
+  "shipper",
+  "carrier",
+  "driver",
   "operator",
+  "support",
+  "finance",
   "admin",
 ]);
 

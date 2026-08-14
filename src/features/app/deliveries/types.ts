@@ -1,66 +1,54 @@
-/**
- * Deliveries feature types
- * Following SOLID principle - centralized type definitions
- */
+import type { ShipmentStatus } from "./api/deliveries.api";
 
-export type DeliveryStatus =
-  | "pending"
-  | "accepted"
-  | "picked_up"
-  | "in_transit"
-  | "delivered"
-  | "cancelled";
+/** View models for the shipper-side tracking surface. */
 
-export interface Delivery {
+export type DeliveryTab = "active" | "past";
+
+/** What the viewer is to this shipment; drives labels and actions. */
+export type DeliveryRole = "shipper" | "carrier" | "driver";
+
+export interface DeliverySummaryView {
   id: string;
   title: string;
-  origin: string;
-  destination: string;
-  dates: string;
-  status: DeliveryStatus;
-  driver?: string;
-  price: number;
+  status: ShipmentStatus;
+  pickupAddress: string;
+  dropoffAddress: string;
+  /** Undefined when the service stripped it (driver viewer). */
+  priceCents?: number;
+  /** The other party's name, relative to the viewer. */
+  counterpartName: string;
+  dateLabel: string;
 }
 
-export type DeliveryTab = "incoming" | "outgoing";
+export type TimelineStepStatus = "completed" | "active" | "pending";
 
-export interface DeliveriesData {
-  incoming: Delivery[];
-  outgoing: Delivery[];
-}
-
-// Delivery Detail types
-export interface Driver {
-  id?: string;
-  name: string;
-  rating: number;
-  reviews: number;
-  phone: string;
-  email: string;
-  avatar: string;
-  vehicle: string;
-}
-
-export type TimelineStatus = "completed" | "active" | "pending";
-
-export interface TimelineEvent {
+export interface TimelineStep {
+  status: ShipmentStatus;
   label: string;
   date: string;
-  status: TimelineStatus;
-  icon: string;
+  note: string | null;
+  step: TimelineStepStatus;
 }
 
-export interface DeliveryDetailData {
+export interface DeliveryDetailView {
   id: string;
-  listingId: string | null; // Reference to listing for messaging context
+  listingId: string;
   title: string;
-  status: DeliveryStatus;
-  price: number;
-  origin: string;
-  destination: string;
-  dates: string;
-  driver: Driver;
-  userId: string; // The client ID who created the shipment
-  timeline: TimelineEvent[];
-  hasReviewed: boolean; // Whether current user has already reviewed
+  status: ShipmentStatus;
+  role: DeliveryRole;
+  priceCents?: number;
+  pickupAddress: string;
+  dropoffAddress: string;
+  scheduledPickup: string | null;
+  scheduledDelivery: string | null;
+  deliveredAt: string | null;
+  cancellationReason: string | null;
+  proofOfDeliveryUrl: string | null;
+  carrier: { id: string; name: string; image: string | null };
+  driver: { id: string; name: string; image: string | null } | null;
+  shipper: { id: string; name: string; image: string | null };
+  /** Who the contact button reaches, relative to the viewer. */
+  counterpart: { id: string; name: string; image: string | null };
+  timeline: TimelineStep[];
+  canCancel: boolean;
 }

@@ -1,23 +1,21 @@
 "use client";
-import { useAuth } from "@/lib/auth-context";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Timeline } from "./Timeline";
+import { format } from "date-fns";
 import {
-  MessageCircle,
-  MapPin,
-  Phone,
-  Mail,
-  Star,
-  AlertTriangle,
   ArrowLeft,
-  Pencil,
+  MapPin,
+  MessageCircle,
+  AlertTriangle,
+  Star,
+  Camera,
+  CalendarClock,
 } from "lucide-react";
-import { LottieLoader } from "@/components/ui/lottie-loader";
-import { CreateReviewModal } from "@/features/app/common/ui/CreateReviewModal";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Dialog,
   DialogContent,
@@ -29,323 +27,315 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import type { DeliveryDetailData } from "../types";
+import { LottieLoader } from "@/components/ui/lottie-loader";
+import { formatCurrency } from "@/lib/currency";
+import { CreateReviewModal } from "@/features/app/common/ui/CreateReviewModal";
+import { useCanReview } from "@/features/app/common/hooks/useCanReview";
 import { useTranslations } from "next-intl";
+import { ShipmentStatusBadge } from "./ShipmentStatusBadge";
+import { Timeline } from "./Timeline";
+import type { DeliveryDetailView } from "../types";
 
-/**
- * Pure UI component for displaying delivery detail
- * Follows Single Responsibility Principle - only handles presentation
- * Business logic handled by useDeliveryDetail hook in page
- *
- * @param delivery - Delivery detail data
- * @param onContactDriver - Callback when contact button is clicked
- * @param onCancelShipment - Callback when cancel is confirmed
- * @param isCancelling - Loading state for cancellation
- * @param isContacting - Loading state for contacting driver
- */
 interface DeliveryDetailProps {
-  delivery: DeliveryDetailData;
-  onContactDriver?: () => void;
-  onCancelShipment?: (reason: string) => void;
+  delivery: DeliveryDetailView;
+  onContact?: () => void;
+  onCancel?: (reason: string) => void;
   isCancelling?: boolean;
   isContacting?: boolean;
 }
 
+/** Full tracking view of one shipment, for any party to it. */
 export function DeliveryDetail({
   delivery,
-  onContactDriver,
-  onCancelShipment,
+  onContact,
+  onCancel,
   isCancelling = false,
   isContacting = false,
 }: DeliveryDetailProps) {
   const t = useTranslations("deliveries");
-  const tCommon = useTranslations("common");
-  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
-  const [cancelReason, setCancelReason] = useState("");
-
-  const handleCancel = () => {
-    if (onCancelShipment && cancelReason.trim()) {
-      onCancelShipment(cancelReason);
-      setIsCancelDialogOpen(false);
-    }
-  };
-
-  const canCancel = ["pending", "accepted"].includes(delivery.status);
-
   const router = useRouter();
 
   return (
-    <div className="  mx-auto p-4 md:p-6 pb-32 md:pb-12">
-      {/* Back Button & Header Actions */}
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="rounded-full -ml-2"
-            onClick={() => router.back()}
-          >
-            <ArrowLeft className="w-6 h-6" />
-          </Button>
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-foreground">
-              {delivery.title}
-            </h1>
-            <Badge className="bg-primary/10 text-primary mt-2">
-              {delivery.price}€
-            </Badge>
+    <div className="mx-auto w-full max-w-3xl space-y-6 p-4 pb-24 sm:p-6">
+      <header className="flex items-start gap-3">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="-ml-2 rounded-full"
+          onClick={() => router.back()}
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <ShipmentStatusBadge status={delivery.status} />
           </div>
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-balance">
+            {delivery.title}
+          </h1>
+          {delivery.priceCents !== undefined && (
+            <p className="mt-1 font-mono text-lg text-muted-foreground">
+              {t("details.agreedPrice")} {formatCurrency(delivery.priceCents)}
+            </p>
+          )}
         </div>
 
-        {canCancel && (
-          <div className="flex gap-2">
-            {/* Modify Shipment Button - Only for early status */}
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2"
-              onClick={() => {
-                // TODO: Implement modify shipment flow
-                console.log("Modify shipment:", delivery.id);
-              }}
-            >
-              <Pencil className="w-4 h-4" />
-              {t("buttons.modifyShipment")}
-            </Button>
-
-            <Dialog
-              open={isCancelDialogOpen}
-              onOpenChange={setIsCancelDialogOpen}
-            >
-              <DialogTrigger asChild>
-                <Button variant="destructive" size="sm" className="gap-2">
-                  <AlertTriangle className="w-4 h-4" />
-                  {t("buttons.cancelShipment")}
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>{t("dialogs.cancel.title")}</DialogTitle>
-                  <DialogDescription>
-                    {t("dialogs.cancel.description")}
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="reason">
-                      {t("dialogs.cancel.reasonLabel")}
-                    </Label>
-                    <Textarea
-                      id="reason"
-                      placeholder={t("dialogs.cancel.reasonPlaceholder")}
-                      value={cancelReason}
-                      onChange={(e) => setCancelReason(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsCancelDialogOpen(false)}
-                    disabled={isCancelling}
-                  >
-                    {t("buttons.keepShipment")}
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    onClick={handleCancel}
-                    disabled={!cancelReason.trim() || isCancelling}
-                  >
-                    {isCancelling
-                      ? t("buttons.cancelling")
-                      : t("buttons.confirmCancellation")}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
+        {delivery.canCancel && onCancel && (
+          <CancelDialog onCancel={onCancel} isCancelling={isCancelling} />
         )}
-      </div>
+      </header>
 
-      {/* Route info */}
-      <div className="bg-card rounded-lg p-4 border border-border mb-6">
-        <div className="space-y-3">
-          <div className="flex gap-3">
-            <MapPin className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm text-muted-foreground">
-                {t("details.from")}
-              </p>
-              <p className="font-medium text-foreground">{delivery.origin}</p>
-            </div>
-          </div>
-          <div className="flex gap-3">
-            <MapPin className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm text-muted-foreground">{t("details.to")}</p>
-              <p className="font-medium text-foreground">
-                {delivery.destination}
-              </p>
-            </div>
-          </div>
-          <div className="text-sm text-muted-foreground pt-2 border-t border-border">
-            {delivery.dates}
-          </div>
-        </div>
-      </div>
+      <RouteCard delivery={delivery} />
 
-      {/* Driver Info */}
-      <div className="bg-card rounded-lg p-4 border border-border mb-6">
-        <h2 className="font-bold text-foreground mb-4">
-          {t("details.driver")}
-        </h2>
-        <div className="flex items-start gap-4 mb-4">
-          <div
-            className="w-12 h-12 rounded-full bg-linear-to-br from-primary to-accent-pink shrink-0"
-            style={{
-              backgroundImage: `url('${delivery.driver.avatar}')`,
-              backgroundSize: "cover",
-            }}
-          />
-          <div className="flex-1">
-            <h3 className="font-bold text-foreground">
-              {delivery.driver.name}
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              ⭐ {delivery.driver.rating}/5 -{" "}
-              {t("details.reviews", { count: delivery.driver.reviews })}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              {delivery.driver.vehicle}
-            </p>
-          </div>
-        </div>
-
-        <div className="space-y-2 pt-4 border-t border-border">
-          <Button
-            variant="outline"
-            className="w-full gap-2"
-            onClick={onContactDriver}
-            disabled={isContacting || delivery.status === "delivered"}
-          >
-            {isContacting ? (
-              <LottieLoader width={20} height={20} />
-            ) : (
-              <MessageCircle className="w-4 h-4" />
-            )}
-            {t("buttons.contactDriver")}
-          </Button>
-        </div>
-      </div>
-
-      {/* Timeline */}
-      <div className="bg-card rounded-lg p-4 border border-border mb-12">
-        <h2 className="font-bold text-foreground mb-6">
-          {tCommon("navigation.shipmentTracking")}
-        </h2>
-        <Timeline events={delivery.timeline} />
-      </div>
-
-      <ReviewActionButtons
+      <CounterpartCard
         delivery={delivery}
+        onContact={onContact}
         isContacting={isContacting}
-        onContactDriver={onContactDriver}
       />
+
+      <Card className="space-y-4 p-4 sm:p-5">
+        <h2 className="font-semibold">{t("details.tracking")}</h2>
+        <Separator />
+        <Timeline steps={delivery.timeline} />
+
+        {delivery.status === "CANCELLED" && delivery.cancellationReason && (
+          <p className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+            {t("details.cancellationReason")}: {delivery.cancellationReason}
+          </p>
+        )}
+
+        {delivery.proofOfDeliveryUrl && (
+          <Button variant="outline" className="gap-2" asChild>
+            <a
+              href={delivery.proofOfDeliveryUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Camera className="h-4 w-4" />
+              {t("details.proofOfDelivery")}
+            </a>
+          </Button>
+        )}
+      </Card>
+
+      {delivery.status === "DELIVERED" && <ReviewSection delivery={delivery} />}
     </div>
   );
 }
 
-function ReviewActionButtons({
-  delivery,
-  isContacting,
-  onContactDriver,
-}: {
-  delivery: DeliveryDetailData;
-  isContacting: boolean;
-  onContactDriver?: () => void;
-}) {
-  const { user } = useAuth();
-  const [showReviewModal, setShowReviewModal] = useState(false);
-  const t = useTranslations("deliveries");
-  const isDelivered = delivery.status === "delivered";
+function RouteCard({ delivery }: { delivery: DeliveryDetailView }) {
+  const t = useTranslations("deliveries.details");
 
-  // Determine role and target
-  const isDriver = user?.id === delivery.driver.id;
-
-  if (isDelivered && delivery.driver.id) {
-    // Already reviewed - show "Reviewed" badge
-    if (delivery.hasReviewed) {
-      return (
-        <div className="fixed bottom-20 md:bottom-6 left-0 right-0 md:relative px-4 md:px-0">
-          <div className="w-full h-12 rounded-full bg-green-500/10 border border-green-500/30 flex items-center justify-center gap-2 text-green-600 font-semibold">
-            <Star className="w-5 h-5 fill-current" />
-            {t("buttons.reviewed")}
-          </div>
-        </div>
-      );
-    }
-
-    // If I am the driver - rate client
-    if (isDriver) {
-      return (
-        <>
-          <div className="fixed bottom-20 md:bottom-6 left-0 right-0 md:relative px-4 md:px-0 space-y-2">
-            <Button
-              onClick={() => setShowReviewModal(true)}
-              className="w-full h-12 rounded-full text-base font-bold gap-2 bg-yellow-500 hover:bg-yellow-600 text-black"
-            >
-              <Star className="w-5 h-5 fill-current" />
-              {t("buttons.rateClient")}
-            </Button>
-          </div>
-          <CreateReviewModal
-            isOpen={showReviewModal}
-            onClose={() => setShowReviewModal(false)}
-            targetUserId={delivery.userId}
-            targetUserName="Client"
-            shipmentId={delivery.id}
-          />
-        </>
-      );
-    }
-
-    // Default: Client reviewing driver
-    return (
-      <>
-        <div className="fixed bottom-20 md:bottom-6 left-0 right-0 md:relative px-4 md:px-0 space-y-2">
-          <Button
-            onClick={() => setShowReviewModal(true)}
-            className="w-full h-12 rounded-full text-base font-bold gap-2 bg-yellow-500 hover:bg-yellow-600 text-black"
-          >
-            <Star className="w-5 h-5 fill-current" />
-            {t("buttons.rateDriver")}
-          </Button>
-        </div>
-        <CreateReviewModal
-          isOpen={showReviewModal}
-          onClose={() => setShowReviewModal(false)}
-          targetUserId={delivery.driver.id!}
-          targetUserName={delivery.driver.name}
-          shipmentId={delivery.id}
+  return (
+    <Card className="space-y-4 p-4 sm:p-5">
+      <h2 className="flex items-center gap-2 font-semibold">
+        <MapPin className="h-4 w-4 text-muted-foreground" />
+        {t("route")}
+      </h2>
+      <Separator />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Endpoint
+          label={t("pickup")}
+          address={delivery.pickupAddress}
+          date={delivery.scheduledPickup}
         />
-      </>
+        <Endpoint
+          label={t("dropoff")}
+          address={delivery.dropoffAddress}
+          date={delivery.scheduledDelivery}
+        />
+      </div>
+    </Card>
+  );
+}
+
+function Endpoint({
+  label,
+  address,
+  date,
+}: {
+  label: string;
+  address: string;
+  date: string | null;
+}) {
+  return (
+    <div className="space-y-1">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        {label}
+      </p>
+      <p className="font-medium">{address}</p>
+      {date && (
+        <p className="flex items-center gap-1.5 pt-1 text-sm text-muted-foreground">
+          <CalendarClock className="h-3.5 w-3.5" />
+          {format(new Date(date), "d MMM HH:mm")}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** The other party to the run, plus the assigned driver when there is one. */
+function CounterpartCard({
+  delivery,
+  onContact,
+  isContacting,
+}: {
+  delivery: DeliveryDetailView;
+  onContact?: () => void;
+  isContacting: boolean;
+}) {
+  const t = useTranslations("deliveries");
+  const isShipperView = delivery.role === "shipper";
+
+  return (
+    <Card className="space-y-4 p-4 sm:p-5">
+      <h2 className="font-semibold">
+        {isShipperView ? t("details.carrier") : t("details.shipper")}
+      </h2>
+      <Separator />
+
+      <div className="flex items-center gap-3">
+        <Avatar className="h-11 w-11">
+          <AvatarImage src={delivery.counterpart.image ?? undefined} />
+          <AvatarFallback>
+            {delivery.counterpart.name.slice(0, 2).toUpperCase()}
+          </AvatarFallback>
+        </Avatar>
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-medium">{delivery.counterpart.name}</p>
+          {isShipperView && delivery.driver && (
+            <p className="truncate text-sm text-muted-foreground">
+              {t("details.driver")}: {delivery.driver.name}
+            </p>
+          )}
+        </div>
+      </div>
+
+      <Button
+        variant="outline"
+        className="w-full gap-2"
+        onClick={onContact}
+        disabled={isContacting}
+      >
+        {isContacting ? (
+          <LottieLoader width={20} height={20} />
+        ) : (
+          <MessageCircle className="h-4 w-4" />
+        )}
+        {isShipperView
+          ? t("buttons.contactCarrier")
+          : t("buttons.contactShipper")}
+      </Button>
+    </Card>
+  );
+}
+
+function CancelDialog({
+  onCancel,
+  isCancelling,
+}: {
+  onCancel: (reason: string) => void;
+  isCancelling: boolean;
+}) {
+  const t = useTranslations("deliveries");
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+
+  const handleConfirm = () => {
+    if (!reason.trim()) return;
+    onCancel(reason.trim());
+    setOpen(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="destructive" size="sm" className="gap-2">
+          <AlertTriangle className="h-4 w-4" />
+          {t("buttons.cancelShipment")}
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{t("dialogs.cancel.title")}</DialogTitle>
+          <DialogDescription>
+            {t("dialogs.cancel.description")}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2 py-2">
+          <Label htmlFor="cancel-reason">
+            {t("dialogs.cancel.reasonLabel")}
+          </Label>
+          <Textarea
+            id="cancel-reason"
+            placeholder={t("dialogs.cancel.reasonPlaceholder")}
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
+          />
+        </div>
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => setOpen(false)}
+            disabled={isCancelling}
+          >
+            {t("buttons.keepShipment")}
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={handleConfirm}
+            disabled={reason.trim().length < 3 || isCancelling}
+          >
+            {isCancelling
+              ? t("buttons.cancelling")
+              : t("buttons.confirmCancellation")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/**
+ * Two-way review, offered once the goods arrived. Eligibility (and the target)
+ * come from the reviews service - the UI never re-derives the counterparty.
+ */
+function ReviewSection({ delivery }: { delivery: DeliveryDetailView }) {
+  const t = useTranslations("deliveries");
+  const [showModal, setShowModal] = useState(false);
+  const { data: eligibility } = useCanReview(delivery.id);
+
+  if (!eligibility) return null;
+
+  if (!eligibility.canReview) {
+    if (eligibility.reason !== "ALREADY_REVIEWED") return null;
+    return (
+      <div className="flex h-12 w-full items-center justify-center gap-2 rounded-full border border-success/30 bg-success/10 font-semibold text-success">
+        <Star className="h-5 w-5 fill-current" />
+        {t("buttons.reviewed")}
+      </div>
     );
   }
 
   return (
-    <div className="fixed bottom-20 md:bottom-6 left-0 right-0 md:relative px-4 md:px-0">
+    <>
       <Button
-        onClick={onContactDriver}
-        disabled={isContacting || !delivery.driver.id}
-        className="w-full h-12 rounded-full text-base font-bold gap-2"
+        onClick={() => setShowModal(true)}
+        className="h-12 w-full gap-2 rounded-full text-base font-bold"
       >
-        {isContacting ? (
-          <LottieLoader width={25} height={25} />
-        ) : (
-          <MessageCircle className="w-5 h-5" />
-        )}
-        {t("buttons.contactDriver")}
+        <Star className="h-5 w-5" />
+        {eligibility.role === "shipper"
+          ? t("buttons.rateCarrier")
+          : t("buttons.rateShipper")}
       </Button>
-    </div>
+      <CreateReviewModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        targetUserId={eligibility.targetUserId}
+        targetUserName={delivery.counterpart.name}
+        listingId={delivery.listingId}
+        shipmentId={delivery.id}
+      />
+    </>
   );
 }

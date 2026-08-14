@@ -347,9 +347,13 @@ export async function getRecentUsers(limit: number = 10) {
 
 /**
  * Assign default role to new user
+ *
+ * Every fresh account starts as a shipper: posting a job needs no vetting,
+ * while `carrier`/`driver` are only granted through the KYC flow. ("buyer"
+ * was the v1 goods-marketplace default and no longer exists in the enum.)
  */
 export async function assignDefaultRole(userId: string) {
-  return assignRole(userId, "buyer");
+  return assignRole(userId, "shipper");
 }
 
 /**

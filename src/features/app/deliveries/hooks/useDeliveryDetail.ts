@@ -1,146 +1,117 @@
+"use client";
+
 import { useQuery } from "@tanstack/react-query";
-import { fetchShipmentDetail, type ShipmentDetail } from "../api";
-import type { DeliveryDetailData, DeliveryStatus, TimelineStatus } from "../types";
+import { format } from "date-fns";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/lib/auth-context";
+import {
+  deliveriesApi,
+  type ShipmentEvent,
+  type ShipmentWithEvents,
+} from "../api/deliveries.api";
+import type {
+  DeliveryDetailView,
+  DeliveryRole,
+  TimelineStep,
+} from "../types";
+import { deliveryKeys } from "./useDeliveries";
 
-/**
- * Custom hook for fetching and managing single delivery detail
- * Follows Single Responsibility Principle - handles only delivery detail data
- *
- * Fetches from API using TanStack Query
- *
- * @param id - Delivery ID
- */
+/** A shipper or carrier may self-cancel until the goods are on a vehicle. */
+const CANCELLABLE = ["PENDING", "ASSIGNED"] as const;
+
 export function useDeliveryDetail(id: string) {
   const t = useTranslations("deliveries");
   const { user } = useAuth();
-  const {
-    data: shipment,
-    isLoading,
-    isError,
-    error,
-  } = useQuery({
-    queryKey: ["shipment", id],
-    queryFn: () => fetchShipmentDetail(id),
-    enabled: !!id, // Only fetch if id is provided
+
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: deliveryKeys.detail(id),
+    queryFn: () => deliveriesApi.getById(id),
+    enabled: Boolean(id),
   });
 
-  // Transform API response to UI format
-  const delivery: DeliveryDetailData | null = shipment
-    ? transformShipmentToDelivery(shipment, t)
-    : null;
+  const delivery: DeliveryDetailView | null =
+    data && user ? toDetailView(data, user.id, t) : null;
 
   return {
     delivery,
     isLoading,
     isError,
     error: error instanceof Error ? error.message : null,
-    user,
   };
 }
 
-/**
- * Transform API shipment detail to UI format
- */
-function transformShipmentToDelivery(
-  shipment: ShipmentDetail,
+function roleFor(shipment: ShipmentWithEvents, viewerId: string): DeliveryRole {
+  if (shipment.carrierId === viewerId) return "carrier";
+  if (shipment.driverId === viewerId) return "driver";
+  return "shipper";
+}
+
+function toDetailView(
+  shipment: ShipmentWithEvents,
+  viewerId: string,
   t: ReturnType<typeof useTranslations>
-): DeliveryDetailData {
+): DeliveryDetailView {
+  const role = roleFor(shipment, viewerId);
+
   return {
     id: shipment.id,
-    listingId: shipment.listing?.id || null,
-    title:
-      shipment.listing?.title ||
-      shipment.packageDescription ||
-      t("card.defaultTitle"),
-    status: mapApiStatusToUiStatus(shipment.status),
-    price: shipment.price ? shipment.price / 100 : 0,
-    origin: shipment.originAddress,
-    destination: shipment.destinationAddress,
-    dates: formatDates(shipment.scheduledDate, shipment.createdAt, t),
-    driver: {
-      id: shipment.driver?.id,
-      name: shipment.driver?.name || t("card.awaitingDriver"),
-      rating: 4.8, // Default - will be replaced with real rating
-      reviews: 0,
-      phone: shipment.driver?.phone || "",
-      email: "", // Not available in current API
-      avatar: shipment.driver?.image || "/placeholder.svg?key=driver",
-      vehicle: "Standard Vehicle", // Not available in current API
-    },
-    userId: shipment.user.id,
-    timeline: transformTimeline(shipment.timeline),
-    hasReviewed: shipment.hasReviewed,
+    listingId: shipment.listingId,
+    title: shipment.listing?.title ?? t("card.defaultTitle"),
+    status: shipment.status,
+    role,
+    priceCents: shipment.priceCents,
+    pickupAddress: shipment.pickupAddress,
+    dropoffAddress: shipment.dropoffAddress,
+    scheduledPickup: shipment.scheduledPickup,
+    scheduledDelivery: shipment.scheduledDelivery,
+    deliveredAt: shipment.deliveredAt,
+    cancellationReason: shipment.cancellationReason,
+    proofOfDeliveryUrl: shipment.proofOfDeliveryUrl,
+    carrier: shipment.carrier,
+    driver: shipment.driver,
+    shipper: shipment.shipper,
+    counterpart: role === "shipper" ? shipment.carrier : shipment.shipper,
+    timeline: toTimeline(shipment, t),
+    canCancel:
+      role !== "driver" &&
+      (CANCELLABLE as readonly string[]).includes(shipment.status),
   };
 }
 
 /**
- * Map API status to UI status
+ * The timeline is the recorded event history, oldest first. A shipment created
+ * before event recording existed still gets its creation step synthesised so
+ * the section is never blank.
  */
-function mapApiStatusToUiStatus(apiStatus: string): DeliveryStatus {
-  const statusMap: Record<string, DeliveryStatus> = {
-    PENDING: "pending",
-    PRICE_PROPOSED: "pending",
-    ASSIGNED: "accepted",
-    PICKED_UP: "picked_up",
-    IN_TRANSIT: "in_transit",
-    DELIVERED: "delivered",
-    CANCELLED: "cancelled",
-  };
-  return statusMap[apiStatus] || "pending";
-}
-
-/**
- * Format dates for display
- */
-function formatDates(
-  scheduledDate: string | null,
-  createdAt: string,
+function toTimeline(
+  shipment: ShipmentWithEvents,
   t: ReturnType<typeof useTranslations>
-): string {
-  if (scheduledDate) {
-    return t("card.scheduled", { date: new Date(scheduledDate).toLocaleDateString() });
+): TimelineStep[] {
+  const events: ShipmentEvent[] = [...shipment.events].sort(
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  );
+
+  if (events.length === 0) {
+    events.push({
+      id: shipment.id,
+      status: shipment.status,
+      previousStatus: null,
+      actorRole: "system",
+      note: null,
+      createdAt: shipment.createdAt,
+    });
   }
-  return t("card.created", { date: new Date(createdAt).toLocaleDateString() });
+
+  const terminal = ["DELIVERED", "CANCELLED"].includes(shipment.status);
+
+  return events.map((event, index) => ({
+    status: event.status,
+    label: t(`events.${event.status}`),
+    date: format(new Date(event.createdAt), "d MMM yyyy HH:mm"),
+    note: event.note,
+    step:
+      index < events.length - 1 || terminal
+        ? ("completed" as const)
+        : ("active" as const),
+  }));
 }
-
-/**
- * Transform API timeline to UI format
- */
-function transformTimeline(
-  apiTimeline: ShipmentDetail["timeline"]
-): DeliveryDetailData["timeline"] {
-  const statusIcons: Record<string, string> = {
-    PENDING: "📦",
-    PRICE_PROPOSED: "💰",
-    ASSIGNED: "✓",
-    PICKED_UP: "🚚",
-    IN_TRANSIT: "🗺️",
-    DELIVERED: "📍",
-    CANCELLED: "❌",
-  };
-
-  return apiTimeline.map((event, index) => {
-    // Determine timeline status
-    let timelineStatus: TimelineStatus;
-    if (index < apiTimeline.length - 1) {
-      timelineStatus = "completed";
-    } else if (index === apiTimeline.length - 1) {
-      timelineStatus =
-        event.status === "DELIVERED" || event.status === "CANCELLED"
-          ? "completed"
-          : "active";
-    } else {
-      timelineStatus = "pending";
-    }
-
-    return {
-      label: event.description,
-      date: new Date(event.timestamp).toLocaleString(),
-      status: timelineStatus,
-      icon: statusIcons[event.status] || "📦",
-    };
-  });
-}
-

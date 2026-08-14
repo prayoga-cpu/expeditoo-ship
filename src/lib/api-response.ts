@@ -4,6 +4,7 @@ import { OfferError } from "@/server/services/offers.service";
 import { ListingError } from "@/server/services/listings.service";
 import { ShipmentError } from "@/server/services/shipment.service";
 import { CarrierError } from "@/server/services/carrier.service";
+import { ReviewError } from "@/server/services/reviews.service";
 
 /**
  * Shared response shape for the REST layer.
@@ -32,7 +33,8 @@ export function handleError(error: unknown, context: string) {
     error instanceof OfferError ||
     error instanceof ListingError ||
     error instanceof ShipmentError ||
-    error instanceof CarrierError
+    error instanceof CarrierError ||
+    error instanceof ReviewError
   ) {
     return fail(error.code, error.message, error.status);
   }

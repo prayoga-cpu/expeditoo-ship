@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   Home,
   Calendar,
+  FileText,
   Plus,
   MessageCircle,
   User,
@@ -31,10 +32,13 @@ export function BottomNav() {
   const t = useTranslations("common.navigation");
   const { user } = useAuth();
 
-  // Roles come from the session; a user who both ships and drives sees the
-  // driver bar, since that is the side with the time-sensitive work.
-  const roles = (user as { roles?: string[] } | null)?.roles ?? [];
-  const isDriver = roles.includes("carrier") || roles.includes("driver");
+  // Roles come from the session (customSession plugin in src/lib/auth.ts).
+  // Carrier outranks driver: the company account manages fleet and KYC, while
+  // a driver only executes shipments; a shipper who is neither sees the
+  // default posting bar.
+  const roles = user?.roles ?? [];
+  const isCarrier = roles.includes("carrier");
+  const isDriver = roles.includes("driver");
 
   const messages: NavItem = {
     href: "/messages",
@@ -49,41 +53,70 @@ export function BottomNav() {
   };
 
   /**
-   * One bar cannot serve both sides of the marketplace: a shipper's primary
+   * One bar cannot serve every side of the marketplace: a shipper's primary
    * action is posting a job, a driver's is finding one and tracking what they
-   * won. Drivers get the board and their offers; shippers get the post button.
+   * won, and a carrier additionally runs the company — its fleet and its KYC
+   * application. Carriers trade the deliveries shortcut for those two screens;
+   * their drivers keep it.
    */
-  const navItems: NavItem[] = isDriver
-    ? [
-        { href: "/home", labelKey: "jobs", icon: <Home className="w-5 h-5" /> },
-        {
-          href: "/carrier/offers",
-          labelKey: "myOffers",
-          icon: <Gavel className="w-5 h-5" />,
-        },
-        {
-          href: "/deliveries",
-          labelKey: "deliveries",
-          icon: <Truck className="w-5 h-5" />,
-        },
-        messages,
-        account,
-      ]
-    : [
-        { href: "/home", labelKey: "home", icon: <Home className="w-5 h-5" /> },
-        {
-          href: "/deliveries",
-          labelKey: "shipments",
-          icon: <Calendar className="w-5 h-5" />,
-        },
-        {
-          href: "/create",
-          labelKey: "create",
-          icon: <Plus className="w-5 h-5" />,
-        },
-        messages,
-        account,
-      ];
+  const carrierItems: NavItem[] = [
+    { href: "/home", labelKey: "jobs", icon: <Home className="w-5 h-5" /> },
+    {
+      href: "/carrier/offers",
+      labelKey: "myOffers",
+      icon: <Gavel className="w-5 h-5" />,
+    },
+    {
+      href: "/carrier/fleet",
+      labelKey: "fleet",
+      icon: <Truck className="w-5 h-5" />,
+    },
+    {
+      href: "/carrier/application",
+      labelKey: "application",
+      icon: <FileText className="w-5 h-5" />,
+    },
+    messages,
+    account,
+  ];
+
+  const driverItems: NavItem[] = [
+    { href: "/home", labelKey: "jobs", icon: <Home className="w-5 h-5" /> },
+    {
+      href: "/carrier/offers",
+      labelKey: "myOffers",
+      icon: <Gavel className="w-5 h-5" />,
+    },
+    {
+      href: "/deliveries",
+      labelKey: "deliveries",
+      icon: <Truck className="w-5 h-5" />,
+    },
+    messages,
+    account,
+  ];
+
+  const shipperItems: NavItem[] = [
+    { href: "/home", labelKey: "home", icon: <Home className="w-5 h-5" /> },
+    {
+      href: "/deliveries",
+      labelKey: "shipments",
+      icon: <Calendar className="w-5 h-5" />,
+    },
+    {
+      href: "/create",
+      labelKey: "create",
+      icon: <Plus className="w-5 h-5" />,
+    },
+    messages,
+    account,
+  ];
+
+  const navItems: NavItem[] = isCarrier
+    ? carrierItems
+    : isDriver
+      ? driverItems
+      : shipperItems;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border/50 xl:hidden pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] h-[88px]">

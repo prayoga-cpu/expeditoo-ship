@@ -1,90 +1,77 @@
+"use client";
+
 import { useQuery } from "@tanstack/react-query";
-import { useTabState } from "@/features/app/common/hooks";
-import { fetchShipments, type ShipmentListItem } from "../api";
-import type { DeliveryTab, Delivery } from "../types";
+import { format } from "date-fns";
 import { useTranslations } from "next-intl";
+import { useTabState } from "@/features/app/common/hooks";
+import { useAuth } from "@/lib/auth-context";
+import { deliveriesApi, type Shipment } from "../api/deliveries.api";
+import type { DeliveryTab, DeliverySummaryView } from "../types";
+
+/** Comma-separated for the route's `status` filter (split server-side). */
+const TAB_STATUSES: Record<DeliveryTab, string> = {
+  active: "PENDING,ASSIGNED,PICKED_UP,IN_TRANSIT",
+  past: "DELIVERED,CANCELLED",
+};
+
+export const deliveryKeys = {
+  list: (tab: DeliveryTab) => ["deliveries", "list", tab] as const,
+  detail: (id: string) => ["deliveries", "detail", id] as const,
+};
 
 /**
- * Custom hook for managing deliveries data and state
- * Follows Single Responsibility Principle - handles only deliveries data logic
- *
- * Fetches from API using TanStack Query
+ * The shipper-side tracking list. The API returns every shipment the caller
+ * is a party to, so the same page also serves a carrier checking their runs -
+ * the counterpart name is resolved relative to the viewer.
  */
 export function useDeliveries() {
   const t = useTranslations("deliveries");
-  const { activeTab, setActiveTab } = useTabState<DeliveryTab>("incoming");
+  const { user } = useAuth();
+  const { activeTab, setActiveTab } = useTabState<DeliveryTab>("active");
 
-  // Fetch shipments from API
-  const {
-    data: incomingData,
-    isLoading: isLoadingIncoming,
-    isError: isErrorIncoming,
-    error: errorIncoming,
-  } = useQuery({
-    queryKey: ["shipments", "incoming"],
-    queryFn: () => fetchShipments({ type: "incoming" }),
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: deliveryKeys.list(activeTab),
+    queryFn: () =>
+      deliveriesApi.list({ status: TAB_STATUSES[activeTab], limit: 50 }),
   });
 
-  const {
-    data: outgoingData,
-    isLoading: isLoadingOutgoing,
-    isError: isErrorOutgoing,
-    error: errorOutgoing,
-  } = useQuery({
-    queryKey: ["shipments", "outgoing"],
-    queryFn: () => fetchShipments({ type: "outgoing" }),
-  });
-
-  // Transform API response to UI format
-  const transformShipment = (shipment: ShipmentListItem): Delivery => ({
-    id: shipment.id,
-    title: shipment.listing?.title || shipment.packageDescription || t("card.defaultTitle"),
-    origin: shipment.originAddress,
-    destination: shipment.destinationAddress,
-    dates: shipment.scheduledDate
-      ? t("card.scheduled", { date: new Date(shipment.scheduledDate).toLocaleDateString() })
-      : t("card.created", { date: new Date(shipment.createdAt).toLocaleDateString() }),
-    status: mapApiStatusToUiStatus(shipment.status),
-    driver: shipment.driver?.name || undefined,
-    price: shipment.price ? shipment.price / 100 : 0, // Convert cents to euros
-  });
-
-  // Map API status to UI status
-  function mapApiStatusToUiStatus(
-    apiStatus: string
-  ): Delivery["status"] {
-    const statusMap: Record<string, Delivery["status"]> = {
-      PENDING: "pending",
-      PRICE_PROPOSED: "pending",
-      ASSIGNED: "accepted",
-      PICKED_UP: "picked_up",
-      IN_TRANSIT: "in_transit",
-      DELIVERED: "delivered",
-      CANCELLED: "cancelled",
-    };
-    return statusMap[apiStatus] || "pending";
-  }
-
-  // Transform data
-  const incoming: Delivery[] = (incomingData?.data || []).map(transformShipment);
-  const outgoing: Delivery[] = (outgoingData?.data || []).map(transformShipment);
-
-  // Get current tab deliveries
-  const currentDeliveries = activeTab === "incoming" ? incoming : outgoing;
-
-  // Combined loading and error states
-  const isLoading = isLoadingIncoming || isLoadingOutgoing;
-  const isError = isErrorIncoming || isErrorOutgoing;
-  const error = errorIncoming || errorOutgoing;
+  const deliveries: DeliverySummaryView[] = (data?.items ?? []).map(
+    (shipment) => toSummary(shipment, user?.id ?? null, t)
+  );
 
   return {
     activeTab,
     setActiveTab,
-    deliveries: currentDeliveries,
-    allDeliveries: { incoming, outgoing },
+    deliveries,
+    total: data?.total ?? 0,
     isLoading,
     isError,
     error: error instanceof Error ? error.message : null,
   };
 }
 
+function toSummary(
+  shipment: Shipment,
+  viewerId: string | null,
+  t: ReturnType<typeof useTranslations>
+): DeliverySummaryView {
+  const counterpart =
+    viewerId === shipment.shipperId ? shipment.carrier : shipment.shipper;
+
+  return {
+    id: shipment.id,
+    title: shipment.listing?.title ?? t("card.defaultTitle"),
+    status: shipment.status,
+    pickupAddress: shipment.pickupAddress,
+    dropoffAddress: shipment.dropoffAddress,
+    priceCents: shipment.priceCents,
+    counterpartName: counterpart.name,
+    dateLabel: shipment.scheduledPickup
+      ? t("card.scheduled", {
+          date: format(new Date(shipment.scheduledPickup), "d MMM HH:mm"),
+        })
+      : t("card.created", {
+          date: format(new Date(shipment.createdAt), "d MMM yyyy"),
+        }),
+  };
+}

@@ -19,9 +19,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const authValue: AuthContextType = {
     session: data?.session ?? null,
-    // better-auth's client session type omits the additionalFields declared
-    // in src/lib/auth.ts (isVerified, banned, stripe*), even though the runtime
-    // payload carries them. The cast bridges that gap in one place.
+    // The server's customSession plugin shapes the payload ({ user, session }
+    // with user.roles and the additionalFields), and customSessionClient in
+    // auth-client.ts mirrors it. The cast aligns the client and server views
+    // of that shape in one place.
     user: (data?.user as User | undefined) ?? null,
     isAuthenticated: !!data,
     isLoading: isPending,

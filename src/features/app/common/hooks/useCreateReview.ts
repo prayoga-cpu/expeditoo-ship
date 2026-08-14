@@ -36,6 +36,8 @@ export function useCreateReview() {
             // Invalidate listing reviews if needed
             queryClient.invalidateQueries({ queryKey: ["listing-reviews"] });
             queryClient.invalidateQueries({ queryKey: ["user-stats"] });
+            // Flip the delivery detail's review button to its "reviewed" state
+            queryClient.invalidateQueries({ queryKey: ["can-review"] });
 
             router.refresh();
         },

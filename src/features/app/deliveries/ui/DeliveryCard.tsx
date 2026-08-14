@@ -1,70 +1,52 @@
 import Link from "next/link";
-import { MapPin, Clock, Zap } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { StatusBadge } from "@/components/StatusBadge";
-import type { Delivery } from "../types";
+import { MapPin, Clock, User } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { formatCurrency } from "@/lib/currency";
+import { ShipmentStatusBadge } from "./ShipmentStatusBadge";
+import type { DeliverySummaryView } from "../types";
 
 /**
- * Pure UI component for rendering a single delivery card
- * Follows Single Responsibility Principle - only handles presentation
- *
- * @param delivery - Delivery data object
- * @param index - Index for staggered animation
+ * One shipment in the tracking list. Pure presentation - the view model is
+ * built by useDeliveries.
  */
-interface DeliveryCardProps {
-  delivery: Delivery;
-  index: number;
-}
-
-export function DeliveryCard({ delivery, index }: DeliveryCardProps) {
+export function DeliveryCard({ delivery }: { delivery: DeliverySummaryView }) {
   return (
-    <Link href={`/deliveries/${delivery.id}`}>
-      <div
-        style={{
-          animation: `fadeIn 0.4s ease-out ${index * 0.08}s both`,
-        }}
-        className="group bg-card rounded-2xl p-5 border border-border cursor-pointer hover:border-primary/40 transition-smooth hover:shadow-md hover:shadow-primary/10 relative overflow-hidden"
-      >
-        <div className="absolute inset-0 bg-linear-to-br from-primary/0 via-primary/0 to-accent-green/0 group-hover:from-primary/5 group-hover:via-primary/0 group-hover:to-accent-green/5 transition-smooth pointer-events-none" />
-
-        <div className="relative z-10">
-          <div className="flex justify-between items-start gap-3 mb-4">
-            <div className="flex-1">
-              <h3 className="font-bold text-foreground text-lg group-hover:text-primary transition-smooth truncate">
-                {delivery.title}
-              </h3>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2 group-hover:text-foreground/70 transition-smooth">
-                <MapPin className="w-4 h-4 shrink-0" />
-                <span className="truncate">
-                  {delivery.origin} → {delivery.destination}
-                </span>
-              </div>
-            </div>
-            <Badge className="bg-primary/90 text-primary-foreground font-bold px-3 py-1 group-hover:bg-primary transition-smooth shrink-0">
-              {delivery.price}€
-            </Badge>
+    <Link href={`/deliveries/${delivery.id}`} className="block">
+      <Card className="group cursor-pointer p-4 transition-colors hover:border-primary/40 sm:p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <h3 className="truncate text-lg font-semibold text-foreground group-hover:text-primary">
+              {delivery.title}
+            </h3>
+            <p className="mt-1.5 flex items-center gap-1.5 text-sm text-muted-foreground">
+              <MapPin className="h-4 w-4 shrink-0" />
+              <span className="truncate">
+                {delivery.pickupAddress} → {delivery.dropoffAddress}
+              </span>
+            </p>
           </div>
 
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground group-hover:text-foreground/70 transition-smooth">
-              <Clock className="w-3.5 h-3.5 shrink-0" />
-              <span>{delivery.dates}</span>
-            </div>
+          {delivery.priceCents !== undefined && (
+            <p className="shrink-0 font-mono text-lg font-semibold">
+              {formatCurrency(delivery.priceCents)}
+            </p>
+          )}
+        </div>
 
-            <div className="h-px bg-linear-to-r from-border via-border to-transparent group-hover:from-primary/20 group-hover:via-primary/10 group-hover:to-transparent transition-smooth" />
-
-            <div className="flex justify-between items-center">
-              <StatusBadge status={delivery.status} />
-              {delivery.driver && (
-                <div className="flex items-center gap-1 text-xs text-muted-foreground group-hover:text-foreground/70 transition-smooth">
-                  <Zap className="w-3 h-3" />
-                  <span>{delivery.driver}</span>
-                </div>
-              )}
-            </div>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+          <ShipmentStatusBadge status={delivery.status} />
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <User className="h-3.5 w-3.5" />
+              {delivery.counterpartName}
+            </span>
+            <span className="flex items-center gap-1">
+              <Clock className="h-3.5 w-3.5" />
+              {delivery.dateLabel}
+            </span>
           </div>
         </div>
-      </div>
+      </Card>
     </Link>
   );
 }

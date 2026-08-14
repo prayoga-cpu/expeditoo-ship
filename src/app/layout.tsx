@@ -1,6 +1,6 @@
 import type React from "react";
 import type { Metadata, Viewport } from "next";
-import { Plus_Jakarta_Sans, Geist_Mono } from "next/font/google";
+import { Plus_Jakarta_Sans, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers/Providers";
 import { PWAInstall } from "@/components/pwa/PWAInstall";
@@ -13,6 +13,12 @@ const font = Plus_Jakarta_Sans({
 const fontMono = Geist_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
+  display: "swap",
+});
+// Landing surface only — the app UI stays on Plus Jakarta Sans.
+const fontGeist = Geist({
+  subsets: ["latin"],
+  variable: "--font-geist",
   display: "swap",
 });
 
@@ -44,7 +50,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${font.variable} ${fontMono.variable} font-sans antialiased`}
+        className={`${font.variable} ${fontGeist.variable} ${fontMono.variable} font-sans antialiased`}
       >
         <Providers>
           {children}

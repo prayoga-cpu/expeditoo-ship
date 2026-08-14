@@ -135,8 +135,13 @@ Phase A is functionally complete. Phase B (Expedion bridge) is wired both ways.
 Tracked in `docs/plans/plan_phase_a_bidding_core.md` and
 `docs/plans/plan_transport_only_refinement.md`.
 
+**The repo is in user-testing mode.** Every MVP journey walks end to end through the
+UI, but payments run behind `MOCK_PAYMENTS` and the Expedion escalation demo runs off
+a seed script — read `docs/TESTING_MOCKS.md` before trusting anything money-shaped.
+Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before shipping.
+
 **Gates — all green.** `npx tsc --noEmit` 0 errors · `pnpm lint` 0 errors ·
-117 unit tests pass · `pnpm build` succeeds (104 pages).
+137 unit tests pass · `pnpm build` succeeds.
 
 **Done**
 - Schema remodelled to the transport model; one clean initial migration
@@ -148,17 +153,28 @@ Tracked in `docs/plans/plan_phase_a_bidding_core.md` and
   approve/reject/suspend, expiry cron. 26 tests
 - Payments: held on acceptance, captured on delivery, released on cancellation,
   10% commission at source, payout recorded
-- Shipper UI: four-step job form, job detail with offer comparison and accept
-- Driver UI: bid form, my offers, job board with filters
+- Shipper UI: four-step job form, job detail with offer comparison and accept,
+  my jobs (`/listings/me`), delivery tracking and two-way review
+- Carrier UI *(testing mode)*: application + fleet screens, bid form mounted on job
+  detail, my offers
+- Driver UI: shipment list and detail, status transitions, proof-of-delivery upload
+- Admin UI *(testing mode)*: carrier application review — list, detail, approve,
+  reject, suspend, KYC documents via presigned URLs
+- Auth: default role `shipper` assigned once for both email and OAuth signup; roles
+  surfaced to the session via `customSession`, so role-aware navigation works
 - Expedion bridge: inbound escalation creates a listing; status changes write back
 - Crons: listing expiry, document expiry, escalation sweep — declared in `vercel.json`
 - FR/EN parity exact (verified by key diff, not by eye)
 
-**Not done** — see `plan_transport_only_refinement.md` WP11–WP16
-- Driver onboarding + fleet **screens** (service and REST layer are done)
-- Admin carrier review screens
-- `seller`/`buyer` vocabulary still in ~70 files
-- Marketing copy still describes a marketplace
+**Not done** — see `plan_transport_only_refinement.md` WP11–WP16 and `docs/TESTING_MOCKS.md`
+- **Real Stripe hold/capture** — runs under `MOCK_PAYMENTS`; needs SetupIntent
+  confirmation and `amount_capturable_updated` webhook handling
+- **Payment → `expedionService.markPaid`** — zero callers, so auto-escalation never
+  fires on a real quote; the demo seeds `escalateAfter` directly
+- Payouts stop at `scheduled`; no carrier earnings screen
+- Realtime shipment data: the Ably path exists on both ends but is not connected
+- `seller`/`buyer` vocabulary still in ~50 files (live paths fixed; the rest cosmetic)
+- Marketing copy still oversells (J+7 payout, live bid refresh, 24 h verification)
 - E2E proving the exit criteria end to end
 
 ## Gotchas

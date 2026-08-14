@@ -3,6 +3,11 @@ import { db } from "@/db";
 import { eq } from "drizzle-orm";
 import { payments, payouts } from "@/db/schema/payments";
 import { stripe } from "@/lib/stripe";
+import {
+  MOCK_INTENT_PREFIX,
+  isMockIntent,
+  isMockPaymentsEnabled,
+} from "@/lib/stripe/mock-payments";
 import { carriersDal } from "@/server/dal/carriers.dal";
 
 // ========================================
@@ -30,6 +35,54 @@ export const commissionFor = (amountCents: number) =>
   Math.round(amountCents * COMMISSION_RATE);
 
 // ========================================
+// MOCK_PAYMENTS test path
+// ========================================
+
+// TODO(EXPEDITOO-TESTING): MOCK_PAYMENTS — replace with SetupIntent confirmation + amount_capturable_updated webhook handling (see docs/TESTING_MOCKS.md).
+/**
+ * Records an authorised hold without calling Stripe at all. Writes the same
+ * two steps as the real path (insert as `authorising`, then mark
+ * `authorised`) so the row is byte-for-byte the shape the rest of the chain
+ * expects, with a synthetic intent id in place of a real one.
+ */
+async function mockAuthoriseForShipment(params: {
+  shipperId: string;
+  shipmentId: string;
+  listingId: string;
+  amountCents: number;
+}) {
+  const commissionCents = commissionFor(params.amountCents);
+  const transferGroup = `shipment_${params.shipmentId}`;
+
+  const [row] = await db
+    .insert(payments)
+    .values({
+      id: nanoid(),
+      userId: params.shipperId,
+      amountCents: params.amountCents,
+      commissionCents,
+      currency: "eur",
+      status: "authorising",
+      transferGroup,
+      listingId: params.listingId,
+      shipmentId: params.shipmentId,
+    })
+    .returning();
+
+  const [updated] = await db
+    .update(payments)
+    .set({
+      stripePaymentIntentId: `${MOCK_INTENT_PREFIX}${params.shipmentId}`,
+      status: "authorised",
+      authorisedAt: new Date(),
+    })
+    .where(eq(payments.id, row.id))
+    .returning();
+
+  return { payment: updated, clientSecret: null, requiresAction: false };
+}
+
+// ========================================
 // Service
 // ========================================
 
@@ -49,6 +102,12 @@ export const paymentsService = {
     stripeCustomerId: string | null;
     paymentMethodId?: string;
   }) {
+    // TODO(EXPEDITOO-TESTING): MOCK_PAYMENTS — replace with SetupIntent confirmation + amount_capturable_updated webhook handling (see docs/TESTING_MOCKS.md).
+    // Before the customer check on purpose: a test shipper has no saved card.
+    if (isMockPaymentsEnabled()) {
+      return await mockAuthoriseForShipment(params);
+    }
+
     if (!params.stripeCustomerId) {
       throw err("PAYMENT_METHOD_REQUIRED", 402, "Add a payment method first");
     }
@@ -140,7 +199,11 @@ export const paymentsService = {
       throw err("PAYMENT_INTENT_MISSING", 409);
     }
 
-    await stripe.paymentIntents.capture(payment.stripePaymentIntentId);
+    // TODO(EXPEDITOO-TESTING): MOCK_PAYMENTS — replace with SetupIntent confirmation + amount_capturable_updated webhook handling (see docs/TESTING_MOCKS.md).
+    // A mock hold has nothing at Stripe to capture; the row alone advances.
+    if (!isMockIntent(payment.stripePaymentIntentId)) {
+      await stripe.paymentIntents.capture(payment.stripePaymentIntentId);
+    }
 
     const [captured] = await db
       .update(payments)
@@ -166,7 +229,12 @@ export const paymentsService = {
       throw err("PAYMENT_ALREADY_CAPTURED", 409, "Refund instead of release");
     }
 
-    if (payment.stripePaymentIntentId) {
+    // TODO(EXPEDITOO-TESTING): MOCK_PAYMENTS — replace with SetupIntent confirmation + amount_capturable_updated webhook handling (see docs/TESTING_MOCKS.md).
+    // A mock hold has nothing at Stripe to cancel; only the row is released.
+    if (
+      payment.stripePaymentIntentId &&
+      !isMockIntent(payment.stripePaymentIntentId)
+    ) {
       await stripe.paymentIntents.cancel(payment.stripePaymentIntentId);
     }
 

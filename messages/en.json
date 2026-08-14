@@ -44,7 +44,9 @@
       "myBids": "My Bids",
       "jobs": "Jobs",
       "myOffers": "My offers",
-      "deliveries": "Deliveries"
+      "deliveries": "Deliveries",
+      "fleet": "Fleet",
+      "application": "Application"
     },
     "categories": {
       "electronics": "Electronics",
@@ -575,48 +577,40 @@
   "deliveries": {
     "title": "Shipments",
     "tabs": {
-      "all": "All",
       "active": "Active",
-      "completed": "Completed",
-      "noIncoming": "No active deliveries",
-      "noIncomingDesc": "Your active deliveries will appear here.",
-      "noOutgoing": "No completed deliveries",
-      "noOutgoingDesc": "Your completed deliveries will appear here."
-    },
-    "status": {
-      "pending": "Pending",
-      "confirmed": "Confirmed",
-      "pickedUp": "Picked Up",
-      "inTransit": "In Transit",
-      "delivered": "Delivered",
-      "cancelled": "Cancelled"
+      "past": "Past",
+      "noActive": "No active deliveries",
+      "noActiveDesc": "Shipments in progress will appear here once a carrier is selected.",
+      "noPast": "No past deliveries",
+      "noPastDesc": "Delivered and cancelled shipments will appear here."
     },
     "card": {
       "scheduled": "Scheduled: {date}",
       "created": "Created: {date}",
-      "defaultTitle": "Shipment",
-      "awaitingDriver": "Awaiting driver"
+      "defaultTitle": "Shipment"
     },
     "details": {
-      "from": "From",
-      "to": "To",
-      "weight": "Weight",
-      "dimensions": "Dimensions",
-      "price": "Price",
       "driver": "Driver",
-      "estimatedDelivery": "Estimated Delivery",
-      "reviews": "{count} reviews"
+      "agreedPrice": "Agreed price",
+      "tracking": "Tracking",
+      "route": "Route",
+      "pickup": "Pickup",
+      "dropoff": "Dropoff",
+      "carrier": "Carrier",
+      "shipper": "Shipper",
+      "cancellationReason": "Cancellation reason",
+      "proofOfDelivery": "View proof of delivery"
     },
     "buttons": {
-      "contactDriver": "Contact Driver",
       "cancelShipment": "Cancel Shipment",
-      "modifyShipment": "Modify",
       "keepShipment": "Keep Shipment",
       "confirmCancellation": "Confirm Cancellation",
       "cancelling": "Cancelling...",
-      "rateDriver": "Rate Driver",
-      "rateClient": "Rate Client",
-      "reviewed": "Reviewed"
+      "reviewed": "Reviewed",
+      "contactCarrier": "Contact carrier",
+      "contactShipper": "Contact shipper",
+      "rateCarrier": "Rate carrier",
+      "rateShipper": "Rate shipper"
     },
     "dialogs": {
       "cancel": {
@@ -628,12 +622,30 @@
     },
     "events": {
       "PENDING": "Shipment created",
-      "PRICE_PROPOSED": "Price proposed",
       "ASSIGNED": "Driver assigned",
       "PICKED_UP": "Package picked up",
       "IN_TRANSIT": "In transit",
       "DELIVERED": "Delivered",
       "CANCELLED": "Cancelled"
+    },
+    "errors": {
+      "loadFailed": "Could not load your deliveries",
+      "contactFailed": "Could not start the conversation",
+      "notFound": "Shipment not found",
+      "notFoundDesc": "This shipment does not exist or you do not have access to it."
+    },
+    "shipmentStatus": {
+      "PENDING": "Pending",
+      "ASSIGNED": "Assigned",
+      "PICKED_UP": "Picked up",
+      "IN_TRANSIT": "In transit",
+      "DELIVERED": "Delivered",
+      "CANCELLED": "Cancelled"
+    },
+    "cancelFeedback": {
+      "success": "Shipment cancelled — the held payment was released",
+      "requiresSupport": "The goods are already on the move — contact support to cancel",
+      "failed": "Could not cancel the shipment"
     }
   },
   "listing": {
@@ -670,6 +682,14 @@
       "handling": "No handling assistance",
       "signature": "Signature not required",
       "packaging": "No custom packaging included"
+    },
+    "bid": {
+      "becomeCarrierTitle": "Want to bid on jobs like this?",
+      "becomeCarrierDescription": "Carriers compete on price and ETA, and the shipper picks the winner. Apply once, then bid on every job.",
+      "becomeCarrierCta": "Become a carrier",
+      "notApprovedTitle": "Your carrier application isn't approved yet",
+      "notApprovedDescription": "Bidding unlocks as soon as an operator approves your application. Check its status to see what's missing.",
+      "notApprovedCta": "View my application"
     }
   },
   "create": {
@@ -882,33 +902,27 @@
     },
     "dashboard": {
       "title": "Driver Dashboard",
-      "availableJobs": "Find shipments and manage your deliveries",
-      "myDeliveries": "My Deliveries",
-      "earnings": "Earnings",
       "stats": {
-        "totalDeliveries": "Total Deliveries",
-        "completedShipments": "Completed shipments",
-        "totalEarnings": "Total Earnings",
-        "fromDeliveries": "From completed deliveries",
-        "successRate": "Success Rate",
-        "basedOnAssignments": "Based on {count} assignments"
+        "assigned": "Awaiting pickup",
+        "assignedHint": "Runs assigned to you",
+        "inProgress": "On the road",
+        "inProgressHint": "Picked up or in transit",
+        "delivered": "Delivered",
+        "deliveredHint": "Completed runs"
       },
       "activeDeliveries": {
         "title": "Active Deliveries",
         "empty": "No active deliveries at the moment.",
-        "earnings": "Earnings",
         "details": "Details",
-        "defaultTitle": "Shipment"
-      }
+        "defaultTitle": "Shipment",
+        "flexible": "Flexible"
+      },
+      "subtitle": "Your assigned deliveries at a glance"
     },
     "shipments": {
       "title": "Shipments",
       "defaultTitle": "Shipment",
-      "subtitle": "Browse and bid on available shipments",
-      "tabs": {
-        "available": "Available Shipments",
-        "myShipments": "My Shipments"
-      },
+      "subtitle": "Track and update your assigned deliveries",
       "empty": {
         "title": "No shipments",
         "description": "No shipments found matching your criteria."
@@ -916,388 +930,250 @@
       "filters": {
         "placeholder": "Filter by status",
         "all": "All",
-        "waiting": "Waiting",
-        "approved": "Approved",
         "active": "Active",
         "completed": "Done",
-        "cancelled": "Cancelled"
+        "cancelled": "Cancelled",
+        "assigned": "Assigned"
       },
-      "proposals": {
-        "title": "Available Shipments",
-        "searchPlaceholder": "Search by city...",
-        "viewAndPropose": "View & Propose",
-        "defaultTitle": "Shipment",
-        "empty": {
-          "title": "No shipments",
-          "description": "No available shipments found matching your criteria."
-        }
-      }
+      "flexible": "Flexible"
     },
     "shipmentDetail": {
       "notFound": "Shipment not found",
       "goBack": "Go Back",
       "shipmentNumber": "Shipment #",
       "shipmentDetails": "Shipment Details",
-      "budget": "Budget",
       "route": "Route",
       "pickup": "Pickup",
       "dropoff": "Dropoff",
-      "date": "Date",
       "weight": "Weight",
       "dimensions": "Dimensions",
       "description": "Description",
-      "flexible": "Flexible"
+      "flexible": "Flexible",
+      "scheduledPickup": "Scheduled pickup",
+      "scheduledDelivery": "Scheduled delivery",
+      "cargo": "Cargo",
+      "quantity": "Quantity",
+      "fragile": "Fragile",
+      "needsHelp": "Loading help required",
+      "timeline": "History",
+      "cancellationReason": "Cancellation reason"
     },
     "actions": {
-      "status": "Status",
       "actions": "Actions",
-      "proposalSubmitted": "Proposal Submitted",
-      "proposalSubmittedDesc": "You have submitted a proposal for this shipment. Wait for the sender to review it.",
-      "backToShipments": "Back to Shipments",
-      "awaitingPayment": "Awaiting Payment",
-      "awaitingPaymentDesc": "You have been assigned to this shipment. The buyer must complete payment before you can pick up the package.",
       "confirmPickup": "Confirm Pickup",
       "updating": "Updating...",
-      "paymentNotConfirmed": "If payment is not yet confirmed, the button above will show an error.",
       "navigateToPickup": "Navigate to Pickup",
       "navigateToDropoff": "Navigate to Dropoff",
       "inTransit": "In Transit",
       "inTransitDesc": "Package is in transit. Update status when delivered.",
-      "startJourney": "Start Journey",
-      "confirmDelivery": "Confirm Delivery",
-      "uploadProof": "Upload Proof of Delivery",
       "deliveryCompleted": "Delivery Completed",
-      "deliveryCompletedDesc": "Great job! This shipment has been delivered."
-    },
-    "proposalForm": {
-      "submitProposal": "Submit Proposal",
-      "referencePrice": "Reference Price",
-      "suggested": "Suggested",
-      "baseDistance": "Base + Distance",
-      "weightVolume": "Weight + Volume",
-      "platformFee": "Platform Fee",
-      "useThisPrice": "Use This Price",
-      "use": "Use",
-      "unableToCalculate": "Unable to calculate reference price",
-      "yourPrice": "Your Price",
-      "yourProposedPrice": "Your Proposed Price (€)",
-      "priceDescription": "Enter your price. Consider the reference price above.",
-      "estimatedDelivery": "Estimated Delivery",
-      "estimatedDeliveryOptional": "Estimated Delivery (Optional)",
-      "estimatedDeliveryDate": "Estimated Delivery Date (Optional)",
-      "deliveryDescription": "When do you estimate to deliver? This helps the buyer plan.",
-      "notes": "Notes (Optional)",
-      "notesPlaceholder": "Add any additional details or conditions...",
-      "submitting": "Submitting...",
-      "submit": "Submit Proposal",
-      "cancel": "Cancel",
-      "cancelGoBack": "Cancel / Go Back",
-      "priceRequired": "Price is required",
-      "successMessage": "Proposal submitted successfully!",
-      "alreadySubmitted": "You have already submitted a proposal for this shipment.",
-      "errorMessage": "Failed to submit proposal. Please try again.",
-      "pickDate": "Pick a date"
+      "deliveryCompletedDesc": "Great job! This shipment has been delivered.",
+      "pendingTitle": "Awaiting dispatch",
+      "pendingDesc": "This run has not been assigned yet.",
+      "assignedTitle": "Ready for pickup",
+      "assignedDesc": "Head to the pickup address and confirm once the load is on board.",
+      "pickedUpTitle": "Load on board",
+      "pickedUpDesc": "Start the run when you leave the pickup location.",
+      "startTransit": "Start transit",
+      "deliverWithPhoto": "Confirm delivery with photo",
+      "markDelivered": "Mark delivered without photo",
+      "podHint": "A photo of the delivered load closes the run and protects you in a dispute.",
+      "uploadingProof": "Uploading proof...",
+      "proofUploaded": "Delivery confirmed",
+      "statusUpdated": "Status updated",
+      "viewProof": "View proof of delivery",
+      "cancelledTitle": "Delivery cancelled",
+      "cancelledDesc": "This run was cancelled. No further action is needed.",
+      "errors": {
+        "staleStatus": "This delivery has moved on. Refresh to see its current state.",
+        "forbidden": "You are not allowed to update this delivery.",
+        "notFound": "Delivery not found.",
+        "podNotInTransit": "Proof of delivery can only be added while in transit.",
+        "invalidFile": "The proof of delivery must be a photo.",
+        "generic": "Something went wrong. Please try again."
+      }
     },
     "apply": {
       "title": "Become a Driver",
       "description": "Join our network of transporters and start earning money.",
       "requirements": "Requirements",
       "submit": "Submit Application"
+    },
+    "status": {
+      "PENDING": "Pending",
+      "ASSIGNED": "Assigned",
+      "PICKED_UP": "Picked up",
+      "IN_TRANSIT": "In transit",
+      "DELIVERED": "Delivered",
+      "CANCELLED": "Cancelled"
     }
   },
   "marketing": {
+    "banner": {
+      "text": "Buying at auction? Your lots travel with Expedion, our buyer app.",
+      "cta": "Open Expedion →"
+    },
     "navbar": {
-      "login": "Sign In",
-      "signup": "Sign Up",
-      "getStarted": "Get Started",
-      "openApp": "Open App"
+      "howItWorks": "How it works",
+      "jobs": "Open jobs",
+      "platform": "Platform",
+      "login": "Log in",
+      "openApp": "Open app",
+      "becomeCarrier": "Become a carrier",
+      "themeLabel": "Theme",
+      "langLabel": "Language",
+      "themeLight": "Light",
+      "themeDark": "Dark",
+      "themeSystem": "System"
     },
     "hero": {
-      "badge": "Now available in France",
-      "titleLine1": "Bid, Ship and Win.",
-      "titleLine2": "Your All-in-One Marketplace.",
-      "subtitle": "Seamlessly ship your packages and discover amazing deals in our auctions. Expeditoo is the ultimate platform for logistics and online bidding in France.",
-      "primaryCta": "Send a parcel",
-      "secondaryCta": "Explore Auctions",
-      "trustedBy": "Trusted by 15,000+ users across France",
-      "rating": "4.9/5 average rating",
-      "form": {
-        "from": "From",
-        "to": "To",
-        "placeholder": "City or address",
-        "cta": "Get a Price"
-      }
+      "badge": "The carrier network of the Expedion group",
+      "titleLine1": "The jobs come to you.",
+      "titleLine2": "You set the price.",
+      "subtitle": "When Expedion's own fleet is full, the job is posted here automatically. Bid your price, win the run, deliver, get paid within 7 days. No prospecting, ever.",
+      "step1": "A job opens",
+      "step2": "You underbid",
+      "step3": "Deliver, paid in 7 days",
+      "primaryCta": "Join the network",
+      "secondaryCta": "See open jobs"
+    },
+    "bidCard": {
+      "fromExpedion": "FROM EXPEDION",
+      "closes": "CLOSES",
+      "item": "Commode Louis XV, 62 kg",
+      "details": "Pickup before 22 Aug · 3rd floor, lift · packed by Expedion",
+      "bestOffer": "Best offer",
+      "yourOffer": "Your offer",
+      "offers": "Offers",
+      "leading": "Your offer is in the lead",
+      "bidCta": "Bid in euros, all-in",
+      "bidInputLabel": "Your offer in euros",
+      "insured": "INSURED BY EXPEDION · PAID WITHIN 7 DAYS"
     },
     "stats": {
-      "deliveries": "Deliveries Completed",
-      "drivers": "Verified Drivers",
-      "auctions": "Active Auctions",
-      "users": "Satisfied Users"
-    },
-    "whatToShip": {
-      "badge": "Categories",
-      "title": "What you can ship",
-      "subtitle": "From small parcels to bulky items, find a courier for anything.\nDiscover these items and more in our auctions!",
-      "items": {
-        "furniture": {
-          "name": "Furniture",
-          "desc": "Sofas, tables, chairs & more"
-        },
-        "carParts": {
-          "name": "Car Parts",
-          "desc": "Wheels, engines & accessories"
-        },
-        "electronics": {
-          "name": "Electronics",
-          "desc": "Gadgets & tech devices"
-        },
-        "appliances": {
-          "name": "Appliances",
-          "desc": "Home appliances"
-        },
-        "sports": {
-          "name": "Sports",
-          "desc": "Sports equipment"
-        },
-        "music": {
-          "name": "Music",
-          "desc": "Instruments & audio"
-        },
-        "pets": {
-          "name": "Pets",
-          "desc": "Pet supplies"
-        },
-        "more": {
-          "name": "And More...",
-          "desc": "Anything else you need"
-        }
-      }
+      "jobsPerMonth": "Jobs posted per month",
+      "timeToAward": "Average time to award",
+      "emptyKm": "Empty kilometres filled",
+      "guaranteedPayment": "Guaranteed payment"
     },
     "howItWorks": {
-      "badge": "Simple Process",
-      "title": "How it works?",
-      "tabs": {
-        "sender": "I'm sending",
-        "courier": "I'm carrying"
+      "eyebrow": "HOW IT WORKS",
+      "title": "One source of jobs: Expedion orders",
+      "intro": "No marketplace to browse, no goods auctions. Every job is a real, packed, insured Expedion shipment that our own fleet could not take.",
+      "step1": {
+        "title": "A job is posted automatically",
+        "desc": "A client ordered on Expedion and no pool driver is free. Route, size, photos and deadline are already in the listing."
       },
-      "sender": {
-        "step1": {
-          "title": "Post your ad",
-          "desc": "Describe what you need to send in a few clicks."
-        },
-        "step2": {
-          "title": "Choose a courier",
-          "desc": "Receive proposals from couriers and choose the one you prefer."
-        },
-        "step3": {
-          "title": "Arrange the details",
-          "desc": "Chat with the courier to arrange the pickup and delivery."
-        },
-        "step4": {
-          "title": "Receive your item",
-          "desc": "Your item is delivered to its destination safely."
-        }
+      "step2": {
+        "title": "You bid your price",
+        "desc": "Reverse auction: the lowest serious offer leads. Bid what the run is worth to you, all-in."
       },
-      "courier": {
-        "step1": {
-          "title": "Find a shipment",
-          "desc": "Find shipments on your route."
-        },
-        "step2": {
-          "title": "Make a proposal",
-          "desc": "Propose a price to the sender."
-        },
-        "step3": {
-          "title": "Arrange the details",
-          "desc": "Chat with the sender to arrange the pickup and delivery."
-        },
-        "step4": {
-          "title": "Deliver and get paid",
-          "desc": "Deliver the item and receive your payment."
-        }
+      "step3": {
+        "title": "The client picks, or Expedion does",
+        "desc": "At closing, the winning carrier is booked instantly. Pickup slot is already reserved with the auction house."
+      },
+      "step4": {
+        "title": "Deliver, one status feed",
+        "desc": "Your updates feed the same tracking the buyer sees in Expedion. Proof of delivery in, payment out within 7 days."
+      }
+    },
+    "jobBoard": {
+      "eyebrow": "OPEN RIGHT NOW",
+      "title": "Today's board",
+      "joinCta": "Join to see all 27 jobs →",
+      "bestOffer": "Best offer",
+      "closes": "CLOSES {time}",
+      "bid": "Bid",
+      "anonymised": "Listings shown anonymised. Full addresses unlock once you are verified.",
+      "jobs": {
+        "one": "Commode Louis XV, 62 kg",
+        "two": "Pair of armchairs, 34 kg",
+        "three": "Gilt mirror, fragile, 18 kg"
       }
     },
     "advantages": {
-      "badge": "Features",
-      "title": "Why choose Expeditoo?",
-      "items": {
-        "economic": {
-          "title": "Economical",
-          "description": "Up to 70% cheaper than traditional carriers"
-        },
-        "ecological": {
-          "title": "Ecological",
-          "description": "Optimize existing routes and reduce carbon footprint"
-        },
-        "secure": {
-          "title": "Secure",
-          "description": "Secure payments and included insurance"
-        },
-        "community": {
-          "title": "Community",
-          "description": "Join a trusted community"
-        }
+      "eyebrow": "WHY CARRIERS STAY",
+      "title": "Full trucks, no chasing",
+      "item1": {
+        "title": "Fill your return legs",
+        "desc": "Filter jobs along routes you already drive. A Bordeaux–Paris return stops being empty kilometres."
+      },
+      "item2": {
+        "title": "Clients already signed",
+        "desc": "Expedion sells, quotes and packs. You never negotiate with the end client, you just drive."
+      },
+      "item3": {
+        "title": "Paid within 7 days",
+        "desc": "The group pays you, not the client. Proof of delivery in, transfer out, guaranteed."
+      },
+      "item4": {
+        "title": "Insurance already on",
+        "desc": "Lots are covered ad valorem by Expedion from pickup to signature. Your liability is framed in the CGV."
       }
     },
-    "showcase": {
-      "badge": "See It In Action",
-      "title": "Experience Expeditoo",
-      "subtitle": "Discover how our platform makes shipping and auctions seamless across France",
-      "features": {
-        "smart": {
-          "title": "Smart Auction Bidding",
-          "desc": "Place bids and track auctions in real-time"
-        },
-        "msg": {
-          "title": "Instant Messaging",
-          "desc": "Chat directly with sellers and couriers"
-        },
-        "track": {
-          "title": "Delivery Progress",
-          "desc": "Track pickup and delivery status updates"
-        }
+    "platform": {
+      "eyebrow": "100% WEB PLATFORM",
+      "title": "Open a tab, bid. Nothing to install.",
+      "intro": "Expeditoo is built as a modern web app (Next.js). For a carrier business, that choice is deliberate:",
+      "point1": {
+        "title": "Works everywhere, instantly.",
+        "desc": "Cab phone, depot PC, dispatcher's laptop: same URL, no app store, no version to update."
       },
-      "ui": {
-        "liveAuction": "Live Auction",
-        "delivered": "Package Delivered",
-        "justNow": "Just now",
-        "mobileApp": "Mobile App"
+      "point2": {
+        "title": "Live auctions.",
+        "desc": "Bids refresh server-side the second they land — what you see is the real state of the board."
       },
-      "cta": {
-        "start": "Get Started Free",
-        "demo": "Watch Demo"
+      "point3": {
+        "title": "Fast on weak networks.",
+        "desc": "Pages are rendered on the server (SSR), so the board loads readable in under a second on an aire d'autoroute."
+      },
+      "point4": {
+        "title": "Easy to share.",
+        "desc": "A job is a link. Forward it to a colleague, they see it without an account."
+      },
+      "note": "Your clients, on their side, use the Expedion mobile app (Flutter, iOS + Android).",
+      "noteCta": "See Expedion →",
+      "preview": {
+        "board": "JOB BOARD",
+        "live": "LIVE",
+        "accepted": "Offer accepted — {route} for {price}",
+        "caption": "Illustrative preview — sample data, not live jobs."
       }
     },
     "testimonials": {
-      "badge": "Testimonials",
-      "title": "Loved by Thousands",
-      "subtitle": "See what our French community has to say about their experience",
-      "items": {
-        "sarah": {
-          "name": "Sarah L.",
-          "role": "Frequent Seller",
-          "comment": "Incredibly simple and effective! I sent a large piece of furniture across France without any hassle. The couriers are professional and the tracking is excellent.",
-          "highlight": "50+ successful deliveries"
-        },
-        "michel": {
-          "name": "Michel D.",
-          "role": "Verified Courier",
-          "comment": "As a courier, Expeditoo has been a game-changer. I can easily find shipments on my routes and make extra money. The payment system is quick and reliable.",
-          "highlight": "€2,000+ earned monthly"
-        },
-        "julie": {
-          "name": "Julie P.",
-          "role": "Auction Winner",
-          "comment": "Found amazing deals on vintage furniture. The bidding system is intuitive and the items always arrive in perfect condition. Highly recommend!",
-          "highlight": "20+ auctions won"
-        }
+      "one": {
+        "quote": "“My Paris–Bordeaux returns used to be empty. Now I check the board on Sunday evening and the week is set.”",
+        "author": "Transports Vidal",
+        "role": "Carrier, Gironde · 214 jobs"
+      },
+      "two": {
+        "quote": "“Everything arrives packed and photographed by Expedion. We load, we drive, we get paid the same week.”",
+        "author": "Sophie L.",
+        "role": "Owner-driver, Orléans · 88 jobs"
       }
     },
     "cta": {
-      "badge": "Start for free today",
-      "title": "Ready to Revolutionize Your Logistics?",
-      "subtitle": "Join thousands of users shipping and trading with EXPEDITOO across France. No credit card required.",
-      "button": "Get Started Free",
-      "trustText": "Trusted by 15,000+ users in France • No credit card required • Cancel anytime"
+      "title": "Verified in 24 hours. Bidding the same day.",
+      "subtitle": "Kbis, insurance, licence: upload three documents and open your first board.",
+      "primary": "Become a carrier"
     },
     "footer": {
-      "tagline": "The future of logistics in France, today.",
-      "availableIn": "Available exclusively in France 🇫🇷",
-      "rights": "All rights reserved.",
-      "product": {
-        "title": "Product",
-        "features": "Features",
-        "auctions": "Auctions",
-        "shipping": "Shipping",
-        "pricing": "Pricing"
-      },
-      "company": {
-        "title": "Company",
-        "about": "About",
-        "careers": "Careers",
-        "blog": "Blog",
-        "press": "Press"
-      },
-      "support": {
-        "title": "Support",
-        "help": "Help Center",
-        "contact": "Contact",
-        "faq": "FAQ",
-        "community": "Community"
-      },
-      "legal": {
-        "title": "Legal",
-        "terms": "Terms of Service",
-        "privacy": "Privacy Policy",
-        "cookie": "Cookie Policy"
-      }
-    },
-    "pricing": {
-      "title": "Transparent Pricing",
-      "subtitle": "Choose the plan that fits your needs. Whether you're selling items or delivering them, we have a clear structure for you.",
-      "disclaimer": "Indicative pricing - Subject to final confirmation",
-      "sellers": {
-        "title": "For Sellers",
-        "subtitle": "List your items for auction or direct sale",
-        "planTitle": "Commission Model",
-        "planDesc": "Pay only when you sell",
-        "price": "5%",
-        "priceUnit": "/ sale",
-        "features": {
-          "unlimited": "Unlimited listings",
-          "auction": "Auction & Fixed Price support",
-          "support": "Basic support",
-          "payments": "Secure payments"
-        },
-        "cta": "Start Selling",
-        "mostPopular": "MOST POPULAR"
-      },
-      "drivers": {
-        "title": "For Drivers",
-        "subtitle": "Earn money delivering shipments",
-        "planTitle": "Transporter Plan",
-        "planDesc": "Professional tools for logistics",
-        "price": "10%",
-        "priceUnit": "/ job",
-        "features": {
-          "allRequests": "Access to all shipment requests",
-          "tools": "Route optimization tools",
-          "payout": "Instant payout eligibility",
-          "badge": "Verified Driver Badge"
-        },
-        "cta": "Become a Driver"
-      },
-      "detailed": {
-        "title": "Detailed Fee Structure (Indicative)",
-        "headers": {
-          "feature": "Feature",
-          "saver": "Saver",
-          "priority": "Priority"
-        },
-        "rows": {
-          "duration": {
-            "name": "Listing Duration",
-            "col1": "7 Days",
-            "col2": "30 Days"
-          },
-          "photos": {
-            "name": "Photos",
-            "col1": "Up to 5",
-            "col2": "Up to 20"
-          },
-          "cap": {
-            "name": "Commission Cap",
-            "col1": "€50 max",
-            "col2": "€200 max"
-          },
-          "highlighting": {
-            "name": "Highlighting",
-            "col1": "-",
-            "col2": "Included"
-          }
-        },
-        "footer": "* This table is for illustrative purposes. Final pricing structure is currently being updated."
-      }
+      "tagline": "The carrier network of the Expedion group. Auction-house shipments, bid by verified carriers.",
+      "carriers": "Carriers",
+      "openJobs": "Open jobs",
+      "howItWorks": "How it works",
+      "verification": "Verification",
+      "platform": "Platform",
+      "group": "Group",
+      "expedionBuyers": "Expedion — auction buyers",
+      "auctionHouses": "Auction houses",
+      "contact": "Contact",
+      "legal": "Legal",
+      "terms": "Terms",
+      "legalNotice": "Legal notice",
+      "privacy": "Privacy policy",
+      "copyright": "© 2026 Expeditoo — Expedion Group",
+      "sameGroup": "Expedion and Expeditoo are part of the same company"
     }
   },
   "help": {
@@ -1470,41 +1346,7 @@
     },
     "drivers": {
       "title": "Drivers",
-      "subtitle": "Manage drivers and applications",
-      "table": {
-        "applicant": "Applicant",
-        "vehicle": "Vehicle",
-        "licensePlate": "License Plate",
-        "siret": "SIRET",
-        "verified": "Verified",
-        "pending": "Pending",
-        "date": "Date",
-        "status": "Status",
-        "actions": "Actions",
-        "searchPlaceholder": "Search applications..."
-      },
-      "detail": {
-        "title": "Application Details",
-        "applicant": "Applicant",
-        "submissionDate": "Submission Date",
-        "currentStatus": "Current Status",
-        "approve": "Approve",
-        "reject": "Reject",
-        "pending": "Pending",
-        "vehicleInfo": "Vehicle Information",
-        "vehicleType": "Vehicle Type",
-        "licensePlate": "License Plate",
-        "licenseNumber": "License Number",
-        "siret": "SIRET",
-        "companyName": "Company Name",
-        "proposal": "Proposal",
-        "close": "Close",
-        "approvedTitle": "Application Approved",
-        "rejectedTitle": "Application Rejected",
-        "statusUpdatedDesc": "Status has been updated",
-        "error": "Error",
-        "errorDesc": "Failed to update status"
-      }
+      "subtitle": "Manage drivers and applications"
     },
     "support": {
       "title": "Support Chats",
@@ -1524,7 +1366,10 @@
       "time": {
         "noMessages": "No messages",
         "justNow": "Just now",
-        "yesterday": "Yesterday"
+        "yesterday": "Yesterday",
+        "minAgo": "{count}m ago",
+        "hoursAgo": "{count}h ago",
+        "daysAgo": "{count}d ago"
       }
     },
     "roles": {
@@ -1572,6 +1417,107 @@
         "cancel": "Cancel",
         "processing": "Processing...",
         "confirm": "Confirm Refund"
+      }
+    },
+    "carriers": {
+      "title": "Carrier Applications",
+      "subtitle": "Review carrier applications and manage carrier accounts",
+      "table": {
+        "company": "Company",
+        "applicant": "Applicant",
+        "city": "City",
+        "fleet": "Fleet",
+        "vehicleCount": "{count, plural, =0 {No vehicles} one {# vehicle} other {# vehicles}}",
+        "documents": "Documents",
+        "documentCount": "{count, plural, =0 {No documents} one {# document} other {# documents}}",
+        "date": "Date",
+        "status": "Status",
+        "actions": "Actions",
+        "searchPlaceholder": "Search by company, SIRET or applicant...",
+        "filterLabel": "Filter by status",
+        "empty": {
+          "title": "No applications",
+          "description": "There are no carrier applications with this status."
+        }
+      },
+      "status": {
+        "draft": "Draft",
+        "submitted": "Submitted",
+        "under_review": "Under review",
+        "approved": "Approved",
+        "rejected": "Rejected",
+        "suspended": "Suspended"
+      },
+      "detail": {
+        "title": "Carrier Application",
+        "applicant": "Applicant",
+        "submissionDate": "Submission date",
+        "currentStatus": "Current status",
+        "company": "Company",
+        "companyName": "Company name",
+        "siret": "SIRET",
+        "vatNumber": "VAT number",
+        "legalForm": "Legal form",
+        "contactPhone": "Contact phone",
+        "address": "Address",
+        "banking": "Banking",
+        "iban": "IBAN",
+        "bic": "BIC",
+        "notProvided": "Not provided",
+        "fleet": "Fleet",
+        "noVehicles": "No vehicles declared",
+        "inactive": "Inactive",
+        "maxWeight": "{weight} kg max",
+        "documents": "Documents",
+        "noDocuments": "No documents uploaded",
+        "view": "View",
+        "expiresOn": "Expires {date}",
+        "documentStatus": {
+          "pending": "Pending",
+          "accepted": "Accepted",
+          "rejected": "Rejected"
+        },
+        "rejectionReason": "Rejection reason",
+        "suspensionReason": "Suspension reason",
+        "approve": "Approve",
+        "reject": "Reject",
+        "suspend": "Suspend",
+        "close": "Close",
+        "cancel": "Cancel",
+        "confirmReject": "Confirm rejection",
+        "confirmSuspend": "Confirm suspension",
+        "rejectReasonLabel": "Rejection reason (sent to the carrier)",
+        "suspendReasonLabel": "Suspension reason (sent to the carrier)",
+        "reasonPlaceholder": "Explain the decision...",
+        "documentOpenFailed": "Could not open the document"
+      },
+      "vehicleTypes": {
+        "motorcycle": "Motorcycle",
+        "car": "Car",
+        "van": "Van",
+        "truck_3_5t": "Truck 3.5 t",
+        "truck_7_5t": "Truck 7.5 t",
+        "truck_19t": "Truck 19 t",
+        "semi_trailer": "Semi-trailer",
+        "flatbed": "Flatbed",
+        "refrigerated": "Refrigerated"
+      },
+      "documentKinds": {
+        "cni_recto": "ID card (front)",
+        "cni_verso": "ID card (back)",
+        "driving_licence": "Driving licence",
+        "kbis": "KBIS extract",
+        "insurance_certificate": "Insurance certificate",
+        "transport_licence": "Transport licence",
+        "rib": "Bank details (RIB)"
+      },
+      "toasts": {
+        "approved": "Application approved",
+        "rejected": "Application rejected",
+        "suspended": "Carrier suspended",
+        "approveFailed": "Failed to approve: {message}",
+        "rejectFailed": "Failed to reject: {message}",
+        "suspendFailed": "Failed to suspend: {message}"
       }
     }
   },
@@ -1628,6 +1574,196 @@
         "ratingRequired": "Please select at least 1 star",
         "commentTooLong": "Comment is too long"
       }
+    }
+  },
+  "carrier": {
+    "application": {
+      "title": "Carrier application",
+      "subtitle": "Complete your file to start bidding on transport jobs.",
+      "withdraw": "Withdraw and edit",
+      "withdrawing": "Withdrawing…",
+      "manageFleet": "Manage my fleet",
+      "form": {
+        "title": "Company details",
+        "description": "The legal identity of your transport company.",
+        "companyName": "Company name",
+        "siret": "SIRET",
+        "vatNumber": "VAT number (optional)",
+        "legalForm": "Legal form (optional)",
+        "contactPhone": "Contact phone",
+        "addressLine": "Address",
+        "city": "City",
+        "postalCode": "Postal code",
+        "bio": "About your company (optional)",
+        "bioPlaceholder": "Routes, specialities, years of experience…",
+        "save": "Save",
+        "saving": "Saving…",
+        "errors": {
+          "companyName": "At least 2 characters",
+          "siret": "Enter a valid 14-digit SIRET",
+          "vat": "Format FRXX123456789",
+          "phone": "Enter a valid French phone number",
+          "addressLine": "Address is required",
+          "city": "City is required",
+          "postalCode": "5 digits"
+        }
+      },
+      "banner": {
+        "reasonLabel": "Reason",
+        "submitted": {
+          "title": "Application submitted",
+          "description": "Our team is reviewing your file. You will be notified of the decision."
+        },
+        "under_review": {
+          "title": "Under review",
+          "description": "Our team is taking a closer look at your file."
+        },
+        "approved": {
+          "title": "You are an approved carrier",
+          "description": "You can bid on jobs. Keep your documents up to date."
+        },
+        "rejected": {
+          "title": "Application rejected",
+          "description": "Fix the points below and submit again."
+        },
+        "suspended": {
+          "title": "Account suspended",
+          "description": "Bidding is paused. Contact support for details."
+        }
+      },
+      "summary": {
+        "company": "Company",
+        "siret": "SIRET",
+        "phone": "Phone",
+        "address": "Address"
+      },
+      "documents": {
+        "title": "Documents",
+        "description": "Uploaded files stay private and are only reviewed by our team.",
+        "optionalTag": "(optional)",
+        "view": "View",
+        "upload": "Upload",
+        "replace": "Replace",
+        "uploading": "Uploading…",
+        "missing": "Not uploaded yet",
+        "expiryLabel": "Expiry date",
+        "expires": "Expires {date}",
+        "status": {
+          "pending": "Pending review",
+          "accepted": "Accepted",
+          "rejected": "Rejected"
+        },
+        "kinds": {
+          "cni_recto": "ID card — front",
+          "cni_verso": "ID card — back",
+          "driving_licence": "Driving licence",
+          "kbis": "Kbis extract",
+          "insurance_certificate": "Insurance certificate",
+          "transport_licence": "Transport licence",
+          "rib": "Bank details (RIB)"
+        }
+      },
+      "banking": {
+        "title": "Payout banking details",
+        "description": "Used to pay you after each delivery. We keep only the last 4 characters.",
+        "onFile": "On file: IBAN ····{iban} · BIC ····{bic}",
+        "iban": "IBAN",
+        "bic": "BIC",
+        "save": "Save",
+        "replace": "Replace",
+        "saving": "Saving…",
+        "errors": {
+          "iban": "Enter a valid IBAN",
+          "bic": "Enter a valid BIC"
+        }
+      },
+      "checklist": {
+        "title": "Before you can submit",
+        "documents": "All required documents uploaded",
+        "banking": "Banking details on file",
+        "vehicle": "At least one vehicle in your fleet",
+        "goToFleet": "Manage fleet",
+        "submit": "Submit for review",
+        "submitting": "Submitting…"
+      }
+    },
+    "fleet": {
+      "title": "My fleet",
+      "subtitle": "The vehicles you can bid with.",
+      "addVehicle": "Add a vehicle",
+      "active": "Active",
+      "inactive": "Inactive",
+      "activate": "Activate",
+      "deactivate": "Deactivate",
+      "remove": "Remove",
+      "capacity": "{kg} kg",
+      "dimensions": "{length} × {width} × {height} cm",
+      "empty": {
+        "title": "No vehicles yet",
+        "description": "Add your first vehicle to complete your carrier file."
+      },
+      "needApplication": {
+        "title": "Start your carrier application first",
+        "description": "Your fleet is attached to your carrier file.",
+        "cta": "Start my application"
+      },
+      "form": {
+        "title": "New vehicle",
+        "type": "Type",
+        "typePlaceholder": "Select a type",
+        "plate": "Plate number",
+        "make": "Make (optional)",
+        "model": "Model (optional)",
+        "year": "Year (optional)",
+        "maxWeightKg": "Max load (kg)",
+        "maxLengthCm": "Max length (cm, optional)",
+        "maxWidthCm": "Max width (cm, optional)",
+        "maxHeightCm": "Max height (cm, optional)",
+        "cancel": "Cancel",
+        "submit": "Add vehicle",
+        "saving": "Adding…",
+        "errors": {
+          "type": "Choose a vehicle type",
+          "plate": "Format AB-123-CD",
+          "weight": "Between 1 and 44 000 kg",
+          "year": "Enter a valid year",
+          "dimension": "Enter a positive number"
+        }
+      },
+      "types": {
+        "motorcycle": "Motorcycle",
+        "car": "Car",
+        "van": "Van",
+        "truck_3_5t": "Truck 3.5 t",
+        "truck_7_5t": "Truck 7.5 t",
+        "truck_19t": "Truck 19 t",
+        "semi_trailer": "Semi-trailer",
+        "flatbed": "Flatbed",
+        "refrigerated": "Refrigerated"
+      }
+    }
+  },
+  "myJobs": {
+    "title": "My jobs",
+    "postJob": "Post a job",
+    "empty": "No jobs yet",
+    "emptyDesc": "Post a transport job and carriers will start bidding.",
+    "emptyFiltered": "No jobs with this status",
+    "emptyFilteredDesc": "Try a different status filter.",
+    "loadFailed": "Could not load your jobs",
+    "offers": "{count, plural, =0 {No offers} one {# offer} other {# offers}}",
+    "posted": "Posted {date}",
+    "filters": {
+      "all": "All statuses"
+    },
+    "status": {
+      "draft": "Draft",
+      "open": "Open",
+      "awarded": "Awarded",
+      "in_progress": "In progress",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "expired": "Expired"
     }
   }
 }

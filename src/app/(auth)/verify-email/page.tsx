@@ -3,7 +3,8 @@
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Package, CheckCircle, XCircle, Mail } from "lucide-react";
+import { CheckCircle, XCircle, Mail } from "lucide-react";
+import { BrandMark } from "@/components/ui/brand-mark";
 import { useAuthActions } from "@/features/auth/hooks/useAuthActions";
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
@@ -66,9 +67,7 @@ function VerifyEmailContent() {
       >
         {/* Logo */}
         <div className="flex items-center justify-center gap-2 mb-8">
-          <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
-            <Package className="w-6 h-6 text-primary-foreground" />
-          </div>
+          <BrandMark size={40} />
           <span className="text-2xl font-bold text-foreground">EXPEDITOO</span>
         </div>
 
