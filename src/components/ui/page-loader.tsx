@@ -8,11 +8,6 @@ interface PageLoaderProps {
     size?: "sm" | "md" | "lg";
     /** Additional CSS classes for the container */
     className?: string;
-    /**
-     * Variant is now Deprecated as all layouts share the same structure.
-     * Kept optional for backward compatibility but ignored.
-     */
-    variant?: string;
 }
 
 const sizeMap = {
@@ -48,14 +43,13 @@ const loaderClass = "min-h-[calc(100vh-var(--loader-offset-mobile,8rem))] xl:min
  * Usage in components with loading states:
  * ```tsx
  * if (isLoading) {
- *   return <PageLoader variant="padded" />;
+ *   return <PageLoader />;
  * }
  * ```
  */
 export function PageLoader({
     size = "md",
     className = "",
-    // variant is ignored
 }: PageLoaderProps) {
     const { width, height } = sizeMap[size];
 

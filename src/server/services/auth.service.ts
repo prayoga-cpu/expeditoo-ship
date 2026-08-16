@@ -1,4 +1,7 @@
 import { Resend } from "resend";
+import { sql } from "drizzle-orm";
+
+import { db } from "@/db";
 import * as usersDAL from "@/server/dal/users.dal";
 import * as sessionsDAL from "@/server/dal/sessions.dal";
 
@@ -17,10 +20,12 @@ const resend = new Resend(process.env.RESEND_API_KEY);
  * Note: better-auth handles the actual user creation and email sending
  * This service handles additional business logic like role assignment
  */
-export async function handlePostSignup(userId: string, _email: string) {
+export async function handlePostSignup(userId: string, email: string) {
   try {
     // Assign default "buyer" role to new user
     await usersDAL.assignDefaultRole(userId);
+
+    await claimImportedExpedionQuotes(userId, email);
 
     return {
       success: true,
@@ -30,6 +35,45 @@ export async function handlePostSignup(userId: string, _email: string) {
   } catch (error) {
     console.error("[Auth Service] Post-signup error:", error);
     throw error;
+  }
+}
+
+/**
+ * Attaches Airtable-imported Expedion quotes to a newly created account.
+ *
+ * The import brought 4,591 historical quotes across, but 4,450 carried no UID
+ * column, so they are keyed `airtable:<recordId>` and no signed-in client can
+ * see them. Email is the only identifier the two systems share. Matching once
+ * at import time reached only the handful of clients who already had an
+ * account; doing it again here means each historical client picks up their own
+ * history the first time they sign up, rather than it staying invisible or
+ * needing a periodic sweep.
+ *
+ * Scoped to rows still bearing the `airtable:` key, so it can never move a
+ * quote that already belongs to someone. Failures are logged and swallowed:
+ * claiming old quotes is a nicety and must not be able to fail a signup.
+ */
+async function claimImportedExpedionQuotes(userId: string, email: string) {
+  const address = email?.trim().toLowerCase();
+  if (!address) return;
+
+  try {
+    const claimed = await db.execute(sql`
+      update expedion_quotes
+      set firebase_uid = ${userId}, user_id = ${userId}
+      where firebase_uid like 'airtable:%'
+        and email is not null
+        and lower(trim(email)) = ${address}
+      returning id
+    `);
+    const count = Array.from(claimed).length;
+    if (count > 0) {
+      console.log(
+        `[Auth Service] claimed ${count} imported Expedion quote(s) for ${userId}`
+      );
+    }
+  } catch (error) {
+    console.error("[Auth Service] Expedion quote claim failed:", error);
   }
 }
 

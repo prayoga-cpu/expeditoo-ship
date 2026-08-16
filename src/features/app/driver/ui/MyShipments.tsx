@@ -48,7 +48,7 @@ export function MyShipments() {
   const { shipments, isLoading } = useDriverShipments();
 
   if (isLoading) {
-    return <PageLoader variant="default" className="xl:min-h-screen" />;
+    return <PageLoader className="xl:min-h-screen" />;
   }
 
   const filteredShipments = shipments.filter((shipment) =>

@@ -10,7 +10,7 @@ export function useAdminDrivers() {
     setIsLoading(true);
     try {
       const queryParams = new URLSearchParams({
-        role: "transporter",
+        role: "driver",
         pageSize: "100", // TODO: Implement proper pagination
         search: searchQuery
       });
@@ -34,7 +34,7 @@ export function useAdminDrivers() {
           // Determine primary role for UI
           let role = "user";
           if (roles.includes("admin")) role = "admin";
-          else if (roles.includes("transporter") || roles.includes("driver"))
+          else if (roles.includes("driver") || roles.includes("carrier"))
             role = "driver";
           else if (roles.length > 0) role = roles[0];
 

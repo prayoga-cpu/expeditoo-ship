@@ -55,7 +55,7 @@ export function PaymentMethods() {
   };
 
   if (loading) {
-    return <PageLoader variant="padded" />;
+    return <PageLoader />;
   }
 
   return (

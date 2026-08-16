@@ -99,17 +99,8 @@ export function Profile() {
     setMounted(true);
   }, []);
 
-  // Detect context for responsive loading height
-  const pathname = usePathname();
-  const isDriver = pathname?.includes("/driver");
-  const isAdmin = pathname?.includes("/admin");
-
   if (!mounted || isLoading || isRolesLoading) {
-    return (
-      <PageLoader
-        variant={isAdmin ? "admin" : isDriver ? "driver" : "default"}
-      />
-    );
+    return <PageLoader />;
   }
 
   if (!user) {
@@ -357,22 +348,11 @@ export function Profile() {
   );
 }
 
+// /my-auctions, /my-bids and /earnings used to live here. None of the three
+// routes ever existed, so every user was shown three links that 404 — they were
+// v1 goods-marketplace leftovers. Bids now live at /carrier/offers, which the
+// nav already carries.
 const baseQuickLinks: { href: string; labelKey: string; icon: LucideIcon }[] = [
-  {
-    href: "/my-auctions",
-    labelKey: "myAuctions",
-    icon: Gavel,
-  },
-  {
-    href: "/my-bids",
-    labelKey: "myBids",
-    icon: Gavel,
-  },
-  {
-    href: "/earnings",
-    labelKey: "earnings",
-    icon: TrendingUp,
-  },
   {
     href: "/profile/reviews",
     labelKey: "myReviews",
@@ -493,8 +473,10 @@ function QuickLinks({ userRoles }: { userRoles?: string[] }) {
       icon: Truck,
     });
   } else {
+    // Was /become-driver, a route that never existed. Becoming a driver is the
+    // carrier application, which is also the "My application" nav entry.
     links.push({
-      href: "/become-driver",
+      href: "/carrier/application",
       labelKey: "becomeDriver",
       icon: Truck,
     });

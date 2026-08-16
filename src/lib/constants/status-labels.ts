@@ -65,12 +65,14 @@ export type NotificationTypeKey = keyof typeof NOTIFICATION_TYPE_LABELS;
 // User Role Labels
 // ========================================
 
+/** The canonical seven (`userRoleEnum`). Previously the v1 goods-marketplace set. */
 export const USER_ROLE_LABELS = {
-    buyer: "Buyer",
-    seller: "Seller",
-    auctioneer: "Auctioneer",
-    transporter: "Driver",
+    shipper: "Shipper",
+    carrier: "Carrier",
+    driver: "Driver",
     operator: "Operator",
+    support: "Support",
+    finance: "Finance",
     admin: "Administrator",
 } as const;
 

@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { offersDal } from "@/server/dal/offers.dal";
 import { listingsDal } from "@/server/dal/listings.dal";
 import { carriersDal } from "@/server/dal/carriers.dal";
+import { userHasRole } from "@/server/dal/users.dal";
 import { notificationsService } from "@/server/services/notifications.service";
 import { paymentsService } from "@/server/services/payments.service";
 import {
@@ -171,21 +172,38 @@ export const offersService = {
   },
 
   /**
-   * The shipper picks a winner. This is the money path: it commits the award,
+   * Someone picks a winner. This is the money path: it commits the award,
    * the shipment and the payment row atomically, then authorises Stripe
    * outside the transaction and compensates if that fails.
    *
    * Idempotent: re-accepting an already-accepted offer returns the existing
    * shipment rather than creating a second one.
    */
-  async acceptOffer(shipperUserId: string, offerId: string) {
+  async acceptOffer(actorUserId: string, offerId: string) {
     const existing = await offersDal.getById(offerId);
     if (!existing) throw err("OFFER_NOT_FOUND", 404);
 
     const listing = await listingsDal.getById(existing.listingId);
     if (!listing) throw err("LISTING_NOT_FOUND", 404);
-    if (listing.shipperId !== shipperUserId) {
-      throw err("FORBIDDEN_NOT_SHIPPER", 403);
+
+    // Who may award depends on where the job came from.
+    //
+    // A direct listing is awarded by the shipper who posted it. An escalated
+    // Expedion job is owned by a system account nobody signs into, so there is
+    // no shipper to do the picking — an operator awards in the client's place.
+    // Without this branch every escalated job would be unawardable.
+    if (listing.shipperId !== actorUserId) {
+      if (listing.origin !== "expedion") {
+        throw err("FORBIDDEN_NOT_SHIPPER", 403);
+      }
+
+      const [isOperator, isAdmin] = await Promise.all([
+        userHasRole(actorUserId, "operator"),
+        userHasRole(actorUserId, "admin"),
+      ]);
+      if (!isOperator && !isAdmin) {
+        throw err("FORBIDDEN_NOT_OPERATOR", 403);
+      }
     }
 
     // Idempotency: this offer already won, so return what that produced.
@@ -209,7 +227,10 @@ export const offersService = {
     let payment;
     try {
       payment = await paymentsService.authoriseForShipment({
-        shipperId: shipperUserId,
+        // The listing's shipper, not whoever clicked. When an operator awards
+        // an escalated job the two differ, and the payment belongs to the
+        // account that owns the job — never to the operator.
+        shipperId: listing.shipperId,
         shipmentId: result.shipment.id,
         listingId: listing.id,
         amountCents: existing.priceCents,

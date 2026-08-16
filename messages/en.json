@@ -31,7 +31,6 @@
     "navigation": {
       "home": "Home",
       "shipments": "Shipments",
-      "create": "Create",
       "messages": "Messages",
       "account": "Account",
       "profile": "Profile",
@@ -39,15 +38,11 @@
       "notifications": "Notifications",
       "logout": "Logout",
       "backToApp": "Back to App",
-      "createAuction": "Create Auction",
       "shipmentTracking": "Shipment Tracking",
-      "myBids": "My Bids",
       "jobs": "Jobs",
       "myOffers": "My offers",
       "deliveries": "Deliveries",
-      "fleet": "Fleet",
-      "application": "Application",
-      "myJobs": "My jobs"
+      "myApplication": "My application"
     },
     "categories": {
       "electronics": "Electronics",
@@ -89,43 +84,6 @@
       "daysAgo": "{count} days ago",
       "hoursAgo": "{count} hours ago",
       "minutesAgo": "{count} minutes ago"
-    }
-  },
-  "checkout": {
-    "title": "Secure Checkout",
-    "steps": {
-      "address": "Shipping Address",
-      "payment": "Payment Method"
-    },
-    "loadingAddresses": "Loading delivery details...",
-    "errors": {
-      "loadAddresses": "Could not load addresses"
-    },
-    "retry": "Retry",
-    "noAddresses": {
-      "title": "No shipping address",
-      "subtitle": "Add an address to receive your item"
-    },
-    "addAddress": "Select Address",
-    "addNewAddress": "Add New Address",
-    "default": "Default",
-    "orderSummary": "Order Summary",
-    "summary": {
-      "auctionWin": "Auction Item",
-      "itemPrice": "Winning Bid",
-      "shippingFee": "Shipping",
-      "platformFee": "Service Fee"
-    },
-    "total": "Total Due",
-    "emailReceipt": {
-      "label": "Email for Receipt",
-      "placeholder": "name@example.com",
-      "hint": "We will send payment confirmation here"
-    },
-    "security": "Encrypted & Secure Payment via Stripe",
-    "actions": {
-      "continue": "Proceed to Payment",
-      "back": "Go Back"
     }
   },
   "auth": {
@@ -201,66 +159,6 @@
       "resending": "Sending...",
       "resent": "Verification email sent!",
       "backToLogin": "Back to login"
-    }
-  },
-  "home": {
-    "title": "Active Auctions",
-    "subtitle": "Browse and place your bid on delivery opportunities",
-    "search": {
-      "placeholder": "Search by title or description...",
-      "button": "Search",
-      "noResults": "No results found",
-      "recentSearches": "Recent Searches",
-      "clearRecent": "Clear",
-      "popularSearches": "Popular Searches",
-      "noSuggestions": "No suggestions"
-    },
-    "filters": {
-      "title": "Filters",
-      "sortBy": "Sort By",
-      "sortOptions": {
-        "endingSoon": "Ending Soon",
-        "newest": "Newest",
-        "priceLow": "Price: Low to High",
-        "priceHigh": "Price: High to Low"
-      },
-      "priceRange": "Price Range",
-      "min": "Min",
-      "max": "Max",
-      "size": "Size",
-      "all": "All",
-      "auctions": "Auctions",
-      "directSales": "Direct Sales",
-      "category": "Category",
-      "price": "Price",
-      "condition": "Condition"
-    },
-    "map": {
-      "title": "Map View",
-      "nearMe": "Near Me",
-      "switch2D": "Switch to 2D View",
-      "switch3D": "Switch to 3D View",
-      "myLocation": "Go to my location",
-      "locationError": "Unable to get your location"
-    },
-    "states": {
-      "error": "Failed to load listings. Please try again.",
-      "empty": "No active auctions found.",
-      "emptyDesc": "Try adjusting your filters to see more results.",
-      "retry": "Retry",
-      "clearFilters": "Clear Filters"
-    },
-    "actions": {
-      "refresh": "Refresh",
-      "refreshing": "Refreshing...",
-      "placeBid": "Place Bid",
-      "bids": "bids",
-      "bid": "bid"
-    },
-    "widgets": {
-      "pendingPayments": "Pending Payments",
-      "pendingCount": "{count, plural, =1 {# payment pending} other {# payments pending}}",
-      "more": "more"
     }
   },
   "profile": {
@@ -693,205 +591,6 @@
       "notApprovedCta": "View my application"
     }
   },
-  "create": {
-    "titleNew": "New Listing",
-    "titleEdit": "Edit Listing",
-    "steps": {
-      "item": "Item",
-      "logistics": "Logistics",
-      "summary": "Summary"
-    },
-    "map": {
-      "searchPlaceholder": "Search location in France...",
-      "outsideFrance": "This location is outside France. Pickup is only available in France.",
-      "notFound": "Could not find address for this location.",
-      "error": "Error getting address. Please try again.",
-      "updating": "Updating address..."
-    },
-    "success": {
-      "title": "Auction Created Successfully!",
-      "description": "Your auction listing has been published and is now live. Share the link below to start receiving bids.",
-      "auctionId": "Auction ID:",
-      "status": "Status:",
-      "active": "Active",
-      "shareTitle": "Share Your Auction",
-      "viewAuction": "View Auction",
-      "shareAuction": "Share Auction",
-      "backHome": "Back to Home",
-      "nextSteps": "Next steps:",
-      "nextStepsDesc": "You'll receive notifications when users place bids on your auction. You can manage your auction from the \"My Deliveries\" section."
-    },
-    "dropzone": {
-      "title": "Add photos",
-      "subtitle": "Drag and drop or click to upload",
-      "uploading": "Uploading {count} photo(s)",
-      "uploadError": "Failed to upload photos",
-      "takePhoto": "Take a photo"
-    },
-    "slip": {
-      "title": "Upload purchase slip",
-      "subtitle": "Drag and drop or click to upload",
-      "invalidFile": "Please upload an image file",
-      "processError": "Failed to process purchase slip. Please try again."
-    },
-    "photos": {
-      "title": "Photos",
-      "aiFeature": {
-        "new": "New!",
-        "badge": "AI",
-        "label": "Purchase Slip Upload",
-        "description": "Upload a purchase slip and AI will extract all data automatically.",
-        "estimateLabel": "AI Price Estimate"
-      }
-    },
-    "ai": {
-      "title": "AI Price Recommendation",
-      "loading": "Analyzing your item...",
-      "analyzePhotos": "Product photos",
-      "analyzeDetails": "Item details",
-      "analyzeMarket": "Market trends",
-      "startingBid": "Starting Bid",
-      "buyNowPrice": "Buy Now Price",
-      "useThis": "Use This",
-      "applied": "Applied",
-      "confidence": "Confidence",
-      "refresh": "Refresh",
-      "error": "Unable to generate recommendation",
-      "errorRetry": "Try Again",
-      "manualEntry": "Please enter your prices manually below.",
-      "noSlipDesc": "Get AI-powered price recommendations based on your item details.",
-      "readyWithSlip": "Ready to analyze with purchase slip data!",
-      "getRecommendation": "Get AI Recommendation",
-      "recommended": "AI Recommended",
-      "reasoning": {
-        "volume": "Volume: {volume} cm³ × {price}/cm³ = {total}.",
-        "weight": "Weight: {weight} kg × {price}/kg = {total}.",
-        "estimatedTotal": "Estimated total: {total}.",
-        "usingSlipPrice": "Using price from slip: {total}.",
-        "minPrice": "Adjusted to minimum: {total}.",
-        "maxPrice": "Adjusted to maximum: {total}."
-      }
-    },
-    "form": {
-      "quantity": "Quantity",
-      "title": "Title",
-      "titlePlaceholder": "Ex: Sofa, armchair, etc...",
-      "category": "Category",
-      "selectCategory": "Select a category",
-      "condition": "Condition",
-      "selectCondition": "Select condition",
-      "selectDuration": "Select duration",
-      "weight": {
-        "label": "Weight Estimator",
-        "placeholder": "Choose a weight range",
-        "ranges": {
-          "0_5": "0 - 5 kg",
-          "5_10": "5 - 10 kg",
-          "10_25": "10 - 25 kg",
-          "25_50": "25 - 50 kg",
-          "50_plus": "50+ kg"
-        }
-      },
-      "dimensions": {
-        "label": "Dimensions (Required)",
-        "length": "Length",
-        "width": "Width",
-        "height": "Height"
-      },
-      "size": {
-        "label": "Estimated Size",
-        "xs": "XS (Phone, Keys)",
-        "s": "S (Shoebox)",
-        "m": "M (Suitcase)",
-        "l": "L (Bicycle)",
-        "xl": "XL (Furniture)",
-        "xxl": "XXL (Vehicle)",
-        "placeholder": "Enter dimensions to see size"
-      },
-      "description": "Description",
-      "descriptionPlaceholder": "Describe your item...",
-      "additionalInfo": {
-        "label": "Additional Information",
-        "warning": "This info is public. Do not share personal details like phone or email.",
-        "placeholder": "Describe your item in detail (condition, history, defects, etc.)"
-      }
-    },
-    "logistics": {
-      "pickup": "Pickup Address",
-      "delivery": "Delivery Address (Optional)",
-      "info": "Information",
-      "searchMap": "Search or click on the map to set the pickup location. Address details will be filled automatically.",
-      "addressDetails": "Address Details",
-      "street": "Street Address",
-      "city": "City",
-      "postalCode": "Postal Code",
-      "country": "Country"
-    },
-    "pricing": {
-      "type": "Sale Type",
-      "auction": "Auction",
-      "fixed": "Fixed Price",
-      "startingPrice": "Starting Price",
-      "reservePrice": "Reserve Price",
-      "buyNowPrice": "Buy Now Price",
-      "minIncrease": "Bid Increment",
-      "duration": {
-        "label": "Auction Duration"
-      },
-      "days": "{count, plural, =1 {day} other {days}}",
-      "optional": "(Optional)"
-    },
-    "summary": {
-      "itemDetails": "Item Details",
-      "logistics": "Logistics",
-      "pricing": "Pricing & Conditions",
-      "location": "Location"
-    },
-    "buttons": {
-      "back": "Back",
-      "next": "Next",
-      "submit": "Publish Listing",
-      "update": "Update Listing"
-    },
-    "messages": {
-      "uploadPhoto": "Please upload at least one photo",
-      "creating": "Creating listing...",
-      "created": "Listing created successfully!",
-      "createError": "Failed to create listing",
-      "updating": "Updating listing...",
-      "updated": "Listing updated successfully!",
-      "updateError": "Failed to update listing"
-    },
-    "validation": {
-      "titleMin": "Title must be at least 3 characters",
-      "categoryRequired": "Category is required",
-      "lengthPositive": "Length must be positive",
-      "widthPositive": "Width must be positive",
-      "heightPositive": "Height must be positive",
-      "weightRequired": "Weight is required",
-      "addressRequired": "Address is required",
-      "cityRequired": "City is required",
-      "postalCodeRequired": "Postal code is required",
-      "countryRequired": "Country is required",
-      "startingBidMin": "Starting bid must be 0 or more",
-      "durationRequired": "Duration is required",
-      "descriptionMin": "Description must be at least 10 characters"
-    }
-  },
-  "wallet": {
-    "title": "Wallet",
-    "balance": "Balance",
-    "transactions": "Transactions",
-    "withdraw": "Withdraw",
-    "deposit": "Deposit",
-    "history": {
-      "title": "History",
-      "purchase": "Purchase",
-      "sale": "Sale",
-      "refund": "Refund",
-      "withdrawal": "Withdrawal"
-    }
-  },
   "driver": {
     "title": "Driver",
     "panelTitle": "Driver Panel",
@@ -1252,7 +951,9 @@
       "payments": "Payments",
       "supportChats": "Support Chats",
       "profile": "Profile",
-      "expedion": "Expedion bridge"
+      "expedion": "Expedion bridge",
+      "awards": "Award queue",
+      "applications": "Driver applications"
     },
     "table": {
       "total": "total",
@@ -1386,13 +1087,17 @@
       "description": "Assign a new role to",
       "currentRole": "Current role:",
       "selectPlaceholder": "Select new role to assign",
-      "buyer": "User",
-      "transporter": "Driver",
       "admin": "Admin",
       "note": "Note: This will add the selected role to the user. Users can have multiple roles.",
       "cancel": "Cancel",
       "assigning": "Assigning...",
-      "assignRole": "Assign Role"
+      "assignRole": "Assign Role",
+      "shipper": "Shipper",
+      "carrier": "Carrier",
+      "driver": "Driver",
+      "operator": "Operator",
+      "support": "Support",
+      "finance": "Finance"
     },
     "payments": {
       "title": "Payments",
@@ -1547,7 +1252,8 @@
         "carriers": "Carriers",
         "carriersHint": "{pending} pending · {active} active",
         "deliveries": "Deliveries in progress",
-        "deliveriesHint": "{count} active clients"
+        "deliveriesHint": "{count} active clients",
+        "reportedPayments": "*reported by Expedion, not observed"
       },
       "funnel": {
         "title": "Funnel",
@@ -1593,7 +1299,8 @@
         "billed": "billed",
         "ready": "ready",
         "missingCoords": "missing coordinates",
-        "airtableImport": "Airtable import"
+        "airtableImport": "Airtable import",
+        "notEscalatable": "not ready"
       },
       "actions": {
         "reprice": "Adjust price",
@@ -1647,6 +1354,20 @@
         "title": "Recent quotes",
         "empty": "No quotes",
         "emptyBody": "Requests will appear here."
+      }
+    },
+    "awards": {
+      "title": "Award queue",
+      "subtitle": "{count} escalated jobs waiting for a decision.",
+      "bidCount": "{count} bids",
+      "clientPaid": "Client paid",
+      "empty": {
+        "title": "Nothing waiting",
+        "description": "Escalated jobs appear here once drivers have bid on them."
+      },
+      "error": {
+        "title": "Could not load the queue",
+        "description": "Try again in a moment."
       }
     }
   },
@@ -1707,11 +1428,11 @@
   },
   "carrier": {
     "application": {
-      "title": "Carrier application",
+      "title": "My application",
       "subtitle": "Complete your file to start bidding on transport jobs.",
       "withdraw": "Withdraw and edit",
       "withdrawing": "Withdrawing…",
-      "manageFleet": "Manage my fleet",
+      "manageFleet": "My vehicles",
       "form": {
         "title": "Company details",
         "description": "The legal identity of your transport company.",
@@ -1748,7 +1469,7 @@
           "description": "Our team is taking a closer look at your file."
         },
         "approved": {
-          "title": "You are an approved carrier",
+          "title": "You are an approved driver",
           "description": "You can bid on jobs. Keep your documents up to date."
         },
         "rejected": {
@@ -1899,27 +1620,50 @@
       "vehicleRemoveFailed": "Could not remove vehicle"
     }
   },
-  "myJobs": {
-    "title": "My jobs",
-    "postJob": "Post a job",
-    "empty": "No jobs yet",
-    "emptyDesc": "Post a transport job and carriers will start bidding.",
-    "emptyFiltered": "No jobs with this status",
-    "emptyFilteredDesc": "Try a different status filter.",
-    "loadFailed": "Could not load your jobs",
-    "offers": "{count, plural, =0 {No offers} one {# offer} other {# offers}}",
-    "posted": "Posted {date}",
-    "filters": {
-      "all": "All statuses"
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Where you stand, and what is waiting.",
+    "getStarted": {
+      "title": "Start driving with EXPEDITOO",
+      "description": "Submit your driver application to bid on transport jobs.",
+      "action": "Start my application"
     },
-    "status": {
-      "draft": "Draft",
-      "open": "Open",
-      "awarded": "Awarded",
-      "in_progress": "In progress",
-      "completed": "Completed",
-      "cancelled": "Cancelled",
-      "expired": "Expired"
+    "currentRun": {
+      "title": "Current run",
+      "untitled": "Transport job",
+      "action": "Open this run"
+    },
+    "stats": {
+      "openJobs": "Jobs open for bids",
+      "activeRuns": "Active runs",
+      "liveOffers": "Bids awaiting a decision"
     }
+  },
+  "jobBoard": {
+    "title": "Open jobs",
+    "loading": "Loading…",
+    "count": "{count} jobs accepting offers",
+    "countOne": "{count} job accepting offers",
+    "search": "Search jobs",
+    "clearSearch": "Clear search",
+    "filters": "Filters",
+    "minBudget": "Min budget (€)",
+    "maxBudget": "Max budget (€)",
+    "maxWeight": "Max weight my vehicle can carry (kg)",
+    "maxWeightHint": "Hides jobs heavier than this.",
+    "clearFilters": "Clear filters",
+    "sort": {
+      "newest": "Newest",
+      "budgetDesc": "Highest budget",
+      "budgetAsc": "Lowest budget",
+      "pickupAsc": "Earliest pickup"
+    },
+    "empty": {
+      "title": "No jobs match",
+      "filtered": "Try widening your filters — new jobs arrive through the day.",
+      "none": "No jobs are open right now. New ones appear as Expedion escalates them."
+    },
+    "previous": "Previous",
+    "next": "Next"
   }
 }

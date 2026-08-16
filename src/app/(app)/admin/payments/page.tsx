@@ -12,7 +12,7 @@ export default function AdminPaymentsPage() {
     const tCommon = useTranslations("common");
 
     if (isLoading) {
-        return <PageLoader variant="admin" />;
+        return <PageLoader />;
     }
 
     if (isError) {

@@ -38,7 +38,6 @@ export function Messages({
     const isDriver = basePath.includes("/driver");
     return (
       <PageLoader
-        variant="default"
         className={cn(isDriver && "xl:min-h-[100vh]")}
       />
     );

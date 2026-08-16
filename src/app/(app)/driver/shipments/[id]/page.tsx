@@ -38,7 +38,7 @@ export default function ShipmentDetailPage() {
   const { shipment, isLoading, isError } = useDriverShipmentDetail(id);
 
   if (isLoading) {
-    return <PageLoader variant="driver" />;
+    return <PageLoader />;
   }
 
   if (isError || !shipment) {

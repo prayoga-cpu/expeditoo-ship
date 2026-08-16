@@ -133,9 +133,28 @@ function num(value: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+/** Upper bound of Postgres `integer`. Every money column here is int4. */
+const MAX_INT4 = 2_147_483_647;
+
+/** Money values the target column cannot hold. Reported at the end. */
+let outOfRangeMoney = 0;
+
 function cents(value: unknown): number | null {
   const n = num(value);
-  return n === null ? null : Math.round(n * 100);
+  if (n === null) return null;
+  const c = Math.round(n * 100);
+
+  // Airtable's money columns contain the occasional phone number or unscaled
+  // figure — the first commit attempt died on "51001220000", i.e. €510 million
+  // on a single lot. Widening the column to bigint would accept that, and then
+  // ad valorem (1.2% of the declared value) would quote a €6.1m premium off it.
+  // Dropping the value is the safer read, and nothing is lost: the raw field is
+  // still preserved verbatim in `airtable_fields` for audit.
+  if (!Number.isSafeInteger(c) || Math.abs(c) > MAX_INT4) {
+    outOfRangeMoney++;
+    return null;
+  }
+  return c;
 }
 
 function date(value: unknown): Date | null {

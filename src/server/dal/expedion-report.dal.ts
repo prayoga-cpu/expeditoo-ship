@@ -20,6 +20,48 @@ const UNOWNED = sql`firebase_uid like 'airtable:%'`;
 /** Statuses a quote can sit in while still needing operator attention. */
 const LIVE = sql`status not in ('delivered', 'cancelled')`;
 
+/**
+ * The rows escalation will actually take, ignoring the data it needs (see
+ * `ESCALATION_READY`).
+ *
+ * `status = 'paid'` and `escalated_at is null` are not decoration. The cron
+ * filters on both (`expedionDal.findDueForEscalation`), and the Escalate
+ * button fails the transition check on the first and the claim on the second
+ * (`expedionEscalationService.escalate`), so a queue without them lists work
+ * that both paths then refuse — a stuck half-escalation, claimed but with no
+ * listing behind it, is the row that used to sit there forever.
+ */
+const ESCALATION_DUE = sql`escalate_after is not null
+  and escalate_after <= now()
+  and status = 'paid'
+  and assigned_carrier_id is null
+  and escalated_at is null
+  and listing_id is null`;
+
+/**
+ * Whether a row carries everything a marketplace listing needs — the SQL
+ * mirror of `escalationBlockers`, which is the authority but wants a hydrated
+ * quote and so cannot be asked about a whole queue at once. Keep the two in
+ * step.
+ *
+ * Deliberately a label rather than part of `ESCALATION_DUE`: a job the timer
+ * has given up on for want of a postal code is exactly what the operator has
+ * to see, so it stays in the queue wearing a badge instead of vanishing.
+ */
+const ESCALATION_READY = sql`
+  pickup_lat is not null and pickup_lng is not null
+  and delivery_lat is not null and delivery_lng is not null
+  and coalesce(pickup_address, '') <> ''
+  and coalesce(pickup_city, '') <> ''
+  and coalesce(delivery_address, '') <> ''
+  and coalesce(delivery_city, '') <> ''
+  and regexp_replace(coalesce(pickup_postal_code, ''), '[^0-9]', '', 'g')
+      ~ '^[0-9]{5}$'
+  and regexp_replace(coalesce(delivery_postal_code, ''), '[^0-9]', '', 'g')
+      ~ '^[0-9]{5}$'
+  and coalesce(weight_kg, 0) > 0
+  and coalesce(accepted_price_cents, 0) >= 100`;
+
 export interface ExpedionTotals {
   total: number;
   unowned: number;
@@ -43,6 +85,14 @@ export interface ExpedionTotals {
  * `storageAtRisk` uses four days to match `DSStorageCountdown.warningThresholdDays`
  * in the Flutter client — the operator should see the same cliff the buyer is
  * being warned about, not a different one.
+ *
+ * `escalated` and `assigned` partition the jobs that reached a driver rather
+ * than overlapping: a carrier winning an escalated listing writes its id back
+ * onto the quote (`expedion-bridge.service#writeBack`), so counting every row
+ * with a carrier as `assigned` counted each successful escalation twice and
+ * pushed the escalation rate below the truth. `assigned` is therefore the
+ * internal pool only, and the two sum to the jobs that found a driver or went
+ * looking for one.
  */
 export async function getExpedionTotals(): Promise<ExpedionTotals> {
   const rows = await db.execute<Record<string, string | number>>(sql`
@@ -60,17 +110,15 @@ export async function getExpedionTotals(): Promise<ExpedionTotals> {
                          and ${LIVE})::int                        as needs_driver,
       count(*) filter (where listing_id is not null
                           or status = 'escalated')::int           as escalated,
-      count(*) filter (where assigned_carrier_id is not null)::int as assigned,
+      count(*) filter (where assigned_carrier_id is not null
+                         and listing_id is null
+                         and status <> 'escalated')::int          as assigned,
       count(*) filter (where status = 'delivered')::int           as delivered,
       count(*) filter (where status = 'cancelled')::int           as cancelled,
       count(*) filter (where storage_free_until is not null
                          and storage_free_until <= now() + interval '4 days'
                          and ${LIVE})::int                        as storage_at_risk,
-      count(*) filter (where escalate_after is not null
-                         and escalate_after <= now()
-                         and assigned_carrier_id is null
-                         and listing_id is null
-                         and ${LIVE})::int                        as escalation_due,
+      count(*) filter (where ${ESCALATION_DUE})::int              as escalation_due,
       coalesce(sum(accepted_price_cents), 0)::bigint              as accepted_value,
       coalesce(sum(accepted_price_cents)
                filter (where payment_status = 'paid'), 0)::bigint as paid_value,
@@ -132,6 +180,13 @@ export interface QuoteRow {
   insuredCents: number | null;
   owned: boolean;
   hasPickupCoords: boolean;
+  /**
+   * Whether `escalationBlockers` would pass this row. Broader than
+   * `hasPickupCoords`, which is only one of the ten things escalation demands
+   * — a row missing a delivery postal code reads as ready by that flag and
+   * then 422s on click. Optional only because the callers predate it.
+   */
+  escalationReady?: boolean;
   storageFreeUntil: Date | null;
   escalateAfter: Date | null;
   requestedAt: Date | null;
@@ -152,6 +207,7 @@ const QUOTE_COLUMNS = sql`
   quote_insured_cents                                   as insured_cents,
   not (${UNOWNED})                                      as owned,
   (pickup_lat is not null and pickup_lng is not null)   as has_pickup_coords,
+  (${ESCALATION_READY})                                 as escalation_ready,
   storage_free_until,
   escalate_after,
   requested_at
@@ -173,6 +229,7 @@ function toQuoteRow(r: Record<string, unknown>): QuoteRow {
     insuredCents: num(r.insured_cents),
     owned: r.owned === true,
     hasPickupCoords: r.has_pickup_coords === true,
+    escalationReady: r.escalation_ready === true,
     storageFreeUntil: date(r.storage_free_until),
     escalateAfter: date(r.escalate_after),
     requestedAt: date(r.requested_at),
@@ -193,9 +250,7 @@ const QUEUE_WHERE: Record<QueueKind, ReturnType<typeof sql>> = {
   storageAtRisk: sql`storage_free_until is not null
                      and storage_free_until <= now() + interval '4 days'
                      and ${LIVE}`,
-  escalationDue: sql`escalate_after is not null and escalate_after <= now()
-                     and assigned_carrier_id is null and listing_id is null
-                     and ${LIVE}`,
+  escalationDue: ESCALATION_DUE,
 };
 
 /**
@@ -342,17 +397,29 @@ export interface MonthPoint {
  * One `group by` rather than the six sequential round trips
  * `admin.service#getDashboardStats` makes for its revenue series — the shape
  * there is already the slowest part of that page and is not worth copying.
+ *
+ * The months come from `generate_series` rather than from the rows, so a month
+ * with no quotes is a zero and not a missing point: an area chart joins the
+ * months either side of a gap and draws a quiet month as steady volume.
  */
 export async function getMonthlySeries(months = 6): Promise<MonthPoint[]> {
   const rows = await db.execute<Record<string, string | number>>(sql`
+    with span as (
+      select generate_series(
+        date_trunc('month', now()) - (${months - 1} || ' months')::interval,
+        date_trunc('month', now()),
+        interval '1 month'
+      ) as bucket
+    )
     select
-      to_char(date_trunc('month', requested_at), 'YYYY-MM')   as bucket,
-      count(*)::int                                           as quotes,
-      coalesce(sum(accepted_price_cents), 0)::bigint          as accepted
-    from expedion_quotes
-    where requested_at >= date_trunc('month', now()) - (${months - 1} || ' months')::interval
-    group by 1
-    order by 1
+      to_char(span.bucket, 'YYYY-MM')                         as bucket,
+      count(q.id)::int                                        as quotes,
+      coalesce(sum(q.accepted_price_cents), 0)::bigint        as accepted
+    from span
+    left join expedion_quotes q
+      on date_trunc('month', q.requested_at) = span.bucket
+    group by span.bucket
+    order by span.bucket
   `);
 
   return [...rows].map((r) => ({

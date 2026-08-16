@@ -12,6 +12,8 @@ import {
   Headset,
   UserCircle,
   DollarSign,
+  Gavel,
+  ClipboardCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -30,6 +32,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
   const sidebarItems = [
     {
+      // The whole-platform report. Was reachable only by typing the URL, and
+      // it has absorbed /admin/dashboard, so it takes the landing slot.
       title: t("navigation.expedion"),
       href: "/admin/expedion",
       icon: LayoutDashboard,
@@ -40,9 +44,19 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       icon: Users,
     },
     {
+      title: t("navigation.awards"),
+      href: "/admin/awards",
+      icon: Gavel,
+    },
+    {
       title: t("navigation.listing"),
       href: "/admin/listings",
       icon: FileText,
+    },
+    {
+      title: t("navigation.applications"),
+      href: "/admin/applications",
+      icon: ClipboardCheck,
     },
     {
       title: t("navigation.driver"),

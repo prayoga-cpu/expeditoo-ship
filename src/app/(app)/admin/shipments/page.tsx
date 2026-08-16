@@ -16,7 +16,7 @@ export default function ShipmentsPage() {
   const t = useTranslations("shipments");
 
   if (isLoading) {
-    return <PageLoader variant="admin" />;
+    return <PageLoader />;
   }
 
   if (error) {

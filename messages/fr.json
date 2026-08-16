@@ -1,41 +1,4 @@
 {
-  "checkout": {
-    "title": "Secure Checkout",
-    "steps": {
-      "address": "Shipping Address",
-      "payment": "Payment Method"
-    },
-    "loadingAddresses": "Loading delivery details...",
-    "errors": {
-      "loadAddresses": "Could not load addresses"
-    },
-    "retry": "Retry",
-    "noAddresses": {
-      "title": "No shipping address",
-      "subtitle": "Add an address to receive your item"
-    },
-    "addAddress": "Select Address",
-    "addNewAddress": "Add New Address",
-    "default": "Default",
-    "orderSummary": "Order Summary",
-    "summary": {
-      "auctionWin": "Auction Item",
-      "itemPrice": "Winning Bid",
-      "shippingFee": "Shipping",
-      "platformFee": "Service Fee"
-    },
-    "total": "Total Due",
-    "emailReceipt": {
-      "label": "Email for Receipt",
-      "placeholder": "name@example.com",
-      "hint": "We will send payment confirmation here"
-    },
-    "security": "Encrypted & Secure Payment via Stripe",
-    "actions": {
-      "continue": "Proceed to Payment",
-      "back": "Go Back"
-    }
-  },
   "common": {
     "buttons": {
       "save": "Enregistrer",
@@ -68,7 +31,6 @@
     "navigation": {
       "home": "Accueil",
       "shipments": "Expéditions",
-      "create": "Créer",
       "messages": "Messages",
       "account": "Compte",
       "profile": "Profil",
@@ -76,15 +38,11 @@
       "notifications": "Notifications",
       "logout": "Déconnexion",
       "backToApp": "Retour à l'app",
-      "createAuction": "Créer une enchère",
       "shipmentTracking": "Suivi d'expédition",
-      "myBids": "Mes offres",
       "jobs": "Missions",
       "myOffers": "Mes offres",
       "deliveries": "Livraisons",
-      "fleet": "Flotte",
-      "application": "Dossier",
-      "myJobs": "Mes missions"
+      "myApplication": "Mon dossier"
     },
     "categories": {
       "electronics": "Électronique",
@@ -201,66 +159,6 @@
       "resending": "Envoi en cours...",
       "resent": "Email de vérification envoyé !",
       "backToLogin": "Retour à la connexion"
-    }
-  },
-  "home": {
-    "title": "Enchères actives",
-    "subtitle": "Parcourez et enchérissez sur les opportunités de livraison",
-    "search": {
-      "placeholder": "Rechercher par titre ou description...",
-      "button": "Rechercher",
-      "noResults": "Aucun résultat trouvé",
-      "clearRecent": "Effacer",
-      "noSuggestions": "Aucune suggestion",
-      "popularSearches": "Recherches populaires",
-      "recentSearches": "Recherches récentes"
-    },
-    "filters": {
-      "title": "Filtres",
-      "sortBy": "Trier par",
-      "sortOptions": {
-        "endingSoon": "Se termine bientôt",
-        "newest": "Plus récents",
-        "priceLow": "Prix : Croissant",
-        "priceHigh": "Prix : Décroissant"
-      },
-      "priceRange": "Fourchette de prix",
-      "min": "Min",
-      "max": "Max",
-      "size": "Taille",
-      "all": "Tout",
-      "auctions": "Enchères",
-      "directSales": "Ventes directes",
-      "category": "Catégorie",
-      "price": "Prix",
-      "condition": "État"
-    },
-    "map": {
-      "title": "Vue carte",
-      "nearMe": "À proximité",
-      "switch2D": "Passer en vue 2D",
-      "switch3D": "Passer en vue 3D",
-      "myLocation": "Ma position",
-      "locationError": "Impossible de vous localiser"
-    },
-    "states": {
-      "error": "Échec du chargement des annonces. Veuillez réessayer.",
-      "empty": "Aucune enchère active trouvée.",
-      "emptyDesc": "Essayez de modifier vos filtres pour voir plus de résultats.",
-      "retry": "Réessayer",
-      "clearFilters": "Effacer les filtres"
-    },
-    "actions": {
-      "refresh": "Actualiser",
-      "refreshing": "Actualisation...",
-      "placeBid": "Enchérir",
-      "bids": "offres",
-      "bid": "offre"
-    },
-    "widgets": {
-      "more": "de plus",
-      "pendingCount": "{count, plural, =1 {# paiement en attente} other {# paiements en attente}}",
-      "pendingPayments": "Paiements en attente"
     }
   },
   "profile": {
@@ -693,205 +591,6 @@
       "notApprovedCta": "Voir ma candidature"
     }
   },
-  "create": {
-    "titleNew": "Nouvelle annonce",
-    "titleEdit": "Modifier l'annonce",
-    "steps": {
-      "item": "Article",
-      "logistics": "Logistique",
-      "summary": "Résumé"
-    },
-    "map": {
-      "searchPlaceholder": "Rechercher un lieu en France...",
-      "outsideFrance": "Ce lieu est hors de France. Le retrait est uniquement disponible en France.",
-      "notFound": "Impossible de trouver une adresse pour ce lieu.",
-      "error": "Erreur lors de la récupération de l'adresse. Veuillez réessayer.",
-      "updating": "Mise à jour de l'adresse..."
-    },
-    "success": {
-      "title": "Enchère créée avec succès !",
-      "description": "Votre annonce d'enchère a été publiée et est maintenant en ligne. Partagez le lien ci-dessous pour commencer à recevoir des offres.",
-      "auctionId": "ID Enchère :",
-      "status": "Statut :",
-      "active": "Active",
-      "shareTitle": "Partager votre enchère",
-      "viewAuction": "Voir l'enchère",
-      "shareAuction": "Partager l'enchère",
-      "backHome": "Retour à l'accueil",
-      "nextSteps": "Prochaines étapes :",
-      "nextStepsDesc": "Vous recevrez des notifications lorsque les utilisateurs enchériront sur votre annonce. Vous pouvez gérer votre enchère depuis la section \"Mes Expéditions\"."
-    },
-    "dropzone": {
-      "title": "Ajouter des photos",
-      "subtitle": "Glisser-déposer ou cliquer pour télécharger",
-      "uploading": "Téléchargement de {count} photo(s)",
-      "uploadError": "Échec du téléchargement des photos",
-      "takePhoto": "Prendre une photo"
-    },
-    "slip": {
-      "title": "Télécharger un reçu",
-      "subtitle": "Glisser-déposer ou cliquer pour télécharger",
-      "invalidFile": "Veuillez télécharger un fichier image",
-      "processError": "Échec du traitement du reçu. Veuillez réessayer."
-    },
-    "photos": {
-      "title": "Photos",
-      "aiFeature": {
-        "new": "Nouveau !",
-        "badge": "IA",
-        "label": "Téléchargement du bon d'achat",
-        "description": "Téléchargez un bon d'achat et l'IA extraira toutes les données automatiquement.",
-        "estimateLabel": "Estimation de prix par IA"
-      }
-    },
-    "ai": {
-      "title": "Recommandation de prix IA",
-      "loading": "Analyse de votre article...",
-      "analyzePhotos": "Photos du produit",
-      "analyzeDetails": "Détails de l'article",
-      "analyzeMarket": "Tendances du marché",
-      "startingBid": "Enchère de départ",
-      "buyNowPrice": "Prix d'achat immédiat",
-      "useThis": "Utiliser",
-      "applied": "Appliqué",
-      "confidence": "Confiance",
-      "refresh": "Actualiser",
-      "error": "Impossible de générer la recommandation",
-      "errorRetry": "Réessayer",
-      "manualEntry": "Veuillez entrer vos prix manuellement ci-dessous.",
-      "noSlipDesc": "Obtenez des recommandations de prix par IA basées sur les détails de votre article.",
-      "readyWithSlip": "Prêt à analyser avec les données du reçu !",
-      "getRecommendation": "Obtenir la recommandation IA",
-      "recommended": "Recommandé par IA",
-      "reasoning": {
-        "volume": "Volume : {volume} cm³ × {price}/cm³ = {total}.",
-        "weight": "Poids : {weight} kg × {price}/kg = {total}.",
-        "estimatedTotal": "Total estimé : {total}.",
-        "usingSlipPrice": "Prix du reçu utilisé : {total}.",
-        "minPrice": "Ajusté au minimum : {total}.",
-        "maxPrice": "Ajusté au maximum : {total}."
-      }
-    },
-    "form": {
-      "quantity": "Quantité",
-      "title": "Titre",
-      "titlePlaceholder": "Ex: Canapé, fauteuil, etc...",
-      "category": "Catégorie",
-      "selectCategory": "Sélectionner une catégorie",
-      "condition": "État",
-      "selectCondition": "Sélectionner l'état",
-      "selectDuration": "Sélectionner la durée",
-      "weight": {
-        "label": "Poids estimateur",
-        "placeholder": "Choisir une tranche de poids",
-        "ranges": {
-          "0_5": "0 - 5 kg",
-          "5_10": "5 - 10 kg",
-          "10_25": "10 - 25 kg",
-          "25_50": "25 - 50 kg",
-          "50_plus": "50+ kg"
-        }
-      },
-      "dimensions": {
-        "label": "Dimensions (Requis)",
-        "length": "Longueur",
-        "width": "Largeur",
-        "height": "Hauteur"
-      },
-      "size": {
-        "label": "Taille estimée",
-        "xs": "XS (Téléphone, Clés)",
-        "s": "S (Boîte à chaussures)",
-        "m": "M (Valise)",
-        "l": "L (Vélo)",
-        "xl": "XL (Meubles)",
-        "xxl": "XXL (Véhicule)",
-        "placeholder": "Entrez les dimensions pour voir la taille"
-      },
-      "description": "Description",
-      "descriptionPlaceholder": "Décrivez votre article...",
-      "additionalInfo": {
-        "label": "Informations supplémentaires",
-        "warning": "Ces informations sont publiques. Ne partagez pas de données personnelles comme téléphone ou email.",
-        "placeholder": "Décrivez votre article en détail (état, histoire, défauts, etc.)"
-      }
-    },
-    "logistics": {
-      "pickup": "Adresse de retrait",
-      "delivery": "Adresse de livraison (Optionnel)",
-      "info": "Informations",
-      "searchMap": "Rechercher ou cliquer sur la carte pour définir le lieu de retrait. Les détails de l'adresse seront remplis automatiquement.",
-      "addressDetails": "Détails de l'adresse",
-      "street": "Rue",
-      "city": "Ville",
-      "postalCode": "Code postal",
-      "country": "Pays"
-    },
-    "pricing": {
-      "type": "Type de vente",
-      "auction": "Enchère",
-      "fixed": "Prix fixe",
-      "startingPrice": "Prix de départ",
-      "reservePrice": "Prix de réserve",
-      "buyNowPrice": "Prix d'achat immédiat",
-      "minIncrease": "Palier d'enchère",
-      "duration": {
-        "label": "Durée de l'enchère"
-      },
-      "days": "{count, plural, =1 {jour} other {jours}}",
-      "optional": "(Optionnel)"
-    },
-    "summary": {
-      "itemDetails": "Détails de l'article",
-      "logistics": "Logistique",
-      "pricing": "Prix & Conditions",
-      "location": "Localisation"
-    },
-    "buttons": {
-      "back": "Retour",
-      "next": "Suivant",
-      "submit": "Publier l'annonce",
-      "update": "Mettre à jour l'annonce"
-    },
-    "messages": {
-      "uploadPhoto": "Veuillez télécharger au moins une photo",
-      "creating": "Création de l'annonce...",
-      "created": "Annonce créée avec succès !",
-      "createError": "Échec de la création de l'annonce",
-      "updating": "Mise à jour de l'annonce...",
-      "updated": "Annonce mise à jour avec succès !",
-      "updateError": "Échec de la mise à jour de l'annonce"
-    },
-    "validation": {
-      "titleMin": "Le titre doit contenir au moins 3 caractères",
-      "categoryRequired": "La catégorie est requise",
-      "lengthPositive": "La longueur doit être positive",
-      "widthPositive": "La largeur doit être positive",
-      "heightPositive": "La hauteur doit être positive",
-      "weightRequired": "Le poids est requis",
-      "addressRequired": "L'adresse est requise",
-      "cityRequired": "La ville est requise",
-      "postalCodeRequired": "Le code postal est requis",
-      "countryRequired": "Le pays est requis",
-      "startingBidMin": "L'enchère de départ doit être de 0 ou plus",
-      "durationRequired": "La durée est requise",
-      "descriptionMin": "La description doit contenir au moins 10 caractères"
-    }
-  },
-  "wallet": {
-    "title": "Portefeuille",
-    "balance": "Solde",
-    "transactions": "Transactions",
-    "withdraw": "Retirer",
-    "deposit": "Déposer",
-    "history": {
-      "title": "Historique",
-      "purchase": "Achat",
-      "sale": "Vente",
-      "refund": "Remboursement",
-      "withdrawal": "Retrait"
-    }
-  },
   "driver": {
     "title": "Chauffeur",
     "panelTitle": "Espace Chauffeur",
@@ -1252,7 +951,9 @@
       "payments": "Paiements",
       "supportChats": "Chats de support",
       "profile": "Profil",
-      "expedion": "Passerelle Expedion"
+      "expedion": "Passerelle Expedion",
+      "awards": "File d'attribution",
+      "applications": "Dossiers chauffeurs"
     },
     "table": {
       "rowsSelected": "{count} sur {total} ligne(s) sélectionnée(s)",
@@ -1386,13 +1087,17 @@
       "description": "Attribuer un nouveau rôle à",
       "currentRole": "Rôle actuel :",
       "selectPlaceholder": "Sélectionner un nouveau rôle",
-      "buyer": "Utilisateur",
-      "transporter": "Chauffeur",
       "admin": "Admin",
       "note": "Note : Cela ajoutera le rôle sélectionné à l'utilisateur. Les utilisateurs peuvent avoir plusieurs rôles.",
       "cancel": "Annuler",
       "assigning": "Attribution...",
-      "assignRole": "Attribuer le rôle"
+      "assignRole": "Attribuer le rôle",
+      "shipper": "Expéditeur",
+      "carrier": "Transporteur",
+      "driver": "Chauffeur",
+      "operator": "Opérateur",
+      "support": "Support",
+      "finance": "Finance"
     },
     "payments": {
       "title": "Paiements",
@@ -1547,7 +1252,8 @@
         "carriers": "Transporteurs",
         "carriersHint": "{pending} en attente · {active} actifs",
         "deliveries": "Livraisons en cours",
-        "deliveriesHint": "{count} clients actifs"
+        "deliveriesHint": "{count} clients actifs",
+        "reportedPayments": "*paiements déclarés, non constatés"
       },
       "funnel": {
         "title": "Entonnoir",
@@ -1593,7 +1299,8 @@
         "billed": "facturé",
         "ready": "prête",
         "missingCoords": "coordonnées manquantes",
-        "airtableImport": "import Airtable"
+        "airtableImport": "import Airtable",
+        "notEscalatable": "non prête"
       },
       "actions": {
         "reprice": "Ajuster le prix",
@@ -1647,6 +1354,20 @@
         "title": "Devis récents",
         "empty": "Aucun devis",
         "emptyBody": "Les demandes apparaîtront ici."
+      }
+    },
+    "awards": {
+      "title": "File d'attribution",
+      "subtitle": "{count} missions escaladées en attente d'une décision.",
+      "bidCount": "{count} offres",
+      "clientPaid": "Payé par le client",
+      "empty": {
+        "title": "Rien en attente",
+        "description": "Les missions escaladées apparaissent ici dès qu'un chauffeur a répondu."
+      },
+      "error": {
+        "title": "Impossible de charger la file",
+        "description": "Réessayez dans un instant."
       }
     }
   },
@@ -1707,11 +1428,11 @@
   },
   "carrier": {
     "application": {
-      "title": "Dossier transporteur",
+      "title": "Mon dossier",
       "subtitle": "Complétez votre dossier pour commencer à répondre aux offres de transport.",
       "withdraw": "Retirer et modifier",
       "withdrawing": "Retrait…",
-      "manageFleet": "Gérer ma flotte",
+      "manageFleet": "Mes véhicules",
       "form": {
         "title": "Informations de l'entreprise",
         "description": "L'identité légale de votre société de transport.",
@@ -1748,7 +1469,7 @@
           "description": "Notre équipe examine votre dossier de plus près."
         },
         "approved": {
-          "title": "Vous êtes un transporteur approuvé",
+          "title": "Vous êtes un chauffeur approuvé",
           "description": "Vous pouvez répondre aux offres. Gardez vos documents à jour."
         },
         "rejected": {
@@ -1899,27 +1620,50 @@
       "vehicleRemoveFailed": "Suppression du véhicule impossible"
     }
   },
-  "myJobs": {
-    "title": "Mes demandes",
-    "postJob": "Publier une demande",
-    "empty": "Aucune demande pour l'instant",
-    "emptyDesc": "Publiez une demande de transport et les transporteurs commenceront à enchérir.",
-    "emptyFiltered": "Aucune demande avec ce statut",
-    "emptyFilteredDesc": "Essayez un autre filtre de statut.",
-    "loadFailed": "Impossible de charger vos demandes",
-    "offers": "{count, plural, =0 {Aucune offre} one {# offre} other {# offres}}",
-    "posted": "Publiée le {date}",
-    "filters": {
-      "all": "Tous les statuts"
+  "dashboard": {
+    "title": "Tableau de bord",
+    "subtitle": "Votre situation, et ce qui vous attend.",
+    "getStarted": {
+      "title": "Commencez à rouler avec EXPEDITOO",
+      "description": "Déposez votre dossier chauffeur pour répondre aux offres de transport.",
+      "action": "Déposer mon dossier"
     },
-    "status": {
-      "draft": "Brouillon",
-      "open": "Ouverte",
-      "awarded": "Attribuée",
-      "in_progress": "En cours",
-      "completed": "Terminée",
-      "cancelled": "Annulée",
-      "expired": "Expirée"
+    "currentRun": {
+      "title": "Course en cours",
+      "untitled": "Mission de transport",
+      "action": "Ouvrir la course"
+    },
+    "stats": {
+      "openJobs": "Missions ouvertes aux offres",
+      "activeRuns": "Courses en cours",
+      "liveOffers": "Offres en attente de décision"
     }
+  },
+  "jobBoard": {
+    "title": "Missions ouvertes",
+    "loading": "Chargement…",
+    "count": "{count} missions ouvertes aux offres",
+    "countOne": "{count} mission ouverte aux offres",
+    "search": "Rechercher une mission",
+    "clearSearch": "Effacer la recherche",
+    "filters": "Filtres",
+    "minBudget": "Budget min (€)",
+    "maxBudget": "Budget max (€)",
+    "maxWeight": "Poids max que mon véhicule peut transporter (kg)",
+    "maxWeightHint": "Masque les missions plus lourdes que cela.",
+    "clearFilters": "Effacer les filtres",
+    "sort": {
+      "newest": "Plus récentes",
+      "budgetDesc": "Budget le plus élevé",
+      "budgetAsc": "Budget le plus bas",
+      "pickupAsc": "Enlèvement le plus proche"
+    },
+    "empty": {
+      "title": "Aucune mission correspondante",
+      "filtered": "Élargissez vos filtres — de nouvelles missions arrivent au fil de la journée.",
+      "none": "Aucune mission ouverte pour le moment. Elles apparaissent dès qu'Expedion en escalade une."
+    },
+    "previous": "Précédent",
+    "next": "Suivant"
   }
 }

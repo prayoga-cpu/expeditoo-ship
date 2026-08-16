@@ -209,6 +209,12 @@ export const MATERIAL_FIELDS = [
 export const browseListingsQuerySchema = z.object({
   categoryId: z.string().optional(),
   q: z.string().optional(),
+  /**
+   * Where the job came from. Expedion escalation is the only inlet now, so the
+   * board passes `expedion` to keep legacy `direct` rows — seeded or left over
+   * from the shipper-posting era — off the carrier's list.
+   */
+  origin: z.enum(["direct", "expedion"]).optional(),
   nearLat: z.coerce.number().optional(),
   nearLng: z.coerce.number().optional(),
   radiusKm: z.coerce.number().positive().max(1000).optional(),

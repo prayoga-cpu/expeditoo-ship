@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { BrandMark } from "@/components/ui/brand-mark";
+import { BrandWordmark } from "@/components/ui/brand-mark";
 
 interface AppSidebarHeaderProps {
   /**
@@ -26,9 +26,11 @@ export function AppSidebarHeader({
   return (
     <div className={cn("flex flex-col", className)}>
       <div className="flex items-center justify-start px-6 h-[57px] shrink-0">
-        <Link href={href} className="flex items-center gap-2.5">
-          <BrandMark size={28} />
-          <h1 className="text-2xl font-bold text-primary">EXPEDITOO</h1>
+        {/* The shared EXPEDITOO / TRANSPORT lockup rather than a hand-written
+            heading, so the sidebar, the marketing chrome and the splash all
+            render one component and cannot drift apart again. */}
+        <Link href={href} className="flex items-center">
+          <BrandWordmark size={28} />
         </Link>
       </div>
       {subtitle && (

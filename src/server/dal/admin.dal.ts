@@ -11,8 +11,11 @@ import { eq, sql, and, ne, gte, lt, desc, or } from "drizzle-orm";
  * Get count of active users (distinct users with any role except admin/operator)
  */
 export async function getActiveUsersCount(): Promise<number> {
-  // Get users who are NOT admins, transporters, or operators
-  // We consider "regular users" as anyone who isn't staff or a driver
+  // "Regular users" means anyone who is neither staff nor supply side.
+  //
+  // The excluded set used to name 'transporter', a v1 role absent from
+  // `userRoleEnum`, so it excluded nobody — every driver and carrier was
+  // counted as a regular user and the figure was inflated.
   const result = await db
     .select({ count: sql<number>`count(DISTINCT ${user.id})` })
     .from(user)
@@ -20,11 +23,10 @@ export async function getActiveUsersCount(): Promise<number> {
       and(
         // Not banned (optional, but "active" usually implies not banned)
         eq(user.banned, false),
-        // Exclude users who have admin/transporter/operator roles
         sql`NOT EXISTS (
           SELECT 1 FROM ${userRoles}
           WHERE ${userRoles.userId} = ${user.id}
-          AND ${userRoles.role} IN ('admin', 'transporter', 'operator')
+          AND ${userRoles.role} IN ('admin', 'operator', 'support', 'finance', 'carrier', 'driver')
         )`
       )
     );

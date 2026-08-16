@@ -25,6 +25,7 @@ type Executor = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
 export interface BrowseFilters {
   categoryId?: string;
   q?: string;
+  origin?: "direct" | "expedion";
   nearLat?: number;
   nearLng?: number;
   radiusKm?: number;
@@ -63,6 +64,21 @@ export const listingsDal = {
   async getById(id: string, tx: Executor = db) {
     return await tx.query.listings.findFirst({
       where: eq(listings.id, id),
+      with: { photos: true, shipper: true, category: true },
+    });
+  },
+
+  /**
+   * The listing minted from a given Expedion quote, if escalation got that far.
+   * `externalRef` holds the quote id, so this is the idempotency key that lets
+   * a retried escalation adopt an orphaned listing rather than mint a second.
+   */
+  async getByExternalRef(externalRef: string, tx: Executor = db) {
+    return await tx.query.listings.findFirst({
+      where: and(
+        eq(listings.origin, "expedion"),
+        eq(listings.externalRef, externalRef)
+      ),
       with: { photos: true, shipper: true, category: true },
     });
   },
@@ -120,6 +136,9 @@ export const listingsDal = {
         sql`to_tsvector('french', ${listings.title} || ' ' || ${listings.description})
             @@ plainto_tsquery('french', ${filters.q})`
       );
+    }
+    if (filters.origin) {
+      conditions.push(eq(listings.origin, filters.origin));
     }
     if (filters.minBudget !== undefined) {
       conditions.push(gte(listings.budgetCents, filters.minBudget));

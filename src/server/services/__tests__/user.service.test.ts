@@ -24,7 +24,7 @@ describe('userService', () => {
             const mockUser = {
                 id: '1', email: 'test@example.com', name: 'Test',
                 image: null, emailVerified: true, isVerified: false, banned: false,
-                roles: [{ role: 'buyer' }], createdAt: new Date(), updatedAt: new Date()
+                roles: [{ role: 'shipper' }], createdAt: new Date(), updatedAt: new Date()
             };
             vi.mocked(usersDAL.getUserById).mockResolvedValue(mockUser as any);
 
@@ -33,7 +33,7 @@ describe('userService', () => {
             expect(result).toEqual(expect.objectContaining({
                 id: '1',
                 email: 'test@example.com',
-                roles: ['buyer']
+                roles: ['shipper']
             }));
         });
 
@@ -72,16 +72,16 @@ describe('userService', () => {
                 .mockResolvedValueOnce({ roles: [{ role: 'admin' }] } as any) // Admin query
                 .mockResolvedValueOnce({ id: 'target' } as any); // Target query
 
-            const result = await userService.assignRole({ userId: 'target', role: 'seller' }, 'admin-id');
+            const result = await userService.assignRole({ userId: 'target', role: 'carrier' }, 'admin-id');
 
             expect(result.success).toBe(true);
-            expect(usersDAL.assignRole).toHaveBeenCalledWith('target', 'seller', 'admin-id');
+            expect(usersDAL.assignRole).toHaveBeenCalledWith('target', 'carrier', 'admin-id');
         });
 
         it('should throw if not admin', async () => {
              vi.mocked(usersDAL.getUserById).mockResolvedValue({ roles: [{ role: 'user' }] } as any);
              
-             await expect(userService.assignRole({ userId: 'target', role: 'seller' }, 'user-id'))
+             await expect(userService.assignRole({ userId: 'target', role: 'carrier' }, 'user-id'))
                 .rejects.toThrow('Unauthorized: Admin role required');
         });
     });

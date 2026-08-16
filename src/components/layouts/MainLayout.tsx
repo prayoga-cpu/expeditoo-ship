@@ -5,6 +5,7 @@ import { BottomNav } from "../BottomNav";
 import { NotificationBell } from "../NotificationBell";
 import { ThemeToggle } from "../ui/theme-toggle";
 import { AppSidebarHeader } from "./AppSidebarHeader";
+import { BrandWordmark } from "@/components/ui/brand-mark";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -41,8 +42,8 @@ export function MainLayout({ children }: MainLayoutProps) {
       icon: Package,
     },
     {
-      href: "/create",
-      label: t("createAuction"),
+      href: "/expedion",
+      label: t("jobs"),
       icon: PlusCircle,
     },
     {
@@ -52,10 +53,10 @@ export function MainLayout({ children }: MainLayoutProps) {
       badge: unreadCount > 0 ? unreadCount : undefined, // Add badge
     },
     {
-      // Was /my-bids, a route that never existed. The shipper's own jobs
-      // live at /listings/me.
-      href: "/listings/me",
-      label: t("myJobs"),
+      // Replaces "My jobs". Shippers no longer post here, so the only thing
+      // that is "mine" is the application to drive.
+      href: "/carrier/application",
+      label: t("myApplication"),
       icon: ClipboardList,
     },
     {
@@ -65,9 +66,7 @@ export function MainLayout({ children }: MainLayoutProps) {
     },
   ];
 
-  // Hide bottom nav on auction detail pages
-  const hideBottomNav =
-    pathname?.includes("/auction/") || pathname?.includes("/listing/");
+  const hideBottomNav = pathname?.includes("/listing/");
 
   return (
     <div 
@@ -136,10 +135,12 @@ function Header() {
   return (
     <header className="border-b border-border bg-card sticky top-0 z-40">
       <div className="flex items-center justify-between px-4 md:px-6 py-2 h-12">
-        {/* Mobile Logo with Back Button for Auction Detail */}
+        {/* Mobile logo. Uses the shared lockup so the mark is present here too
+            — this used to be a bare heading, which is why mobile showed the
+            wordmark with no mark beside it. */}
         <div className="flex items-center gap-2 shrink-0 xl:hidden">
           <Link href="/home">
-            <h1 className="text-lg font-bold text-primary">EXPEDITOO</h1>
+            <BrandWordmark size={24} />
           </Link>
         </div>
 

@@ -39,9 +39,16 @@ export function RoleManagementDialog({
   const [selectedRole, setSelectedRole] = useState<string>("");
   const t = useTranslations("admin.roles");
 
+  // The canonical seven (src/db/schema/users.ts). This previously offered
+  // "buyer" and "transporter" — neither exists in the database enum, so every
+  // assignment made from this dialog failed.
   const AVAILABLE_ROLES = [
-    { value: "buyer", label: t("buyer") },
-    { value: "transporter", label: t("transporter") },
+    { value: "shipper", label: t("shipper") },
+    { value: "carrier", label: t("carrier") },
+    { value: "driver", label: t("driver") },
+    { value: "operator", label: t("operator") },
+    { value: "support", label: t("support") },
+    { value: "finance", label: t("finance") },
     { value: "admin", label: t("admin") },
   ];
 

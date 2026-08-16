@@ -22,6 +22,7 @@ import {
   useWithdrawApplication,
 } from "../hooks/useCarrier";
 import type { CarrierApplication } from "../api/carrier.api";
+import { ApplicationStatusBanner } from "./ApplicationStatusBanner";
 import { BankingSection } from "./BankingSection";
 import { CarrierProfileForm } from "./CarrierProfileForm";
 import { DocumentChecklist } from "./DocumentChecklist";
@@ -56,7 +57,7 @@ function ApplicationFunnel({ application }: { application: CarrierApplication })
 
   return (
     <div className="space-y-6">
-      <StatusBanner application={application} />
+      <ApplicationStatusBanner application={application} />
 
       {editable ? (
         <CarrierProfileForm application={application} />
@@ -72,42 +73,6 @@ function ApplicationFunnel({ application }: { application: CarrierApplication })
       {status === "submitted" && <WithdrawSection />}
       {status === "approved" && <ApprovedActions />}
     </div>
-  );
-}
-
-function StatusBanner({ application }: { application: CarrierApplication }) {
-  const t = useTranslations("carrier.application.banner");
-  const { status } = application;
-
-  if (status === "draft") return null;
-
-  const failed = status === "rejected" || status === "suspended";
-  const reason =
-    status === "rejected"
-      ? application.rejectionReason
-      : status === "suspended"
-        ? application.suspensionReason
-        : null;
-
-  return (
-    <Alert variant={failed ? "destructive" : "default"}>
-      {status === "approved" ? (
-        <BadgeCheck />
-      ) : failed ? (
-        <ShieldAlert />
-      ) : (
-        <Clock />
-      )}
-      <AlertTitle>{t(`${status}.title`)}</AlertTitle>
-      <AlertDescription>
-        <p>{t(`${status}.description`)}</p>
-        {reason && (
-          <p>
-            {t("reasonLabel")}: {reason}
-          </p>
-        )}
-      </AlertDescription>
-    </Alert>
   );
 }
 

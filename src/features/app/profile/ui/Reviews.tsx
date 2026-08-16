@@ -28,7 +28,6 @@ export function Reviews({ userId }: { userId?: string }) {
   if (isLoading) {
     return (
       <PageLoader
-        variant="default"
         className={cn(isDriver && "xl:min-h-[100vh]")}
       />
     );

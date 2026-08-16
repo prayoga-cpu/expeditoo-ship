@@ -66,7 +66,7 @@ export function AdminSupportChats() {
     };
 
     if (isLoading) {
-        return <PageLoader variant="admin" />;
+        return <PageLoader />;
     }
 
     return (

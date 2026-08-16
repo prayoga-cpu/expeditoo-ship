@@ -91,6 +91,9 @@ export function applicationGaps(carrier: CarrierWithRelations): string[] {
   if (!carrier.ibanLast4) missing.push("banking:iban");
   if (!carrier.bicLast4) missing.push("banking:bic");
 
+  // One vehicle, not a fleet: an offer names the vehicle that will do the job,
+  // so a driver with none cannot bid. Individual applicants register the van
+  // they drive; the requirement is the same, the framing is not.
   if (carrier.vehicles.length === 0) {
     missing.push("vehicle:at_least_one");
   }

@@ -475,11 +475,19 @@ export const expedionService = {
     const quote = await expedionDal.getById(id);
     if (!quote) throw err("QUOTE_NOT_FOUND", 404);
 
-    if (input.status && !canTransition(quote.status, input.status)) {
+    // Attaching a driver implies a move to `assigned`, which is a status
+    // change like any other. Resolving it here means the implied move answers
+    // to the same graph as a stated one — written straight into the patch, it
+    // let a cancelled or delivered quote be dragged back into the queue by
+    // handing it a driver.
+    const nextStatus: ExpedionQuoteStatus | undefined =
+      input.status ?? (input.assignedCarrierId ? "assigned" : undefined);
+
+    if (nextStatus && !canTransition(quote.status, nextStatus)) {
       throw err(
         "INVALID_TRANSITION",
         409,
-        `${quote.status} → ${input.status} is not a legal transition`
+        `${quote.status} → ${nextStatus} is not a legal transition`
       );
     }
 
@@ -489,7 +497,15 @@ export const expedionService = {
     // Assigning a driver is what stops the escalation clock.
     if (input.assignedCarrierId) {
       patch.assignedAt = new Date();
-      patch.status = input.status ?? "assigned";
+      patch.status = nextStatus;
+    }
+
+    // Now that an unmentioned field no longer arrives as `null`, a body that
+    // names nothing produces an empty patch — and Drizzle answers an empty
+    // `set()` with a raw throw. A patch that changes nothing is a caller
+    // mistake, so it is named as one rather than surfacing as a 500.
+    if (!Object.values(patch).some((v) => v !== undefined)) {
+      throw err("NO_CHANGES", 400, "no fields to update");
     }
 
     const updated = await db.transaction(async (tx) => {

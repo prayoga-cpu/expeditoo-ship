@@ -76,7 +76,7 @@ export function AddressManagement() {
   };
 
   if (isLoading) {
-    return <PageLoader variant="padded" />;
+    return <PageLoader />;
   }
 
   return (

@@ -35,7 +35,7 @@ export function useAdmin() {
           // Determine primary role for UI
           let role = "user";
           if (roles.includes("admin")) role = "admin";
-          else if (roles.includes("transporter") || roles.includes("driver"))
+          else if (roles.includes("driver") || roles.includes("carrier"))
             role = "driver";
           else if (roles.length > 0) role = roles[0];
 

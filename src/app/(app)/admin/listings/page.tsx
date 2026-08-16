@@ -38,7 +38,7 @@ export default function ListingsPage() {
   }
 
   if (isLoading) {
-    return <PageLoader variant="admin" />;
+    return <PageLoader />;
   }
 
   if (error) {

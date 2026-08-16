@@ -24,14 +24,29 @@ const looseNumber = z.union([z.number(), z.string()]).nullish().transform((v) =>
   return Number.isFinite(n) ? n : null;
 });
 
+/**
+ * The same, for dates — but with `.optional()` outside the transform.
+ *
+ * `.nullish()` inside it means an absent key still reaches the transform as
+ * `undefined` and leaves it as `null`, which Zod then emits. On a patch a
+ * present `null` says "clear this column", so every admin PATCH was wiping
+ * `escalateAfter` and `storageFreeUntil` on its way past. Outside, an absent
+ * key is dropped from the parsed object and only an explicit `null` clears.
+ *
+ * `looseNumber` has the same shape and the same trap. It is only ever reached
+ * through `.partial()` schemas, where Zod short-circuits on `undefined` before
+ * the transform runs, so it is safe where it stands — but do not reuse it in a
+ * patch schema without moving its optionality out too.
+ */
 const looseDate = z
   .union([z.string(), z.date()])
-  .nullish()
+  .nullable()
   .transform((v) => {
     if (!v) return null;
     const d = v instanceof Date ? v : new Date(v);
     return Number.isNaN(d.getTime()) ? null : d;
-  });
+  })
+  .optional();
 
 const trimmed = z.string().trim().min(1).nullish();
 
@@ -123,6 +138,14 @@ export type UpdateExpedionQuoteInput = z.infer<
 // Admin update
 // ========================================
 
+/**
+ * A true patch: an absent key means "leave the stored value alone", an
+ * explicit `null` means "clear it".
+ *
+ * The two are separate values in the inferred type — `undefined` against
+ * `null` — rather than something the service has to reconstruct from the raw
+ * body, so a field the operator never touched cannot reach the DAL at all.
+ */
 export const adminUpdateExpedionQuoteSchema = z.object({
   status: expedionQuoteStatusSchema.optional(),
   paymentStatus: expedionPaymentStatusSchema.optional(),

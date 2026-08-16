@@ -54,6 +54,13 @@ export function LocaleProvider({ children }: LocaleProviderProps) {
         setIsLoading(false);
     }, []);
 
+    // Keep <html lang> in step with what is actually rendered. The server can
+    // only guess (it stamps `defaultLocale`), so on an English device the
+    // document would otherwise claim to be French for the rest of the session.
+    useEffect(() => {
+        document.documentElement.lang = locale;
+    }, [locale]);
+
     // Change locale
     const setLocale = useCallback((newLocale: Locale) => {
         if (!isValidLocale(newLocale)) {

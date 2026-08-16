@@ -31,6 +31,14 @@ interface JobDetailProps {
   listingId: string;
   /** Null when signed out; drives whether offers are visible at all. */
   viewerId: string | null;
+  /**
+   * Viewer holds `operator` or `admin`. Escalated Expedion jobs belong to a
+   * system account nobody signs into, so without this nobody could ever award
+   * one. Mirrors the rule in offersService.acceptOffer exactly — including its
+   * restriction to Expedion-origin jobs — so the UI never offers an award the
+   * service will refuse.
+   */
+  isOperator?: boolean;
 }
 
 const euros = (cents: number) =>
@@ -49,7 +57,11 @@ const STATUS_TONE: Record<string, string> = {
   draft: "bg-muted text-muted-foreground border-border",
 };
 
-export function JobDetail({ listingId, viewerId }: JobDetailProps) {
+export function JobDetail({
+  listingId,
+  viewerId,
+  isOperator = false,
+}: JobDetailProps) {
   const [sort, setSort] = useState("price_asc");
 
   const { data: job, isLoading } = useJobDetail(listingId);
@@ -59,7 +71,8 @@ export function JobDetail({ listingId, viewerId }: JobDetailProps) {
   if (isLoading || !job) return <PageLoader />;
 
   const isShipper = viewerId !== null && job.shipperId === viewerId;
-  const canAccept = isShipper && job.status === "open";
+  const canAward = isOperator && job.origin === "expedion";
+  const canAccept = (isShipper || canAward) && job.status === "open";
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6 p-4 sm:p-6">

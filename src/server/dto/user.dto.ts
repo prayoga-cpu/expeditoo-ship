@@ -1,17 +1,20 @@
 import { z } from "zod";
+import { userRoleEnum } from "@/db/schema/users";
 
 // ========================================
 // User Role Enum
 // ========================================
 
-export const userRoleSchema = z.enum([
-  "buyer",
-  "seller",
-  "auctioneer",
-  "transporter",
-  "operator",
-  "admin",
-]);
+/**
+ * Derived from the database enum rather than restated, because restating it is
+ * how the two drifted apart. This listed the v1 goods-marketplace roles —
+ * buyer, seller, auctioneer, transporter — none of which exist in
+ * `userRoleEnum`. The effect was not cosmetic: admin role assignment validates
+ * against this schema, so granting `carrier`, `driver`, `shipper`, `support` or
+ * `finance` was rejected as invalid, while `transporter` passed validation and
+ * then failed at the database. Deriving it means that cannot recur.
+ */
+export const userRoleSchema = z.enum(userRoleEnum.enumValues);
 
 export type UserRole = z.infer<typeof userRoleSchema>;
 

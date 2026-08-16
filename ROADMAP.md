@@ -7,17 +7,21 @@ Version 2.0 · 04/08/2026 · PRIONATION.io for Atout Global Services
 
 ## 1. What this product is
 
-Shippers post transport jobs. Carriers bid with price, ETA and vehicle. The shipper compares offers and picks a carrier. Stripe holds and releases payment.
+Expedion escalates paid transport jobs that no driver in its own pool has taken.
+Approved drivers on Expeditoo bid with price, ETA and vehicle. An operator
+compares the bids and picks a carrier. Stripe holds and releases payment.
 
-There are no goods auctions in Expeditoo. The only auction here is the **reverse auction on transport**, carriers competing downward on price.
+Shippers do not post jobs here — Expedion is the only inlet. There are no goods
+auctions either; the only auction is the **reverse auction on transport**,
+drivers competing downward on price.
 
 | | |
 |---|---|
 | Market | France, road transport, any category |
-| Model | Two-sided marketplace, competitive bidding |
-| Revenue | 10% commission on each completed delivery |
-| Selection | **The client selects** the carrier from submitted bids |
-| Upstream feed | Escalated jobs from Expedion when no driver is available |
+| Model | Driver-side marketplace on escalated demand, competitive bidding |
+| Revenue | Commission on each completed delivery — split undecided, see §10 |
+| Selection | **An operator selects** the driver from submitted bids |
+| Demand | Escalated jobs from Expedion when no driver is available |
 
 ---
 
@@ -25,29 +29,37 @@ There are no goods auctions in Expeditoo. The only auction here is the **reverse
 
 | Role | Can do |
 |---|---|
-| **Shipper** | Register, create and edit listings, receive offers, chat, select carrier, pay, track, review |
-| **Carrier** | Register with KYC, browse listings, submit offers, chat, manage schedule, update status, deliver, get paid |
-| **Admin** | Manage users, moderate listings, approve carrier applications, handle payments and refunds, view statistics, force-escalate jobs |
+| **Driver** | Register with KYC, browse escalated jobs, submit offers, chat, update status, deliver, get paid |
+| **Operator** | Compare bids and award, monitor the Expedion bridge, review driver applications, force-escalate |
+| **Admin** | Everything an operator can, plus users, roles, payments, refunds and statistics |
+
+`shipper` remains in the role enum but is held only by the Expedion system
+account that owns escalated listings. Nobody signs in as one.
 
 ---
 
 ## 3. Core flow
 
 ```
-Shipper posts a job
-   ↓  what / where / when / price expectation
-Job goes live on the marketplace
-   ↓  matching carriers notified
-Carriers submit bids
+Expedion client accepts a quote and pays
+   ↓  escalateAfter set to now + 48h
+No driver assigned inside the window
+   ↓  cron sweep auto-escalates
+Job goes live on Expeditoo
+   ↓  matching drivers notified
+Drivers submit bids
    ↓  price + ETA + vehicle + message
-Shipper compares and accepts one
+An operator compares and accepts one
    ↓  Stripe payment authorised
 Pickup → In transit → Delivered
-   ↓  status updates at each stage
-Payout to carrier, two-way review
+   ↓  status writes back to Expedion at each stage
+Payout to driver, two-way review
 ```
 
-**Escalation inlet.** A job arriving from Expedion enters at "Job goes live" with a flag marking its origin. Everything downstream is identical. When a carrier is selected, the status writes back so the Expedion client sees "retrait en cours" without leaving their app.
+**The escalation inlet is the product.** A job arriving from Expedion enters at
+"Job goes live" carrying `origin='expedion'` and `external_ref`. When a driver is
+selected, the status writes back so the Expedion client sees "retrait en cours"
+without leaving their app.
 
 ---
 
@@ -57,11 +69,8 @@ Payout to carrier, two-way review
 |---|---|
 | **Public** | Splash, landing, pricing, FAQ, terms, privacy |
 | **Auth** | Login, register, forgot password, reset password, verify email |
-| **Shipper** | Home + map, search and filters, create listing (multi-step), listing details, my listings, offers received, chat, checkout, deliveries, tracking, wallet, payments, profile, settings, notifications |
-| **Carrier** | Dashboard, browse jobs, job details, submit offer, my jobs, schedule, active delivery, proof of delivery, earnings, chat, profile |
-| **Admin** | Dashboard, users, carrier applications, listings, shipments, payments, support, reports, statistics |
-
----
+| **Driver** | Dashboard (`/home`), job board (`/expedion`), job details, submit offer, my offers, my application, deliveries, active delivery, proof of delivery, chat, profile, settings, notifications |
+| **Operator / Admin** | Award queue, Expedion bridge, driver applications, users, listings, shipments, payments, support, reports, statistics |
 
 ## 5. Data entities
 
@@ -200,13 +209,24 @@ Route matching is deliberately **after** bidding. Bidding is the product; routes
 
 ## 9. Out of scope
 
-Goods auctions of any kind · native iOS build · carrier tracking API integrations (quoted per carrier) · multi-country expansion beyond France.
+Goods auctions of any kind · a shipper-facing posting flow · native iOS build ·
+carrier tracking API integrations (quoted per carrier) · multi-country expansion
+beyond France.
 
 ---
 
 ## 10. Open decisions
 
-1. Auto-escalation window duration
-2. Commission split when a job originates from Expedion
-3. Insurance partner selection
-4. KYC vendor selection
+1. **Commission split when a job originates from Expedion.** `budgetCents` is
+   what the client already paid Expedion; the driver bids below it and the
+   difference is the margin. Nothing names how that splits. Payouts cannot go
+   live until it does — this is the blocking one.
+2. **Who calls `/api/expedion/quotes/:id/paid`.** The endpoint exists and starts
+   the escalation clock, but nothing on the Expedion side posts to it, so
+   auto-escalation is inert on real data.
+3. **Whether person-level driver applications survive French licensing.** KBIS is
+   no longer required, but SIRET and a transport licence still are for anything
+   at or above 7.5 t. If regulation pushes back, the company layer returns.
+4. Auto-escalation window duration (currently 48 h)
+5. Insurance partner selection
+6. KYC vendor selection

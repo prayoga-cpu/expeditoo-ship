@@ -12,7 +12,7 @@ export default function DriverDashboardPage() {
   const t = useTranslations("driver.dashboard");
 
   if (isLoading) {
-    return <PageLoader variant="driver" />;
+    return <PageLoader />;
   }
 
   return (

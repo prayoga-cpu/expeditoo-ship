@@ -11,6 +11,7 @@ vi.mock("@/db", () => ({
 vi.mock("@/server/dal/offers.dal", () => ({ offersDal: {} }));
 vi.mock("@/server/dal/listings.dal", () => ({ listingsDal: {} }));
 vi.mock("@/server/dal/carriers.dal", () => ({ carriersDal: {} }));
+vi.mock("@/server/dal/users.dal", () => ({ userHasRole: vi.fn() }));
 vi.mock("@/server/services/notifications.service", () => ({
   notificationsService: { createNotification: vi.fn().mockResolvedValue({}) },
 }));
@@ -26,6 +27,7 @@ import { offersService, OfferError } from "../offers.service";
 import { offersDal } from "@/server/dal/offers.dal";
 import { listingsDal } from "@/server/dal/listings.dal";
 import { carriersDal } from "@/server/dal/carriers.dal";
+import { userHasRole } from "@/server/dal/users.dal";
 import { paymentsService } from "@/server/services/payments.service";
 
 // ========================================
@@ -377,6 +379,66 @@ describe("offersService.acceptOffer", () => {
 
   it("only lets the job's own shipper accept", async () => {
     expect(await codeFrom(() => offersService.acceptOffer("someone-else", "offer-1")))
+      .toBe("FORBIDDEN_NOT_SHIPPER");
+  });
+
+  // An escalated Expedion job is owned by a system account nobody signs into,
+  // so the shipper-only rule above would make it permanently unawardable. An
+  // operator awards in the client's place - but only on jobs from that inlet.
+  describe("on an escalated Expedion job", () => {
+    const expedionListing = () =>
+      listing({ shipperId: "expedion-system", origin: "expedion" });
+
+    beforeEach(() => {
+      Object.assign(listingsDal, {
+        getById: vi.fn().mockResolvedValue(expedionListing()),
+        getByIdForUpdate: vi.fn().mockResolvedValue(expedionListing()),
+      });
+    });
+
+    it("lets an operator award it", async () => {
+      vi.mocked(userHasRole).mockImplementation(
+        async (_id, role) => role === "operator"
+      );
+
+      const { shipment } = await offersService.acceptOffer("op-1", "offer-1");
+      expect(shipment).toBeTruthy();
+    });
+
+    it("lets an admin award it", async () => {
+      vi.mocked(userHasRole).mockImplementation(
+        async (_id, role) => role === "admin"
+      );
+
+      const { shipment } = await offersService.acceptOffer("admin-1", "offer-1");
+      expect(shipment).toBeTruthy();
+    });
+
+    it("refuses anyone without an operating role", async () => {
+      vi.mocked(userHasRole).mockResolvedValue(false);
+
+      expect(await codeFrom(() => offersService.acceptOffer("driver-9", "offer-1")))
+        .toBe("FORBIDDEN_NOT_OPERATOR");
+    });
+
+    // The operator clicked; the system account owns the job and therefore the
+    // money. Charging the operator would be a real-world billing error.
+    it("bills the listing's shipper, not the operator who clicked", async () => {
+      vi.mocked(userHasRole).mockResolvedValue(true);
+
+      await offersService.acceptOffer("op-1", "offer-1");
+
+      expect(paymentsService.authoriseForShipment).toHaveBeenCalledWith(
+        expect.objectContaining({ shipperId: "expedion-system" })
+      );
+    });
+  });
+
+  // A direct listing must not gain an operator escape hatch.
+  it("does not let an operator award a direct job", async () => {
+    vi.mocked(userHasRole).mockResolvedValue(true);
+
+    expect(await codeFrom(() => offersService.acceptOffer("op-1", "offer-1")))
       .toBe("FORBIDDEN_NOT_SHIPPER");
   });
 

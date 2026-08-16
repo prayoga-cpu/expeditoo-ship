@@ -46,7 +46,7 @@ export function Notifications({
   const t = useTranslations("notifications");
 
   if (isLoading) {
-    return <PageLoader variant="padded" />;
+    return <PageLoader />;
   }
 
   return (

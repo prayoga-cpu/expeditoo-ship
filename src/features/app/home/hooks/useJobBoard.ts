@@ -12,10 +12,13 @@ import { DEFAULT_JOB_FILTERS, type JobFilters } from "../types";
  * Budgets are entered in euros and sent in cents, because the API works in
  * cents throughout and converting at the boundary keeps the rounding in one
  * place.
+ *
+ * `origin` pins the board to one inlet. Expedion escalation is the only source
+ * of demand now, so the board passes `expedion` and legacy `direct` rows — left
+ * over from the shipper-posting era, or seeded — stay off the carrier's list.
  */
-export function useJobBoard() {
+export function useJobBoard(options: { origin?: "direct" | "expedion" } = {}) {
   const [filters, setFilters] = useState<JobFilters>(DEFAULT_JOB_FILTERS);
-  const [showMap, setShowMap] = useState(false);
   const [page, setPage] = useState(1);
 
   // Typing should not fire a request per keystroke.
@@ -24,6 +27,7 @@ export function useJobBoard() {
   const params = useMemo(
     () => ({
       q: debouncedQuery || undefined,
+      origin: options.origin,
       categoryId: filters.categoryId ?? undefined,
       minBudget: filters.minBudget != null ? filters.minBudget * 100 : undefined,
       maxBudget: filters.maxBudget != null ? filters.maxBudget * 100 : undefined,
@@ -35,7 +39,7 @@ export function useJobBoard() {
       page,
       limit: 20,
     }),
-    [debouncedQuery, filters, page]
+    [debouncedQuery, filters, page, options.origin]
   );
 
   const query = useQuery({
@@ -76,7 +80,5 @@ export function useJobBoard() {
     activeFilterCount,
     page,
     setPage,
-    showMap,
-    setShowMap,
   };
 }

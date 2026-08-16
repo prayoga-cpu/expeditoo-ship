@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
+import type { QuoteRow } from "@/server/dal/expedion-report.dal";
 import type { ExpedionReport } from "@/server/services/expedion-report.service";
 
 /**
@@ -34,11 +35,52 @@ async function unwrap<T>(response: Response): Promise<T> {
   return body.data;
 }
 
+/**
+ * Turns the report's date columns back into `Date`s.
+ *
+ * `QuoteRow` declares `storageFreeUntil`, `escalateAfter` and `requestedAt` as
+ * `Date`, and on the server they are. JSON has no date type, so what actually
+ * arrives is an ISO string — and `unwrap` is a cast, not a parse, so nothing
+ * noticed: the compiler believed the declaration while the Storage queue called
+ * `.getTime()` on a string and threw on every row it had.
+ *
+ * Reviving here keeps the one declared type honest on both sides. It is a hand-
+ * written field list, so it has to be extended when a date column is added —
+ * `expedion-report.dal.test.ts` round-trips a row through `JSON.parse(JSON
+ * .stringify(...))` to make that failure loud rather than silent.
+ */
+function reviveQuoteDates(report: ExpedionReport): ExpedionReport {
+  const row = (r: QuoteRow): QuoteRow => ({
+    ...r,
+    storageFreeUntil: asDate(r.storageFreeUntil),
+    escalateAfter: asDate(r.escalateAfter),
+    requestedAt: asDate(r.requestedAt),
+  });
+  return {
+    ...report,
+    queues: Object.fromEntries(
+      Object.entries(report.queues).map(([key, rows]) => [key, rows.map(row)])
+    ) as ExpedionReport["queues"],
+    recent: report.recent.map(row),
+  };
+}
+
+/** Accepts what the wire sends (string) or what the type promises (Date). */
+function asDate(value: Date | string | null): Date | null {
+  if (value === null) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 export function useExpedionReport() {
   return useQuery<ExpedionReport>({
     queryKey: REPORT_KEY,
     queryFn: async () =>
-      unwrap<ExpedionReport>(await fetch("/api/admin/expedion/report")),
+      reviveQuoteDates(
+        await unwrap<ExpedionReport>(
+          await fetch("/api/admin/expedion/report")
+        )
+      ),
     // Operator queues are worked through in a sitting; a stale-for-a-minute
     // count is fine, a refetch on every window focus is not.
     staleTime: 60_000,
@@ -108,15 +150,16 @@ export interface CarrierOption {
 export function useCarrierOptions() {
   return useQuery<CarrierOption[]>({
     queryKey: ["admin", "carriers", "options"],
-    queryFn: async () => {
-      const body = (await (await fetch("/api/admin/carriers")).json()) as
-        | Envelope<{ items?: CarrierOption[] } | CarrierOption[]>
-        | undefined;
-      const data = body?.data;
-      if (Array.isArray(data)) return data;
-      return data?.items ?? [];
-    },
+    // Shares `unwrap` with the queries above, so a failed request surfaces as
+    // a query error. Guessing at the envelope instead turned a missing
+    // endpoint into an empty list, which reads as "no carrier is approved yet"
+    // and hid a picker that could never be filled.
+    queryFn: async () =>
+      unwrap<CarrierOption[]>(await fetch("/api/admin/carriers")),
     staleTime: 5 * 60_000,
     refetchOnWindowFocus: false,
   });
 }
+
+/** Exposed for the JSON round-trip test; not part of the hook's public API. */
+export const __testing = { reviveQuoteDates };

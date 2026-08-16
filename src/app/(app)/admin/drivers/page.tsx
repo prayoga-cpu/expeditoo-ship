@@ -39,7 +39,7 @@ export default function DriversPage() {
   }
 
   if (isLoading) {
-    return <PageLoader variant="admin" />;
+    return <PageLoader />;
   }
 
   return (

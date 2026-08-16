@@ -53,27 +53,24 @@ export function BottomNav() {
   };
 
   /**
-   * One bar cannot serve every side of the marketplace: a shipper's primary
-   * action is posting a job, a driver's is finding one and tracking what they
-   * won, and a carrier additionally runs the company — its fleet and its KYC
-   * application. Carriers trade the deliveries shortcut for those two screens;
-   * their drivers keep it.
+   * A carrier bids and runs the company: its offers and its KYC application.
+   * They trade the deliveries shortcut for those; their drivers keep it.
    */
   const carrierItems: NavItem[] = [
-    { href: "/home", labelKey: "jobs", icon: <Home className="w-5 h-5" /> },
+    { href: "/home", labelKey: "home", icon: <Home className="w-5 h-5" /> },
+    {
+      href: "/expedion",
+      labelKey: "jobs",
+      icon: <Plus className="w-5 h-5" />,
+    },
     {
       href: "/carrier/offers",
       labelKey: "myOffers",
       icon: <Gavel className="w-5 h-5" />,
     },
     {
-      href: "/carrier/fleet",
-      labelKey: "fleet",
-      icon: <Truck className="w-5 h-5" />,
-    },
-    {
       href: "/carrier/application",
-      labelKey: "application",
+      labelKey: "myApplication",
       icon: <FileText className="w-5 h-5" />,
     },
     messages,
@@ -87,7 +84,8 @@ export function BottomNav() {
    * surface that carries the status actions and proof of delivery.
    */
   const driverItems: NavItem[] = [
-    { href: "/home", labelKey: "jobs", icon: <Home className="w-5 h-5" /> },
+    { href: "/home", labelKey: "home", icon: <Home className="w-5 h-5" /> },
+    { href: "/expedion", labelKey: "jobs", icon: <Plus className="w-5 h-5" /> },
     {
       href: "/driver/shipments",
       labelKey: "deliveries",
@@ -97,22 +95,22 @@ export function BottomNav() {
     account,
   ];
 
-  const shipperItems: NavItem[] = [
+  /**
+   * Anyone without an application yet. Shippers no longer post work here, so
+   * this bar's job is to show the board and the way to become a driver.
+   */
+  const applicantItems: NavItem[] = [
     { href: "/home", labelKey: "home", icon: <Home className="w-5 h-5" /> },
+    { href: "/expedion", labelKey: "jobs", icon: <Plus className="w-5 h-5" /> },
     {
-      href: "/listings/me",
-      labelKey: "myJobs",
+      href: "/carrier/application",
+      labelKey: "myApplication",
       icon: <FileText className="w-5 h-5" />,
     },
     {
       href: "/deliveries",
       labelKey: "shipments",
       icon: <Calendar className="w-5 h-5" />,
-    },
-    {
-      href: "/create",
-      labelKey: "create",
-      icon: <Plus className="w-5 h-5" />,
     },
     messages,
     account,
@@ -122,7 +120,7 @@ export function BottomNav() {
     ? carrierItems
     : isDriver
       ? driverItems
-      : shipperItems;
+      : applicantItems;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border/50 xl:hidden pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] h-[88px]">

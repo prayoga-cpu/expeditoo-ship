@@ -26,6 +26,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageLoader } from "@/components/ui/page-loader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatCard } from "@/features/app/admin/ui/StatCard";
+import type { ExpedionReportSection } from "@/server/services/expedion-report.service";
 
 import { useExpedionReport } from "../hooks/useExpedionReport";
 import { QuoteQueueTable, type QueueColumn } from "./QuoteQueueTable";
@@ -101,6 +102,15 @@ export function ExpedionDashboard() {
   const { quotes, statuses, marketplace, health, series, queues, platform } =
     data;
 
+  // A section whose query threw still arrives, zero-filled, so the rest of the
+  // page can render — which means a placeholder nought is indistinguishable
+  // from a counted one unless we say so. `unavailable` names them; anything it
+  // names becomes the em-dash this page already uses for "cannot say", because
+  // "0 € collected" is a far worse thing to show an operator than nothing.
+  const missing = new Set<ExpedionReportSection>(data.unavailable ?? []);
+  const figure = (section: ExpedionReportSection, value: string) =>
+    missing.has(section) ? "—" : value;
+
   const byStatus = new Map(statuses.map((s) => [s.status, s.count]));
   const actionable =
     quotes.awaitingPricing + quotes.needsDriver + quotes.escalationDue;
@@ -128,49 +138,63 @@ export function ExpedionDashboard() {
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
         <StatCard
           label={t("kpi.quotes")}
-          value={count(quotes.total)}
+          value={figure("quotes", count(quotes.total))}
           icon={Gavel}
-          hint={t("kpi.quotesHint", { count: count(quotes.unowned) })}
+          hint={t("kpi.quotesHint", {
+            count: figure("quotes", count(quotes.unowned)),
+          })}
         />
         <StatCard
           label={t("kpi.actionable")}
-          value={count(actionable)}
+          value={figure("quotes", count(actionable))}
           icon={AlertTriangle}
           hint={t("kpi.actionableHint")}
           tone={actionable > 0 ? "warning" : "default"}
         />
         <StatCard
           label={t("kpi.collected")}
-          value={money(quotes.paidValueCents)}
+          value={figure("quotes", money(quotes.paidValueCents))}
           icon={DollarSign}
           hint={t("kpi.collectedHint", {
-            value: money(quotes.acceptedValueCents),
+            value: figure("quotes", money(quotes.acceptedValueCents)),
           })}
+          // Collected is not "how much money arrived" — it counts quotes whose
+          // paymentStatus reached `paid`, which only ever happens if Expedion
+          // reports the settlement to us. Nothing here observes Stripe, so a
+          // zero means "nothing reported". MOCK_PAYMENTS was never the reason.
           footnote={
-            data.provisional.mockPayments ? t("kpi.mockPayments") : undefined
+            data.provisional.paymentsUnobserved
+              ? t("kpi.reportedPayments")
+              : undefined
           }
         />
         <StatCard
           label={t("kpi.commission")}
-          value={money(platform.appFeesCents)}
+          value={figure("platform", money(platform.appFeesCents))}
           icon={DollarSign}
           hint={t("kpi.commissionHint")}
-          footnote={t("kpi.beforeStripe")}
+          footnote={
+            data.provisional.mockPayments
+              ? `${t("kpi.beforeStripe")} ${t("kpi.mockPayments")}`
+              : t("kpi.beforeStripe")
+          }
         />
         <StatCard
           label={t("kpi.carriers")}
-          value={count(marketplace.carriersApproved)}
+          value={figure("marketplace", count(marketplace.carriersApproved))}
           icon={Truck}
           hint={t("kpi.carriersHint", {
-            pending: count(marketplace.carriersPending),
-            active: count(platform.activeDrivers),
+            pending: figure("marketplace", count(marketplace.carriersPending)),
+            active: figure("platform", count(platform.activeDrivers)),
           })}
         />
         <StatCard
           label={t("kpi.deliveries")}
-          value={count(platform.pendingDeliveries)}
+          value={figure("platform", count(platform.pendingDeliveries))}
           icon={Package}
-          hint={t("kpi.deliveriesHint", { count: count(platform.activeUsers) })}
+          hint={t("kpi.deliveriesHint", {
+            count: figure("platform", count(platform.activeUsers)),
+          })}
         />
       </div>
 
@@ -198,7 +222,7 @@ export function ExpedionDashboard() {
                     />
                   </div>
                   <span className="w-14 shrink-0 text-right font-mono text-xs">
-                    {count(value)}
+                    {figure("statuses", count(value))}
                   </span>
                 </div>
               );
@@ -290,8 +314,19 @@ export function ExpedionDashboard() {
                 <QuoteQueueTable
                   rows={queues[queue.key]}
                   extraColumn={queue.column}
-                  emptyTitle={t(`queues.${queue.key}Empty`)}
-                  emptyDescription={t(`queues.${queue.key}EmptyBody`)}
+                  // An unread queue arrives empty, and "nothing to price" is
+                  // the one thing it must not be allowed to say — that is the
+                  // operator closing the tab on work still sitting there.
+                  emptyTitle={
+                    missing.has("queues")
+                      ? t("error")
+                      : t(`queues.${queue.key}Empty`)
+                  }
+                  emptyDescription={
+                    missing.has("queues")
+                      ? ""
+                      : t(`queues.${queue.key}EmptyBody`)
+                  }
                 />
               </TabsContent>
             ))}
@@ -311,14 +346,24 @@ export function ExpedionDashboard() {
           <CardContent className="space-y-3 text-sm">
             <Row
               label={t("supply.listings")}
-              value={count(marketplace.expedionListings)}
+              value={figure(
+                "marketplace",
+                count(marketplace.expedionListings)
+              )}
             />
             <Row
               label={t("supply.offers")}
-              value={count(marketplace.offersOnExpedionJobs)}
+              value={figure(
+                "marketplace",
+                count(marketplace.offersOnExpedionJobs)
+              )}
             />
             <Row
               label={t("supply.rate")}
+              // `escalated` and `assigned` partition the jobs that reached the
+              // driver stage — a carrier winning an escalated listing counts
+              // once, on the escalated side — so this is the share the pool
+              // could not cover, not a proportion of two overlapping sets.
               value={
                 quotes.paidValueCents === 0 && quotes.escalated === 0
                   ? "—"
@@ -332,12 +377,15 @@ export function ExpedionDashboard() {
             />
             <Row
               label={t("supply.insurance")}
-              value={`${Math.round(quotes.insuredShare * 100)} %`}
+              value={figure(
+                "quotes",
+                `${Math.round(quotes.insuredShare * 100)} %`
+              )}
               hint={t("supply.insuranceHint")}
             />
             <Row
               label={t("supply.vehicles")}
-              value={count(marketplace.activeVehicles)}
+              value={figure("marketplace", count(marketplace.activeVehicles))}
             />
           </CardContent>
         </Card>
@@ -352,18 +400,18 @@ export function ExpedionDashboard() {
           <CardContent className="space-y-3 text-sm">
             <Row
               label={t("health.unowned")}
-              value={count(health.unowned)}
+              value={figure("health", count(health.unowned))}
               hint={t("health.unownedHint")}
             />
             <Row
               label={t("health.missingCoords")}
-              value={count(health.missingPickupCoords)}
+              value={figure("health", count(health.missingPickupCoords))}
               hint={t("health.missingCoordsHint")}
               tone={health.missingPickupCoords > 0 ? "warning" : undefined}
             />
             <Row
               label={t("health.missingDims")}
-              value={count(health.missingDimensions)}
+              value={figure("health", count(health.missingDimensions))}
               hint={t("health.missingDimsHint")}
             />
             <Row
@@ -374,7 +422,7 @@ export function ExpedionDashboard() {
                   : `${Math.round(health.meanExtractionConfidence * 100)} %`
               }
               hint={t("health.confidenceHint", {
-                count: count(health.extracted),
+                count: figure("health", count(health.extracted)),
               })}
             />
           </CardContent>
@@ -390,8 +438,10 @@ export function ExpedionDashboard() {
           <QuoteQueueTable
             rows={data.recent}
             extraColumn="client"
-            emptyTitle={t("recent.empty")}
-            emptyDescription={t("recent.emptyBody")}
+            emptyTitle={missing.has("recent") ? t("error") : t("recent.empty")}
+            emptyDescription={
+              missing.has("recent") ? "" : t("recent.emptyBody")
+            }
           />
         </CardContent>
       </Card>

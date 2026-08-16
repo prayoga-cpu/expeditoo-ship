@@ -8,6 +8,7 @@ import {
   getUserQuerySchema,
   type UserOutput,
   type UserListOutput,
+  type UserRole,
 } from "@/server/dto/user.dto";
 
 // ========================================
@@ -244,7 +245,9 @@ export async function getUsers(query: unknown, adminId: string): Promise<UserLis
       emailVerified: user.emailVerified,
       isVerified: user.isVerified,
       banned: user.banned,
-      roles: user.roles.map((r: { role: string }) => r.role as "buyer" | "seller" | "auctioneer" | "transporter" | "operator" | "admin"),
+      // Cast to the canonical role union rather than a restated v1 list. The
+      // rows come from `user_roles`, whose column is that enum already.
+      roles: user.roles.map((r: { role: string }) => r.role as UserRole),
       createdAt: user.createdAt,
     })),
     total: result.total,

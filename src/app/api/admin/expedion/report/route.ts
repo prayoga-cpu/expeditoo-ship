@@ -41,14 +41,17 @@ export async function GET() {
 
     return NextResponse.json({ success: true, data: report });
   } catch (error: unknown) {
+    // Fixed message, detail to the server log — what `expedionErrorResponse`
+    // does for every other Expedion route. Admin-gated is not a licence to
+    // echo the error back: these are raw aggregate failures, and their text
+    // names tables and columns.
     console.error("Error fetching Expedion report:", error);
     return NextResponse.json(
       {
         success: false,
         error: {
           code: "INTERNAL_SERVER_ERROR",
-          message:
-            error instanceof Error ? error.message : "Internal server error",
+          message: "Failed to load the Expedion report",
         },
       },
       { status: 500 }

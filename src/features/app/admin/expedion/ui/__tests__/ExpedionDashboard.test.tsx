@@ -34,6 +34,7 @@ const QUOTE: QuoteRow = {
   insuredCents: 14_500,
   owned: true,
   hasPickupCoords: true,
+  escalationReady: true,
   storageFreeUntil: new Date("2026-08-20T00:00:00Z"),
   escalateAfter: new Date("2026-08-18T00:00:00Z"),
   requestedAt: new Date("2026-08-14T00:00:00Z"),
@@ -50,6 +51,7 @@ const ORPHAN: QuoteRow = {
   priceCents: null,
   owned: false,
   hasPickupCoords: false,
+  escalationReady: false,
   // Already past, so the storage column takes its "billed" branch.
   storageFreeUntil: new Date("2026-08-01T00:00:00Z"),
 };
@@ -118,7 +120,12 @@ const REPORT: ExpedionReport = {
     activeDrivers: 18,
     pendingDeliveries: 6,
   },
-  provisional: { mockPayments: true, payoutsIncomplete: true },
+  unavailable: [],
+  provisional: {
+    paymentsUnobserved: true,
+    mockPayments: true,
+    payoutsIncomplete: true,
+  },
 };
 
 const state = vi.hoisted(() => ({
@@ -196,7 +203,15 @@ describe("ExpedionDashboard", () => {
 
     // The interpolated hints, which are the other thing a bad key breaks.
     expect(screen.getByText("4 450 importés sans compte")).toBeInTheDocument();
-    expect(screen.getByText("*paiements simulés")).toBeInTheDocument();
+    // The two caveats sit on the figures they actually qualify: "Collected"
+    // counts only settlements Expedion reported to us, while the commission
+    // total is what MOCK_PAYMENTS inflates. They used to be the other way round.
+    expect(
+      screen.getByText("*paiements déclarés, non constatés")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/\*avant frais Stripe \*paiements simulés/)
+    ).toBeInTheDocument();
 
     // The queue tabs carry their pending counts.
     expect(
@@ -215,6 +230,32 @@ describe("ExpedionDashboard", () => {
     renderWith("fr", fr);
 
     expect(screen.getByText("Rien à chiffrer")).toBeInTheDocument();
+  });
+
+  it("shows an unavailable section as unknown, not as nought", () => {
+    // The figures are deliberately left at their real values. In production a
+    // failed section arrives zero-filled, so asserting against zeros would pass
+    // for a page that ignores `unavailable` entirely; keeping the numbers is
+    // what proves the flag, and not the value, is what the page reads.
+    state.report = {
+      ...REPORT,
+      queues: { ...REPORT.queues, toPrice: [] },
+      unavailable: ["quotes", "queues"],
+    };
+    state.isLoading = false;
+    state.error = null;
+
+    const onError = renderWith("fr", fr);
+
+    expect(
+      onError.mock.calls.map(([e]) => e.message),
+      "next-intl reported a message problem"
+    ).toEqual([]);
+    // The quote total, which the report no longer vouches for.
+    expect(screen.queryByText(/^4.591$/)).toBeNull();
+    // An unread queue must not report the work as done.
+    expect(screen.queryByText("Rien à chiffrer")).toBeNull();
+    expect(screen.getByText("Rapport indisponible")).toBeInTheDocument();
   });
 
   it("falls back to the translated error when the report fails", () => {

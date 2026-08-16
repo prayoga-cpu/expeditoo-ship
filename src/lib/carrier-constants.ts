@@ -33,12 +33,23 @@ export const DOCUMENT_KINDS = [
 
 export type DocumentKind = (typeof DOCUMENT_KINDS)[number];
 
-/** Every application must carry these before it can be submitted. */
+/**
+ * Every application must carry these before it can be submitted.
+ *
+ * Person-level: applicants are individual drivers, not haulage companies. The
+ * KBIS — the registry extract for a registered company — is therefore no longer
+ * required, because an auto-entrepreneur simply does not have one; theirs is an
+ * avis de situation SIRENE. It stays in `DOCUMENT_KINDS` so anyone who already
+ * uploaded one keeps a valid document, and so a company applicant can still
+ * supply it.
+ *
+ * SIRET is deliberately still required elsewhere: a sole trader carrying goods
+ * for hire in France has one, and the column is NOT NULL.
+ */
 export const REQUIRED_DOCUMENT_KINDS = [
   "cni_recto",
   "cni_verso",
   "driving_licence",
-  "kbis",
   "insurance_certificate",
   "rib",
 ] as const;

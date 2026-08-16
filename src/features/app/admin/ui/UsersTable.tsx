@@ -278,7 +278,7 @@ export function UsersTable({
             )
           ) {
             displayRole = "User";
-          } else if (role.toLowerCase() === "transporter") {
+          } else if (role.toLowerCase() === "driver") {
             displayRole = "Driver";
           } else if (role.toLowerCase() === "admin") {
             displayRole = "Admin";

@@ -4,6 +4,7 @@ import type { Job, BrowseResult, OffersResponse } from "../types";
 export interface BrowseParams {
   categoryId?: string;
   q?: string;
+  origin?: "direct" | "expedion";
   nearLat?: number;
   nearLng?: number;
   radiusKm?: number;

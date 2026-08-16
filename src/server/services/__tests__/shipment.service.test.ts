@@ -22,6 +22,17 @@ import { shipmentService, ShipmentError } from "../shipment.service";
 import { shipmentsDal } from "@/server/dal/shipments.dal";
 
 /** A full user row as the DAL loads it - permission-blind by design. */
+/**
+ * Fixed, not `new Date()`.
+ *
+ * Assertions compare the service's output against a freshly built
+ * `shipmentRow()`, so a per-call timestamp meant two different `new Date()`
+ * values being compared for equality. They matched only when both landed in
+ * the same millisecond, which made this file fail intermittently on full-suite
+ * runs and pass every time in isolation.
+ */
+const FIXED_CREATED_AT = new Date("2026-01-01T00:00:00.000Z");
+
 const userRow = (id: string, name: string) => ({
   id,
   name,
@@ -33,7 +44,7 @@ const userRow = (id: string, name: string) => ({
   stripeAccountId: `acct_${id}`,
   stripeAccountStatus: "active",
   preferences: { notifyByEmail: true, phone: "+33600000000" },
-  createdAt: new Date(),
+  createdAt: FIXED_CREATED_AT,
 });
 
 /** The shipment graph `shipments.dal.getById` returns, relations and all. */

@@ -39,7 +39,8 @@ export function MyOffers() {
         description="Browse open jobs and bid on the ones that fit your routes."
       >
         <Button asChild>
-          <Link href="/home">Browse jobs</Link>
+          {/* The board lives at /expedion. /home is the driver dashboard. */}
+          <Link href="/expedion">Browse jobs</Link>
         </Button>
       </CenteredEmptyState>
     );

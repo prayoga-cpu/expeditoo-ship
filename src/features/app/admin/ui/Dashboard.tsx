@@ -77,7 +77,7 @@ export function Dashboard() {
   return (
     <div className="space-y-6">
       {isLoading ? (
-        <PageLoader variant="admin" />
+        <PageLoader />
       ) : (
         <>
           {/* Header */}

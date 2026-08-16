@@ -72,10 +72,10 @@ export default function manifest(): MetadataRoute.Manifest {
         icons: [{ src: '/icons/icon-192x192.png', sizes: '192x192' }],
       },
       {
-        name: 'Post a Job',
-        short_name: 'Post',
-        description: 'Create a new transport job and receive offers',
-        url: '/create?source=pwa_shortcut',
+        name: 'Find Jobs',
+        short_name: 'Jobs',
+        description: 'Browse transport jobs open for bids',
+        url: '/expedion?source=pwa_shortcut',
         icons: [{ src: '/icons/icon-192x192.png', sizes: '192x192' }],
       },
       {

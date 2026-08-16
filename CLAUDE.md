@@ -6,18 +6,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**EXPEDITOO** (`expeditoo-ship`) is a **reverse-bidding transport marketplace** for
-France. Shippers post transport jobs; carriers bid downward on price, ETA and
-vehicle; **the shipper selects** the carrier. Stripe holds and releases payment.
-Revenue is a 10% commission on each completed delivery.
+**EXPEDITOO** (`expeditoo-ship`) is the **driver-side app for Expedion demand** in
+France. Expedion — the sibling quote product — escalates paid jobs no driver has
+taken; approved drivers bid downward on price, ETA and vehicle; **an operator
+selects** the winner. Status writes back so the Expedion client never leaves
+their app. Revenue is a commission on each completed delivery.
 
-**There are no goods auctions.** The only auction is the reverse auction on
-transport. If you find auction, bid-on-item, or won-checkout code, it is a
-leftover from v1 and should be removed, not extended.
+**Shippers do not post jobs here.** Expedion escalation is the only inlet. If you
+find a job-posting form, a shipper's "my jobs" list, or won-checkout code, it is
+a leftover and should be removed, not extended. Likewise **there are no goods
+auctions** — the only auction is the reverse auction on transport.
+
+**Nobody signs in as the shipper.** Escalated listings are owned by a system
+account (`EXPEDION_SYSTEM_USER_ID`), which is why awarding is an operator
+permission rather than an owner permission.
 
 `ROADMAP.md` is the product source of truth. Read it before planning anything.
 
-**Current status:** Phase A functionally complete, Phase B wired. See §"Where Things Stand".
+**Current status:** driver-side revamp complete; the Expedion inlet needs a real
+payment signal. See §"Where Things Stand".
 
 ---
 
@@ -41,16 +48,20 @@ pnpm db:studio      # Drizzle Studio
 ## Core Flow
 
 ```
-Shipper posts a job (listing)
-   ↓  what / where / when / budget
-Job goes live on the marketplace
-Carriers submit offers
+Expedion client accepts a quote and pays
+   ↓  POST /api/expedion/quotes/:id/paid sets escalateAfter (+48h)
+No driver assigned inside the window
+   ↓  cron sweep auto-escalates
+Quote becomes a listing (origin='expedion', externalRef=quote id)
+   ↓  appears on /expedion
+Approved drivers submit offers
    ↓  price + ETA + vehicle + message
-Shipper compares and accepts one
+An operator compares and accepts one
    ↓  Stripe authorised (held, not captured), shipment created
+   ↓  status writes back to Expedion
 Pickup → In transit → Delivered
    ↓  payment captured
-Payout to carrier, two-way review
+Payout to driver, two-way review
 ```
 
 ---
@@ -62,17 +73,30 @@ Payout to carrier, two-way review
 | `listings` | **A transport job**, not an item for sale |
 | `offers` | A carrier's competing bid on a job |
 | `shipments` | The execution record, created when an offer is accepted |
-| `carriers` / `vehicles` / `carrier_documents` | Carrier company, its fleet, its KYC file |
+| `carriers` / `vehicles` / `carrier_documents` | **An individual driver's** profile, vehicle and KYC file |
 | `payments` / `payouts` | Money in (held then captured) and money out |
 | `user_roles` | Many-to-many; seven roles |
 
 `listings.origin` (`direct` \| `expedion`) and `listings.external_ref` are the
 bridge to the sibling Expedion product. Both legs are wired: escalation creates a
 listing, and shipment status writes back so the Expedion client sees progress.
+`external_ref` holds the quote id and is the **idempotency key** that stops a
+retried escalation minting a second listing.
+
+New listings are always `expedion`. `direct` survives only as the default on
+legacy rows, and `/expedion` filters them out.
+
+**The `carriers` table is person-level.** Applicants are individual drivers, not
+haulage companies, so KBIS is not required — an auto-entrepreneur has none.
+SIRET still is: a sole trader carrying goods for hire in France has one, and the
+column is `NOT NULL`. One vehicle is required because an offer names the vehicle
+that will do the job; that is not fleet management.
 
 **Roles (7):** `shipper`, `carrier`, `driver`, `operator`, `support`, `finance`,
-`admin`. A `driver` executes shipments and never sees prices, offers or payouts.
-See `docs/specs/roles_spec.md` for the full permission matrix.
+`admin`. The canonical list is `userRoleEnum` in `src/db/schema/users.ts` — Zod
+schemas must **derive** from it, never restate it. A `driver` executes shipments
+and never sees prices, offers or payouts. `shipper` is now held only by the
+Expedion system account. See `docs/specs/roles_spec.md` for the permission matrix.
 
 ---
 
@@ -131,9 +155,11 @@ next-intl (FR + EN) · next-pwa + Capacitor (Android) · Vitest + Playwright.
 
 ## Where Things Stand
 
-Phase A is functionally complete. Phase B (Expedion bridge) is wired both ways.
-Tracked in `docs/plans/plan_phase_a_bidding_core.md` and
-`docs/plans/plan_transport_only_refinement.md`.
+The driver-side revamp is complete: the shipper surface is gone, Expedion is the
+only inlet, and an operator awards in the client's place. Tracked in
+`docs/plans/plan_phase_a_bidding_core.md` and
+`docs/plans/plan_transport_only_refinement.md` (both partly superseded by the
+revamp above).
 
 **The repo is in user-testing mode.** Every MVP journey walks end to end through the
 UI, but payments run behind `MOCK_PAYMENTS` and the Expedion escalation demo runs off
@@ -141,54 +167,71 @@ a seed script — read `docs/TESTING_MOCKS.md` before trusting anything money-sh
 Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before shipping.
 
 **Gates — all green.** `npx tsc --noEmit` 0 errors · `pnpm lint` 0 errors ·
-137 unit tests pass · `pnpm build` succeeds.
+168 unit tests pass · `pnpm build` succeeds.
 
 **Done**
 - Schema remodelled to the transport model; one clean initial migration
 - Goods-auction surface deleted, including its checkout, browse card and categories
-- Offers engine: DTO, DAL, service, routes — atomic accept, concurrency guarantee,
-  idempotency, Stripe compensation. 30 tests
+- **Shipper surface deleted**: job form, `create/success`, my-jobs list. `/listings/me`
+  redirects to `/expedion`
+- **`/expedion` job board**, pinned to `origin='expedion'` (filter threaded DTO → DAL → client)
+- **`/home` is the driver dashboard**: application status, current run, open jobs,
+  bids awaiting decision
+- **Operator award queue** at `/admin/awards`; `offersService.acceptOffer` accepts an
+  operator or admin on Expedion-origin jobs, and bills `listing.shipperId` rather than
+  the actor. 35 tests
+- Offers engine: atomic accept, concurrency guarantee, idempotency, Stripe compensation
 - Listings as transport jobs: DTO, DAL, service, routes. 25 tests
-- Carrier/driver KYC: application, private document storage, fleet, admin
+- Driver KYC (person-level): application, private document storage, vehicle, admin
   approve/reject/suspend, expiry cron. 26 tests
 - Payments: held on acceptance, captured on delivery, released on cancellation,
-  10% commission at source, payout recorded
-- Shipper UI: four-step job form, job detail with offer comparison and accept,
-  my jobs (`/listings/me`), delivery tracking and two-way review
-- Carrier UI *(testing mode)*: application + fleet screens, bid form mounted on job
-  detail, my offers
+  commission at source, payout recorded
 - Driver UI: shipment list and detail, status transitions, proof-of-delivery upload
-- Admin UI *(testing mode)*: carrier application review — list, detail, approve,
-  reject, suspend, KYC documents via presigned URLs
-- Auth: default role `shipper` assigned once for both email and OAuth signup; roles
-  surfaced to the session via `customSession`, so role-aware navigation works
-- Expedion bridge: inbound escalation creates a listing; status changes write back
+- Admin UI: driver application review, award queue, Expedion bridge monitor — the
+  last two were previously orphaned and are now in the sidebar
+- Expedion bridge: `POST /api/expedion/quotes/:id/paid` starts the escalation clock;
+  escalation is idempotent via `external_ref` and refuses to release its claim after
+  creating a listing; status changes write back
 - Crons: listing expiry, document expiry, escalation sweep, image cleanup — driven by
   `.github/workflows/scheduled-jobs.yml`, not Vercel Cron (Hobby caps crons at 2/project,
   once per day). Needs repo variable `APP_URL` and repo secret `CRON_SECRET`.
-- FR/EN parity exact (verified by key diff, not by eye)
+- Theme-aware loader (light/dark `.lottie` cuts, picked by `resolvedTheme`); one shared
+  `BrandWordmark` lockup across sidebar, mobile header and marketing
+- FR/EN parity exact, 1433 keys (verified by key diff, not by eye)
 
-**Not done** — see `plan_transport_only_refinement.md` WP11–WP16 and `docs/TESTING_MOCKS.md`
+**Not done**
 - **Real Stripe hold/capture** — runs under `MOCK_PAYMENTS`; needs SetupIntent
   confirmation and `amount_capturable_updated` webhook handling
-- **Payment → `expedionService.markPaid`** — zero callers, so auto-escalation never
-  fires on a real quote; the demo seeds `escalateAfter` directly
-- Payouts stop at `scheduled`; no carrier earnings screen
+- **Expedion never calls `/quotes/:id/paid`.** The endpoint exists and `markPaid`
+  works, but nothing on the Expedion side posts to it yet, so `escalateAfter` is
+  still only set by hand. Until that call is wired, auto-escalation stays inert on
+  real data and only admin force-escalation works.
+- **Commission split on Expedion-origin jobs is undecided** (`ROADMAP.md` §10).
+  `budgetCents` is what the client already paid; the margin is whatever the driver
+  bids below it. Payouts cannot go live until this is named.
+- Payouts stop at `scheduled`; no driver earnings screen
 - Realtime shipment data: the Ably path exists on both ends but is not connected
 - `seller`/`buyer` vocabulary still in ~50 files (live paths fixed; the rest cosmetic)
-- Marketing copy still oversells (J+7 payout, live bid refresh, 24 h verification)
+- Marketing copy still describes a two-sided marketplace and oversells (J+7 payout,
+  live bid refresh, 24 h verification)
 - E2E proving the exit criteria end to end
 
 ## Gotchas
 
 1. **No goods-auction concepts.** No `bids` on items, no `orders`, no `sellers`
-   or `buyers` — it is `shipper` and `carrier`.
-2. A listing is a *job*. `budgetCents` is the shipper's expectation, **not a cap** —
-   carriers may bid above it and often will.
-3. Lowest price never wins automatically. The shipper chooses.
+   or `buyers`. And no shipper-facing surface at all — Expedion is the inlet.
+2. A listing is a *job*. `budgetCents` is what the Expedion client already paid,
+   **not a cap** — it is the ceiling the platform's margin comes out of.
+3. Lowest price never wins automatically. An **operator** chooses.
 4. Money is **held** on acceptance and captured on delivery. Never capture early.
+   The payer is `listing.shipperId`, never whoever clicked accept.
 5. KYC documents are private. Never serve them by direct URL, and never persist
    a full IBAN — only the last 4.
 6. No feature flags, no backwards-compatibility shims. Make changes directly.
 7. Docs under `docs/specs/` and `docs/plans/` written for the v1 goods
    marketplace are stale. The Phase A specs listed above are current.
+8. **Never restate the role enum.** Derive from `userRoleEnum`. A restated copy
+   in `user.dto.ts` silently broke every admin role assignment.
+9. `.prettierc` is misnamed (missing an `r`), so Prettier never loads it and
+   falls back to `trailingComma: "all"`. Running Prettier reformats whole files.
+   Match surrounding style by hand instead.

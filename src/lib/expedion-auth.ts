@@ -26,6 +26,7 @@
 
 import { auth } from "@/lib/auth";
 import * as usersDAL from "@/server/dal/users.dal";
+import { verifyFirebaseIdToken } from "@/lib/firebase-token";
 
 export interface ExpedionCaller {
   /**
@@ -40,7 +41,7 @@ export interface ExpedionCaller {
   isAdmin: boolean;
 
   /** Which path authenticated this caller, for logging and for tests. */
-  via: "session" | "client-key" | "admin-key";
+  via: "session" | "firebase" | "client-key" | "admin-key";
 }
 
 export class ExpedionAuthError extends Error {
@@ -116,12 +117,34 @@ export async function requireExpedionCaller(
   const fromSession = await sessionCaller(req);
   if (fromSession) return fromSession;
 
-  // 2. Otherwise fall back to the app-level keys.
-  const clientKey = process.env.EXPEDION_API_KEY;
-  const adminKey = process.env.EXPEDION_ADMIN_API_KEY;
-
   const presented = bearer(req);
   if (!presented) throw new ExpedionAuthError("UNAUTHORIZED", 401);
+
+  // 2. A Firebase ID token is also a real user — Google signed it, so the UID
+  //    is established rather than asserted. This is what lets an account that
+  //    predates the Better Auth migration keep working in a browser, where the
+  //    shared key below must never be present.
+  const firebase = await verifyFirebaseIdToken(presented);
+  if (firebase) {
+    let isAdmin = false;
+    try {
+      // Firebase users are matched to a Better Auth account by verified email,
+      // which is the only identifier the two systems share. An unverified
+      // address is not matched: it would let anyone claim an admin's role by
+      // signing up with their address in the other system.
+      if (firebase.email && firebase.emailVerified) {
+        const linked = await usersDAL.getUserByEmail(firebase.email);
+        if (linked) isAdmin = await usersDAL.userHasRole(linked.id, "admin");
+      }
+    } catch (error) {
+      console.error("[expedion-auth] firebase role lookup failed", error);
+    }
+    return { userId: firebase.uid, isAdmin, via: "firebase" };
+  }
+
+  // 3. Otherwise fall back to the app-level keys.
+  const clientKey = process.env.EXPEDION_API_KEY;
+  const adminKey = process.env.EXPEDION_ADMIN_API_KEY;
 
   if (!clientKey && !adminKey) {
     // Fail closed. Missing configuration must never mean "let everyone in" —

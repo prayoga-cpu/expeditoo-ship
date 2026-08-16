@@ -20,7 +20,7 @@ export default function UsersPage() {
   const t = useTranslations("admin.users");
 
   if (isLoading) {
-    return <PageLoader variant="admin" />;
+    return <PageLoader />;
   }
 
   return (

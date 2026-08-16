@@ -199,7 +199,7 @@ export function CarrierApplicationsList({
       </Select>
 
       {isLoading ? (
-        <PageLoader variant="admin" />
+        <PageLoader />
       ) : applications.length === 0 ? (
         <CenteredEmptyState
           icon={Inbox}

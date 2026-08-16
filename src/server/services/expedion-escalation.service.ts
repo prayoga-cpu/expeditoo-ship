@@ -190,56 +190,72 @@ export const expedionEscalationService = {
     const now = Date.now();
     const categoryId = await resolveCategoryId();
 
-    try {
-      const listing = await listingsService.createListing(systemShipperId(), {
-        title: buildTitle(quote),
-        description: buildDescription(quote),
-        categoryId,
-        weightKg: quote.weightKg!,
-        ...(quote.lengthCm && quote.widthCm && quote.heightCm
-          ? {
-              lengthCm: quote.lengthCm,
-              widthCm: quote.widthCm,
-              heightCm: quote.heightCm,
-            }
-          : {}),
-        quantity: 1,
-        // Auction lots are antiques and art far more often than not.
-        isFragile: true,
-        needsHelp: !quote.isProtected,
-        pickup: {
-          lat: quote.pickupLat!,
-          lng: quote.pickupLng!,
-          address: quote.pickupAddress!,
-          city: quote.pickupCity!,
-          postalCode: normalisePostalCode(quote.pickupPostalCode)!,
-          locationType: AUCTION_LOCATION_TYPE,
-        },
-        dropoff: {
-          lat: quote.deliveryLat!,
-          lng: quote.deliveryLng!,
-          address: quote.deliveryAddress!,
-          city: quote.deliveryCity!,
-          postalCode: normalisePostalCode(quote.deliveryPostalCode)!,
-          locationType: AUCTION_LOCATION_TYPE,
-        },
-        pickupFrom: new Date(now + PICKUP_LEAD_DAYS * DAY_MS),
-        pickupUntil: new Date(now + PICKUP_WINDOW_DAYS * DAY_MS),
-        dropoffFrom: new Date(now + DROPOFF_LEAD_DAYS * DAY_MS),
-        dropoffUntil: new Date(now + DROPOFF_WINDOW_DAYS * DAY_MS),
-        isFlexible: true,
-        budgetCents: quote.acceptedPriceCents!,
-        photos: (quote.photoUrls ?? []).slice(0, 10),
-        publish: true,
-      });
+    // A previous attempt can die after the listing exists but before the quote
+    // records it. `externalRef` carries the quote id, so an orphan left in that
+    // window is adoptable and the retry finishes the job instead of minting a
+    // second listing.
+    const adopted = await listingsDal.getByExternalRef(quoteId);
 
-      // `createListing` does not take the bridge columns — they are not part
-      // of the client-facing contract — so they are stamped on here.
-      await listingsDal.update(listing.id, {
-        origin: "expedion",
-        externalRef: quote.id,
-        status: "open",
-      });
+    // Whether this attempt has put a listing into the world. Releasing the
+    // claim is only safe while this is false — see the catch.
+    let createdListing = false;
+
+    try {
+      const listing =
+        adopted ??
+        (await listingsService.createListing(systemShipperId(), {
+          title: buildTitle(quote),
+          description: buildDescription(quote),
+          categoryId,
+          weightKg: quote.weightKg!,
+          ...(quote.lengthCm && quote.widthCm && quote.heightCm
+            ? {
+                lengthCm: quote.lengthCm,
+                widthCm: quote.widthCm,
+                heightCm: quote.heightCm,
+              }
+            : {}),
+          quantity: 1,
+          // Auction lots are antiques and art far more often than not.
+          isFragile: true,
+          needsHelp: !quote.isProtected,
+          pickup: {
+            lat: quote.pickupLat!,
+            lng: quote.pickupLng!,
+            address: quote.pickupAddress!,
+            city: quote.pickupCity!,
+            postalCode: normalisePostalCode(quote.pickupPostalCode)!,
+            locationType: AUCTION_LOCATION_TYPE,
+          },
+          dropoff: {
+            lat: quote.deliveryLat!,
+            lng: quote.deliveryLng!,
+            address: quote.deliveryAddress!,
+            city: quote.deliveryCity!,
+            postalCode: normalisePostalCode(quote.deliveryPostalCode)!,
+            locationType: AUCTION_LOCATION_TYPE,
+          },
+          pickupFrom: new Date(now + PICKUP_LEAD_DAYS * DAY_MS),
+          pickupUntil: new Date(now + PICKUP_WINDOW_DAYS * DAY_MS),
+          dropoffFrom: new Date(now + DROPOFF_LEAD_DAYS * DAY_MS),
+          dropoffUntil: new Date(now + DROPOFF_WINDOW_DAYS * DAY_MS),
+          isFlexible: true,
+          budgetCents: quote.acceptedPriceCents!,
+          photos: (quote.photoUrls ?? []).slice(0, 10),
+          publish: true,
+        }));
+
+      if (!adopted) {
+        createdListing = true;
+
+        // `createListing` does not take the bridge columns — they are not part
+        // of the client-facing contract — so they are stamped on here.
+        await listingsDal.update(listing.id, {
+          origin: "expedion",
+          externalRef: quote.id,
+          status: "open",
+        });
+      }
 
       const updated = await db.transaction(async (tx) => {
         const row = await expedionDal.update(
@@ -273,8 +289,22 @@ export const expedionEscalationService = {
 
       return { quote: updated, listing };
     } catch (error) {
-      // Release the claim so a later run can retry, rather than leaving the
-      // quote permanently marked as escalated with no listing behind it.
+      // Releasing the claim invites a retry, which is only safe if this attempt
+      // left nothing behind. Having created a listing but failed before
+      // stamping `externalRef` onto it, the adoption lookup above cannot find
+      // it, so a retry would mint a second listing for one quote. Stay claimed
+      // instead: a stuck quote is visible and repairable, a duplicate is not.
+      if (createdListing) {
+        console.error(
+          `Escalation of quote ${quoteId} failed after creating a listing. ` +
+            `Claim left in place to prevent a duplicate; needs manual repair.`,
+          error
+        );
+        throw error;
+      }
+
+      // Nothing was created — release so a later run can retry, rather than
+      // leaving the quote marked as escalated with no listing behind it.
       await expedionDal.update(quoteId, { escalatedAt: null });
       throw error;
     }
