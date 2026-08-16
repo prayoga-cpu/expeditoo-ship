@@ -42,9 +42,16 @@ const ALLOWED_METHODS = ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"];
 function allowedOrigins(): string[] {
   return [
     process.env.NEXT_PUBLIC_APP_URL,
+    // The deployment's own hostnames, injected by Vercel. Included for the same
+    // reason auth.ts trusts them: NEXT_PUBLIC_APP_URL is hand-maintained, and a
+    // deployment whose variable still names the previous domain would otherwise
+    // refuse credentialed requests from its own pages.
+    process.env.VERCEL_PROJECT_PRODUCTION_URL &&
+      `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`,
+    process.env.VERCEL_URL && `https://${process.env.VERCEL_URL}`,
     ...(process.env.EXPEDION_APP_ORIGINS?.split(",") ?? []),
   ]
-    .map((origin) => origin?.trim())
+    .map((origin) => (origin ? origin.trim() : origin))
     .filter(Boolean) as string[];
 }
 

@@ -15,6 +15,31 @@ import type {
   EmailCallbackRequest,
 } from "@/types/auth.types";
 
+/**
+ * Hostnames Vercel injects for the running deployment.
+ *
+ * `VERCEL_PROJECT_PRODUCTION_URL` is the stable production domain;
+ * `VERCEL_URL` is the immutable per-deployment URL, which is what a preview
+ * build is actually served from. Both are set by the platform, so they track
+ * the real domain without anyone maintaining a variable.
+ *
+ * Empty off-platform, where `NEXT_PUBLIC_APP_URL` is the only answer.
+ */
+function deploymentOrigins(): string[] {
+  return [
+    process.env.VERCEL_PROJECT_PRODUCTION_URL,
+    process.env.VERCEL_URL,
+  ]
+    .filter((host): host is string => Boolean(host))
+    .map((host) => `https://${host}`);
+}
+
+/** The canonical origin: what emails, Stripe returns and OAuth callbacks use. */
+const APP_URL =
+  process.env.NEXT_PUBLIC_APP_URL ||
+  deploymentOrigins()[0] ||
+  "http://localhost:3000";
+
 // Options live in a separate object (rather than inline in `betterAuth`) so
 // they can also be handed to the `customSession` plugin below, which needs
 // them to infer the user's additionalFields on its callback argument.
@@ -158,20 +183,33 @@ const options = {
   },
 
   // Base URL
-  baseURL: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+  //
+  // Drives the OAuth callback, so it must match a redirect URI registered with
+  // Google. That makes it a deliberate, human-set value rather than something
+  // derived per deployment: Vercel's immutable per-deploy hostname changes on
+  // every push and could never be registered.
+  baseURL: APP_URL,
 
   // Trusted Origins
   //
   // Expedion's Flutter client is a separate origin, so it has to be listed
-  // here or Better Auth rejects its sign-in POSTs as cross-origin. Configured
-  // rather than hard-coded because the web build moves between a Vercel
-  // preview, the production domain and localhost during development; the
-  // native builds send no Origin header at all and are unaffected either way.
+  // here or Better Auth rejects its sign-in POSTs as cross-origin. The native
+  // builds send no Origin header at all and are unaffected either way.
+  //
+  // The deployment's own hostnames are always included, whatever
+  // NEXT_PUBLIC_APP_URL says. That variable is hand-maintained, and when the
+  // deployment domain changed it kept naming the previous one — production then
+  // refused sign-in from its own URL with "Invalid origin", which reads like a
+  // code fault rather than a stale environment variable. A deployment should
+  // never distrust itself.
   trustedOrigins: [
-    process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
-    ...(process.env.EXPEDION_APP_ORIGINS?.split(",")
-      .map((origin) => origin.trim())
-      .filter(Boolean) ?? []),
+    ...new Set([
+      APP_URL,
+      ...deploymentOrigins(),
+      ...(process.env.EXPEDION_APP_ORIGINS?.split(",")
+        .map((origin) => origin.trim())
+        .filter(Boolean) ?? []),
+    ]),
   ],
 } satisfies BetterAuthOptions;
 
