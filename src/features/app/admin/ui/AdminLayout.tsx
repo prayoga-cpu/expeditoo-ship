@@ -30,8 +30,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
   const sidebarItems = [
     {
-      title: t("navigation.dashboard"),
-      href: "/admin/dashboard",
+      title: t("navigation.expedion"),
+      href: "/admin/expedion",
       icon: LayoutDashboard,
     },
     {
@@ -73,7 +73,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full pb-4">
-      <AppSidebarHeader href="/admin/dashboard" subtitle={t("panelTitle")} />
+      <AppSidebarHeader href="/admin/expedion" subtitle={t("panelTitle")} />
       <nav className="flex-1 px-4 space-y-2">
         {sidebarItems.map((item) => (
           <Link

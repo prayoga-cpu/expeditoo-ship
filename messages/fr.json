@@ -1251,7 +1251,8 @@
       "shipment": "Expéditions",
       "payments": "Paiements",
       "supportChats": "Chats de support",
-      "profile": "Profil"
+      "profile": "Profil",
+      "expedion": "Passerelle Expedion"
     },
     "table": {
       "rowsSelected": "{count} sur {total} ligne(s) sélectionnée(s)",
@@ -1526,6 +1527,126 @@
         "approveFailed": "Échec de l'approbation : {message}",
         "rejectFailed": "Échec du refus : {message}",
         "suspendFailed": "Échec de la suspension : {message}"
+      }
+    },
+    "expedion": {
+      "title": "Supervision",
+      "subtitle": "Devis Expedion et marketplace Expeditoo, vue d'ensemble.",
+      "error": "Rapport indisponible",
+      "kpi": {
+        "quotes": "Devis",
+        "quotesHint": "{count} importés sans compte",
+        "actionable": "À traiter",
+        "actionableHint": "Chiffrage, chauffeur, escalade",
+        "collected": "Encaissé",
+        "collectedHint": "{value} acceptés",
+        "mockPayments": "*paiements simulés",
+        "commission": "Commission",
+        "commissionHint": "Toute la plateforme",
+        "beforeStripe": "*avant frais Stripe",
+        "carriers": "Transporteurs",
+        "carriersHint": "{pending} en attente · {active} actifs",
+        "deliveries": "Livraisons en cours",
+        "deliveriesHint": "{count} clients actifs"
+      },
+      "funnel": {
+        "title": "Entonnoir",
+        "cancelled": "{count} annulés, hors entonnoir",
+        "pending": "Reçus",
+        "awaiting_confirmation": "À confirmer",
+        "quoted": "Chiffrés",
+        "accepted": "Acceptés",
+        "paid": "Payés",
+        "assigned": "Attribués",
+        "escalated": "Escaladés",
+        "picked_up": "Enlevés",
+        "delivered": "Livrés"
+      },
+      "chart": {
+        "title": "Valeur acceptée par mois"
+      },
+      "queues": {
+        "title": "Files opérateur",
+        "toPrice": "À chiffrer",
+        "toPriceEmpty": "Rien à chiffrer",
+        "toPriceEmptyBody": "Tous les devis reçus ont un prix publié.",
+        "needsDriver": "Sans chauffeur",
+        "needsDriverEmpty": "Aucune course en attente",
+        "needsDriverEmptyBody": "Chaque course payée a un chauffeur ou est passée sur Expeditoo.",
+        "storageAtRisk": "Gardiennage",
+        "storageAtRiskEmpty": "Aucun lot à risque",
+        "storageAtRiskEmptyBody": "Aucun gardiennage ne démarre dans les quatre prochains jours.",
+        "escalationDue": "Escalade due",
+        "escalationDueEmpty": "Aucune escalade en retard",
+        "escalationDueEmptyBody": "Le délai n'est dépassé pour aucune course non attribuée."
+      },
+      "table": {
+        "reference": "Référence",
+        "auctionHouse": "Maison de ventes",
+        "delivery": "Livraison",
+        "amount": "Montant",
+        "storage": "Gardiennage",
+        "escalation": "Escalade",
+        "client": "Client",
+        "actions": "Actions",
+        "searchPlaceholder": "Référence, maison de ventes, ville, client…",
+        "billed": "facturé",
+        "ready": "prête",
+        "missingCoords": "coordonnées manquantes",
+        "airtableImport": "import Airtable"
+      },
+      "actions": {
+        "reprice": "Ajuster le prix",
+        "assign": "Attribuer un chauffeur",
+        "escalate": "Publier sur Expeditoo",
+        "cancel": "Annuler",
+        "saving": "Enregistrement…",
+        "assigning": "Attribution…",
+        "publishing": "Publication…",
+        "publish": "Publier",
+        "assignConfirm": "Attribuer",
+        "repriceTitle": "Ajuster le prix",
+        "repriceBody": "{reference} — {house}. Le devis devient visible par le client une fois enregistré.",
+        "standard": "Devis standard (€)",
+        "insured": "Avec ad valorem (€)",
+        "publishPrice": "Publier le prix",
+        "assignTitle": "Attribuer un chauffeur",
+        "assignBody": "{reference} → {city}. La course sort de la file « sans chauffeur » et n'est plus escaladée automatiquement.",
+        "carrier": "Transporteur",
+        "chooseCarrier": "Choisir un transporteur",
+        "loading": "Chargement…",
+        "noCarriers": "Aucun transporteur approuvé. Publiez la course sur Expeditoo à la place.",
+        "escalateTitle": "Publier sur Expeditoo ?",
+        "escalateBody": "{reference} sera publiée comme annonce et les transporteurs pourront enchérir immédiatement. La publication est définitive : il n'y a pas de retour en arrière.",
+        "repriced": "Devis mis à jour",
+        "assigned": "Chauffeur attribué",
+        "escalated": "Course publiée sur Expeditoo"
+      },
+      "supply": {
+        "title": "Escalade vers Expeditoo",
+        "listings": "Annonces issues d'Expedion",
+        "offers": "Offres reçues sur ces annonces",
+        "rate": "Taux d'escalade",
+        "rateHint": "part des courses confiées au marché plutôt qu'au réseau",
+        "insurance": "Assurance ad valorem",
+        "insuranceHint": "des devis acceptés",
+        "vehicles": "Véhicules actifs"
+      },
+      "health": {
+        "title": "Qualité des données",
+        "unowned": "Devis sans compte client",
+        "unownedHint": "importés d'Airtable, invisibles côté client jusqu'à rattachement",
+        "missingCoords": "Sans coordonnées d'enlèvement",
+        "missingCoordsHint": "bloque l'escalade",
+        "missingDims": "Sans dimensions",
+        "missingDimsHint": "empêche le calcul automatique du prix",
+        "confidence": "Confiance d'extraction",
+        "confidenceHint": "sur {count} bordereaux lus"
+      },
+      "recent": {
+        "title": "Devis récents",
+        "empty": "Aucun devis",
+        "emptyBody": "Les demandes apparaîtront ici."
       }
     }
   },

@@ -473,7 +473,7 @@ function QuickLinks({ userRoles }: { userRoles?: string[] }) {
 
   if (isAdmin) {
     links.unshift({
-      href: "/admin/dashboard",
+      href: "/admin/expedion",
       labelKey: "adminDashboard",
       icon: Shield,
     });

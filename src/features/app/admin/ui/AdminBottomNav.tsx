@@ -32,8 +32,8 @@ export function AdminBottomNav() {
   // All navigation items
   const navItems: NavItem[] = [
     {
-      href: "/admin/dashboard",
-      label: t("dashboard"),
+      href: "/admin/expedion",
+      label: t("expedion"),
       icon: <LayoutDashboard className="w-5 h-5" />,
     },
     {

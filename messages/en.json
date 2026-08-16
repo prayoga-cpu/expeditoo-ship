@@ -1251,7 +1251,8 @@
       "shipment": "Shipments",
       "payments": "Payments",
       "supportChats": "Support Chats",
-      "profile": "Profile"
+      "profile": "Profile",
+      "expedion": "Expedion bridge"
     },
     "table": {
       "total": "total",
@@ -1526,6 +1527,126 @@
         "approveFailed": "Failed to approve: {message}",
         "rejectFailed": "Failed to reject: {message}",
         "suspendFailed": "Failed to suspend: {message}"
+      }
+    },
+    "expedion": {
+      "title": "Overview",
+      "subtitle": "Expedion quotes and the Expeditoo marketplace, at a glance.",
+      "error": "Report unavailable",
+      "kpi": {
+        "quotes": "Quotes",
+        "quotesHint": "{count} imported without an account",
+        "actionable": "To handle",
+        "actionableHint": "Pricing, driver, escalation",
+        "collected": "Collected",
+        "collectedHint": "{value} accepted",
+        "mockPayments": "*simulated payments",
+        "commission": "Commission",
+        "commissionHint": "Whole platform",
+        "beforeStripe": "*before Stripe fees",
+        "carriers": "Carriers",
+        "carriersHint": "{pending} pending · {active} active",
+        "deliveries": "Deliveries in progress",
+        "deliveriesHint": "{count} active clients"
+      },
+      "funnel": {
+        "title": "Funnel",
+        "cancelled": "{count} cancelled, outside the funnel",
+        "pending": "Received",
+        "awaiting_confirmation": "To confirm",
+        "quoted": "Quoted",
+        "accepted": "Accepted",
+        "paid": "Paid",
+        "assigned": "Assigned",
+        "escalated": "Escalated",
+        "picked_up": "Picked up",
+        "delivered": "Delivered"
+      },
+      "chart": {
+        "title": "Accepted value per month"
+      },
+      "queues": {
+        "title": "Operator queues",
+        "toPrice": "To price",
+        "toPriceEmpty": "Nothing to price",
+        "toPriceEmptyBody": "Every quote received has a published price.",
+        "needsDriver": "No driver",
+        "needsDriverEmpty": "No job waiting",
+        "needsDriverEmptyBody": "Every paid job has a driver or has gone to Expeditoo.",
+        "storageAtRisk": "Storage",
+        "storageAtRiskEmpty": "No lot at risk",
+        "storageAtRiskEmptyBody": "No storage starts in the next four days.",
+        "escalationDue": "Escalation due",
+        "escalationDueEmpty": "No overdue escalation",
+        "escalationDueEmptyBody": "No unassigned job is past its deadline."
+      },
+      "table": {
+        "reference": "Reference",
+        "auctionHouse": "Auction house",
+        "delivery": "Delivery",
+        "amount": "Amount",
+        "storage": "Storage",
+        "escalation": "Escalation",
+        "client": "Client",
+        "actions": "Actions",
+        "searchPlaceholder": "Reference, auction house, city, client…",
+        "billed": "billed",
+        "ready": "ready",
+        "missingCoords": "missing coordinates",
+        "airtableImport": "Airtable import"
+      },
+      "actions": {
+        "reprice": "Adjust price",
+        "assign": "Assign a driver",
+        "escalate": "Publish to Expeditoo",
+        "cancel": "Cancel",
+        "saving": "Saving…",
+        "assigning": "Assigning…",
+        "publishing": "Publishing…",
+        "publish": "Publish",
+        "assignConfirm": "Assign",
+        "repriceTitle": "Adjust price",
+        "repriceBody": "{reference} — {house}. The quote becomes visible to the client once saved.",
+        "standard": "Standard quote (€)",
+        "insured": "With ad valorem (€)",
+        "publishPrice": "Publish price",
+        "assignTitle": "Assign a driver",
+        "assignBody": "{reference} → {city}. The job leaves the “no driver” queue and is no longer escalated automatically.",
+        "carrier": "Carrier",
+        "chooseCarrier": "Choose a carrier",
+        "loading": "Loading…",
+        "noCarriers": "No approved carrier. Publish the job to Expeditoo instead.",
+        "escalateTitle": "Publish to Expeditoo?",
+        "escalateBody": "{reference} will be published as a listing and carriers can bid immediately. Publishing is final — there is no undo.",
+        "repriced": "Quote updated",
+        "assigned": "Driver assigned",
+        "escalated": "Job published to Expeditoo"
+      },
+      "supply": {
+        "title": "Escalation to Expeditoo",
+        "listings": "Listings from Expedion",
+        "offers": "Offers received on those listings",
+        "rate": "Escalation rate",
+        "rateHint": "share of jobs given to the market rather than the pool",
+        "insurance": "Ad valorem insurance",
+        "insuranceHint": "of accepted quotes",
+        "vehicles": "Active vehicles"
+      },
+      "health": {
+        "title": "Data quality",
+        "unowned": "Quotes with no client account",
+        "unownedHint": "imported from Airtable, invisible to clients until claimed",
+        "missingCoords": "Without pickup coordinates",
+        "missingCoordsHint": "blocks escalation",
+        "missingDims": "Without dimensions",
+        "missingDimsHint": "prevents automatic pricing",
+        "confidence": "Extraction confidence",
+        "confidenceHint": "over {count} bordereaux read"
+      },
+      "recent": {
+        "title": "Recent quotes",
+        "empty": "No quotes",
+        "emptyBody": "Requests will appear here."
       }
     }
   },
