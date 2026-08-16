@@ -10,8 +10,23 @@ import { and, asc, desc, eq, ilike, lte, isNull, sql, count } from "drizzle-orm"
 
 type Executor = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
 
+/**
+ * Whose quotes a list call is asking for.
+ *
+ * A discriminated union rather than an optional `firebaseUid`, because the two
+ * meanings the optional field conflated — "this owner" and "every owner" — are
+ * exactly the bug it caused: the route passed `undefined` for admins, the DAL
+ * read that as "no predicate", and the *client* app was served the whole table.
+ *
+ * Now the caller has to say which it wants. Omitting it does not compile.
+ */
+export type QuoteOwnerScope =
+  | { scope: "mine"; ownerId: string }
+  /** Every owner. Only ever legitimate on an operator surface. */
+  | { scope: "all" };
+
 export interface QuoteFilters {
-  firebaseUid?: string;
+  owner: QuoteOwnerScope;
   status?: ExpedionQuoteStatus;
   bordereauNumber?: string;
   pickupCity?: string;
@@ -47,8 +62,8 @@ export const expedionDal = {
   async list(filters: QuoteFilters, tx: Executor = db) {
     const where = and(
       ...[
-        filters.firebaseUid
-          ? eq(expedionQuotes.firebaseUid, filters.firebaseUid)
+        filters.owner.scope === "mine"
+          ? eq(expedionQuotes.firebaseUid, filters.owner.ownerId)
           : undefined,
         filters.status ? eq(expedionQuotes.status, filters.status) : undefined,
         filters.bordereauNumber

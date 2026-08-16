@@ -162,6 +162,19 @@ export const listExpedionQuotesSchema = z.object({
   pickupCity: z.string().trim().optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
+
+  /**
+   * Whose quotes to return. Defaults to the caller's own — for everyone,
+   * including admins.
+   *
+   * Breadth is a deliberate request, never a consequence of who is asking.
+   * This is the endpoint the Flutter client's "Mes devis" calls, and it used to
+   * widen automatically for admins, so an operator opening their own quote list
+   * was served the whole table inside a client UI. `all` is refused for
+   * non-admins rather than quietly downgraded, so a client probing for breadth
+   * gets an answer that says so.
+   */
+  scope: z.enum(["mine", "all"]).default("mine"),
 });
 
 export type ListExpedionQuotesInput = z.infer<typeof listExpedionQuotesSchema>;

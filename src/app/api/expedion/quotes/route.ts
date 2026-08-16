@@ -3,7 +3,8 @@
  * API: Expedion quotes — collection
  * ============================================================================
  *
- * GET  /api/expedion/quotes   List the caller's quotes (all quotes for admins)
+ * GET  /api/expedion/quotes   List the caller's own quotes. `?scope=all`
+ *                             widens to every owner and requires an admin.
  * POST /api/expedion/quotes   File a new devis from an uploaded bordereau
  *
  * Replaces the Airtable `CONTACTS` table the Flutter client reads today
@@ -11,7 +12,10 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { requireExpedionCaller } from "@/lib/expedion-auth";
+import {
+  ExpedionAuthError,
+  requireExpedionCaller,
+} from "@/lib/expedion-auth";
 import { expedionErrorResponse } from "@/lib/expedion-response";
 import {
   createExpedionQuoteSchema,
@@ -26,18 +30,29 @@ export async function GET(req: NextRequest) {
     const caller = await requireExpedionCaller(req);
     const { searchParams } = new URL(req.url);
 
-    const filters = listExpedionQuotesSchema.parse({
+    const { scope, ...filters } = listExpedionQuotesSchema.parse({
       status: searchParams.get("status") ?? undefined,
       bordereauNumber: searchParams.get("bordereauNumber") ?? undefined,
       pickupCity: searchParams.get("pickupCity") ?? undefined,
       page: searchParams.get("page") ?? undefined,
       limit: searchParams.get("limit") ?? undefined,
+      scope: searchParams.get("scope") ?? undefined,
     });
+
+    // Sweeping the table is an operator action and has to be asked for.
+    // Refused rather than downgraded: a caller that asked for every row should
+    // learn it cannot have them, not silently receive its own and believe it
+    // saw everything.
+    if (scope === "all" && !caller.isAdmin) {
+      throw new ExpedionAuthError("FORBIDDEN", 403);
+    }
 
     const { rows, total } = await expedionService.listQuotes({
       ...filters,
-      // Admins may sweep the whole table; everyone else sees only their own.
-      firebaseUid: caller.isAdmin ? undefined : caller.userId,
+      owner:
+        scope === "all"
+          ? { scope: "all" }
+          : { scope: "mine", ownerId: caller.userId },
     });
 
     return NextResponse.json({
