@@ -1,17 +1,14 @@
 import { z } from "zod";
+import { userRoleEnum } from "@/db/schema/users";
 
 /**
- * User roles enum matching database schema
+ * Derived from the database enum, never restated.
+ *
+ * A restated copy drifts. `user.dto.ts` carried one listing the v1 roles and it
+ * silently broke every admin role assignment; this file had the right values
+ * but the same fragility. Deriving means the two cannot disagree.
  */
-export const UserRoleSchema = z.enum([
-  "shipper",
-  "carrier",
-  "driver",
-  "operator",
-  "support",
-  "finance",
-  "admin",
-]);
+export const UserRoleSchema = z.enum(userRoleEnum.enumValues);
 
 /**
  * Response schema for user roles API

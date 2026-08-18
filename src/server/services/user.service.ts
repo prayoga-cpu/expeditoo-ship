@@ -1,5 +1,6 @@
 import * as usersDAL from "@/server/dal/users.dal";
 import { UserPreferences, defaultPreferences } from "@/db/schema";
+import { userRoleEnum } from "@/db/schema/users";
 import {
   userOutputSchema,
   updateProfileInputSchema,
@@ -10,6 +11,23 @@ import {
   type UserListOutput,
   type UserRole,
 } from "@/server/dto/user.dto";
+
+// ========================================
+// Roles
+// ========================================
+
+/**
+ * Roles the enum still admits.
+ *
+ * Accounts predating the transport pivot can carry a retired v1 role such as
+ * `transporter`. Those grant nothing, but one of them reaching a Zod schema
+ * fails validation for the WHOLE array, so the endpoint 500s and the client
+ * sees no roles at all -- which stripped a genuine admin of their admin.
+ */
+function canonicalRoles(rows: { role: string }[]): string[] {
+  const allowed = new Set<string>(userRoleEnum.enumValues);
+  return rows.map((r) => r.role).filter((role) => allowed.has(role));
+}
 
 // ========================================
 // Preference Utilities
@@ -79,7 +97,7 @@ export async function getProfile(userId: string): Promise<UserOutput> {
     emailVerified: user.emailVerified,
     isVerified: user.isVerified,
     banned: user.banned,
-    roles: user.roles.map((r: { role: string }) => r.role),
+    roles: canonicalRoles(user.roles),
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   });
@@ -341,8 +359,7 @@ export async function hasAllRoles(userId: string, roles: string[]): Promise<bool
  * Get user roles
  */
 export async function getUserRoles(userId: string): Promise<string[]> {
-  const roles = await usersDAL.getUserRoles(userId);
-  return roles.map((r: { role: string }) => r.role);
+  return canonicalRoles(await usersDAL.getUserRoles(userId));
 }
 
 // ========================================
