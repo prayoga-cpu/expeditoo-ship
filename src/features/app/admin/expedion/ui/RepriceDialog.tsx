@@ -18,6 +18,9 @@ import type { QuoteRow } from "@/server/dal/expedion-report.dal";
 
 import { useExpedionQuoteAdmin } from "../hooks/useExpedionReport";
 
+/** The states from which `canTransition(..., "quoted")` holds. */
+const PRICEABLE_STATUSES = ["pending", "awaiting_confirmation"];
+
 /**
  * Publishes a price, which is what moves a quote out of the "to price" queue.
  *
@@ -25,8 +28,9 @@ import { useExpedionQuoteAdmin } from "../hooks/useExpedionReport";
  * on submit — the input never holds cents, so there is no window where a
  * mis-read field could send a figure a hundred times too large.
  *
- * Saving also sets `quoteAvailable`, because a price the client cannot see has
- * not actually been quoted.
+ * Saving sets `quoteAvailable` — a price the client cannot see has not really
+ * been quoted — and advances the status to `quoted`, which is what lets the
+ * client accept it.
  */
 export function RepriceDialog({
   quote,
@@ -69,6 +73,18 @@ export function RepriceDialog({
           quoteStandardCents: standardCents,
           quoteInsuredCents: toCents(insured),
           quoteAvailable: true,
+          // Publishing a price has to advance the status too. `quoteAvailable`
+          // alone takes the row out of the "to price" queue while leaving it
+          // `pending`, and `acceptQuote` only permits `quoted -> accepted` — so
+          // the client would be shown a price they could never accept, on a
+          // quote no queue was still watching.
+          //
+          // Only from the two states that can legally reach `quoted`: an
+          // operator correcting the price of an already-accepted or paid job
+          // must not drag it backwards, and `adminUpdate` would refuse anyway.
+          status: PRICEABLE_STATUSES.includes(quote?.status ?? "")
+            ? "quoted"
+            : undefined,
           // Persisted onto the quote's timeline rather than rendered, so it is
           // written once in the language that log already uses (see the event
           // messages in expedion.service.ts) instead of in whichever locale

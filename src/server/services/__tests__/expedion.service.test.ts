@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { expedionService, ExpedionError } from '../expedion.service';
+import {
+  expedionService,
+  ExpedionError,
+  canTransition,
+} from '../expedion.service';
 import { expedionDal, type QuoteFilters } from '@/server/dal/expedion.dal';
 import { adminUpdateExpedionQuoteSchema } from '@/server/dto/expedion.dto';
 
@@ -282,4 +286,30 @@ describe('expedionService.adminUpdate — assigning answers to the graph', () =>
             expedionService.adminUpdate('q_1', body({ status: 'picked_up' }))
         ).rejects.toMatchObject({ code: 'INVALID_TRANSITION', status: 409 });
     });
+});
+
+describe("pricing a quote makes it acceptable", () => {
+  // The admin dashboard used to publish a price without a status. The row then
+  // left the "to price" queue (quoteAvailable was true) while staying `pending`,
+  // and acceptQuote refuses `pending -> accepted` — so the client was shown a
+  // price they could never act on, on a quote no queue was watching any more.
+  it("allows quoted -> accepted but never pending -> accepted", () => {
+    expect(canTransition("pending", "accepted")).toBe(false);
+    expect(canTransition("quoted", "accepted")).toBe(true);
+  });
+
+  it("lets both to-price states reach quoted", () => {
+    // These are the two the dialog gates on; if either stopped being legal the
+    // publish action would start throwing INVALID_TRANSITION.
+    expect(canTransition("pending", "quoted")).toBe(true);
+    expect(canTransition("awaiting_confirmation", "quoted")).toBe(true);
+  });
+
+  it("refuses to drag a settled quote back to quoted", () => {
+    // Why the dialog sends a status only from the two states above: re-pricing
+    // an accepted or paid job must not rewind it.
+    expect(canTransition("accepted", "quoted")).toBe(false);
+    expect(canTransition("paid", "quoted")).toBe(false);
+    expect(canTransition("delivered", "quoted")).toBe(false);
+  });
 });
