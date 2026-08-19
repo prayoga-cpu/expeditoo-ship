@@ -1,15 +1,12 @@
-import { Resend } from "resend";
 import { sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import * as usersDAL from "@/server/dal/users.dal";
 import * as sessionsDAL from "@/server/dal/sessions.dal";
+import { sendViaResend, EMAIL_FROM } from "@/lib/email";
 
 import { VerificationEmail } from "@/server/emails/VerificationEmail";
 import { PasswordResetEmail } from "@/server/emails/PasswordResetEmail";
-
-// Initialize Resend for email sending
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 // ========================================
 // Sign Up Service
@@ -71,6 +68,15 @@ async function claimImportedExpedionQuotes(userId: string, email: string) {
       console.log(
         `[Auth Service] claimed ${count} imported Expedion quote(s) for ${userId}`
       );
+
+      // Deliberately does NOT set `user.origin = 'expedion'`.
+      //
+      // Claiming a quote looks like evidence of an Expedion client and is not:
+      // this runs on every signup, from either product, and matches on email
+      // alone. A carrier who signs up here and whose address happens to appear
+      // on a historical Airtable quote would be relabelled an Expedion client
+      // by EXPEDITOO's own signup hook. That is exactly what happened to the
+      // one account an earlier backfill marked — an admin of this app.
     }
   } catch (error) {
     console.error("[Auth Service] Expedion quote claim failed:", error);
@@ -107,17 +113,9 @@ export async function sendVerificationEmail(
     const user = await usersDAL.getUserByEmail(email);
     const userName = user?.name?.split(" ")[0] || "there";
 
-    // Determine recipient based on environment
-    // In development, send all emails to test email
-    // In production, send to actual user email
-    const isDevelopment = process.env.NODE_ENV !== "production";
-    const recipientEmail = isDevelopment
-      ? "prayogadevelopment@gmail.com"
-      : email;
-
-    await resend.emails.send({
-      from: process.env.EMAIL_FROM || "EXPEDITOO <onboarding@resend.dev>",
-      to: recipientEmail,
+    await sendViaResend({
+      from: EMAIL_FROM,
+      to: email,
       subject: "Verify your EXPEDITOO account",
       react: VerificationEmail({
         verificationUrl: finalVerificationUrl,
@@ -185,15 +183,9 @@ export async function sendPasswordResetEmail(email: string, resetUrl: string) {
     const user = await usersDAL.getUserByEmail(email);
     const userName = user?.name?.split(" ")[0] || "there";
 
-    // Determine recipient based on environment
-    const isDevelopment = process.env.NODE_ENV !== "production";
-    const recipientEmail = isDevelopment
-      ? "prayogadevelopment@gmail.com"
-      : email;
-
-    await resend.emails.send({
-      from: process.env.EMAIL_FROM || "EXPEDITOO <delivered@resend.dev>",
-      to: recipientEmail,
+    await sendViaResend({
+      from: EMAIL_FROM,
+      to: email,
       subject: "Reset your EXPEDITOO password",
       react: PasswordResetEmail({ resetUrl, userName }),
     });
@@ -212,6 +204,36 @@ export async function sendPasswordResetEmail(email: string, resetUrl: string) {
  */
 export async function invalidateAllUserSessions(userId: string) {
   await sessionsDAL.deleteUserSessions(userId);
+}
+
+/**
+ * Stamp the moment a user got in.
+ *
+ * Called from the session-create hook in src/lib/auth.ts, which is the only
+ * place that knows a sign-in just happened.
+ */
+export async function recordLogin(userId: string, at: Date = new Date()) {
+  await usersDAL.updateLastLogin(userId, at);
+}
+
+/**
+ * Refuse a session for a suspended account.
+ *
+ * `reject` is handed in rather than thrown from here because the caller is
+ * Better Auth's session hook, and only it can raise the APIError shape the
+ * auth layer turns into a 403 the client understands.
+ */
+export async function rejectIfBanned(
+  userId: string,
+  reject: (message: string) => never
+) {
+  const user = await usersDAL.getUserById(userId);
+
+  if (user?.banned) {
+    reject(
+      "This account has been suspended. Contact support if you believe this is a mistake."
+    );
+  }
 }
 
 // ========================================

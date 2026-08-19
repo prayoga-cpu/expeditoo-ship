@@ -9,15 +9,12 @@ const mocks = vi.hoisted(() => {
 })
 
 // Mock dependencies
-vi.mock('resend', () => {
-  return {
-    Resend: class {
-      emails = {
-        send: mocks.send
-      }
-    }
-  };
-});
+vi.mock('@/lib/email', () => ({
+  // sendViaResend normally redirects outside production; the mock bypasses
+  // that so this file can test authService's own subject/template logic.
+  sendViaResend: mocks.send,
+  EMAIL_FROM: 'test@example.com',
+}));
 
 vi.mock('@/server/dal/users.dal', () => ({
   assignDefaultRole: vi.fn(),

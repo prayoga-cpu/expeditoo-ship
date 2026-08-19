@@ -53,11 +53,15 @@ describe('ablyService', () => {
 
             await ablyService.createTokenRequest('user-1');
 
+            // Capability patterns are namespaced with the environment tag (see
+            // src/lib/env.ts `namespaced()`) so a shared Ably key cannot let one
+            // environment's token subscribe to another's channels. Tests run
+            // with APP_ENV resolving to "local".
             expect(mocks.createTokenRequest).toHaveBeenCalledWith(expect.objectContaining({
                 clientId: 'user-1',
                 capability: expect.objectContaining({
-                    'user:user-1:*': ['subscribe', 'presence'],
-                    'conversation:*': ['subscribe', 'presence']
+                    'local:user:user-1:*': ['subscribe', 'presence'],
+                    'local:conversation:*': ['subscribe', 'presence']
                 })
             }));
         });

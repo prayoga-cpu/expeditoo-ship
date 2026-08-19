@@ -1,4 +1,4 @@
-import { resend, EMAIL_FROM } from "@/lib/email";
+import { resend, sendViaResend, EMAIL_FROM } from "@/lib/email";
 import { SendEmailSchema, type SendEmailInput } from "@/server/dto/email.dto";
 import { WelcomeEmail } from "@/server/emails/WelcomeEmail";
 import { PaymentReceiptEmail } from "@/server/emails/PaymentReceiptEmail";
@@ -28,7 +28,7 @@ export const emailService = {
     }
 
     try {
-      const { error } = await resend.emails.send({
+      const { error } = await sendViaResend({
         from: EMAIL_FROM,
         to: validated.to,
         subject: validated.subject,

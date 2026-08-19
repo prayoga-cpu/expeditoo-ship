@@ -1,4 +1,5 @@
 import Ably from "ably";
+import { namespaced } from "@/lib/env";
 
 /**
  * Ably Authentication Service
@@ -58,15 +59,20 @@ export const ablyService = {
     const tokenRequest = await client.auth.createTokenRequest({
       clientId: userId,
       // Define capabilities to restrict access to user's channels
+      //
+      // Patterns are namespaced the same way ablyServer publishes (see
+      // src/lib/ably-server.ts) — outside production this scopes the token to
+      // e.g. `preview:user:42:*` so it grants no access to production's
+      // unprefixed channels on the shared API key.
       capability: {
         // User's private channels
-        [`user:${userId}:*`]: ["subscribe", "presence"],
+        [namespaced(`user:${userId}:*`)]: ["subscribe", "presence"],
         // Conversation channels (user can subscribe to any conversation they're part of)
-        ["conversation:*"]: ["subscribe", "presence"],
+        [namespaced("conversation:*")]: ["subscribe", "presence"],
         // Public listing bid channels
-        ["listing:*:bids"]: ["subscribe"],
+        [namespaced("listing:*:bids")]: ["subscribe"],
         // Order status channels
-        ["order:*:status"]: ["subscribe"],
+        [namespaced("order:*:status")]: ["subscribe"],
       },
     });
 

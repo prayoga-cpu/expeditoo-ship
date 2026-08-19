@@ -15,6 +15,9 @@ vi.mock('@/lib/email', () => ({
       send: mocks.send
     }
   },
+  // sendViaResend normally redirects outside production; the mock bypasses
+  // that so this file can test emailService's own logic in isolation.
+  sendViaResend: mocks.send,
   EMAIL_FROM: 'test@example.com'
 }));
 

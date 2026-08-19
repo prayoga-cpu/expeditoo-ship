@@ -1,4 +1,5 @@
 import Ably from "ably";
+import { namespaced } from "@/lib/env";
 
 /**
  * Server-side Ably REST client for publishing events
@@ -9,7 +10,18 @@ import Ably from "ably";
  * - All user-specific events go through this single channel
  * - Shared channels (conversations, listings) remain separate
  *
+ * Every channel name is passed through `namespaced()`, which prefixes it
+ * with the environment tag outside production (e.g. `preview:user:42:stream`).
+ * All four Ably projects (local/preview/production, plus whatever a second
+ * developer's laptop resolves to) currently share one API key, so without this
+ * a local `pnpm dev` session would publish into — and receive — the exact
+ * channels production clients are subscribed to. `src/server/services/ably.service.ts`
+ * grants token capability on the same namespaced patterns, and the two client
+ * call sites (`AblySubscriptions.tsx`, `useMessageDetail.ts`) build the same
+ * namespaced name to subscribe — all four must stay in agreement.
+ *
  * @see docs/plans/plan_ably_integration.md
+ * @see docs/specs/environments_spec.md
  */
 let ablyRestClient: Ably.Rest | null = null;
 
@@ -56,7 +68,7 @@ export const ablyServer = {
    * Get user's private stream channel name
    */
   getUserStreamChannel(userId: string): string {
-    return `user:${userId}:stream`;
+    return namespaced(`user:${userId}:stream`);
   },
 
   /**
@@ -103,7 +115,7 @@ export const ablyServer = {
    * Channel: conversation:{conversationId}
    */
   async publishMessage(conversationId: string, data: unknown): Promise<void> {
-    await this.publish(`conversation:${conversationId}`, "message:new", data);
+    await this.publish(namespaced(`conversation:${conversationId}`), "message:new", data);
   },
 
   /**
@@ -111,7 +123,7 @@ export const ablyServer = {
    * Channel: listing:{listingId}:bids
    */
   async publishBid(listingId: string, data: unknown): Promise<void> {
-    await this.publish(`listing:${listingId}:bids`, "bid:new", data);
+    await this.publish(namespaced(`listing:${listingId}:bids`), "bid:new", data);
   },
 
   /**
@@ -119,7 +131,7 @@ export const ablyServer = {
    * Channel: listing:{listingId}:bids
    */
   async publishAuctionEnded(listingId: string, data: unknown): Promise<void> {
-    await this.publish(`listing:${listingId}:bids`, "auction:ended", data);
+    await this.publish(namespaced(`listing:${listingId}:bids`), "auction:ended", data);
   },
 
   /**
@@ -127,6 +139,6 @@ export const ablyServer = {
    * Channel: order:{orderId}:status
    */
   async publishOrderStatus(orderId: string, data: unknown): Promise<void> {
-    await this.publish(`order:${orderId}:status`, "order:status", data);
+    await this.publish(namespaced(`order:${orderId}:status`), "order:status", data);
   },
 };

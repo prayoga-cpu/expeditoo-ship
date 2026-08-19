@@ -7,6 +7,7 @@ import { useAblyClientContext } from "@/components/providers/AblyProvider";
 import { useActiveConversation } from "@/features/app/messages/context";
 import { AblyMessage } from "@/types/ably.types";
 import type { RealtimeChannel } from "ably";
+import { namespaced } from "@/lib/env";
 
 /**
  * Global Ably Subscriptions Component
@@ -207,7 +208,9 @@ export function AblySubscriptions() {
 
     // Subscribe to single user stream channel
     try {
-      const channel = client.channels.get(`user:${user.id}:stream`);
+      // Must match the namespacing ablyServer.getUserStreamChannel() applies
+      // server-side, or this never receives what the server publishes.
+      const channel = client.channels.get(namespaced(`user:${user.id}:stream`));
 
       // Subscribe to ALL events on this channel
       channel.subscribe(handleEvent);

@@ -8,6 +8,7 @@ import { useAblyClientContext } from "@/components/providers/AblyProvider";
 import { useAuth } from "@/lib/auth-context";
 import { useActiveConversation } from "../context";
 import type { NewMessageEvent } from "@/server/dto/ably-events.dto";
+import { namespaced } from "@/lib/env";
 
 /**
  * Custom hook for managing message detail/chat conversation
@@ -52,7 +53,9 @@ export function useMessageDetail(conversationId: string) {
     }
 
     try {
-      const channel = ablyClient.channels.get(`conversation:${conversationId}`) as unknown as AblyRealtimeChannel;
+      // Must match the namespacing ablyServer.publishMessage() applies
+      // server-side, or this never receives what the server publishes.
+      const channel = ablyClient.channels.get(namespaced(`conversation:${conversationId}`)) as unknown as AblyRealtimeChannel;
 
       const handleNewMessage = (message: AblyMessage) => {
         const eventData = message.data as NewMessageEvent;
