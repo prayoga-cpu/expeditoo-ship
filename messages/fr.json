@@ -42,7 +42,8 @@
       "jobs": "Missions",
       "myOffers": "Mes offres",
       "deliveries": "Livraisons",
-      "myApplication": "Mon dossier"
+      "myApplication": "Mon dossier",
+      "adminPanel": "Panneau d'administration"
     },
     "categories": {
       "electronics": "Électronique",
@@ -994,41 +995,100 @@
       "title": "Utilisateurs",
       "subtitle": "Gérer tous les utilisateurs",
       "table": {
-        "searchPlaceholder": "Rechercher des utilisateurs...",
+        "searchPlaceholder": "Rechercher un utilisateur...",
         "name": "Nom",
         "status": "Statut",
-        "joinDate": "Date d'inscription",
+        "lastLogin": "Dernière connexion",
+        "never": "Jamais",
+        "joinDate": "Inscription",
         "role": "Rôle",
         "actions": "Actions"
+      },
+      "status": {
+        "active": "actif",
+        "suspended": "suspendu",
+        "pending": "en attente"
       },
       "actions": {
         "manageRoles": "Gérer les rôles",
         "viewProfile": "Voir le profil",
-        "removeDriver": "Retirer le chauffeur",
-        "activate": "Activer",
+        "copyId": "Copier l'identifiant",
+        "impersonate": "Se connecter en tant que",
+        "passwordReset": "Envoyer une réinitialisation",
+        "revokeSessions": "Déconnecter partout",
+        "removeDriver": "Retirer le statut chauffeur",
+        "activate": "Réactiver",
         "suspend": "Suspendre",
-        "delete": "Supprimer"
+        "delete": "Supprimer le compte"
       },
       "dialogs": {
-        "suspendTitle": "Suspendre l'utilisateur",
-        "suspendDesc": "Êtes-vous sûr de vouloir suspendre {name} ? Il ne pourra plus accéder à la plateforme.",
-        "activateTitle": "Activer l'utilisateur",
-        "activateDesc": "Êtes-vous sûr de vouloir activer {name} ? Il retrouvera l'accès à la plateforme.",
-        "removeDriverTitle": "Retirer le statut de chauffeur",
-        "removeDriverDesc": "Êtes-vous sûr de vouloir retirer le statut de chauffeur de {name} ?",
         "cancel": "Annuler",
-        "suspend": "Suspendre",
-        "activate": "Activer",
-        "remove": "Retirer",
-        "processing": "Traitement..."
+        "processing": "Traitement...",
+        "suspend": {
+          "title": "Suspendre l'utilisateur",
+          "description": "Suspendre {name} ? Il est déconnecté de tous ses appareils immédiatement et ne pourra plus se connecter jusqu'à réactivation.",
+          "confirm": "Suspendre"
+        },
+        "activate": {
+          "title": "Réactiver l'utilisateur",
+          "description": "Réactiver {name} ? Il pourra de nouveau se connecter.",
+          "confirm": "Réactiver"
+        },
+        "remove_driver": {
+          "title": "Retirer le statut chauffeur",
+          "description": "Retirer le statut chauffeur à {name} ? Son compte reste actif mais il ne pourra plus proposer d'offres.",
+          "confirm": "Retirer"
+        },
+        "revoke_sessions": {
+          "title": "Déconnecter partout",
+          "description": "Déconnecter {name} de tous ses appareils ? Son compte n'est pas modifié.",
+          "confirm": "Déconnecter"
+        },
+        "password_reset": {
+          "title": "Envoyer une réinitialisation",
+          "description": "Envoyer à {name} un lien pour définir un nouveau mot de passe ? Vous ne voyez ni ne définissez jamais le mot de passe.",
+          "confirm": "Envoyer l'e-mail"
+        },
+        "impersonate": {
+          "title": "Se connecter en tant que cet utilisateur",
+          "description": "Ouvrir l'application en tant que {name} pendant une heure. Tout ce que vous faites est enregistré comme son action, et l'accès est journalisé.",
+          "confirm": "Se connecter"
+        }
+      },
+      "deleteDialog": {
+        "title": "Supprimer le compte",
+        "description": "Cette action supprime définitivement {name}. Elle est irréversible.",
+        "cascade": "Ses annonces, offres, expéditions, paiements, messages, avis et son profil chauffeur sont supprimés avec le compte.",
+        "prompt": "Saisissez {email} pour confirmer",
+        "cancel": "Annuler",
+        "confirm": "Supprimer définitivement",
+        "deleting": "Suppression..."
       },
       "messages": {
         "suspended": "Utilisateur suspendu",
-        "suspendedDesc": "{name} a été suspendu",
-        "activated": "Utilisateur activé",
-        "activatedDesc": "{name} a été activé",
+        "suspendedDesc": "{name} a été suspendu et déconnecté",
+        "activated": "Utilisateur réactivé",
+        "activatedDesc": "{name} peut de nouveau se connecter",
+        "sessionsRevoked": "Déconnecté partout",
+        "sessionsRevokedDesc": "{count} session(s) fermée(s) pour {name}",
+        "resetSent": "E-mail envoyé",
+        "resetSentDesc": "Un lien de réinitialisation part vers {email}",
+        "deleted": "Compte supprimé",
+        "deletedDesc": "{name} et toutes ses données ont été supprimés",
+        "idCopied": "Identifiant copié",
         "error": "Erreur",
-        "errorDesc": "Échec de la mise à jour du statut"
+        "errorDesc": "L'action n'a pas pu être effectuée"
+      },
+      "blocked": {
+        "CANNOT_IMPERSONATE_SELF": "Vous êtes connecté avec ce compte",
+        "SELF_BAN_NOT_ALLOWED": "Vous ne pouvez pas suspendre votre propre compte",
+        "SELF_DELETE_NOT_ALLOWED": "Vous ne pouvez pas supprimer votre propre compte",
+        "CANNOT_DELETE_ADMIN": "Les comptes admin ne peuvent pas être supprimés ici",
+        "CANNOT_DELETE_SYSTEM_USER": "Le compte système Expedion ne peut pas être supprimé"
+      },
+      "origin": {
+        "expeditoo": "Expeditoo",
+        "expedion": "Expedion"
       }
     },
     "listings": {
@@ -1149,9 +1209,11 @@
         "actions": "Actions",
         "searchPlaceholder": "Rechercher par entreprise, SIRET ou candidat...",
         "filterLabel": "Filtrer par statut",
+        "filterAll": "Tous les statuts",
         "empty": {
           "title": "Aucune candidature",
-          "description": "Aucune candidature de transporteur avec ce statut."
+          "description": "Aucune candidature de transporteur avec ce statut.",
+          "descriptionAll": "Aucune candidature de transporteur pour le moment."
         }
       },
       "status": {
@@ -1352,8 +1414,84 @@
       },
       "recent": {
         "title": "Devis récents",
+        "subtitle": "{total} plus récents · {count, plural, =0 {rien de nouveau en 24 h} one {# nouveau en 24 h} other {# nouveaux en 24 h}}",
+        "waiting": "En attente",
+        "nextStep": "Prochaine étape",
+        "new": "Nouveau",
+        "storageIn": "stockage J-{count}",
+        "tabs": {
+          "todo": "À traiter",
+          "all": "Tous"
+        },
+        "todoEmpty": "Rien ne vous attend",
+        "todoEmptyBody": "Chaque devis récent est chez le client ou déjà en route.",
         "empty": "Aucun devis",
-        "emptyBody": "Les demandes apparaîtront ici."
+        "emptyBody": "Les demandes apparaîtront ici.",
+        "action": {
+          "escalate": "Escalade due",
+          "escalateBlocked": "Escalade bloquée",
+          "assign": "Sans chauffeur",
+          "price": "À chiffrer",
+          "storage": "Stockage bientôt facturé",
+          "awaitingPayment": "Paiement en attente",
+          "awaitingClient": "Chez le client",
+          "inProgress": "En cours",
+          "done": "Livré",
+          "cancelled": "Annulé"
+        },
+        "button": {
+          "reprice": "Chiffrer",
+          "assign": "Affecter",
+          "escalate": "Publier"
+        },
+        "openHint": "cliquez sur une ligne pour le devis complet et son bordereau"
+      },
+      "detail": {
+        "title": "Devis {reference}",
+        "loading": "Chargement du devis…",
+        "error": "Devis indisponible",
+        "documents": "Documents téléversés",
+        "bordereau": "Bordereau",
+        "photo": "Photo {index}",
+        "noDocuments": "Le client n'a téléversé aucun document.",
+        "openDocument": "Ouvrir",
+        "documentNotPreviewable": "Référence stockée — ce n'est pas un lien public, l'aperçu est impossible ici.",
+        "client": "Client",
+        "name": "Nom",
+        "email": "E-mail",
+        "phone": "Téléphone",
+        "address": "Adresse",
+        "pickup": "Enlèvement",
+        "auctionHouse": "Maison de ventes",
+        "saleDate": "Date de vente",
+        "coordinates": "Coordonnées GPS",
+        "delivery": "Livraison",
+        "recipient": "Destinataire",
+        "lot": "Le lot",
+        "description": "Description",
+        "dimensions": "Dimensions",
+        "weight": "Poids",
+        "protected": "Emballage protégé",
+        "declaredValue": "Valeur déclarée",
+        "pricing": "Tarification",
+        "standard": "Devis standard",
+        "insured": "Avec ad valorem",
+        "accepted": "Accepté",
+        "published": "Prix publié",
+        "flow": "Avancement",
+        "requestedAt": "Demandé le",
+        "assignedCarrier": "Transporteur affecté",
+        "listing": "Annonce",
+        "escalateAfter": "Escalade après",
+        "escalatedAt": "Escaladé le",
+        "storageFreeUntil": "Stockage gratuit jusqu'au",
+        "storageFee": "Frais de stockage",
+        "perDay": "{value} par jour",
+        "extraction": "Extraction",
+        "confidence": "{percent} % de confiance ({model})",
+        "comment": "Commentaire",
+        "yes": "Oui",
+        "no": "Non"
       }
     },
     "awards": {
@@ -1665,5 +1803,10 @@
     },
     "previous": "Précédent",
     "next": "Suivant"
+  },
+  "impersonation": {
+    "viewingAs": "Connecté en tant que",
+    "endsIn": "expire dans {time}",
+    "stop": "Quitter"
   }
 }

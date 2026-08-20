@@ -42,7 +42,8 @@
       "jobs": "Jobs",
       "myOffers": "My offers",
       "deliveries": "Deliveries",
-      "myApplication": "My application"
+      "myApplication": "My application",
+      "adminPanel": "Admin Panel"
     },
     "categories": {
       "electronics": "Electronics",
@@ -997,38 +998,97 @@
         "searchPlaceholder": "Search users...",
         "name": "Name",
         "status": "Status",
+        "lastLogin": "Last login",
+        "never": "Never",
         "joinDate": "Join Date",
         "role": "Role",
         "actions": "Actions"
       },
+      "status": {
+        "active": "active",
+        "suspended": "suspended",
+        "pending": "pending"
+      },
       "actions": {
-        "manageRoles": "Manage Roles",
-        "viewProfile": "View Profile",
-        "removeDriver": "Remove Driver",
+        "manageRoles": "Manage roles",
+        "viewProfile": "View profile",
+        "copyId": "Copy user ID",
+        "impersonate": "Log in as user",
+        "passwordReset": "Send password reset",
+        "revokeSessions": "Sign out everywhere",
+        "removeDriver": "Remove driver",
         "activate": "Activate",
         "suspend": "Suspend",
-        "delete": "Delete"
+        "delete": "Delete account"
       },
       "dialogs": {
-        "suspendTitle": "Suspend User",
-        "suspendDesc": "Are you sure you want to suspend {name}? They will not be able to access the platform.",
-        "activateTitle": "Activate User",
-        "activateDesc": "Are you sure you want to activate {name}? They will regain access to the platform.",
-        "removeDriverTitle": "Remove Driver Status",
-        "removeDriverDesc": "Are you sure you want to remove driver status from {name}?",
         "cancel": "Cancel",
-        "suspend": "Suspend",
-        "activate": "Activate",
-        "remove": "Remove",
-        "processing": "Processing..."
+        "processing": "Processing...",
+        "suspend": {
+          "title": "Suspend user",
+          "description": "Suspend {name}? They are signed out of every device immediately and cannot sign in again until reinstated.",
+          "confirm": "Suspend"
+        },
+        "activate": {
+          "title": "Reinstate user",
+          "description": "Reinstate {name}? They will be able to sign in again.",
+          "confirm": "Reinstate"
+        },
+        "remove_driver": {
+          "title": "Remove driver status",
+          "description": "Remove driver status from {name}? They keep their account but can no longer bid on jobs.",
+          "confirm": "Remove"
+        },
+        "revoke_sessions": {
+          "title": "Sign out everywhere",
+          "description": "Sign {name} out of every device? Their account is otherwise untouched.",
+          "confirm": "Sign out"
+        },
+        "password_reset": {
+          "title": "Send password reset",
+          "description": "Email {name} a link to set a new password? You never see or set the password yourself.",
+          "confirm": "Send email"
+        },
+        "impersonate": {
+          "title": "Log in as this user",
+          "description": "Open the app as {name} for one hour. Anything you do is recorded as their action, and the impersonation is logged.",
+          "confirm": "Log in as user"
+        }
+      },
+      "deleteDialog": {
+        "title": "Delete account",
+        "description": "This permanently deletes {name}. It cannot be undone.",
+        "cascade": "Their listings, offers, shipments, payments, messages, reviews and driver profile are deleted with the account.",
+        "prompt": "Type {email} to confirm",
+        "cancel": "Cancel",
+        "confirm": "Delete permanently",
+        "deleting": "Deleting..."
       },
       "messages": {
-        "suspended": "User Suspended",
-        "suspendedDesc": "{name} has been suspended",
-        "activated": "User Activated",
-        "activatedDesc": "{name} has been activated",
+        "suspended": "User suspended",
+        "suspendedDesc": "{name} has been suspended and signed out",
+        "activated": "User reinstated",
+        "activatedDesc": "{name} can sign in again",
+        "sessionsRevoked": "Signed out everywhere",
+        "sessionsRevokedDesc": "{count} session(s) ended for {name}",
+        "resetSent": "Reset email sent",
+        "resetSentDesc": "A password reset link is on its way to {email}",
+        "deleted": "Account deleted",
+        "deletedDesc": "{name} and all their data have been deleted",
+        "idCopied": "User ID copied",
         "error": "Error",
-        "errorDesc": "Failed to update user status"
+        "errorDesc": "The action could not be completed"
+      },
+      "blocked": {
+        "CANNOT_IMPERSONATE_SELF": "You are signed in as this account",
+        "SELF_BAN_NOT_ALLOWED": "You cannot suspend your own account",
+        "SELF_DELETE_NOT_ALLOWED": "You cannot delete your own account",
+        "CANNOT_DELETE_ADMIN": "Admin accounts cannot be deleted from here",
+        "CANNOT_DELETE_SYSTEM_USER": "The Expedion system account cannot be deleted"
+      },
+      "origin": {
+        "expeditoo": "Expeditoo",
+        "expedion": "Expedion"
       }
     },
     "listings": {
@@ -1149,9 +1209,11 @@
         "actions": "Actions",
         "searchPlaceholder": "Search by company, SIRET or applicant...",
         "filterLabel": "Filter by status",
+        "filterAll": "All statuses",
         "empty": {
           "title": "No applications",
-          "description": "There are no carrier applications with this status."
+          "description": "There are no carrier applications with this status.",
+          "descriptionAll": "No carrier applications yet."
         }
       },
       "status": {
@@ -1352,8 +1414,84 @@
       },
       "recent": {
         "title": "Recent quotes",
+        "subtitle": "{total} most recent · {count, plural, =0 {nothing new in 24 h} one {# new in 24 h} other {# new in 24 h}}",
+        "waiting": "Waiting",
+        "nextStep": "Next step",
+        "new": "New",
+        "storageIn": "storage in {count} d",
+        "tabs": {
+          "todo": "To handle",
+          "all": "All"
+        },
+        "todoEmpty": "Nothing waiting on you",
+        "todoEmptyBody": "Every recent quote is with the client or already moving.",
         "empty": "No quotes",
-        "emptyBody": "Requests will appear here."
+        "emptyBody": "Requests will appear here.",
+        "action": {
+          "escalate": "Escalation due",
+          "escalateBlocked": "Escalation blocked",
+          "assign": "Needs a driver",
+          "price": "To price",
+          "storage": "Storage ending",
+          "awaitingPayment": "Awaiting payment",
+          "awaitingClient": "With the client",
+          "inProgress": "In progress",
+          "done": "Delivered",
+          "cancelled": "Cancelled"
+        },
+        "button": {
+          "reprice": "Set price",
+          "assign": "Assign",
+          "escalate": "Publish"
+        },
+        "openHint": "click a row for the full quote and its bordereau"
+      },
+      "detail": {
+        "title": "Quote {reference}",
+        "loading": "Loading the quote…",
+        "error": "Quote unavailable",
+        "documents": "Uploaded documents",
+        "bordereau": "Bordereau",
+        "photo": "Photo {index}",
+        "noDocuments": "The client uploaded no document.",
+        "openDocument": "Open",
+        "documentNotPreviewable": "Stored reference — not a public link, so it cannot be previewed here.",
+        "client": "Client",
+        "name": "Name",
+        "email": "Email",
+        "phone": "Phone",
+        "address": "Address",
+        "pickup": "Pickup",
+        "auctionHouse": "Auction house",
+        "saleDate": "Sale date",
+        "coordinates": "Coordinates",
+        "delivery": "Delivery",
+        "recipient": "Recipient",
+        "lot": "The lot",
+        "description": "Description",
+        "dimensions": "Dimensions",
+        "weight": "Weight",
+        "protected": "Protected packaging",
+        "declaredValue": "Declared value",
+        "pricing": "Pricing",
+        "standard": "Standard quote",
+        "insured": "With ad valorem",
+        "accepted": "Accepted",
+        "published": "Price published",
+        "flow": "Progress",
+        "requestedAt": "Requested",
+        "assignedCarrier": "Assigned carrier",
+        "listing": "Listing",
+        "escalateAfter": "Escalates after",
+        "escalatedAt": "Escalated",
+        "storageFreeUntil": "Free storage until",
+        "storageFee": "Storage fee",
+        "perDay": "{value} per day",
+        "extraction": "Extraction",
+        "confidence": "{percent} % confidence ({model})",
+        "comment": "Comment",
+        "yes": "Yes",
+        "no": "No"
       }
     },
     "awards": {
@@ -1665,5 +1803,10 @@
     },
     "previous": "Previous",
     "next": "Next"
+  },
+  "impersonation": {
+    "viewingAs": "Viewing as",
+    "endsIn": "ends in {time}",
+    "stop": "Stop"
   }
 }
