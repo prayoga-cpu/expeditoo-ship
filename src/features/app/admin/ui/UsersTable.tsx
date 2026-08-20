@@ -47,7 +47,7 @@ import type { User } from "../types";
 import { useLocale, useTranslations } from "next-intl";
 import { format, formatDistanceToNow } from "date-fns";
 import { enUS, fr } from "date-fns/locale";
-import { DataTable, DataTableColumnHeader } from "./data-table";
+import { DataTable, DataTableColumnHeader, dateRangeFilterFn } from "./data-table";
 import { DeleteUserDialog } from "./DeleteUserDialog";
 
 type ConfirmAction =
@@ -487,6 +487,7 @@ export function UsersTable({
         cell: ({ row }) => (
           <span className="text-muted-foreground">{row.original.joinDate}</span>
         ),
+        filterFn: dateRangeFilterFn<User>(),
       },
       {
         accessorKey: "role",
@@ -544,6 +545,7 @@ export function UsersTable({
         searchPlaceholder={tTable("searchPlaceholder")}
         className={className}
         tableMinHeight={tableMinHeight}
+        dateFilterKey="joinDate"
       />
 
       <AlertDialog

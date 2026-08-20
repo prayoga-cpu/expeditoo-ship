@@ -192,6 +192,24 @@ export const expedionQuotes = pgTable(
     /** Set when the client signs off the confirm-details screen. */
     extractionConfirmedAt: timestamp("extraction_confirmed_at"),
 
+    // ---- AI price suggestion (client-visible) ----
+    /**
+     * `expedionPriceSuggestionService.suggest`'s output, cached the first
+     * time a client opens the AI estimate on a still-pending quote so
+     * reopening it does not re-run GPT-4.1 vision. No TTL — same permanence
+     * as `extraction` above: holds until `updateQuote` clears it because a
+     * pricing-relevant field changed, or the quote gets a real price and the
+     * suggestion becomes moot.
+     */
+    aiSuggestedStandardCents: integer("ai_suggested_standard_cents"),
+    aiSuggestedInsuredCents: integer("ai_suggested_insured_cents"),
+    aiSuggestionReasoning: text("ai_suggestion_reasoning"),
+    aiSuggestionEstimations: jsonb("ai_suggestion_estimations").$type<string[]>(),
+    aiSuggestionConfidence: doublePrecision("ai_suggestion_confidence"),
+    /** `'ai' | 'engine'` — mirrors `PriceSuggestion['source']`. */
+    aiSuggestionSource: text("ai_suggestion_source"),
+    aiSuggestedAt: timestamp("ai_suggested_at"),
+
     // ---- Misc ----
     comment: text("comment"),
     requestedAt: timestamp("requested_at").defaultNow().notNull(),

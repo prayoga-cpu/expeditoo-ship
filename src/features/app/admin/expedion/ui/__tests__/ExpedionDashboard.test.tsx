@@ -36,6 +36,7 @@ const QUOTE: QuoteRow = {
   owned: true,
   hasPickupCoords: true,
   escalationReady: true,
+  escalationBlockers: [],
   queues: {
     toPrice: true,
     needsDriver: false,
@@ -60,6 +61,12 @@ const ORPHAN: QuoteRow = {
   owned: false,
   hasPickupCoords: false,
   escalationReady: false,
+  escalationBlockers: [
+    "pickupCoords",
+    "deliveryCoords",
+    "weight",
+    "acceptedPrice",
+  ],
   // Overdue *and* unescalatable, so the recent list renders its blocked
   // branch — the one where the button is offered but refuses to fire.
   queues: {
@@ -157,6 +164,7 @@ vi.mock("../../hooks/useExpedionReport", () => ({
     error: state.error,
   }),
   useExpedionQuoteAdmin: () => ({ mutate: vi.fn(), isPending: false }),
+  useExpedionPriceSuggestion: () => ({ mutate: vi.fn(), isPending: false }),
   useExpedionEscalate: () => ({ mutate: vi.fn(), isPending: false }),
   useCarrierOptions: () => ({ data: [], isLoading: false }),
 }));

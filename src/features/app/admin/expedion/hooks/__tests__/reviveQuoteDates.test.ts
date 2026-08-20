@@ -36,6 +36,7 @@ function row(overrides: Partial<QuoteRow> = {}): QuoteRow {
     insuredCents: 1200,
     owned: true,
     hasPickupCoords: true,
+    escalationBlockers: [],
     queues: {
       toPrice: false,
       needsDriver: false,

@@ -41,6 +41,7 @@ function row(overrides: Partial<QuoteRow> = {}): QuoteRow {
     owned: true,
     hasPickupCoords: true,
     escalationReady: true,
+    escalationBlockers: [],
     queues: { ...NO_QUEUES },
     storageFreeUntil: null,
     escalateAfter: null,
@@ -63,16 +64,29 @@ describe("nextAction", () => {
     expect(action.blocked).toBe(false);
   });
 
-  it("still offers escalation when the row is blocked, but marks it", () => {
+  it("still offers escalation when the row is blocked, but marks it and names why", () => {
     const action = nextAction(row({
         status: "paid",
         paymentStatus: "paid",
         escalationReady: false,
+        escalationBlockers: ["pickupCoords", "weight"],
         queues: { ...NO_QUEUES, escalationDue: true },
       }));
 
     expect(action.kind).toBe("escalate");
     expect(action.blocked).toBe(true);
+    expect(action.blockers).toEqual(["pickupCoords", "weight"]);
+  });
+
+  it("carries no blocker list once the row is ready", () => {
+    const action = nextAction(row({
+        status: "paid",
+        paymentStatus: "paid",
+        queues: { ...NO_QUEUES, escalationDue: true },
+      }));
+
+    expect(action.blocked).toBe(false);
+    expect(action.blockers).toBeUndefined();
   });
 
   it("falls back to the pickup-coordinate flag when readiness is absent", () => {

@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { UserPlus, MapPin, Calendar } from "lucide-react";
 import type { PendingDelivery } from "../types";
 import { useTranslations } from "next-intl";
-import { DataTable, DataTableColumnHeader } from "./data-table";
+import { DataTable, DataTableColumnHeader, dateRangeFilterFn } from "./data-table";
 
 interface DeliveriesTableProps {
   deliveries: PendingDelivery[];
@@ -141,6 +141,7 @@ export function DeliveriesTable({
             {new Date(row.original.createdDate).toLocaleDateString()}
           </p>
         ),
+        filterFn: dateRangeFilterFn<PendingDelivery>(),
       },
       {
         id: "actions",
@@ -177,6 +178,7 @@ export function DeliveriesTable({
       searchKey="title"
       searchPlaceholder={t("searchPlaceholder")}
       className={className}
+      dateFilterKey="createdDate"
     />
   );
 }

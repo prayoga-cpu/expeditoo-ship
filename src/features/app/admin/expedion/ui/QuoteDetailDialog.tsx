@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Check,
@@ -9,11 +9,16 @@ import {
   FileText,
   ImageIcon,
   Loader2,
+  Pencil,
+  Sparkles,
+  X,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
+import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -21,9 +26,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import type { ExpedionQuote } from "@/db/schema/expedion";
 import { formatCurrency } from "@/lib/currency";
+import {
+  useExpedionQuoteEdit,
+  useExpedionReextract,
+  type QuoteEditPatch,
+} from "../hooks/useExpedionReport";
 
 /**
  * Everything the platform holds about one quote, including the slip the client
@@ -71,6 +84,47 @@ function isPreviewable(url: string): boolean {
  */
 function looksLikeImage(url: string): boolean {
   return /\.(png|jpe?g|gif|webp|heic|avif)(\?|$|%3f)/i.test(url);
+}
+
+function toDateInputValue(value: string | Date | null | undefined): string {
+  if (!value) return "";
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? "" : date.toISOString().slice(0, 10);
+}
+
+/** Seeds the edit form from whatever the server currently holds. */
+function buildEditForm(d: QuoteDetail): QuoteEditPatch {
+  return {
+    firstName: d.firstName,
+    lastName: d.lastName,
+    email: d.email,
+    phone: d.phone,
+    clientAddress: d.clientAddress,
+    clientPostalCode: d.clientPostalCode,
+    clientCity: d.clientCity,
+    clientCountry: d.clientCountry,
+    auctionHouseName: d.auctionHouseName,
+    pickupAddress: d.pickupAddress,
+    pickupPostalCode: d.pickupPostalCode,
+    pickupCity: d.pickupCity,
+    pickupPhone: d.pickupPhone,
+    saleDate: toDateInputValue(d.saleDate),
+    recipientName: d.recipientName,
+    deliveryAddress: d.deliveryAddress,
+    deliveryAddressLine2: d.deliveryAddressLine2,
+    deliveryPostalCode: d.deliveryPostalCode,
+    deliveryCity: d.deliveryCity,
+    deliveryCountry: d.deliveryCountry,
+    deliveryPhone: d.deliveryPhone,
+    description: d.description,
+    lengthCm: d.lengthCm,
+    widthCm: d.widthCm,
+    heightCm: d.heightCm,
+    weightKg: d.weightKg,
+    isProtected: d.isProtected,
+    declaredValueCents: d.declaredValueCents,
+    valueBracket: d.valueBracket,
+  };
 }
 
 export interface QuoteDetailDialogProps {
@@ -122,6 +176,57 @@ export function QuoteDetailDialog({
     },
   });
 
+  const [isEditing, setIsEditing] = useState(false);
+  const [form, setForm] = useState<QuoteEditPatch>({});
+  const { mutate: saveEdit, isPending: isSaving } = useExpedionQuoteEdit();
+  const { mutate: reextract, isPending: isAnalyzing } = useExpedionReextract();
+
+  // A different quote opened mid-edit should not carry the previous one's
+  // draft into it.
+  useEffect(() => {
+    setIsEditing(false);
+  }, [quoteId]);
+
+  function enterEdit(source: QuoteDetail) {
+    setForm(buildEditForm(source));
+    setIsEditing(true);
+  }
+
+  function setField<K extends keyof QuoteEditPatch>(
+    key: K,
+    value: QuoteEditPatch[K]
+  ) {
+    setForm((f) => ({ ...f, [key]: value }));
+  }
+
+  function saveChanges() {
+    if (!quoteId) return;
+    saveEdit(
+      { id: quoteId, patch: form },
+      {
+        onSuccess: () => {
+          setIsEditing(false);
+          toast.success(t("editSuccess"));
+        },
+        onError: () => toast.error(t("editFailed")),
+      }
+    );
+  }
+
+  function analyzeWithAi() {
+    if (!quoteId) return;
+    reextract(quoteId, {
+      onSuccess: (result) => {
+        toast.success(t("reextractSuccess"));
+        // Drop straight into edit mode with the freshly extracted values, so
+        // the operator reviews and corrects rather than hunting for what
+        // changed.
+        enterEdit(result.quote as QuoteDetail);
+      },
+      onError: () => toast.error(t("reextractFailed")),
+    });
+  }
+
   const dateTime = (value: string | Date | null | undefined): string => {
     if (!value) return "—";
     const date = value instanceof Date ? value : new Date(value);
@@ -151,28 +256,65 @@ export function QuoteDetailDialog({
     <Dialog open={quoteId !== null} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="flex max-h-[88vh] max-w-3xl flex-col gap-0 overflow-hidden p-0">
         <DialogHeader className="border-b p-6 pb-4">
-          <DialogTitle className="flex flex-wrap items-center gap-2">
-            {t("title", {
-              reference: data?.quoteNumber ?? data?.bordereauNumber ?? "—",
-            })}
-            {data ? (
-              <>
-                <Badge variant="secondary">{data.status}</Badge>
-                <Badge variant="outline">{data.paymentStatus}</Badge>
-              </>
-            ) : null}
-          </DialogTitle>
-          <DialogDescription asChild>
-            {/* The id, not the quote number, is what the two products share:
-                Expedion shows the same string on the client's own quote, so an
-                operator and a client can name the same row out loud. */}
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-xs break-all">
-                {quoteId ?? ""}
-              </span>
-              {quoteId ? <CopyButton value={quoteId} /> : null}
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <DialogTitle className="flex flex-wrap items-center gap-2">
+                {t("title", {
+                  reference: data?.quoteNumber ?? data?.bordereauNumber ?? "—",
+                })}
+                {data ? (
+                  <>
+                    <Badge variant="secondary">{data.status}</Badge>
+                    <Badge variant="outline">{data.paymentStatus}</Badge>
+                  </>
+                ) : null}
+              </DialogTitle>
+              <DialogDescription asChild>
+                {/* The id, not the quote number, is what the two products share:
+                    Expedion shows the same string on the client's own quote, so an
+                    operator and a client can name the same row out loud. */}
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-xs break-all">
+                    {quoteId ?? ""}
+                  </span>
+                  {quoteId ? <CopyButton value={quoteId} /> : null}
+                </div>
+              </DialogDescription>
             </div>
-          </DialogDescription>
+
+            {data ? (
+              <div className="flex shrink-0 items-center gap-2">
+                {isEditing ? (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsEditing(false)}
+                      disabled={isSaving}
+                    >
+                      <X className="mr-1 h-3.5 w-3.5" />
+                      {t("cancel")}
+                    </Button>
+                    <Button size="sm" onClick={saveChanges} disabled={isSaving}>
+                      {isSaving ? (
+                        <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                      ) : null}
+                      {isSaving ? t("saving") : t("save")}
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => enterEdit(data)}
+                  >
+                    <Pencil className="mr-1 h-3.5 w-3.5" />
+                    {t("edit")}
+                  </Button>
+                )}
+              </div>
+            ) : null}
+          </div>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto p-6">
@@ -188,6 +330,28 @@ export function QuoteDetailDialog({
           ) : (
             <div className="space-y-6">
               <Section title={t("documents")}>
+                <div className="mb-3">
+                  {data.bordereauDocUrl ? (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={analyzeWithAi}
+                      disabled={isAnalyzing}
+                    >
+                      {isAnalyzing ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Sparkles className="mr-2 h-4 w-4" />
+                      )}
+                      {isAnalyzing ? t("analyzing") : t("analyzeWithAi")}
+                    </Button>
+                  ) : (
+                    <p className="text-muted-foreground text-xs">
+                      {t("noDocumentToAnalyze")}
+                    </p>
+                  )}
+                </div>
                 {documents.length === 0 ? (
                   <p className="text-muted-foreground text-sm">
                     {t("noDocuments")}
@@ -208,44 +372,137 @@ export function QuoteDetailDialog({
               </Section>
 
               <Section title={t("client")}>
-                <Field
-                  label={t("name")}
-                  value={
-                    [data.firstName, data.lastName].filter(Boolean).join(" ") ||
-                    "—"
-                  }
-                />
-                <Field label={t("email")} value={data.email} copyable />
-                <Field label={t("phone")} value={data.phone} />
-                <Field
-                  label={t("address")}
-                  value={[
-                    data.clientAddress,
-                    [data.clientPostalCode, data.clientCity]
-                      .filter(Boolean)
-                      .join(" "),
-                    data.clientCountry,
-                  ]
-                    .filter(Boolean)
-                    .join(", ")}
-                />
+                {isEditing ? (
+                  <>
+                    <EditableField
+                      label={t("firstName")}
+                      value={form.firstName ?? ""}
+                      onChange={(v) => setField("firstName", v || null)}
+                    />
+                    <EditableField
+                      label={t("lastName")}
+                      value={form.lastName ?? ""}
+                      onChange={(v) => setField("lastName", v || null)}
+                    />
+                    <EditableField
+                      label={t("email")}
+                      type="email"
+                      value={form.email ?? ""}
+                      onChange={(v) => setField("email", v || null)}
+                    />
+                    <EditableField
+                      label={t("phone")}
+                      value={form.phone ?? ""}
+                      onChange={(v) => setField("phone", v || null)}
+                    />
+                    <EditableField
+                      label={t("address")}
+                      value={form.clientAddress ?? ""}
+                      onChange={(v) => setField("clientAddress", v || null)}
+                    />
+                    <EditableField
+                      label={t("postalCode")}
+                      value={form.clientPostalCode ?? ""}
+                      onChange={(v) => setField("clientPostalCode", v || null)}
+                    />
+                    <EditableField
+                      label={t("city")}
+                      value={form.clientCity ?? ""}
+                      onChange={(v) => setField("clientCity", v || null)}
+                    />
+                    <EditableField
+                      label={t("country")}
+                      value={form.clientCountry ?? ""}
+                      onChange={(v) => setField("clientCountry", v || null)}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <Field
+                      label={t("name")}
+                      value={
+                        [data.firstName, data.lastName]
+                          .filter(Boolean)
+                          .join(" ") || "—"
+                      }
+                    />
+                    <Field label={t("email")} value={data.email} copyable />
+                    <Field label={t("phone")} value={data.phone} />
+                    <Field
+                      label={t("address")}
+                      value={[
+                        data.clientAddress,
+                        [data.clientPostalCode, data.clientCity]
+                          .filter(Boolean)
+                          .join(" "),
+                        data.clientCountry,
+                      ]
+                        .filter(Boolean)
+                        .join(", ")}
+                    />
+                  </>
+                )}
               </Section>
 
               <Section title={t("pickup")}>
-                <Field label={t("auctionHouse")} value={data.auctionHouseName} />
-                <Field
-                  label={t("address")}
-                  value={[
-                    data.pickupAddress,
-                    [data.pickupPostalCode, data.pickupCity]
-                      .filter(Boolean)
-                      .join(" "),
-                  ]
-                    .filter(Boolean)
-                    .join(", ")}
-                />
-                <Field label={t("phone")} value={data.pickupPhone} />
-                <Field label={t("saleDate")} value={dateTime(data.saleDate)} />
+                {isEditing ? (
+                  <>
+                    <EditableField
+                      label={t("auctionHouse")}
+                      value={form.auctionHouseName ?? ""}
+                      onChange={(v) => setField("auctionHouseName", v || null)}
+                    />
+                    <EditableField
+                      label={t("address")}
+                      value={form.pickupAddress ?? ""}
+                      onChange={(v) => setField("pickupAddress", v || null)}
+                    />
+                    <EditableField
+                      label={t("postalCode")}
+                      value={form.pickupPostalCode ?? ""}
+                      onChange={(v) => setField("pickupPostalCode", v || null)}
+                    />
+                    <EditableField
+                      label={t("city")}
+                      value={form.pickupCity ?? ""}
+                      onChange={(v) => setField("pickupCity", v || null)}
+                    />
+                    <EditableField
+                      label={t("phone")}
+                      value={form.pickupPhone ?? ""}
+                      onChange={(v) => setField("pickupPhone", v || null)}
+                    />
+                    <EditableField
+                      label={t("saleDate")}
+                      type="date"
+                      value={form.saleDate ?? ""}
+                      onChange={(v) => setField("saleDate", v || null)}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <Field
+                      label={t("auctionHouse")}
+                      value={data.auctionHouseName}
+                    />
+                    <Field
+                      label={t("address")}
+                      value={[
+                        data.pickupAddress,
+                        [data.pickupPostalCode, data.pickupCity]
+                          .filter(Boolean)
+                          .join(" "),
+                      ]
+                        .filter(Boolean)
+                        .join(", ")}
+                    />
+                    <Field label={t("phone")} value={data.pickupPhone} />
+                    <Field
+                      label={t("saleDate")}
+                      value={dateTime(data.saleDate)}
+                    />
+                  </>
+                )}
                 <Field
                   label={t("coordinates")}
                   value={
@@ -257,21 +514,67 @@ export function QuoteDetailDialog({
               </Section>
 
               <Section title={t("delivery")}>
-                <Field label={t("recipient")} value={data.recipientName} />
-                <Field
-                  label={t("address")}
-                  value={[
-                    data.deliveryAddress,
-                    data.deliveryAddressLine2,
-                    [data.deliveryPostalCode, data.deliveryCity]
-                      .filter(Boolean)
-                      .join(" "),
-                    data.deliveryCountry,
-                  ]
-                    .filter(Boolean)
-                    .join(", ")}
-                />
-                <Field label={t("phone")} value={data.deliveryPhone} />
+                {isEditing ? (
+                  <>
+                    <EditableField
+                      label={t("recipient")}
+                      value={form.recipientName ?? ""}
+                      onChange={(v) => setField("recipientName", v || null)}
+                    />
+                    <EditableField
+                      label={t("address")}
+                      value={form.deliveryAddress ?? ""}
+                      onChange={(v) => setField("deliveryAddress", v || null)}
+                    />
+                    <EditableField
+                      label={t("addressLine2")}
+                      value={form.deliveryAddressLine2 ?? ""}
+                      onChange={(v) =>
+                        setField("deliveryAddressLine2", v || null)
+                      }
+                    />
+                    <EditableField
+                      label={t("postalCode")}
+                      value={form.deliveryPostalCode ?? ""}
+                      onChange={(v) =>
+                        setField("deliveryPostalCode", v || null)
+                      }
+                    />
+                    <EditableField
+                      label={t("city")}
+                      value={form.deliveryCity ?? ""}
+                      onChange={(v) => setField("deliveryCity", v || null)}
+                    />
+                    <EditableField
+                      label={t("country")}
+                      value={form.deliveryCountry ?? ""}
+                      onChange={(v) => setField("deliveryCountry", v || null)}
+                    />
+                    <EditableField
+                      label={t("phone")}
+                      value={form.deliveryPhone ?? ""}
+                      onChange={(v) => setField("deliveryPhone", v || null)}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <Field label={t("recipient")} value={data.recipientName} />
+                    <Field
+                      label={t("address")}
+                      value={[
+                        data.deliveryAddress,
+                        data.deliveryAddressLine2,
+                        [data.deliveryPostalCode, data.deliveryCity]
+                          .filter(Boolean)
+                          .join(" "),
+                        data.deliveryCountry,
+                      ]
+                        .filter(Boolean)
+                        .join(", ")}
+                    />
+                    <Field label={t("phone")} value={data.deliveryPhone} />
+                  </>
+                )}
                 <Field
                   label={t("coordinates")}
                   value={
@@ -283,33 +586,144 @@ export function QuoteDetailDialog({
               </Section>
 
               <Section title={t("lot")}>
-                <Field label={t("description")} value={data.description} />
-                <Field
-                  label={t("dimensions")}
-                  value={
-                    data.lengthCm || data.widthCm || data.heightCm
-                      ? `${data.lengthCm ?? "?"} × ${data.widthCm ?? "?"} × ${
-                          data.heightCm ?? "?"
-                        } cm`
-                      : null
-                  }
-                />
-                <Field
-                  label={t("weight")}
-                  value={data.weightKg ? `${data.weightKg} kg` : null}
-                />
-                <Field
-                  label={t("protected")}
-                  value={data.isProtected ? t("yes") : t("no")}
-                />
-                <Field
-                  label={t("declaredValue")}
-                  value={
-                    data.declaredValueCents !== null
-                      ? money(data.declaredValueCents)
-                      : (data.valueBracket ?? null)
-                  }
-                />
+                {isEditing ? (
+                  <>
+                    <div className="min-w-0 text-sm sm:col-span-2">
+                      <Label className="text-muted-foreground text-xs font-normal">
+                        {t("description")}
+                      </Label>
+                      <Textarea
+                        value={form.description ?? ""}
+                        onChange={(e) =>
+                          setField("description", e.target.value || null)
+                        }
+                        className="mt-1"
+                        rows={3}
+                      />
+                    </div>
+                    <div className="min-w-0 text-sm">
+                      <Label className="text-muted-foreground text-xs font-normal">
+                        {t("dimensions")}
+                      </Label>
+                      <div className="mt-1 flex items-center gap-1">
+                        <Input
+                          type="number"
+                          value={form.lengthCm?.toString() ?? ""}
+                          onChange={(e) =>
+                            setField(
+                              "lengthCm",
+                              e.target.value === "" ? null : Number(e.target.value)
+                            )
+                          }
+                          placeholder="L"
+                          className="h-8"
+                        />
+                        <span className="text-muted-foreground">×</span>
+                        <Input
+                          type="number"
+                          value={form.widthCm?.toString() ?? ""}
+                          onChange={(e) =>
+                            setField(
+                              "widthCm",
+                              e.target.value === "" ? null : Number(e.target.value)
+                            )
+                          }
+                          placeholder="l"
+                          className="h-8"
+                        />
+                        <span className="text-muted-foreground">×</span>
+                        <Input
+                          type="number"
+                          value={form.heightCm?.toString() ?? ""}
+                          onChange={(e) =>
+                            setField(
+                              "heightCm",
+                              e.target.value === "" ? null : Number(e.target.value)
+                            )
+                          }
+                          placeholder="h"
+                          className="h-8"
+                        />
+                        <span className="text-muted-foreground text-xs">cm</span>
+                      </div>
+                    </div>
+                    <EditableField
+                      label={t("weight")}
+                      type="number"
+                      value={form.weightKg?.toString() ?? ""}
+                      onChange={(v) =>
+                        setField("weightKg", v === "" ? null : Number(v))
+                      }
+                      placeholder="kg"
+                    />
+                    <div className="flex items-center gap-2 text-sm">
+                      <Checkbox
+                        id="quote-edit-protected"
+                        checked={form.isProtected ?? false}
+                        onCheckedChange={(checked) =>
+                          setField("isProtected", checked === true)
+                        }
+                      />
+                      <Label
+                        htmlFor="quote-edit-protected"
+                        className="text-sm font-normal"
+                      >
+                        {t("protected")}
+                      </Label>
+                    </div>
+                    <EditableField
+                      label={t("declaredValue")}
+                      type="number"
+                      value={
+                        form.declaredValueCents != null
+                          ? String(form.declaredValueCents / 100)
+                          : ""
+                      }
+                      onChange={(v) =>
+                        setField(
+                          "declaredValueCents",
+                          v === "" ? null : Math.round(Number(v) * 100)
+                        )
+                      }
+                    />
+                    <EditableField
+                      label={t("valueBracket")}
+                      value={form.valueBracket ?? ""}
+                      onChange={(v) => setField("valueBracket", v || null)}
+                      placeholder="Jusqu'à 150 €"
+                    />
+                  </>
+                ) : (
+                  <>
+                    <Field label={t("description")} value={data.description} />
+                    <Field
+                      label={t("dimensions")}
+                      value={
+                        data.lengthCm || data.widthCm || data.heightCm
+                          ? `${data.lengthCm ?? "?"} × ${
+                              data.widthCm ?? "?"
+                            } × ${data.heightCm ?? "?"} cm`
+                          : null
+                      }
+                    />
+                    <Field
+                      label={t("weight")}
+                      value={data.weightKg ? `${data.weightKg} kg` : null}
+                    />
+                    <Field
+                      label={t("protected")}
+                      value={data.isProtected ? t("yes") : t("no")}
+                    />
+                    <Field
+                      label={t("declaredValue")}
+                      value={
+                        data.declaredValueCents !== null
+                          ? money(data.declaredValueCents)
+                          : (data.valueBracket ?? null)
+                      }
+                    />
+                  </>
+                )}
               </Section>
 
               <Section title={t("pricing")}>
@@ -425,6 +839,35 @@ function Field({
         <span className="min-w-0 break-words">{shown}</span>
         {copyable && shown !== "—" ? <CopyButton value={shown} /> : null}
       </div>
+    </div>
+  );
+}
+
+function EditableField({
+  label,
+  value,
+  onChange,
+  type = "text",
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  type?: "text" | "email" | "date" | "number";
+  placeholder?: string;
+}) {
+  return (
+    <div className="min-w-0 text-sm">
+      <Label className="text-muted-foreground text-xs font-normal">
+        {label}
+      </Label>
+      <Input
+        type={type}
+        value={value}
+        placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+        className="mt-1 h-8"
+      />
     </div>
   );
 }

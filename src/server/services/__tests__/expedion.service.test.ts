@@ -5,6 +5,7 @@ import {
   canTransition,
 } from '../expedion.service';
 import { expedionDal, type QuoteFilters } from '@/server/dal/expedion.dal';
+import { expedionPriceSuggestionService } from '@/server/services/expedion-price-suggestion.service';
 import { adminUpdateExpedionQuoteSchema } from '@/server/dto/expedion.dto';
 
 // The DAL is stubbed so the suite never touches a database.
@@ -35,6 +36,10 @@ vi.mock('@/server/services/expedion-sms.service', () => ({
         deliveryUpdate: vi.fn().mockResolvedValue(undefined),
         storageWarning: vi.fn().mockResolvedValue(undefined),
     },
+}));
+
+vi.mock('@/server/services/expedion-price-suggestion.service', () => ({
+    expedionPriceSuggestionService: { suggest: vi.fn() },
 }));
 
 const listMock = vi.mocked(expedionDal.list);
@@ -312,4 +317,157 @@ describe("pricing a quote makes it acceptable", () => {
     expect(canTransition("paid", "quoted")).toBe(false);
     expect(canTransition("delivered", "quoted")).toBe(false);
   });
+});
+
+// ========================================
+// AI price suggestion
+// ========================================
+
+/** A pending, unpriced quote — the state the client-facing AI estimate targets. */
+const pendingQuote = (over: Record<string, unknown> = {}) => ({
+    id: 'q_1',
+    firebaseUid: 'user_abc',
+    status: 'pending',
+    quoteAvailable: false,
+    aiSuggestedStandardCents: null,
+    aiSuggestedInsuredCents: null,
+    aiSuggestionReasoning: null,
+    aiSuggestionEstimations: null,
+    aiSuggestionConfidence: null,
+    aiSuggestionSource: null,
+    aiSuggestedAt: null,
+    ...over,
+});
+
+const OWNER_CALLER = { userId: 'user_abc', isAdmin: false };
+
+describe('expedionService.getPriceSuggestion', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        updateMock.mockImplementation(
+            async (_id, patch) => ({ ...pendingQuote(), ...patch }) as never
+        );
+    });
+
+    it('returns the cached suggestion without calling the AI service', async () => {
+        getByIdMock.mockResolvedValue(
+            pendingQuote({
+                aiSuggestedStandardCents: 12_000,
+                aiSuggestedInsuredCents: 12_500,
+                aiSuggestionReasoning: 'Cached reasoning',
+                aiSuggestionEstimations: ['weight'],
+                aiSuggestionConfidence: 0.7,
+                aiSuggestionSource: 'ai',
+                aiSuggestedAt: new Date('2026-08-01T00:00:00.000Z'),
+            }) as never
+        );
+
+        const suggestion = await expedionService.getPriceSuggestion('q_1', OWNER_CALLER);
+
+        expect(suggestion).toEqual({
+            standardCents: 12_000,
+            insuredCents: 12_500,
+            reasoning: 'Cached reasoning',
+            estimations: ['weight'],
+            confidence: 0.7,
+            source: 'ai',
+        });
+        expect(expedionPriceSuggestionService.suggest).not.toHaveBeenCalled();
+        expect(updateMock).not.toHaveBeenCalled();
+    });
+
+    it('computes and persists a fresh suggestion when nothing is cached', async () => {
+        getByIdMock.mockResolvedValue(pendingQuote() as never);
+        vi.mocked(expedionPriceSuggestionService.suggest).mockResolvedValue({
+            standardCents: 15_000,
+            insuredCents: 15_500,
+            reasoning: 'Fresh reasoning',
+            estimations: [],
+            confidence: 0.8,
+            source: 'ai',
+        });
+
+        const suggestion = await expedionService.getPriceSuggestion('q_1', OWNER_CALLER);
+
+        expect(expedionPriceSuggestionService.suggest).toHaveBeenCalledWith('q_1');
+        expect(suggestion.standardCents).toBe(15_000);
+        expect(lastPatch()).toMatchObject({
+            aiSuggestedStandardCents: 15_000,
+            aiSuggestedInsuredCents: 15_500,
+            aiSuggestionReasoning: 'Fresh reasoning',
+            aiSuggestionSource: 'ai',
+        });
+        expect(lastPatch().aiSuggestedAt).toBeInstanceOf(Date);
+    });
+
+    it('refuses once the quote already has a real price', async () => {
+        getByIdMock.mockResolvedValue(pendingQuote({ quoteAvailable: true }) as never);
+
+        await expect(
+            expedionService.getPriceSuggestion('q_1', OWNER_CALLER)
+        ).rejects.toMatchObject({ code: 'QUOTE_ALREADY_PRICED', status: 409 });
+        expect(expedionPriceSuggestionService.suggest).not.toHaveBeenCalled();
+    });
+
+    it('hides the quote from a non-owner, same as getQuote', async () => {
+        getByIdMock.mockResolvedValue(
+            pendingQuote({ firebaseUid: 'someone_else' }) as never
+        );
+
+        await expect(
+            expedionService.getPriceSuggestion('q_1', OWNER_CALLER)
+        ).rejects.toMatchObject({ code: 'QUOTE_NOT_FOUND', status: 404 });
+        expect(expedionPriceSuggestionService.suggest).not.toHaveBeenCalled();
+    });
+});
+
+describe('expedionService.updateQuote — AI suggestion cache invalidation', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        updateMock.mockImplementation(
+            async (_id, patch) => ({ ...pendingQuote(), ...patch }) as never
+        );
+    });
+
+    it('clears the cached AI suggestion when a dimension changes', async () => {
+        getByIdMock.mockResolvedValue(
+            pendingQuote({
+                aiSuggestedAt: new Date('2026-08-01T00:00:00.000Z'),
+                aiSuggestedStandardCents: 12_000,
+            }) as never
+        );
+
+        await expedionService.updateQuote('q_1', OWNER_CALLER, { lengthCm: 50 });
+
+        expect(lastPatch()).toMatchObject({
+            aiSuggestedStandardCents: null,
+            aiSuggestedInsuredCents: null,
+            aiSuggestionReasoning: null,
+            aiSuggestionEstimations: null,
+            aiSuggestionConfidence: null,
+            aiSuggestionSource: null,
+            aiSuggestedAt: null,
+        });
+    });
+
+    it('leaves the cache alone when nothing pricing-relevant changes', async () => {
+        getByIdMock.mockResolvedValue(
+            pendingQuote({
+                aiSuggestedAt: new Date('2026-08-01T00:00:00.000Z'),
+                aiSuggestedStandardCents: 12_000,
+            }) as never
+        );
+
+        await expedionService.updateQuote('q_1', OWNER_CALLER, { comment: 'a note' });
+
+        expect(lastPatch()).not.toHaveProperty('aiSuggestedAt');
+    });
+
+    it('does not touch the cache when nothing was ever cached', async () => {
+        getByIdMock.mockResolvedValue(pendingQuote() as never);
+
+        await expedionService.updateQuote('q_1', OWNER_CALLER, { weightKg: 10 });
+
+        expect(lastPatch()).not.toHaveProperty('aiSuggestedAt');
+    });
 });

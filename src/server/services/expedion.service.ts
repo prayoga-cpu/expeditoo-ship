@@ -3,6 +3,12 @@ import { db } from "@/db";
 import { expedionDal, type QuoteFilters } from "@/server/dal/expedion.dal";
 import { pricingService } from "@/server/services/pricing.service";
 import { expedionSmsService } from "@/server/services/expedion-sms.service";
+import { expedionExtractionService } from "@/server/services/expedion-extraction.service";
+import {
+  expedionPriceSuggestionService,
+  type PriceSuggestion,
+} from "@/server/services/expedion-price-suggestion.service";
+import { imageUrlToBase64DataUrl } from "@/lib/ai/openai";
 import { searchAddress } from "@/lib/geocoding";
 import type {
   CreateExpedionQuoteInput,
@@ -116,7 +122,7 @@ export function canTransition(
 // ========================================
 
 /** Volumetric weight, matching the Expeditoo pricing engine's divisor. */
-function hasDimensions(q: {
+export function hasDimensions(q: {
   lengthCm: number | null;
   widthCm: number | null;
   heightCm: number | null;
@@ -127,7 +133,19 @@ function hasDimensions(q: {
   );
 }
 
-async function geocodeFr(
+/** The ad valorem line: a floor-protected percentage of the declared value. */
+export function adValoremInsuranceCents(
+  declaredValueCents: number | null
+): number {
+  return declaredValueCents
+    ? Math.max(
+        AD_VALOREM_MINIMUM_CENTS,
+        Math.round(declaredValueCents * AD_VALOREM_RATE)
+      )
+    : AD_VALOREM_MINIMUM_CENTS;
+}
+
+export async function geocodeFr(
   address: string | null | undefined,
   postalCode: string | null | undefined,
   city: string | null | undefined
@@ -265,23 +283,190 @@ export const expedionService = {
       if (quote.status === "awaiting_confirmation") patch.status = "pending";
     }
 
-    const updated = await expedionDal.update(id, patch);
-
-    // Dimensions drive the price, so a corrected dimension reprices.
-    if (
+    const dimensionsOrAddressChanged =
       fields.lengthCm !== undefined ||
       fields.widthCm !== undefined ||
       fields.heightCm !== undefined ||
       fields.weightKg !== undefined ||
       fields.deliveryPostalCode !== undefined ||
-      fields.pickupPostalCode !== undefined
-    ) {
+      fields.pickupPostalCode !== undefined;
+
+    // A stale AI estimate is worse than none — it was grounded in the
+    // values being changed here.
+    if (dimensionsOrAddressChanged && quote.aiSuggestedAt) {
+      patch.aiSuggestedStandardCents = null;
+      patch.aiSuggestedInsuredCents = null;
+      patch.aiSuggestionReasoning = null;
+      patch.aiSuggestionEstimations = null;
+      patch.aiSuggestionConfidence = null;
+      patch.aiSuggestionSource = null;
+      patch.aiSuggestedAt = null;
+    }
+
+    const updated = await expedionDal.update(id, patch);
+
+    // Dimensions drive the price, so a corrected dimension reprices.
+    if (dimensionsOrAddressChanged) {
       void this.autoPrice(id).catch((e) =>
         console.error("[expedion] reprice failed", id, e)
       );
     }
 
     return updated;
+  },
+
+  /**
+   * The client-facing counterpart to `expedionPriceSuggestionService.suggest`:
+   * ownership-checked, cached on the quote so a reopened sheet does not
+   * re-run GPT-4.1 vision, and refused once the quote has a real price —
+   * at that point the estimate is moot and letting a client keep
+   * triggering it is pure cost with no upside.
+   */
+  async getPriceSuggestion(
+    id: string,
+    caller: ExpedionCallerIdentity
+  ): Promise<PriceSuggestion> {
+    const quote = await this.getQuote(id, caller);
+
+    if (quote.quoteAvailable) {
+      throw err(
+        "QUOTE_ALREADY_PRICED",
+        409,
+        "Le devis est déjà chiffré, l'estimation IA n'est plus disponible."
+      );
+    }
+
+    if (
+      quote.aiSuggestedAt &&
+      quote.aiSuggestedStandardCents != null &&
+      quote.aiSuggestedInsuredCents != null
+    ) {
+      return {
+        standardCents: quote.aiSuggestedStandardCents,
+        insuredCents: quote.aiSuggestedInsuredCents,
+        reasoning: quote.aiSuggestionReasoning ?? "",
+        estimations: (quote.aiSuggestionEstimations as string[] | null) ?? [],
+        confidence: quote.aiSuggestionConfidence ?? 0,
+        source: (quote.aiSuggestionSource as PriceSuggestion["source"]) ?? "engine",
+      };
+    }
+
+    const suggestion = await expedionPriceSuggestionService.suggest(id);
+
+    await db
+      .transaction(async (tx) => {
+        await expedionDal.update(
+          id,
+          {
+            aiSuggestedStandardCents: suggestion.standardCents,
+            aiSuggestedInsuredCents: suggestion.insuredCents,
+            aiSuggestionReasoning: suggestion.reasoning,
+            aiSuggestionEstimations: suggestion.estimations,
+            aiSuggestionConfidence: suggestion.confidence,
+            aiSuggestionSource: suggestion.source,
+            aiSuggestedAt: new Date(),
+          },
+          tx
+        );
+        await expedionDal.addEvent(
+          {
+            id: nanoid(),
+            quoteId: id,
+            status: quote.status,
+            actor: "system",
+            message: "Estimation IA générée pour le client",
+            metadata: {
+              standardCents: suggestion.standardCents,
+              insuredCents: suggestion.insuredCents,
+              source: suggestion.source,
+              confidence: suggestion.confidence,
+            },
+          },
+          tx
+        );
+      })
+      // The client already has the suggestion (and it was already computed);
+      // losing the cache write just means the next open recomputes.
+      .catch((e) => console.error("[expedion] failed to cache AI suggestion", id, e));
+
+    return suggestion;
+  },
+
+  /**
+   * Re-reads the bordereau already stored on a quote and refills whatever
+   * the model finds — client identity, pickup, the lot. For a devis an
+   * operator is helping a stuck client finish: the client uploaded a
+   * document once but never confirmed the extracted details, or the initial
+   * extraction ran thin. This is the same model and schema
+   * `POST /api/expedion/extract` uses at upload time, pointed at the URL
+   * already on the row instead of a fresh client upload.
+   *
+   * Only an admin calls this (route-gated) — it is a supervision tool, not
+   * something exposed to the client, who already gets one extraction per
+   * upload for free.
+   */
+  async reextractDocument(id: string) {
+    const quote = await expedionDal.getById(id);
+    if (!quote) throw err("QUOTE_NOT_FOUND", 404);
+    if (!quote.bordereauDocUrl) {
+      throw err("NO_DOCUMENT", 422, "Aucun bordereau à analyser pour ce devis");
+    }
+
+    const dataUrl = await imageUrlToBase64DataUrl(quote.bordereauDocUrl);
+    if (!dataUrl) {
+      throw err("NO_DOCUMENT", 422, "Le document est introuvable ou illisible");
+    }
+    const mimeType =
+      dataUrl.match(/^data:([^;]+);base64,/)?.[1] ?? "application/octet-stream";
+
+    const outcome = await expedionExtractionService.extract({
+      data: dataUrl,
+      mimeType,
+      filename: "bordereau",
+    });
+
+    const patch = expedionExtractionService.toQuotePatch(outcome.extraction);
+    // Same rule as the upload-time extraction: only overwrite what the model
+    // actually filled, so a re-run never blanks a field someone already
+    // corrected by hand.
+    const nonNull = Object.fromEntries(
+      Object.entries(patch).filter(([, v]) => v !== null && v !== undefined)
+    );
+
+    const updated = await db.transaction(async (tx) => {
+      const row = await expedionDal.update(
+        id,
+        {
+          ...nonNull,
+          extraction: outcome.extraction,
+          extractionModel: outcome.model,
+          extractionConfidence: outcome.extraction.confidence,
+          status:
+            quote.status === "pending" ? "awaiting_confirmation" : quote.status,
+        },
+        tx
+      );
+      await expedionDal.addEvent(
+        {
+          id: nanoid(),
+          quoteId: id,
+          status: row.status,
+          actor: "admin",
+          message: "Document ré-analysé par l'IA depuis la supervision",
+          metadata: { model: outcome.model, missingFields: outcome.missingFields },
+        },
+        tx
+      );
+      return row;
+    });
+
+    // Dimensions may just have appeared or changed; give auto-pricing another
+    // shot the same way a client-side dimension edit would.
+    void this.autoPrice(id).catch((e) =>
+      console.error("[expedion] reprice after reextract failed", id, e)
+    );
+
+    return { quote: updated, missingFields: outcome.missingFields, model: outcome.model };
   },
 
   /**
@@ -330,12 +515,7 @@ export const expedionService = {
     });
 
     const standardCents = Math.round(result.breakdown.total * 100);
-    const insuranceCents = quote.declaredValueCents
-      ? Math.max(
-          AD_VALOREM_MINIMUM_CENTS,
-          Math.round(quote.declaredValueCents * AD_VALOREM_RATE)
-        )
-      : AD_VALOREM_MINIMUM_CENTS;
+    const insuranceCents = adValoremInsuranceCents(quote.declaredValueCents);
 
     const updated = await db.transaction(async (tx) => {
       const row = await expedionDal.update(

@@ -4,6 +4,7 @@ import { toast } from "sonner";
 
 import type { QuoteRow } from "@/server/dal/expedion-report.dal";
 import type { ExpedionReport } from "@/server/services/expedion-report.service";
+import type { ExpedionQuote } from "@/db/schema/expedion";
 
 /**
  * Data and actions for the operator report.
@@ -88,13 +89,60 @@ export function useExpedionReport() {
   });
 }
 
-/** Fields an operator may change on a quote. Mirrors `adminUpdateExpedionQuoteSchema`. */
+/**
+ * Fields an operator may change on a quote — every field the quote detail
+ * dialog's edit form and the queue's price/assign dialogs write. Mirrors
+ * `adminUpdateExpedionQuoteSchema`.
+ */
 export interface QuoteAdminPatch {
+  status?: string;
+  paymentStatus?: string;
   quoteStandardCents?: number | null;
   quoteInsuredCents?: number | null;
   quoteAvailable?: boolean;
   assignedCarrierId?: string | null;
-  status?: string;
+  escalateAfter?: string | null;
+  storageFreeUntil?: string | null;
+  storageDailyFeeCents?: number | null;
+
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  clientAddress?: string | null;
+  clientPostalCode?: string | null;
+  clientCity?: string | null;
+  clientCountry?: string | null;
+
+  auctionHouseName?: string | null;
+  pickupAddress?: string | null;
+  pickupCity?: string | null;
+  pickupPostalCode?: string | null;
+  pickupLat?: number | null;
+  pickupLng?: number | null;
+  pickupPhone?: string | null;
+  saleDate?: string | null;
+
+  recipientName?: string | null;
+  deliveryAddress?: string | null;
+  deliveryAddressLine2?: string | null;
+  deliveryCity?: string | null;
+  deliveryPostalCode?: string | null;
+  deliveryLat?: number | null;
+  deliveryLng?: number | null;
+  deliveryCountry?: string | null;
+  deliveryPhone?: string | null;
+
+  description?: string | null;
+  lengthCm?: number | null;
+  widthCm?: number | null;
+  heightCm?: number | null;
+  weightKg?: number | null;
+  isProtected?: boolean;
+  declaredValueCents?: number | null;
+  valueBracket?: string | null;
+  acceptedPriceCents?: number | null;
+
   note?: string;
 }
 
@@ -118,6 +166,125 @@ export function useExpedionQuoteAdmin() {
       );
     },
     onError: (error: Error) => toast.error(error.message),
+  });
+}
+
+/** A value that left the server as a `Date` and arrived as an ISO string. */
+type Wire<T> = {
+  [K in keyof T]: T[K] extends Date | null
+    ? string | Date | null
+    : T[K] extends Date
+      ? string | Date
+      : T[K];
+};
+
+export type QuoteDetail = Wire<ExpedionQuote>;
+
+interface QuoteDetailEnvelope {
+  success: boolean;
+  data?: QuoteDetail;
+  error?: { code: string; message: string };
+}
+
+/**
+ * The full quote — including the bordereau, coordinates and every field the
+ * report's tables leave out. Shared by the detail dialog and the fix-and-
+ * publish flow inside it, both of which need the same row hydrated the same
+ * way.
+ *
+ * Reads `GET /api/expedion/quotes/:id`, the same endpoint the client app
+ * uses for its own quote; that route hands an admin any row and a non-owner
+ * a 404, so nothing here widens who can see what.
+ */
+export function useExpedionQuoteDetail(quoteId: string | null) {
+  return useQuery<QuoteDetail>({
+    queryKey: ["admin", "expedion", "quote", quoteId],
+    enabled: quoteId !== null,
+    queryFn: async () => {
+      const response = await fetch(`/api/expedion/quotes/${quoteId}`);
+
+      /*
+       * Read the body as text and parse it here, rather than `response.json()`.
+       * A route that throws before it can answer — a refused database
+       * connection, a crashed render — replies with Next's HTML error page, and
+       * `response.json()` then fails with `Unexpected token '<'`, which is what
+       * the operator ends up reading inside the dialog. The status is the fact
+       * worth showing; the parser's complaint about the first character is not.
+       */
+      const raw = await response.text();
+      let body: QuoteDetailEnvelope | null = null;
+      try {
+        body = JSON.parse(raw) as QuoteDetailEnvelope;
+      } catch {
+        body = null;
+      }
+
+      if (!body) {
+        throw new Error(
+          response.ok
+            ? "The server sent something that is not a quote."
+            : `The server refused this quote (HTTP ${response.status}).`
+        );
+      }
+
+      if (!response.ok || !body.success || !body.data) {
+        throw new Error(body.error?.message ?? "Quote unavailable");
+      }
+      return body.data;
+    },
+  });
+}
+
+export interface ReextractResult {
+  quote: unknown;
+  missingFields: string[];
+  model: string;
+}
+
+/**
+ * Re-runs bordereau extraction against the document already stored on the
+ * quote and writes back whatever the model finds. `quote` in the result is
+ * the freshly updated row, still wire-shaped (dates as strings) — the caller
+ * casts it the same way the detail query's own response is cast.
+ */
+export function useExpedionReextract() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) =>
+      unwrap<ReextractResult>(
+        await fetch(`/api/expedion/quotes/${id}/reextract`, { method: "POST" })
+      ),
+    onSuccess: (_data, id) => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "expedion", "quote", id] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "expedion"] });
+    },
+  });
+}
+
+/** Mirrors `PriceSuggestion` in `expedion-price-suggestion.service.ts`. */
+export interface PriceSuggestion {
+  standardCents: number;
+  insuredCents: number;
+  reasoning: string;
+  estimations: string[];
+  confidence: number;
+  source: "ai" | "engine";
+}
+
+/**
+ * Fetches a suggested price for a quote; writes nothing. The reprice dialog
+ * uses the result to seed its editable fields, the same way it seeds them
+ * from whatever price is already on the quote.
+ */
+export function useExpedionPriceSuggestion() {
+  return useMutation({
+    mutationFn: async (id: string) =>
+      unwrap<PriceSuggestion>(
+        await fetch(`/api/expedion/quotes/${id}/suggest-price`, {
+          method: "POST",
+        })
+      ),
   });
 }
 

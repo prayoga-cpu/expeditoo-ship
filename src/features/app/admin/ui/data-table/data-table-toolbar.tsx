@@ -35,12 +35,14 @@ export function DataTableToolbar<TData>({
     return () => clearTimeout(timeout);
   }, [value, onSearchChange]);
 
+  // Only the search box is toolbar-local state — the date range is the
+  // admin header's global field, so clearing here must not touch it.
+  const isSearchFiltered = !!table.getColumn(searchKey)?.getFilterValue();
+
   const handleClear = useCallback(() => {
     setValue("");
     onSearchChange("");
   }, [onSearchChange]);
-
-  const isFiltered = table.getState().columnFilters.length > 0;
 
   return (
     <div className="flex items-center justify-between gap-2">
@@ -54,7 +56,7 @@ export function DataTableToolbar<TData>({
             className="pl-8 h-9"
           />
         </div>
-        {isFiltered && (
+        {isSearchFiltered && (
           <Button
             variant="ghost"
             onClick={handleClear}

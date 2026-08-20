@@ -26,7 +26,7 @@ import {
   type CarrierApplicationFilter,
 } from "../api/carriers.api";
 import { useTranslations, useLocale } from "next-intl";
-import { DataTable, DataTableColumnHeader } from "./data-table";
+import { DataTable, DataTableColumnHeader, dateRangeFilterFn } from "./data-table";
 
 export function CarrierApplicationsList({
   tableMinHeight,
@@ -148,6 +148,7 @@ export function CarrierApplicationsList({
             })}
           </span>
         ),
+        filterFn: dateRangeFilterFn<CarrierApplication>(),
       },
       {
         accessorKey: "status",
@@ -220,6 +221,7 @@ export function CarrierApplicationsList({
           searchKey="companyName"
           searchPlaceholder={t("table.searchPlaceholder")}
           tableMinHeight={tableMinHeight}
+          dateFilterKey="createdAt"
         />
       )}
 

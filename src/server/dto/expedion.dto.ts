@@ -156,6 +156,51 @@ export const adminUpdateExpedionQuoteSchema = z.object({
   escalateAfter: looseDate,
   storageFreeUntil: looseDate,
   storageDailyFeeCents: z.number().int().nonnegative().nullish(),
+
+  // The ten fields `escalationBlockers` checks, plus the rest of the quote
+  // detail dialog's edit form. Absent from `updateExpedionQuoteSchema`
+  // (the client's own confirm-details screen), because an Airtable-imported
+  // quote has no client to reach it with — an admin correcting it here is
+  // the only path left, and coordinates and the accepted price are never
+  // client-editable at all, on either schema.
+  firstName: trimmed,
+  lastName: trimmed,
+  email: z.string().trim().email().nullish(),
+  phone: trimmed,
+  clientAddress: trimmed,
+  clientPostalCode: trimmed,
+  clientCity: trimmed,
+  clientCountry: trimmed,
+
+  auctionHouseName: trimmed,
+  pickupAddress: trimmed,
+  pickupCity: trimmed,
+  pickupPostalCode: trimmed,
+  pickupLat: z.number().nullish(),
+  pickupLng: z.number().nullish(),
+  pickupPhone: trimmed,
+  saleDate: looseDate,
+
+  recipientName: trimmed,
+  deliveryAddress: trimmed,
+  deliveryAddressLine2: trimmed,
+  deliveryCity: trimmed,
+  deliveryPostalCode: trimmed,
+  deliveryLat: z.number().nullish(),
+  deliveryLng: z.number().nullish(),
+  deliveryCountry: trimmed,
+  deliveryPhone: trimmed,
+
+  description: trimmed,
+  lengthCm: looseNumber,
+  widthCm: looseNumber,
+  heightCm: looseNumber,
+  weightKg: looseNumber,
+  isProtected: z.boolean().optional(),
+  declaredValueCents: z.number().int().nonnegative().nullish(),
+  valueBracket: trimmed,
+  acceptedPriceCents: z.number().int().nonnegative().nullish(),
+
   note: trimmed,
 });
 

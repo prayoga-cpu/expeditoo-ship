@@ -39,6 +39,23 @@ const ESCALATION_DUE = sql`escalate_after is not null
   and listing_id is null`;
 
 /**
+ * The ten checks `escalationBlockers` runs, named individually rather than as
+ * one AND-chain — so a row can carry not just *whether* it is ready but
+ * *which* of the ten it is still missing. Each stays the SQL mirror of its
+ * `escalationBlockers` counterpart; keep the two in step.
+ */
+const HAS_PICKUP_COORDS = sql`pickup_lat is not null and pickup_lng is not null`;
+const HAS_DELIVERY_COORDS = sql`delivery_lat is not null and delivery_lng is not null`;
+const HAS_PICKUP_ADDRESS = sql`coalesce(pickup_address, '') <> ''`;
+const HAS_PICKUP_CITY = sql`coalesce(pickup_city, '') <> ''`;
+const HAS_PICKUP_POSTAL = sql`regexp_replace(coalesce(pickup_postal_code, ''), '[^0-9]', '', 'g') ~ '^[0-9]{5}$'`;
+const HAS_DELIVERY_ADDRESS = sql`coalesce(delivery_address, '') <> ''`;
+const HAS_DELIVERY_CITY = sql`coalesce(delivery_city, '') <> ''`;
+const HAS_DELIVERY_POSTAL = sql`regexp_replace(coalesce(delivery_postal_code, ''), '[^0-9]', '', 'g') ~ '^[0-9]{5}$'`;
+const HAS_WEIGHT = sql`coalesce(weight_kg, 0) > 0`;
+const HAS_ACCEPTED_PRICE = sql`coalesce(accepted_price_cents, 0) >= 100`;
+
+/**
  * Whether a row carries everything a marketplace listing needs — the SQL
  * mirror of `escalationBlockers`, which is the authority but wants a hydrated
  * quote and so cannot be asked about a whole queue at once. Keep the two in
@@ -48,19 +65,36 @@ const ESCALATION_DUE = sql`escalate_after is not null
  * has given up on for want of a postal code is exactly what the operator has
  * to see, so it stays in the queue wearing a badge instead of vanishing.
  */
-const ESCALATION_READY = sql`
-  pickup_lat is not null and pickup_lng is not null
-  and delivery_lat is not null and delivery_lng is not null
-  and coalesce(pickup_address, '') <> ''
-  and coalesce(pickup_city, '') <> ''
-  and coalesce(delivery_address, '') <> ''
-  and coalesce(delivery_city, '') <> ''
-  and regexp_replace(coalesce(pickup_postal_code, ''), '[^0-9]', '', 'g')
-      ~ '^[0-9]{5}$'
-  and regexp_replace(coalesce(delivery_postal_code, ''), '[^0-9]', '', 'g')
-      ~ '^[0-9]{5}$'
-  and coalesce(weight_kg, 0) > 0
-  and coalesce(accepted_price_cents, 0) >= 100`;
+const ESCALATION_READY = sql`${HAS_PICKUP_COORDS}
+  and ${HAS_DELIVERY_COORDS}
+  and ${HAS_PICKUP_ADDRESS}
+  and ${HAS_PICKUP_CITY}
+  and ${HAS_PICKUP_POSTAL}
+  and ${HAS_DELIVERY_ADDRESS}
+  and ${HAS_DELIVERY_CITY}
+  and ${HAS_DELIVERY_POSTAL}
+  and ${HAS_WEIGHT}
+  and ${HAS_ACCEPTED_PRICE}`;
+
+/**
+ * Stable keys for the ten checks, in the same order `escalationBlockers`
+ * lists them — the order a chip list or a form's field order should follow.
+ * The UI owns the translated label for each; this file only names the fact.
+ */
+export const ESCALATION_BLOCKER_CODES = [
+  "pickupCoords",
+  "deliveryCoords",
+  "pickupAddress",
+  "pickupCity",
+  "pickupPostalCode",
+  "deliveryAddress",
+  "deliveryCity",
+  "deliveryPostalCode",
+  "weight",
+  "acceptedPrice",
+] as const;
+
+export type EscalationBlockerCode = (typeof ESCALATION_BLOCKER_CODES)[number];
 
 export interface ExpedionTotals {
   total: number;
@@ -217,6 +251,13 @@ export interface QuoteRow {
    */
   escalationReady?: boolean;
   /**
+   * Which of the ten `escalationBlockers` checks this row still fails —
+   * empty once `escalationReady` is true. Carried alongside the boolean
+   * rather than replacing it, so a caller that only cares "ready or not"
+   * never has to check an array's length.
+   */
+  escalationBlockers: EscalationBlockerCode[];
+  /**
    * Which operator queues this row is in, straight from `QUEUE_WHERE` — the
    * same predicates that build the queues themselves, evaluated once per row.
    *
@@ -246,7 +287,16 @@ const QUOTE_COLUMNS = sql`
   quote_standard_cents                                  as standard_cents,
   quote_insured_cents                                   as insured_cents,
   not (${UNOWNED})                                      as owned,
-  (pickup_lat is not null and pickup_lng is not null)   as has_pickup_coords,
+  (${HAS_PICKUP_COORDS})                                as has_pickup_coords,
+  (${HAS_DELIVERY_COORDS})                              as has_delivery_coords,
+  (${HAS_PICKUP_ADDRESS})                               as has_pickup_address,
+  (${HAS_PICKUP_CITY})                                  as has_pickup_city,
+  (${HAS_PICKUP_POSTAL})                                as has_pickup_postal,
+  (${HAS_DELIVERY_ADDRESS})                             as has_delivery_address,
+  (${HAS_DELIVERY_CITY})                                as has_delivery_city,
+  (${HAS_DELIVERY_POSTAL})                              as has_delivery_postal,
+  (${HAS_WEIGHT})                                       as has_weight,
+  (${HAS_ACCEPTED_PRICE})                               as has_accepted_price,
   (${ESCALATION_READY})                                 as escalation_ready,
   (${QUEUE_WHERE.toPrice})                              as f_to_price,
   (${QUEUE_WHERE.needsDriver})                          as f_needs_driver,
@@ -256,6 +306,23 @@ const QUOTE_COLUMNS = sql`
   escalate_after,
   requested_at
 `;
+
+/** The ten `has_*` flags, reduced to the codes that came back false. */
+function blockerCodes(r: Record<string, unknown>): EscalationBlockerCode[] {
+  const flags: Record<EscalationBlockerCode, unknown> = {
+    pickupCoords: r.has_pickup_coords,
+    deliveryCoords: r.has_delivery_coords,
+    pickupAddress: r.has_pickup_address,
+    pickupCity: r.has_pickup_city,
+    pickupPostalCode: r.has_pickup_postal,
+    deliveryAddress: r.has_delivery_address,
+    deliveryCity: r.has_delivery_city,
+    deliveryPostalCode: r.has_delivery_postal,
+    weight: r.has_weight,
+    acceptedPrice: r.has_accepted_price,
+  };
+  return ESCALATION_BLOCKER_CODES.filter((code) => flags[code] !== true);
+}
 
 function toQuoteRow(r: Record<string, unknown>): QuoteRow {
   const num = (v: unknown) => (v === null || v === undefined ? null : Number(v));
@@ -275,6 +342,7 @@ function toQuoteRow(r: Record<string, unknown>): QuoteRow {
     owned: r.owned === true,
     hasPickupCoords: r.has_pickup_coords === true,
     escalationReady: r.escalation_ready === true,
+    escalationBlockers: blockerCodes(r),
     queues: {
       toPrice: r.f_to_price === true,
       needsDriver: r.f_needs_driver === true,
@@ -512,9 +580,11 @@ export async function getMonthlySeries(months = 6): Promise<MonthPoint[]> {
 const QUOTE_FIELDS = sql`
   id, reference, status, payment_status, auction_house_name, delivery_city,
   client_name, client_email, price_cents, standard_cents, insured_cents, owned,
-  has_pickup_coords, escalation_ready, f_to_price, f_needs_driver,
-  f_storage_at_risk, f_escalation_due, storage_free_until, escalate_after,
-  requested_at`;
+  has_pickup_coords, has_delivery_coords, has_pickup_address, has_pickup_city,
+  has_pickup_postal, has_delivery_address, has_delivery_city,
+  has_delivery_postal, has_weight, has_accepted_price, escalation_ready,
+  f_to_price, f_needs_driver, f_storage_at_risk, f_escalation_due,
+  storage_free_until, escalate_after, requested_at`;
 
 export interface ReportScalars {
   quotes: ExpedionTotals;

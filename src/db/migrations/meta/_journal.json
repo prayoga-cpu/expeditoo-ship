@@ -36,6 +36,13 @@
       "when": 1787130000000,
       "tag": "0004_user_signup_origin",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1787133600000,
+      "tag": "0005_expedion_ai_price_suggestion",
+      "breakpoints": true
     }
   ]
 }

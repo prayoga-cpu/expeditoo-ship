@@ -12,7 +12,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
 import {
@@ -23,6 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useAdminDateRange } from "../../hooks/useAdminDateRange";
 import { DataTablePagination } from "./data-table-pagination";
 import { DataTableToolbar } from "./data-table-toolbar";
 
@@ -39,6 +40,12 @@ interface DataTableProps<TData, TValue> {
    * propagation, or clicking one both acts and opens the row.
    */
   onRowClick?: (row: TData) => void;
+  /**
+   * Id of a column using `dateRangeFilterFn`. Filtered by the admin header's
+   * global `DateRangeField` (via `useAdminDateRange`), not a table-local
+   * control — every table sharing the same range is the point.
+   */
+  dateFilterKey?: string;
 }
 
 export function DataTable<TData, TValue>({
@@ -49,6 +56,7 @@ export function DataTable<TData, TValue>({
   className,
   tableMinHeight = "50vh",
   onRowClick,
+  dateFilterKey,
 }: DataTableProps<TData, TValue>) {
   // Simple local state - no URL sync to avoid re-render issues
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -77,6 +85,25 @@ export function DataTable<TData, TValue>({
       pagination,
     },
   });
+
+  // Applies the admin panel's one global date range to this table's date
+  // column, whenever `dateFilterKey` opts in. `table` is deliberately not a
+  // dependency: `useReactTable` returns a new object identity every render,
+  // and `setFilterValue` itself triggers a re-render — listing it here would
+  // loop. Depending only on the primitive from/to values keeps this to one
+  // call per actual range change.
+  const dateRange = useAdminDateRange();
+  useEffect(() => {
+    if (!dateFilterKey) return;
+    table
+      .getColumn(dateFilterKey)
+      ?.setFilterValue(
+        dateRange.from || dateRange.to
+          ? { from: dateRange.from, to: dateRange.to }
+          : undefined
+      );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dateFilterKey, dateRange.from, dateRange.to]);
 
   // Simple pagination handlers
   const handlePageChange = useCallback((pageIndex: number) => {

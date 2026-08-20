@@ -30,7 +30,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useTranslations } from "next-intl";
-import { DataTable, DataTableColumnHeader } from "./data-table";
+import { DataTable, DataTableColumnHeader, dateRangeFilterFn } from "./data-table";
 
 interface Listing {
   id: string;
@@ -210,6 +210,7 @@ export function ListingsTable({
             {new Date(row.original.createdAt).toLocaleDateString()}
           </span>
         ),
+        filterFn: dateRangeFilterFn<Listing>(),
       },
       {
         id: "actions",
@@ -241,6 +242,7 @@ export function ListingsTable({
         searchKey="title"
         searchPlaceholder={t("searchPlaceholder")}
         className={className}
+        dateFilterKey="createdAt"
       />
 
       <AlertDialog

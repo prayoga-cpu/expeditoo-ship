@@ -1,4 +1,7 @@
-import type { QuoteRow } from "@/server/dal/expedion-report.dal";
+import type {
+  EscalationBlockerCode,
+  QuoteRow,
+} from "@/server/dal/expedion-report.dal";
 
 /**
  * What a quote is waiting for, and who it is waiting on.
@@ -44,10 +47,14 @@ export interface QuoteAction {
   dialog: QuoteDialog | null;
   /**
    * Set on `escalate` when `escalationBlockers` would refuse the row. The
-   * button stays visible and disabled: the work is real, it is the data that
-   * has to be fixed first, and hiding it is how a job sat unescalated.
+   * button stays visible and enabled: it opens a fix-and-publish dialog
+   * rather than the plain publish confirmation, because the work is real —
+   * it is the data that has to be fixed first, and hiding it is how a job
+   * sat unescalated.
    */
   blocked?: boolean;
+  /** Which checks are failing, when `blocked` is true. */
+  blockers?: EscalationBlockerCode[];
 }
 
 /** A quote requested within this window is still "new" to the operator. */
@@ -93,11 +100,13 @@ export function nextAction(quote: QuoteRow): QuoteAction {
   const queues = quote.queues;
 
   if (queues.escalationDue) {
+    const blocked = !(quote.escalationReady ?? quote.hasPickupCoords);
     return {
       kind: "escalate",
       actionable: true,
       dialog: "escalate",
-      blocked: !(quote.escalationReady ?? quote.hasPickupCoords),
+      blocked,
+      blockers: blocked ? quote.escalationBlockers : undefined,
     };
   }
   if (queues.needsDriver) {
@@ -150,4 +159,56 @@ export function byUrgency() {
     const bt = b.requestedAt?.getTime() ?? Number.POSITIVE_INFINITY;
     return at - bt;
   };
+}
+
+/**
+ * Whatever a draft (a quote, or the in-progress edit form over one) carries
+ * for the ten `escalationBlockers` checks — no more, since that is all this
+ * needs to answer "what is still missing".
+ */
+export interface EscalationDraft {
+  pickupLat: number | null | undefined;
+  pickupLng: number | null | undefined;
+  deliveryLat: number | null | undefined;
+  deliveryLng: number | null | undefined;
+  pickupAddress: string | null | undefined;
+  pickupCity: string | null | undefined;
+  pickupPostalCode: string | null | undefined;
+  deliveryAddress: string | null | undefined;
+  deliveryCity: string | null | undefined;
+  deliveryPostalCode: string | null | undefined;
+  weightKg: number | null | undefined;
+  acceptedPriceCents: number | null | undefined;
+}
+
+function hasPostalCode(value: string | null | undefined): boolean {
+  return !!value && /^\d{5}$/.test(value.replace(/\D/g, ""));
+}
+
+/**
+ * Client-side mirror of `escalationBlockers`
+ * (`expedion-escalation.service.ts`), run against a draft still being edited
+ * so a fix form's checklist updates as the operator types instead of waiting
+ * on a round trip. Kept to the same ten checks in the same order; the server
+ * still has the final word the moment Publish is actually clicked.
+ */
+export function draftEscalationBlockers(
+  draft: EscalationDraft
+): EscalationBlockerCode[] {
+  const blockers: EscalationBlockerCode[] = [];
+  if (draft.pickupLat == null || draft.pickupLng == null)
+    blockers.push("pickupCoords");
+  if (draft.deliveryLat == null || draft.deliveryLng == null)
+    blockers.push("deliveryCoords");
+  if (!draft.pickupAddress) blockers.push("pickupAddress");
+  if (!draft.pickupCity) blockers.push("pickupCity");
+  if (!hasPostalCode(draft.pickupPostalCode)) blockers.push("pickupPostalCode");
+  if (!draft.deliveryAddress) blockers.push("deliveryAddress");
+  if (!draft.deliveryCity) blockers.push("deliveryCity");
+  if (!hasPostalCode(draft.deliveryPostalCode))
+    blockers.push("deliveryPostalCode");
+  if (!draft.weightKg || draft.weightKg <= 0) blockers.push("weight");
+  if (!draft.acceptedPriceCents || draft.acceptedPriceCents < 100)
+    blockers.push("acceptedPrice");
+  return blockers;
 }
