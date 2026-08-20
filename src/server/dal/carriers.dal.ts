@@ -10,7 +10,7 @@ import {
   type InsertVehicle,
   type CarrierStatus,
 } from "@/db/schema/carriers";
-import { and, eq, lte } from "drizzle-orm";
+import { and, desc, eq, lte } from "drizzle-orm";
 
 type Executor = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -40,10 +40,12 @@ export const carriersDal = {
     });
   },
 
-  async listByStatus(status: CarrierStatus, tx: Executor = db) {
+  /** Omitting the status returns every application, newest first. */
+  async listByStatus(status: CarrierStatus | undefined, tx: Executor = db) {
     return await tx.query.carriers.findMany({
-      where: eq(carriers.status, status),
+      where: status ? eq(carriers.status, status) : undefined,
       with: { documents: true, vehicles: true, user: true },
+      orderBy: desc(carriers.createdAt),
     });
   },
 

@@ -8,10 +8,10 @@ import {
     rejectCarrierApplication,
     suspendCarrier,
     fetchDocumentViewUrl,
-    type CarrierApplicationStatus,
+    type CarrierApplicationFilter,
 } from "../api/carriers.api";
 
-export function useCarrierApplications(status: CarrierApplicationStatus) {
+export function useCarrierApplications(status: CarrierApplicationFilter) {
     const queryClient = useQueryClient();
     const t = useTranslations("admin.carriers.toasts");
 

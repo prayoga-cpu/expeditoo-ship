@@ -20,9 +20,10 @@ import {
 } from "@/components/ui/select";
 import { useCarrierApplications } from "../hooks/useCarrierApplications";
 import {
+  ALL_STATUSES,
   CARRIER_APPLICATION_STATUSES,
   type CarrierApplication,
-  type CarrierApplicationStatus,
+  type CarrierApplicationFilter,
 } from "../api/carriers.api";
 import { useTranslations, useLocale } from "next-intl";
 import { DataTable, DataTableColumnHeader } from "./data-table";
@@ -32,7 +33,9 @@ export function CarrierApplicationsList({
 }: {
   tableMinHeight?: string;
 }) {
-  const [status, setStatus] = useState<CarrierApplicationStatus>("submitted");
+  // Unfiltered by default: an admin lands on the whole queue and narrows it
+  // themselves, rather than on a slice that hides applications.
+  const [status, setStatus] = useState<CarrierApplicationFilter>(ALL_STATUSES);
   const {
     applications,
     isLoading,
@@ -179,9 +182,7 @@ export function CarrierApplicationsList({
     <div className="space-y-4">
       <Select
         value={status}
-        onValueChange={(value) =>
-          setStatus(value as CarrierApplicationStatus)
-        }
+        onValueChange={(value) => setStatus(value as CarrierApplicationFilter)}
       >
         <SelectTrigger
           className="w-[200px]"
@@ -190,6 +191,7 @@ export function CarrierApplicationsList({
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
+          <SelectItem value={ALL_STATUSES}>{t("table.filterAll")}</SelectItem>
           {CARRIER_APPLICATION_STATUSES.map((value) => (
             <SelectItem key={value} value={value}>
               {t(`status.${value}`)}
@@ -204,7 +206,11 @@ export function CarrierApplicationsList({
         <CenteredEmptyState
           icon={Inbox}
           title={t("table.empty.title")}
-          description={t("table.empty.description")}
+          description={
+            status === ALL_STATUSES
+              ? t("table.empty.descriptionAll")
+              : t("table.empty.description")
+          }
           variant="page"
         />
       ) : (

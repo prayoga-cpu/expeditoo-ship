@@ -18,6 +18,13 @@ export const CARRIER_APPLICATION_STATUSES = [
 export type CarrierApplicationStatus =
     (typeof CARRIER_APPLICATION_STATUSES)[number];
 
+/** The review queue defaults to every status; "all" is the unfiltered view. */
+export const ALL_STATUSES = "all" as const;
+
+export type CarrierApplicationFilter =
+    | CarrierApplicationStatus
+    | typeof ALL_STATUSES;
+
 export type CarrierDocumentStatus = "pending" | "accepted" | "rejected";
 
 export interface CarrierApplicationDocument {
@@ -92,11 +99,11 @@ export interface ApiResponse<T> {
 }
 
 export async function fetchCarrierApplications(
-    status: CarrierApplicationStatus,
+    status: CarrierApplicationFilter = ALL_STATUSES,
 ): Promise<CarrierApplication[]> {
-    const res = await fetch(
-        `/api/admin/carrier-applications?status=${status}`,
-    );
+    const query =
+        status === ALL_STATUSES ? "" : `?status=${encodeURIComponent(status)}`;
+    const res = await fetch(`/api/admin/carrier-applications${query}`);
     const data: ApiResponse<CarrierApplication[]> = await res.json();
 
     if (!data.success) {

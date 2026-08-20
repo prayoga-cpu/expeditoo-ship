@@ -268,7 +268,8 @@ export const carrierService = {
 
   // ---- Admin review ----
 
-  async listForReview(status: Carrier["status"]) {
+  /** No status means the whole queue, every state included. */
+  async listForReview(status?: Carrier["status"]) {
     return await carriersDal.listByStatus(status);
   },
 
