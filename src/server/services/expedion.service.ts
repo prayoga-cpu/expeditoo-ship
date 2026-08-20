@@ -165,6 +165,70 @@ export async function geocodeFr(
   }
 }
 
+/**
+ * Resolves coordinates for whichever side of a quote has a full address but
+ * no lat/lng yet, and persists whatever it finds.
+ *
+ * `autoPrice` already geocodes pickup/delivery — but only once dimensions are
+ * known, since coordinates there are a means to a price. A quote submitted
+ * with a complete address and no dimensions yet (the common case for the
+ * bordereau flow, which collects dimensions later in confirm-details) would
+ * otherwise sit with `pickupLat`/`pickupLng` null until an admin filled
+ * dimensions by hand — which is also the fact `escalationBlockers` (see
+ * `expedion-escalation.service.ts`) checks to decide whether a quote is ready
+ * to publish. Running this independently of `hasDimensions` closes that gap:
+ * an address alone is enough to clear the coordinate blockers, exactly as an
+ * admin manually placing the pin on the map would.
+ *
+ * Coordinates are still never client-supplied (see the comment on
+ * `adminUpdateExpedionQuoteSchema` in `expedion.dto.ts`) — this only ever
+ * writes back what the server's own geocoder resolved.
+ */
+async function geocodeMissingCoordinates(id: string): Promise<void> {
+  const quote = await expedionDal.getById(id);
+  if (!quote) return;
+
+  const patch: Partial<InsertExpedionQuote> = {};
+
+  if (
+    (quote.pickupLat == null || quote.pickupLng == null) &&
+    quote.pickupAddress &&
+    quote.pickupPostalCode &&
+    quote.pickupCity
+  ) {
+    const hit = await geocodeFr(
+      quote.pickupAddress,
+      quote.pickupPostalCode,
+      quote.pickupCity
+    );
+    if (hit) {
+      patch.pickupLat = hit.lat;
+      patch.pickupLng = hit.lng;
+    }
+  }
+
+  if (
+    (quote.deliveryLat == null || quote.deliveryLng == null) &&
+    quote.deliveryAddress &&
+    quote.deliveryPostalCode &&
+    quote.deliveryCity
+  ) {
+    const hit = await geocodeFr(
+      quote.deliveryAddress,
+      quote.deliveryPostalCode,
+      quote.deliveryCity
+    );
+    if (hit) {
+      patch.deliveryLat = hit.lat;
+      patch.deliveryLng = hit.lng;
+    }
+  }
+
+  if (Object.keys(patch).length > 0) {
+    await expedionDal.update(id, patch);
+  }
+}
+
 function toInsert(
   firebaseUid: string,
   input: CreateExpedionQuoteInput
@@ -243,6 +307,14 @@ export const expedionService = {
       console.error("[expedion] auto-price failed", quote.id, e)
     );
 
+    // Independent of pricing: a quote submitted with a full address but no
+    // dimensions yet (the bordereau flow) would otherwise never get
+    // coordinates until an admin filled dimensions by hand. See
+    // `geocodeMissingCoordinates`.
+    void geocodeMissingCoordinates(quote.id).catch((e) =>
+      console.error("[expedion] geocode failed", quote.id, e)
+    );
+
     // A bordereau submitted with the quote gets read immediately — an
     // operator (or the client, on their own quote) should never have to
     // click a button first. `reextractDocument` only fills what is still
@@ -295,13 +367,21 @@ export const expedionService = {
       if (quote.status === "awaiting_confirmation") patch.status = "pending";
     }
 
+    const pickupAddressChanged =
+      fields.pickupAddress !== undefined ||
+      fields.pickupCity !== undefined ||
+      fields.pickupPostalCode !== undefined;
+    const deliveryAddressChanged =
+      fields.deliveryAddress !== undefined ||
+      fields.deliveryCity !== undefined ||
+      fields.deliveryPostalCode !== undefined;
     const dimensionsOrAddressChanged =
       fields.lengthCm !== undefined ||
       fields.widthCm !== undefined ||
       fields.heightCm !== undefined ||
       fields.weightKg !== undefined ||
-      fields.deliveryPostalCode !== undefined ||
-      fields.pickupPostalCode !== undefined;
+      pickupAddressChanged ||
+      deliveryAddressChanged;
 
     // A stale AI estimate is worse than none — it was grounded in the
     // values being changed here.
@@ -315,12 +395,30 @@ export const expedionService = {
       patch.aiSuggestedAt = null;
     }
 
+    // Stale coordinates are worse than none: `geocodeMissingCoordinates`
+    // below only fills a lat/lng that is *null*, so an edited address would
+    // otherwise keep pointing at the old one forever. The client-facing
+    // schema never carries pickupLat/pickupLng itself (see the comment on
+    // `adminUpdateExpedionQuoteSchema`), so clearing them here cannot
+    // clobber a value this same request just set.
+    if (pickupAddressChanged) {
+      patch.pickupLat = null;
+      patch.pickupLng = null;
+    }
+    if (deliveryAddressChanged) {
+      patch.deliveryLat = null;
+      patch.deliveryLng = null;
+    }
+
     const updated = await expedionDal.update(id, patch);
 
     // Dimensions drive the price, so a corrected dimension reprices.
     if (dimensionsOrAddressChanged) {
       void this.autoPrice(id).catch((e) =>
         console.error("[expedion] reprice failed", id, e)
+      );
+      void geocodeMissingCoordinates(id).catch((e) =>
+        console.error("[expedion] geocode failed", id, e)
       );
     }
 
