@@ -1375,6 +1375,18 @@
         "airtableImport": "import Airtable",
         "notEscalatable": "non prête"
       },
+      "blockers": {
+        "pickupCoords": "Coordonnées d'enlèvement",
+        "deliveryCoords": "Coordonnées de livraison",
+        "pickupAddress": "Adresse d'enlèvement",
+        "pickupCity": "Ville d'enlèvement",
+        "pickupPostalCode": "Code postal d'enlèvement",
+        "deliveryAddress": "Adresse de livraison",
+        "deliveryCity": "Ville de livraison",
+        "deliveryPostalCode": "Code postal de livraison",
+        "weight": "Poids",
+        "acceptedPrice": "Prix accepté"
+      },
       "actions": {
         "reprice": "Ajuster le prix",
         "assign": "Attribuer un chauffeur",
@@ -1404,7 +1416,12 @@
         "escalateBody": "{reference} sera publiée comme annonce et les transporteurs pourront enchérir immédiatement. La publication est définitive : il n'y a pas de retour en arrière.",
         "repriced": "Devis mis à jour",
         "assigned": "Chauffeur attribué",
-        "escalated": "Course publiée sur Expeditoo"
+        "escalated": "Course publiée sur Expeditoo",
+        "storageTitle": "Conditions de gardiennage",
+        "storageBody": "{reference} — prolongez la franchise de gardiennage ou fixez le tarif journalier applicable ensuite.",
+        "freeUntil": "Gardiennage gratuit jusqu'au",
+        "dailyFee": "Tarif journalier ensuite (€)",
+        "storageSave": "Enregistrer"
       },
       "supply": {
         "title": "Escalade vers Expeditoo",
@@ -1419,7 +1436,7 @@
       "health": {
         "title": "Qualité des données",
         "unowned": "Devis sans compte client",
-        "unownedHint": "importés d'Airtable, invisibles côté client jusqu'à rattachement",
+        "unownedHint": "importés d'Airtable, sans compte client — à corriger et publier ici",
         "missingCoords": "Sans coordonnées d'enlèvement",
         "missingCoordsHint": "bloque l'escalade",
         "missingDims": "Sans dimensions",
@@ -1457,7 +1474,9 @@
         "button": {
           "reprice": "Chiffrer",
           "assign": "Affecter",
-          "escalate": "Publier"
+          "escalate": "Publier",
+          "fix": "Corriger",
+          "storage": "Gardiennage"
         },
         "openHint": "cliquez sur une ligne pour le devis complet et son bordereau"
       },
@@ -1480,8 +1499,10 @@
         "save": "Enregistrer",
         "saving": "Enregistrement…",
         "cancel": "Annuler",
-        "editSuccess": "Devis mis à jour",
-        "editFailed": "Impossible d'enregistrer les modifications",
+        "saveAndPublish": "Enregistrer et publier",
+        "fixNow": "Corriger maintenant",
+        "readyToPublish": "Prêt à publier sur Expeditoo",
+        "blockedBanner": "Bloqué pour la publication — manque :",
         "client": "Client",
         "name": "Nom",
         "firstName": "Prénom",

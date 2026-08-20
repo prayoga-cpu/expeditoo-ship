@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef, useState } from "react";
 import {
   AlertCircle,
   AlertTriangle,
@@ -77,6 +78,17 @@ const QUEUES: {
 export function ExpedionDashboard() {
   const { data, isLoading, error } = useExpedionReport();
   const t = useTranslations("admin.expedion");
+  // Controlled so a data-quality tile can jump straight to the queue it is
+  // counting, rather than leaving the operator to find the right tab
+  // themselves for a number the page already knows the source of.
+  const [queueTab, setQueueTab] = useState<(typeof QUEUES)[number]["key"]>(
+    QUEUES[0].key
+  );
+  const queuesRef = useRef<HTMLDivElement>(null);
+  const jumpToQueue = (key: (typeof QUEUES)[number]["key"]) => {
+    setQueueTab(key);
+    queuesRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   if (isLoading) return <PageLoader />;
 
@@ -286,12 +298,13 @@ export function ExpedionDashboard() {
       </div>
 
       {/* ---- The queues: the actual work ---- */}
+      <div ref={queuesRef}>
       <Card>
         <CardHeader>
           <CardTitle className="text-base">{t("queues.title")}</CardTitle>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue={QUEUES[0].key}>
+          <Tabs value={queueTab} onValueChange={(v) => setQueueTab(v as typeof queueTab)}>
             <TabsList className="mb-4 flex-wrap">
               {QUEUES.map((queue) => (
                 <TabsTrigger key={queue.key} value={queue.key}>
@@ -328,6 +341,7 @@ export function ExpedionDashboard() {
           </Tabs>
         </CardContent>
       </Card>
+      </div>
 
       {/* ---- Supply and data health ---- */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -403,11 +417,28 @@ export function ExpedionDashboard() {
               value={figure("health", count(health.missingPickupCoords))}
               hint={t("health.missingCoordsHint")}
               tone={health.missingPickupCoords > 0 ? "warning" : undefined}
+              // Missing coordinates is exactly what keeps a row in
+              // "escalation due" wearing a blocked badge — the tab it sends
+              // the operator to is where those rows, and their fix action,
+              // already live.
+              onClick={
+                health.missingPickupCoords > 0
+                  ? () => jumpToQueue("escalationDue")
+                  : undefined
+              }
             />
             <Row
               label={t("health.missingDims")}
               value={figure("health", count(health.missingDimensions))}
               hint={t("health.missingDimsHint")}
+              // No dedicated "missing dimensions" queue exists — "to price" is
+              // the closest bucket, since a quote with nothing to auto-price
+              // off almost always still needs a price set by hand.
+              onClick={
+                health.missingDimensions > 0
+                  ? () => jumpToQueue("toPrice")
+                  : undefined
+              }
             />
             <Row
               label={t("health.confidence")}
@@ -432,14 +463,17 @@ function Row({
   value,
   hint,
   tone,
+  onClick,
 }: {
   label: string;
   value: string;
   hint?: string;
   tone?: "warning";
+  /** When set, the row is a button into the part of the page counting it. */
+  onClick?: () => void;
 }) {
-  return (
-    <div className="flex items-start justify-between gap-4">
+  const content = (
+    <>
       <div className="min-w-0">
         <div className="text-foreground">{label}</div>
         {hint ? (
@@ -453,6 +487,22 @@ function Row({
       >
         {value}
       </div>
-    </div>
+    </>
+  );
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className="hover:bg-muted/60 -mx-2 flex w-[calc(100%+1rem)] items-start justify-between gap-4 rounded-md px-2 py-0.5 text-left transition-colors"
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex items-start justify-between gap-4">{content}</div>
   );
 }

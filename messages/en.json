@@ -1375,6 +1375,18 @@
         "airtableImport": "Airtable import",
         "notEscalatable": "not ready"
       },
+      "blockers": {
+        "pickupCoords": "Pickup coordinates",
+        "deliveryCoords": "Delivery coordinates",
+        "pickupAddress": "Pickup address",
+        "pickupCity": "Pickup city",
+        "pickupPostalCode": "Pickup postal code",
+        "deliveryAddress": "Delivery address",
+        "deliveryCity": "Delivery city",
+        "deliveryPostalCode": "Delivery postal code",
+        "weight": "Weight",
+        "acceptedPrice": "Accepted price"
+      },
       "actions": {
         "reprice": "Adjust price",
         "assign": "Assign a driver",
@@ -1404,7 +1416,12 @@
         "escalateBody": "{reference} will be published as a listing and carriers can bid immediately. Publishing is final — there is no undo.",
         "repriced": "Quote updated",
         "assigned": "Driver assigned",
-        "escalated": "Job published to Expeditoo"
+        "escalated": "Job published to Expeditoo",
+        "storageTitle": "Storage terms",
+        "storageBody": "{reference} — extend the free-storage window or set the daily fee that applies after it.",
+        "freeUntil": "Free storage until",
+        "dailyFee": "Daily fee after (€)",
+        "storageSave": "Save"
       },
       "supply": {
         "title": "Escalation to Expeditoo",
@@ -1419,7 +1436,7 @@
       "health": {
         "title": "Data quality",
         "unowned": "Quotes with no client account",
-        "unownedHint": "imported from Airtable, invisible to clients until claimed",
+        "unownedHint": "imported from Airtable, no client account — fix and publish from here",
         "missingCoords": "Without pickup coordinates",
         "missingCoordsHint": "blocks escalation",
         "missingDims": "Without dimensions",
@@ -1457,7 +1474,9 @@
         "button": {
           "reprice": "Set price",
           "assign": "Assign",
-          "escalate": "Publish"
+          "escalate": "Publish",
+          "fix": "Fix",
+          "storage": "Storage"
         },
         "openHint": "click a row for the full quote and its bordereau"
       },
@@ -1480,8 +1499,10 @@
         "save": "Save",
         "saving": "Saving…",
         "cancel": "Cancel",
-        "editSuccess": "Quote updated",
-        "editFailed": "Could not save the changes",
+        "saveAndPublish": "Save & publish",
+        "fixNow": "Fix now",
+        "readyToPublish": "Ready to publish to Expeditoo",
+        "blockedBanner": "Blocked from publishing — missing:",
         "client": "Client",
         "name": "Name",
         "firstName": "First name",

@@ -38,7 +38,7 @@ export type QuoteActionKind =
   | "cancelled";
 
 /** Which dialog the row's primary button opens, when there is one. */
-export type QuoteDialog = "reprice" | "assign" | "escalate";
+export type QuoteDialog = "reprice" | "assign" | "escalate" | "storage";
 
 export interface QuoteAction {
   kind: QuoteActionKind;
@@ -115,11 +115,11 @@ export function nextAction(quote: QuoteRow): QuoteAction {
   if (queues.toPrice) {
     return { kind: "price", actionable: true, dialog: "reprice" };
   }
-  // Storage is a deadline nobody can clear from this table — the lot has to be
-  // collected — so it is actionable only in the sense that it needs chasing,
-  // and it never carries a dialog.
+  // The lot itself still has to be collected — no dialog clears that — but
+  // the terms around it (the free-storage deadline, the fee after) are
+  // editable, for a lot whose auction house agreed to hold it longer.
   if (queues.storageAtRisk) {
-    return { kind: "storage", actionable: true, dialog: null };
+    return { kind: "storage", actionable: true, dialog: "storage" };
   }
 
   if (quote.status === "accepted" && quote.paymentStatus !== "paid") {
@@ -167,18 +167,18 @@ export function byUrgency() {
  * needs to answer "what is still missing".
  */
 export interface EscalationDraft {
-  pickupLat: number | null | undefined;
-  pickupLng: number | null | undefined;
-  deliveryLat: number | null | undefined;
-  deliveryLng: number | null | undefined;
-  pickupAddress: string | null | undefined;
-  pickupCity: string | null | undefined;
-  pickupPostalCode: string | null | undefined;
-  deliveryAddress: string | null | undefined;
-  deliveryCity: string | null | undefined;
-  deliveryPostalCode: string | null | undefined;
-  weightKg: number | null | undefined;
-  acceptedPriceCents: number | null | undefined;
+  pickupLat?: number | null;
+  pickupLng?: number | null;
+  deliveryLat?: number | null;
+  deliveryLng?: number | null;
+  pickupAddress?: string | null;
+  pickupCity?: string | null;
+  pickupPostalCode?: string | null;
+  deliveryAddress?: string | null;
+  deliveryCity?: string | null;
+  deliveryPostalCode?: string | null;
+  weightKg?: number | null;
+  acceptedPriceCents?: number | null;
 }
 
 function hasPostalCode(value: string | null | undefined): boolean {

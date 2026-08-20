@@ -10,8 +10,14 @@ import OpenAI from "openai";
 
 const API_KEY = process.env.OPENAI_API_KEY || "";
 
-// Initialize client - will be null if no API key
-const openai = API_KEY ? new OpenAI({ apiKey: API_KEY }) : null;
+// Initialize client - will be null if no API key.
+// `dangerouslyAllowBrowser` is misleading here: this module only ever runs
+// server-side (it reads a non-`NEXT_PUBLIC_` env var, so it couldn't work if
+// bundled to the client anyway). Without the flag, the SDK refuses to
+// construct at all under Vitest's jsdom environment, which fakes `window`.
+const openai = API_KEY
+  ? new OpenAI({ apiKey: API_KEY, dangerouslyAllowBrowser: true })
+  : null;
 
 /**
  * Check if OpenAI is available (API key configured)

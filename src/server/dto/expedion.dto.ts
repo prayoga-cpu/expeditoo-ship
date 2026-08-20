@@ -48,6 +48,17 @@ const looseDate = z
   })
   .optional();
 
+/** `looseNumber`, moved to the same "optional outside" shape as `looseDate` — the one safe to reuse in a patch schema. */
+const looseNumberPatch = z
+  .union([z.number(), z.string()])
+  .nullable()
+  .transform((v) => {
+    if (v === null || v === "") return null;
+    const n = typeof v === "number" ? v : Number(String(v).replace(",", "."));
+    return Number.isFinite(n) ? n : null;
+  })
+  .optional();
+
 const trimmed = z.string().trim().min(1).nullish();
 
 // ========================================
@@ -192,10 +203,10 @@ export const adminUpdateExpedionQuoteSchema = z.object({
   deliveryPhone: trimmed,
 
   description: trimmed,
-  lengthCm: looseNumber,
-  widthCm: looseNumber,
-  heightCm: looseNumber,
-  weightKg: looseNumber,
+  lengthCm: looseNumberPatch,
+  widthCm: looseNumberPatch,
+  heightCm: looseNumberPatch,
+  weightKg: looseNumberPatch,
   isProtected: z.boolean().optional(),
   declaredValueCents: z.number().int().nonnegative().nullish(),
   valueBracket: trimmed,

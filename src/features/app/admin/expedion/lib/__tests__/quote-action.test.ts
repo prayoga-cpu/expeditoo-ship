@@ -119,7 +119,7 @@ describe("nextAction", () => {
     expect(action.dialog).toBe("reprice");
   });
 
-  it("flags storage as work with no dialog behind it", () => {
+  it("flags storage as work, with a dialog that can adjust its terms", () => {
     const action = nextAction(row({
         status: "paid",
         paymentStatus: "paid",
@@ -129,7 +129,7 @@ describe("nextAction", () => {
 
     expect(action.kind).toBe("storage");
     expect(action.actionable).toBe(true);
-    expect(action.dialog).toBeNull();
+    expect(action.dialog).toBe("storage");
   });
 
   it("does not invent work for the client's half of the flow", () => {

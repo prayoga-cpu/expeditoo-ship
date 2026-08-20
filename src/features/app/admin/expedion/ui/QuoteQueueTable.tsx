@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { MoreVertical, Send, Tag, Truck } from "lucide-react";
+import { MoreVertical, Package, Pencil, Send, Tag, Truck } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { ColumnDef } from "@tanstack/react-table";
 
@@ -22,7 +22,9 @@ import type { QuoteRow } from "@/server/dal/expedion-report.dal";
 
 import { AssignDriverDialog } from "./AssignDriverDialog";
 import { EscalateDialog } from "./EscalateDialog";
+import { QuoteDetailDialog } from "./QuoteDetailDialog";
 import { RepriceDialog } from "./RepriceDialog";
+import { StorageDialog } from "./StorageDialog";
 
 /**
  * One operator queue, with the actions that clear it.
@@ -78,7 +80,10 @@ export function QuoteQueueTable({
   const [reprice, setReprice] = useState<QuoteRow | null>(null);
   const [assign, setAssign] = useState<QuoteRow | null>(null);
   const [escalate, setEscalate] = useState<QuoteRow | null>(null);
+  const [storage, setStorage] = useState<QuoteRow | null>(null);
+  const [fixId, setFixId] = useState<string | null>(null);
   const t = useTranslations("admin.expedion");
+  const tb = useTranslations("admin.expedion.blockers");
 
   const columns = useMemo<ColumnDef<QuoteRow>[]>(() => {
     const base: ColumnDef<QuoteRow>[] = [
@@ -165,7 +170,18 @@ export function QuoteQueueTable({
           isEscalatable(row.original) ? (
             <Badge variant="secondary">{t("table.ready")}</Badge>
           ) : (
-            <Badge variant="destructive">{t("table.notEscalatable")}</Badge>
+            <Badge
+              variant="destructive"
+              title={
+                row.original.escalationBlockers.length > 0
+                  ? row.original.escalationBlockers
+                      .map((code) => tb(code))
+                      .join(", ")
+                  : undefined
+              }
+            >
+              {t("table.notEscalatable")}
+            </Badge>
           ),
       },
       client: {
@@ -207,19 +223,32 @@ export function QuoteQueueTable({
                 <Truck className="mr-2 h-4 w-4" />
                 {t("actions.assign")}
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStorage(row.original)}>
+                <Package className="mr-2 h-4 w-4" />
+                {t("actions.storageTitle")}
+              </DropdownMenuItem>
               <DropdownMenuItem
-                onClick={() => setEscalate(row.original)}
-                disabled={!isEscalatable(row.original)}
+                onClick={() =>
+                  isEscalatable(row.original)
+                    ? setEscalate(row.original)
+                    : setFixId(row.original.id)
+                }
               >
-                <Send className="mr-2 h-4 w-4" />
-                {t("actions.escalate")}
+                {isEscalatable(row.original) ? (
+                  <Send className="mr-2 h-4 w-4" />
+                ) : (
+                  <Pencil className="mr-2 h-4 w-4" />
+                )}
+                {isEscalatable(row.original)
+                  ? t("actions.escalate")
+                  : t("recent.button.fix")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         ),
       },
     ];
-  }, [extraColumn, t]);
+  }, [extraColumn, t, tb]);
 
   if (rows.length === 0) {
     return (
@@ -244,6 +273,14 @@ export function QuoteQueueTable({
       <RepriceDialog quote={reprice} onClose={() => setReprice(null)} />
       <AssignDriverDialog quote={assign} onClose={() => setAssign(null)} />
       <EscalateDialog quote={escalate} onClose={() => setEscalate(null)} />
+      <StorageDialog quote={storage} onClose={() => setStorage(null)} />
+      {fixId ? (
+        <QuoteDetailDialog
+          quoteId={fixId}
+          autoEdit
+          onClose={() => setFixId(null)}
+        />
+      ) : null}
     </>
   );
 }

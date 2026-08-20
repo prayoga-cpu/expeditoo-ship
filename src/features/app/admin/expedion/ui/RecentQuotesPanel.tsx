@@ -2,7 +2,15 @@
 
 import { useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { ArrowRight, MoreVertical, Send, Tag, Truck } from "lucide-react";
+import {
+  ArrowRight,
+  MoreVertical,
+  Package,
+  Pencil,
+  Send,
+  Tag,
+  Truck,
+} from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +35,7 @@ import { AssignDriverDialog } from "./AssignDriverDialog";
 import { EscalateDialog } from "./EscalateDialog";
 import { QuoteDetailDialog } from "./QuoteDetailDialog";
 import { RepriceDialog } from "./RepriceDialog";
+import { StorageDialog } from "./StorageDialog";
 import {
   byUrgency,
   isNewQuote,
@@ -72,6 +81,7 @@ const DIALOG_ICON: Record<QuoteDialog, typeof Tag> = {
   reprice: Tag,
   assign: Truck,
   escalate: Send,
+  storage: Package,
 };
 
 function money(cents: number | null): string {
@@ -116,12 +126,18 @@ export function RecentQuotesPanel({
   unavailable = false,
 }: RecentQuotesPanelProps) {
   const t = useTranslations("admin.expedion");
+  const tb = useTranslations("admin.expedion.blockers");
   const locale = useLocale();
   const [tab, setTab] = useState<"todo" | "all" | null>(null);
   const [reprice, setReprice] = useState<QuoteRow | null>(null);
   const [assign, setAssign] = useState<QuoteRow | null>(null);
   const [escalate, setEscalate] = useState<QuoteRow | null>(null);
+  const [storage, setStorage] = useState<QuoteRow | null>(null);
   const [detail, setDetail] = useState<string | null>(null);
+  // Set alongside `detail` when the row that opened it is not escalation-
+  // ready — the dialog opens straight into edit mode, on the blocker that
+  // sent the operator here, rather than the read-only view.
+  const [detailAutoEdit, setDetailAutoEdit] = useState(false);
 
   // One `now` for the whole render, so the age column, the "new" dots and the
   // sort cannot each be computed against a slightly different clock.
@@ -147,7 +163,17 @@ export function RecentQuotesPanel({
   const openDialog = (quote: QuoteRow, dialog: QuoteDialog) => {
     if (dialog === "reprice") setReprice(quote);
     if (dialog === "assign") setAssign(quote);
-    if (dialog === "escalate") setEscalate(quote);
+    if (dialog === "storage") setStorage(quote);
+    if (dialog === "escalate") {
+      // Not ready — no dialog can publish it, so open the one that can fix
+      // it instead of a confirm box that only fails.
+      if (quote.escalationReady ?? quote.hasPickupCoords) {
+        setEscalate(quote);
+      } else {
+        setDetail(quote.id);
+        setDetailAutoEdit(true);
+      }
+    }
   };
 
   const columns = useMemo<ColumnDef<QuoteRow>[]>(
@@ -295,10 +321,14 @@ export function RecentQuotesPanel({
         ),
         cell: ({ row }) => {
           const action = nextAction(row.original);
+          const blockerList = action.blockers?.length
+            ? action.blockers.map((code) => tb(code)).join(", ")
+            : undefined;
           return (
             <Badge
               className={cn("border", TONE[action.kind])}
               variant="outline"
+              title={blockerList}
             >
               {action.blocked
                 ? t("recent.action.escalateBlocked")
@@ -321,9 +351,9 @@ export function RecentQuotesPanel({
         ),
       },
     ],
-    // `now` is stable for the life of a `rows` array; `t` and `locale` change
-    // only with the language.
-    [locale, now, t]
+    // `now` is stable for the life of a `rows` array; `t`, `tb` and `locale`
+    // change only with the language.
+    [locale, now, t, tb]
   );
 
   return (
@@ -382,7 +412,10 @@ export function RecentQuotesPanel({
             searchKey="reference"
             searchPlaceholder={t("table.searchPlaceholder")}
             tableMinHeight="auto"
-            onRowClick={(row) => setDetail(row.id)}
+            onRowClick={(row) => {
+              setDetail(row.id);
+              setDetailAutoEdit(false);
+            }}
             dateFilterKey="waiting"
           />
         )}
@@ -391,11 +424,19 @@ export function RecentQuotesPanel({
       {/* Mounted only while open: it fetches the whole quote on mount, and a
           detail view for a row nobody clicked is a request nobody asked for. */}
       {detail ? (
-        <QuoteDetailDialog quoteId={detail} onClose={() => setDetail(null)} />
+        <QuoteDetailDialog
+          quoteId={detail}
+          autoEdit={detailAutoEdit}
+          onClose={() => {
+            setDetail(null);
+            setDetailAutoEdit(false);
+          }}
+        />
       ) : null}
       <RepriceDialog quote={reprice} onClose={() => setReprice(null)} />
       <AssignDriverDialog quote={assign} onClose={() => setAssign(null)} />
       <EscalateDialog quote={escalate} onClose={() => setEscalate(null)} />
+      <StorageDialog quote={storage} onClose={() => setStorage(null)} />
     </Card>
   );
 }
@@ -417,8 +458,19 @@ function RowActions({
   onOpen: (quote: QuoteRow, dialog: QuoteDialog) => void;
 }) {
   const t = useTranslations("admin.expedion");
+  const tb = useTranslations("admin.expedion.blockers");
   const escalatable = quote.escalationReady ?? quote.hasPickupCoords;
-  const Primary = action.dialog ? DIALOG_ICON[action.dialog] : null;
+  // Blocked from publishing: the button still opens something real — the
+  // fix-and-publish view inside the quote detail dialog — so it stays
+  // enabled rather than disabled with nowhere to go.
+  const Primary = action.dialog
+    ? action.blocked
+      ? Pencil
+      : DIALOG_ICON[action.dialog]
+    : null;
+  const blockerList = action.blockers?.length
+    ? action.blockers.map((code) => tb(code)).join(", ")
+    : undefined;
 
   return (
     <div
@@ -428,14 +480,15 @@ function RowActions({
       {action.dialog && Primary ? (
         <Button
           size="sm"
-          variant={action.kind === "escalate" ? "default" : "outline"}
+          variant={action.kind === "escalate" && !action.blocked ? "default" : "outline"}
           className="h-8"
-          disabled={action.blocked}
-          title={action.blocked ? t("table.notEscalatable") : undefined}
+          title={blockerList}
           onClick={() => onOpen(quote, action.dialog as QuoteDialog)}
         >
           <Primary className="mr-1 h-3.5 w-3.5" />
-          {t(`recent.button.${action.dialog}`)}
+          {action.blocked
+            ? t("recent.button.fix")
+            : t(`recent.button.${action.dialog}`)}
         </Button>
       ) : (
         <span className={cn("text-xs", NOT_ACTIONABLE_TONE)}>—</span>
@@ -455,12 +508,17 @@ function RowActions({
             <Truck className="mr-2 h-4 w-4" />
             {t("actions.assign")}
           </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => onOpen(quote, "escalate")}
-            disabled={!escalatable}
-          >
-            <Send className="mr-2 h-4 w-4" />
-            {t("actions.escalate")}
+          <DropdownMenuItem onClick={() => onOpen(quote, "storage")}>
+            <Package className="mr-2 h-4 w-4" />
+            {t("actions.storageTitle")}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => onOpen(quote, "escalate")}>
+            {escalatable ? (
+              <Send className="mr-2 h-4 w-4" />
+            ) : (
+              <Pencil className="mr-2 h-4 w-4" />
+            )}
+            {escalatable ? t("actions.escalate") : t("recent.button.fix")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
