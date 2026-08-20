@@ -243,10 +243,32 @@ export const stripeService = {
     await paymentsService.schedulePayout(shipmentId, shipment.carrierId);
   },
   /**
+   * The Stripe customer this user already has, or null.
+   *
+   * Reading a user's cards must not bring a customer into existence. Both
+   * screens below load from a `useEffect` on mount, so `getOrCreateCustomer`
+   * here meant that merely opening the payments page created a real Stripe
+   * Customer and stamped `stripeCustomerId` on the row -- a write performed by
+   * a GET, on behalf of someone who had not asked for anything.
+   */
+  async findCustomer(userId: string): Promise<string | null> {
+    const userRecord = await db.query.user.findFirst({
+      where: eq(user.id, userId),
+    });
+
+    if (!userRecord) throw new Error("User not found");
+
+    return userRecord.stripeCustomerId ?? null;
+  },
+
+  /**
    * List Saved Payment Methods
    */
   async listPaymentMethods(userId: string) {
-    const customerId = await this.getOrCreateCustomer(userId);
+    const customerId = await this.findCustomer(userId);
+
+    // No customer means no saved cards. That is the answer, not an error.
+    if (!customerId) return [];
 
     const paymentMethods = await stripe.paymentMethods.list({
       customer: customerId,
@@ -260,7 +282,11 @@ export const stripeService = {
    * Detach (Delete) Payment Method
    */
   async detachPaymentMethod(userId: string, paymentMethodId: string) {
-    const customerId = await this.getOrCreateCustomer(userId);
+    const customerId = await this.findCustomer(userId);
+
+    if (!customerId) {
+      throw new Error("Unauthorized to delete this payment method");
+    }
 
     const paymentMethod = await stripe.paymentMethods.retrieve(paymentMethodId);
 

@@ -1,14 +1,19 @@
 import { betterAuth, type BetterAuthOptions } from "better-auth";
+import { APIError } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { bearer, customSession } from "better-auth/plugins";
 import { db } from "@/db";
 import * as schema from "@/db/schema";
 import {
   handlePostSignup,
+  recordLogin,
+  rejectIfBanned,
   sendPasswordResetEmail,
   sendVerificationEmail,
 } from "@/server/services/auth.service";
 import { getUserRoles } from "@/server/services/user.service";
+import { impersonation } from "@/lib/auth-impersonation";
+import { originOfRequest } from "@/lib/app-origins";
 import type {
   EmailVerificationParams,
   PasswordResetParams,
@@ -119,6 +124,15 @@ const options = {
   databaseHooks: {
     user: {
       create: {
+        // Which product this signup came from. The two share this Better Auth
+        // instance and this table, so the request's Origin is the only thing
+        // that distinguishes them, and it is only knowable here -- afterwards
+        // the row looks identical either way.
+        before: async (user, ctx) => {
+          const origin = originOfRequest(ctx?.headers?.get("origin") ?? null);
+
+          return { data: { ...user, origin } };
+        },
         after: async (user) => {
           try {
             await handlePostSignup(user.id, user.email);
@@ -126,6 +140,49 @@ const options = {
             console.error(
               "[Better Auth] Default role assignment failed for user:",
               user.id,
+              error
+            );
+          }
+        },
+      },
+    },
+    session: {
+      create: {
+        // Suspension is enforced here, and only here. `user.banned` was
+        // written by the admin panel and read by nothing, so suspending
+        // somebody left them signed in and free to sign in again.
+        //
+        // An impersonation session is exempt: an admin looking at a suspended
+        // account is usually looking at it *because* it is suspended.
+        before: async (session) => {
+          const impersonated = (
+            session as { impersonatedBy?: string | null }
+          ).impersonatedBy;
+
+          if (impersonated) return;
+
+          await rejectIfBanned(session.userId, (message) => {
+            throw new APIError("FORBIDDEN", {
+              message,
+              code: "BANNED_USER",
+            });
+          });
+        },
+        // The only moment that knows a sign-in just happened. `updatedAt`
+        // could never answer it -- any write to the user row moves that.
+        after: async (session) => {
+          const impersonated = (
+            session as { impersonatedBy?: string | null }
+          ).impersonatedBy;
+
+          if (impersonated) return;
+
+          try {
+            await recordLogin(session.userId, session.createdAt);
+          } catch (error) {
+            console.error(
+              "[Better Auth] Failed to stamp last login for user:",
+              session.userId,
               error
             );
           }
@@ -140,7 +197,12 @@ const options = {
     updateAge: 60 * 60 * 24, // Refresh if session is older than 1 day
     cookieCache: {
       enabled: true,
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      // The cached copy is trusted without touching the database until it
+      // expires, so this is the window in which a suspension, a revoked
+      // session or a role change stays invisible on the browser holding it.
+      // At the previous 7 days, none of the admin moderation actions had any
+      // effect on a signed-in tester for a week.
+      maxAge: 60 * 5, // 5 minutes
     },
   },
 
@@ -236,6 +298,9 @@ export const auth = betterAuth({
   // `customSessionClient` in auth-client.ts) see `session.user.roles`.
   plugins: [
     bearer(),
+    // "Log in as this user" for admins, with the permission check delegated to
+    // user_roles rather than a second role column. See auth-impersonation.ts.
+    impersonation(),
     customSession(async ({ user, session }) => {
       let roles: string[] = [];
       try {
@@ -249,7 +314,15 @@ export const auth = betterAuth({
           error
         );
       }
-      return { user: { ...user, roles }, session };
+      // `impersonatedBy` rides along so the client can tell it is inside a
+      // borrowed session and show the banner; it is null for every real one.
+      const impersonatedBy =
+        (session as { impersonatedBy?: string | null }).impersonatedBy ?? null;
+
+      return {
+        user: { ...user, roles },
+        session: { ...session, impersonatedBy },
+      };
     }, options),
   ],
 });

@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { isImpersonated } from "@/lib/impersonation-guard";
 import { messagesService } from "@/server/services/messages.service";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
@@ -22,7 +23,11 @@ export async function POST() {
       );
     }
 
-    const updatedCount = await messagesService.markAllAsSeen(session.user.id);
+    // Fires from a useEffect the moment /messages mounts, so an admin merely
+    // opening the page would wipe the user's entire unread state.
+    const updatedCount = isImpersonated(session)
+      ? 0
+      : await messagesService.markAllAsSeen(session.user.id);
 
     return NextResponse.json({
       success: true,

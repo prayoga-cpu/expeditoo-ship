@@ -50,6 +50,19 @@ export const userListItemSchema = z.object({
   banned: z.boolean(),
   roles: z.array(userRoleSchema),
   createdAt: z.date(),
+  // Null until the user has actually signed in once; the admin table renders
+  // that as "Never" rather than inventing a date.
+  lastLoginAt: z.date().nullable(),
+  // Which product the account was created in, so the table can label an
+  // Expedion client apart from an EXPEDITOO driver.
+  origin: z.enum(["expeditoo", "expedion"]),
+  // Why the server would refuse this action on this row, or null when it would
+  // accept it — decided by account-policy.ts, so the menu cannot drift out of
+  // step with the endpoints. A *code*, not a sentence: the table is FR/EN and
+  // renders its own copy.
+  impersonateBlocked: z.string().nullable(),
+  deleteBlocked: z.string().nullable(),
+  suspendBlocked: z.string().nullable(),
 });
 
 export type UserListItem = z.infer<typeof userListItemSchema>;

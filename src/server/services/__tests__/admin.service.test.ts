@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as adminService from '../admin.service';
 import * as adminDal from '@/server/dal/admin.dal';
 import * as usersDal from '@/server/dal/users.dal';
+import * as sessionsDal from '@/server/dal/sessions.dal';
 
 // Mock DALs
 vi.mock('@/server/dal/admin.dal', () => ({
@@ -21,7 +22,22 @@ vi.mock('@/server/dal/admin.dal', () => ({
 
 vi.mock('@/server/dal/users.dal', () => ({
     getUserById: vi.fn(),
+    deleteUser: vi.fn(),
 }));
+
+vi.mock('@/server/dal/sessions.dal', () => ({
+    deleteUserSessions: vi.fn(),
+}));
+
+const ADMIN = { id: 'admin', email: 'admin@expeditoo.test', roles: [{ role: 'admin' }] };
+const TARGET = { id: 'target', email: 'driver@expeditoo.test', roles: [{ role: 'driver' }] };
+
+/** getUserById is asked for the actor first, then the target. */
+function mockActorAndTarget(actor: unknown = ADMIN, target: unknown = TARGET) {
+    vi.mocked(usersDal.getUserById).mockImplementation(async (id: string) =>
+        (id === 'admin' ? actor : target) as never
+    );
+}
 
 describe('adminService', () => {
     beforeEach(() => {
@@ -75,20 +91,116 @@ describe('adminService', () => {
     });
 
     describe('updateUserStatus', () => {
-        it('should prevent self-ban', async () => {
-            await expect(adminService.updateUserStatus('me', true, 'me'))
-                .rejects.toThrow('SELF_BAN_NOT_ALLOWED');
+        it('should refuse a caller who is not an admin', async () => {
+            mockActorAndTarget({ id: 'admin', email: 'x@y.z', roles: [{ role: 'driver' }] });
+
+            await expect(adminService.updateUserStatus('target', true, 'admin'))
+                .rejects.toMatchObject({ code: 'NOT_ADMIN', status: 403 });
         });
 
-        it('should update status if valid', async () => {
-            vi.mocked(usersDal.getUserById).mockResolvedValue({ id: 'target' } as any);
-            vi.mocked(adminDal.updateUserBannedStatus).mockResolvedValue({ 
-                id: 'target', updatedAt: new Date() 
+        it('should prevent self-ban', async () => {
+            mockActorAndTarget();
+
+            await expect(adminService.updateUserStatus('admin', true, 'admin'))
+                .rejects.toMatchObject({ code: 'SELF_BAN_NOT_ALLOWED', status: 400 });
+        });
+
+        it('should suspend and end every live session', async () => {
+            mockActorAndTarget();
+            vi.mocked(adminDal.updateUserBannedStatus).mockResolvedValue({
+                id: 'target', name: 'T', email: 'driver@expeditoo.test',
+                banned: true, updatedAt: new Date(),
             } as any);
 
             await adminService.updateUserStatus('target', true, 'admin');
 
             expect(adminDal.updateUserBannedStatus).toHaveBeenCalledWith('target', true);
+            // Writing `banned` alone leaves the user inside the session they
+            // already hold; the revocation is what makes suspension bite.
+            // `keepImpersonated` scopes it to the user's own sessions, so
+            // suspending an account somebody is viewing does not eject the
+            // admin viewing it.
+            expect(sessionsDal.deleteUserSessions).toHaveBeenCalledWith(
+                'target', { keepImpersonated: true }
+            );
+        });
+
+        it('should leave sessions alone when reinstating', async () => {
+            mockActorAndTarget();
+            vi.mocked(adminDal.updateUserBannedStatus).mockResolvedValue({
+                id: 'target', name: 'T', email: 'driver@expeditoo.test',
+                banned: false, updatedAt: new Date(),
+            } as any);
+
+            await adminService.updateUserStatus('target', false, 'admin');
+
+            expect(sessionsDal.deleteUserSessions).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('revokeUserSessions', () => {
+        it('should report how many sessions ended', async () => {
+            mockActorAndTarget();
+            vi.mocked(sessionsDal.deleteUserSessions).mockResolvedValue(3);
+
+            await expect(adminService.revokeUserSessions('target', 'admin'))
+                .resolves.toEqual({ revoked: 3 });
+        });
+
+        it('should sign out the user, not an admin viewing them', async () => {
+            mockActorAndTarget();
+            vi.mocked(sessionsDal.deleteUserSessions).mockResolvedValue(1);
+
+            await adminService.revokeUserSessions('target', 'admin');
+
+            // "Every device" means theirs. Killing a borrowed session would
+            // drop the other admin on the sign-in screen with no explanation.
+            expect(sessionsDal.deleteUserSessions).toHaveBeenCalledWith(
+                'target', { keepImpersonated: true }
+            );
+        });
+    });
+
+    describe('deleteUserAccount', () => {
+        it('should refuse to delete yourself', async () => {
+            mockActorAndTarget();
+
+            await expect(adminService.deleteUserAccount('admin', 'admin'))
+                .rejects.toMatchObject({ code: 'SELF_DELETE_NOT_ALLOWED' });
+        });
+
+        it('should refuse to delete another admin', async () => {
+            mockActorAndTarget(ADMIN, { id: 'target', email: 'a@b.c', roles: [{ role: 'admin' }] });
+
+            await expect(adminService.deleteUserAccount('target', 'admin'))
+                .rejects.toMatchObject({ code: 'CANNOT_DELETE_ADMIN', status: 403 });
+        });
+
+        it('should refuse to delete the Expedion system account', async () => {
+            // That account owns every escalated listing, so the delete would
+            // cascade the whole inlet away.
+            vi.stubEnv('EXPEDION_SYSTEM_USER_ID', 'target');
+            mockActorAndTarget();
+
+            await expect(adminService.deleteUserAccount('target', 'admin'))
+                .rejects.toMatchObject({ code: 'CANNOT_DELETE_SYSTEM_USER' });
+
+            vi.unstubAllEnvs();
+        });
+
+        it('should 404 an unknown user', async () => {
+            mockActorAndTarget(ADMIN, null);
+
+            await expect(adminService.deleteUserAccount('target', 'admin'))
+                .rejects.toMatchObject({ code: 'USER_NOT_FOUND', status: 404 });
+        });
+
+        it('should delete an ordinary user', async () => {
+            mockActorAndTarget();
+
+            await expect(adminService.deleteUserAccount('target', 'admin'))
+                .resolves.toEqual({ id: 'target', email: 'driver@expeditoo.test' });
+            expect(usersDal.deleteUser).toHaveBeenCalledWith('target');
         });
     });
 });

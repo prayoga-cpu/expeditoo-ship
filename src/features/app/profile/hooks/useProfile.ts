@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { stopImpersonating } from "@/features/app/admin/api/users.api";
 import { useAuthActions } from "@/features/auth/hooks/useAuthActions";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
@@ -73,7 +74,7 @@ async function fetchStripeStatus(): Promise<{
  * Follows Single Responsibility - handles profile data and logout
  */
 export function useProfile() {
-  const { user: userData, isLoading } = useAuth();
+  const { user: userData, session, isLoading } = useAuth();
   const { signOut } = useAuthActions();
   const router = useRouter();
 
@@ -242,9 +243,20 @@ export function useProfile() {
   }, []);
 
   const handleLogout = useCallback(async () => {
+    // While an admin is viewing this account, "log out" means leave the
+    // account -- not destroy the borrowed session. Signing out here would
+    // clear the session cookie and orphan the parked `admin_session` one,
+    // dropping the admin at the sign-in screen with their own session still
+    // alive but unreachable.
+    if ((session as { impersonatedBy?: string | null } | null)?.impersonatedBy) {
+      await stopImpersonating().catch(() => {});
+      window.location.assign("/admin/users");
+      return;
+    }
+
     await signOut();
     router.push("/");
-  }, [signOut, router]);
+  }, [signOut, router, session]);
 
   /**
    * Remove profile picture

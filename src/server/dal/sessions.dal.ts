@@ -3,7 +3,7 @@ import {
   session,
   type InsertSession,
 } from "@/db/schema";
-import { eq, lt, gt, and, desc, sql } from "drizzle-orm";
+import { eq, lt, gt, and, desc, isNull, sql } from "drizzle-orm";
 
 // ========================================
 // Session CRUD Operations
@@ -81,10 +81,31 @@ export async function deleteSessionByToken(token: string) {
 }
 
 /**
- * Delete all sessions for a user
+ * Delete all sessions for a user.
+ *
+ * Returns how many were killed, which is what the admin "sign out everywhere"
+ * action reports back.
+ *
+ * `keepImpersonated` spares the sessions an admin opened *as* this user. Both
+ * admin actions that revoke sessions target the user's own access -- an admin
+ * looking at the account is not one of their devices -- and killing that row
+ * strands the admin at the sign-in screen, because the session cookie in their
+ * browser then names a token that no longer exists.
  */
-export async function deleteUserSessions(userId: string) {
-  await db.delete(session).where(eq(session.userId, userId));
+export async function deleteUserSessions(
+  userId: string,
+  { keepImpersonated = false }: { keepImpersonated?: boolean } = {}
+): Promise<number> {
+  const deleted = await db
+    .delete(session)
+    .where(
+      keepImpersonated
+        ? and(eq(session.userId, userId), isNull(session.impersonatedBy))
+        : eq(session.userId, userId)
+    )
+    .returning({ id: session.id });
+
+  return deleted.length;
 }
 
 /**

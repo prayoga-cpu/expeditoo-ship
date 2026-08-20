@@ -162,8 +162,22 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // An admin viewing this account is exempt from the account's own gates.
+  //
+  // Impersonation exists to see what the user sees, and the verification wall
+  // is the one thing that shows nothing at all -- an admin cannot click a link
+  // in somebody else's inbox, so every unverified account was unviewable.
+  // Suspended accounts are the same case: the whole reason to look is usually
+  // that something is wrong with the account.
+  const isImpersonating = Boolean(session?.session?.impersonatedBy);
+
   // Check email verification
-  if (session && !session.user.emailVerified && isProtectedRoute) {
+  if (
+    session &&
+    !session.user.emailVerified &&
+    isProtectedRoute &&
+    !isImpersonating
+  ) {
     // Allow access to verification-related pages
     if (pathname.startsWith("/verify-email")) {
       return NextResponse.next();

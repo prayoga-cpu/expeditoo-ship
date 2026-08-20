@@ -19,7 +19,9 @@ import {
   MessageSquare,
   User,
   ClipboardList,
+  Shield,
 } from "lucide-react";
+import { useAuth } from "@/lib/auth-context";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -29,6 +31,8 @@ export function MainLayout({ children }: MainLayoutProps) {
   const pathname = usePathname();
   const { unreadCount } = useUnreadMessages();
   const t = useTranslations("common.navigation");
+  const { user } = useAuth();
+  const isAdmin = (user?.roles ?? []).includes("admin");
 
   const navItems = [
     {
@@ -64,6 +68,24 @@ export function MainLayout({ children }: MainLayoutProps) {
       label: t("profile"),
       icon: User,
     },
+    // The way back in. The admin sidebar has "Back to App" at its foot, but
+    // nothing pointed the other way, so an admin who left the panel had to
+    // type the URL to return. Roles come from the session (customSession in
+    // auth.ts reads user_roles per request), so this follows a revoked role
+    // without a round trip of its own.
+    ...(isAdmin
+      ? [
+          {
+            href: "/admin/expedion",
+            label: t("adminPanel"),
+            icon: Shield,
+            // Marked out from the ordinary destinations: this one leaves the
+            // app for the back office, and it is the only entry most people
+            // will never see.
+            accent: true,
+          },
+        ]
+      : []),
   ];
 
   const hideBottomNav = pathname?.includes("/listing/");
@@ -90,9 +112,13 @@ export function MainLayout({ children }: MainLayoutProps) {
                 href={item.href}
                 className={cn(
                   "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors relative", // Added relative
-                  isActive
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  item.accent
+                    ? isActive
+                      ? "bg-destructive text-destructive-foreground"
+                      : "text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    : isActive
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
               >
                 <item.icon className="w-5 h-5" />

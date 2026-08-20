@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import type { User } from "../types";
+import { mapApiUser } from "../lib/map-api-user";
 
 export function useAdminDrivers() {
   const [drivers, setDrivers] = useState<User[]>([]);
@@ -19,37 +20,9 @@ export function useAdminDrivers() {
       
       if (response.ok) {
         const data = await response.json();
-        
-        interface ApiUser {
-          id: string;
-          name?: string;
-          email: string;
-          roles?: string[];
-          emailVerified?: boolean;
-          createdAt?: string;
-        }
-        
-        const mappedUsers: User[] = (data.data?.users || []).map((u: ApiUser) => {
-          const roles = u.roles || [];
-          // Determine primary role for UI
-          let role = "user";
-          if (roles.includes("admin")) role = "admin";
-          else if (roles.includes("driver") || roles.includes("carrier"))
-            role = "driver";
-          else if (roles.length > 0) role = roles[0];
 
-          return {
-            id: u.id,
-            name: u.name || "Unknown",
-            email: u.email,
-            role: role,
-            status: u.emailVerified ? "active" : "inactive",
-            joinDate: u.createdAt
-              ? new Date(u.createdAt).toISOString().split("T")[0]
-              : new Date().toISOString().split("T")[0],
-          };
-        });
-        
+        const mappedUsers: User[] = (data.data?.users || []).map(mapApiUser);
+
         setDrivers(mappedUsers);
       }
     } catch (error) {
@@ -66,7 +39,7 @@ export function useAdminDrivers() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId: user.id,
-          role: "buyer",
+          role: "shipper",
           replace: true,
         }),
       });

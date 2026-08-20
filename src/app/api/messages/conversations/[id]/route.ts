@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { isImpersonated } from "@/lib/impersonation-guard";
 import { messagesService } from "@/server/services/messages.service";
 import { getMessagesQuerySchema } from "@/server/dto/messages.dto";
 import { headers } from "next/headers";
@@ -31,7 +32,10 @@ export async function GET(
     const result = await messagesService.getThread(
       session.user.id,
       id,
-      validated
+      validated,
+      // An admin reading the thread must not send a read receipt in the
+      // user's name.
+      { markRead: !isImpersonated(session) }
     );
 
     return NextResponse.json({

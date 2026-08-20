@@ -33,9 +33,13 @@ export function AppSidebarHeader({
           <BrandWordmark size={28} />
         </Link>
       </div>
+      {/* The logo row keeps its fixed height so the sidebar lines up with the
+          content header in every layout; the subtitle hangs below it. It used
+          to be pulled back up with -mt-4, which sat it on top of the wordmark's
+          TRANSPORT line. */}
       {subtitle && (
-        <div className="px-6 -mt-4 pb-6">
-          <p className="text-sm font-medium text-muted-foreground">
+        <div className="px-6 pb-5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             {subtitle}
           </p>
         </div>

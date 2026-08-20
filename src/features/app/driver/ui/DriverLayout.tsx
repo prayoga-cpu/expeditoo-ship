@@ -53,11 +53,12 @@ export function DriverLayout({ children }: DriverLayoutProps) {
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full pb-4">
-      <AppSidebarHeader
-        href="/driver/dashboard"
-        subtitle={t("panelTitle")}
-      />
-      <nav className="flex-1 px-4 space-y-2">
+      {/* Same as the admin sidebar: the content header already carries the
+          panel title, so a subtitle here just repeated it. */}
+      <AppSidebarHeader href="/driver/dashboard" />
+      {/* p-4, not px-4: same as the admin sidebar — its subtitle used to supply
+          the gap under the logo. Matches the app sidebar. */}
+      <nav className="flex-1 p-4 space-y-2">
         {sidebarItems.map((item) => (
           <Link
             key={item.href}

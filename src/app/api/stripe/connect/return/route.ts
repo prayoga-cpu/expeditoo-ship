@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { stripeService } from "@/server/services/stripe.service";
+import { isImpersonated } from "@/lib/impersonation-guard";
 
 const HOST_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
@@ -10,9 +11,11 @@ export async function GET() {
     headers: await headers(),
   });
 
-  if (session?.user?.id) {
+  if (session?.user?.id && !isImpersonated(session)) {
     console.log("Stripe Return: Checking status for user", session.user.id);
-    // Manually force a status check since webhooks might not trigger locally
+    // Manually force a status check since webhooks might not trigger locally.
+    // Skipped for an admin viewing the account: this overwrites the user's
+    // payout status, and no admin navigation should be able to do that.
     await stripeService.checkAccountStatus(session.user.id);
   } else {
     console.log("Stripe Return: No session found");

@@ -49,6 +49,17 @@ export const stripeAccountStatusEnum = pgEnum("stripe_account_status", [
 ]);
 
 // ========================================
+// Signup Origin Enum
+// ========================================
+// Which of the two products the account was created in. EXPEDITOO and Expedion
+// share this Better Auth instance and this table, and nothing recorded which
+// app a person actually signed up in -- the admin user list could not tell a
+// driver from an Expedion client. Owning a quote is not an answer: 4,588 of the
+// 4,593 imported quotes carry no user at all.
+
+export const userOriginEnum = pgEnum("user_origin", ["expeditoo", "expedion"]);
+
+// ========================================
 // User Preferences Interface
 // ========================================
 
@@ -129,6 +140,16 @@ export const user = pgTable(
       .default(defaultPreferences)
       .notNull(),
 
+    // Stamped by the session-create hook in src/lib/auth.ts on every real
+    // sign-in. An impersonation session deliberately leaves it alone: an admin
+    // opening the account is not this person getting in.
+    lastLoginAt: timestamp("last_login_at"),
+
+    // Which app this account was created in, from the request's Origin at
+    // signup (src/lib/app-origins.ts). Defaults to `expeditoo` because that is
+    // what an absent Origin means for every server-side and same-origin call.
+    origin: userOriginEnum("origin").default("expeditoo").notNull(),
+
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
@@ -163,6 +184,12 @@ export const session = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
+    // Set only on a session an admin opened as somebody else. Declared to
+    // Better Auth by the impersonation plugin (src/lib/auth-impersonation.ts),
+    // which is what lets the adapter read and write it.
+    impersonatedBy: text("impersonated_by").references(() => user.id, {
+      onDelete: "cascade",
+    }),
   },
   (table) => [index("session_userId_idx").on(table.userId)]
 );
@@ -239,6 +266,41 @@ export const userRoles = pgTable(
 );
 
 // ========================================
+// Impersonation Sessions (Audit)
+// ========================================
+// One row per "log in as this user" an admin performs. Both emails are stored
+// alongside the ids because the record has to outlive the accounts it names --
+// deleting a user is one of the actions offered on the same admin screen.
+
+export const impersonationSessions = pgTable(
+  "impersonation_sessions",
+  {
+    id: text("id").primaryKey(),
+    adminId: text("admin_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    adminEmail: text("admin_email").notNull(),
+    targetUserId: text("target_user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    targetEmail: text("target_email").notNull(),
+    sessionToken: text("session_token").notNull(),
+    startedAt: timestamp("started_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    endedAt: timestamp("ended_at", { withTimezone: true }),
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+  },
+  (table) => [
+    index("impersonation_admin_idx").on(table.adminId),
+    index("impersonation_target_idx").on(table.targetUserId),
+    index("impersonation_token_idx").on(table.sessionToken),
+  ]
+);
+
+// ========================================
 // Relations
 // ========================================
 
@@ -302,3 +364,7 @@ export type InsertAccount = typeof account.$inferInsert;
 
 export type Verification = typeof verification.$inferSelect;
 export type InsertVerification = typeof verification.$inferInsert;
+
+export type ImpersonationSession = typeof impersonationSessions.$inferSelect;
+export type InsertImpersonationSession =
+  typeof impersonationSessions.$inferInsert;

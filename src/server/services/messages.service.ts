@@ -169,7 +169,8 @@ export const messagesService = {
   async getThread(
     userId: string,
     conversationId: string,
-    query: GetMessagesQuery
+    query: GetMessagesQuery,
+    { markRead = true }: { markRead?: boolean } = {}
   ) {
     // Verify participation
     const conversation = await messagesDAL.getConversationById(conversationId);
@@ -213,8 +214,12 @@ export const messagesService = {
       currentParticipant?.lastClearedAt // Pass lastClearedAt to filter messages
     );
 
-    // Mark as read when fetching first page
-    if (query.page === 1) {
+    // Mark as read when fetching first page.
+    //
+    // Suppressed for an admin viewing the account: this write is visible to
+    // the *other* party as a read receipt, so it would tell them their message
+    // had been read by someone who never read it, and it cannot be undone.
+    if (query.page === 1 && markRead) {
       await messagesDAL.markAsRead(conversationId, userId);
     }
 

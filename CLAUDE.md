@@ -189,6 +189,17 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
 - Driver UI: shipment list and detail, status transitions, proof-of-delivery upload
 - Admin UI: driver application review, award queue, Expedion bridge monitor — the
   last two were previously orphaned and are now in the sidebar
+- **Admin user management** at `/admin/users`: last-login column, working "view
+  profile", impersonation ("log in as", 60 min, audited in `impersonation_sessions`,
+  banner while active), password reset, sign-out-everywhere, account delete.
+  `docs/specs/admin_user_management_spec.md`. **A borrowed session never writes
+  by itself** — every mutation that fired from a page load (message read
+  receipts, `mark-seen`, Stripe customer/SetupIntent/Connect provisioning) is
+  suppressed for it via `isImpersonated()`; add a new auto-firing write and you
+  must guard it too. **Suspension now bites** — `user.banned`
+  was written and read by nobody: it blocks session creation, kills live sessions, and
+  `session.cookieCache.maxAge` dropped 7 days → 5 min so revocations are not invisible
+  for a week
 - Expedion bridge: `POST /api/expedion/quotes/:id/paid` starts the escalation clock;
   escalation is idempotent via `external_ref` and refuses to release its claim after
   creating a listing; status changes write back

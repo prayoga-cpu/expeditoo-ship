@@ -2,6 +2,11 @@ import * as usersDAL from "@/server/dal/users.dal";
 import { UserPreferences, defaultPreferences } from "@/db/schema";
 import { userRoleEnum } from "@/db/schema/users";
 import {
+  deletionRefusal,
+  impersonationRefusal,
+  suspensionRefusal,
+} from "@/server/services/account-policy";
+import {
   userOutputSchema,
   updateProfileInputSchema,
   assignRoleInputSchema,
@@ -267,6 +272,11 @@ export async function getUsers(query: unknown, adminId: string): Promise<UserLis
       // rows come from `user_roles`, whose column is that enum already.
       roles: user.roles.map((r: { role: string }) => r.role as UserRole),
       createdAt: user.createdAt,
+      lastLoginAt: user.lastLoginAt,
+      origin: user.origin,
+      impersonateBlocked: impersonationRefusal(adminId, user)?.code ?? null,
+      deleteBlocked: deletionRefusal(adminId, user)?.code ?? null,
+      suspendBlocked: suspensionRefusal(adminId, user)?.code ?? null,
     })),
     total: result.total,
     page: result.page,

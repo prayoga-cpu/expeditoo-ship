@@ -126,4 +126,34 @@ describe('messagesService', () => {
             expect(result.items[0].lastMessage).toBe('Last msg');
         });
     });
+
+    describe('getThread read receipts', () => {
+        beforeEach(() => {
+            vi.mocked(messagesDAL.getConversationById).mockResolvedValue({
+                id: 'conv-1',
+                participants: [
+                    { userId: 'user-1', user: { id: 'user-1' }, lastReadAt: null, lastClearedAt: null },
+                    { userId: 'user-2', user: { id: 'user-2' }, lastReadAt: null, lastClearedAt: null },
+                ],
+            } as any);
+            vi.mocked(messagesDAL.getMessages).mockResolvedValue([] as any);
+        });
+
+        it('marks the thread read on the first page', async () => {
+            await messagesService.getThread('user-1', 'conv-1', { page: 1, limit: 50 });
+
+            expect(messagesDAL.markAsRead).toHaveBeenCalledWith('conv-1', 'user-1');
+        });
+
+        it('does not mark it read when an admin is only viewing', async () => {
+            // The write is visible to the other party as a read receipt, so an
+            // impersonated view would tell them their message had been read by
+            // somebody who never read it -- and it cannot be undone.
+            await messagesService.getThread(
+                'user-1', 'conv-1', { page: 1, limit: 50 }, { markRead: false }
+            );
+
+            expect(messagesDAL.markAsRead).not.toHaveBeenCalled();
+        });
+    });
 });

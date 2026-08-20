@@ -10,6 +10,7 @@ import React from "react";
 // Dynamically import AblyProvider to avoid SSR issues
 import { LazyAblyProvider } from "@/components/providers/LazyAblyProvider";
 import { LocaleProvider } from "@/components/providers/LocaleProvider";
+import { ImpersonationBanner } from "@/components/ImpersonationBanner";
 
 // Create a client instance
 const queryClient = new QueryClient({
@@ -42,6 +43,14 @@ const providers = [
   (children: React.ReactNode) => <AuthProvider>{children}</AuthProvider>,
   (children: React.ReactNode) => <ActiveConversationProvider>{children}</ActiveConversationProvider>,
   (children: React.ReactNode) => <LazyAblyProvider>{children}</LazyAblyProvider>,
+  // Last, so it sits inside AuthProvider and renders over every surface: an
+  // admin inside somebody else's session has to be able to see that anywhere.
+  (children: React.ReactNode) => (
+    <>
+      {children}
+      <ImpersonationBanner />
+    </>
+  ),
 ];
 
 export function Providers({ children }: { children: React.ReactNode }) {

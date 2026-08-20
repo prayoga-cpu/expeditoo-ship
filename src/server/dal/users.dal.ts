@@ -98,6 +98,17 @@ export async function deleteUser(id: string) {
 }
 
 /**
+ * Stamp the moment this user last got in.
+ *
+ * Called from the session-create hook, which is the only place that knows a
+ * sign-in just happened -- `updatedAt` on the user row moves for any write at
+ * all, so it could never answer the question.
+ */
+export async function updateLastLogin(id: string, at: Date = new Date()) {
+  await db.update(user).set({ lastLoginAt: at }).where(eq(user.id, id));
+}
+
+/**
  * Check if user exists by email
  */
 export async function userExistsByEmail(email: string): Promise<boolean> {

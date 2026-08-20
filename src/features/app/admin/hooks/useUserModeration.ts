@@ -1,61 +1,19 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { UpdatedUserData } from "@/server/dto/admin.dto";
-
-// ========================================
-// Types
-// ========================================
-
-interface UpdateStatusApiResponse {
-  success: boolean;
-  data?: UpdatedUserData;
-  message?: string;
-  error?: {
-    code: string;
-    message: string;
-  };
-}
-
-interface UpdateUserStatusParams {
-  userId: string;
-  banned: boolean;
-}
-
-// ========================================
-// Mutation Function
-// ========================================
-
-async function updateUserStatus(params: UpdateUserStatusParams): Promise<UpdatedUserData> {
-  const response = await fetch(`/api/admin/users/${params.userId}/status`, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ banned: params.banned }),
-  });
-
-  const json: UpdateStatusApiResponse = await response.json();
-
-  if (!response.ok || !json.success) {
-    throw new Error(json.error?.message || "Failed to update user status");
-  }
-
-  return json.data!;
-}
-
-// ========================================
-// Hook
-// ========================================
+import * as usersApi from "../api/users.api";
 
 /**
- * Hook to update user banned status (suspend/activate)
+ * Every admin action on a user, as mutations that invalidate the same
+ * `["admin", "users"]` key the users table reads from.
  */
-export function useUpdateUserStatus() {
+
+function useAdminUserMutation<TArgs, TResult>(
+  mutationFn: (args: TArgs) => Promise<TResult>
+) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: updateUserStatus,
+    mutationFn,
     onSuccess: () => {
-      // Invalidate user-related queries to refresh data
       queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "stats"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "activity"] });
@@ -63,26 +21,48 @@ export function useUpdateUserStatus() {
   });
 }
 
-/**
- * Hook to suspend a user (convenience wrapper)
- */
-export function useSuspendUser() {
-  const mutation = useUpdateUserStatus();
+/** Suspend or reinstate. Suspending also ends the user's live sessions. */
+export function useUpdateUserStatus() {
+  return useAdminUserMutation((params: { userId: string; banned: boolean }) =>
+    usersApi.updateUserStatus(params.userId, params.banned)
+  );
+}
 
-  return {
-    ...mutation,
-    suspendUser: (userId: string) => mutation.mutate({ userId, banned: true }),
-  };
+/** Delete the account and everything cascading from it. Irreversible. */
+export function useDeleteUser() {
+  return useAdminUserMutation((userId: string) => usersApi.deleteUser(userId));
+}
+
+/** Sign the user out of every device. */
+export function useRevokeUserSessions() {
+  return useAdminUserMutation((userId: string) =>
+    usersApi.revokeUserSessions(userId)
+  );
+}
+
+/** Mail the user a password reset link. */
+export function useSendPasswordReset() {
+  return useAdminUserMutation((userId: string) =>
+    usersApi.sendPasswordReset(userId)
+  );
 }
 
 /**
- * Hook to activate a user (convenience wrapper)
+ * Borrow the user's session.
+ *
+ * Deliberately not a plain mutation callback: the cookie has changed by the
+ * time this resolves, so every cached query belongs to the previous identity
+ * and the caller reloads the page rather than trying to reconcile them.
  */
-export function useActivateUser() {
-  const mutation = useUpdateUserStatus();
+export function useImpersonateUser() {
+  return useMutation({
+    mutationFn: (userId: string) => usersApi.impersonateUser(userId),
+  });
+}
 
-  return {
-    ...mutation,
-    activateUser: (userId: string) => mutation.mutate({ userId, banned: false }),
-  };
+/** Hand the admin back their own session. */
+export function useStopImpersonating() {
+  return useMutation({
+    mutationFn: () => usersApi.stopImpersonating(),
+  });
 }
