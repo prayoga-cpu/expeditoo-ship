@@ -243,6 +243,18 @@ export const expedionService = {
       console.error("[expedion] auto-price failed", quote.id, e)
     );
 
+    // A bordereau submitted with the quote gets read immediately — an
+    // operator (or the client, on their own quote) should never have to
+    // click a button first. `reextractDocument` only fills what is still
+    // null, so this cannot clobber anything the client already typed, and it
+    // is what records `extractionConfidence`, which is what tells the detail
+    // view this quote's fields came from the model rather than the client.
+    if (input.bordereauDocUrl) {
+      void this.reextractDocument(quote.id, { actor: "system" }).catch((e) =>
+        console.error("[expedion] auto-extract failed", quote.id, e)
+      );
+    }
+
     return quote;
   },
 
@@ -401,11 +413,16 @@ export const expedionService = {
    * `POST /api/expedion/extract` uses at upload time, pointed at the URL
    * already on the row instead of a fresh client upload.
    *
-   * Only an admin calls this (route-gated) — it is a supervision tool, not
-   * something exposed to the client, who already gets one extraction per
-   * upload for free.
+   * Also the call `createQuote` makes on itself right after a bordereau is
+   * submitted, with `opts.actor: "system"` — the route above stays admin-
+   * gated (a supervision tool, re-run by a human), but the underlying work
+   * is the same either way, so it is one function rather than two copies of
+   * the merge-and-record logic drifting apart.
    */
-  async reextractDocument(id: string) {
+  async reextractDocument(
+    id: string,
+    opts: { actor?: "admin" | "system"; message?: string } = {}
+  ) {
     const quote = await expedionDal.getById(id);
     if (!quote) throw err("QUOTE_NOT_FOUND", 404);
     if (!quote.bordereauDocUrl) {
@@ -451,8 +468,12 @@ export const expedionService = {
           id: nanoid(),
           quoteId: id,
           status: row.status,
-          actor: "admin",
-          message: "Document ré-analysé par l'IA depuis la supervision",
+          actor: opts.actor ?? "admin",
+          message:
+            opts.message ??
+            (opts.actor === "system"
+              ? "Champs pré-remplis automatiquement par l'IA à la réception"
+              : "Document ré-analysé par l'IA depuis la supervision"),
           metadata: { model: outcome.model, missingFields: outcome.missingFields },
         },
         tx

@@ -232,6 +232,13 @@ export function ListingsTable({
     []
   );
 
+  const sortFields = [
+    { id: "title", label: t("title") },
+    { id: "price", label: t("price") },
+    { id: "views", label: t("views") },
+    { id: "createdAt", label: t("created") },
+  ];
+
   return (
     <>
       {/* Table View - works on all screens with horizontal scroll on mobile */}
@@ -243,6 +250,7 @@ export function ListingsTable({
         searchPlaceholder={t("searchPlaceholder")}
         className={className}
         dateFilterKey="createdAt"
+        sortFields={sortFields}
       />
 
       <AlertDialog

@@ -17,14 +17,9 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { DateRangeField } from "@/components/ui/date-range-field";
 import { AdminBottomNav } from "./AdminBottomNav";
 import { AppSidebarHeader } from "@/components/layouts/AppSidebarHeader";
 import { useAdminNavCounts } from "../hooks/useAdminNavCounts";
-import {
-  AdminDateRangeProvider,
-  useAdminDateRange,
-} from "../hooks/useAdminDateRange";
 import type { AdminNavCounts } from "@/server/services/admin-nav.service";
 import { useTranslations } from "next-intl";
 
@@ -54,24 +49,10 @@ const BADGE_TONE: Record<keyof AdminNavCounts, "attention" | "info"> = {
 };
 
 export function AdminLayout({ children }: AdminLayoutProps) {
-  return (
-    <AdminDateRangeProvider>
-      <AdminLayoutContent>{children}</AdminLayoutContent>
-    </AdminDateRangeProvider>
-  );
-}
-
-/**
- * Split from `AdminLayout` so the date-range field in the header can read
- * `useAdminDateRange()` — a context has to be consumed below the provider
- * that creates it, not in the same component.
- */
-function AdminLayoutContent({ children }: AdminLayoutProps) {
   const pathname = usePathname();
   const t = useTranslations("admin");
   const tCommon = useTranslations("common");
   const counts = useAdminNavCounts();
-  const dateRange = useAdminDateRange();
 
   const sidebarItems: {
     title: string;
@@ -201,21 +182,10 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header - Always visible like MainLayout */}
         <header className="border-b border-border bg-card shrink-0 z-40">
-          <div className="flex items-center justify-between gap-2 px-4 md:px-6 py-2 h-12">
-            <div className="flex min-w-0 items-center gap-3">
-              <h1 className="text-lg font-bold text-foreground shrink-0">
-                {t("panelTitle")}
-              </h1>
-              {/* One date range for the whole panel: it drives every page's
-                  date-filterable table and stays applied while you navigate,
-                  rather than each table carrying its own separate picker. */}
-              <DateRangeField
-                from={dateRange.from}
-                to={dateRange.to}
-                onChange={dateRange.setRange}
-                className="h-8 w-auto max-w-[9.5rem] shrink-0 sm:max-w-none"
-              />
-            </div>
+          <div className="flex items-center justify-between px-4 md:px-6 py-2 h-12">
+            <h1 className="text-lg font-bold text-foreground">
+              {t("panelTitle")}
+            </h1>
             <div className="flex items-center gap-2">
               {/* Only below xl. From xl up the sidebar carries "Back to App"
                   at its foot, and two identical exits sat on screen at once;

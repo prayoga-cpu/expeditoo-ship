@@ -8,6 +8,8 @@ import {
   FileText,
   ImageIcon,
   Loader2,
+  Maximize2,
+  Minimize2,
   Pencil,
   Send,
   Sparkles,
@@ -45,6 +47,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { formatCurrency } from "@/lib/currency";
+import { cn } from "@/lib/utils";
 import { draftEscalationBlockers } from "../lib/quote-action";
 import {
   useExpedionEscalate,
@@ -178,6 +181,10 @@ export function QuoteDetailDialog({
   const [isEditing, setIsEditing] = useState(false);
   const [form, setForm] = useState<QuoteAdminPatch>({});
   const [confirmingPublish, setConfirmingPublish] = useState(false);
+  // Two map pickers plus every field on the quote is a lot for the default
+  // size — an operator fixing several blockers at once can expand to a
+  // near-fullscreen view instead of scrolling a cramped modal.
+  const [maximized, setMaximized] = useState(false);
   const { mutate: saveEdit, isPending: isSaving } = useExpedionQuoteAdmin();
   const { mutate: reextract, isPending: isAnalyzing } = useExpedionReextract();
   const { mutate: escalate, isPending: isEscalating } = useExpedionEscalate();
@@ -302,10 +309,27 @@ export function QuoteDetailDialog({
   const readyToPublish = escalationDue && blockers.length === 0;
   const busy = isSaving || isEscalating;
 
+  // Surfaced the moment the dialog opens rather than left in the Flow
+  // section at the bottom — for a quote nobody has confirmed yet, whether
+  // its fields came from the model or the client is the first thing worth
+  // knowing, not something to scroll past.
+  const showExtractionBanner =
+    !!data &&
+    data.extractionConfidence !== null &&
+    (data.status === "pending" || data.status === "awaiting_confirmation");
+
   return (
     <>
       <Dialog open={quoteId !== null} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="flex max-h-[88vh] max-w-3xl flex-col gap-0 overflow-hidden p-0">
+        <DialogContent
+          showCloseButton={false}
+          className={cn(
+            "flex flex-col gap-0 overflow-hidden p-0",
+            maximized
+              ? "h-[95vh] max-h-[95vh] w-[95vw] max-w-[95vw]"
+              : "max-h-[88vh] max-w-3xl"
+          )}
+        >
           <DialogHeader className="border-b p-6 pb-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
@@ -333,9 +357,9 @@ export function QuoteDetailDialog({
                 </DialogDescription>
               </div>
 
-              {data ? (
-                <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-                  {isEditing ? (
+              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                {data ? (
+                  isEditing ? (
                     <>
                       <Button
                         variant="outline"
@@ -385,9 +409,38 @@ export function QuoteDetailDialog({
                         {t("edit")}
                       </Button>
                     </>
+                  )
+                ) : null}
+                {/* Replaces `DialogContent`'s own absolutely-positioned close
+                    button: that one sits at a fixed corner offset regardless
+                    of padding, which this header's own button row — flush
+                    against the same corner once `p-0` moved the edge in —
+                    was landing right underneath. One row, laid out by flex
+                    like everything else here, cannot collide with itself. */}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setMaximized((m) => !m)}
+                  aria-label={maximized ? t("restore") : t("maximize")}
+                  title={maximized ? t("restore") : t("maximize")}
+                >
+                  {maximized ? (
+                    <Minimize2 className="h-4 w-4" />
+                  ) : (
+                    <Maximize2 className="h-4 w-4" />
                   )}
-                </div>
-              ) : null}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={onClose}
+                  aria-label={t("close")}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </DialogHeader>
 
@@ -406,6 +459,25 @@ export function QuoteDetailDialog({
               {!isEditing && blockers.length > 0 ? (
                 <Button size="sm" variant="outline" onClick={() => enterEdit(data)}>
                   {t("fixNow")}
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
+
+          {showExtractionBanner && data ? (
+            <div className="border-b bg-primary/5 flex flex-wrap items-center justify-between gap-3 px-6 py-3">
+              <div className="flex items-center gap-2">
+                <Sparkles className="text-primary h-4 w-4 shrink-0" />
+                <span className="text-xs font-medium">
+                  {t("aiExtractedBanner", {
+                    percent: Math.round((data.extractionConfidence ?? 0) * 100),
+                    model: data.extractionModel ?? "—",
+                  })}
+                </span>
+              </div>
+              {!isEditing ? (
+                <Button size="sm" variant="outline" onClick={() => enterEdit(data)}>
+                  {t("reviewNow")}
                 </Button>
               ) : null}
             </div>

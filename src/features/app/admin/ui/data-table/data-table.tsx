@@ -12,7 +12,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { cn } from "@/lib/utils";
 
 import {
@@ -23,9 +23,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useAdminDateRange } from "../../hooks/useAdminDateRange";
 import { DataTablePagination } from "./data-table-pagination";
 import { DataTableToolbar } from "./data-table-toolbar";
+import type { SortField } from "./data-table-sort-field";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -40,12 +40,10 @@ interface DataTableProps<TData, TValue> {
    * propagation, or clicking one both acts and opens the row.
    */
   onRowClick?: (row: TData) => void;
-  /**
-   * Id of a column using `dateRangeFilterFn`. Filtered by the admin header's
-   * global `DateRangeField` (via `useAdminDateRange`), not a table-local
-   * control — every table sharing the same range is the point.
-   */
+  /** Id of a column using `dateRangeFilterFn`, to render a date-range field in the toolbar. */
   dateFilterKey?: string;
+  /** Columns offered by the toolbar's "sort by" dropdown, alongside per-column header sorting. */
+  sortFields?: SortField[];
 }
 
 export function DataTable<TData, TValue>({
@@ -57,6 +55,7 @@ export function DataTable<TData, TValue>({
   tableMinHeight = "50vh",
   onRowClick,
   dateFilterKey,
+  sortFields,
 }: DataTableProps<TData, TValue>) {
   // Simple local state - no URL sync to avoid re-render issues
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -86,25 +85,6 @@ export function DataTable<TData, TValue>({
     },
   });
 
-  // Applies the admin panel's one global date range to this table's date
-  // column, whenever `dateFilterKey` opts in. `table` is deliberately not a
-  // dependency: `useReactTable` returns a new object identity every render,
-  // and `setFilterValue` itself triggers a re-render — listing it here would
-  // loop. Depending only on the primitive from/to values keeps this to one
-  // call per actual range change.
-  const dateRange = useAdminDateRange();
-  useEffect(() => {
-    if (!dateFilterKey) return;
-    table
-      .getColumn(dateFilterKey)
-      ?.setFilterValue(
-        dateRange.from || dateRange.to
-          ? { from: dateRange.from, to: dateRange.to }
-          : undefined
-      );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dateFilterKey, dateRange.from, dateRange.to]);
-
   // Simple pagination handlers
   const handlePageChange = useCallback((pageIndex: number) => {
     setPagination((prev) => ({ ...prev, pageIndex }));
@@ -126,13 +106,15 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className={cn("space-y-4", className)}>
-      {searchKey && (
+      {(searchKey || dateFilterKey || (sortFields && sortFields.length > 0)) && (
         <DataTableToolbar
           table={table}
           searchKey={searchKey}
           searchPlaceholder={searchPlaceholder}
           onSearchChange={handleSearchChange}
           initialValue=""
+          dateFilterKey={dateFilterKey}
+          sortFields={sortFields}
         />
       )}
       <div className="rounded-md border relative overflow-auto" style={{ minHeight: tableMinHeight }}>

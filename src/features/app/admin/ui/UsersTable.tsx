@@ -529,6 +529,14 @@ export function UsersTable({
     [viewMode]
   );
 
+  const sortFields = [
+    { id: "name", label: tTable("name") },
+    { id: "status", label: tTable("status") },
+    { id: "lastLoginAt", label: tTable("lastLogin") },
+    { id: "joinDate", label: tTable("joinDate") },
+    { id: "role", label: tTable("role") },
+  ];
+
   const action = confirmDialog.action;
   const name = confirmDialog.user?.name ?? "";
   const destructive =
@@ -546,6 +554,7 @@ export function UsersTable({
         className={className}
         tableMinHeight={tableMinHeight}
         dateFilterKey="joinDate"
+        sortFields={sortFields}
       />
 
       <AlertDialog

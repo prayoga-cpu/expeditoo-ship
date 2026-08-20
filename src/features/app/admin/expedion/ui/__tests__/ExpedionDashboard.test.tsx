@@ -4,7 +4,6 @@ import { describe, expect, it, vi } from "vitest";
 
 import en from "../../../../../../../messages/en.json";
 import fr from "../../../../../../../messages/fr.json";
-import { AdminDateRangeProvider } from "@/features/app/admin/hooks/useAdminDateRange";
 import type { QuoteRow } from "@/server/dal/expedion-report.dal";
 import type { ExpedionReport } from "@/server/services/expedion-report.service";
 
@@ -190,9 +189,7 @@ function renderWith(locale: "en" | "fr", messages: typeof en | typeof fr) {
       messages={messages}
       onError={onError}
     >
-      <AdminDateRangeProvider>
-        <ExpedionDashboard />
-      </AdminDateRangeProvider>
+      <ExpedionDashboard />
     </NextIntlClientProvider>
   );
   return onError;

@@ -49,3 +49,8 @@ public/sw.js
 public/sw.js.map
 public/workbox-*.js
 public/workbox-*.js.map
+
+# graphify — commit the queryable graph + report so every clone/agent has one; ignore the rest (extraction cache, machine-specific interpreter path, temp chunk files)
+graphify-out/*
+!graphify-out/graph.json
+!graphify-out/GRAPH_REPORT.md

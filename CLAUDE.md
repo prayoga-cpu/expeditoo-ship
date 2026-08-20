@@ -26,6 +26,15 @@ permission rather than an owner permission.
 **Current status:** driver-side revamp complete; the Expedion inlet needs a real
 payment signal. See §"Where Things Stand".
 
+**Knowledge graph:** `graphify-out/graph.json` is a merged cross-repo graph
+covering both this repo and the sibling `expedion_encheres` Flutter client —
+node IDs carry a `repo` attribute so you can tell which side of the bridge a
+result came from. Query it (`graphify query "<question>"`) before grepping for
+architecture, cross-file, or cross-repo questions, especially anything about the
+Expedion escalation bridge (`markPaid`, `escalateAfter`, `external_ref`,
+`expedion_quotes`). Regenerate with `graphify <path> --update` after either
+repo's docs or structure change meaningfully — it goes stale otherwise.
+
 ---
 
 ## Essential Commands

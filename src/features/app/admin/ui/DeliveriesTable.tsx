@@ -171,6 +171,14 @@ export function DeliveriesTable({
     []
   );
 
+  const sortFields = [
+    { id: "title", label: t("title") },
+    { id: "status", label: t("status") },
+    { id: "proposalCount", label: t("proposals") },
+    { id: "price", label: t("price") },
+    { id: "createdDate", label: t("created") },
+  ];
+
   return (
     <DataTable
       columns={columns}
@@ -179,6 +187,7 @@ export function DeliveriesTable({
       searchPlaceholder={t("searchPlaceholder")}
       className={className}
       dateFilterKey="createdDate"
+      sortFields={sortFields}
     />
   );
 }

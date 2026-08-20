@@ -266,6 +266,9 @@ export function RecentQuotesPanel({
       },
       {
         id: "amount",
+        // Enables both the header click-to-sort and the toolbar's "sort by"
+        // dropdown — an id-only column otherwise has no value to sort on.
+        accessorFn: (row) => row.priceCents,
         header: ({ column }) => (
           <DataTableColumnHeader column={column} title={t("table.amount")} />
         ),
@@ -274,7 +277,6 @@ export function RecentQuotesPanel({
             {money(row.original.priceCents)}
           </span>
         ),
-        enableSorting: false,
       },
       {
         id: "waiting",
@@ -356,6 +358,12 @@ export function RecentQuotesPanel({
     [locale, now, t, tb]
   );
 
+  const sortFields = [
+    { id: "reference", label: t("table.reference") },
+    { id: "amount", label: t("table.amount") },
+    { id: "waiting", label: t("recent.waiting") },
+  ];
+
   return (
     <Card>
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -417,6 +425,7 @@ export function RecentQuotesPanel({
               setDetailAutoEdit(false);
             }}
             dateFilterKey="waiting"
+            sortFields={sortFields}
           />
         )}
       </CardContent>

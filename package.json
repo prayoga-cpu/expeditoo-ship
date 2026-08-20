@@ -7,6 +7,7 @@
     "dev": "next dev",
     "lint": "eslint .",
     "start": "next start",
+    "clean:cache": "bash scripts/clean-dev-caches.sh",
     "db:start": "bash scripts/db-start.sh",
     "db:stop": "bash scripts/db-stop.sh",
     "db:generate": "drizzle-kit generate",

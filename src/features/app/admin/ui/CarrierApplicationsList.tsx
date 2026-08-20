@@ -179,6 +179,13 @@ export function CarrierApplicationsList({
     [dateLocale]
   );
 
+  const sortFields = [
+    { id: "companyName", label: t("table.company") },
+    { id: "city", label: t("table.city") },
+    { id: "createdAt", label: t("table.date") },
+    { id: "status", label: t("table.status") },
+  ];
+
   return (
     <div className="space-y-4">
       <Select
@@ -222,6 +229,7 @@ export function CarrierApplicationsList({
           searchPlaceholder={t("table.searchPlaceholder")}
           tableMinHeight={tableMinHeight}
           dateFilterKey="createdAt"
+          sortFields={sortFields}
         />
       )}
 

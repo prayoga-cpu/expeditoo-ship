@@ -96,6 +96,17 @@
         "last30Days": "30 derniers jours",
         "thisMonth": "Ce mois-ci"
       }
+    },
+    "locationPicker": {
+      "searchPlaceholder": "Rechercher une adresse…",
+      "clickToPin": "Cliquez sur la carte pour épingler l'emplacement",
+      "gettingAddress": "Recherche de l'adresse…",
+      "notFound": "Aucune adresse trouvée pour ce point",
+      "outsideFrance": "Ce point est en dehors de la France",
+      "genericError": "Impossible de résoudre cet emplacement",
+      "address": "Adresse",
+      "postalCode": "Code postal",
+      "city": "Ville"
     }
   },
   "auth": {
@@ -977,7 +988,10 @@
       "goToNext": "Aller à la page suivante",
       "goToLast": "Aller à la dernière page",
       "searchPlaceholder": "Rechercher...",
-      "clearFilters": "Effacer les filtres"
+      "clearFilters": "Effacer les filtres",
+      "sortBy": "Trier par",
+      "sortAscending": "Croissant",
+      "sortDescending": "Décroissant"
     },
     "dashboard": {
       "title": "Tableau de bord",
@@ -1490,8 +1504,8 @@
         "noDocuments": "Le client n'a téléversé aucun document.",
         "openDocument": "Ouvrir",
         "documentNotPreviewable": "Référence stockée — ce n'est pas un lien public, l'aperçu est impossible ici.",
-        "analyzeWithAi": "Analyser le document avec l'IA",
-        "analyzing": "Analyse…",
+        "analyzeWithAi": "Recompléter avec l'extraction IA",
+        "analyzing": "Recomplétion…",
         "noDocumentToAnalyze": "Aucun document téléversé à analyser",
         "reextractSuccess": "Document analysé — vérifiez les champs ci-dessous",
         "reextractFailed": "Analyse impossible — saisissez les champs manuellement",
@@ -1503,6 +1517,11 @@
         "fixNow": "Corriger maintenant",
         "readyToPublish": "Prêt à publier sur Expeditoo",
         "blockedBanner": "Bloqué pour la publication — manque :",
+        "maximize": "Agrandir",
+        "restore": "Réduire",
+        "close": "Fermer",
+        "aiExtractedBanner": "Pré-rempli par l'IA depuis le bordereau — {percent} % de confiance ({model})",
+        "reviewNow": "Vérifier maintenant",
         "client": "Client",
         "name": "Nom",
         "firstName": "Prénom",
@@ -1526,6 +1545,7 @@
         "weight": "Poids",
         "protected": "Emballage protégé",
         "declaredValue": "Valeur déclarée",
+        "valueBracket": "Tranche de valeur",
         "pricing": "Tarification",
         "standard": "Devis standard",
         "insured": "Avec ad valorem",

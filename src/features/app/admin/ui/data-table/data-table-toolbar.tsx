@@ -7,13 +7,21 @@ import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateRangeField } from "@/components/ui/date-range-field";
+
+import { DataTableSortField, type SortField } from "./data-table-sort-field";
+import type { DateRangeFilterValue } from "./date-range-filter";
 
 interface DataTableToolbarProps<TData> {
   table: Table<TData>;
-  searchKey: string;
+  searchKey?: string;
   searchPlaceholder?: string;
   onSearchChange: (value: string) => void;
   initialValue?: string;
+  /** Id of a column carrying `dateRangeFilterFn`, to show a date-range field beside the search box. */
+  dateFilterKey?: string;
+  /** Columns offered by the "sort by" dropdown, alongside per-column header sorting. */
+  sortFields?: SortField[];
 }
 
 export function DataTableToolbar<TData>({
@@ -22,41 +30,63 @@ export function DataTableToolbar<TData>({
   searchPlaceholder,
   onSearchChange,
   initialValue = "",
+  dateFilterKey,
+  sortFields,
 }: DataTableToolbarProps<TData>) {
   const t = useTranslations("admin.table");
   const [value, setValue] = useState(initialValue);
 
   // Debounce search
   useEffect(() => {
+    if (!searchKey) return;
     const timeout = setTimeout(() => {
       onSearchChange(value);
     }, 300);
 
     return () => clearTimeout(timeout);
-  }, [value, onSearchChange]);
+  }, [value, searchKey, onSearchChange]);
 
-  // Only the search box is toolbar-local state — the date range is the
-  // admin header's global field, so clearing here must not touch it.
-  const isSearchFiltered = !!table.getColumn(searchKey)?.getFilterValue();
+  const isFiltered = table.getState().columnFilters.length > 0;
 
   const handleClear = useCallback(() => {
     setValue("");
-    onSearchChange("");
-  }, [onSearchChange]);
+    table.resetColumnFilters();
+  }, [table]);
+
+  const dateColumn = dateFilterKey ? table.getColumn(dateFilterKey) : undefined;
+  const dateFilterValue = dateColumn?.getFilterValue() as
+    | DateRangeFilterValue
+    | undefined;
+
+  const handleDateChange = (from: string, to: string) => {
+    dateColumn?.setFilterValue(from || to ? { from, to } : undefined);
+  };
 
   return (
-    <div className="flex items-center justify-between gap-2">
-      <div className="flex flex-1 items-center gap-2">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder={searchPlaceholder || t("searchPlaceholder")}
-            value={value}
-            onChange={(event) => setValue(event.target.value)}
-            className="pl-8 h-9"
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex flex-1 flex-wrap items-center gap-2">
+        {searchKey && (
+          <div className="relative max-w-sm flex-1">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder={searchPlaceholder || t("searchPlaceholder")}
+              value={value}
+              onChange={(event) => setValue(event.target.value)}
+              className="pl-8 h-9"
+            />
+          </div>
+        )}
+        {dateColumn && (
+          <DateRangeField
+            from={dateFilterValue?.from ?? ""}
+            to={dateFilterValue?.to ?? ""}
+            onChange={handleDateChange}
           />
-        </div>
-        {isSearchFiltered && (
+        )}
+        {sortFields && sortFields.length > 0 && (
+          <DataTableSortField table={table} fields={sortFields} />
+        )}
+        {isFiltered && (
           <Button
             variant="ghost"
             onClick={handleClear}

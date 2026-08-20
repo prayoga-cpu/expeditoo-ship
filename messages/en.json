@@ -96,6 +96,17 @@
         "last30Days": "Last 30 days",
         "thisMonth": "This month"
       }
+    },
+    "locationPicker": {
+      "searchPlaceholder": "Search an address…",
+      "clickToPin": "Click the map to pin the location",
+      "gettingAddress": "Getting the address…",
+      "notFound": "No address found for this point",
+      "outsideFrance": "This point is outside France",
+      "genericError": "Could not resolve this location",
+      "address": "Address",
+      "postalCode": "Postal code",
+      "city": "City"
     }
   },
   "auth": {
@@ -977,7 +988,10 @@
       "goToLast": "Go to last page",
       "searchPlaceholder": "Search...",
       "clearFilters": "Clear filters",
-      "rowsSelected": "{selected} of {total} row(s) selected"
+      "rowsSelected": "{selected} of {total} row(s) selected",
+      "sortBy": "Sort by",
+      "sortAscending": "Ascending",
+      "sortDescending": "Descending"
     },
     "dashboard": {
       "title": "Dashboard",
@@ -1490,8 +1504,8 @@
         "noDocuments": "The client uploaded no document.",
         "openDocument": "Open",
         "documentNotPreviewable": "Stored reference — not a public link, so it cannot be previewed here.",
-        "analyzeWithAi": "Analyze document with AI",
-        "analyzing": "Analyzing…",
+        "analyzeWithAi": "Refill with AI extraction",
+        "analyzing": "Refilling…",
         "noDocumentToAnalyze": "No document uploaded to analyze",
         "reextractSuccess": "Document analyzed — review the fields below",
         "reextractFailed": "Analysis failed — enter the fields manually",
@@ -1503,6 +1517,11 @@
         "fixNow": "Fix now",
         "readyToPublish": "Ready to publish to Expeditoo",
         "blockedBanner": "Blocked from publishing — missing:",
+        "maximize": "Maximize",
+        "restore": "Restore",
+        "close": "Close",
+        "aiExtractedBanner": "Pre-filled by AI from the bordereau — {percent} % confidence ({model})",
+        "reviewNow": "Review now",
         "client": "Client",
         "name": "Name",
         "firstName": "First name",
@@ -1526,6 +1545,7 @@
         "weight": "Weight",
         "protected": "Protected packaging",
         "declaredValue": "Declared value",
+        "valueBracket": "Value bracket",
         "pricing": "Pricing",
         "standard": "Standard quote",
         "insured": "With ad valorem",

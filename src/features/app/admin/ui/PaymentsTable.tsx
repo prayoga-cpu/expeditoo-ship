@@ -210,6 +210,13 @@ export function PaymentsTable({
         []
     );
 
+    const sortFields = [
+        { id: "userName", label: tTable("user") },
+        { id: "amount", label: tTable("amount") },
+        { id: "status", label: tTable("status") },
+        { id: "createdAt", label: tTable("date") },
+    ];
+
     return (
         <>
             <DataTable
@@ -219,6 +226,7 @@ export function PaymentsTable({
                 searchPlaceholder={tTable("searchPlaceholder")}
                 className={className}
                 dateFilterKey="createdAt"
+                sortFields={sortFields}
             />
 
             <AlertDialog

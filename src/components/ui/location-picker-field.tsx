@@ -213,7 +213,7 @@ export function LocationPickerField({
           ) : null}
         </Map>
 
-        {!hasPin && !isGeocoding ? (
+        {!hasPin && !isGeocoding && !locationError ? (
           <div className="bg-background/90 pointer-events-none absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full border px-3 py-1 text-[11px] font-medium shadow">
             {t("clickToPin")}
           </div>
