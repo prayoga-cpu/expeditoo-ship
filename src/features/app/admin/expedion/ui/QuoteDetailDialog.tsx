@@ -287,15 +287,23 @@ export function QuoteDetailDialog({
   const money = (cents: number | null | undefined): string =>
     cents === null || cents === undefined ? "—" : formatCurrency(cents);
 
+  // `photoUrls` is `jsonb`, so `$type<string[]>()` is only a compile-time
+  // label — nothing stops a legacy or hand-edited row from holding something
+  // else. Rendering a non-string entry straight into JSX throws ("Objects
+  // are not valid as a React child"), which crashes the whole dialog with no
+  // boundary to catch it, so this filters before anything is rendered rather
+  // than trusting the column's declared type.
   const documents = data
     ? [
         ...(data.bordereauDocUrl
           ? [{ url: data.bordereauDocUrl, label: t("bordereau") }]
           : []),
-        ...((data.photoUrls ?? []) as string[]).map((url, index) => ({
-          url,
-          label: t("photo", { index: index + 1 }),
-        })),
+        ...(Array.isArray(data.photoUrls) ? data.photoUrls : [])
+          .filter((url): url is string => typeof url === "string")
+          .map((url, index) => ({
+            url,
+            label: t("photo", { index: index + 1 }),
+          })),
       ]
     : [];
 
