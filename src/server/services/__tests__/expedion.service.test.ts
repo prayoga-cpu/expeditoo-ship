@@ -7,6 +7,13 @@ import {
 import { expedionDal, type QuoteFilters } from '@/server/dal/expedion.dal';
 import { expedionPriceSuggestionService } from '@/server/services/expedion-price-suggestion.service';
 import { adminUpdateExpedionQuoteSchema } from '@/server/dto/expedion.dto';
+import { searchAddress } from '@/lib/geocoding';
+
+// Nominatim is stubbed so the suite never makes a real network call — every
+// `createQuote`/`updateQuote` here fires `geocodeMissingCoordinates` in the
+// background, and without this the search-address fixtures below would hit
+// the real service.
+vi.mock('@/lib/geocoding', () => ({ searchAddress: vi.fn() }));
 
 // The DAL is stubbed so the suite never touches a database.
 vi.mock('@/server/dal/expedion.dal', () => ({
@@ -469,5 +476,122 @@ describe('expedionService.updateQuote — AI suggestion cache invalidation', () 
         await expedionService.updateQuote('q_1', OWNER_CALLER, { weightKg: 10 });
 
         expect(lastPatch()).not.toHaveProperty('aiSuggestedAt');
+    });
+});
+
+// ========================================
+// Coordinate geocoding — closing the escalation-blocker gap
+// ========================================
+//
+// `escalationBlockers` (expedion-escalation.service.ts) refuses to publish a
+// quote with no pickup/delivery lat/lng. `autoPrice` only resolves those as a
+// side effect of pricing, which needs dimensions too — so a quote with a
+// complete address and no dimensions yet (the common shape right after the
+// bordereau flow submits) used to sit blocked until an admin filled
+// dimensions by hand. These tests pin `geocodeMissingCoordinates`, the fix.
+
+const searchAddressMock = vi.mocked(searchAddress);
+const createMock = vi.mocked(expedionDal.create);
+
+/** Nominatim is called through a fire-and-forget chain the caller never
+ * awaits; this lets each test wait for its effect (a DAL write, or none) to
+ * either land or have had every chance to. */
+async function flushBackgroundWork() {
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+}
+
+describe('geocodeMissingCoordinates — filling coordinates from an address alone', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        createMock.mockImplementation(async (row) => row as never);
+        vi.mocked(expedionDal.addEvent).mockResolvedValue(undefined as never);
+        updateMock.mockImplementation(
+            async (_id, patch) => ({ ...pendingQuote(), ...patch }) as never
+        );
+        searchAddressMock.mockResolvedValue([
+            {
+                id: '1',
+                place_name: '10 Rue de Rivoli, 75001 Paris, France',
+                center: [2.3522, 48.8566],
+            },
+        ]);
+    });
+
+    it('geocodes a full pickup and delivery address on create, no dimensions needed', async () => {
+        getByIdMock.mockResolvedValue(
+            pendingQuote({
+                pickupAddress: '10 Rue de Rivoli',
+                pickupPostalCode: '75001',
+                pickupCity: 'Paris',
+                pickupLat: null,
+                pickupLng: null,
+                deliveryAddress: '1 Place Bellecour',
+                deliveryPostalCode: '69002',
+                deliveryCity: 'Lyon',
+                deliveryLat: null,
+                deliveryLng: null,
+                // No lengthCm/widthCm/heightCm/weightKg: hasDimensions is false,
+                // so autoPrice bails out and only geocodeMissingCoordinates writes.
+            }) as never
+        );
+
+        await expedionService.createQuote('user_abc', {
+            pickupAddress: '10 Rue de Rivoli',
+            pickupPostalCode: '75001',
+            pickupCity: 'Paris',
+            deliveryAddress: '1 Place Bellecour',
+            deliveryPostalCode: '69002',
+            deliveryCity: 'Lyon',
+        } as never);
+        await vi.waitFor(() => expect(updateMock).toHaveBeenCalled());
+
+        expect(searchAddressMock).toHaveBeenCalledTimes(2);
+        expect(lastPatch()).toMatchObject({
+            pickupLat: 48.8566,
+            pickupLng: 2.3522,
+            deliveryLat: 48.8566,
+            deliveryLng: 2.3522,
+        });
+    });
+
+    it('does not re-geocode a side that already has coordinates', async () => {
+        getByIdMock.mockResolvedValue(
+            pendingQuote({
+                pickupAddress: '10 Rue de Rivoli',
+                pickupPostalCode: '75001',
+                pickupCity: 'Paris',
+                pickupLat: 48.85,
+                pickupLng: 2.35,
+            }) as never
+        );
+
+        await expedionService.createQuote('user_abc', {
+            pickupAddress: '10 Rue de Rivoli',
+            pickupPostalCode: '75001',
+            pickupCity: 'Paris',
+        } as never);
+        await flushBackgroundWork();
+
+        expect(searchAddressMock).not.toHaveBeenCalled();
+    });
+
+    it('clears stale coordinates immediately when the pickup address is edited', async () => {
+        getByIdMock.mockResolvedValue(
+            pendingQuote({
+                pickupAddress: '10 Rue de Rivoli',
+                pickupPostalCode: '75001',
+                pickupCity: 'Paris',
+                pickupLat: 48.85,
+                pickupLng: 2.35,
+            }) as never
+        );
+
+        await expedionService.updateQuote('q_1', OWNER_CALLER, {
+            pickupAddress: '2 Rue de Rivoli',
+        });
+
+        // Synchronous: the stale pin is cleared in the same patch that saves
+        // the new address, before the background re-geocode even starts.
+        expect(lastPatch()).toMatchObject({ pickupLat: null, pickupLng: null });
     });
 });
