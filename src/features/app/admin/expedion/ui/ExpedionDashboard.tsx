@@ -30,6 +30,7 @@ import type { ExpedionReportSection } from "@/server/services/expedion-report.se
 
 import { useExpedionReport } from "../hooks/useExpedionReport";
 import { QuoteQueueTable, type QueueColumn } from "./QuoteQueueTable";
+import { RecentQuotesPanel } from "./RecentQuotesPanel";
 
 /**
  * The operator report — Expedion quotes and the Expeditoo marketplace they
@@ -133,6 +134,9 @@ export function ExpedionDashboard() {
           <p className="text-muted-foreground">{t("subtitle")}</p>
         </div>
       </div>
+
+      {/* ---- What arrived and what needs doing, before any figure ---- */}
+      <RecentQuotesPanel rows={data.recent} unavailable={missing.has("recent")} />
 
       {/* ---- KPIs: the auction business, then the platform around it ---- */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
@@ -428,23 +432,6 @@ export function ExpedionDashboard() {
           </CardContent>
         </Card>
       </div>
-
-      {/* ---- Everything, most recent first ---- */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">{t("recent.title")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <QuoteQueueTable
-            rows={data.recent}
-            extraColumn="client"
-            emptyTitle={missing.has("recent") ? t("error") : t("recent.empty")}
-            emptyDescription={
-              missing.has("recent") ? "" : t("recent.emptyBody")
-            }
-          />
-        </CardContent>
-      </Card>
     </div>
   );
 }

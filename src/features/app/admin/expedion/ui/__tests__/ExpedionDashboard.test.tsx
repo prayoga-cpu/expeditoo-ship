@@ -29,12 +29,19 @@ const QUOTE: QuoteRow = {
   auctionHouseName: "Drouot",
   deliveryCity: "Lyon",
   clientName: "A. Client",
+  clientEmail: "client@example.com",
   priceCents: 12_000,
   standardCents: 12_000,
   insuredCents: 14_500,
   owned: true,
   hasPickupCoords: true,
   escalationReady: true,
+  queues: {
+    toPrice: true,
+    needsDriver: false,
+    storageAtRisk: true,
+    escalationDue: false,
+  },
   storageFreeUntil: new Date("2026-08-20T00:00:00Z"),
   escalateAfter: new Date("2026-08-18T00:00:00Z"),
   requestedAt: new Date("2026-08-14T00:00:00Z"),
@@ -48,10 +55,19 @@ const ORPHAN: QuoteRow = {
   auctionHouseName: null,
   deliveryCity: null,
   clientName: null,
+  clientEmail: null,
   priceCents: null,
   owned: false,
   hasPickupCoords: false,
   escalationReady: false,
+  // Overdue *and* unescalatable, so the recent list renders its blocked
+  // branch — the one where the button is offered but refuses to fire.
+  queues: {
+    toPrice: false,
+    needsDriver: true,
+    storageAtRisk: true,
+    escalationDue: true,
+  },
   // Already past, so the storage column takes its "billed" branch.
   storageFreeUntil: new Date("2026-08-01T00:00:00Z"),
 };

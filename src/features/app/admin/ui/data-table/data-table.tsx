@@ -33,6 +33,12 @@ interface DataTableProps<TData, TValue> {
   searchPlaceholder?: string;
   className?: string;
   tableMinHeight?: string;
+  /**
+   * Opens a row. The row becomes a keyboard-reachable button when set, so a
+   * detail view is not mouse-only. Controls inside a cell must stop
+   * propagation, or clicking one both acts and opens the row.
+   */
+  onRowClick?: (row: TData) => void;
 }
 
 export function DataTable<TData, TValue>({
@@ -42,6 +48,7 @@ export function DataTable<TData, TValue>({
   searchPlaceholder,
   className,
   tableMinHeight = "50vh",
+  onRowClick,
 }: DataTableProps<TData, TValue>) {
   // Simple local state - no URL sync to avoid re-render issues
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -125,6 +132,23 @@ export function DataTable<TData, TValue>({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
+                  className={onRowClick ? "cursor-pointer" : undefined}
+                  tabIndex={onRowClick ? 0 : undefined}
+                  role={onRowClick ? "button" : undefined}
+                  onClick={
+                    onRowClick ? () => onRowClick(row.original) : undefined
+                  }
+                  onKeyDown={
+                    onRowClick
+                      ? (event) => {
+                          if (event.key !== "Enter" && event.key !== " ") return;
+                          // Space scrolls the page otherwise, and the row under
+                          // the cursor moves out from under the keyboard user.
+                          event.preventDefault();
+                          onRowClick(row.original);
+                        }
+                      : undefined
+                  }
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>

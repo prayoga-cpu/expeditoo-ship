@@ -167,6 +167,29 @@ export async function getStatusBreakdown(): Promise<StatusCount[]> {
   return [...rows].map((r) => ({ status: r.status, count: Number(r.count) }));
 }
 
+/** Which operator queue to fetch. */
+export type QueueKind =
+  | "toPrice"
+  | "needsDriver"
+  | "storageAtRisk"
+  | "escalationDue";
+
+/**
+ * The four queue predicates, exported because the sidebar badge counts the
+ * same work this page lists (`admin-nav.dal.ts`). A second copy of "needs a
+ * driver" over there would drift from this one the first time either moved,
+ * and the badge disagreeing with the queue it points at is worse than no badge.
+ */
+export const QUEUE_WHERE: Record<QueueKind, ReturnType<typeof sql>> = {
+  toPrice: sql`quote_available = false and status in ('pending','awaiting_confirmation')`,
+  needsDriver: sql`payment_status = 'paid' and assigned_carrier_id is null
+                   and listing_id is null and ${LIVE}`,
+  storageAtRisk: sql`storage_free_until is not null
+                     and storage_free_until <= now() + interval '4 days'
+                     and ${LIVE}`,
+  escalationDue: ESCALATION_DUE,
+};
+
 export interface QuoteRow {
   id: string;
   reference: string | null;
@@ -175,6 +198,12 @@ export interface QuoteRow {
   auctionHouseName: string | null;
   deliveryCity: string | null;
   clientName: string | null;
+  /**
+   * The address the client gave on the bordereau. Often the only identity an
+   * Airtable-imported row has — those carry no account and frequently no name
+   * either, and "—" in every column is not something an operator can chase.
+   */
+  clientEmail: string | null;
   priceCents: number | null;
   standardCents: number | null;
   insuredCents: number | null;
@@ -187,6 +216,16 @@ export interface QuoteRow {
    * then 422s on click. Optional only because the callers predate it.
    */
   escalationReady?: boolean;
+  /**
+   * Which operator queues this row is in, straight from `QUEUE_WHERE` — the
+   * same predicates that build the queues themselves, evaluated once per row.
+   *
+   * The recent list needs this to say what a quote is waiting for, and
+   * re-deriving it on the client from `status` alone would be a second,
+   * looser definition: `needsDriver` turns on a null carrier *and* a null
+   * listing, neither of which is on the wire.
+   */
+  queues: Record<QueueKind, boolean>;
   storageFreeUntil: Date | null;
   escalateAfter: Date | null;
   requestedAt: Date | null;
@@ -202,12 +241,17 @@ const QUOTE_COLUMNS = sql`
   delivery_city,
   nullif(trim(coalesce(first_name,'') || ' ' || coalesce(last_name,'')), '')
                                                         as client_name,
+  email                                                 as client_email,
   coalesce(accepted_price_cents, quote_standard_cents)  as price_cents,
   quote_standard_cents                                  as standard_cents,
   quote_insured_cents                                   as insured_cents,
   not (${UNOWNED})                                      as owned,
   (pickup_lat is not null and pickup_lng is not null)   as has_pickup_coords,
   (${ESCALATION_READY})                                 as escalation_ready,
+  (${QUEUE_WHERE.toPrice})                              as f_to_price,
+  (${QUEUE_WHERE.needsDriver})                          as f_needs_driver,
+  (${QUEUE_WHERE.storageAtRisk})                        as f_storage_at_risk,
+  (${QUEUE_WHERE.escalationDue})                        as f_escalation_due,
   storage_free_until,
   escalate_after,
   requested_at
@@ -224,46 +268,46 @@ function toQuoteRow(r: Record<string, unknown>): QuoteRow {
     auctionHouseName: (r.auction_house_name as string) ?? null,
     deliveryCity: (r.delivery_city as string) ?? null,
     clientName: (r.client_name as string) ?? null,
+    clientEmail: (r.client_email as string) ?? null,
     priceCents: num(r.price_cents),
     standardCents: num(r.standard_cents),
     insuredCents: num(r.insured_cents),
     owned: r.owned === true,
     hasPickupCoords: r.has_pickup_coords === true,
     escalationReady: r.escalation_ready === true,
+    queues: {
+      toPrice: r.f_to_price === true,
+      needsDriver: r.f_needs_driver === true,
+      storageAtRisk: r.f_storage_at_risk === true,
+      escalationDue: r.f_escalation_due === true,
+    },
     storageFreeUntil: date(r.storage_free_until),
     escalateAfter: date(r.escalate_after),
     requestedAt: date(r.requested_at),
   };
 }
 
-/** Which operator queue to fetch. */
-export type QueueKind =
-  | "toPrice"
-  | "needsDriver"
-  | "storageAtRisk"
-  | "escalationDue";
-
-const QUEUE_WHERE: Record<QueueKind, ReturnType<typeof sql>> = {
-  toPrice: sql`quote_available = false and status in ('pending','awaiting_confirmation')`,
-  needsDriver: sql`payment_status = 'paid' and assigned_carrier_id is null
-                   and listing_id is null and ${LIVE}`,
-  storageAtRisk: sql`storage_free_until is not null
-                     and storage_free_until <= now() + interval '4 days'
-                     and ${LIVE}`,
-  escalationDue: ESCALATION_DUE,
-};
-
 /**
  * One operator queue, oldest first — the work that has been waiting longest is
  * the work to do next, which is the opposite of the newest-first the recent
  * list wants.
+ *
+ * `id` breaks ties on `requested_at`, which is far from unique — about a fifth
+ * as many distinct values as rows. Without it the top-`limit` cut is only as
+ * stable as the plan that produced it, and the plan is not stable: escalation
+ * has an index on `escalate_after`, so once that column is populated this
+ * query can switch to an index scan and hand the sort a different row order,
+ * and a *different set* of fifty rows comes back. That matters most on
+ * `escalationDue`, the queue whose whole job is that a job the timer gave up
+ * on cannot sit unseen. The same tiebreaker is on the batched form in
+ * `getReportRowSets`, so the two agree by construction rather than by luck.
  */
 export async function getQueue(kind: QueueKind, limit = 50): Promise<QuoteRow[]> {
   const rows = await db.execute<Record<string, unknown>>(sql`
     select ${QUOTE_COLUMNS}
     from expedion_quotes
     where ${QUEUE_WHERE[kind]}
-    order by requested_at asc nulls last
+    order by requested_at asc nulls last, id
     limit ${limit}
   `);
   return [...rows].map(toQuoteRow);
@@ -273,7 +317,7 @@ export async function getRecentQuotes(limit = 25): Promise<QuoteRow[]> {
   const rows = await db.execute<Record<string, unknown>>(sql`
     select ${QUOTE_COLUMNS}
     from expedion_quotes
-    order by requested_at desc nulls last
+    order by requested_at desc nulls last, id
     limit ${limit}
   `);
   return [...rows].map(toQuoteRow);
@@ -298,51 +342,78 @@ export interface MarketplaceTotals {
  * cross-product number meaningful rather than two unrelated totals.
  */
 export async function getMarketplaceTotals(): Promise<MarketplaceTotals> {
-  const [listings] = await db.execute<Record<string, string | number>>(sql`
+  const [row] = await db.execute<Record<string, string | number>>(sql`
+    with ${MARKETPLACE_CTES}
+    select * from lst, ofr, shp, car, veh
+  `);
+
+  return toMarketplaceTotals(row);
+}
+
+/**
+ * The five marketplace aggregates as single-row CTEs.
+ *
+ * They were five sequential `await`s, which cost five round trips to
+ * eu-central-1 for numbers that share no data. Each CTE is a bare aggregate,
+ * so it yields exactly one row even against an empty table and the cross join
+ * that consumes them can only produce one row.
+ *
+ * Every output column is named for what it counts rather than for its CTE,
+ * because `getReportScalars` cross-joins these with the quote aggregates and
+ * selects `.*` from both: a bare `delivered` here would collide with the
+ * quotes `delivered`, and postgres.js resolves a duplicate column name by
+ * keeping the last one silently. That would have reported 0 delivered quotes
+ * with no error anywhere.
+ *
+ * The fragment omits its own `with` so both callers can splice it into a
+ * larger CTE list.
+ */
+const MARKETPLACE_CTES = sql`
+  lst as (
     select
       count(*) filter (where origin = 'expedion')::int as expedion_listings,
       count(*) filter (where origin = 'direct')::int   as direct_listings
     from listings
-  `);
-
-  const [offers] = await db.execute<Record<string, string | number>>(sql`
-    select count(*)::int as offers
+  ),
+  ofr as (
+    select count(*)::int as offers_on_expedion
     from offers o
     join listings l on l.id = o.listing_id
     where l.origin = 'expedion'
-  `);
-
-  const [shipments] = await db.execute<Record<string, string | number>>(sql`
+  ),
+  shp as (
     select
-      count(*) filter (where l.origin = 'expedion')::int as expedion_shipments,
-      count(*) filter (where s.status = 'DELIVERED')::int as delivered
+      count(*) filter (where l.origin = 'expedion')::int  as expedion_shipments,
+      count(*) filter (where s.status = 'DELIVERED')::int as delivered_shipments
     from shipments s
     join listings l on l.id = s.listing_id
-  `);
-
-  const [carriers] = await db.execute<Record<string, string | number>>(sql`
+  ),
+  car as (
     select
-      count(*) filter (where status = 'approved')::int as approved,
-      count(*) filter (where status in ('submitted','under_review'))::int as pending
+      count(*) filter (where status = 'approved')::int as carriers_approved,
+      count(*) filter (where status in ('submitted','under_review'))::int
+                                                      as carriers_pending
     from carriers
-  `);
+  ),
+  veh as (
+    select count(*) filter (where is_active)::int as active_vehicles from vehicles
+  )
+`;
 
-  const [vehicles] = await db.execute<Record<string, string | number>>(sql`
-    select count(*) filter (where is_active)::int as active from vehicles
-  `);
-
-  const n = (row: Record<string, string | number> | undefined, k: string) =>
-    Number(row?.[k] ?? 0);
-
+/** Shared by the batched and per-section paths so the mapping cannot drift. */
+function toMarketplaceTotals(
+  row: Record<string, string | number> | undefined
+): MarketplaceTotals {
+  const n = (k: string) => Number(row?.[k] ?? 0);
   return {
-    expedionListings: n(listings, "expedion_listings"),
-    directListings: n(listings, "direct_listings"),
-    offersOnExpedionJobs: n(offers, "offers"),
-    expedionShipments: n(shipments, "expedion_shipments"),
-    deliveredShipments: n(shipments, "delivered"),
-    carriersApproved: n(carriers, "approved"),
-    carriersPending: n(carriers, "pending"),
-    activeVehicles: n(vehicles, "active"),
+    expedionListings: n("expedion_listings"),
+    directListings: n("direct_listings"),
+    offersOnExpedionJobs: n("offers_on_expedion"),
+    expedionShipments: n("expedion_shipments"),
+    deliveredShipments: n("delivered_shipments"),
+    carriersApproved: n("carriers_approved"),
+    carriersPending: n("carriers_pending"),
+    activeVehicles: n("active_vehicles"),
   };
 }
 
@@ -427,4 +498,236 @@ export async function getMonthlySeries(months = 6): Promise<MonthPoint[]> {
     quotes: Number(r.quotes),
     acceptedCents: Number(r.accepted),
   }));
+}
+
+/**
+ * The projection's *output* names, re-selected off the shared CTE below.
+ *
+ * `QUOTE_COLUMNS` computes the fields; this lists them by the names it gave
+ * them, so each JSON object carries exactly what `toQuoteRow` reads — the four
+ * `f_*` queue flags included, since the recent list reads them to say what a
+ * quote is waiting for. Only the series columns computed alongside them stay
+ * on the server.
+ */
+const QUOTE_FIELDS = sql`
+  id, reference, status, payment_status, auction_house_name, delivery_city,
+  client_name, client_email, price_cents, standard_cents, insured_cents, owned,
+  has_pickup_coords, escalation_ready, f_to_price, f_needs_driver,
+  f_storage_at_risk, f_escalation_due, storage_free_until, escalate_after,
+  requested_at`;
+
+export interface ReportScalars {
+  quotes: ExpedionTotals;
+  marketplace: MarketplaceTotals;
+  health: DataHealth;
+}
+
+/**
+ * Every scalar the report shows, in one round trip.
+ *
+ * `getExpedionTotals` and `getDataHealth` are one scan rather than two — they
+ * count the same table and share the `unowned` column outright — and the
+ * marketplace aggregates ride along as the single-row CTEs above.
+ *
+ * The platform figures are deliberately *not* here. They belong to `admin.dal`,
+ * which defines what an active driver and an app fee are for the whole admin
+ * area; restating them in this file to save one concurrent query is exactly the
+ * second definition that would drift from the one every other page shows.
+ */
+export async function getReportScalars(): Promise<ReportScalars> {
+  const rows = await db.execute<Record<string, string | number | null>>(sql`
+    with q as (
+      select
+        count(*)::int                                               as total,
+        count(*) filter (where ${UNOWNED})::int                     as unowned,
+        count(*) filter (where quote_available = false
+                           and status in ('pending','awaiting_confirmation'))::int
+                                                                    as awaiting_pricing,
+        count(*) filter (where status = 'accepted'
+                           and payment_status <> 'paid')::int       as awaiting_payment,
+        count(*) filter (where payment_status = 'paid'
+                           and assigned_carrier_id is null
+                           and listing_id is null
+                           and ${LIVE})::int                        as needs_driver,
+        count(*) filter (where listing_id is not null
+                            or status = 'escalated')::int           as escalated,
+        count(*) filter (where assigned_carrier_id is not null
+                           and listing_id is null
+                           and status <> 'escalated')::int          as assigned,
+        count(*) filter (where status = 'delivered')::int           as delivered,
+        count(*) filter (where status = 'cancelled')::int           as cancelled,
+        count(*) filter (where storage_free_until is not null
+                           and storage_free_until <= now() + interval '4 days'
+                           and ${LIVE})::int                        as storage_at_risk,
+        count(*) filter (where ${ESCALATION_DUE})::int              as escalation_due,
+        coalesce(sum(accepted_price_cents), 0)::bigint              as accepted_value,
+        coalesce(sum(accepted_price_cents)
+                 filter (where payment_status = 'paid'), 0)::bigint as paid_value,
+        count(*) filter (where accepted_kind = 'with_ad_valorem_insurance')::int
+                                                                    as insured_count,
+        count(*) filter (where accepted_kind is not null)::int      as accepted_count,
+        count(*) filter (where (pickup_lat is null or pickup_lng is null)
+                           and ${LIVE})::int                        as missing_coords,
+        count(*) filter (where (length_cm is null or width_cm is null
+                                or height_cm is null or weight_kg is null)
+                           and ${LIVE})::int                        as missing_dims,
+        avg(extraction_confidence)                                  as mean_confidence,
+        count(*) filter (where extraction_confidence is not null)::int as extracted
+      from expedion_quotes
+    ),
+    ${MARKETPLACE_CTES}
+    select q.*, lst.*, ofr.*, shp.*, car.*, veh.*
+    from q, lst, ofr, shp, car, veh
+  `);
+
+  const r = rows[0] ?? {};
+  const n = (k: string) => Number(r[k] ?? 0);
+  const acceptedCount = n("accepted_count");
+  const mean = r.mean_confidence;
+
+  return {
+    quotes: {
+      total: n("total"),
+      unowned: n("unowned"),
+      awaitingPricing: n("awaiting_pricing"),
+      awaitingPayment: n("awaiting_payment"),
+      needsDriver: n("needs_driver"),
+      escalated: n("escalated"),
+      assigned: n("assigned"),
+      delivered: n("delivered"),
+      cancelled: n("cancelled"),
+      storageAtRisk: n("storage_at_risk"),
+      escalationDue: n("escalation_due"),
+      acceptedValueCents: n("accepted_value"),
+      paidValueCents: n("paid_value"),
+      insuredShare:
+        acceptedCount === 0 ? 0 : n("insured_count") / acceptedCount,
+    },
+    marketplace: toMarketplaceTotals(
+      r as unknown as Record<string, string | number>
+    ),
+    health: {
+      unowned: n("unowned"),
+      missingPickupCoords: n("missing_coords"),
+      missingDimensions: n("missing_dims"),
+      meanExtractionConfidence:
+        mean === null || mean === undefined ? null : Number(mean),
+      extracted: n("extracted"),
+    },
+  };
+}
+
+export interface ReportRowSets {
+  statuses: StatusCount[];
+  series: MonthPoint[];
+  queues: Record<QueueKind, QuoteRow[]>;
+  recent: QuoteRow[];
+}
+
+/**
+ * Every row set the report shows, in one round trip.
+ *
+ * The quote projection is scanned once and each set is aggregated off it, so
+ * the six lists cost one pass rather than six. `as materialized` is spelled out
+ * because the CTE is referenced seven times: it makes the single scan
+ * deliberate, and it fixes one `now()` for the whole report, so the storage
+ * cliff the queue counts and the one it lists cannot disagree.
+ *
+ * `coalesce(..., '[]'::json)` is load-bearing, not defensive — `json_agg` over
+ * no rows returns SQL NULL, and two of these queues are empty on real data.
+ */
+export async function getReportRowSets(
+  months = 6,
+  queueLimit = 50,
+  recentLimit = 25
+): Promise<ReportRowSets> {
+  const queue = (flag: ReturnType<typeof sql>) => sql`
+    (select coalesce(json_agg(t order by t.requested_at asc nulls last, t.id),
+                     '[]'::json)
+       from (select ${QUOTE_FIELDS} from q
+              where ${flag}
+              order by q.requested_at asc nulls last, q.id
+              limit ${queueLimit}) t)`;
+
+  const rows = await db.execute<Record<string, unknown>>(sql`
+    with q as materialized (
+      select
+        ${QUOTE_COLUMNS},
+        accepted_price_cents              as accepted_cents,
+        date_trunc('month', requested_at) as month_bucket
+      from expedion_quotes
+    ),
+    span as (
+      select generate_series(
+        date_trunc('month', now()) - (${months - 1} || ' months')::interval,
+        date_trunc('month', now()),
+        interval '1 month'
+      ) as bucket
+    )
+    select
+      (select coalesce(json_agg(s order by s.status), '[]'::json)
+         from (select q.status, count(*)::int as count
+                 from q group by q.status) s)              as statuses,
+
+      (select coalesce(json_agg(json_build_object(
+                  'bucket', m.label, 'quotes', m.quotes, 'accepted', m.accepted
+                ) order by m.bucket), '[]'::json)
+         from (select span.bucket                                as bucket,
+                      to_char(span.bucket, 'YYYY-MM')            as label,
+                      count(q.id)::int                           as quotes,
+                      coalesce(sum(q.accepted_cents), 0)::bigint as accepted
+                 from span
+                 left join q on q.month_bucket = span.bucket
+                group by span.bucket) m)                   as series,
+
+      ${queue(sql`q.f_to_price`)}                          as queue_to_price,
+      ${queue(sql`q.f_needs_driver`)}                      as queue_needs_driver,
+      ${queue(sql`q.f_storage_at_risk`)}                   as queue_storage_at_risk,
+      ${queue(sql`q.f_escalation_due`)}                    as queue_escalation_due,
+
+      (select coalesce(json_agg(t order by t.requested_at desc nulls last, t.id),
+                       '[]'::json)
+         from (select ${QUOTE_FIELDS} from q
+                order by q.requested_at desc nulls last, q.id
+                limit ${recentLimit}) t)                   as recent
+  `);
+
+  return toReportRowSets(rows[0] ?? {});
+}
+
+/**
+ * Splits one JSON row into the six sets.
+ *
+ * Exported for the unit tests: nothing here can be exercised against a database
+ * in unit tests, but every wrong-shape case that would reach it — a null where
+ * an array is expected, a bigint arriving as a string — is worth pinning.
+ */
+export function toReportRowSets(r: Record<string, unknown>): ReportRowSets {
+  const quoteRows = (v: unknown): QuoteRow[] =>
+    (Array.isArray(v) ? v : []).map((x) =>
+      toQuoteRow(x as Record<string, unknown>)
+    );
+
+  return {
+    statuses: (Array.isArray(r.statuses) ? r.statuses : []).map(
+      (s: { status: string; count: number }) => ({
+        status: String(s.status),
+        count: Number(s.count),
+      })
+    ),
+    series: (Array.isArray(r.series) ? r.series : []).map(
+      (m: { bucket: string; quotes: number; accepted: number }) => ({
+        name: String(m.bucket),
+        quotes: Number(m.quotes),
+        acceptedCents: Number(m.accepted),
+      })
+    ),
+    queues: {
+      toPrice: quoteRows(r.queue_to_price),
+      needsDriver: quoteRows(r.queue_needs_driver),
+      storageAtRisk: quoteRows(r.queue_storage_at_risk),
+      escalationDue: quoteRows(r.queue_escalation_due),
+    },
+    recent: quoteRows(r.recent),
+  };
 }

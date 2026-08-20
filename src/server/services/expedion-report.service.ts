@@ -9,10 +9,20 @@ import * as reportDal from "@/server/dal/expedion-report.dal";
  * "app fees" mean, and a second definition would drift from the one the rest
  * of the admin area shows.
  *
- * Every section is loaded independently and is allowed to fail alone. The
+ * The eight sections are loaded by three concurrent queries — the scalars, the
+ * row sets, and the four platform figures — rather than the eighteen this used
+ * to issue. That is not tidiness: postgres.js pipelines onto a busy connection
+ * once its pool is exhausted, Supabase's transaction pooler does not answer
+ * pipelined work, and eighteen in flight against a pool of ten hung the page
+ * indefinitely rather than failing.
+ *
+ * Failure is still per section, because that is what the page can act on. The
  * aggregates run against tables at different migration stages, so one query
  * meeting a column that is not there yet is a normal Tuesday — and it should
- * cost the operator that one card, not the eight beside it that were fine.
+ * cost the operator those cards, not the ones beside them that were fine. A
+ * batch that throws therefore names every section it was carrying, and the
+ * groups are drawn so the sections that fail together are ones an operator
+ * would not try to read against each other anyway.
  */
 
 /** One independently-loaded part of the report; the fields below, one for one. */
@@ -138,10 +148,14 @@ interface Section<T> {
 }
 
 /**
- * Loads one section, degrading to its placeholder instead of taking the report
+ * Loads one batch, degrading to its placeholder instead of taking the report
  * down. The error is logged and not returned: the route tells the client
  * nothing about internals, and the section list already says *which* figure to
  * distrust, which is all the page can act on anyway.
+ *
+ * `key` names the batch in the log only. What reaches the client is the fanned
+ * out list at the bottom of `getExpedionReport`, because a section name the
+ * page does not recognise reads to it as "that section is fine".
  */
 async function section<T>(
   key: ExpedionReportSection,
@@ -156,50 +170,42 @@ async function section<T>(
   }
 }
 
+const NO_ROW_SETS: reportDal.ReportRowSets = {
+  statuses: [],
+  series: [],
+  queues: { toPrice: [], needsDriver: [], storageAtRisk: [], escalationDue: [] },
+  recent: [],
+};
+
+/**
+ * Which report sections each batched query answers for.
+ *
+ * The two loaders below each cover several sections, but `unavailable` stays
+ * keyed by section because that is what the page reads: `ExpedionDashboard`
+ * asks it about `statuses`, `queues` and `recent` by name, and a key it does
+ * not recognise reads as "this section is fine". A failed batch therefore fans
+ * out to every section it was carrying — otherwise one dead statement renders
+ * four empty queues as "no work outstanding", which is the single thing the
+ * `unavailable` contract exists to prevent.
+ */
+const SCALAR_SECTIONS = ["quotes", "marketplace", "health"] as const;
+const ROW_SET_SECTIONS = ["statuses", "series", "queues", "recent"] as const;
+
 export async function getExpedionReport(): Promise<ExpedionReport> {
-  const [
-    quotes,
-    statuses,
-    marketplace,
-    health,
-    series,
-    queues,
-    recent,
-    platform,
-  ] = await Promise.all([
-    section("quotes", NO_QUOTES, () => reportDal.getExpedionTotals()),
-    section<reportDal.StatusCount[]>("statuses", [], () =>
-      reportDal.getStatusBreakdown()
+  const [scalars, rowSets, platform] = await Promise.all([
+    section<reportDal.ReportScalars>(
+      "quotes",
+      { quotes: NO_QUOTES, marketplace: NO_MARKETPLACE, health: NO_HEALTH },
+      () => reportDal.getReportScalars()
     ),
-    section("marketplace", NO_MARKETPLACE, () =>
-      reportDal.getMarketplaceTotals()
+    section<reportDal.ReportRowSets>("queues", NO_ROW_SETS, () =>
+      reportDal.getReportRowSets()
     ),
-    section("health", NO_HEALTH, () => reportDal.getDataHealth()),
-    section<reportDal.MonthPoint[]>("series", [], () =>
-      reportDal.getMonthlySeries()
-    ),
-    // The four queues stand or fall together on purpose: they are the same
-    // projection over the same table, so whatever breaks one breaks the rest,
-    // and a partial tab strip would be a lie about the work outstanding.
-    section<Record<reportDal.QueueKind, reportDal.QuoteRow[]>>(
-      "queues",
-      { toPrice: [], needsDriver: [], storageAtRisk: [], escalationDue: [] },
-      async () => {
-        const [toPrice, needsDriver, storageAtRisk, escalationDue] =
-          await Promise.all([
-            reportDal.getQueue("toPrice"),
-            reportDal.getQueue("needsDriver"),
-            reportDal.getQueue("storageAtRisk"),
-            reportDal.getQueue("escalationDue"),
-          ]);
-        return { toPrice, needsDriver, storageAtRisk, escalationDue };
-      }
-    ),
-    section<reportDal.QuoteRow[]>("recent", [], () =>
-      reportDal.getRecentQuotes()
-    ),
-    // Grouped so the flag means one thing: every figure under `platform` is
-    // either counted or placeholder, never a mix the UI would have to unpick.
+    // Left as four concurrent calls rather than folded into the scalar query:
+    // `admin.dal` owns what these four numbers mean for the whole admin area,
+    // and they run alongside the two batches, so merging them would buy no
+    // round trip. Grouped so the flag means one thing: every figure under
+    // `platform` is either counted or placeholder, never a mix.
     section("platform", NO_PLATFORM, async () => {
       const [appFeesCents, activeUsers, activeDrivers, pendingDeliveries] =
         await Promise.all([
@@ -218,27 +224,22 @@ export async function getExpedionReport(): Promise<ExpedionReport> {
     }),
   ]);
 
-  const sections = [
-    quotes,
-    statuses,
-    marketplace,
-    health,
-    series,
-    queues,
-    recent,
-    platform,
+  const unavailable: ExpedionReportSection[] = [
+    ...(scalars.failed ? SCALAR_SECTIONS : []),
+    ...(rowSets.failed ? ROW_SET_SECTIONS : []),
+    ...(platform.failed ? (["platform"] as const) : []),
   ];
 
   return {
-    quotes: quotes.value,
-    statuses: statuses.value,
-    marketplace: marketplace.value,
-    health: health.value,
-    series: series.value,
-    queues: queues.value,
-    recent: recent.value,
+    quotes: scalars.value.quotes,
+    statuses: rowSets.value.statuses,
+    marketplace: scalars.value.marketplace,
+    health: scalars.value.health,
+    series: rowSets.value.series,
+    queues: rowSets.value.queues,
+    recent: rowSets.value.recent,
     platform: platform.value,
-    unavailable: sections.filter((s) => s.failed).map((s) => s.key),
+    unavailable,
     provisional: {
       paymentsUnobserved: true,
       mockPayments: process.env.MOCK_PAYMENTS === "true",

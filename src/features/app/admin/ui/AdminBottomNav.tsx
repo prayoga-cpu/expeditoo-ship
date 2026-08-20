@@ -15,17 +15,21 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
+import { useAdminNavCounts } from "../hooks/useAdminNavCounts";
+import type { AdminNavCounts } from "@/server/services/admin-nav.service";
 
 interface NavItem {
   href: string;
   label: string;
   icon: React.ReactNode;
-  badge?: number;
+  /** Which sidebar count rides on this entry; see `BADGE_TONE` in AdminLayout. */
+  badge?: keyof AdminNavCounts;
 }
 
 export function AdminBottomNav() {
   const pathname = usePathname();
   const t = useTranslations("admin.navigation");
+  const counts = useAdminNavCounts();
   const scrollRef = useRef<HTMLDivElement>(null);
   const activeRef = useRef<HTMLAnchorElement>(null);
 
@@ -35,36 +39,43 @@ export function AdminBottomNav() {
       href: "/admin/expedion",
       label: t("expedion"),
       icon: <LayoutDashboard className="w-5 h-5" />,
+      badge: "expedion",
     },
     {
       href: "/admin/users",
       label: t("users"),
       icon: <Users className="w-5 h-5" />,
+      badge: "users",
     },
     {
       href: "/admin/listings",
       label: t("listing"),
       icon: <FileText className="w-5 h-5" />,
+      badge: "listings",
     },
     {
       href: "/admin/drivers",
       label: t("driver"),
       icon: <Car className="w-5 h-5" />,
+      badge: "drivers",
     },
     {
       href: "/admin/shipments",
       label: t("shipment"),
       icon: <Truck className="w-5 h-5" />,
+      badge: "shipments",
     },
     {
       href: "/admin/payments",
       label: t("payments"),
       icon: <DollarSign className="w-5 h-5" />,
+      badge: "payments",
     },
     {
       href: "/admin/support",
       label: t("supportChats"),
       icon: <Headset className="w-5 h-5" />,
+      badge: "support",
     },
     {
       href: "/admin/profile",
@@ -102,6 +113,7 @@ export function AdminBottomNav() {
       >
         {navItems.map((item) => {
           const isActive = pathname?.startsWith(item.href);
+          const badge = item.badge ? counts?.[item.badge] : undefined;
           return (
             <Link
               key={item.href}
@@ -127,12 +139,17 @@ export function AdminBottomNav() {
                 )}
               >
                 {item.icon}
-                {item.badge && (
-                  <span className="absolute -top-1 -right-1 bg-destructive text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center shadow-sm">
-                    {item.badge}
+                {badge ? (
+                  <span
+                    className="absolute -top-1 -right-1 bg-destructive text-white text-[10px] font-bold rounded-full min-w-4 h-4 px-1 flex items-center justify-center shadow-sm tabular-nums"
+                    aria-hidden
+                  >
+                    {badge > 9 ? "9+" : badge}
                   </span>
-                )}
+                ) : null}
               </div>
+
+              {badge ? <span className="sr-only">{badge}</span> : null}
 
               <span
                 className={cn(
