@@ -17,6 +17,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { formatCurrency } from "@/lib/currency";
 import type { QuoteRow } from "@/server/dal/expedion-report.dal";
 
 import { AssignDriverDialog } from "./AssignDriverDialog";
@@ -48,10 +49,7 @@ export interface QuoteQueueTableProps {
 
 function money(cents: number | null): string {
   if (cents === null) return "—";
-  return new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency: "EUR",
-  }).format(cents / 100);
+  return formatCurrency(cents);
 }
 
 /**

@@ -26,6 +26,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageLoader } from "@/components/ui/page-loader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatCard } from "@/features/app/admin/ui/StatCard";
+import { formatCurrency, formatNumber } from "@/lib/currency";
 import type { ExpedionReportSection } from "@/server/services/expedion-report.service";
 
 import { useExpedionReport } from "../hooks/useExpedionReport";
@@ -44,18 +45,8 @@ import { RecentQuotesPanel } from "./RecentQuotesPanel";
  * page can disagree.
  */
 
-const EUR = new Intl.NumberFormat("fr-FR", {
-  style: "currency",
-  currency: "EUR",
-});
-
-function money(cents: number): string {
-  return EUR.format(cents / 100);
-}
-
-function count(value: number): string {
-  return value.toLocaleString("fr-FR");
-}
+const money = formatCurrency;
+const count = formatNumber;
 
 /**
  * The funnel, in the order `canTransition` allows movement through it. Each

@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { formatCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 import type { BoardJob } from "../types";
 
@@ -19,12 +20,7 @@ interface JobCardProps {
   job: BoardJob;
 }
 
-const euros = (cents: number) =>
-  new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency: "EUR",
-    maximumFractionDigits: 0,
-  }).format(cents / 100);
+const euros = (cents: number) => formatCurrency(cents, { fractionDigits: 0 });
 
 /** Hours left to bid, or null once the window has closed. */
 function hoursLeft(expiresAt: string): number | null {

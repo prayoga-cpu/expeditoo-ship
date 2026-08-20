@@ -218,7 +218,9 @@ describe("ExpedionDashboard", () => {
     expect(screen.queryByText(/admin\.expedion\./)).toBeNull();
 
     // The interpolated hints, which are the other thing a bad key breaks.
-    expect(screen.getByText("4 450 importés sans compte")).toBeInTheDocument();
+    // "4.450" not "4 450": src/lib/currency.ts formats with de-DE, not fr-FR
+    // (see its header comment for why).
+    expect(screen.getByText("4.450 importés sans compte")).toBeInTheDocument();
     // The two caveats sit on the figures they actually qualify: "Collected"
     // counts only settlements Expedion reported to us, while the commission
     // total is what MOCK_PAYMENTS inflates. They used to be the other way round.

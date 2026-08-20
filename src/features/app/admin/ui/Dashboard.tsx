@@ -20,14 +20,7 @@ import {
   YAxis,
 } from "recharts";
 import { useTranslations } from "next-intl";
-
-// Helper to format currency
-function formatCurrency(cents: number): string {
-  return new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency: "EUR",
-  }).format(cents / 100);
-}
+import { formatCurrency } from "@/lib/currency";
 
 // Helper to format change percentage
 function formatChange(percentage: number): string {
@@ -289,11 +282,8 @@ export function Dashboard() {
                             color: "var(--primary)",
                           }}
                           formatter={(value: number) => [
-                            // Value is already in units, just format as currency
-                            new Intl.NumberFormat("fr-FR", {
-                              style: "currency",
-                              currency: "EUR",
-                            }).format(value),
+                            // Value is already in units (euros), not cents
+                            formatCurrency(Math.round(value * 100)),
                             "Revenue",
                           ]}
                         />

@@ -13,6 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { formatCurrency } from "@/lib/currency";
 import {
   Select,
   SelectContent,
@@ -41,11 +42,7 @@ interface JobDetailProps {
   isOperator?: boolean;
 }
 
-const euros = (cents: number) =>
-  new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency: "EUR",
-  }).format(cents / 100);
+const euros = formatCurrency;
 
 const STATUS_TONE: Record<string, string> = {
   open: "bg-success/15 text-success border-success/30",

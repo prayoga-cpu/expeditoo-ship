@@ -6,6 +6,7 @@ import {
     View,
     StyleSheet,
 } from "@react-pdf/renderer";
+import { formatCurrency } from "@/lib/currency";
 
 // Styles for the invoice PDF
 const styles = StyleSheet.create({
@@ -174,14 +175,6 @@ interface InvoicePDFProps {
     currency?: string;
 }
 
-const formatCurrency = (cents: number, currency = "EUR") => {
-    const amount = cents / 100;
-    return new Intl.NumberFormat("fr-FR", {
-        style: "currency",
-        currency,
-    }).format(amount);
-};
-
 export const InvoicePDF = ({
     invoiceNumber,
     invoiceDate,
@@ -262,10 +255,10 @@ export const InvoicePDF = ({
                         <Text style={styles.tableColDesc}>{item.description}</Text>
                         <Text style={styles.tableColQty}>{item.quantity}</Text>
                         <Text style={styles.tableColPrice}>
-                            {formatCurrency(item.unitPrice, currency)}
+                            {formatCurrency(item.unitPrice, { currency })}
                         </Text>
                         <Text style={styles.tableColTotal}>
-                            {formatCurrency(item.unitPrice * item.quantity, currency)}
+                            {formatCurrency(item.unitPrice * item.quantity, { currency })}
                         </Text>
                     </View>
                 ))}
@@ -275,24 +268,24 @@ export const InvoicePDF = ({
             <View style={styles.totals}>
                 <View style={styles.totalRow}>
                     <Text>Subtotal</Text>
-                    <Text>{formatCurrency(subtotal, currency)}</Text>
+                    <Text>{formatCurrency(subtotal, { currency })}</Text>
                 </View>
                 {shippingFee > 0 && (
                     <View style={styles.totalRow}>
                         <Text>Shipping</Text>
-                        <Text>{formatCurrency(shippingFee, currency)}</Text>
+                        <Text>{formatCurrency(shippingFee, { currency })}</Text>
                     </View>
                 )}
                 {tax > 0 && (
                     <View style={styles.totalRow}>
                         <Text>Tax</Text>
-                        <Text>{formatCurrency(tax, currency)}</Text>
+                        <Text>{formatCurrency(tax, { currency })}</Text>
                     </View>
                 )}
                 <View style={styles.grandTotal}>
                     <Text style={styles.grandTotalLabel}>Total</Text>
                     <Text style={styles.grandTotalValue}>
-                        {formatCurrency(total, currency)}
+                        {formatCurrency(total, { currency })}
                     </Text>
                 </View>
             </View>

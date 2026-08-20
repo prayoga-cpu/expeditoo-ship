@@ -15,6 +15,8 @@
  * has a priced quote.
  */
 
+import { formatCurrency } from "@/lib/currency";
+
 export interface SmsResult {
   sent: boolean;
   sid?: string;
@@ -88,11 +90,7 @@ async function send(to: string, body: string): Promise<SmsResult> {
   }
 }
 
-const euros = (cents: number) =>
-  (cents / 100).toLocaleString("fr-FR", {
-    style: "currency",
-    currency: "EUR",
-  });
+const euros = formatCurrency;
 
 export const expedionSmsService = {
   send,

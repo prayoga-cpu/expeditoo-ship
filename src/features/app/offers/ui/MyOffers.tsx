@@ -10,11 +10,9 @@ import { PageLoader } from "@/components/ui/page-loader";
 import Link from "next/link";
 import { useMyOffers, useWithdrawOffer } from "../hooks/useCarrierOffers";
 import type { OfferStatus } from "@/features/app/listing/types";
+import { formatCurrency } from "@/lib/currency";
 
-const euros = (cents: number) =>
-  new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(
-    cents / 100
-  );
+const euros = formatCurrency;
 
 const STATUS_TONE: Record<OfferStatus, string> = {
   pending: "bg-primary/10 text-primary border-primary/30",

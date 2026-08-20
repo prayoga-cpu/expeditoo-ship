@@ -9,13 +9,9 @@ import { Card } from "@/components/ui/card";
 import { PageLoader } from "@/components/ui/page-loader";
 import { CenteredEmptyState } from "@/components/ui/centered-empty-state";
 import { listingsApi } from "@/features/app/listing/api/listings.api";
+import { formatCurrency } from "@/lib/currency";
 
-const euros = (cents: number) =>
-  new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency: "EUR",
-    maximumFractionDigits: 0,
-  }).format(cents / 100);
+const euros = (cents: number) => formatCurrency(cents, { fractionDigits: 0 });
 
 /**
  * Escalated Expedion jobs waiting for someone to pick a winner.

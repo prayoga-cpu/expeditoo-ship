@@ -18,15 +18,13 @@ import { CenteredEmptyState } from "@/components/ui/centered-empty-state";
 import { useVehicles } from "@/features/app/carrier/hooks/useCarrier";
 import { useSubmitOffer } from "../hooks/useCarrierOffers";
 import type { Job } from "@/features/app/listing/types";
+import { formatCurrency } from "@/lib/currency";
 
 interface SubmitOfferFormProps {
   job: Job;
 }
 
-const euros = (cents: number) =>
-  new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(
-    cents / 100
-  );
+const euros = formatCurrency;
 
 const toLocalInput = (iso: string) => iso.slice(0, 16);
 

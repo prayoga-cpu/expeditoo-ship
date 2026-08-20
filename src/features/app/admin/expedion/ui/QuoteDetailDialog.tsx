@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import type { ExpedionQuote } from "@/db/schema/expedion";
+import { formatCurrency } from "@/lib/currency";
 
 /**
  * Everything the platform holds about one quote, including the slip the client
@@ -132,12 +133,7 @@ export function QuoteDetailDialog({
   };
 
   const money = (cents: number | null | undefined): string =>
-    cents === null || cents === undefined
-      ? "—"
-      : new Intl.NumberFormat("fr-FR", {
-          style: "currency",
-          currency: "EUR",
-        }).format(cents / 100);
+    cents === null || cents === undefined ? "—" : formatCurrency(cents);
 
   const documents = data
     ? [

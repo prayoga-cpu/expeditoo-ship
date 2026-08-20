@@ -17,7 +17,9 @@ import {
 import {
   DataTable,
   DataTableColumnHeader,
+  dateRangeFilterFn,
 } from "@/features/app/admin/ui/data-table";
+import { formatCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 import type { QuoteRow } from "@/server/dal/expedion-report.dal";
 
@@ -74,11 +76,7 @@ const DIALOG_ICON: Record<QuoteDialog, typeof Tag> = {
 
 function money(cents: number | null): string {
   if (cents === null) return "—";
-  return new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency: "EUR",
-    maximumFractionDigits: 0,
-  }).format(cents / 100);
+  return formatCurrency(cents, { fractionDigits: 0 });
 }
 
 /**
@@ -254,6 +252,10 @@ export function RecentQuotesPanel({
       },
       {
         id: "waiting",
+        // Sorting and the date-range filter both need `getValue("waiting")`
+        // to resolve to the underlying `requestedAt`, which this id-only
+        // column otherwise has no accessor for.
+        accessorFn: (row) => row.requestedAt,
         header: ({ column }) => (
           <DataTableColumnHeader column={column} title={t("recent.waiting")} />
         ),
@@ -281,7 +283,7 @@ export function RecentQuotesPanel({
             </div>
           );
         },
-        enableSorting: false,
+        filterFn: dateRangeFilterFn<QuoteRow>(),
       },
       {
         id: "action",
@@ -381,6 +383,7 @@ export function RecentQuotesPanel({
             searchPlaceholder={t("table.searchPlaceholder")}
             tableMinHeight="auto"
             onRowClick={(row) => setDetail(row.id)}
+            dateFilterKey="waiting"
           />
         )}
       </CardContent>

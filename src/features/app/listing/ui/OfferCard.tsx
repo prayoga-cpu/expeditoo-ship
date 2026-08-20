@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { formatCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 import type { Offer } from "../types";
 
@@ -19,11 +20,7 @@ interface OfferCardProps {
   onAccept: (offerId: string) => void;
 }
 
-const euros = (cents: number) =>
-  new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency: "EUR",
-  }).format(cents / 100);
+const euros = formatCurrency;
 
 export function OfferCard({
   offer,

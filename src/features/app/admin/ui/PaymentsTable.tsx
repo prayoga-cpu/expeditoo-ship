@@ -29,17 +29,10 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { DataTable, DataTableColumnHeader } from "./data-table";
+import { DataTable, DataTableColumnHeader, dateRangeFilterFn } from "./data-table";
 import type { AdminPayment } from "../hooks/useAdminPayments";
 import { useTranslations } from "next-intl";
-
-// Format currency
-function formatCurrency(cents: number, currency: string): string {
-    return new Intl.NumberFormat("fr-FR", {
-        style: "currency",
-        currency: currency.toUpperCase(),
-    }).format(cents / 100);
-}
+import { formatCurrency } from "@/lib/currency";
 
 // Status badge
 function PaymentStatusBadge({
@@ -168,7 +161,7 @@ export function PaymentsTable({
                 ),
                 cell: ({ row }) => (
                     <span className="font-medium">
-                        {formatCurrency(row.original.amount, row.original.currency)}
+                        {formatCurrency(row.original.amount, { currency: row.original.currency })}
                     </span>
                 ),
             },
@@ -194,6 +187,7 @@ export function PaymentsTable({
                         {new Date(row.original.createdAt).toLocaleDateString()}
                     </span>
                 ),
+                filterFn: dateRangeFilterFn<AdminPayment>(),
             },
             {
                 id: "actions",
@@ -224,6 +218,7 @@ export function PaymentsTable({
                 searchKey="userName"
                 searchPlaceholder={tTable("searchPlaceholder")}
                 className={className}
+                dateFilterKey="createdAt"
             />
 
             <AlertDialog
