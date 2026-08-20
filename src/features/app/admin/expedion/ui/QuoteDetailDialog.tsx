@@ -184,7 +184,7 @@ export function QuoteDetailDialog({
 
   // One `now` for the life of this dialog, so the deadline check and the
   // banner it drives cannot disagree mid-edit.
-  const now = useMemo(() => new Date(), [quoteId]);
+  const now = useMemo(() => new Date(), [quoteId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // A different quote opened mid-edit should not carry the previous one's
   // draft into it.
@@ -200,10 +200,6 @@ export function QuoteDetailDialog({
 
   useEffect(() => {
     if (autoEdit && data) enterEdit(data);
-    // Only when the quote first loads for this open — re-running on every
-    // `data` change (e.g. after a save) would blow away what the operator is
-    // mid-typing.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoEdit, data]);
 
   function setField<K extends keyof QuoteAdminPatch>(
