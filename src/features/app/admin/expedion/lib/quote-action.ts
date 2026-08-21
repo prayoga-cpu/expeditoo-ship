@@ -131,36 +131,6 @@ export function nextAction(quote: QuoteRow): QuoteAction {
   return { kind: "awaitingClient", actionable: false, dialog: null };
 }
 
-/** Sort weight, most urgent first; ties fall through to age. */
-const RANK: Record<QuoteActionKind, number> = {
-  escalate: 0,
-  assign: 1,
-  price: 2,
-  storage: 3,
-  awaitingPayment: 4,
-  awaitingClient: 5,
-  inProgress: 6,
-  done: 7,
-  cancelled: 8,
-};
-
-/**
- * Work order: most urgent kind first, then whichever has been waiting longest.
- *
- * Oldest-first inside a kind is the opposite of the newest-first the recent
- * feed uses, and deliberately so — the quote that has sat the longest is the
- * one about to cost something.
- */
-export function byUrgency() {
-  return (a: QuoteRow, b: QuoteRow): number => {
-    const rank = RANK[nextAction(a).kind] - RANK[nextAction(b).kind];
-    if (rank !== 0) return rank;
-    const at = a.requestedAt?.getTime() ?? Number.POSITIVE_INFINITY;
-    const bt = b.requestedAt?.getTime() ?? Number.POSITIVE_INFINITY;
-    return at - bt;
-  };
-}
-
 /**
  * Whatever a draft (a quote, or the in-progress edit form over one) carries
  * for the ten `escalationBlockers` checks — no more, since that is all this

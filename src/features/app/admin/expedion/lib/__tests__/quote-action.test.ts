@@ -2,12 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { QuoteRow } from "@/server/dal/expedion-report.dal";
 
-import {
-  byUrgency,
-  isNewQuote,
-  nextAction,
-  storageDaysLeft,
-} from "../quote-action";
+import { isNewQuote, nextAction, storageDaysLeft } from "../quote-action";
 
 /**
  * The recent list's badge and its button both come from `nextAction`, so what
@@ -195,31 +190,5 @@ describe("storageDaysLeft", () => {
       )
     ).toBe(-1);
     expect(storageDaysLeft(row(), NOW)).toBeNull();
-  });
-});
-
-describe("byUrgency", () => {
-  it("orders by kind, then oldest first inside a kind", () => {
-    const escalation = row({
-      id: "escalate",
-      status: "paid",
-      queues: { ...NO_QUEUES, escalationDue: true },
-    });
-    const oldPrice = row({
-      id: "old-price",
-      status: "pending",
-      queues: { ...NO_QUEUES, toPrice: true },
-      requestedAt: new Date("2026-08-01T12:00:00Z"),
-    });
-    const newPrice = row({
-      id: "new-price",
-      status: "pending",
-      queues: { ...NO_QUEUES, toPrice: true },
-      requestedAt: new Date("2026-08-18T12:00:00Z"),
-    });
-
-    expect(
-      [newPrice, escalation, oldPrice].sort(byUrgency()).map((r) => r.id)
-    ).toEqual(["escalate", "old-price", "new-price"]);
   });
 });

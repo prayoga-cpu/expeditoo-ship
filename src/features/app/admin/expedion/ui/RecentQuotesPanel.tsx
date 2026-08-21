@@ -37,7 +37,6 @@ import { QuoteDetailDialog } from "./QuoteDetailDialog";
 import { RepriceDialog } from "./RepriceDialog";
 import { StorageDialog } from "./StorageDialog";
 import {
-  byUrgency,
   isNewQuote,
   nextAction,
   storageDaysLeft,
@@ -53,11 +52,11 @@ import {
  * answers "has anything arrived, and does it need me?" — the KPIs below say how
  * the business is doing, which is a different question and a slower one.
  *
- * Two views over the same rows: **To handle** (default when there is any) is
- * the work, most urgent first and oldest first within a kind; **All** is the
- * newest-first feed the section used to be. Every row states what it is waiting
- * for and offers exactly that action as its button, so an operator never has to
- * open a dropdown to find out whether there is anything to do.
+ * Two views over the same rows, both newest-first: **To handle** (default
+ * when there is any) is just the actionable subset; **All** is the full feed.
+ * Every row states what it is waiting for and offers exactly that action as
+ * its button, so an operator never has to open a dropdown to find out
+ * whether there is anything to do.
  */
 
 const NOT_ACTIONABLE_TONE = "text-muted-foreground";
@@ -143,13 +142,14 @@ export function RecentQuotesPanel({
   // sort cannot each be computed against a slightly different clock.
   const now = useMemo(() => new Date(), [rows]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // `rows` arrives newest-first (the report's `getRecentQuotes` query orders
+  // by `requested_at desc`); filtering to the actionable subset preserves
+  // that order rather than re-ranking by urgency, so a quote that just came
+  // in surfaces immediately instead of waiting behind older backlog.
   const { todo, all, newCount } = useMemo(() => {
     const decorated = rows.map((row) => ({ row, action: nextAction(row) }));
     return {
-      todo: decorated
-        .filter((d) => d.action.actionable)
-        .map((d) => d.row)
-        .sort(byUrgency()),
+      todo: decorated.filter((d) => d.action.actionable).map((d) => d.row),
       all: rows,
       newCount: rows.filter((row) => isNewQuote(row, now)).length,
     };
