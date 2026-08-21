@@ -8,6 +8,7 @@ import {
   expedionPriceSuggestionService,
   type PriceSuggestion,
 } from "@/server/services/expedion-price-suggestion.service";
+import { notifyExpedionAdmins } from "@/server/services/expedion-realtime.service";
 import { imageUrlToBase64DataUrl } from "@/lib/ai/openai";
 import { searchAddress } from "@/lib/geocoding";
 import type {
@@ -301,6 +302,11 @@ export const expedionService = {
       return created;
     });
 
+    // A new quote is exactly what the dashboard's "Recent quotes" panel
+    // exists to surface; an operator watching it should see this land
+    // without a refresh.
+    void notifyExpedionAdmins(quote.id);
+
     // Priced outside the transaction: it geocodes over the network, and a
     // quote that fails to auto-price is still a valid quote awaiting an admin.
     void this.autoPrice(quote.id).catch((e) =>
@@ -411,6 +417,7 @@ export const expedionService = {
     }
 
     const updated = await expedionDal.update(id, patch);
+    void notifyExpedionAdmins(id);
 
     // Dimensions drive the price, so a corrected dimension reprices.
     if (dimensionsOrAddressChanged) {
@@ -579,6 +586,8 @@ export const expedionService = {
       return row;
     });
 
+    void notifyExpedionAdmins(id);
+
     // Dimensions may just have appeared or changed; give auto-pricing another
     // shot the same way a client-side dimension edit would.
     void this.autoPrice(id).catch((e) =>
@@ -686,6 +695,7 @@ export const expedionService = {
         .catch(() => undefined);
     }
 
+    void notifyExpedionAdmins(id);
     return updated;
   },
 
@@ -706,8 +716,8 @@ export const expedionService = {
         : quote.quoteInsuredCents;
     if (price == null) throw err("QUOTE_NOT_PRICED", 409);
 
-    return await db.transaction(async (tx) => {
-      const updated = await expedionDal.update(
+    const updated = await db.transaction(async (tx) => {
+      const row = await expedionDal.update(
         id,
         {
           status: "accepted",
@@ -728,8 +738,11 @@ export const expedionService = {
         },
         tx
       );
-      return updated;
+      return row;
     });
+
+    void notifyExpedionAdmins(id);
+    return updated;
   },
 
   /**
@@ -745,8 +758,8 @@ export const expedionService = {
       Date.now() + escalationWindowHours() * 60 * 60 * 1000
     );
 
-    return await db.transaction(async (tx) => {
-      const updated = await expedionDal.update(
+    const updated = await db.transaction(async (tx) => {
+      const row = await expedionDal.update(
         id,
         {
           paymentStatus: "paid",
@@ -759,15 +772,18 @@ export const expedionService = {
         {
           id: nanoid(),
           quoteId: id,
-          status: updated.status,
+          status: row.status,
           actor: "system",
           message: "Paiement reçu",
           metadata: { ...metadata, escalateAfter: escalateAfter.toISOString() },
         },
         tx
       );
-      return updated;
+      return row;
     });
+
+    void notifyExpedionAdmins(id);
+    return updated;
   },
 
   async adminUpdate(id: string, input: AdminUpdateExpedionQuoteInput) {
@@ -822,6 +838,10 @@ export const expedionService = {
       );
       return row;
     });
+
+    // The acting admin's own client already invalidates on this mutation's
+    // success — this is for every other admin with the dashboard open.
+    void notifyExpedionAdmins(id);
 
     if (input.assignedCarrierId && !quote.assignedCarrierId) {
       void expedionSmsService

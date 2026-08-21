@@ -24,6 +24,7 @@ import { expedionDal } from "@/server/dal/expedion.dal";
 import { listingsService } from "@/server/services/listings.service";
 import { listingsDal } from "@/server/dal/listings.dal";
 import { expedionSmsService } from "@/server/services/expedion-sms.service";
+import { notifyExpedionAdmins } from "@/server/services/expedion-realtime.service";
 import {
   ExpedionError,
   canTransition,
@@ -278,6 +279,8 @@ export const expedionEscalationService = {
         );
         return row;
       });
+
+      void notifyExpedionAdmins(quoteId);
 
       void expedionSmsService
         .deliveryUpdate({

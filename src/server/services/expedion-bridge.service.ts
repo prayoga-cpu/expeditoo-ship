@@ -22,6 +22,7 @@ import { nanoid } from "nanoid";
 import { db } from "@/db";
 import { expedionDal } from "@/server/dal/expedion.dal";
 import { expedionSmsService } from "@/server/services/expedion-sms.service";
+import { notifyExpedionAdmins } from "@/server/services/expedion-realtime.service";
 import {
   ExpedionError,
   canTransition,
@@ -99,6 +100,8 @@ export const expedionBridgeService = {
       );
       return row;
     });
+
+    void notifyExpedionAdmins(quote.id);
 
     if (input.carrierId && !quote.assignedCarrierId) {
       void expedionSmsService

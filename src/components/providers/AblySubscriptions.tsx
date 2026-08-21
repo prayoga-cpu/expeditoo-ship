@@ -167,6 +167,15 @@ export function AblySubscriptions() {
           queryClient.invalidateQueries({ queryKey: ["listings"] });
           break;
 
+        case "expedion":
+          // Broad on purpose: the same prefix `useExpedionQuoteAdmin` and
+          // friends already invalidate on their own mutations' success,
+          // covering both the operator report and any open quote-detail
+          // query — this just reaches the other admins who didn't fire the
+          // mutation themselves.
+          queryClient.invalidateQueries({ queryKey: ["admin", "expedion"] });
+          break;
+
         default:
           // Ignore unknown types - don't invalidate anything
           console.log(
