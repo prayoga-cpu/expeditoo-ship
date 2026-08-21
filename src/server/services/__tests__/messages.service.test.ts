@@ -20,6 +20,7 @@ vi.mock('@/lib/ably-server', () => {
 vi.mock('@/server/dal/messages.dal', () => ({
   messagesDAL: {
     findConversation: vi.fn(),
+    findSupportConversation: vi.fn(),
     createConversation: vi.fn(),
     getConversationById: vi.fn(),
     createMessage: vi.fn(),
@@ -103,6 +104,30 @@ describe('messagesService', () => {
              });
 
              expect(messagesDAL.addParticipant).toHaveBeenCalledWith('support-chat', 'admin-user');
+        });
+    });
+
+    describe('getOrCreateSupportConversation', () => {
+        it('returns the existing thread without creating a new one', async () => {
+            vi.mocked(messagesDAL.findSupportConversation).mockResolvedValue({ id: 'support-1' } as any);
+
+            const result = await messagesService.getOrCreateSupportConversation('user-1');
+
+            expect(result).toEqual({ conversationId: 'support-1', created: false });
+            expect(messagesDAL.createConversation).not.toHaveBeenCalled();
+        });
+
+        it('creates a SUPPORT conversation on first use', async () => {
+            vi.mocked(messagesDAL.findSupportConversation).mockResolvedValue(null as never);
+            vi.mocked(messagesDAL.createConversation).mockResolvedValue({ id: 'nano-id' } as any);
+
+            const result = await messagesService.getOrCreateSupportConversation('user-1');
+
+            expect(messagesDAL.createConversation).toHaveBeenCalledWith(
+                { id: 'nano-id', type: 'SUPPORT', listingId: null },
+                ['user-1']
+            );
+            expect(result).toEqual({ conversationId: 'nano-id', created: true });
         });
     });
 

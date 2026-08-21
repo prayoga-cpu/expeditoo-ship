@@ -40,6 +40,19 @@ export interface ExpedionCaller {
   userId: string;
   isAdmin: boolean;
 
+  /**
+   * The caller's address, when the credential established one — a Better Auth
+   * session or a Google-signed Firebase token. Absent on the shared-key paths,
+   * where the app names a UID and no address is proven.
+   *
+   * Only consumers that need to *find* the matching Better Auth row should
+   * read this, and only together with [emailVerified]: an unverified address
+   * is a claim, and matching on it would let anyone reach another person's
+   * account by signing up with their address in the other system.
+   */
+  email?: string;
+  emailVerified?: boolean;
+
   /** Which path authenticated this caller, for logging and for tests. */
   via: "session" | "firebase" | "client-key" | "admin-key";
 }
@@ -96,7 +109,13 @@ async function sessionCaller(req: Request): Promise<ExpedionCaller | null> {
       console.error("[expedion-auth] role lookup failed", error);
     }
 
-    return { userId: session.user.id, isAdmin, via: "session" };
+    return {
+      userId: session.user.id,
+      isAdmin,
+      email: session.user.email ?? undefined,
+      emailVerified: session.user.emailVerified ?? false,
+      via: "session",
+    };
   } catch (error) {
     console.error("[expedion-auth] session lookup failed", error);
     return null;
@@ -139,7 +158,13 @@ export async function requireExpedionCaller(
     } catch (error) {
       console.error("[expedion-auth] firebase role lookup failed", error);
     }
-    return { userId: firebase.uid, isAdmin, via: "firebase" };
+    return {
+      userId: firebase.uid,
+      isAdmin,
+      email: firebase.email ?? undefined,
+      emailVerified: firebase.emailVerified ?? false,
+      via: "firebase",
+    };
   }
 
   // 3. Otherwise fall back to the app-level keys.

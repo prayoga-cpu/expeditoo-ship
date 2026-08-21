@@ -120,6 +120,31 @@ export const messagesService = {
   },
 
   /**
+   * The caller's support thread, created on first use.
+   *
+   * Both entry points route through here — the web client's
+   * `/api/chat/support` and the Expedion bridge's `/api/expedion/support` — so
+   * a person who writes in from the Flutter app and again from the website
+   * lands in one thread, which is the thread the admin inbox shows.
+   *
+   * Two simultaneous first-time calls can still race into two threads; there
+   * is no unique constraint to lean on, and one duplicate on a first message
+   * is cheaper than serialising every support request. `findSupportConversation`
+   * takes the oldest, so the pair collapses back to one from then on.
+   */
+  async getOrCreateSupportConversation(userId: string) {
+    const existing = await messagesDAL.findSupportConversation(userId);
+    if (existing) return { conversationId: existing.id, created: false };
+
+    const conversation = await messagesDAL.createConversation(
+      { id: nanoid(), type: "SUPPORT", listingId: null },
+      [userId]
+    );
+
+    return { conversationId: conversation.id, created: true };
+  },
+
+  /**
    * Get user's inbox
    */
   async getInbox(userId: string, query: GetConversationsQuery) {

@@ -3,8 +3,9 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { db } from "@/db";
 import { conversations, messages } from "@/db/schema/messages";
+import { hasAnyRole } from "@/server/services/user.service";
 
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, gt, sql } from "drizzle-orm";
 
 /**
  * GET /api/admin/support-chats
@@ -27,6 +28,24 @@ export async function GET(req: NextRequest) {
                     }
                 },
                 { status: 401 }
+            );
+        }
+
+        // Every support conversation on the platform, across every user —
+        // being signed in is not being staff. `support` is this feature's own
+        // role (docs/specs/roles_spec.md: "act in support conversations");
+        // `admin` always has it too.
+        const authorized = await hasAnyRole(session.user.id, ["admin", "support"]);
+        if (!authorized) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: {
+                        code: "FORBIDDEN",
+                        message: "Admin or support access required"
+                    }
+                },
+                { status: 403 }
             );
         }
 
@@ -79,6 +98,12 @@ export async function GET(req: NextRequest) {
                 let unreadCount = 0;
 
                 if (myParticipant) {
+                    // `gt`, not an interpolated `sql` template: a JS Date
+                    // dropped into a raw fragment reaches the pg driver as a
+                    // bind parameter it refuses ("Received an instance of
+                    // Date"), and the whole listing 500s. It only bit once an
+                    // admin had joined a thread *and* read it — which is to
+                    // say, from the second visit to this page onward.
                     const countResult = await db
                         .select({ count: sql<number>`count(*)` })
                         .from(messages)
@@ -86,8 +111,8 @@ export async function GET(req: NextRequest) {
                             and(
                                 eq(messages.conversationId, chat.id),
                                 myParticipant.lastReadAt
-                                    ? sql`${messages.createdAt} > ${myParticipant.lastReadAt}`
-                                    : sql`true`
+                                    ? gt(messages.createdAt, myParticipant.lastReadAt)
+                                    : undefined
                             )
                         );
                     unreadCount = Number(countResult[0]?.count || 0);

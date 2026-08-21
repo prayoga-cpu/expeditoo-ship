@@ -6,7 +6,7 @@ import {
   type InsertConversation,
   type InsertMessage,
 } from "@/db/schema/messages";
-import { eq, and, sql, inArray, gt } from "drizzle-orm";
+import { eq, and, sql, inArray, gt, asc } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 export const messagesDAL = {
@@ -378,5 +378,38 @@ export const messagesDAL = {
       .returning({ id: conversationParticipants.id });
 
     return result.length > 0;
+  },
+
+  /**
+   * The caller's own support thread, if they already have one.
+   *
+   * Joins on `conversations.type` rather than reading the type off whichever
+   * participant row comes back first. That shortcut is what made the web
+   * client open a *second* support conversation for anyone who had ever
+   * messaged a carrier — their first participant row is a LISTING chat, the
+   * type check fails, and a fresh thread is created on every visit. The admin
+   * inbox then shows one person as several unrelated conversations.
+   *
+   * Oldest wins, so where duplicates already exist both products converge on
+   * the thread that holds the history.
+   */
+  async findSupportConversation(userId: string) {
+    const [existing] = await db
+      .select({ id: conversations.id })
+      .from(conversations)
+      .innerJoin(
+        conversationParticipants,
+        eq(conversationParticipants.conversationId, conversations.id)
+      )
+      .where(
+        and(
+          eq(conversations.type, "SUPPORT"),
+          eq(conversationParticipants.userId, userId)
+        )
+      )
+      .orderBy(asc(conversations.createdAt))
+      .limit(1);
+
+    return existing ?? null;
   },
 };

@@ -1,14 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-import { db } from "@/db";
-import { conversations, conversationParticipants } from "@/db/schema/messages";
-import { eq, and } from "drizzle-orm";
-import { nanoid } from "nanoid";
+import { messagesService } from "@/server/services/messages.service";
 
 /**
  * POST /api/chat/support
  * Create or get existing support chat for current user
+ *
+ * The lookup lives in `messagesService.getOrCreateSupportConversation`, shared
+ * with the Expedion bridge (`/api/expedion/support`) so both products write to
+ * one thread per person. It also fixes what this route used to do: it read the
+ * user's *first* participant row and only accepted it if that conversation
+ * happened to be a support one, so anybody who had ever messaged a carrier got
+ * a brand-new support thread on every visit.
  */
 export async function POST(_req: NextRequest) {
     try {
@@ -30,57 +34,14 @@ export async function POST(_req: NextRequest) {
             );
         }
 
-        const userId = session.user.id;
-
-        // Check if user already has a support chat
-        const existingChat = await db.query.conversationParticipants.findFirst({
-            where: and(
-                eq(conversationParticipants.userId, userId)
-            ),
-            with: {
-                conversation: true,
-            },
-        });
-
-        // Filter for support chat type
-        const supportChat = existingChat?.conversation.type === "SUPPORT"
-            ? existingChat
-            : null;
-
-        if (supportChat) {
-            return NextResponse.json({
-                success: true,
-                data: {
-                    chatRoomId: supportChat.conversationId,
-                    exists: true,
-                }
-            });
-        }
-
-        // Create new support chat
-        const chatRoomId = nanoid();
-        const participantId = nanoid();
-
-        // Create conversation
-        await db.insert(conversations).values({
-            id: chatRoomId,
-            type: "SUPPORT",
-            listingId: null, // No listing for support chats
-            lastMessageAt: null,
-        });
-
-        // Add user as participant
-        await db.insert(conversationParticipants).values({
-            id: participantId,
-            conversationId: chatRoomId,
-            userId: userId,
-        });
+        const { conversationId, created } =
+            await messagesService.getOrCreateSupportConversation(session.user.id);
 
         return NextResponse.json({
             success: true,
             data: {
-                chatRoomId,
-                exists: false,
+                chatRoomId: conversationId,
+                exists: !created,
             }
         });
     } catch (error) {
