@@ -1,11 +1,18 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useGatedAction } from "../hooks/useGatedAction";
+import { GatedButtonContent } from "./LandingGatedButton";
 
 const START_SECONDS = 252;
 const OPENING_BID = 196;
 const OPENING_COUNT = 3;
+const JOB_REF = "EX-2481";
+/** Below this the demo stops being a demo of anything. */
+const MIN_BID = 50;
+
+type BidError = "errorInvalid" | "errorTooLow" | "errorTooHigh";
 
 function formatClock(total: number) {
   const mm = String(Math.floor(total / 60)).padStart(2, "0");
@@ -27,53 +34,78 @@ function useCountdown() {
   return formatClock(seconds);
 }
 
-/** Local state for the demo auction: an offer only lands if it undercuts. */
+/**
+ * Local state for the demo auction. An offer only lands if it parses, clears
+ * the floor and undercuts the standing best — the same three rules the real
+ * board applies, minus the listing.
+ * `docs/specs/landing_gated_actions_spec.md` §4.
+ */
 function useDemoBid() {
   const [best, setBest] = useState(OPENING_BID);
   const [count, setCount] = useState(OPENING_COUNT);
   const [leading, setLeading] = useState(false);
-  const [rejected, setRejected] = useState(false);
-  const rejectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [error, setError] = useState<BidError | null>(null);
+  const [shaking, setShaking] = useState(false);
 
-  useEffect(
-    () => () => {
-      if (rejectTimer.current) clearTimeout(rejectTimer.current);
-    },
-    []
-  );
+  /** Two frames off, then on, so a repeated rejection replays the shake. */
+  function shake() {
+    setShaking(false);
+    if (typeof requestAnimationFrame !== "function") return;
+    requestAnimationFrame(() => requestAnimationFrame(() => setShaking(true)));
+  }
+
+  function reject(code: BidError) {
+    setError(code);
+    shake();
+    return false;
+  }
 
   function submit(raw: string) {
-    const value = parseFloat(raw.replace(",", "."));
-    if (!value || value >= best) {
-      setRejected(true);
-      if (rejectTimer.current) clearTimeout(rejectTimer.current);
-      rejectTimer.current = setTimeout(() => setRejected(false), 900);
-      return false;
-    }
-    setBest(Math.round(value));
+    const value = Number.parseFloat(raw.replace(",", "."));
+
+    if (!Number.isFinite(value)) return reject("errorInvalid");
+    if (value < MIN_BID) return reject("errorTooLow");
+    if (value >= best) return reject("errorTooHigh");
+
+    setError(null);
+    // Floor, not round: 195.6 against a standing 196 would round back up to
+    // 196 and the card would claim the lead at a price that never undercut.
+    setBest(Math.floor(value));
     setCount((c) => c + 1);
     setLeading(true);
     return true;
   }
 
-  return { best, count, leading, rejected, submit };
+  return { best, count, leading, error, shaking, submit, clearError: () => setError(null) };
 }
 
 export function LandingBidCard() {
   const t = useTranslations("marketing.bidCard");
   const clock = useCountdown();
-  const { best, count, leading, rejected, submit } = useDemoBid();
+  const { best, count, leading, error, shaking, submit, clearError } =
+    useDemoBid();
   const [draft, setDraft] = useState("");
+  const { phase, start, isBusy, isSessionLoading } = useGatedAction({
+    intent: "bid",
+    reference: JOB_REF,
+  });
 
   function handleSubmit() {
-    if (submit(draft)) setDraft("");
+    // `start()` refuses while the session is unknown, so without this the
+    // Enter key would consume the offer — best price moved, count raised — and
+    // then go nowhere.
+    if (isBusy || isSessionLoading) return;
+    if (submit(draft)) {
+      setDraft("");
+      start();
+    }
   }
 
   return (
     <div className="flex flex-col gap-4 rounded-[20px] border border-[var(--lp-line)] bg-[var(--lp-bg2)] p-[22px] shadow-[var(--lp-shadow)]">
       <div className="flex flex-wrap items-center gap-2">
         <span className="font-mono text-[11px] tracking-[0.12em] text-[var(--lp-dim)]">
-          COURSE EX-2481
+          COURSE {JOB_REF}
         </span>
         <span className="rounded-md border border-[rgba(255,169,31,0.3)] bg-[rgba(255,169,31,0.12)] px-2 py-1 font-mono text-[10px] tracking-[0.1em] text-[var(--lp-ambertext)]">
           {t("fromExpedion")}
@@ -103,7 +135,10 @@ export function LandingBidCard() {
           <span className="text-[12.5px] text-[var(--lp-muted)]">
             {leading ? t("yourOffer") : t("bestOffer")}
           </span>
-          <span className="font-mono text-[30px] font-medium tracking-[-0.02em]">
+          <span
+            key={best}
+            className="animate-lp-tick font-mono text-[30px] font-medium tracking-[-0.02em]"
+          >
             {best} €
           </span>
         </div>
@@ -118,7 +153,7 @@ export function LandingBidCard() {
       </div>
 
       {leading && (
-        <div className="flex items-center gap-2 rounded-[10px] border border-[var(--lp-greenbg)] bg-[var(--lp-greenbg)] px-3.5 py-2.5">
+        <div className="animate-lp-pop flex items-center gap-2 rounded-[10px] border border-[var(--lp-greenbg)] bg-[var(--lp-greenbg)] px-3.5 py-2.5">
           <span className="h-[7px] w-[7px] rounded-full bg-[var(--lp-green)]" />
           <span className="text-[13.5px] font-medium text-[var(--lp-green)]">
             {t("leading")}
@@ -126,28 +161,53 @@ export function LandingBidCard() {
         </div>
       )}
 
-      <div className="flex gap-2.5">
-        <input
-          type="text"
-          inputMode="numeric"
-          placeholder="189"
-          aria-label={t("bidInputLabel")}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-          className={`box-border w-[110px] min-w-0 rounded-[11px] border bg-[var(--lp-input)] px-3.5 py-3 font-mono text-base text-[var(--lp-text)] outline-none ${
-            rejected
-              ? "border-[var(--lp-red)]"
-              : "border-[var(--lp-line2)] focus:border-[#0052FF]"
-          }`}
-        />
-        <button
-          type="button"
-          onClick={handleSubmit}
-          className="flex-1 cursor-pointer rounded-[11px] border-0 bg-[#0052FF] px-[18px] py-3 text-[15px] font-medium text-white transition-colors hover:bg-[#1F63FF]"
-        >
-          {t("bidCta")}
-        </button>
+      <div className="flex flex-col gap-2">
+        <div className="flex gap-2.5">
+          <input
+            type="text"
+            inputMode="numeric"
+            placeholder="189"
+            aria-label={t("bidInputLabel")}
+            aria-invalid={!!error}
+            aria-describedby={error ? "lp-bid-error" : undefined}
+            value={draft}
+            disabled={isBusy}
+            onChange={(e) => {
+              setDraft(e.target.value);
+              if (error) clearError();
+            }}
+            onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+            className={`box-border w-[110px] min-w-0 rounded-[11px] border bg-[var(--lp-input)] px-3.5 py-3 font-mono text-base text-[var(--lp-text)] outline-none disabled:opacity-60 ${
+              error
+                ? "border-[var(--lp-red)]"
+                : "border-[var(--lp-line2)] focus:border-[#0052FF]"
+            } ${shaking ? "animate-lp-shake" : ""}`}
+          />
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={isBusy || isSessionLoading}
+            aria-busy={isBusy}
+            aria-live="polite"
+            className="flex-1 cursor-pointer rounded-[11px] border-0 bg-[#0052FF] px-[18px] py-3 text-[15px] font-medium text-white transition-colors hover:bg-[#1F63FF] disabled:cursor-default disabled:opacity-90"
+          >
+            <GatedButtonContent
+              phase={phase}
+              intent="bid"
+              idleLabel={t("bidCta")}
+            />
+          </button>
+        </div>
+
+        {error && (
+          <span
+            id="lp-bid-error"
+            role="alert"
+            className="text-[13px] text-[var(--lp-red)]"
+          >
+            {t(error, { min: MIN_BID, best })}
+          </span>
+        )}
       </div>
 
       <span className="font-mono text-[10.5px] tracking-[0.1em] text-[var(--lp-faint)]">

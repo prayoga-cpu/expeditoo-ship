@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { useAuth } from "@/lib/auth-context";
 import { LandingBidCard } from "./LandingBidCard";
+import { LandingGatedButton } from "./LandingGatedButton";
 import { LandingStats } from "./LandingStats";
 import { LP_ANCHOR_OFFSET, LP_BTN_GHOST, LP_BTN_PRIMARY } from "./styles";
 
@@ -32,6 +34,7 @@ function HeroSteps() {
 
 export function LandingHero() {
   const t = useTranslations("marketing.hero");
+  const { isAuthenticated } = useAuth();
 
   return (
     <section
@@ -63,12 +66,11 @@ export function LandingHero() {
           <HeroSteps />
 
           <div className="flex flex-wrap items-center gap-3">
-            <Link
-              href="/signup"
+            <LandingGatedButton
+              intent="carrier"
+              label={isAuthenticated ? t("primaryCtaAuthed") : t("primaryCta")}
               className={`${LP_BTN_PRIMARY} px-[26px] py-[15px] text-base`}
-            >
-              {t("primaryCta")}
-            </Link>
+            />
             <Link
               href="/#courses"
               className={`${LP_BTN_GHOST} px-[26px] py-[15px] text-base`}

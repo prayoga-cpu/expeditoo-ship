@@ -182,6 +182,12 @@
       "resending": "Sending...",
       "resent": "Verification email sent!",
       "backToLogin": "Back to login"
+    },
+    "intent": {
+      "bid": "You were about to place an offer.",
+      "bidWithRef": "You were about to bid on {ref}.",
+      "jobs": "You were heading for the full job board.",
+      "carrier": "You were joining the carrier network."
     }
   },
   "profile": {
@@ -765,7 +771,8 @@
       "step2": "You underbid",
       "step3": "Deliver, paid in 7 days",
       "primaryCta": "Join the network",
-      "secondaryCta": "See open jobs"
+      "secondaryCta": "See open jobs",
+      "primaryCtaAuthed": "Open your profile"
     },
     "bidCard": {
       "fromExpedion": "FROM EXPEDION",
@@ -778,7 +785,10 @@
       "leading": "Your offer is in the lead",
       "bidCta": "Bid in euros, all-in",
       "bidInputLabel": "Your offer in euros",
-      "insured": "INSURED BY EXPEDION · PAID WITHIN 7 DAYS"
+      "insured": "INSURED BY EXPEDION · PAID WITHIN 7 DAYS",
+      "errorInvalid": "Enter an amount in euros.",
+      "errorTooLow": "Serious offers start at {min} €.",
+      "errorTooHigh": "Your offer has to undercut {best} €."
     },
     "stats": {
       "jobsPerMonth": "Jobs posted per month",
@@ -814,12 +824,13 @@
       "bestOffer": "Best offer",
       "closes": "CLOSES {time}",
       "bid": "Bid",
-      "anonymised": "Listings shown anonymised. Full addresses unlock once you are verified.",
+      "anonymised": "Illustrative rows — sample data, not live jobs. Full addresses unlock once you are verified.",
       "jobs": {
         "one": "Commode Louis XV, 62 kg",
         "two": "Pair of armchairs, 34 kg",
         "three": "Gilt mirror, fragile, 18 kg"
-      }
+      },
+      "liveLabel": "Board updating live"
     },
     "advantages": {
       "eyebrow": "WHY CARRIERS STAY",
@@ -884,8 +895,10 @@
     },
     "cta": {
       "title": "Verified in 24 hours. Bidding the same day.",
-      "subtitle": "Kbis, insurance, licence: upload three documents and open your first board.",
-      "primary": "Become a carrier"
+      "subtitle": "SIRET, insurance, licence: upload three documents and open your first board.",
+      "primary": "Become a carrier",
+      "primaryAuthed": "Open your profile",
+      "subtitleAuthed": "You are already signed in. Your documents, your vehicle and your verification all live in your profile."
     },
     "footer": {
       "tagline": "The carrier network of the Expedion group. Auction-house shipments, bid by verified carriers.",
@@ -904,6 +917,464 @@
       "privacy": "Privacy policy",
       "copyright": "© 2026 Expeditoo — Expedion Group",
       "sameGroup": "Expedion and Expeditoo are part of the same company"
+    },
+    "actions": {
+      "bid": {
+        "validating": "Checking your offer…",
+        "success": "Offer ready"
+      },
+      "jobs": {
+        "validating": "Opening the board…",
+        "success": "Board ready"
+      },
+      "carrier": {
+        "validating": "Checking your account…",
+        "success": "Let's get started"
+      }
+    },
+    "verification": {
+      "eyebrow": "VERIFICATION",
+      "title": "How drivers are verified",
+      "intro": "Every driver bidding on this network is an approved individual carrier. Nothing is visible to bid on until that approval is granted. Here is exactly what we ask for, what we check, and what happens to your documents afterwards.",
+      "requirements": {
+        "title": "What you need to apply",
+        "items": [
+          {
+            "title": "Proof of identity",
+            "desc": "A valid identity document, plus the licence category covering the vehicle you intend to drive."
+          },
+          {
+            "title": "A SIRET number",
+            "desc": "A sole trader carrying goods for hire in France has one. We do not ask for a KBIS extract — an auto-entrepreneur does not have one, and requiring it would exclude most of the drivers this network is built for."
+          },
+          {
+            "title": "Transport insurance",
+            "desc": "Cover for goods in transit, in your own name, valid on the date you apply and kept valid afterwards."
+          },
+          {
+            "title": "One vehicle",
+            "desc": "Registration, capacity and type for the vehicle you will use. One is enough — an offer names the vehicle that will do the job, so we need the one you are actually bidding with, not a fleet."
+          }
+        ]
+      },
+      "process": {
+        "title": "What happens next",
+        "items": [
+          {
+            "title": "You apply",
+            "desc": "Create an account, complete the carrier application and upload your documents. You can save and come back; nothing is submitted until you say so."
+          },
+          {
+            "title": "We check",
+            "desc": "An operator reviews the documents against the requirements above and confirms the SIRET and the insurance are live and in your name."
+          },
+          {
+            "title": "You are approved",
+            "desc": "Approval opens the job board. From that point you can see escalated jobs and bid on price, arrival time and vehicle."
+          },
+          {
+            "title": "You stay current",
+            "desc": "Documents carry expiry dates. We track them and warn you before one lapses, so approval does not quietly go stale."
+          }
+        ]
+      },
+      "privacy": {
+        "title": "What happens to your documents",
+        "body": "Identity and compliance documents are held in private storage. They are never served from a public address, never attached to a job, and never shown to another carrier or to the client whose delivery you are carrying. Only operators reviewing your application can open them. Bank details are held by our payment provider — we keep only the last four digits so you can recognise your own account.",
+        "expiry": "If a document expires and is not replaced, the account is suspended rather than left to bid with cover that no longer exists. Replacing the document restores it."
+      },
+      "cta": "Apply as a driver",
+      "ctaSecondary": "Ask a question first"
+    },
+    "auctionHouses": {
+      "eyebrow": "AUCTION HOUSES",
+      "title": "For auction houses and their buyers",
+      "intro": "Expeditoo is the carrier network behind Expedion. You never post here and you never manage a driver here — you accept a quote in Expedion, and this network exists so that a job nobody has picked up still gets collected.",
+      "flow": {
+        "title": "How a delivery reaches this network",
+        "items": [
+          {
+            "title": "The quote is accepted",
+            "desc": "Your buyer accepts and pays a transport quote inside Expedion. That is the whole commitment on their side — the price is fixed at that moment."
+          },
+          {
+            "title": "The clock starts",
+            "desc": "If no driver has taken the job within 48 hours, it escalates automatically. Nothing needs to be chased and nobody has to notice."
+          },
+          {
+            "title": "Drivers bid it down",
+            "desc": "Approved carriers compete on price, collection time and vehicle. What the buyer already paid is the ceiling, never a target."
+          },
+          {
+            "title": "An operator awards it",
+            "desc": "The cheapest bid does not win automatically. An operator compares price against arrival time and vehicle and selects the one that will actually work."
+          }
+        ]
+      },
+      "guarantees": {
+        "title": "What that means for you",
+        "items": [
+          {
+            "title": "The price does not move",
+            "desc": "Escalation never asks the buyer for more money. The amount agreed in Expedion is what they pay, whatever the job takes to fill."
+          },
+          {
+            "title": "Nobody leaves your product",
+            "desc": "Status flows back to Expedion — awarded, collected, in transit, delivered. Your buyer follows it where they started."
+          },
+          {
+            "title": "Only verified carriers",
+            "desc": "Every bidder has passed identity, SIRET, insurance and vehicle checks before seeing the job at all."
+          },
+          {
+            "title": "Paid on delivery, not before",
+            "desc": "Funds are authorised when a driver is awarded the job and captured only once delivery is confirmed."
+          }
+        ]
+      },
+      "notMarketplace": {
+        "title": "What this is not",
+        "body": "This is not a marketplace where you shop for transport, and there is no goods auction here — the only auction is the reverse one on price between carriers. There is no house-facing job form and nothing to log into. If you want to arrange transport, that happens in Expedion; this network is what stands behind it when a job goes unclaimed."
+      },
+      "cta": "Go to Expedion",
+      "ctaSecondary": "Talk to us"
+    },
+    "contact": {
+      "eyebrow": "CONTACT",
+      "title": "Talk to us",
+      "intro": "Drivers, auction houses, buyers chasing a delivery, or anyone with a question about how this works. Write below and it reaches the same desk that answers in-app support.",
+      "form": {
+        "name": "Your name",
+        "email": "Email address",
+        "company": "Company (optional)",
+        "subject": "What is this about?",
+        "message": "Message",
+        "send": "Send message",
+        "sending": "Sending…",
+        "failed": "Your message could not be sent. Please try again, or write to support@expeditoo.com directly.",
+        "rateLimited": "Too many messages from this connection. Please wait a few minutes and try again, or write to support@expeditoo.com directly.",
+        "privacyNote": "We use your address to reply and nothing else.",
+        "successTitle": "Message sent",
+        "successBody": "Thank you — we have it. We will reply to {email}, usually within one working day. If you have an Expeditoo account, the message is also in your support thread inside the app.",
+        "subjects": {
+          "carrier": "Becoming a driver",
+          "auctionHouse": "Auction house partnership",
+          "expedionQuote": "A delivery or Expedion quote",
+          "billing": "Billing or payouts",
+          "press": "Press",
+          "other": "Something else"
+        }
+      },
+      "channels": {
+        "title": "Direct addresses",
+        "support": "General and delivery support",
+        "carriers": "Drivers and applications",
+        "privacy": "Data protection requests"
+      },
+      "response": {
+        "title": "Response times",
+        "body": "One working day for general enquiries. A delivery already in progress is faster — if you are signed in, the support chat inside the app is the quickest route, because it lands in the same inbox with your account already attached."
+      }
+    },
+    "legalNotice": {
+      "eyebrow": "LEGAL NOTICE",
+      "title": "Legal notice",
+      "intro": "Publication and hosting information for expeditoo.com, as required by French law.",
+      "identityTitle": "Publisher",
+      "pendingNote": "The values shown as placeholders above have not yet been supplied. This page is not complete until every one of them is replaced with the registered details.",
+      "lastUpdated": "LAST UPDATED — 22 AUGUST 2026",
+      "identity": [
+        {
+          "label": "Site",
+          "value": "expeditoo.com"
+        },
+        {
+          "label": "Publisher",
+          "value": "TO BE SUPPLIED — registered company name",
+          "pending": true
+        },
+        {
+          "label": "Legal form",
+          "value": "TO BE SUPPLIED — e.g. SAS",
+          "pending": true
+        },
+        {
+          "label": "Share capital",
+          "value": "TO BE SUPPLIED",
+          "pending": true
+        },
+        {
+          "label": "Registered office",
+          "value": "TO BE SUPPLIED — full postal address",
+          "pending": true
+        },
+        {
+          "label": "RCS registration",
+          "value": "TO BE SUPPLIED — city and number",
+          "pending": true
+        },
+        {
+          "label": "SIRET",
+          "value": "TO BE SUPPLIED",
+          "pending": true
+        },
+        {
+          "label": "VAT number",
+          "value": "TO BE SUPPLIED",
+          "pending": true
+        },
+        {
+          "label": "Publication director",
+          "value": "TO BE SUPPLIED — name and role",
+          "pending": true
+        },
+        {
+          "label": "Contact",
+          "value": "contact@expeditoo.com"
+        },
+        {
+          "label": "Host",
+          "value": "TO BE SUPPLIED — host name and postal address",
+          "pending": true
+        }
+      ],
+      "sections": [
+        {
+          "title": "Purpose of the site",
+          "paragraphs": [
+            "expeditoo.com is the carrier-side platform of the Expedion group. It lets verified individual carriers bid on transport jobs escalated from Expedion, and lets operators award those jobs.",
+            "The site does not sell goods and hosts no auction of goods. The only auction it operates is a reverse auction on the price of a transport job, between carriers."
+          ]
+        },
+        {
+          "title": "Intellectual property",
+          "paragraphs": [
+            "The structure of the site, its text, graphics, logos and software are the property of the publisher or are used with permission. Reproduction or reuse of any part, by any means, without prior written consent is prohibited.",
+            "The EXPEDITOO and Expedion names and logos are the property of the group. Use of them without authorisation is not permitted."
+          ]
+        },
+        {
+          "title": "Personal data",
+          "paragraphs": [
+            "Processing of personal data is described in the privacy policy, which sets out what is collected, why, how long it is kept and how to exercise your rights under the GDPR.",
+            "Requests relating to your data go to privacy@expeditoo.com."
+          ]
+        },
+        {
+          "title": "Cookies",
+          "paragraphs": [
+            "The site sets only the cookies needed for it to work — the session that keeps you signed in, and the storage that remembers your language and theme. These require no consent because the site cannot function without them.",
+            "No advertising or third-party tracking cookie is set."
+          ]
+        },
+        {
+          "title": "Liability",
+          "paragraphs": [
+            "The publisher works to keep the information on this site accurate and up to date, but gives no warranty that it is free of error or continuously available.",
+            "The publisher operates the platform on which carriers and clients transact. It is not the carrier and does not perform deliveries."
+          ]
+        },
+        {
+          "title": "Applicable law and mediation",
+          "paragraphs": [
+            "This notice is governed by French law. Any dispute falls to the competent French courts.",
+            "In accordance with the French Consumer Code, a consumer may refer a dispute free of charge to a consumer mediator. The mediator appointed by the publisher is named below once designated.",
+            "TO BE SUPPLIED — mediator name and address."
+          ]
+        }
+      ]
+    },
+    "terms": {
+      "eyebrow": "TERMS",
+      "title": "Terms of service",
+      "intro": "The rules that govern the use of expeditoo.com by carriers, operators and anyone else who accesses it.",
+      "lastUpdated": "LAST UPDATED — 22 AUGUST 2026",
+      "sections": [
+        {
+          "title": "Acceptance",
+          "paragraphs": [
+            "Using expeditoo.com means accepting these terms in full. If you do not accept them, do not use the platform.",
+            "We may change these terms. Continuing to use the platform after a change means accepting the amended version."
+          ]
+        },
+        {
+          "title": "What the service is",
+          "paragraphs": [
+            "Expeditoo is the carrier network of the Expedion group. It publishes transport jobs escalated from Expedion, lets approved carriers bid on them, and lets an operator award one bid.",
+            "Expeditoo is not a marketplace for goods. Nothing is sold here, there is no goods auction, and no client posts work here directly — every job on this platform arrives by escalation from Expedion."
+          ],
+          "items": [
+            "Publication of escalated transport jobs",
+            "Competitive bidding by approved carriers on price, collection time and vehicle",
+            "Award of a job by an operator",
+            "Execution tracking, proof of delivery and status write-back to Expedion",
+            "Payment handling and carrier payouts"
+          ]
+        },
+        {
+          "title": "Accounts and approval",
+          "paragraphs": [
+            "An account is personal. You are responsible for keeping your credentials confidential and for everything done under your account, and you must tell us at once if you believe it has been used without your consent.",
+            "Bidding requires approval as a carrier. Approval follows a documentary check — identity, SIRET, transport insurance and one vehicle. Approval may be refused, suspended or withdrawn, in particular when a document expires or turns out not to be valid."
+          ]
+        },
+        {
+          "title": "How a job is awarded",
+          "paragraphs": [
+            "A job carries the amount the client has already paid in Expedion. That amount is a ceiling, not a target: carriers bid below it, and the difference between the amount paid and the winning bid is the platform's margin.",
+            "The lowest bid does not win automatically. An operator selects the winning bid, weighing price against collection time, vehicle and the carrier's record. No carrier is entitled to be awarded a job."
+          ]
+        },
+        {
+          "title": "Carrier obligations",
+          "items": [
+            "Carry out an awarded job yourself, with the vehicle named in your bid",
+            "Keep your identity, SIRET, insurance and vehicle information accurate and current",
+            "Collect and deliver within the times you committed to, and report a delay as soon as you know of one",
+            "Provide proof of delivery when the job is complete",
+            "Comply with the law applying to the carriage of goods for hire, including driving time and load rules"
+          ]
+        },
+        {
+          "title": "Payment",
+          "paragraphs": [
+            "Funds are authorised when a job is awarded and held. They are captured when delivery is confirmed, never before.",
+            "If a job is cancelled before delivery, the authorisation is released. The platform's commission is deducted at source, and the balance is paid out to the carrier.",
+            "The payer is the client who commissioned the job in Expedion. Nothing here creates a payment obligation on an operator personally."
+          ]
+        },
+        {
+          "title": "Conduct",
+          "paragraphs": [
+            "You agree not to submit false or misleading information, to impersonate another person, to attempt unauthorised access to the platform, or to use it for any unlawful purpose.",
+            "Bidding without the intention or means to perform the job, or with a vehicle you do not have, is a breach of these terms."
+          ]
+        },
+        {
+          "title": "Reviews",
+          "paragraphs": [
+            "After a completed delivery, both sides may leave a review. Reviews must be factual and relate to the delivery. We may remove a review that is abusive, off-topic or plainly false."
+          ]
+        },
+        {
+          "title": "Suspension",
+          "paragraphs": [
+            "We may suspend or close an account that breaches these terms, whose documents have lapsed, or where there is reasonable suspicion of fraud. A suspended account cannot bid and its live sessions are ended.",
+            "Money already earned on completed deliveries remains payable."
+          ]
+        },
+        {
+          "title": "Liability",
+          "paragraphs": [
+            "The platform is provided as is. We do not warrant uninterrupted or error-free operation.",
+            "Expeditoo is not the carrier. The carriage itself is performed by the carrier awarded the job, under their own insurance and their own legal responsibility."
+          ]
+        },
+        {
+          "title": "Governing law",
+          "paragraphs": [
+            "These terms are governed by French law, and any dispute falls to the competent French courts.",
+            "Questions about these terms go to support@expeditoo.com."
+          ]
+        }
+      ]
+    },
+    "privacy": {
+      "eyebrow": "PRIVACY",
+      "title": "Privacy policy",
+      "intro": "What personal data Expeditoo holds, why it holds it, how long for, and the rights you have over it.",
+      "lastUpdated": "LAST UPDATED — 22 AUGUST 2026",
+      "sections": [
+        {
+          "title": "Who is responsible",
+          "paragraphs": [
+            "The publisher named in the legal notice is the data controller for the processing described here.",
+            "For any question or request about your data, write to privacy@expeditoo.com."
+          ]
+        },
+        {
+          "title": "What we collect",
+          "items": [
+            "Account data — name, email address, telephone number, password (stored hashed, never in the clear)",
+            "Carrier compliance data — identity document, SIRET, transport insurance, driving licence category",
+            "Vehicle data — registration, type and capacity of the vehicle you bid with",
+            "Activity data — bids submitted, jobs awarded, collection and delivery timestamps, proof of delivery",
+            "Messages exchanged through the platform, including support conversations",
+            "Payment data — held by our payment provider. We store the last four digits of a bank account so you can recognise it, and never a full IBAN",
+            "Technical data — IP address and device information, used for security and abuse prevention"
+          ]
+        },
+        {
+          "title": "Why we process it",
+          "items": [
+            "To operate the platform and perform our contract with you — publishing jobs, accepting bids, tracking delivery, paying carriers",
+            "To meet our legal obligations — verifying that a carrier may lawfully carry goods for hire, and keeping accounting records",
+            "For our legitimate interest in a safe platform — preventing fraud and abuse, and investigating incidents",
+            "To notify you about your own activity. Marketing messages, if any, need your consent and can be withdrawn at any time"
+          ]
+        },
+        {
+          "title": "Compliance documents",
+          "paragraphs": [
+            "Identity and compliance documents are treated separately from the rest of your account. They are held in private storage, are never served from a public address, and are never disclosed to another carrier or to a client.",
+            "Only operators reviewing an application can open them. They are kept for as long as the account is approved and for the period French law requires afterwards, then deleted."
+          ]
+        },
+        {
+          "title": "Who we share it with",
+          "paragraphs": [
+            "We do not sell personal data. It is shared only with the processors that run the service, each bound to act on our instructions:"
+          ],
+          "items": [
+            "Stripe — payment authorisation, capture and carrier payouts",
+            "Supabase — the database holding platform records",
+            "Cloudflare R2 — file storage, including private compliance documents",
+            "Resend — transactional email",
+            "Ably — realtime updates to job and delivery screens",
+            "Expedion, our sibling product — delivery status only, so the client who commissioned the job can follow it where they started"
+          ]
+        },
+        {
+          "title": "How long we keep it",
+          "items": [
+            "Account data — for as long as the account exists, then deleted or anonymised",
+            "Delivery and payment records — for the accounting retention period French law imposes",
+            "Compliance documents — while approval stands, plus the retention period required afterwards",
+            "Messages — for as long as the account exists",
+            "Technical logs — a rolling period, kept short and used only for security"
+          ]
+        },
+        {
+          "title": "Your rights",
+          "paragraphs": [
+            "Under the GDPR you may ask for access to your data, correction of it, its deletion, a portable copy of it, restriction of processing, or you may object to processing based on our legitimate interest."
+          ],
+          "items": [
+            "Write to privacy@expeditoo.com; we answer within one month",
+            "You may also complain to the CNIL, the French data protection authority",
+            "Deletion is subject to records we are legally obliged to keep, such as accounting records for a completed delivery"
+          ]
+        },
+        {
+          "title": "Cookies",
+          "paragraphs": [
+            "Only the cookies the site needs to work are set: the session that keeps you signed in, and the local storage that remembers your language and theme. No advertising or third-party tracking cookie is set."
+          ]
+        },
+        {
+          "title": "Security",
+          "paragraphs": [
+            "Traffic is encrypted in transit. Passwords are hashed. Compliance documents sit in private storage reachable only through an authorised, time-limited request. Sessions can be revoked, and a suspended account's live sessions end rather than surviving until they expire.",
+            "No system is perfectly secure. If a breach affects your data and is likely to present a risk to you, we will tell you and the CNIL as the GDPR requires."
+          ]
+        },
+        {
+          "title": "Changes",
+          "paragraphs": [
+            "If this policy changes materially we will say so in the app rather than only editing this page."
+          ]
+        }
+      ]
     }
   },
   "help": {

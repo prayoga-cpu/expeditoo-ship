@@ -34,6 +34,7 @@ export const emailService = {
         subject: validated.subject,
         html: validated.html || "",
         text: validated.text,
+        ...(validated.replyTo ? { replyTo: validated.replyTo } : {}),
       });
 
       if (error) {

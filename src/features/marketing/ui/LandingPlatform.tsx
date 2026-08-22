@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { usePrefersReducedMotion } from "../hooks/useGatedAction";
 import {
   EXPEDION_URL,
   LP_CONTAINER,
@@ -18,11 +20,23 @@ const PREVIEW_JOBS = [
   { ref: "EX-2490", route: "Rouen → Paris 16e", best: "85 €", time: "09:00" },
 ] as const;
 
-function PreviewJobRow({ job }: { job: (typeof PREVIEW_JOBS)[number] }) {
+function PreviewJobRow({
+  job,
+  active,
+}: {
+  job: (typeof PREVIEW_JOBS)[number];
+  active: boolean;
+}) {
   const tBoard = useTranslations("marketing.jobBoard");
 
   return (
-    <div className="flex items-center justify-between gap-3 rounded-[14px] border border-[var(--lp-line)] bg-[var(--lp-bg2)] px-3.5 py-2.5">
+    <div
+      className={`flex items-center justify-between gap-3 rounded-[14px] border bg-[var(--lp-bg2)] px-3.5 py-2.5 transition-colors ${
+        active
+          ? "border-[var(--lp-green)]"
+          : "border-[var(--lp-line)]"
+      }`}
+    >
       <div className="flex min-w-0 flex-col gap-[3px]">
         <span className="truncate text-[13px] font-semibold text-[var(--lp-text)]">
           {job.route}
@@ -47,6 +61,23 @@ function PreviewJobRow({ job }: { job: (typeof PREVIEW_JOBS)[number] }) {
 /** Browser chrome around a miniature, CSS-only job-board vignette. */
 function PlatformPreview() {
   const t = useTranslations("marketing.platform");
+  const reducedMotion = usePrefersReducedMotion();
+
+  // Starts on the row the still design shows, so the server render and the
+  // hydrated one agree; the cycle only begins once the effect runs.
+  const [activeIndex, setActiveIndex] = useState(1);
+
+  useEffect(() => {
+    if (reducedMotion) return;
+
+    const timer = setInterval(
+      () => setActiveIndex((index) => (index + 1) % PREVIEW_JOBS.length),
+      4000
+    );
+    return () => clearInterval(timer);
+  }, [reducedMotion]);
+
+  const active = PREVIEW_JOBS[activeIndex] ?? PREVIEW_JOBS[0];
 
   return (
     <div className="flex flex-col gap-3 rounded-[22px] border border-[var(--lp-line)] bg-[var(--lp-bg2)] p-3.5">
@@ -76,12 +107,19 @@ function PlatformPreview() {
           </span>
         </div>
         {PREVIEW_JOBS.map((job) => (
-          <PreviewJobRow key={job.ref} job={job} />
+          <PreviewJobRow
+            key={job.ref}
+            job={job}
+            active={job.ref === active.ref}
+          />
         ))}
-        <div className="flex items-center gap-2 rounded-[14px] bg-[var(--lp-greenbg)] px-3.5 py-2.5">
+        <div
+          key={active.ref}
+          className="animate-lp-tick flex items-center gap-2 rounded-[14px] bg-[var(--lp-greenbg)] px-3.5 py-2.5"
+        >
           <span className="h-1.5 w-1.5 flex-none rounded-full bg-[var(--lp-green)]" />
           <span className="truncate text-xs font-medium text-[var(--lp-green)]">
-            {t("preview.accepted", { route: "Lyon → Toulouse", price: "120 €" })}
+            {t("preview.accepted", { route: active.route, price: active.best })}
           </span>
         </div>
       </div>

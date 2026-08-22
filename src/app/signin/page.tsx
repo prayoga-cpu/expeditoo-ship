@@ -9,6 +9,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuthActions } from "@/features/auth/hooks/useAuthActions";
+import { AuthIntentNote, AuthSwitchLink } from "@/features/auth/ui";
 import { useState, useEffect, Suspense } from "react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -111,6 +112,8 @@ function SignInContent() {
           <p className="text-muted-foreground mb-6">
             {t("subtitle")}
           </p>
+
+          <AuthIntentNote />
 
           {/* Error Display */}
           {(serverError || authError) && (
@@ -247,15 +250,11 @@ function SignInContent() {
             {t("signInWithGoogle")}
           </Button>
 
-          <p className="text-center text-muted-foreground mt-6">
-            {t("noAccount")}{" "}
-            <button
-              onClick={() => router.push("/signup")}
-              className="text-primary hover:text-primary/80 font-semibold"
-            >
-              {t("signUp")}
-            </button>
-          </p>
+          <AuthSwitchLink
+            to="/signup"
+            prompt={t("noAccount")}
+            action={t("signUp")}
+          />
         </div>
       </motion.div>
     </div>

@@ -32,3 +32,15 @@ export const LP_BTN_GHOST =
   "rounded-xl border border-[var(--lp-line2)] font-medium text-[var(--lp-text)] transition-colors hover:bg-[var(--lp-chip)] hover:text-[var(--lp-text)]";
 
 export const EXPEDION_URL = "https://expedion-encheres.vercel.app/";
+
+/**
+ * Content pages sit narrower than the landing grid: the landing rows are
+ * cards, these are prose, and a 1180px measure is unreadable as running text.
+ */
+export const LP_PROSE_CONTAINER = "mx-auto w-full max-w-[760px]";
+
+export const LP_H3 =
+  "m-0 text-[19px] leading-[1.25] font-semibold tracking-[-0.015em] text-pretty sm:text-[21px]";
+
+export const LP_BODY =
+  "m-0 text-[15.5px] leading-[1.7] text-pretty text-[var(--lp-muted)]";

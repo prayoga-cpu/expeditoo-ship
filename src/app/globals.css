@@ -353,6 +353,78 @@
   .transition-smooth {
     @apply transition-all duration-200 ease-out;
   }
+
+  /* --- Landing gated actions — docs/specs/landing_gated_actions_spec.md --- */
+
+  /* A rejected offer: the field refuses, the page does not move. */
+  @keyframes lpShake {
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    20% {
+      transform: translateX(-5px);
+    }
+    40% {
+      transform: translateX(4px);
+    }
+    60% {
+      transform: translateX(-3px);
+    }
+    80% {
+      transform: translateX(2px);
+    }
+  }
+
+  .animate-lp-shake {
+    animation: lpShake 0.36s ease-in-out;
+  }
+
+  /* The tick drawn when the validating beat ends. */
+  @keyframes lpPop {
+    0% {
+      opacity: 0;
+      transform: scale(0.4);
+    }
+    60% {
+      opacity: 1;
+      transform: scale(1.12);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .animate-lp-pop {
+    animation: lpPop 0.34s cubic-bezier(0.2, 0.9, 0.3, 1.4);
+  }
+
+  /* A figure on the board that just moved. */
+  @keyframes lpTick {
+    0% {
+      opacity: 0.35;
+      transform: translateY(-4px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-lp-tick {
+    animation: lpTick 0.5s ease-out;
+  }
+}
+
+/* Every landing animation is decoration over a state change the label already
+   states, so they can all simply stop. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-lp-shake,
+  .animate-lp-pop,
+  .animate-lp-tick {
+    animation: none;
+  }
 }
 
 /* Leaflet Customization */

@@ -182,6 +182,12 @@
       "resending": "Envoi en cours...",
       "resent": "Email de vérification envoyé !",
       "backToLogin": "Retour à la connexion"
+    },
+    "intent": {
+      "bid": "Vous étiez sur le point de placer une offre.",
+      "bidWithRef": "Vous étiez sur le point d'enchérir sur {ref}.",
+      "jobs": "Vous alliez voir le tableau complet des courses.",
+      "carrier": "Vous rejoigniez le réseau de transporteurs."
     }
   },
   "profile": {
@@ -782,7 +788,8 @@
       "step2": "Vous enchérissez à la baisse",
       "step3": "Livrez, payé sous 7 j",
       "primaryCta": "Rejoindre le réseau",
-      "secondaryCta": "Voir les courses ouvertes"
+      "secondaryCta": "Voir les courses ouvertes",
+      "primaryCtaAuthed": "Ouvrir votre profil"
     },
     "bidCard": {
       "fromExpedion": "DEPUIS EXPEDION",
@@ -795,7 +802,10 @@
       "leading": "Votre offre est en tête",
       "bidCta": "Enchérir, tout compris",
       "bidInputLabel": "Votre offre en euros",
-      "insured": "ASSURÉ PAR EXPEDION · PAYÉ SOUS 7 JOURS"
+      "insured": "ASSURÉ PAR EXPEDION · PAYÉ SOUS 7 JOURS",
+      "errorInvalid": "Saisissez un montant en euros.",
+      "errorTooLow": "Les offres sérieuses commencent à {min} €.",
+      "errorTooHigh": "Votre offre doit passer sous {best} €."
     },
     "stats": {
       "jobsPerMonth": "Courses publiées par mois",
@@ -831,12 +841,13 @@
       "bestOffer": "Meilleure offre",
       "closes": "FERME {time}",
       "bid": "Enchérir",
-      "anonymised": "Annonces anonymisées. Les adresses complètes se débloquent une fois votre compte vérifié.",
+      "anonymised": "Lignes illustratives — données d'exemple, pas de courses réelles. Les adresses complètes se débloquent une fois votre compte vérifié.",
       "jobs": {
         "one": "Commode Louis XV, 62 kg",
         "two": "Paire de fauteuils, 34 kg",
         "three": "Miroir doré, fragile, 18 kg"
-      }
+      },
+      "liveLabel": "Tableau mis à jour en direct"
     },
     "advantages": {
       "eyebrow": "POURQUOI LES TRANSPORTEURS RESTENT",
@@ -901,8 +912,10 @@
     },
     "cta": {
       "title": "Vérifié en 24 heures. En course le jour même.",
-      "subtitle": "Kbis, assurance, licence : trois documents à déposer et votre premier tableau s'ouvre.",
-      "primary": "Devenir transporteur"
+      "subtitle": "SIRET, assurance, licence : trois documents à déposer et votre premier tableau s'ouvre.",
+      "primary": "Devenir transporteur",
+      "primaryAuthed": "Ouvrir votre profil",
+      "subtitleAuthed": "Vous êtes déjà connecté. Vos documents, votre véhicule et votre vérification sont dans votre profil."
     },
     "footer": {
       "tagline": "Le réseau de transporteurs du groupe Expedion. Des expéditions de ventes aux enchères, enchéries par des transporteurs vérifiés.",
@@ -921,6 +934,464 @@
       "privacy": "Politique de confidentialité",
       "copyright": "© 2026 Expeditoo — Groupe Expedion",
       "sameGroup": "Expedion et Expeditoo appartiennent au même groupe"
+    },
+    "actions": {
+      "bid": {
+        "validating": "Vérification de votre offre…",
+        "success": "Offre prête"
+      },
+      "jobs": {
+        "validating": "Ouverture du tableau…",
+        "success": "Tableau prêt"
+      },
+      "carrier": {
+        "validating": "Vérification de votre compte…",
+        "success": "C'est parti"
+      }
+    },
+    "verification": {
+      "eyebrow": "VÉRIFICATION",
+      "title": "Comment les transporteurs sont vérifiés",
+      "intro": "Chaque transporteur qui enchérit sur ce réseau est un professionnel indépendant validé. Rien n'est visible tant que cette validation n'est pas accordée. Voici exactement ce que nous demandons, ce que nous contrôlons, et ce que deviennent vos documents ensuite.",
+      "requirements": {
+        "title": "Ce qu'il faut pour candidater",
+        "items": [
+          {
+            "title": "Pièce d'identité",
+            "desc": "Une pièce d'identité en cours de validité, ainsi que la catégorie de permis correspondant au véhicule que vous comptez conduire."
+          },
+          {
+            "title": "Un numéro SIRET",
+            "desc": "Un indépendant qui transporte des marchandises pour autrui en France en possède un. Nous ne demandons pas d'extrait KBIS : un auto-entrepreneur n'en a pas, et l'exiger écarterait la plupart des transporteurs pour qui ce réseau est fait."
+          },
+          {
+            "title": "Assurance transport",
+            "desc": "Une garantie marchandises transportées, à votre nom, valide au moment de la candidature et maintenue valide ensuite."
+          },
+          {
+            "title": "Un véhicule",
+            "desc": "Immatriculation, capacité et type du véhicule que vous utiliserez. Un seul suffit : une offre désigne le véhicule qui fera la course, nous avons donc besoin de celui avec lequel vous enchérissez, pas d'une flotte."
+          }
+        ]
+      },
+      "process": {
+        "title": "Ce qui se passe ensuite",
+        "items": [
+          {
+            "title": "Vous candidatez",
+            "desc": "Vous créez un compte, remplissez le dossier transporteur et déposez vos documents. Vous pouvez enregistrer et revenir : rien n'est transmis avant votre validation."
+          },
+          {
+            "title": "Nous contrôlons",
+            "desc": "Un opérateur examine les documents au regard des exigences ci-dessus et vérifie que le SIRET et l'assurance sont actifs et bien à votre nom."
+          },
+          {
+            "title": "Vous êtes validé",
+            "desc": "La validation ouvre l'accès aux courses. À partir de là, vous voyez les courses escaladées et vous enchérissez sur le prix, l'heure d'enlèvement et le véhicule."
+          },
+          {
+            "title": "Vous restez à jour",
+            "desc": "Les documents ont une date d'expiration. Nous la suivons et vous prévenons avant l'échéance, pour qu'une validation ne devienne pas caduque sans que personne ne s'en aperçoive."
+          }
+        ]
+      },
+      "privacy": {
+        "title": "Ce que deviennent vos documents",
+        "body": "Les pièces d'identité et les documents de conformité sont conservés dans un stockage privé. Ils ne sont jamais servis depuis une adresse publique, jamais rattachés à une course, et jamais montrés à un autre transporteur ni au client dont vous réalisez la livraison. Seuls les opérateurs qui instruisent votre dossier peuvent les ouvrir. Les coordonnées bancaires sont détenues par notre prestataire de paiement : nous ne conservons que les quatre derniers chiffres, pour que vous reconnaissiez votre propre compte.",
+        "expiry": "Si un document expire et n'est pas remplacé, le compte est suspendu plutôt que laissé libre d'enchérir avec une couverture qui n'existe plus. Le remplacement du document rétablit l'accès."
+      },
+      "cta": "Devenir transporteur",
+      "ctaSecondary": "Poser une question d'abord"
+    },
+    "auctionHouses": {
+      "eyebrow": "MAISONS DE VENTE",
+      "title": "Pour les maisons de vente et leurs acheteurs",
+      "intro": "Expeditoo est le réseau de transporteurs derrière Expedion. Vous ne publiez rien ici et vous n'y gérez aucun transporteur : vous acceptez un devis dans Expedion, et ce réseau existe pour qu'une course que personne n'a prise soit malgré tout enlevée.",
+      "flow": {
+        "title": "Comment une livraison arrive sur ce réseau",
+        "items": [
+          {
+            "title": "Le devis est accepté",
+            "desc": "Votre acheteur accepte et règle un devis de transport dans Expedion. C'est tout son engagement : le prix est fixé à cet instant."
+          },
+          {
+            "title": "Le délai court",
+            "desc": "Si aucun transporteur n'a pris la course sous 48 heures, elle est escaladée automatiquement. Rien à relancer, personne n'a besoin de s'en rendre compte."
+          },
+          {
+            "title": "Les transporteurs font baisser le prix",
+            "desc": "Les transporteurs validés se disputent la course sur le prix, l'heure d'enlèvement et le véhicule. Ce que l'acheteur a déjà payé est un plafond, jamais un objectif."
+          },
+          {
+            "title": "Un opérateur attribue",
+            "desc": "L'offre la moins chère ne l'emporte pas automatiquement. Un opérateur met en balance le prix, le délai et le véhicule, et retient celle qui tiendra réellement."
+          }
+        ]
+      },
+      "guarantees": {
+        "title": "Ce que cela change pour vous",
+        "items": [
+          {
+            "title": "Le prix ne bouge pas",
+            "desc": "L'escalade ne demande jamais un centime de plus à l'acheteur. Le montant convenu dans Expedion est celui qu'il paie, quel que soit le mal qu'a eu la course à trouver preneur."
+          },
+          {
+            "title": "Personne ne quitte votre produit",
+            "desc": "Les statuts remontent vers Expedion — attribuée, enlevée, en transit, livrée. Votre acheteur suit la course là où il a commencé."
+          },
+          {
+            "title": "Uniquement des transporteurs vérifiés",
+            "desc": "Chaque enchérisseur a passé les contrôles d'identité, de SIRET, d'assurance et de véhicule avant même de voir la course."
+          },
+          {
+            "title": "Payé à la livraison, pas avant",
+            "desc": "Les fonds sont autorisés à l'attribution de la course et débités seulement une fois la livraison confirmée."
+          }
+        ]
+      },
+      "notMarketplace": {
+        "title": "Ce que ce n'est pas",
+        "body": "Ce n'est pas une place de marché où l'on fait ses courses de transport, et il n'y a ici aucune vente aux enchères de marchandises : la seule enchère est l'enchère inversée sur le prix, entre transporteurs. Il n'existe aucun formulaire de dépôt côté maison de vente, ni compte à ouvrir. Pour organiser un transport, cela se passe dans Expedion ; ce réseau est ce qui prend le relais quand une course reste sans preneur."
+      },
+      "cta": "Aller sur Expedion",
+      "ctaSecondary": "Nous écrire"
+    },
+    "contact": {
+      "eyebrow": "CONTACT",
+      "title": "Nous écrire",
+      "intro": "Transporteurs, maisons de vente, acheteurs qui suivent une livraison, ou simple question sur le fonctionnement. Écrivez ci-dessous : votre message arrive au même bureau que le support dans l'application.",
+      "form": {
+        "name": "Votre nom",
+        "email": "Adresse e-mail",
+        "company": "Société (facultatif)",
+        "subject": "De quoi s'agit-il ?",
+        "message": "Message",
+        "send": "Envoyer le message",
+        "sending": "Envoi…",
+        "failed": "Votre message n'a pas pu être envoyé. Réessayez, ou écrivez directement à support@expeditoo.com.",
+        "rateLimited": "Trop de messages depuis cette connexion. Patientez quelques minutes avant de réessayer, ou écrivez directement à support@expeditoo.com.",
+        "privacyNote": "Nous utilisons votre adresse pour vous répondre, rien d'autre.",
+        "successTitle": "Message envoyé",
+        "successBody": "Merci, nous l'avons bien reçu. Nous répondrons à {email}, en général sous un jour ouvré. Si vous avez un compte Expeditoo, le message figure aussi dans votre fil de support dans l'application.",
+        "subjects": {
+          "carrier": "Devenir transporteur",
+          "auctionHouse": "Partenariat maison de vente",
+          "expedionQuote": "Une livraison ou un devis Expedion",
+          "billing": "Facturation ou versements",
+          "press": "Presse",
+          "other": "Autre sujet"
+        }
+      },
+      "channels": {
+        "title": "Adresses directes",
+        "support": "Support général et livraisons",
+        "carriers": "Transporteurs et candidatures",
+        "privacy": "Demandes relatives aux données"
+      },
+      "response": {
+        "title": "Délais de réponse",
+        "body": "Un jour ouvré pour les demandes générales. Une livraison en cours est traitée plus vite : si vous êtes connecté, le chat de support dans l'application est le chemin le plus rapide, car il arrive dans la même boîte avec votre compte déjà rattaché."
+      }
+    },
+    "legalNotice": {
+      "eyebrow": "MENTIONS LÉGALES",
+      "title": "Mentions légales",
+      "intro": "Informations relatives à l'édition et à l'hébergement de expeditoo.com, conformément à la loi française.",
+      "identityTitle": "Éditeur",
+      "pendingNote": "Les valeurs affichées ci-dessus comme à compléter n'ont pas encore été fournies. Cette page n'est pas complète tant que chacune n'a pas été remplacée par les informations d'immatriculation réelles.",
+      "lastUpdated": "DERNIÈRE MISE À JOUR — 22 AOÛT 2026",
+      "identity": [
+        {
+          "label": "Site",
+          "value": "expeditoo.com"
+        },
+        {
+          "label": "Éditeur",
+          "value": "À COMPLÉTER — dénomination sociale",
+          "pending": true
+        },
+        {
+          "label": "Forme juridique",
+          "value": "À COMPLÉTER — par ex. SAS",
+          "pending": true
+        },
+        {
+          "label": "Capital social",
+          "value": "À COMPLÉTER",
+          "pending": true
+        },
+        {
+          "label": "Siège social",
+          "value": "À COMPLÉTER — adresse postale complète",
+          "pending": true
+        },
+        {
+          "label": "Immatriculation RCS",
+          "value": "À COMPLÉTER — ville et numéro",
+          "pending": true
+        },
+        {
+          "label": "SIRET",
+          "value": "À COMPLÉTER",
+          "pending": true
+        },
+        {
+          "label": "Numéro de TVA",
+          "value": "À COMPLÉTER",
+          "pending": true
+        },
+        {
+          "label": "Directeur de la publication",
+          "value": "À COMPLÉTER — nom et qualité",
+          "pending": true
+        },
+        {
+          "label": "Contact",
+          "value": "contact@expeditoo.com"
+        },
+        {
+          "label": "Hébergeur",
+          "value": "À COMPLÉTER — raison sociale et adresse postale",
+          "pending": true
+        }
+      ],
+      "sections": [
+        {
+          "title": "Objet du site",
+          "paragraphs": [
+            "expeditoo.com est la plateforme transporteurs du groupe Expedion. Elle permet à des transporteurs indépendants vérifiés d'enchérir sur des courses escaladées depuis Expedion, et à des opérateurs de les attribuer.",
+            "Le site ne vend aucune marchandise et n'héberge aucune vente aux enchères de biens. La seule enchère qu'il opère est une enchère inversée sur le prix d'une course, entre transporteurs."
+          ]
+        },
+        {
+          "title": "Propriété intellectuelle",
+          "paragraphs": [
+            "La structure du site, ses textes, graphismes, logos et logiciels sont la propriété de l'éditeur ou sont utilisés avec autorisation. Toute reproduction ou réutilisation, par quelque moyen que ce soit, sans accord écrit préalable est interdite.",
+            "Les noms et logos EXPEDITOO et Expedion sont la propriété du groupe. Leur usage sans autorisation n'est pas permis."
+          ]
+        },
+        {
+          "title": "Données personnelles",
+          "paragraphs": [
+            "Le traitement des données personnelles est décrit dans la politique de confidentialité, qui précise ce qui est collecté, pourquoi, pendant combien de temps, et comment exercer vos droits au titre du RGPD.",
+            "Les demandes relatives à vos données sont à adresser à privacy@expeditoo.com."
+          ]
+        },
+        {
+          "title": "Cookies",
+          "paragraphs": [
+            "Le site ne dépose que les cookies nécessaires à son fonctionnement : la session qui vous maintient connecté, et le stockage qui mémorise votre langue et votre thème. Ils ne requièrent pas de consentement, le site ne pouvant fonctionner sans eux.",
+            "Aucun cookie publicitaire ni traceur tiers n'est déposé."
+          ]
+        },
+        {
+          "title": "Responsabilité",
+          "paragraphs": [
+            "L'éditeur s'efforce de maintenir les informations de ce site exactes et à jour, sans garantir qu'elles soient exemptes d'erreur ni continûment accessibles.",
+            "L'éditeur exploite la plateforme sur laquelle transporteurs et clients contractent. Il n'est pas le transporteur et n'effectue pas les livraisons."
+          ]
+        },
+        {
+          "title": "Droit applicable et médiation",
+          "paragraphs": [
+            "Les présentes mentions sont régies par le droit français. Tout litige relève des juridictions françaises compétentes.",
+            "Conformément au code de la consommation, un consommateur peut saisir gratuitement un médiateur de la consommation. Le médiateur désigné par l'éditeur est indiqué ci-après une fois désigné.",
+            "À COMPLÉTER — nom et adresse du médiateur."
+          ]
+        }
+      ]
+    },
+    "terms": {
+      "eyebrow": "CONDITIONS",
+      "title": "Conditions générales d'utilisation",
+      "intro": "Les règles qui encadrent l'utilisation de expeditoo.com par les transporteurs, les opérateurs et toute personne y accédant.",
+      "lastUpdated": "DERNIÈRE MISE À JOUR — 22 AOÛT 2026",
+      "sections": [
+        {
+          "title": "Acceptation",
+          "paragraphs": [
+            "Utiliser expeditoo.com vaut acceptation pleine et entière des présentes conditions. Si vous ne les acceptez pas, n'utilisez pas la plateforme.",
+            "Nous pouvons modifier ces conditions. Continuer à utiliser la plateforme après une modification vaut acceptation de la version modifiée."
+          ]
+        },
+        {
+          "title": "Ce qu'est le service",
+          "paragraphs": [
+            "Expeditoo est le réseau de transporteurs du groupe Expedion. Il publie les courses escaladées depuis Expedion, permet aux transporteurs validés d'y enchérir, et permet à un opérateur d'en retenir une.",
+            "Expeditoo n'est pas une place de marché de marchandises. Rien n'y est vendu, il n'y a aucune vente aux enchères de biens, et aucun client n'y dépose de course directement : toute course présente sur cette plateforme y arrive par escalade depuis Expedion."
+          ],
+          "items": [
+            "Publication des courses escaladées",
+            "Mise en concurrence des transporteurs validés sur le prix, l'heure d'enlèvement et le véhicule",
+            "Attribution d'une course par un opérateur",
+            "Suivi d'exécution, preuve de livraison et remontée des statuts vers Expedion",
+            "Gestion des paiements et versements aux transporteurs"
+          ]
+        },
+        {
+          "title": "Comptes et validation",
+          "paragraphs": [
+            "Un compte est personnel. Vous êtes responsable de la confidentialité de vos identifiants et de tout ce qui est fait depuis votre compte, et devez nous avertir immédiatement si vous pensez qu'il a été utilisé sans votre accord.",
+            "Enchérir suppose d'être validé comme transporteur. La validation fait suite à un contrôle documentaire : identité, SIRET, assurance transport et un véhicule. Elle peut être refusée, suspendue ou retirée, notamment lorsqu'un document expire ou se révèle invalide."
+          ]
+        },
+        {
+          "title": "Attribution d'une course",
+          "paragraphs": [
+            "Une course porte le montant que le client a déjà réglé dans Expedion. Ce montant est un plafond et non un objectif : les transporteurs enchérissent en dessous, et l'écart entre le montant payé et l'offre retenue constitue la marge de la plateforme.",
+            "L'offre la moins chère ne l'emporte pas automatiquement. Un opérateur retient l'offre gagnante en mettant en balance le prix, l'heure d'enlèvement, le véhicule et l'historique du transporteur. Aucun transporteur n'a droit à se voir attribuer une course."
+          ]
+        },
+        {
+          "title": "Obligations du transporteur",
+          "items": [
+            "Réaliser vous-même la course attribuée, avec le véhicule désigné dans votre offre",
+            "Maintenir exactes et à jour vos informations d'identité, de SIRET, d'assurance et de véhicule",
+            "Enlever et livrer dans les délais sur lesquels vous vous êtes engagé, et signaler tout retard dès que vous en avez connaissance",
+            "Fournir la preuve de livraison une fois la course terminée",
+            "Respecter la réglementation applicable au transport de marchandises pour autrui, y compris les règles de temps de conduite et de chargement"
+          ]
+        },
+        {
+          "title": "Paiement",
+          "paragraphs": [
+            "Les fonds sont autorisés et bloqués lors de l'attribution de la course. Ils sont débités une fois la livraison confirmée, jamais avant.",
+            "Si une course est annulée avant livraison, l'autorisation est levée. La commission de la plateforme est prélevée à la source, et le solde est versé au transporteur.",
+            "Le payeur est le client qui a commandé la course dans Expedion. Rien ici ne crée d'obligation de paiement personnelle à la charge d'un opérateur."
+          ]
+        },
+        {
+          "title": "Comportement",
+          "paragraphs": [
+            "Vous vous engagez à ne pas transmettre d'informations fausses ou trompeuses, à ne pas usurper l'identité d'un tiers, à ne pas tenter d'accéder sans autorisation à la plateforme, et à ne pas l'utiliser à des fins illicites.",
+            "Enchérir sans l'intention ou les moyens de réaliser la course, ou avec un véhicule dont vous ne disposez pas, constitue un manquement aux présentes conditions."
+          ]
+        },
+        {
+          "title": "Avis",
+          "paragraphs": [
+            "Après une livraison réalisée, chaque partie peut laisser un avis. Les avis doivent être factuels et porter sur la livraison. Nous pouvons retirer un avis injurieux, hors sujet ou manifestement mensonger."
+          ]
+        },
+        {
+          "title": "Suspension",
+          "paragraphs": [
+            "Nous pouvons suspendre ou fermer un compte qui manque aux présentes conditions, dont les documents sont périmés, ou en cas de soupçon raisonnable de fraude. Un compte suspendu ne peut plus enchérir et ses sessions actives sont interrompues.",
+            "Les sommes déjà acquises au titre de livraisons réalisées restent dues."
+          ]
+        },
+        {
+          "title": "Responsabilité",
+          "paragraphs": [
+            "La plateforme est fournie en l'état. Nous ne garantissons ni une disponibilité ininterrompue ni un fonctionnement exempt d'erreur.",
+            "Expeditoo n'est pas le transporteur. Le transport lui-même est réalisé par le transporteur attributaire, sous sa propre assurance et sa propre responsabilité."
+          ]
+        },
+        {
+          "title": "Droit applicable",
+          "paragraphs": [
+            "Les présentes conditions sont régies par le droit français, et tout litige relève des juridictions françaises compétentes.",
+            "Les questions relatives aux présentes conditions sont à adresser à support@expeditoo.com."
+          ]
+        }
+      ]
+    },
+    "privacy": {
+      "eyebrow": "CONFIDENTIALITÉ",
+      "title": "Politique de confidentialité",
+      "intro": "Quelles données personnelles Expeditoo détient, pourquoi, pendant combien de temps, et les droits dont vous disposez sur elles.",
+      "lastUpdated": "DERNIÈRE MISE À JOUR — 22 AOÛT 2026",
+      "sections": [
+        {
+          "title": "Qui est responsable",
+          "paragraphs": [
+            "L'éditeur désigné dans les mentions légales est le responsable de traitement pour les traitements décrits ici.",
+            "Pour toute question ou demande relative à vos données, écrivez à privacy@expeditoo.com."
+          ]
+        },
+        {
+          "title": "Ce que nous collectons",
+          "items": [
+            "Données de compte — nom, adresse e-mail, numéro de téléphone, mot de passe (conservé sous forme de hachage, jamais en clair)",
+            "Données de conformité transporteur — pièce d'identité, SIRET, assurance transport, catégorie de permis",
+            "Données de véhicule — immatriculation, type et capacité du véhicule avec lequel vous enchérissez",
+            "Données d'activité — offres soumises, courses attribuées, horodatages d'enlèvement et de livraison, preuve de livraison",
+            "Messages échangés via la plateforme, y compris les conversations de support",
+            "Données de paiement — détenues par notre prestataire de paiement. Nous conservons les quatre derniers chiffres d'un compte bancaire pour que vous le reconnaissiez, jamais un IBAN complet",
+            "Données techniques — adresse IP et informations d'appareil, utilisées pour la sécurité et la prévention des abus"
+          ]
+        },
+        {
+          "title": "Pourquoi nous les traitons",
+          "items": [
+            "Pour exploiter la plateforme et exécuter notre contrat avec vous — publier les courses, recevoir les offres, suivre les livraisons, payer les transporteurs",
+            "Pour respecter nos obligations légales — vérifier qu'un transporteur peut légalement transporter pour autrui, et tenir la comptabilité",
+            "Au titre de notre intérêt légitime à une plateforme sûre — prévenir la fraude et les abus, et instruire les incidents",
+            "Pour vous informer de votre propre activité. Les messages marketing, le cas échéant, supposent votre consentement et peuvent être retirés à tout moment"
+          ]
+        },
+        {
+          "title": "Documents de conformité",
+          "paragraphs": [
+            "Les pièces d'identité et documents de conformité sont traités à part du reste de votre compte. Ils sont conservés dans un stockage privé, ne sont jamais servis depuis une adresse publique, et ne sont jamais communiqués à un autre transporteur ni à un client.",
+            "Seuls les opérateurs qui instruisent un dossier peuvent les ouvrir. Ils sont conservés tant que le compte est validé, puis pendant la durée exigée par la loi française, et ensuite supprimés."
+          ]
+        },
+        {
+          "title": "Avec qui nous les partageons",
+          "paragraphs": [
+            "Nous ne vendons aucune donnée personnelle. Elles ne sont partagées qu'avec les sous-traitants qui font fonctionner le service, chacun tenu d'agir sur nos instructions :"
+          ],
+          "items": [
+            "Stripe — autorisation, débit des paiements et versements aux transporteurs",
+            "Supabase — la base de données qui héberge les enregistrements de la plateforme",
+            "Cloudflare R2 — stockage de fichiers, y compris les documents de conformité privés",
+            "Resend — e-mails transactionnels",
+            "Ably — mises à jour en temps réel des écrans de courses et de livraisons",
+            "Expedion, notre produit frère — uniquement les statuts de livraison, pour que le client à l'origine de la course la suive là où il a commencé"
+          ]
+        },
+        {
+          "title": "Durées de conservation",
+          "items": [
+            "Données de compte — tant que le compte existe, puis supprimées ou anonymisées",
+            "Enregistrements de livraison et de paiement — pendant la durée de conservation comptable imposée par la loi française",
+            "Documents de conformité — tant que la validation est en vigueur, plus la durée de conservation exigée ensuite",
+            "Messages — tant que le compte existe",
+            "Journaux techniques — sur une période glissante, volontairement courte et utilisée à des fins de sécurité uniquement"
+          ]
+        },
+        {
+          "title": "Vos droits",
+          "paragraphs": [
+            "Au titre du RGPD, vous pouvez demander l'accès à vos données, leur rectification, leur effacement, une copie portable, la limitation du traitement, ou vous opposer à un traitement fondé sur notre intérêt légitime."
+          ],
+          "items": [
+            "Écrivez à privacy@expeditoo.com ; nous répondons sous un mois",
+            "Vous pouvez également saisir la CNIL, l'autorité française de protection des données",
+            "L'effacement s'entend sous réserve des enregistrements que la loi nous oblige à conserver, comme la comptabilité d'une livraison réalisée"
+          ]
+        },
+        {
+          "title": "Cookies",
+          "paragraphs": [
+            "Seuls les cookies nécessaires au fonctionnement du site sont déposés : la session qui vous maintient connecté, et le stockage local qui mémorise votre langue et votre thème. Aucun cookie publicitaire ni traceur tiers n'est déposé."
+          ]
+        },
+        {
+          "title": "Sécurité",
+          "paragraphs": [
+            "Les échanges sont chiffrés en transit. Les mots de passe sont hachés. Les documents de conformité résident dans un stockage privé, accessible uniquement par une requête autorisée et limitée dans le temps. Les sessions peuvent être révoquées, et les sessions actives d'un compte suspendu sont interrompues au lieu de subsister jusqu'à leur expiration.",
+            "Aucun système n'est parfaitement sûr. Si une violation touche vos données et présente vraisemblablement un risque pour vous, nous vous en informerons ainsi que la CNIL, comme le RGPD l'exige."
+          ]
+        },
+        {
+          "title": "Modifications",
+          "paragraphs": [
+            "Si cette politique évolue de façon substantielle, nous le signalerons dans l'application plutôt que de simplement modifier cette page."
+          ]
+        }
+      ]
     }
   },
   "help": {

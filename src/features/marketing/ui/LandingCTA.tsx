@@ -1,13 +1,15 @@
 "use client";
 
-import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { useAuth } from "@/lib/auth-context";
+import { LandingGatedButton } from "./LandingGatedButton";
 import { LP_BTN_GHOST, LP_BTN_PRIMARY, LP_CONTAINER, LP_SECTION } from "./styles";
 
 const CARRIER_EMAIL = "transporteurs@expeditoo.com";
 
 export function LandingCTA() {
   const t = useTranslations("marketing.cta");
+  const { isAuthenticated } = useAuth();
 
   return (
     <section id="cta" className={LP_SECTION}>
@@ -23,16 +25,15 @@ export function LandingCTA() {
             {t("title")}
           </h2>
           <p className="m-0 text-[16.5px] leading-[1.55] text-[var(--lp-muted)]">
-            {t("subtitle")}
+            {isAuthenticated ? t("subtitleAuthed") : t("subtitle")}
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <Link
-            href="/signup"
+          <LandingGatedButton
+            intent="carrier"
+            label={isAuthenticated ? t("primaryAuthed") : t("primary")}
             className={`${LP_BTN_PRIMARY} px-7 py-4 text-base`}
-          >
-            {t("primary")}
-          </Link>
+          />
           <a
             href={`mailto:${CARRIER_EMAIL}`}
             className={`${LP_BTN_GHOST} max-w-full px-5 py-4 text-center text-base [overflow-wrap:anywhere] sm:px-7`}

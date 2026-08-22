@@ -1,5 +1,6 @@
 export * from "./styles";
 export * from "./LandingControls";
+export * from "./LandingGatedButton";
 export * from "./LandingBanner";
 export * from "./LandingNavbar";
 export * from "./LandingHero";
@@ -12,3 +13,7 @@ export * from "./LandingPlatform";
 export * from "./LandingTestimonials";
 export * from "./LandingCTA";
 export * from "./LandingFooter";
+export * from "./MarketingPageShell";
+export * from "./LegalDocument";
+export * from "./MarketingCardGrid";
+export * from "./ContactForm";

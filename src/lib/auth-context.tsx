@@ -1,7 +1,8 @@
 "use client";
 
-import { createContext, useContext, type ReactNode } from "react";
+import { createContext, useContext, useEffect, type ReactNode } from "react";
 import { useSession } from "@/lib/auth-client";
+import { markReturningVisitor } from "@/lib/returning-visitor";
 import type { Session, User } from "@/lib/auth";
 
 interface AuthContextType {
@@ -27,6 +28,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAuthenticated: !!data,
     isLoading: isPending,
   };
+
+  // Remembering that this device has had a session is what lets the landing
+  // page send a signed-out visitor to login rather than signup. Marked here
+  // rather than on the landing page so it holds however the session started.
+  useEffect(() => {
+    if (authValue.isAuthenticated) markReturningVisitor();
+  }, [authValue.isAuthenticated]);
 
   return (
     <AuthContext.Provider value={authValue}>{children}</AuthContext.Provider>

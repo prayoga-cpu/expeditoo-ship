@@ -8,13 +8,21 @@ import { EXPEDION_URL } from "./styles";
 const LINK = "text-sm text-[var(--lp-muted)]";
 const HEADING = "text-[13px] font-medium";
 
+/**
+ * Four of these used to be placeholders: "Verification" and "Auction houses"
+ * both pointed at `/#cta`, the sign-up call to action; "Contact" was a bare
+ * `mailto:`; and "Legal notice" opened the terms of service, which is a
+ * different document that French law does not accept in its place. Every entry
+ * now resolves to the page it names — see
+ * docs/specs/marketing_footer_pages_spec.md §1.
+ */
 const COLUMNS = [
   {
     title: "carriers",
     links: [
       { key: "openJobs", href: "/#courses" },
       { key: "howItWorks", href: "/#how" },
-      { key: "verification", href: "/#cta" },
+      { key: "verification", href: "/verification" },
       { key: "platform", href: "/#platform" },
     ],
   },
@@ -22,15 +30,15 @@ const COLUMNS = [
     title: "group",
     links: [
       { key: "expedionBuyers", href: EXPEDION_URL, external: true },
-      { key: "auctionHouses", href: "/#cta" },
-      { key: "contact", href: "mailto:contact@expeditoo.com", external: true },
+      { key: "auctionHouses", href: "/auction-houses" },
+      { key: "contact", href: "/contact" },
     ],
   },
   {
     title: "legal",
     links: [
       { key: "terms", href: "/terms" },
-      { key: "legalNotice", href: "/terms" },
+      { key: "legalNotice", href: "/legal-notice" },
       { key: "privacy", href: "/privacy" },
     ],
   },
@@ -44,7 +52,16 @@ function FooterColumn({ column }: { column: (typeof COLUMNS)[number] }) {
       <span className={HEADING}>{t(column.title)}</span>
       {column.links.map((link) =>
         "external" in link && link.external ? (
-          <a key={link.key} href={link.href} className={LINK}>
+          // Expedion is a separate product on its own origin: opening it in a
+          // new tab keeps the visitor's place, and `noreferrer` stops the
+          // opened page reaching back through `window.opener`.
+          <a
+            key={link.key}
+            href={link.href}
+            target="_blank"
+            rel="noreferrer"
+            className={LINK}
+          >
             {t(link.key)}
           </a>
         ) : (

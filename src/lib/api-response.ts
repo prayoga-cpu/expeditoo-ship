@@ -6,6 +6,7 @@ import { ShipmentError } from "@/server/services/shipment.service";
 import { CarrierError } from "@/server/services/carrier.service";
 import { ReviewError } from "@/server/services/reviews.service";
 import { AdminError } from "@/server/services/admin.service";
+import { ContactError } from "@/server/services/contact.service";
 
 /**
  * Shared response shape for the REST layer.
@@ -36,7 +37,8 @@ export function handleError(error: unknown, context: string) {
     error instanceof ShipmentError ||
     error instanceof CarrierError ||
     error instanceof ReviewError ||
-    error instanceof AdminError
+    error instanceof AdminError ||
+    error instanceof ContactError
   ) {
     return fail(error.code, error.message, error.status);
   }

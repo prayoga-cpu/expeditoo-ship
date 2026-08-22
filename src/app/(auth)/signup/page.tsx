@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Eye, EyeOff } from "lucide-react";
@@ -10,6 +9,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuthActions } from "@/features/auth/hooks/useAuthActions";
+import { AuthIntentNote, AuthSwitchLink } from "@/features/auth/ui";
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 
@@ -23,7 +23,6 @@ type SignupFormData = {
 };
 
 export default function SignupPage() {
-  const router = useRouter();
   const {
     signUp,
     signInWithGoogle,
@@ -109,6 +108,12 @@ export default function SignupPage() {
           <p className="text-muted-foreground mb-6">
             {t("subtitle")}
           </p>
+
+          {/* Both of these read the query, which would otherwise opt this
+              route out of static rendering. */}
+          <Suspense fallback={null}>
+            <AuthIntentNote />
+          </Suspense>
 
           {/* Error Display */}
           {(serverError || authError) && (
@@ -273,15 +278,13 @@ export default function SignupPage() {
             {t("signUpWithGoogle")}
           </Button>
 
-          <p className="text-center text-muted-foreground mt-6">
-            {t("hasAccount")}{" "}
-            <button
-              onClick={() => router.push("/signin")}
-              className="text-primary hover:text-primary/80 font-semibold"
-            >
-              {t("signIn")}
-            </button>
-          </p>
+          <Suspense fallback={null}>
+            <AuthSwitchLink
+              to="/signin"
+              prompt={t("hasAccount")}
+              action={t("signIn")}
+            />
+          </Suspense>
 
           <p className="text-xs text-muted-foreground text-center mt-4">
             {t("terms")}{" "}

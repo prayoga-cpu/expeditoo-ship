@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/lib/auth-context";
 import { BrandWordmark } from "@/components/ui/brand-mark";
+import { LandingGatedButton } from "./LandingGatedButton";
 import { LandingLangToggle, LandingThemeToggle } from "./LandingControls";
 import { LP_BTN_PRIMARY } from "./styles";
 
@@ -47,12 +48,15 @@ export function LandingNavbar() {
           >
             {isAuthenticated ? t("openApp") : t("login")}
           </Link>
-          <Link
-            href="/signup"
-            className={`${LP_BTN_PRIMARY} px-[18px] py-[9px] text-[14.5px]`}
-          >
-            {t("becomeCarrier")}
-          </Link>
+          {/* Someone already signed in is not becoming a carrier from here —
+              "Open app" beside it is the only CTA that still means anything. */}
+          {!isAuthenticated && (
+            <LandingGatedButton
+              intent="carrier"
+              label={t("becomeCarrier")}
+              className={`${LP_BTN_PRIMARY} px-[18px] py-[9px] text-[14.5px]`}
+            />
+          )}
         </div>
       </div>
     </header>
