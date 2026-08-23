@@ -48,7 +48,7 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { formatCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
-import { draftEscalationBlockers } from "../lib/quote-action";
+import { canRepriceQuote, draftEscalationBlockers } from "../lib/quote-action";
 import {
   useExpedionEscalate,
   useExpedionQuoteAdmin,
@@ -238,10 +238,31 @@ export function QuoteDetailDialog({
     }));
   }
 
+  /**
+   * The draft, minus anything this quote no longer permits.
+   *
+   * The form is seeded from the whole quote and posted whole, so a paid quote
+   * would carry `acceptedPriceCents` into every save and be refused by
+   * `PRICE_LOCKED` — including the fix-and-publish flow, which is the one
+   * thing a blocked paid quote actually needs. The field is already read-only
+   * above; dropping it here is what stops it riding along unchanged.
+   */
+  function patchToSend(): QuoteAdminPatch {
+    if (!data || canRepriceQuote(data)) return form;
+    const {
+      acceptedPriceCents: _accepted,
+      quoteStandardCents: _standard,
+      quoteInsuredCents: _insured,
+      quoteAvailable: _available,
+      ...rest
+    } = form;
+    return rest;
+  }
+
   function saveChanges() {
     if (!quoteId) return;
     saveEdit(
-      { id: quoteId, patch: form },
+      { id: quoteId, patch: patchToSend() },
       { onSuccess: () => setIsEditing(false) }
     );
   }
@@ -250,7 +271,7 @@ export function QuoteDetailDialog({
   function saveAndPublish() {
     if (!quoteId) return;
     saveEdit(
-      { id: quoteId, patch: form },
+      { id: quoteId, patch: patchToSend() },
       {
         onSuccess: () => {
           setIsEditing(false);
@@ -903,7 +924,14 @@ export function QuoteDetailDialog({
                     label={t("insured")}
                     value={money(data.quoteInsuredCents)}
                   />
-                  {isEditing ? (
+                  {/* Editable only while the price is still the platform's to
+                      set. Once the client has paid, this figure is what Stripe
+                      charged and what becomes the marketplace budget on
+                      escalation — editing it here would put the record and the
+                      capture out of step, and `adminUpdate` refuses it anyway
+                      (`PRICE_LOCKED`). The correction path is Refund and
+                      re-quote. */}
+                  {isEditing && canRepriceQuote(data) ? (
                     <EditableField
                       label={t("accepted")}
                       type="number"
@@ -929,6 +957,15 @@ export function QuoteDetailDialog({
                               data.acceptedKind ? ` (${data.acceptedKind})` : ""
                             }`
                           : null
+                      }
+                      // Said, not merely enforced: an operator who opened edit
+                      // mode to change this needs to know the field is missing
+                      // because the money has landed, not because the dialog
+                      // is broken.
+                      hint={
+                        isEditing && !canRepriceQuote(data)
+                          ? ta("priceLocked")
+                          : undefined
                       }
                     />
                   )}
@@ -1048,10 +1085,13 @@ function Field({
   label,
   value,
   copyable = false,
+  hint,
 }: {
   label: string;
   value: string | number | null | undefined;
   copyable?: boolean;
+  /** Why this is read-only, when a sibling field in the same section is not. */
+  hint?: string;
 }) {
   const shown =
     value === null || value === undefined || value === "" ? "—" : String(value);
@@ -1063,6 +1103,9 @@ function Field({
         <span className="min-w-0 break-words">{shown}</span>
         {copyable && shown !== "—" ? <CopyButton value={shown} /> : null}
       </div>
+      {hint ? (
+        <div className="text-muted-foreground/80 mt-0.5 text-[11px]">{hint}</div>
+      ) : null}
     </div>
   );
 }

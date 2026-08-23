@@ -37,14 +37,37 @@ export type QuoteActionKind =
   | "done"
   | "cancelled";
 
-/** Which dialog the row's primary button opens, when there is one. */
-export type QuoteDialog = "reprice" | "assign" | "escalate" | "storage";
+/**
+ * Which dialog a row's button — or its overflow entry — opens.
+ *
+ * `requote` is never a row's *next step*, so it never appears in
+ * `QuoteAction.dialogs`; it is a correction, offered only through the overflow
+ * and only while `canRequote` holds.
+ */
+export type QuoteDialog =
+  | "reprice"
+  | "assign"
+  | "escalate"
+  | "storage"
+  | "requote";
 
 export interface QuoteAction {
   kind: QuoteActionKind;
   /** Whether an operator has something to do on this row right now. */
   actionable: boolean;
   dialog: QuoteDialog | null;
+  /**
+   * Every dialog this step offers, most-recommended first — `dialog` is just
+   * `dialogs[0]`.
+   *
+   * Only `assign` has more than one. Payment is a fork, not a queue: the
+   * operator either hands the job to a driver in the pool or puts it out to
+   * bid, and both are the right answer depending on the job. Offering one and
+   * hiding the other behind an overflow menu made the timer look like the
+   * decision-maker, which it is not — it is the fallback for an operator who
+   * did not choose.
+   */
+  dialogs: QuoteDialog[];
   /**
    * Set on `escalate` when `escalationBlockers` would refuse the row. The
    * button stays visible and enabled: it opens a fix-and-publish dialog
@@ -77,6 +100,27 @@ export function storageDaysLeft(
   return Math.ceil((quote.storageFreeUntil.getTime() - now.getTime()) / DAY_MS);
 }
 
+const HOUR_MS = 60 * 60 * 1000;
+
+/**
+ * Whole hours until the escalation timer publishes this quote itself; null
+ * once the deadline is gone or was never set.
+ *
+ * Displayed next to a `needsDriver` row so the operator can see that the
+ * decision has a clock on it without having to know the window is 48 hours.
+ * Client-side against the panel's single `now`, exactly like
+ * `storageDaysLeft` — which of the two states a row is *in* is still the
+ * server's answer (`queues.escalationDue`); this only renders the gap.
+ */
+export function escalationHoursLeft(
+  quote: QuoteRow,
+  now: Date = new Date()
+): number | null {
+  if (!quote.escalateAfter) return null;
+  const hours = Math.ceil((quote.escalateAfter.getTime() - now.getTime()) / HOUR_MS);
+  return hours > 0 ? hours : null;
+}
+
 /**
  * The single thing this quote is waiting for, most urgent first.
  *
@@ -90,12 +134,8 @@ export function storageDaysLeft(
  * and a lot in storage is.
  */
 export function nextAction(quote: QuoteRow): QuoteAction {
-  if (quote.status === "cancelled") {
-    return { kind: "cancelled", actionable: false, dialog: null };
-  }
-  if (quote.status === "delivered") {
-    return { kind: "done", actionable: false, dialog: null };
-  }
+  if (quote.status === "cancelled") return idle("cancelled");
+  if (quote.status === "delivered") return idle("done");
 
   const queues = quote.queues;
 
@@ -105,30 +145,145 @@ export function nextAction(quote: QuoteRow): QuoteAction {
       kind: "escalate",
       actionable: true,
       dialog: "escalate",
+      dialogs: ["escalate"],
       blocked,
       blockers: blocked ? quote.escalationBlockers : undefined,
     };
   }
+  // The fork. Both branches are legitimate outcomes of the same fact — the
+  // client has paid and nobody is carrying the job yet — so both are offered,
+  // with assignment first because it is the cheaper of the two when the pool
+  // can cover the run.
   if (queues.needsDriver) {
-    return { kind: "assign", actionable: true, dialog: "assign" };
+    // Unless the row cannot take either of them. `assignDirect` runs through
+    // `escalate`, so the same ten `escalationBlockers` gate both lanes: a row
+    // missing a delivery postal code answers Assign with a 422 and Publish
+    // with a dialog that cannot publish. Offering two lanes neither of which
+    // is open is worse than naming the one thing that is — fix the data, and
+    // the fork comes back on the next render.
+    const blocked = !(quote.escalationReady ?? quote.hasPickupCoords);
+    if (blocked) {
+      return {
+        kind: "assign",
+        actionable: true,
+        dialog: "escalate",
+        dialogs: ["escalate"],
+        blocked: true,
+        blockers: quote.escalationBlockers,
+      };
+    }
+    return {
+      kind: "assign",
+      actionable: true,
+      dialog: "assign",
+      dialogs: ["assign", "escalate"],
+    };
   }
   if (queues.toPrice) {
-    return { kind: "price", actionable: true, dialog: "reprice" };
+    return {
+      kind: "price",
+      actionable: true,
+      dialog: "reprice",
+      dialogs: ["reprice"],
+    };
   }
   // The lot itself still has to be collected — no dialog clears that — but
   // the terms around it (the free-storage deadline, the fee after) are
   // editable, for a lot whose auction house agreed to hold it longer.
   if (queues.storageAtRisk) {
-    return { kind: "storage", actionable: true, dialog: "storage" };
+    return {
+      kind: "storage",
+      actionable: true,
+      dialog: "storage",
+      dialogs: ["storage"],
+    };
   }
 
   if (quote.status === "accepted" && quote.paymentStatus !== "paid") {
-    return { kind: "awaitingPayment", actionable: false, dialog: null };
+    return idle("awaitingPayment");
   }
   if (["assigned", "escalated", "picked_up"].includes(quote.status)) {
-    return { kind: "inProgress", actionable: false, dialog: null };
+    return idle("inProgress");
   }
-  return { kind: "awaitingClient", actionable: false, dialog: null };
+  return idle("awaitingClient");
+}
+
+/** A step nobody can act on: no button, no dialog. */
+function idle(kind: QuoteActionKind): QuoteAction {
+  return { kind, actionable: false, dialog: null, dialogs: [] };
+}
+
+/**
+ * What an operator is *allowed* to do to this quote, as opposed to what it is
+ * waiting for.
+ *
+ * `nextAction` answers "what is the one next step here"; this answers "which
+ * of the four dialogs may open at all". They are separate questions: a paid
+ * quote's next step is to get a driver, but its storage terms are still
+ * editable and its price is not.
+ *
+ * This is a mirror of the server's rules — `PRICE_FIELDS` and the
+ * `PRICE_LOCKED` check in `expedion.service.ts`, and the preconditions on
+ * `assignDirect` — never a second definition of them. The server has the final
+ * word; this exists so an operator is not offered a button that can only 409.
+ */
+export interface QuoteCapabilities {
+  /** Publish or change a price. */
+  canReprice: boolean;
+  /** Hand the job to a driver in the pool. */
+  canAssign: boolean;
+  /** Publish the job to the Expeditoo marketplace. */
+  canEscalate: boolean;
+  /** Edit the free-storage deadline and the daily fee after it. */
+  canEditStorage: boolean;
+  /** Refund and return the quote to the client for a new price. */
+  canRequote: boolean;
+}
+
+/** A quote in one of these is finished; nothing is editable. */
+const TERMINAL = ["delivered", "cancelled"];
+
+/**
+ * Whether a price may still be published or changed.
+ *
+ * Takes the two fields it reads rather than a `QuoteRow`, because the detail
+ * dialog holds a full `ExpedionQuote` and the report holds a row projection —
+ * and "is this price still editable" must not have one answer per surface.
+ *
+ * The mirror of `PRICE_LOCKED` in `expedion.service.ts`, down to keying on
+ * `paymentStatus` rather than `status`: a refunded quote becomes editable
+ * again, which is what `cancelAndRequote` depends on.
+ */
+export function canRepriceQuote(quote: {
+  status: string;
+  paymentStatus: string;
+}): boolean {
+  return !TERMINAL.includes(quote.status) && quote.paymentStatus !== "paid";
+}
+
+export function quoteCapabilities(quote: QuoteRow): QuoteCapabilities {
+  const live = !TERMINAL.includes(quote.status);
+
+  // `needsDriver` is "paid, status paid, no carrier, no listing, still live" —
+  // exactly the window in which a quote can be dispatched or unwound. Taking
+  // it from the queue rather than re-deriving it keeps the button and the
+  // badge answering to the same fact; `assignedCarrierId` and `listingId` are
+  // not on the wire for this row, so re-deriving would be a looser copy.
+  //
+  // `status === 'paid'` is asserted again anyway. The queue predicate now
+  // carries it, but this is the guard standing between an operator and
+  // `cancelAndRequote`, which unwinds a payment — and the cost of the two
+  // drifting apart is a job in transit rewound to `quoted`. Cheap belt to a
+  // brace that has already slipped once.
+  const dispatchable = quote.queues.needsDriver && quote.status === "paid";
+
+  return {
+    canReprice: canRepriceQuote(quote),
+    canAssign: dispatchable,
+    canEscalate: dispatchable,
+    canEditStorage: live,
+    canRequote: dispatchable,
+  };
 }
 
 /**

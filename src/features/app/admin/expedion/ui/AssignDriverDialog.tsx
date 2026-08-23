@@ -22,18 +22,25 @@ import {
 } from "@/components/ui/select";
 import type { QuoteRow } from "@/server/dal/expedion-report.dal";
 
+import { formatCurrency } from "@/lib/currency";
+
 import {
   useCarrierOptions,
-  useExpedionQuoteAdmin,
+  useExpedionAssignDriver,
 } from "../hooks/useExpedionReport";
 
 /**
  * Assigns a carrier from the pool — the concierge half of the model, where an
  * operator picks rather than the job going out to bid.
  *
- * Assigning is what takes a quote out of the "no driver" queue, and it is also
- * what stops the escalation timer picking it up: `findDueForEscalation` skips
- * anything with an `assigned_carrier_id`.
+ * This posts to `/assign`, which runs the same award machinery the
+ * marketplace uses: a listing, an offer at the price the client already paid,
+ * a shipment and a payment hold. The older shape — a `PATCH` setting
+ * `assignedCarrierId` — only wrote the column, so the driver never saw the job
+ * and nothing could carry it to `delivered`.
+ *
+ * Assigning is also what stops the escalation timer picking the quote up: it
+ * leaves with a listing behind it, and `findDueForEscalation` skips those.
  */
 export function AssignDriverDialog({
   quote,
@@ -44,7 +51,7 @@ export function AssignDriverDialog({
 }) {
   const [carrierId, setCarrierId] = useState<string>("");
   const { data: carriers = [], isLoading } = useCarrierOptions();
-  const { mutate, isPending } = useExpedionQuoteAdmin();
+  const { mutate, isPending } = useExpedionAssignDriver();
   const t = useTranslations("admin.expedion");
 
   useEffect(() => {
@@ -53,18 +60,7 @@ export function AssignDriverDialog({
 
   function save() {
     if (!quote || !carrierId) return;
-    mutate(
-      {
-        id: quote.id,
-        patch: {
-          assignedCarrierId: carrierId,
-          // A timeline entry, not UI — kept in the log's own language. Same
-          // reasoning as the note in RepriceDialog.
-          note: "Chauffeur attribué depuis la supervision",
-        },
-      },
-      { onSuccess: onClose }
-    );
+    mutate({ id: quote.id, carrierId }, { onSuccess: onClose });
   }
 
   return (
@@ -76,6 +72,13 @@ export function AssignDriverDialog({
             {t("actions.assignBody", {
               reference: quote?.reference ?? quote?.id.slice(0, 8) ?? "",
               city: quote?.deliveryCity ?? "—",
+              // What the driver will be paid against, and what is already
+              // held — stated here because this dialog is the last step
+              // before money moves.
+              price:
+                quote?.priceCents != null
+                  ? formatCurrency(quote.priceCents, { fractionDigits: 0 })
+                  : "—",
             })}
           </DialogDescription>
         </DialogHeader>

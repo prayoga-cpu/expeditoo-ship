@@ -2,7 +2,14 @@ import { describe, expect, it } from "vitest";
 
 import type { QuoteRow } from "@/server/dal/expedion-report.dal";
 
-import { isNewQuote, nextAction, storageDaysLeft } from "../quote-action";
+import {
+  canRepriceQuote,
+  escalationHoursLeft,
+  isNewQuote,
+  nextAction,
+  quoteCapabilities,
+  storageDaysLeft,
+} from "../quote-action";
 
 /**
  * The recent list's badge and its button both come from `nextAction`, so what
@@ -190,5 +197,181 @@ describe("storageDaysLeft", () => {
       )
     ).toBe(-1);
     expect(storageDaysLeft(row(), NOW)).toBeNull();
+  });
+});
+
+describe("escalationHoursLeft", () => {
+  it("counts whole hours and stops at the deadline", () => {
+    expect(
+      escalationHoursLeft(
+        row({ escalateAfter: new Date("2026-08-21T12:00:00Z") }),
+        NOW
+      )
+    ).toBe(48);
+    expect(
+      escalationHoursLeft(
+        row({ escalateAfter: new Date("2026-08-19T13:30:00Z") }),
+        NOW
+      )
+    ).toBe(2);
+    // Past the deadline the row is `escalate`, not `assign` — a countdown
+    // under a badge saying the time is up reads as a contradiction.
+    expect(
+      escalationHoursLeft(
+        row({ escalateAfter: new Date("2026-08-19T11:00:00Z") }),
+        NOW
+      )
+    ).toBeNull();
+    expect(escalationHoursLeft(row(), NOW)).toBeNull();
+  });
+});
+
+/** Paid, nobody carrying it — the state the fork exists for. */
+const paidRow = (overrides: Partial<QuoteRow> = {}) =>
+  row({
+    status: "paid",
+    paymentStatus: "paid",
+    queues: { ...NO_QUEUES, needsDriver: true },
+    ...overrides,
+  });
+
+describe("nextAction — the post-payment fork", () => {
+  it("offers both lanes on a paid row, assignment first", () => {
+    const action = nextAction(paidRow());
+
+    expect(action.kind).toBe("assign");
+    expect(action.dialogs).toEqual(["assign", "escalate"]);
+    // `dialog` stays the emphasised one, for callers that only want the first.
+    expect(action.dialog).toBe("assign");
+    expect(action.actionable).toBe(true);
+  });
+
+  // `assignDirect` runs through `escalate`, so the same ten checks gate both
+  // lanes. A row that fails them can take neither, and offering "Assign" (a
+  // guaranteed 422) beside a "Publish" that silently opens a fix form is how
+  // an operator ends up clicking twice to learn one thing.
+  it("collapses to a single Fix when neither lane is open", () => {
+    const action = nextAction(
+      paidRow({
+        escalationReady: false,
+        escalationBlockers: ["deliveryPostalCode", "weight"],
+      })
+    );
+
+    expect(action.kind).toBe("assign");
+    expect(action.dialogs).toEqual(["escalate"]);
+    expect(action.blocked).toBe(true);
+    expect(action.blockers).toEqual(["deliveryPostalCode", "weight"]);
+  });
+
+  it("offers both lanes again once the blockers are cleared", () => {
+    expect(
+      nextAction(paidRow({ escalationReady: true, escalationBlockers: [] }))
+        .dialogs
+    ).toEqual(["assign", "escalate"]);
+  });
+
+  it("collapses to publishing alone once the deadline has passed", () => {
+    const action = nextAction(
+      paidRow({ queues: { ...NO_QUEUES, needsDriver: true, escalationDue: true } })
+    );
+
+    expect(action.kind).toBe("escalate");
+    expect(action.dialogs).toEqual(["escalate"]);
+  });
+
+  it("offers nothing on a step that is not an operator's to take", () => {
+    for (const quote of [
+      row({ status: "accepted" }),
+      row({ status: "assigned" }),
+      row({ status: "delivered" }),
+      row({ status: "cancelled" }),
+    ]) {
+      expect(nextAction(quote).dialogs).toEqual([]);
+    }
+  });
+});
+
+describe("quoteCapabilities", () => {
+  // The mirror of `PRICE_LOCKED` in `expedion.service.ts`. If these two drift,
+  // the dashboard offers a form the API can only refuse.
+  it("closes repricing the moment the money lands", () => {
+    expect(quoteCapabilities(row({ status: "quoted" })).canReprice).toBe(true);
+    expect(
+      quoteCapabilities(row({ status: "accepted", paymentStatus: "unpaid" }))
+        .canReprice
+    ).toBe(true);
+    expect(quoteCapabilities(paidRow()).canReprice).toBe(false);
+  });
+
+  // Keyed on `paymentStatus`, not `status`, which is what lets a refunded
+  // quote be priced again — the whole basis of cancel-and-re-quote.
+  it("reopens repricing once a payment is unwound", () => {
+    expect(
+      canRepriceQuote({ status: "quoted", paymentStatus: "unpaid" })
+    ).toBe(true);
+    expect(canRepriceQuote({ status: "paid", paymentStatus: "paid" })).toBe(
+      false
+    );
+  });
+
+  it("opens dispatch and re-quote only while the fork is open", () => {
+    const open = quoteCapabilities(paidRow());
+    expect(open).toMatchObject({
+      canAssign: true,
+      canEscalate: true,
+      canRequote: true,
+    });
+
+    // `needsDriver` already means "paid, no carrier, no listing, still live",
+    // so a job that has left the fork leaves all three behind with it.
+    const dispatched = quoteCapabilities(
+      row({ status: "escalated", paymentStatus: "paid" })
+    );
+    expect(dispatched).toMatchObject({
+      canAssign: false,
+      canEscalate: false,
+      canRequote: false,
+    });
+  });
+
+  // The queue predicate is `payment_status = 'paid' AND status = 'paid'`, but
+  // this asserts the status half independently: it is the guard standing
+  // between an operator and `cancelAndRequote`, which unwinds a payment. 1085
+  // imported rows sit at `picked_up` with a settled payment and no carrier.
+  it("offers nothing dispatchable on a job already in transit", () => {
+    const inTransit = row({
+      status: "picked_up",
+      paymentStatus: "paid",
+      queues: { ...NO_QUEUES, needsDriver: true },
+    });
+
+    expect(quoteCapabilities(inTransit)).toMatchObject({
+      canAssign: false,
+      canEscalate: false,
+      canRequote: false,
+    });
+  });
+
+  it("shuts everything on a finished quote", () => {
+    for (const status of ["delivered", "cancelled"]) {
+      expect(quoteCapabilities(row({ status }))).toEqual({
+        canReprice: false,
+        canAssign: false,
+        canEscalate: false,
+        canEditStorage: false,
+        canRequote: false,
+      });
+    }
+  });
+
+  // Storage terms are not a price. A lot whose auction house agreed to hold it
+  // longer has to be recordable at any live status, paid or not.
+  it("keeps storage terms editable after payment", () => {
+    expect(quoteCapabilities(paidRow()).canEditStorage).toBe(true);
+    expect(
+      quoteCapabilities(row({ status: "picked_up", paymentStatus: "paid" }))
+        .canEditStorage
+    ).toBe(true);
   });
 });

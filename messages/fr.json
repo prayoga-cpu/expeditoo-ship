@@ -1892,7 +1892,7 @@
         "suggestionFailed": "Suggestion IA indisponible — saisissez le prix manuellement",
         "publishPrice": "Publier le prix",
         "assignTitle": "Attribuer un chauffeur",
-        "assignBody": "{reference} → {city}. La course sort de la file « sans chauffeur » et n'est plus escaladée automatiquement.",
+        "assignBody": "{reference} → {city}. Le chauffeur reçoit la course immédiatement, le client en est informé, et le prix reste à {price}.",
         "carrier": "Transporteur",
         "chooseCarrier": "Choisir un transporteur",
         "loading": "Chargement…",
@@ -1906,7 +1906,14 @@
         "storageBody": "{reference} — prolongez la franchise de gardiennage ou fixez le tarif journalier applicable ensuite.",
         "freeUntil": "Gardiennage gratuit jusqu'au",
         "dailyFee": "Tarif journalier ensuite (€)",
-        "storageSave": "Enregistrer"
+        "storageSave": "Enregistrer",
+        "requote": "Annuler et recoter",
+        "requoteTitle": "Annuler et recoter ?",
+        "requoteBody": "{reference} repart chez le client pour un nouveau prix. Les {price} déjà réglés doivent être remboursés côté Expedion — cette application ne les a jamais encaissés et ne peut pas les rendre. Cette action est irréversible.",
+        "requoteConfirm": "Remettre en cotation",
+        "requoting": "Annulation…",
+        "requoted": "Devis remis en cotation — le remboursement reste à émettre",
+        "priceLocked": "Payé — le prix est figé"
       },
       "supply": {
         "title": "Escalade vers Expeditoo",
@@ -1958,12 +1965,13 @@
         },
         "button": {
           "reprice": "Chiffrer",
-          "assign": "Affecter",
+          "assign": "Affecter un chauffeur",
           "escalate": "Publier",
           "fix": "Corriger",
           "storage": "Gardiennage"
         },
-        "openHint": "cliquez sur une ligne pour le devis complet et son bordereau"
+        "openHint": "cliquez sur une ligne pour le devis complet et son bordereau",
+        "autoPublishIn": "publication auto dans {count} h"
       },
       "detail": {
         "title": "Devis {reference}",

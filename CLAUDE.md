@@ -176,7 +176,7 @@ a seed script — read `docs/TESTING_MOCKS.md` before trusting anything money-sh
 Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before shipping.
 
 **Gates — all green.** `npx tsc --noEmit` 0 errors · `pnpm lint` 0 errors ·
-168 unit tests pass · `pnpm build` succeeds.
+429 unit tests pass · `pnpm build` succeeds.
 
 **Done**
 - Schema remodelled to the transport model; one clean initial migration
@@ -209,9 +209,23 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
   was written and read by nobody: it blocks session creation, kills live sessions, and
   `session.cookieCache.maxAge` dropped 7 days → 5 min so revocations are not invisible
   for a week
-- Expedion bridge: `POST /api/expedion/quotes/:id/paid` starts the escalation clock;
-  escalation is idempotent via `external_ref` and refuses to release its claim after
+- Expedion bridge: `POST /api/expedion/quotes/:id/paid` starts the escalation clock,
+  and the Expedion payment server **does** call it — `api/confirm-payment.js` in
+  `expedion_encheres` verifies the Checkout session with Stripe and posts here.
+  Escalation is idempotent via `external_ref` and refuses to release its claim after
   creating a listing; status changes write back
+- **Post-payment fork** at `/admin/expedion`: a paid quote reads "Needs a driver"
+  and offers both lanes as buttons — assign from the pool, or publish to the
+  marketplace — with the auto-publish deadline shown as the fallback it is. The
+  price locks at payment (`PRICE_LOCKED`); the correction path is
+  `POST /quotes/:id/requote`. Assignment goes through
+  `expedionEscalationService.assignDirect`, which escalates and then awards the
+  chosen driver through `offersService.acceptOffer`, so both lanes produce the
+  same listing + offer + shipment + payment hold. A driver is never attached by
+  patching `assignedCarrierId` — that route no longer accepts the field.
+  `expedion_quotes.assigned_directly` is what keeps the escalation-rate KPI
+  honest, since a pool assignment now mints a listing like an auction does.
+  `docs/specs/expedion_post_payment_fork_spec.md`
 - Crons: listing expiry, document expiry, escalation sweep, image cleanup — driven by
   `.github/workflows/scheduled-jobs.yml`, not Vercel Cron (Hobby caps crons at 2/project,
   once per day). Needs repo variable `APP_URL` and repo secret `CRON_SECRET`.
@@ -222,10 +236,10 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
 **Not done**
 - **Real Stripe hold/capture** — runs under `MOCK_PAYMENTS`; needs SetupIntent
   confirmation and `amount_capturable_updated` webhook handling
-- **Expedion never calls `/quotes/:id/paid`.** The endpoint exists and `markPaid`
-  works, but nothing on the Expedion side posts to it yet, so `escalateAfter` is
-  still only set by hand. Until that call is wired, auto-escalation stays inert on
-  real data and only admin force-escalation works.
+- **Driver pay on either lane.** Escalation hands the driver the full
+  `acceptedPriceCents` as the bid ceiling; direct assignment writes it as the
+  offer price. The commission split (`ROADMAP.md` §10) is what decides how much
+  of that is actually theirs, and it is still unnamed.
 - **Commission split on Expedion-origin jobs is undecided** (`ROADMAP.md` §10).
   `budgetCents` is what the client already paid; the margin is whatever the driver
   bids below it. Payouts cannot go live until this is named.

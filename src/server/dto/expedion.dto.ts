@@ -163,7 +163,11 @@ export const adminUpdateExpedionQuoteSchema = z.object({
   quoteStandardCents: z.number().int().nonnegative().nullish(),
   quoteInsuredCents: z.number().int().nonnegative().nullish(),
   quoteAvailable: z.boolean().optional(),
-  assignedCarrierId: z.string().nullish(),
+  // No `assignedCarrierId`. Attaching a driver is not a field edit — it has to
+  // create the listing, offer, shipment and payment hold that make the job
+  // real for that driver, which is `POST /quotes/:id/assign`
+  // (`expedionEscalationService.assignDirect`). Accepting it here wrote the
+  // column alone and left every one of those undone.
   escalateAfter: looseDate,
   storageFreeUntil: looseDate,
   storageDailyFeeCents: z.number().int().nonnegative().nullish(),
@@ -266,6 +270,16 @@ export const expedionWriteBackSchema = z.object({
   /** The Expeditoo listing carrying this quote. */
   listingId: z.string().min(1),
   status: expedionQuoteStatusSchema,
+  /**
+   * The winning carrier's **user id** — what `offers.carrier_id` and
+   * `shipments.carrier_id` hold, and what every Expeditoo-side caller has in
+   * hand.
+   *
+   * `expedion_quotes.assigned_carrier_id` is a `carriers.id`, so the service
+   * resolves this before writing it. Passing a `carriers.id` here would be
+   * silently wrong: it would fail the lookup and record the status change with
+   * no driver on it.
+   */
   carrierId: z.string().nullish(),
   message: trimmed,
   metadata: z.record(z.unknown()).optional(),

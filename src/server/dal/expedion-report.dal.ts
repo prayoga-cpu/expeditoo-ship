@@ -124,9 +124,14 @@ export interface ExpedionTotals {
  * than overlapping: a carrier winning an escalated listing writes its id back
  * onto the quote (`expedion-bridge.service#writeBack`), so counting every row
  * with a carrier as `assigned` counted each successful escalation twice and
- * pushed the escalation rate below the truth. `assigned` is therefore the
- * internal pool only, and the two sum to the jobs that found a driver or went
- * looking for one.
+ * pushed the escalation rate below the truth. `assigned` is the internal pool
+ * only, and the two sum to the jobs that found a driver or went looking for one.
+ *
+ * `assigned_directly` is what keeps that partition meaningful now that handing
+ * a job to the pool also mints a listing (`assignDirect` — the shipment, the
+ * hold and the write-back are the marketplace's own machinery). Splitting on
+ * `listing_id` alone would file every direct assignment under `escalated` and
+ * report an escalation rate of 100 %.
  */
 export async function getExpedionTotals(): Promise<ExpedionTotals> {
   const rows = await db.execute<Record<string, string | number>>(sql`
@@ -139,14 +144,16 @@ export async function getExpedionTotals(): Promise<ExpedionTotals> {
       count(*) filter (where status = 'accepted'
                          and payment_status <> 'paid')::int       as awaiting_payment,
       count(*) filter (where payment_status = 'paid'
+                         and status = 'paid'
                          and assigned_carrier_id is null
                          and listing_id is null
                          and ${LIVE})::int                        as needs_driver,
-      count(*) filter (where listing_id is not null
-                          or status = 'escalated')::int           as escalated,
+      count(*) filter (where (listing_id is not null or status = 'escalated')
+                         and not assigned_directly)::int          as escalated,
       count(*) filter (where assigned_carrier_id is not null
-                         and listing_id is null
-                         and status <> 'escalated')::int          as assigned,
+                         and status <> 'escalated'
+                         and (listing_id is null or assigned_directly))::int
+                                                                  as assigned,
       count(*) filter (where status = 'delivered')::int           as delivered,
       count(*) filter (where status = 'cancelled')::int           as cancelled,
       count(*) filter (where storage_free_until is not null
@@ -216,7 +223,15 @@ export type QueueKind =
  */
 export const QUEUE_WHERE: Record<QueueKind, ReturnType<typeof sql>> = {
   toPrice: sql`quote_available = false and status in ('pending','awaiting_confirmation')`,
-  needsDriver: sql`payment_status = 'paid' and assigned_carrier_id is null
+  // `status = 'paid'` is not redundant with `payment_status`. Imported rows
+  // carry a settled payment on a job that was already collected outside the
+  // system: 1085 of them sit at `picked_up` with no carrier and no listing, and
+  // without this they filled a queue called "needs a driver" with jobs already
+  // in transit — and, once the fork shipped, offered them Assign, Publish and
+  // Cancel-and-re-quote. Same reasoning as `ESCALATION_DUE` above: a queue must
+  // not list work every action behind it would refuse.
+  needsDriver: sql`payment_status = 'paid' and status = 'paid'
+                   and assigned_carrier_id is null
                    and listing_id is null and ${LIVE}`,
   storageAtRisk: sql`storage_free_until is not null
                      and storage_free_until <= now() + interval '4 days'
@@ -616,14 +631,16 @@ export async function getReportScalars(): Promise<ReportScalars> {
         count(*) filter (where status = 'accepted'
                            and payment_status <> 'paid')::int       as awaiting_payment,
         count(*) filter (where payment_status = 'paid'
+                           and status = 'paid'
                            and assigned_carrier_id is null
                            and listing_id is null
                            and ${LIVE})::int                        as needs_driver,
-        count(*) filter (where listing_id is not null
-                            or status = 'escalated')::int           as escalated,
+        count(*) filter (where (listing_id is not null or status = 'escalated')
+                           and not assigned_directly)::int          as escalated,
         count(*) filter (where assigned_carrier_id is not null
-                           and listing_id is null
-                           and status <> 'escalated')::int          as assigned,
+                           and status <> 'escalated'
+                           and (listing_id is null or assigned_directly))::int
+                                                                    as assigned,
         count(*) filter (where status = 'delivered')::int           as delivered,
         count(*) filter (where status = 'cancelled')::int           as cancelled,
         count(*) filter (where storage_free_until is not null

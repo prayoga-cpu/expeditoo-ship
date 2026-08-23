@@ -100,7 +100,9 @@ export interface QuoteAdminPatch {
   quoteStandardCents?: number | null;
   quoteInsuredCents?: number | null;
   quoteAvailable?: boolean;
-  assignedCarrierId?: string | null;
+  // No `assignedCarrierId` — see `useExpedionAssignDriver`. The server stopped
+  // accepting it on this route, and a field the API rejects has no business
+  // being typeable here.
   escalateAfter?: string | null;
   storageFreeUntil?: string | null;
   storageDailyFeeCents?: number | null;
@@ -159,11 +161,9 @@ export function useExpedionQuoteAdmin() {
           body: JSON.stringify(patch),
         })
       ),
-    onSuccess: (_data, { patch }) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "expedion"] });
-      toast.success(
-        patch.assignedCarrierId !== undefined ? t("assigned") : t("repriced")
-      );
+      toast.success(t("repriced"));
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -304,6 +304,68 @@ export function useExpedionEscalate() {
     // The common failure is a missing pickup coordinate, which
     // `escalationBlockers` names — surface the server's message rather than a
     // generic one, because it tells the operator what to fix.
+    onError: (error: Error) => toast.error(error.message),
+  });
+}
+
+/**
+ * Hands a paid job to a driver in the pool.
+ *
+ * A dedicated endpoint rather than a `PATCH /admin` carrying
+ * `assignedCarrierId`, because assignment is not a field edit: it creates the
+ * listing, the offer, the shipment and the payment hold that make the job real
+ * for the driver. The PATCH shape only ever wrote the column.
+ */
+export function useExpedionAssignDriver() {
+  const queryClient = useQueryClient();
+  const t = useTranslations("admin.expedion.actions");
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      carrierId,
+    }: {
+      id: string;
+      carrierId: string;
+    }) =>
+      unwrap<{ listingId: string; shipmentId: string | null }>(
+        await fetch(`/api/expedion/quotes/${id}/assign`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ carrierId }),
+        })
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "expedion"] });
+      toast.success(t("assigned"));
+    },
+    // The server names why — an unapproved driver, a missing vehicle, a job
+    // already published — and each of those tells the operator what to do
+    // next, which a generic failure does not.
+    onError: (error: Error) => toast.error(error.message),
+  });
+}
+
+/**
+ * Unwinds a paid quote so the client can be re-quoted.
+ *
+ * The response carries the Stripe reference the refund has to be issued
+ * against, because EXPEDITOO never took the payment and cannot return it —
+ * see `expedionService.cancelAndRequote`.
+ */
+export function useExpedionRequote() {
+  const queryClient = useQueryClient();
+  const t = useTranslations("admin.expedion.actions");
+
+  return useMutation({
+    mutationFn: async (id: string) =>
+      unwrap<{ refundedCents: number | null; paymentReference: string | null }>(
+        await fetch(`/api/expedion/quotes/${id}/requote`, { method: "POST" })
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "expedion"] });
+      toast.success(t("requoted"));
+    },
     onError: (error: Error) => toast.error(error.message),
   });
 }

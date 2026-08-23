@@ -7,6 +7,7 @@ import {
   MoreVertical,
   Package,
   Pencil,
+  RotateCcw,
   Send,
   Tag,
   Truck,
@@ -35,10 +36,13 @@ import { AssignDriverDialog } from "./AssignDriverDialog";
 import { EscalateDialog } from "./EscalateDialog";
 import { QuoteDetailDialog } from "./QuoteDetailDialog";
 import { RepriceDialog } from "./RepriceDialog";
+import { RequoteDialog } from "./RequoteDialog";
 import { StorageDialog } from "./StorageDialog";
 import {
+  escalationHoursLeft,
   isNewQuote,
   nextAction,
+  quoteCapabilities,
   storageDaysLeft,
   type QuoteAction,
   type QuoteActionKind,
@@ -81,6 +85,7 @@ const DIALOG_ICON: Record<QuoteDialog, typeof Tag> = {
   assign: Truck,
   escalate: Send,
   storage: Package,
+  requote: RotateCcw,
 };
 
 function money(cents: number | null): string {
@@ -132,6 +137,7 @@ export function RecentQuotesPanel({
   const [assign, setAssign] = useState<QuoteRow | null>(null);
   const [escalate, setEscalate] = useState<QuoteRow | null>(null);
   const [storage, setStorage] = useState<QuoteRow | null>(null);
+  const [requote, setRequote] = useState<QuoteRow | null>(null);
   const [detail, setDetail] = useState<string | null>(null);
   // Set alongside `detail` when the row that opened it is not escalation-
   // ready — the dialog opens straight into edit mode, on the blocker that
@@ -164,6 +170,7 @@ export function RecentQuotesPanel({
     if (dialog === "reprice") setReprice(quote);
     if (dialog === "assign") setAssign(quote);
     if (dialog === "storage") setStorage(quote);
+    if (dialog === "requote") setRequote(quote);
     if (dialog === "escalate") {
       // Not ready — no dialog can publish it, so open the one that can fix
       // it instead of a confirm box that only fails.
@@ -290,6 +297,12 @@ export function RecentQuotesPanel({
         cell: ({ row }) => {
           const days = storageDaysLeft(row.original, now);
           const atRisk = row.original.queues.storageAtRisk && days !== null;
+          // Only while the fork is open. Once the deadline passes the row is
+          // already `escalate`, and a countdown under a badge that says the
+          // time is up reads as a contradiction.
+          const hours = row.original.queues.needsDriver
+            ? escalationHoursLeft(row.original, now)
+            : null;
           return (
             <div className="flex flex-col items-start gap-1">
               <span
@@ -307,6 +320,19 @@ export function RecentQuotesPanel({
                     ? t("table.billed")
                     : t("recent.storageIn", { count: days })}
                 </Badge>
+              ) : null}
+              {hours !== null ? (
+                <span
+                  className={cn(
+                    "text-[10px]",
+                    hours <= 4
+                      ? "text-amber-600 dark:text-amber-500"
+                      : "text-muted-foreground"
+                  )}
+                  title={exact(row.original.escalateAfter, locale)}
+                >
+                  {t("recent.autoPublishIn", { count: hours })}
+                </span>
               ) : null}
             </div>
           );
@@ -332,6 +358,10 @@ export function RecentQuotesPanel({
               variant="outline"
               title={blockerList}
             >
+              {/* Keyed on `blocked`, not on the kind: a paid row that fails
+                  the ten checks is blocked whichever lane the operator wanted,
+                  and "Needs a driver" next to a button that only opens a fix
+                  form is the pair that sends them round in circles. */}
               {action.blocked
                 ? t("recent.action.escalateBlocked")
                 : t(`recent.action.${action.kind}`)}
@@ -446,16 +476,27 @@ export function RecentQuotesPanel({
       <AssignDriverDialog quote={assign} onClose={() => setAssign(null)} />
       <EscalateDialog quote={escalate} onClose={() => setEscalate(null)} />
       <StorageDialog quote={storage} onClose={() => setStorage(null)} />
+      <RequoteDialog quote={requote} onClose={() => setRequote(null)} />
     </Card>
   );
 }
 
 /**
- * The row's own next step as a button, with the other two behind the overflow.
+ * The row's next step as buttons, with anything else it may still do behind
+ * the overflow.
  *
  * A row whose next step is not an operator's to take (waiting on the client,
  * already moving) gets no button — a screen of buttons that mostly do nothing
  * useful is what made the old table unreadable as a worklist.
+ *
+ * A paid row gets two, because payment is a fork rather than a queue: assign
+ * from the pool, or publish and let carriers bid. Both were always legal here;
+ * only one was reachable without opening a menu, which made the escalation
+ * timer look like it was making the decision.
+ *
+ * The overflow is filtered by `quoteCapabilities`, so it stops offering
+ * "Adjust price" on a paid quote and "Assign a driver" on a delivered one —
+ * every entry it shows is one the server will accept.
  */
 function RowActions({
   quote,
@@ -468,70 +509,118 @@ function RowActions({
 }) {
   const t = useTranslations("admin.expedion");
   const tb = useTranslations("admin.expedion.blockers");
+  const can = quoteCapabilities(quote);
   const escalatable = quote.escalationReady ?? quote.hasPickupCoords;
-  // Blocked from publishing: the button still opens something real — the
-  // fix-and-publish view inside the quote detail dialog — so it stays
-  // enabled rather than disabled with nowhere to go.
-  const Primary = action.dialog
-    ? action.blocked
-      ? Pencil
-      : DIALOG_ICON[action.dialog]
-    : null;
   const blockerList = action.blockers?.length
     ? action.blockers.map((code) => tb(code)).join(", ")
     : undefined;
+
+  // Everything this row could do, minus what it is already offering as a
+  // button — repeating the primary action inside the menu behind it is noise.
+  const overflow = (
+    [
+      ["reprice", can.canReprice, Tag, t("actions.reprice")],
+      ["assign", can.canAssign, Truck, t("actions.assign")],
+      ["storage", can.canEditStorage, Package, t("actions.storageTitle")],
+      [
+        "escalate",
+        can.canEscalate,
+        escalatable ? Send : Pencil,
+        escalatable ? t("actions.escalate") : t("recent.button.fix"),
+      ],
+      // Last, and never a primary button: unwinding a settled quote is a
+      // correction, not a step anyone is waiting on.
+      ["requote", can.canRequote, RotateCcw, t("actions.requote")],
+    ] as const
+  ).filter(([dialog, allowed]) => allowed && !action.dialogs.includes(dialog));
 
   return (
     <div
       className="flex items-center justify-end gap-1"
       onClick={(event) => event.stopPropagation()}
     >
-      {action.dialog && Primary ? (
-        <Button
-          size="sm"
-          variant={action.kind === "escalate" && !action.blocked ? "default" : "outline"}
-          className="h-8"
-          title={blockerList}
-          onClick={() => onOpen(quote, action.dialog as QuoteDialog)}
-        >
-          <Primary className="mr-1 h-3.5 w-3.5" />
-          {action.blocked
-            ? t("recent.button.fix")
-            : t(`recent.button.${action.dialog}`)}
-        </Button>
+      {action.dialogs.length > 0 ? (
+        action.dialogs.map((dialog, index) => (
+          <PrimaryButton
+            key={dialog}
+            dialog={dialog}
+            action={action}
+            // Only the first is emphasised. Two filled buttons side by side
+            // read as "these are both urgent" rather than "pick one".
+            emphasised={index === 0}
+            title={blockerList}
+            onClick={() => onOpen(quote, dialog)}
+          />
+        ))
       ) : (
         <span className={cn("text-xs", NOT_ACTIONABLE_TONE)}>—</span>
       )}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" aria-label={t("table.actions")}>
-            <MoreVertical className="h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => onOpen(quote, "reprice")}>
-            <Tag className="mr-2 h-4 w-4" />
-            {t("actions.reprice")}
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => onOpen(quote, "assign")}>
-            <Truck className="mr-2 h-4 w-4" />
-            {t("actions.assign")}
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => onOpen(quote, "storage")}>
-            <Package className="mr-2 h-4 w-4" />
-            {t("actions.storageTitle")}
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => onOpen(quote, "escalate")}>
-            {escalatable ? (
-              <Send className="mr-2 h-4 w-4" />
-            ) : (
-              <Pencil className="mr-2 h-4 w-4" />
-            )}
-            {escalatable ? t("actions.escalate") : t("recent.button.fix")}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      {overflow.length > 0 ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" aria-label={t("table.actions")}>
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {overflow.map(([dialog, , Icon, label]) => (
+              <DropdownMenuItem
+                key={dialog}
+                onClick={() => onOpen(quote, dialog)}
+              >
+                <Icon className="mr-2 h-4 w-4" />
+                {label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : null}
     </div>
+  );
+}
+
+/**
+ * One of the row's action buttons.
+ *
+ * `blocked` only ever applies to publishing, and only the button that
+ * publishes: on a paid row offering both, "Assign" must not turn into "Fix"
+ * because the *other* button's target is missing a postal code.
+ */
+function PrimaryButton({
+  dialog,
+  action,
+  emphasised,
+  title,
+  onClick,
+}: {
+  dialog: QuoteDialog;
+  action: QuoteAction;
+  emphasised: boolean;
+  title?: string;
+  onClick: () => void;
+}) {
+  const t = useTranslations("admin.expedion");
+  const blocked = dialog === "escalate" && !!action.blocked;
+  // Blocked from publishing: the button still opens something real — the
+  // fix-and-publish view inside the quote detail dialog — so it stays
+  // enabled rather than disabled with nowhere to go.
+  const Icon = blocked ? Pencil : DIALOG_ICON[dialog];
+
+  return (
+    <Button
+      size="sm"
+      variant={
+        emphasised && action.kind === "escalate" && !blocked
+          ? "default"
+          : "outline"
+      }
+      className="h-8"
+      title={blocked ? title : undefined}
+      onClick={onClick}
+    >
+      <Icon className="mr-1 h-3.5 w-3.5" />
+      {blocked ? t("recent.button.fix") : t(`recent.button.${dialog}`)}
+    </Button>
   );
 }
 

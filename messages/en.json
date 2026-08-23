@@ -1892,7 +1892,7 @@
         "suggestionFailed": "AI suggestion unavailable — enter the price manually",
         "publishPrice": "Publish price",
         "assignTitle": "Assign a driver",
-        "assignBody": "{reference} → {city}. The job leaves the “no driver” queue and is no longer escalated automatically.",
+        "assignBody": "{reference} → {city}. The driver gets the job immediately, the client is told, and the price stays {price}.",
         "carrier": "Carrier",
         "chooseCarrier": "Choose a carrier",
         "loading": "Loading…",
@@ -1906,7 +1906,14 @@
         "storageBody": "{reference} — extend the free-storage window or set the daily fee that applies after it.",
         "freeUntil": "Free storage until",
         "dailyFee": "Daily fee after (€)",
-        "storageSave": "Save"
+        "storageSave": "Save",
+        "requote": "Cancel and re-quote",
+        "requoteTitle": "Cancel and re-quote?",
+        "requoteBody": "{reference} goes back to the client for a new price. The {price} already paid has to be refunded on the Expedion side — this app never took it and cannot return it. There is no undo.",
+        "requoteConfirm": "Unwind and re-quote",
+        "requoting": "Unwinding…",
+        "requoted": "Quote re-opened for pricing — the refund still has to be issued",
+        "priceLocked": "Paid — the price is settled"
       },
       "supply": {
         "title": "Escalation to Expeditoo",
@@ -1958,12 +1965,13 @@
         },
         "button": {
           "reprice": "Set price",
-          "assign": "Assign",
+          "assign": "Assign a driver",
           "escalate": "Publish",
           "fix": "Fix",
           "storage": "Storage"
         },
-        "openHint": "click a row for the full quote and its bordereau"
+        "openHint": "click a row for the full quote and its bordereau",
+        "autoPublishIn": "auto-publishes in {count} h"
       },
       "detail": {
         "title": "Quote {reference}",

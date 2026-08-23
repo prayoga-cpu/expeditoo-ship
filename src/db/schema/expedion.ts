@@ -73,6 +73,24 @@ export const expedionQuoteKindEnum = pgEnum("expedion_quote_kind", [
 // Quotes
 // ========================================
 
+/**
+ * The five deadline columns here — `sale_date`, `assigned_at`, `escalated_at`,
+ * `escalate_after`, `storage_free_until` — are `timestamptz`; everything else
+ * on this table is a plain `timestamp`.
+ *
+ * They are the ones written from JS *and* compared against SQL `now()`
+ * (`ESCALATION_DUE` and `storageAtRisk` in `expedion-report.dal.ts`), and the
+ * two do not agree on a naked `timestamp`: Drizzle sends a `Date` as its UTC
+ * wall-clock, while `now()` is evaluated in the session's time zone. On a
+ * server at UTC+8 that made every quote escalation-due eight hours early —
+ * and `findDueForEscalation`, which compares against a JS `Date` instead of
+ * `now()`, stayed correct, so the cron and the dashboard disagreed about the
+ * same row. `timestamptz` removes the ambiguity rather than asking every
+ * call site to remember it.
+ *
+ * `created_at` / `updated_at` / `requested_at` stay plain: they are written by
+ * `defaultNow()` and only ever read for display.
+ */
 export const expedionQuotes = pgTable(
   "expedion_quotes",
   {
@@ -118,7 +136,7 @@ export const expedionQuotes = pgTable(
     pickupPhone: text("pickup_phone"),
     pickupLat: doublePrecision("pickup_lat"),
     pickupLng: doublePrecision("pickup_lng"),
-    saleDate: timestamp("sale_date"),
+    saleDate: timestamp("sale_date", { withTimezone: true }),
 
     // ---- Delivery ----
     recipientName: text("recipient_name"),
@@ -162,26 +180,41 @@ export const expedionQuotes = pgTable(
       () => carriers.id,
       { onDelete: "set null" }
     ),
-    assignedAt: timestamp("assigned_at"),
+    assignedAt: timestamp("assigned_at", { withTimezone: true }),
 
     // ---- Escalation bridge to Expeditoo (Phase D) ----
     /** The marketplace listing this quote became, once escalated. */
     listingId: text("listing_id").references(() => listings.id, {
       onDelete: "set null",
     }),
-    escalatedAt: timestamp("escalated_at"),
+    escalatedAt: timestamp("escalated_at", { withTimezone: true }),
+    /**
+     * Whether this job reached its driver from the pool rather than by auction.
+     *
+     * Direct assignment is modelled as an escalation with a pre-selected winner
+     * — it creates a real listing so the shipment, the hold and the write-back
+     * are the marketplace's own — which means `listing_id is not null` no
+     * longer distinguishes "went out to tender" from "an operator picked
+     * someone". Without this column the funnel counted every direct assignment
+     * as an escalation and pinned the escalation rate at 100 %.
+     */
+    assignedDirectly: boolean("assigned_directly").default(false).notNull(),
     /**
      * When the auto-escalate timer fires. Set on `paid`; an admin can force
      * escalation early, which just escalates now and ignores this.
+     *
+     * `withTimezone`, like the four other deadlines on this table
+     * (`sale_date`, `assigned_at`, `escalated_at`, `storage_free_until`) — see
+     * the note at the top of the table.
      */
-    escalateAfter: timestamp("escalate_after"),
+    escalateAfter: timestamp("escalate_after", { withTimezone: true }),
 
     // ---- Storage countdown (the conversion lever, ROADMAP.md §1) ----
     /**
      * Auction houses charge gardiennage after a grace period — Accord Enchères
      * bills €1–20/day after day ten. Surfacing the countdown is what converts.
      */
-    storageFreeUntil: timestamp("storage_free_until"),
+    storageFreeUntil: timestamp("storage_free_until", { withTimezone: true }),
     storageDailyFeeCents: integer("storage_daily_fee_cents"),
 
     // ---- AI extraction (Phase B) ----

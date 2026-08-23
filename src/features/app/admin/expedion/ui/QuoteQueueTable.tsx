@@ -20,6 +20,8 @@ import {
 import { formatCurrency } from "@/lib/currency";
 import type { QuoteRow } from "@/server/dal/expedion-report.dal";
 
+import { quoteCapabilities } from "../lib/quote-action";
+
 import { AssignDriverDialog } from "./AssignDriverDialog";
 import { EscalateDialog } from "./EscalateDialog";
 import { QuoteDetailDialog } from "./QuoteDetailDialog";
@@ -207,45 +209,77 @@ export function QuoteQueueTable({
         id: "actions",
         enableSorting: false,
         enableHiding: false,
-        cell: ({ row }) => (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label={t("table.actions")}>
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setReprice(row.original)}>
+        // Filtered by the same `quoteCapabilities` the recent-quotes panel
+        // uses. Unfiltered, this menu offered "Adjust price" on a paid quote —
+        // which `PRICE_LOCKED` now refuses — and "Assign a driver" on the 1085
+        // imported rows sitting at `picked_up`, where it can only 409.
+        cell: ({ row }) => {
+          const can = quoteCapabilities(row.original);
+          const escalatable = isEscalatable(row.original);
+          const items = [
+            can.canReprice && (
+              <DropdownMenuItem
+                key="reprice"
+                onClick={() => setReprice(row.original)}
+              >
                 <Tag className="mr-2 h-4 w-4" />
                 {t("actions.reprice")}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setAssign(row.original)}>
+            ),
+            can.canAssign && (
+              <DropdownMenuItem
+                key="assign"
+                onClick={() => setAssign(row.original)}
+              >
                 <Truck className="mr-2 h-4 w-4" />
                 {t("actions.assign")}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStorage(row.original)}>
+            ),
+            can.canEditStorage && (
+              <DropdownMenuItem
+                key="storage"
+                onClick={() => setStorage(row.original)}
+              >
                 <Package className="mr-2 h-4 w-4" />
                 {t("actions.storageTitle")}
               </DropdownMenuItem>
+            ),
+            can.canEscalate && (
               <DropdownMenuItem
+                key="escalate"
                 onClick={() =>
-                  isEscalatable(row.original)
+                  escalatable
                     ? setEscalate(row.original)
                     : setFixId(row.original.id)
                 }
               >
-                {isEscalatable(row.original) ? (
+                {escalatable ? (
                   <Send className="mr-2 h-4 w-4" />
                 ) : (
                   <Pencil className="mr-2 h-4 w-4" />
                 )}
-                {isEscalatable(row.original)
-                  ? t("actions.escalate")
-                  : t("recent.button.fix")}
+                {escalatable ? t("actions.escalate") : t("recent.button.fix")}
               </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ),
+            ),
+          ].filter(Boolean);
+
+          if (items.length === 0) return null;
+
+          return (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={t("table.actions")}
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">{items}</DropdownMenuContent>
+            </DropdownMenu>
+          );
+        },
       },
     ];
   }, [extraColumn, t, tb]);

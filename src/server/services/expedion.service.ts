@@ -118,6 +118,27 @@ export function canTransition(
   return from === to || TRANSITIONS[from].includes(to);
 }
 
+/**
+ * The fields `adminUpdate` refuses once the quote is paid.
+ *
+ * Named once here because `quoteCapabilities` on the client mirrors this list
+ * to decide whether to offer the buttons at all, and the two drifting apart is
+ * how an operator gets a form that only ever 409s.
+ */
+/**
+ * The floor `escalationBlockers` enforces on `acceptedPriceCents`. Named here
+ * because the price lock's carve-out has to agree with it: a value that would
+ * still block escalation is not a repair.
+ */
+export const MIN_ESCALATABLE_PRICE_CENTS = 100;
+
+export const PRICE_FIELDS = [
+  "quoteStandardCents",
+  "quoteInsuredCents",
+  "quoteAvailable",
+  "acceptedPriceCents",
+] as const satisfies readonly (keyof AdminUpdateExpedionQuoteInput)[];
+
 // ========================================
 // Helpers
 // ========================================
@@ -164,6 +185,52 @@ export async function geocodeFr(
     // auto-priced, and falls back to manual pricing by an admin.
     return null;
   }
+}
+
+/**
+ * Whether this write *supplies* a price the quote never had, rather than
+ * *changing* one it was paid at.
+ *
+ * The lock exists so a recorded amount cannot drift from what Stripe captured.
+ * It is not meant to strand a row that carries no amount at all — and 95 live
+ * paid quotes do, because the Airtable import brought a settled payment across
+ * without an accepted price. Those can never escalate (`escalationBlockers`
+ * demands `acceptedPriceCents >= 100`), and after the lock shipped the detail
+ * dialog was the only surface that could repair them and it had gone read-only.
+ *
+ * Narrow on purpose: only `acceptedPriceCents`, only when the stored value is
+ * missing or below the escalation floor, and only to a value that clears it.
+ * Overwriting a real settled price stays refused.
+ */
+function isSupplyingMissingPrice(
+  quote: ExpedionQuote,
+  field: (typeof PRICE_FIELDS)[number],
+  input: AdminUpdateExpedionQuoteInput
+): boolean {
+  if (field !== "acceptedPriceCents") return false;
+  const stored = quote.acceptedPriceCents;
+  if (stored != null && stored >= MIN_ESCALATABLE_PRICE_CENTS) return false;
+  const next = input.acceptedPriceCents;
+  return typeof next === "number" && next >= MIN_ESCALATABLE_PRICE_CENTS;
+}
+
+/**
+ * The Stripe Checkout session behind a quote's payment, from the event
+ * `markPaid` wrote.
+ *
+ * There is no column for it. `markPaid` records whatever the payment server
+ * reported as free-form metadata (`{ reference, method }`) precisely because
+ * this side never interprets it — but a refund has to be issued against
+ * something, and this is the only handle that exists.
+ */
+async function findPaymentReference(quoteId: string): Promise<string | null> {
+  const events = await expedionDal.listEvents(quoteId);
+  for (let i = events.length - 1; i >= 0; i--) {
+    const meta = events[i].metadata as Record<string, unknown> | null;
+    const reference = meta?.reference;
+    if (typeof reference === "string" && reference) return reference;
+  }
+  return null;
 }
 
 /**
@@ -608,6 +675,13 @@ export const expedionService = {
   async autoPrice(id: string): Promise<ExpedionQuote | null> {
     const quote = await expedionDal.getById(id);
     if (!quote) throw err("QUOTE_NOT_FOUND", 404);
+    // A settled price is not the engine's to revise. This runs in the
+    // background off `createQuote`, `updateQuote` and `reextractDocument` — and
+    // re-extracting a paid quote's bordereau would otherwise rewrite the very
+    // figures `adminUpdate` refuses to let an operator touch, straight past
+    // PRICE_LOCKED. Returns null rather than throwing: the callers are all
+    // fire-and-forget, and "nothing to price here" is the honest answer.
+    if (quote.paymentStatus === "paid") return null;
     if (!hasDimensions(quote)) return null;
 
     const pickup =
@@ -790,13 +864,39 @@ export const expedionService = {
     const quote = await expedionDal.getById(id);
     if (!quote) throw err("QUOTE_NOT_FOUND", 404);
 
-    // Attaching a driver implies a move to `assigned`, which is a status
-    // change like any other. Resolving it here means the implied move answers
-    // to the same graph as a stated one — written straight into the patch, it
-    // let a cancelled or delivered quote be dragged back into the queue by
-    // handing it a driver.
-    const nextStatus: ExpedionQuoteStatus | undefined =
-      input.status ?? (input.assignedCarrierId ? "assigned" : undefined);
+    // A paid price is settled. `acceptedPriceCents` is what Stripe actually
+    // charged and what becomes the marketplace `budgetCents` on escalation;
+    // the other three are what the client was shown. Editing any of them
+    // after settlement puts the recorded amount and the captured one out of
+    // step, and moves the bid ceiling off money that exists.
+    //
+    // Keyed on `paymentStatus`, not `status`: a quote can be `escalated` or
+    // `picked_up` and still carry the price it was paid at, and one refunded
+    // back to `unpaid` by `cancelAndRequote` must become editable again.
+    //
+    // Addresses, coordinates, weight and storage terms stay editable at every
+    // status — they are what `escalationBlockers` demands, and locking them
+    // would strand a paid quote that cannot be published.
+    if (quote.paymentStatus === "paid") {
+      const locked = PRICE_FIELDS.filter(
+        (f) => input[f] !== undefined && !isSupplyingMissingPrice(quote, f, input)
+      );
+      if (locked.length > 0) {
+        throw err(
+          "PRICE_LOCKED",
+          409,
+          `This quote has been paid; ${locked.join(", ")} can no longer be edited`
+        );
+      }
+    }
+
+    // Attaching a driver is no longer one of the edits this route accepts.
+    // It used to be — `assignedCarrierId` in the patch implied a move to
+    // `assigned` — and that was the whole defect: it wrote the column, texted
+    // the client, and produced no listing, no shipment and no payment hold,
+    // so the driver never saw the job and nothing but another hand-edit could
+    // finish it. `expedionEscalationService.assignDirect` is the one way in.
+    const nextStatus = input.status;
 
     if (nextStatus && !canTransition(quote.status, nextStatus)) {
       throw err(
@@ -808,12 +908,6 @@ export const expedionService = {
 
     const { note, ...fields } = input;
     const patch: Partial<InsertExpedionQuote> = { ...fields };
-
-    // Assigning a driver is what stops the escalation clock.
-    if (input.assignedCarrierId) {
-      patch.assignedAt = new Date();
-      patch.status = nextStatus;
-    }
 
     // Now that an unmentioned field no longer arrives as `null`, a body that
     // names nothing produces an empty patch — and Drizzle answers an empty
@@ -843,15 +937,10 @@ export const expedionService = {
     // success — this is for every other admin with the dashboard open.
     void notifyExpedionAdmins(id);
 
-    if (input.assignedCarrierId && !quote.assignedCarrierId) {
-      void expedionSmsService
-        .driverAssigned({
-          phone: updated.phone,
-          firstName: updated.firstName,
-          pickupCity: updated.pickupCity,
-        })
-        .catch(() => undefined);
-    } else if (
+    // The driver-assigned text now rides on the write-back
+    // (`expedionBridgeService.writeBack`), which is where a driver actually
+    // becomes attached to a quote.
+    if (
       input.status &&
       input.status !== quote.status &&
       (input.status === "picked_up" || input.status === "delivered")
@@ -866,6 +955,104 @@ export const expedionService = {
     }
 
     return updated;
+  },
+
+  /**
+   * Unwinds a settled quote so the client can be re-quoted.
+   *
+   * The correction path for a price that turns out to be wrong after the
+   * client has paid. In-place editing is refused (`PRICE_LOCKED`) because it
+   * would leave the recorded amount disagreeing with what Stripe captured;
+   * this instead returns the quote to `quoted`, where the client accepts and
+   * pays the corrected figure — so the two never disagree at any point.
+   *
+   * **This does not move money.** EXPEDITOO never took it: `expedion_quotes`
+   * carries no payment intent or session, because the client pays on the
+   * Expedion side and that side reports the settlement here (see
+   * `POST /quotes/:id/paid`). `refundService` only knows about `payments`
+   * rows, which are Expeditoo's own holds against shipments — there is no row
+   * here for it to refund. What this does is unwind our record of the
+   * payment and put the Stripe reference on the timeline, so whoever runs the
+   * Expedion Stripe account can refund against it. Wiring that call is a
+   * payment-server change, not one this repo can make.
+   *
+   * Refused once a listing or a driver exists: money is then held against a
+   * shipment on our side too, and unwinding that is a cancellation, not a
+   * re-quote.
+   */
+  async cancelAndRequote(id: string, actorId?: string) {
+    const quote = await expedionDal.getById(id);
+    if (!quote) throw err("QUOTE_NOT_FOUND", 404);
+    if (quote.paymentStatus !== "paid") {
+      throw err("NOT_PAID", 409, "This quote has not been paid");
+    }
+    // `paymentStatus` alone is not enough. 1085 imported rows sit at
+    // `picked_up` with a settled payment, no carrier and no listing — the lot
+    // was collected outside the system — and without this the correction path
+    // would rewind a job already in transit back to `quoted`, wiping the price
+    // the client paid. `paid` is the only status where the fork is genuinely
+    // still open.
+    if (quote.status !== "paid") {
+      throw err(
+        "NOT_AWAITING_DISPATCH",
+        409,
+        `A quote can only be re-quoted while it is awaiting a driver, not from ${quote.status}`
+      );
+    }
+    if (quote.listingId || quote.assignedCarrierId) {
+      throw err(
+        "ALREADY_DISPATCHED",
+        409,
+        "This job is already with a driver or on the marketplace; cancel it instead"
+      );
+    }
+
+    // The Checkout session the payment server reported, recovered from the
+    // timeline — it is the only handle anyone has for issuing the refund, and
+    // burying it in an old event is how it gets lost.
+    const paymentReference = await findPaymentReference(id);
+    const refundedCents = quote.acceptedPriceCents;
+
+    const updated = await db.transaction(async (tx) => {
+      const row = await expedionDal.update(
+        id,
+        {
+          paymentStatus: "unpaid",
+          // Written directly rather than through `canTransition`: `paid` has
+          // no edge back to `quoted`, and it should not gain one. Rewinding a
+          // settled quote is exactly the move the transition graph exists to
+          // stop `adminUpdate` making by accident; it is legitimate only here,
+          // where a refund is being recorded alongside it.
+          status: "quoted",
+          acceptedKind: null,
+          acceptedPriceCents: null,
+          escalateAfter: null,
+        },
+        tx
+      );
+      await expedionDal.addEvent(
+        {
+          id: nanoid(),
+          quoteId: id,
+          status: "quoted",
+          actor: "admin",
+          actorId,
+          message: "Devis annulé et remis en cotation ; remboursement à émettre",
+          metadata: {
+            refundedCents,
+            previousAcceptedKind: quote.acceptedKind,
+            paymentReference,
+            // Named so nobody reads this event as "the money is back".
+            refundIssued: false,
+          },
+        },
+        tx
+      );
+      return row;
+    });
+
+    void notifyExpedionAdmins(id);
+    return { quote: updated, refundedCents, paymentReference };
   },
 
   async listEvents(id: string, caller: ExpedionCallerIdentity) {

@@ -166,6 +166,8 @@ vi.mock("../../hooks/useExpedionReport", () => ({
   useExpedionQuoteAdmin: () => ({ mutate: vi.fn(), isPending: false }),
   useExpedionPriceSuggestion: () => ({ mutate: vi.fn(), isPending: false }),
   useExpedionEscalate: () => ({ mutate: vi.fn(), isPending: false }),
+  useExpedionAssignDriver: () => ({ mutate: vi.fn(), isPending: false }),
+  useExpedionRequote: () => ({ mutate: vi.fn(), isPending: false }),
   useCarrierOptions: () => ({ data: [], isLoading: false }),
 }));
 

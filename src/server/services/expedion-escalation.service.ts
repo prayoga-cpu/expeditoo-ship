@@ -20,9 +20,12 @@ import { nanoid } from "nanoid";
 import { db } from "@/db";
 import { eq } from "drizzle-orm";
 import { categories } from "@/db/schema/listings";
+import { carriersDal } from "@/server/dal/carriers.dal";
 import { expedionDal } from "@/server/dal/expedion.dal";
+import { userHasRole } from "@/server/dal/users.dal";
 import { listingsService } from "@/server/services/listings.service";
 import { listingsDal } from "@/server/dal/listings.dal";
+import { offersService } from "@/server/services/offers.service";
 import { expedionSmsService } from "@/server/services/expedion-sms.service";
 import { notifyExpedionAdmins } from "@/server/services/expedion-realtime.service";
 import {
@@ -33,6 +36,40 @@ import type { ExpedionQuote } from "@/db/schema/expedion";
 
 const err = (code: string, status: number, message?: string) =>
   new ExpedionError(code, status, message);
+
+/**
+ * Re-labels an offers-engine failure as an Expedion one.
+ *
+ * `expedionErrorResponse` only translates `ExpedionError`, `ExpedionAuthError`
+ * and `ZodError`; an `OfferError` — which is what every guard inside
+ * `submitOffer` and `acceptOffer` throws — fell through to a bare 500 reading
+ * "An unexpected error occurred". The operator has to be told that the vehicle
+ * is too small, or that the hold was declined, because each one has a
+ * different next move.
+ *
+ * Duck-typed rather than `instanceof OfferError`, so this module does not pull
+ * the offers service's whole dependency graph in for a type it only reads two
+ * fields off.
+ */
+function asExpedionError(cause: unknown, listingId: string): ExpedionError {
+  const e = cause as { code?: unknown; status?: unknown; message?: unknown };
+  if (typeof e?.code === "string" && typeof e?.status === "number") {
+    return new ExpedionError(
+      e.code,
+      e.status,
+      `${typeof e.message === "string" ? e.message : e.code} — the job is now ` +
+        `on the marketplace as listing ${listingId} and can still be awarded there`
+    );
+  }
+  return cause instanceof ExpedionError
+    ? cause
+    : err(
+        "ASSIGNMENT_FAILED",
+        500,
+        `The job was published as listing ${listingId} but the driver could not ` +
+          `be awarded it`
+      );
+}
 
 // ========================================
 // Policy
@@ -71,8 +108,22 @@ function systemShipperId(): string {
 }
 
 async function resolveCategoryId(): Promise<string> {
+  // The configured id is checked rather than trusted. It was returned
+  // unverified, so an `EXPEDION_CATEGORY_ID` naming a category that does not
+  // exist — the state of every environment whose seed predates the variable —
+  // reached `createListing` and died on the foreign key, which reads as
+  // "escalation is broken" rather than "this one setting is wrong".
   const configured = process.env.EXPEDION_CATEGORY_ID;
-  if (configured) return configured;
+  if (configured) {
+    const exists = await db.query.categories.findFirst({
+      where: eq(categories.id, configured),
+    });
+    if (exists) return exists.id;
+    console.warn(
+      `[expedion] EXPEDION_CATEGORY_ID="${configured}" matches no category; ` +
+        `falling back to the 'encheres' slug`
+    );
+  }
 
   const bySlug = await db.query.categories.findFirst({
     where: eq(categories.slug, "encheres"),
@@ -158,7 +209,18 @@ export const expedionEscalationService = {
    */
   async escalate(
     quoteId: string,
-    opts: { reason?: string; actor?: string } = {}
+    opts: {
+      reason?: string;
+      actor?: string;
+      /**
+       * Suppresses the "your job is going out to tender" text and records the
+       * quote as pool-assigned. Set only by `assignDirect`, which uses this
+       * path for its machinery, not for its meaning — the client is getting a
+       * named driver, and telling them the opposite is worse than telling them
+       * nothing.
+       */
+      directAssignment?: boolean;
+    } = {}
   ) {
     const quote = await expedionDal.getById(quoteId);
     if (!quote) throw err("QUOTE_NOT_FOUND", 404);
@@ -261,7 +323,11 @@ export const expedionEscalationService = {
       const updated = await db.transaction(async (tx) => {
         const row = await expedionDal.update(
           quoteId,
-          { status: "escalated", listingId: listing.id },
+          {
+            status: "escalated",
+            listingId: listing.id,
+            ...(opts.directAssignment ? { assignedDirectly: true } : {}),
+          },
           tx
         );
         await expedionDal.addEvent(
@@ -282,13 +348,19 @@ export const expedionEscalationService = {
 
       void notifyExpedionAdmins(quoteId);
 
-      void expedionSmsService
-        .deliveryUpdate({
-          phone: updated.phone,
-          status: "escalated",
-          bordereauNumber: updated.bordereauNumber,
-        })
-        .catch(() => undefined);
+      // Not on a direct assignment: `assignDirect` awards a named driver in the
+      // same call, and `writeBack` texts the client about that driver moments
+      // later. Sending both would tell them their job went to tender and then
+      // that someone won it.
+      if (!opts.directAssignment) {
+        void expedionSmsService
+          .deliveryUpdate({
+            phone: updated.phone,
+            status: "escalated",
+            bordereauNumber: updated.bordereauNumber,
+          })
+          .catch(() => undefined);
+      }
 
       return { quote: updated, listing };
     } catch (error) {
@@ -310,6 +382,132 @@ export const expedionEscalationService = {
       // leaving the quote marked as escalated with no listing behind it.
       await expedionDal.update(quoteId, { escalatedAt: null });
       throw error;
+    }
+  },
+
+  /**
+   * Hands a paid job to a driver in the pool, without an auction.
+   *
+   * This is the other half of the fork a payment opens: assign, or publish and
+   * let carriers bid. It is modelled as an escalation with a pre-selected
+   * winner rather than as a second execution path, and that is the whole point
+   * — `acceptOffer` is what creates the shipment, holds the money, rejects the
+   * other bids and writes back to Expedion. Assignment that did not go through
+   * it wrote three columns onto the quote and stopped: the driver never saw
+   * the job in their app, no money was held, and nothing but an admin editing
+   * status by hand could ever move it to `delivered`.
+   *
+   * The listing is `open` between `escalate` and `acceptOffer`, so a directly
+   * assigned job is technically on `/expedion` for the duration of this call.
+   * Accepted rather than engineered around: `commitAward` requires `open` and
+   * takes a row lock, so a bid landing inside that window is rejected by the
+   * award like any other losing bid. A "never really on the market" flag would
+   * mean a migration, a second predicate in `browse` and a listing state
+   * `acceptOffer` would have to learn — for a window measured in milliseconds.
+   *
+   * The driver is told by `acceptOffer`'s own notification. Its wording says
+   * their offer was accepted, which is the shape this borrows rather than a
+   * claim they bid.
+   *
+   * @param carrierId a `carriers.id`, as the operator's picker yields it —
+   *   `offers.carrier_id` is a user id, and the two are mapped here.
+   * @param actorUserId the operator awarding. `acceptOffer` checks the
+   *   `operator`/`admin` role itself, so a shared-key caller with no account
+   *   behind it is refused there.
+   */
+  async assignDirect(
+    quoteId: string,
+    carrierId: string,
+    actorUserId: string
+  ) {
+    const quote = await expedionDal.getById(quoteId);
+    if (!quote) throw err("QUOTE_NOT_FOUND", 404);
+    if (quote.paymentStatus !== "paid") {
+      throw err(
+        "QUOTE_NOT_PAID",
+        409,
+        "A driver may only be assigned once the client has paid"
+      );
+    }
+    if (quote.listingId) {
+      throw err("ALREADY_ESCALATED", 409, "This quote is already on Expeditoo");
+    }
+
+    // The driver is checked before anything is created. Discovering an
+    // unusable carrier after `escalate` has run would leave the job on the
+    // marketplace as a side effect of an assignment that never happened.
+    const carrier = await carriersDal.getById(carrierId);
+    if (!carrier || carrier.status !== "approved") {
+      throw err(
+        "CARRIER_NOT_APPROVED",
+        409,
+        "This driver is not approved to carry work"
+      );
+    }
+    const vehicle =
+      carrier.vehicles.find((v) => v.isActive) ?? carrier.vehicles[0];
+    if (!vehicle) {
+      throw err(
+        "CARRIER_HAS_NO_VEHICLE",
+        409,
+        "This driver has no vehicle on file, and an offer must name one"
+      );
+    }
+
+    // The actor's authority is settled BEFORE anything is published.
+    // `acceptOffer` checks it too, but by then `escalate` has already put the
+    // job on the marketplace — so a caller who cannot award (the shared-key
+    // path, where `userId` is whatever `x-expedion-uid` claimed and no account
+    // stands behind it) would have escalated a quote as a side effect of an
+    // assignment that was always going to be refused.
+    const [isOperator, isAdmin] = await Promise.all([
+      userHasRole(actorUserId, "operator"),
+      userHasRole(actorUserId, "admin"),
+    ]);
+    if (!isOperator && !isAdmin) {
+      throw err(
+        "FORBIDDEN_NOT_OPERATOR",
+        403,
+        "Awarding a job needs an operator or admin account, not a shared key"
+      );
+    }
+
+    // Status, blockers and the escalation claim are all `escalate`'s checks;
+    // repeating them here would be a second copy that drifts.
+    const { listing } = await this.escalate(quoteId, {
+      reason: "Chauffeur attribué directement par la supervision",
+      actor: "admin",
+      directAssignment: true,
+    });
+
+    // Past this point the job is on the marketplace. Anything that fails is
+    // reported as itself rather than as a 500, because the states differ in
+    // what the operator should do next — a vehicle too small is a different
+    // driver, a declined hold is a payment problem, and either way the job is
+    // now live and awaiting a bid rather than lost.
+    try {
+      // Through the offers service, not the DAL: `submitOffer` is what checks
+      // the vehicle can legally carry the load (`assertOfferFitsJob`), that the
+      // vehicle belongs to this carrier, and that the carrier is approved — and
+      // it is what maintains `listings.offers_count`. Writing the row directly
+      // skipped all four.
+      const offer = await offersService.submitOffer(carrier.userId, listing.id, {
+        vehicleId: vehicle.id,
+        // What the client already paid. There is no negotiation on this lane,
+        // so there is nothing to bid down to.
+        priceCents: quote.acceptedPriceCents!,
+        estimatedPickup: listing.pickupFrom,
+        estimatedDelivery: listing.dropoffFrom,
+        message: "Course attribuée directement, sans mise en concurrence.",
+      });
+
+      // Everything real happens here: the hold, the shipment, the write-back
+      // that puts the driver's name on the client's screen.
+      const award = await offersService.acceptOffer(actorUserId, offer.id);
+
+      return { listing, offer, shipment: award.shipment };
+    } catch (cause) {
+      throw asExpedionError(cause, listing.id);
     }
   },
 

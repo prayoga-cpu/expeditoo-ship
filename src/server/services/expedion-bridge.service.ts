@@ -20,6 +20,7 @@
 
 import { nanoid } from "nanoid";
 import { db } from "@/db";
+import { carriersDal } from "@/server/dal/carriers.dal";
 import { expedionDal } from "@/server/dal/expedion.dal";
 import { expedionSmsService } from "@/server/services/expedion-sms.service";
 import { notifyExpedionAdmins } from "@/server/services/expedion-realtime.service";
@@ -49,6 +50,30 @@ const SHIPMENT_STATUS_MAP: Record<string, ExpedionQuoteStatus | undefined> = {
   CANCELLED: "cancelled",
 };
 
+/**
+ * `input.carrierId` is a **user id** — that is what `offers.carrier_id` and
+ * `shipments.carrier_id` hold — but `expedion_quotes.assigned_carrier_id`
+ * references `carriers.id`. Writing one into the other raised a foreign-key
+ * violation on every award of an escalated job, and `notifyExpedion` swallowed
+ * it, so the award succeeded and the Expedion client was never told which
+ * carrier won. The quote then sat at `escalated` for good.
+ *
+ * Returns null rather than throwing when there is no carrier row: this runs
+ * downstream of an award that has already happened, and refusing to record it
+ * would lose the status change as well as the carrier.
+ */
+async function resolveCarrierRowId(userId: string): Promise<string | null> {
+  const carrier = await carriersDal.getByUserId(userId);
+  if (!carrier) {
+    console.error(
+      `[expedion] no carrier row for user ${userId}; ` +
+        `recording the status change without the driver`
+    );
+    return null;
+  }
+  return carrier.id;
+}
+
 export const expedionBridgeService = {
   /**
    * Applies a status change from the Expeditoo side onto the linked quote.
@@ -75,13 +100,17 @@ export const expedionBridgeService = {
       );
     }
 
+    const carrierRowId = input.carrierId
+      ? await resolveCarrierRowId(input.carrierId)
+      : null;
+
     const updated = await db.transaction(async (tx) => {
       const row = await expedionDal.update(
         quote.id,
         {
           status: input.status,
-          ...(input.carrierId
-            ? { assignedCarrierId: input.carrierId, assignedAt: new Date() }
+          ...(carrierRowId
+            ? { assignedCarrierId: carrierRowId, assignedAt: new Date() }
             : {}),
         },
         tx
@@ -94,7 +123,18 @@ export const expedionBridgeService = {
           actor: "expeditoo",
           actorId: input.carrierId ?? undefined,
           message: input.message ?? null,
-          metadata: { ...(input.metadata ?? {}), listingId: input.listingId },
+          metadata: {
+            ...(input.metadata ?? {}),
+            listingId: input.listingId,
+            // Both ids on the timeline: the user id is what Expeditoo's own
+            // tables key on, and without it a support question about "which
+            // driver" has to be answered by joining backwards from a column
+            // that may be null.
+            ...(input.carrierId ? { carrierUserId: input.carrierId } : {}),
+            ...(input.carrierId && !carrierRowId
+              ? { carrierRowMissing: true }
+              : {}),
+          },
         },
         tx
       );

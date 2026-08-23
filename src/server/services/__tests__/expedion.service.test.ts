@@ -136,6 +136,10 @@ const paidQuote = (over: Record<string, unknown> = {}) => ({
     id: 'q_1',
     status: 'paid',
     paymentStatus: 'paid',
+    // A settled price, because that is what makes the lock meaningful — a paid
+    // quote carrying none is the repairable case, and it has its own fixture.
+    acceptedPriceCents: 10_000,
+    listingId: null,
     assignedCarrierId: null,
     escalateAfter: ESCALATE_AFTER,
     storageFreeUntil: STORAGE_FREE_UNTIL,
@@ -145,6 +149,22 @@ const paidQuote = (over: Record<string, unknown> = {}) => ({
     bordereauNumber: 'B-77',
     ...over,
 });
+
+/**
+ * The same quote before the money landed — the only state in which a price is
+ * still the platform's to set. `paidQuote` cannot stand in for it: every price
+ * field is refused once `paymentStatus` is `paid`.
+ */
+const quotedQuote = (over: Record<string, unknown> = {}) =>
+    paidQuote({ status: 'quoted', paymentStatus: 'unpaid', ...over });
+
+/**
+ * A paid quote the Airtable import brought across with no accepted price. 95 of
+ * these are live; they can never escalate (`escalationBlockers` wants
+ * `acceptedPriceCents >= 100`) and the price lock would strand them.
+ */
+const priceless = (over: Record<string, unknown> = {}) =>
+    paidQuote({ acceptedPriceCents: null, ...over });
 
 /** The patch the DAL was handed on the most recent write. */
 function lastPatch(): Record<string, unknown> {
@@ -172,7 +192,7 @@ describe('expedionService.adminUpdate — absent fields are not writes', () => {
     // `null` and the patch cleared the column. Every reprice and every assign
     // wiped the gardiennage deadline and the escalation timer.
     it('leaves the deadlines alone when repricing does not mention them', async () => {
-        getByIdMock.mockResolvedValue(paidQuote() as never);
+        getByIdMock.mockResolvedValue(quotedQuote() as never);
 
         await expedionService.adminUpdate(
             'q_1',
@@ -183,10 +203,10 @@ describe('expedionService.adminUpdate — absent fields are not writes', () => {
         expect(lastPatch()).not.toHaveProperty('storageFreeUntil');
     });
 
-    it('leaves the deadlines alone when assigning a driver', async () => {
+    it('leaves the deadlines alone when correcting an address', async () => {
         getByIdMock.mockResolvedValue(paidQuote() as never);
 
-        await expedionService.adminUpdate('q_1', body({ assignedCarrierId: 'car_1' }));
+        await expedionService.adminUpdate('q_1', body({ deliveryCity: 'Lyon' }));
 
         expect(lastPatch()).not.toHaveProperty('escalateAfter');
         expect(lastPatch()).not.toHaveProperty('storageFreeUntil');
@@ -207,7 +227,7 @@ describe('expedionService.adminUpdate — absent fields are not writes', () => {
     });
 
     it('reports only the fields the operator actually sent', async () => {
-        getByIdMock.mockResolvedValue(paidQuote() as never);
+        getByIdMock.mockResolvedValue(quotedQuote() as never);
 
         await expedionService.adminUpdate('q_1', body({ quoteAvailable: true }));
 
@@ -229,7 +249,7 @@ describe('expedionService.adminUpdate — absent fields are not writes', () => {
     });
 });
 
-describe('expedionService.adminUpdate — assigning answers to the graph', () => {
+describe('expedionService.adminUpdate — a paid price is settled', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         updateMock.mockImplementation(
@@ -237,59 +257,128 @@ describe('expedionService.adminUpdate — assigning answers to the graph', () =>
         );
     });
 
-    it('assigns a paid quote', async () => {
+    // Every one of these is what Stripe charged, or what the client was shown
+    // before they paid it. Editing any after settlement puts the recorded
+    // amount and the captured one out of step — and `acceptedPriceCents` is
+    // also the marketplace `budgetCents` on escalation, so it would move the
+    // bid ceiling off money that exists.
+    it.each([
+        ['quoteStandardCents', 12_000],
+        ['quoteInsuredCents', 14_400],
+        ['quoteAvailable', true],
+        ['acceptedPriceCents', 9_900],
+    ] as const)('refuses %s on a paid quote', async (field, value) => {
         getByIdMock.mockResolvedValue(paidQuote() as never);
+        // `paidQuote` carries a settled `acceptedPriceCents`, so the
+        // supply-a-missing-price carve-out does not apply to any of the four.
 
-        await expedionService.adminUpdate('q_1', body({ assignedCarrierId: 'car_1' }));
-
-        expect(lastPatch()).toMatchObject({
-            assignedCarrierId: 'car_1',
-            status: 'assigned',
-        });
-        expect(lastPatch().assignedAt).toBeInstanceOf(Date);
-    });
-
-    it('assigns a quote that has already escalated', async () => {
-        getByIdMock.mockResolvedValue(paidQuote({ status: 'escalated' }) as never);
-
-        await expedionService.adminUpdate('q_1', body({ assignedCarrierId: 'car_1' }));
-
-        expect(lastPatch().status).toBe('assigned');
-    });
-
-    it('swaps the driver on an already-assigned quote', async () => {
-        getByIdMock.mockResolvedValue(
-            paidQuote({ status: 'assigned', assignedCarrierId: 'car_0' }) as never
+        const rejection = expedionService.adminUpdate(
+            'q_1',
+            body({ [field]: value })
         );
 
-        await expedionService.adminUpdate('q_1', body({ assignedCarrierId: 'car_1' }));
+        await expect(rejection).rejects.toBeInstanceOf(ExpedionError);
+        await expect(rejection).rejects.toMatchObject({
+            code: 'PRICE_LOCKED',
+            status: 409,
+        });
+        expect(updateMock).not.toHaveBeenCalled();
+    });
 
-        expect(lastPatch()).toMatchObject({
-            assignedCarrierId: 'car_1',
-            status: 'assigned',
+    it('names every locked field the caller sent, not just the first', async () => {
+        getByIdMock.mockResolvedValue(paidQuote() as never);
+
+        await expect(
+            expedionService.adminUpdate(
+                'q_1',
+                body({ quoteStandardCents: 1_000, acceptedPriceCents: 2_000 })
+            )
+        ).rejects.toMatchObject({
+            message: expect.stringContaining('acceptedPriceCents'),
         });
     });
 
-    // The dashboard offers "assign" on every row, including the finished ones
-    // in the recent list, so this is reachable by a single misclick.
-    it.each(['cancelled', 'delivered'] as const)(
-        'refuses to drag a %s quote back to assigned',
-        async (status) => {
-            getByIdMock.mockResolvedValue(paidQuote({ status }) as never);
+    // Supplying a price the row never had is not changing one it was paid at.
+    // Without this the lock strands every imported quote that arrived settled
+    // but priceless: they cannot escalate, and the detail dialog — the only
+    // surface that could repair them — had just gone read-only.
+    it('lets an operator supply an accepted price the quote never had', async () => {
+        getByIdMock.mockResolvedValue(priceless() as never);
 
-            const rejection = expedionService.adminUpdate(
+        await expedionService.adminUpdate('q_1', body({ acceptedPriceCents: 9_900 }));
+
+        expect(lastPatch()).toMatchObject({ acceptedPriceCents: 9_900 });
+    });
+
+    it('refuses a supplied price that would still block escalation', async () => {
+        getByIdMock.mockResolvedValue(priceless() as never);
+
+        await expect(
+            expedionService.adminUpdate('q_1', body({ acceptedPriceCents: 50 }))
+        ).rejects.toMatchObject({ code: 'PRICE_LOCKED', status: 409 });
+    });
+
+    // The carve-out is for the accepted price only — the two published figures
+    // are what the client was shown and stay shut either way.
+    it('does not extend the carve-out to the published prices', async () => {
+        getByIdMock.mockResolvedValue(priceless() as never);
+
+        await expect(
+            expedionService.adminUpdate('q_1', body({ quoteStandardCents: 9_900 }))
+        ).rejects.toMatchObject({ code: 'PRICE_LOCKED', status: 409 });
+    });
+
+    it('still refuses to overwrite a price that was actually paid', async () => {
+        getByIdMock.mockResolvedValue(paidQuote() as never);
+
+        await expect(
+            expedionService.adminUpdate('q_1', body({ acceptedPriceCents: 9_900 }))
+        ).rejects.toMatchObject({ code: 'PRICE_LOCKED', status: 409 });
+    });
+
+    // The lock keys on `paymentStatus`, not `status`. A quote refunded back to
+    // `unpaid` has to become editable again, which is the whole basis of the
+    // cancel-and-re-quote path.
+    it('allows a price on a quote that has not been paid', async () => {
+        getByIdMock.mockResolvedValue(quotedQuote() as never);
+
+        await expedionService.adminUpdate(
+            'q_1',
+            body({ quoteStandardCents: 12_000 })
+        );
+
+        expect(lastPatch()).toMatchObject({ quoteStandardCents: 12_000 });
+    });
+
+    // What escalation demands — addresses, coordinates, weight — stays open at
+    // every status. Locking it too would strand a paid quote that cannot be
+    // published because of a missing postal code.
+    it.each([
+        ['deliveryPostalCode', '69001'],
+        ['weightKg', 12],
+        ['storageDailyFeeCents', 500],
+    ] as const)('still accepts %s on a paid quote', async (field, value) => {
+        getByIdMock.mockResolvedValue(paidQuote() as never);
+
+        await expedionService.adminUpdate('q_1', body({ [field]: value }));
+
+        expect(lastPatch()).toMatchObject({ [field]: value });
+    });
+
+    // Assignment left this route entirely: it has to create a listing, an
+    // offer, a shipment and a payment hold, none of which a field patch does.
+    // `expedionEscalationService.assignDirect` is the one way in.
+    it('no longer accepts a driver as a field edit', async () => {
+        getByIdMock.mockResolvedValue(paidQuote() as never);
+
+        await expect(
+            expedionService.adminUpdate(
                 'q_1',
                 body({ assignedCarrierId: 'car_1' })
-            );
-
-            await expect(rejection).rejects.toBeInstanceOf(ExpedionError);
-            await expect(rejection).rejects.toMatchObject({
-                code: 'INVALID_TRANSITION',
-                status: 409,
-            });
-            expect(updateMock).not.toHaveBeenCalled();
-        }
-    );
+            )
+        ).rejects.toMatchObject({ code: 'NO_CHANGES', status: 400 });
+        expect(updateMock).not.toHaveBeenCalled();
+    });
 
     it('still refuses an illegal status the operator states outright', async () => {
         getByIdMock.mockResolvedValue(paidQuote({ status: 'cancelled' }) as never);
@@ -297,6 +386,137 @@ describe('expedionService.adminUpdate — assigning answers to the graph', () =>
         await expect(
             expedionService.adminUpdate('q_1', body({ status: 'picked_up' }))
         ).rejects.toMatchObject({ code: 'INVALID_TRANSITION', status: 409 });
+    });
+});
+
+describe('expedionService.cancelAndRequote', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        updateMock.mockImplementation(
+            async (_id, patch) => ({ ...paidQuote(), ...patch }) as never
+        );
+        vi.mocked(expedionDal.listEvents).mockResolvedValue([] as never);
+    });
+
+    const PAID_EVENT = [
+        {
+            id: 'e_1',
+            quoteId: 'q_1',
+            status: 'paid',
+            metadata: { reference: 'cs_test_abc', method: 'stripe' },
+        },
+    ];
+
+    it('returns a paid quote to the client for a new price', async () => {
+        getByIdMock.mockResolvedValue(
+            paidQuote({ acceptedKind: 'standard', acceptedPriceCents: 10_000 }) as never
+        );
+
+        await expedionService.cancelAndRequote('q_1', 'admin_1');
+
+        expect(lastPatch()).toMatchObject({
+            paymentStatus: 'unpaid',
+            status: 'quoted',
+            acceptedKind: null,
+            acceptedPriceCents: null,
+            escalateAfter: null,
+        });
+    });
+
+    // `paid -> quoted` is deliberately not in the transition graph: rewinding a
+    // settled quote is what that graph stops `adminUpdate` doing by accident.
+    // This route is the one place it is legitimate, and it writes directly.
+    it('rewinds a status the transition graph refuses', () => {
+        expect(canTransition('paid', 'quoted')).toBe(false);
+    });
+
+    // The only handle anyone has for issuing the refund — EXPEDITOO never took
+    // the money, so this string is what the Expedion side refunds against.
+    it('recovers the Stripe reference from the timeline', async () => {
+        getByIdMock.mockResolvedValue(paidQuote({ acceptedPriceCents: 10_000 }) as never);
+        vi.mocked(expedionDal.listEvents).mockResolvedValue(PAID_EVENT as never);
+
+        const result = await expedionService.cancelAndRequote('q_1', 'admin_1');
+
+        expect(result.paymentReference).toBe('cs_test_abc');
+        expect(result.refundedCents).toBe(10_000);
+        expect(
+            vi.mocked(expedionDal.addEvent).mock.calls.at(-1)![0].metadata
+        ).toMatchObject({ paymentReference: 'cs_test_abc', refundIssued: false });
+    });
+
+    it('records the unwind even when no reference was ever stored', async () => {
+        getByIdMock.mockResolvedValue(paidQuote() as never);
+
+        const result = await expedionService.cancelAndRequote('q_1', 'admin_1');
+
+        expect(result.paymentReference).toBeNull();
+        expect(updateMock).toHaveBeenCalled();
+    });
+
+    it('refuses a quote that was never paid', async () => {
+        getByIdMock.mockResolvedValue(quotedQuote() as never);
+
+        await expect(
+            expedionService.cancelAndRequote('q_1', 'admin_1')
+        ).rejects.toMatchObject({ code: 'NOT_PAID', status: 409 });
+        expect(updateMock).not.toHaveBeenCalled();
+    });
+
+    // Once a listing or a driver exists, money is held against a shipment on
+    // this side too. Unwinding that is a cancellation, not a re-quote.
+    it.each([
+        ['already on the marketplace', { listingId: 'lst_1' }],
+        ['already with a driver', { assignedCarrierId: 'car_1' }],
+    ])('refuses a job %s', async (_label, over) => {
+        getByIdMock.mockResolvedValue(paidQuote(over) as never);
+
+        await expect(
+            expedionService.cancelAndRequote('q_1', 'admin_1')
+        ).rejects.toMatchObject({ code: 'ALREADY_DISPATCHED', status: 409 });
+        expect(updateMock).not.toHaveBeenCalled();
+    });
+
+    it('is a 404 for a quote that does not exist', async () => {
+        getByIdMock.mockResolvedValue(undefined as never);
+
+        await expect(
+            expedionService.cancelAndRequote('nope', 'admin_1')
+        ).rejects.toMatchObject({ code: 'QUOTE_NOT_FOUND', status: 404 });
+    });
+
+    // 1085 imported rows sit at `picked_up` with a settled payment, no carrier
+    // and no listing, because the lot was collected outside the system. Gating
+    // on `paymentStatus` alone would rewind a job in transit to `quoted` and
+    // wipe the price the client paid.
+    it.each(['picked_up', 'assigned', 'escalated'] as const)(
+        'refuses to rewind a quote that is already at %s',
+        async (status) => {
+            getByIdMock.mockResolvedValue(paidQuote({ status }) as never);
+
+            await expect(
+                expedionService.cancelAndRequote('q_1', 'admin_1')
+            ).rejects.toMatchObject({ code: 'NOT_AWAITING_DISPATCH', status: 409 });
+            expect(updateMock).not.toHaveBeenCalled();
+        }
+    );
+});
+
+describe('expedionService.autoPrice — a settled price is not the engine\'s to revise', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    // `reextractDocument` re-runs this in the background. Without the guard it
+    // rewrote the very figures `adminUpdate` refuses to let an operator touch,
+    // straight past PRICE_LOCKED.
+    it('declines to price a quote the client has already paid for', async () => {
+        getByIdMock.mockResolvedValue(
+            paidQuote({ lengthCm: 80, widthCm: 60, heightCm: 50, weightKg: 18 }) as never
+        );
+
+        await expect(expedionService.autoPrice('q_1')).resolves.toBeNull();
+        expect(updateMock).not.toHaveBeenCalled();
     });
 });
 
