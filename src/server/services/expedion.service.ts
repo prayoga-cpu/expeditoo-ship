@@ -828,6 +828,23 @@ export const expedionService = {
     if (!quote) throw err("QUOTE_NOT_FOUND", 404);
     if (quote.paymentStatus === "paid") return quote; // idempotent
 
+    // Refused rather than half-written. This used to keep the old status when
+    // the move was illegal, which produced `payment_status = 'paid'` on a
+    // `quoted` row — a combination every capability in the fork reads as
+    // "nothing to do": unpriceable, undispatchable, and not re-quotable
+    // either. `cancelAndRequote` makes that reachable, because the Expedion
+    // success page re-posts this endpoint from `initState` on every mount and
+    // the payment server replays it for as long as Stripe still reports the
+    // session paid. An operator who deliberately reopened a quote must not
+    // have it re-settled behind them by a stale session id.
+    if (!canTransition(quote.status, "paid")) {
+      throw err(
+        "INVALID_TRANSITION",
+        409,
+        `A payment cannot be recorded against a quote at ${quote.status}`
+      );
+    }
+
     const escalateAfter = new Date(
       Date.now() + escalationWindowHours() * 60 * 60 * 1000
     );
@@ -837,7 +854,7 @@ export const expedionService = {
         id,
         {
           paymentStatus: "paid",
-          status: canTransition(quote.status, "paid") ? "paid" : quote.status,
+          status: "paid",
           escalateAfter,
         },
         tx

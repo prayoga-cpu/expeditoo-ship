@@ -267,6 +267,22 @@ verification and all eight were real. What they caught, and what it cost:
 | Copy promised a refund the code cannot issue, and the French confirm button read "Annuler…" like the dismiss button beside it | Rewritten; confirm is **Unwind and re-quote** / **Remettre en cotation** |
 | Migration 0006 was not replay-safe — applied twice on a non-UTC session it shifts every value again | Each statement guarded on the column still being naive |
 
+A completeness pass then found three the dimension finders had all missed —
+including one the fixes above had themselves created:
+
+| Defect | Fix |
+|---|---|
+| The price-lock carve-out had **no caller**: `QuoteDetailDialog` gated the field and `patchToSend` on `canRepriceQuote`, so the 16 rows the carve-out exists for still could not be repaired | Both gate on `canSupplyMissingPrice`, the client mirror of `isSupplyingMissingPrice` |
+| `markPaid` wrote `payment_status = 'paid'` while keeping an illegal status, and `cancelAndRequote` made that reachable — the Expedion success page re-posts `/paid` on every mount, leaving a `quoted` row marked paid that no capability, queue or button could touch | Refuses with `INVALID_TRANSITION` instead of half-writing |
+| `canAssign` ignored `escalationReady`, so the overflow put "Assign a driver" back on exactly the rows the blocked-fork collapse protects — all 41 of them | Readiness folded into `canAssign`; `canEscalate` left alone, since its click routes to the fix form |
+
+It also flagged a deploy hazard that is **not** fixed in code: nothing in the
+pipeline runs migrations (`build` is a bare `next build`, `vercel.json` is
+empty, the only workflow is the cron). The new code reads `assigned_directly`
+on every `expedion_quotes` select, so a deploy that precedes `pnpm db:migrate`
+fails every read — including the `/paid` endpoint the payment server calls.
+0006 and 0007 must be applied to production before or with this deploy.
+
 Refuted on verification, and left alone: claims that the funnel's `assigned`
 count needed no marker, that the write-back's SMS branch misfires, that
 `requested_at` needed migrating, and several that were reading HEAD rather than

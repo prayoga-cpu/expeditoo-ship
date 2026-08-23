@@ -4,6 +4,7 @@ import type { QuoteRow } from "@/server/dal/expedion-report.dal";
 
 import {
   canRepriceQuote,
+  canSupplyMissingPrice,
   escalationHoursLeft,
   isNewQuote,
   nextAction,
@@ -353,6 +354,21 @@ describe("quoteCapabilities", () => {
     });
   });
 
+  // The overflow keeps every capability that is not already a primary button,
+  // so without this it put "Assign a driver" straight back on the very rows
+  // `nextAction` collapses to a single Fix — and assigning them can only 422.
+  it("withholds assignment from a row that cannot be published", () => {
+    const blocked = paidRow({
+      escalationReady: false,
+      escalationBlockers: ["pickupCoords"],
+    });
+
+    expect(quoteCapabilities(blocked).canAssign).toBe(false);
+    // Publishing stays offered: its click routes to the fix form, not to a
+    // publish that would fail.
+    expect(quoteCapabilities(blocked).canEscalate).toBe(true);
+  });
+
   it("shuts everything on a finished quote", () => {
     for (const status of ["delivered", "cancelled"]) {
       expect(quoteCapabilities(row({ status }))).toEqual({
@@ -373,5 +389,66 @@ describe("quoteCapabilities", () => {
       quoteCapabilities(row({ status: "picked_up", paymentStatus: "paid" }))
         .canEditStorage
     ).toBe(true);
+  });
+});
+
+describe("canSupplyMissingPrice", () => {
+  // The client mirror of `isSupplyingMissingPrice`. Gating the detail dialog's
+  // accepted-price field on `canRepriceQuote` instead left the server's
+  // carve-out with no caller at all: the field was hidden and the patch
+  // stripped it, so an imported quote that arrived settled but priceless could
+  // never be published and the only escape was to unwind a real payment.
+  it("opens the field on a paid quote that carries no price", () => {
+    expect(
+      canSupplyMissingPrice({
+        status: "paid",
+        paymentStatus: "paid",
+        acceptedPriceCents: null,
+      })
+    ).toBe(true);
+  });
+
+  it("keeps it shut on a price the client actually paid", () => {
+    expect(
+      canSupplyMissingPrice({
+        status: "paid",
+        paymentStatus: "paid",
+        acceptedPriceCents: 10_000,
+      })
+    ).toBe(false);
+  });
+
+  // A value below the escalation floor is not a price, so the row is still the
+  // repairable case rather than a settled one.
+  it("treats a sub-floor amount as missing", () => {
+    expect(
+      canSupplyMissingPrice({
+        status: "paid",
+        paymentStatus: "paid",
+        acceptedPriceCents: 50,
+      })
+    ).toBe(true);
+  });
+
+  it("stays open wherever repricing itself is", () => {
+    expect(
+      canSupplyMissingPrice({
+        status: "quoted",
+        paymentStatus: "unpaid",
+        acceptedPriceCents: 10_000,
+      })
+    ).toBe(true);
+  });
+
+  it("is shut on a finished quote either way", () => {
+    for (const status of ["delivered", "cancelled"]) {
+      expect(
+        canSupplyMissingPrice({
+          status,
+          paymentStatus: "paid",
+          acceptedPriceCents: null,
+        })
+      ).toBe(false);
+    }
   });
 });

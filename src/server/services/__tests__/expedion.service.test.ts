@@ -502,6 +502,50 @@ describe('expedionService.cancelAndRequote', () => {
     );
 });
 
+describe('expedionService.markPaid — a payment is recorded whole or not at all', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        updateMock.mockImplementation(
+            async (_id, patch) => ({ ...paidQuote(), ...patch }) as never
+        );
+    });
+
+    it('records a settlement against an accepted quote', async () => {
+        getByIdMock.mockResolvedValue(
+            paidQuote({ status: 'accepted', paymentStatus: 'unpaid' }) as never
+        );
+
+        await expedionService.markPaid('q_1', { reference: 'cs_test_x' });
+
+        expect(lastPatch()).toMatchObject({ paymentStatus: 'paid', status: 'paid' });
+        expect(lastPatch().escalateAfter).toBeInstanceOf(Date);
+    });
+
+    // The half-state this replaced: `payment_status = 'paid'` on a `quoted`
+    // row reads as "nothing to do" to every capability in the fork — not
+    // priceable, not dispatchable, not re-quotable — and only a direct DB edit
+    // could free it. `cancelAndRequote` makes it reachable, because the
+    // Expedion success page re-posts this endpoint on every mount.
+    it('refuses a settlement the quote cannot legally accept', async () => {
+        getByIdMock.mockResolvedValue(
+            paidQuote({ status: 'quoted', paymentStatus: 'unpaid' }) as never
+        );
+
+        await expect(
+            expedionService.markPaid('q_1', { reference: 'cs_test_x' })
+        ).rejects.toMatchObject({ code: 'INVALID_TRANSITION', status: 409 });
+        expect(updateMock).not.toHaveBeenCalled();
+    });
+
+    it('stays idempotent on a quote already settled', async () => {
+        getByIdMock.mockResolvedValue(paidQuote() as never);
+
+        await expedionService.markPaid('q_1');
+
+        expect(updateMock).not.toHaveBeenCalled();
+    });
+});
+
 describe('expedionService.autoPrice — a settled price is not the engine\'s to revise', () => {
     beforeEach(() => {
         vi.clearAllMocks();

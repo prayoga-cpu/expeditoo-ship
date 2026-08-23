@@ -100,8 +100,8 @@ export function quoteCapabilities(quote: QuoteRow): QuoteCapabilities;
 | Capability | True when |
 |---|---|
 | `canReprice` | `paymentStatus !== 'paid'` **and** `status` not in `delivered, cancelled` |
-| `canAssign` | `queues.needsDriver` **and** `status === 'paid'` |
-| `canEscalate` | same as `canAssign` |
+| `canAssign` | `queues.needsDriver`, `status === 'paid'` **and** escalation-ready |
+| `canEscalate` | `queues.needsDriver` **and** `status === 'paid'` |
 | `canEditStorage` | status not in `delivered, cancelled` |
 | `canRequote` | same as `canAssign` |
 
@@ -110,6 +110,13 @@ carries it too. This is the guard standing between an operator and
 `cancelAndRequote`, which unwinds a payment; the cost of the two drifting apart
 is a job in transit rewound to `quoted`. Cheap belt to a brace that has already
 slipped once.
+
+`canAssign` alone folds in escalation readiness. The overflow keeps every
+capability that is not already a primary button, so without it "Assign a
+driver" reappeared on precisely the rows §2 collapses to a single Fix — and
+assigning them can only 422, since `assignDirect` runs through `escalate`.
+`canEscalate` deliberately does not: its click already routes to the fix form
+rather than to a publish that would fail.
 
 Both tables read this — `RecentQuotesPanel` and `QuoteQueueTable`. The ⋮ menu
 renders only the entries whose capability holds, and a row with none shows no
@@ -143,7 +150,12 @@ locking them would strand a paid quote that cannot be published.
 
 **One carve-out: supplying a price the row never had.** `acceptedPriceCents` may
 be written when the stored value is null or below `MIN_ESCALATABLE_PRICE_CENTS`,
-and only to a value that clears it. The lock exists so a recorded amount cannot
+and only to a value that clears it. The client mirror is
+`canSupplyMissingPrice`, and **both** the editable field and `patchToSend` in
+`QuoteDetailDialog` gate on it — gating either on `canRepriceQuote` instead
+leaves the server carve-out with no caller at all: the field is hidden and the
+patch strips the value, so the repair surface this section names cannot reach
+it. 16 live rows depend on that path. The lock exists so a recorded amount cannot
 drift from what Stripe captured; it is not meant to strand a row carrying no
 amount at all — and 95 live paid quotes do, because the Airtable import brought
 settled payments across without an accepted price. Those can never escalate, and
@@ -342,7 +354,8 @@ gates the buttons anyway, so `PRICE_LOCKED` is unreachable from the dashboard.
 | 3 | Assign, then the payment hold fails | `acceptOffer` compensates the award; the listing returns to `open` with the quote escalated. Surfaced as a failure, not swallowed |
 | 4 | Carrier suspended between picker render and submit | Precondition 6 → `CARRIER_NOT_APPROVED` 409 |
 | 5 | No approved carrier at all | Picker empty, existing `actions.noCarriers` copy; Publish is the other button and is unaffected |
-| 6 | `markPaid` fires twice | Already idempotent on `paymentStatus === 'paid'`; `escalateAfter` is not re-stamped |
+| 6 | `markPaid` fires twice | Idempotent on `paymentStatus === 'paid'`; `escalateAfter` is not re-stamped |
+| 6b | `markPaid` fires on a quote it cannot legally move to `paid` | `INVALID_TRANSITION` 409, and nothing is written. It used to keep the old status and set `payment_status = 'paid'` anyway — a `quoted` row marked paid, which every capability reads as "nothing to do": unpriceable, undispatchable, not re-quotable, no button. `cancelAndRequote` makes it reachable, because the Expedion success page re-posts `/paid` from `initState` on every mount and the payment server replays it while Stripe still reports the session paid. An operator who deliberately reopened a quote must not have it re-settled by a stale session id |
 | 7 | Reprice attempted on a paid quote via the API directly | `PRICE_LOCKED` 409. The UI never offers it, but the UI is not the guard |
 | 8 | Re-quote on a quote that was already escalated | `ALREADY_DISPATCHED` 409 |
 | 9 | Awarded carrier has no `carriers` row | Write-back records `null` and notes the mismatch; the award stands (§4.3) |

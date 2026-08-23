@@ -244,6 +244,36 @@ export interface QuoteCapabilities {
 const TERMINAL = ["delivered", "cancelled"];
 
 /**
+ * The floor `escalationBlockers` puts on `acceptedPriceCents`, mirroring
+ * `MIN_ESCALATABLE_PRICE_CENTS` in `expedion.service.ts`.
+ *
+ * `draftEscalationBlockers` below already hard-codes the same 100; naming it
+ * once means the price-lock carve-out and the blocker check cannot disagree
+ * about what counts as a usable price.
+ */
+export const MIN_ESCALATABLE_PRICE_CENTS = 100;
+
+/**
+ * Whether an operator may still *supply* an accepted price on this quote —
+ * the client mirror of `isSupplyingMissingPrice`.
+ *
+ * The blanket lock is right for a price the client actually paid, and wrong
+ * for a row that carries none: imported quotes arrived settled but priceless,
+ * `escalationBlockers` refuses to publish them without one, and gating the
+ * field on `canRepriceQuote` alone left the server's carve-out with no caller
+ * — the repair surface the spec names could not reach it.
+ */
+export function canSupplyMissingPrice(quote: {
+  status: string;
+  paymentStatus: string;
+  acceptedPriceCents?: number | null;
+}): boolean {
+  if (TERMINAL.includes(quote.status)) return false;
+  if (canRepriceQuote(quote)) return true;
+  return (quote.acceptedPriceCents ?? 0) < MIN_ESCALATABLE_PRICE_CENTS;
+}
+
+/**
  * Whether a price may still be published or changed.
  *
  * Takes the two fields it reads rather than a `QuoteRow`, because the detail
@@ -277,9 +307,18 @@ export function quoteCapabilities(quote: QuoteRow): QuoteCapabilities {
   // brace that has already slipped once.
   const dispatchable = quote.queues.needsDriver && quote.status === "paid";
 
+  // Assigning runs through `escalate`, so a row failing the ten checks answers
+  // it with a 422. `nextAction` already collapses such a row to a single Fix
+  // button; without this the overflow filter — which keeps every capability
+  // that is not already a primary button — put "Assign a driver" straight back
+  // on it, in a menu whose whole claim is that the server accepts what it
+  // shows. `canEscalate` stays as it is: its click already routes to the fix
+  // form rather than to a publish that would fail.
+  const ready = quote.escalationReady ?? quote.hasPickupCoords;
+
   return {
     canReprice: canRepriceQuote(quote),
-    canAssign: dispatchable,
+    canAssign: dispatchable && ready,
     canEscalate: dispatchable,
     canEditStorage: live,
     canRequote: dispatchable,
@@ -333,7 +372,10 @@ export function draftEscalationBlockers(
   if (!hasPostalCode(draft.deliveryPostalCode))
     blockers.push("deliveryPostalCode");
   if (!draft.weightKg || draft.weightKg <= 0) blockers.push("weight");
-  if (!draft.acceptedPriceCents || draft.acceptedPriceCents < 100)
+  if (
+    !draft.acceptedPriceCents ||
+    draft.acceptedPriceCents < MIN_ESCALATABLE_PRICE_CENTS
+  )
     blockers.push("acceptedPrice");
   return blockers;
 }

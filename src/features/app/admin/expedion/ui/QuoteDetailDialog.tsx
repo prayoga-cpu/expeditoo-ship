@@ -48,7 +48,11 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { formatCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
-import { canRepriceQuote, draftEscalationBlockers } from "../lib/quote-action";
+import {
+  canRepriceQuote,
+  canSupplyMissingPrice,
+  draftEscalationBlockers,
+} from "../lib/quote-action";
 import {
   useExpedionEscalate,
   useExpedionQuoteAdmin,
@@ -256,7 +260,12 @@ export function QuoteDetailDialog({
       quoteAvailable: _available,
       ...rest
     } = form;
-    return rest;
+    // The one field the server still accepts on a paid quote: a price the row
+    // never had. Stripping it here as well would leave `isSupplyingMissingPrice`
+    // with no caller and an imported quote unpublishable forever.
+    return canSupplyMissingPrice(data)
+      ? { ...rest, acceptedPriceCents: form.acceptedPriceCents }
+      : rest;
   }
 
   function saveChanges() {
@@ -931,7 +940,7 @@ export function QuoteDetailDialog({
                       capture out of step, and `adminUpdate` refuses it anyway
                       (`PRICE_LOCKED`). The correction path is Refund and
                       re-quote. */}
-                  {isEditing && canRepriceQuote(data) ? (
+                  {isEditing && canSupplyMissingPrice(data) ? (
                     <EditableField
                       label={t("accepted")}
                       type="number"
@@ -963,7 +972,7 @@ export function QuoteDetailDialog({
                       // because the money has landed, not because the dialog
                       // is broken.
                       hint={
-                        isEditing && !canRepriceQuote(data)
+                        isEditing && !canSupplyMissingPrice(data)
                           ? ta("priceLocked")
                           : undefined
                       }

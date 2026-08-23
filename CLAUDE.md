@@ -176,7 +176,7 @@ a seed script — read `docs/TESTING_MOCKS.md` before trusting anything money-sh
 Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before shipping.
 
 **Gates — all green.** `npx tsc --noEmit` 0 errors · `pnpm lint` 0 errors ·
-429 unit tests pass · `pnpm build` succeeds.
+438 unit tests pass · `pnpm build` succeeds.
 
 **Done**
 - Schema remodelled to the transport model; one clean initial migration
