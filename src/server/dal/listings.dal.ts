@@ -1,11 +1,16 @@
 import { db } from "@/db";
 import {
+  categories,
   listings,
   photos,
   type InsertListing,
   type InsertPhoto,
   type ListingStatus,
 } from "@/db/schema/listings";
+
+/** Stable id and slug for the fallback category, so the upsert is idempotent. */
+const DEFAULT_CATEGORY_ID = "transport-general";
+const DEFAULT_CATEGORY_SLUG = "transport-general";
 import { shipments, type InsertShipment } from "@/db/schema/shipments";
 import {
   and,
@@ -59,6 +64,33 @@ export const listingsDal = {
   async create(data: InsertListing, tx: Executor = db) {
     const [result] = await tx.insert(listings).values(data).returning();
     return result;
+  },
+
+  /**
+   * The category a transport request falls into when nobody picked one.
+   *
+   * Upserted rather than looked up because `listings.category_id` is a foreign
+   * key and an environment whose seed predates this row would otherwise fail
+   * the insert — which reads as "posting a job is broken" rather than "this
+   * database has no categories yet". Escalation learned the same lesson; see
+   * `resolveCategoryId` in `expedion-escalation.service.ts`.
+   */
+  async ensureDefaultCategory(tx: Executor = db) {
+    await tx
+      .insert(categories)
+      .values({
+        id: DEFAULT_CATEGORY_ID,
+        name: "Transport (général)",
+        slug: DEFAULT_CATEGORY_SLUG,
+        description:
+          "Demandes de transport déposées directement sur Expeditoo.",
+      })
+      .onConflictDoNothing();
+
+    const row = await tx.query.categories.findFirst({
+      where: eq(categories.slug, DEFAULT_CATEGORY_SLUG),
+    });
+    return row?.id ?? DEFAULT_CATEGORY_ID;
   },
 
   async getById(id: string, tx: Executor = db) {

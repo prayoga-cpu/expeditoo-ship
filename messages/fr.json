@@ -43,7 +43,9 @@
       "myOffers": "Mes offres",
       "deliveries": "Livraisons",
       "myApplication": "Mon dossier",
-      "adminPanel": "Panneau d'administration"
+      "adminPanel": "Panneau d'administration",
+      "requestTransport": "Demander un transport",
+      "myRequests": "Mes demandes"
     },
     "categories": {
       "electronics": "Électronique",
@@ -618,6 +620,132 @@
       "notApprovedTitle": "Votre candidature transporteur n'est pas encore approuvee",
       "notApprovedDescription": "Les offres se debloquent des qu'un operateur approuve votre candidature. Consultez son statut pour voir ce qu'il manque.",
       "notApprovedCta": "Voir ma candidature"
+    }
+  },
+  "create": {
+    "title": "Demander un transport",
+    "subtitle": "Les transporteurs enchérissent sur votre demande. Vous choisissez qui l'effectue.",
+    "steps": {
+      "what": "Quoi",
+      "where": "Où",
+      "when": "Quand",
+      "budget": "Budget"
+    },
+    "buttons": {
+      "back": "Retour",
+      "saveDraft": "Enregistrer le brouillon",
+      "post": "Publier la demande",
+      "posting": "Publication…",
+      "next": "Suivant"
+    },
+    "toast": {
+      "posted": "Demande publiée — les transporteurs peuvent enchérir",
+      "draftSaved": "Brouillon enregistré",
+      "pickupTooSoon": "Le retrait est trop proche pour laisser le temps d'enchérir. Reportez-le.",
+      "failed": "Impossible de publier votre demande. Veuillez réessayer."
+    },
+    "what": {
+      "titleLabel": "Que transportez-vous ?",
+      "titlePlaceholder": "Un canapé deux places et une table basse",
+      "descriptionLabel": "Détails",
+      "descriptionPlaceholder": "Décrivez le chargement, l'accès, et tout ce qu'un transporteur doit savoir avant d'enchérir.",
+      "weight": "Poids (kg)",
+      "quantity": "Quantité",
+      "length": "Longueur (cm)",
+      "width": "Largeur (cm)",
+      "height": "Hauteur (cm)",
+      "fragile": "Fragile",
+      "fragileHint": "Nécessite une manipulation soignée",
+      "help": "Aide au chargement",
+      "helpHint": "Le transporteur doit aider à charger et décharger",
+      "photos": "Photos (facultatif)"
+    },
+    "where": {
+      "pickup": "Retrait",
+      "dropoff": "Livraison",
+      "locationType": "Type de lieu",
+      "select": "Sélectionner",
+      "floor": "Étage",
+      "lift": "Ascenseur disponible",
+      "liftHint": "Y a-t-il un ascenseur jusqu'à cet étage ?"
+    },
+    "locationTypes": {
+      "house": "Maison",
+      "apartment": "Appartement",
+      "warehouse": "Entrepôt",
+      "factory": "Usine",
+      "construction_site": "Chantier",
+      "shop": "Commerce",
+      "office": "Bureau",
+      "storage_unit": "Box de stockage",
+      "farm": "Ferme",
+      "port": "Port",
+      "airport": "Aéroport",
+      "rail_terminal": "Terminal ferroviaire",
+      "other": "Autre"
+    },
+    "when": {
+      "pickupFrom": "Retrait à partir du",
+      "pickupUntil": "Retrait jusqu'au",
+      "dropoffFrom": "Livraison à partir du",
+      "dropoffUntil": "Livraison jusqu'au",
+      "flexible": "Les dates sont flexibles",
+      "flexibleHint": "Laissez les transporteurs proposer des horaires hors de vos créneaux"
+    },
+    "budget": {
+      "label": "Combien pensez-vous payer ? (€)",
+      "hint": "C'est une estimation, pas une limite. Les transporteurs peuvent enchérir au-dessus ou en dessous, et vous choisissez l'offre que vous acceptez."
+    },
+    "dropzone": {
+      "title": "Ajouter des photos",
+      "subtitle": "Glissez-déposez, ou cliquez pour téléverser",
+      "uploading": "{count} photo(s) téléversée(s)",
+      "uploadError": "Certaines photos n'ont pas pu être téléversées",
+      "takePhoto": "Prendre une photo",
+      "remove": "Supprimer cette photo"
+    },
+    "validation": {
+      "titleShort": "Au moins 5 caractères",
+      "descriptionShort": "Au moins 20 caractères",
+      "aboveZero": "Doit être supérieur à 0",
+      "weightMax": "Cela dépasse les 44 t que nous pouvons transporter",
+      "dimensionsPartial": "Indiquez les trois dimensions, ou aucune",
+      "addressRequired": "L'adresse est obligatoire",
+      "cityRequired": "La ville est obligatoire",
+      "postalCode": "Doit comporter 5 chiffres",
+      "pinRequired": "Placez le repère sur la carte",
+      "outsideFrance": "Nous ne transportons qu'en France",
+      "floorRequired": "L'étage est obligatoire pour un appartement",
+      "liftRequired": "Indiquez aux transporteurs s'il y a un ascenseur",
+      "tooClose": "Le retrait et la livraison sont trop proches l'un de l'autre",
+      "dateRequired": "Choisissez une date et une heure",
+      "pickupWindow": "Le créneau de retrait doit se terminer après son début",
+      "deliveryBeforePickup": "La livraison ne peut pas commencer avant le retrait",
+      "deliveryWindow": "Le créneau de livraison doit se terminer après son début",
+      "budgetRequired": "Indiquez le montant que vous prévoyez"
+    }
+  },
+  "myJobs": {
+    "title": "Mes demandes",
+    "postJob": "Publier une demande",
+    "empty": "Aucune demande pour l'instant",
+    "emptyDesc": "Publiez une demande de transport et les transporteurs commenceront à enchérir.",
+    "emptyFiltered": "Aucune demande avec ce statut",
+    "emptyFilteredDesc": "Essayez un autre filtre de statut.",
+    "loadFailed": "Impossible de charger vos demandes",
+    "offers": "{count, plural, =0 {Aucune offre} one {# offre} other {# offres}}",
+    "posted": "Publiée le {date}",
+    "filters": {
+      "all": "Tous les statuts"
+    },
+    "status": {
+      "draft": "Brouillon",
+      "open": "Ouverte",
+      "awarded": "Attribuée",
+      "in_progress": "En cours",
+      "completed": "Terminée",
+      "cancelled": "Annulée",
+      "expired": "Expirée"
     }
   },
   "driver": {

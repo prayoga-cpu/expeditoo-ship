@@ -19,6 +19,8 @@ import {
   MessageSquare,
   User,
   ClipboardList,
+  PackagePlus,
+  Boxes,
   Shield,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
@@ -57,8 +59,16 @@ export function MainLayout({ children }: MainLayoutProps) {
       badge: unreadCount > 0 ? unreadCount : undefined, // Add badge
     },
     {
-      // Replaces "My jobs". Shippers no longer post here, so the only thing
-      // that is "mine" is the application to drive.
+      href: "/create",
+      label: t("requestTransport"),
+      icon: PackagePlus,
+    },
+    {
+      href: "/listings/me",
+      label: t("myRequests"),
+      icon: Boxes,
+    },
+    {
       href: "/carrier/application",
       label: t("myApplication"),
       icon: ClipboardList,

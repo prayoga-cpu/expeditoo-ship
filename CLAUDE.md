@@ -12,14 +12,27 @@ taken; approved drivers bid downward on price, ETA and vehicle; **an operator
 selects** the winner. Status writes back so the Expedion client never leaves
 their app. Revenue is a commission on each completed delivery.
 
-**Shippers do not post jobs here.** Expedion escalation is the only inlet. If you
-find a job-posting form, a shipper's "my jobs" list, or won-checkout code, it is
-a leftover and should be removed, not extended. Likewise **there are no goods
-auctions** — the only auction is the reverse auction on transport.
+**There are two inlets.** Expedion escalation, and a direct transport request
+posted at `/create` by anyone with a session. The second was deleted in
+`7a455c0` and restored on 2026-08-26 because the client asked for it back; if
+you are reading an older doc that says "Expedion escalation is the only inlet",
+that is what changed. **Won-checkout code and goods-auction concepts are still
+leftovers** and should be removed, not extended — the only auction here is the
+reverse auction on transport.
 
-**Nobody signs in as the shipper.** Escalated listings are owned by a system
-account (`EXPEDION_SYSTEM_USER_ID`), which is why awarding is an operator
-permission rather than an owner permission.
+The two inlets differ in who awards the job, and that difference is load-bearing:
+an escalated job is owned by the Expedion system account and awarded by an
+**operator**; a direct request is owned by the person who posted it and awarded
+by **them**. `offersService.acceptOffer` reads `listing.origin` to tell the two
+apart, which is why `origin` is stamped by the service and is **not** a field on
+`createListingSchema` — accepting it from the client would let anyone post work
+straight into the operator award queue.
+
+**Nobody signs in as the owner of an escalated job.** Those listings belong to a
+system account (`EXPEDION_SYSTEM_USER_ID`) that no human logs into, which is why
+awarding is an operator permission rather than an owner permission. (This is not
+the same as saying nobody holds the `shipper` role — every signup does. See
+§"Data Model".)
 
 `ROADMAP.md` is the product source of truth. Read it before planning anything.
 
@@ -104,8 +117,14 @@ that will do the job; that is not fleet management.
 **Roles (7):** `shipper`, `carrier`, `driver`, `operator`, `support`, `finance`,
 `admin`. The canonical list is `userRoleEnum` in `src/db/schema/users.ts` — Zod
 schemas must **derive** from it, never restate it. A `driver` executes shipments
-and never sees prices, offers or payouts. `shipper` is now held only by the
-Expedion system account. See `docs/specs/roles_spec.md` for the permission matrix.
+and never sees prices, offers or payouts. `shipper` is the **default role granted
+to every new signup** (`assignDefaultRole`, `src/server/dal/users.dal.ts`) — a
+leftover from the era when shippers posted work. No shipper-facing surface exists,
+so the role reaches nothing in the UI, but do not read that as "nobody holds it":
+`POST /api/listings` checks for a session and no role at all, so the job-posting
+API is live for any signed-in user even though nothing links to it. The Expedion
+system account is the owner of escalated listings, not the only holder of the
+role. See `docs/specs/roles_spec.md` for the permission matrix.
 
 ---
 

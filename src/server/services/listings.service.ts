@@ -47,12 +47,20 @@ export function resolveExpiresAt(pickupFrom: Date, now = new Date()): Date {
 function toInsert(
   shipperId: string,
   data: CreateListingInput,
-  expiresAt: Date
+  expiresAt: Date,
+  categoryId: string
 ): InsertListing {
   return {
     id: nanoid(),
     shipperId,
-    categoryId: data.categoryId,
+    categoryId,
+    // Stamped here, and deliberately not a field on `createListingSchema`.
+    // `offersService.acceptOffer` reads `listing.origin` to decide whether an
+    // operator may award the job in the owner's place, so a client-supplied
+    // origin would let any signed-in account post work straight into the
+    // operator queue. Escalation stamps `expedion` on its own listings the
+    // same way, from the server side.
+    origin: "direct",
     status: data.publish ? "open" : "draft",
     title: data.title,
     description: data.description,
@@ -108,7 +116,13 @@ export const listingsService = {
     }
 
     const expiresAt = resolveExpiresAt(data.pickupFrom);
-    const listing = await listingsDal.create(toInsert(shipperId, data, expiresAt));
+    // A requester describes an object, not a taxonomy node, so the category is
+    // resolved here when the caller did not name one.
+    const categoryId =
+      data.categoryId ?? (await listingsDal.ensureDefaultCategory());
+    const listing = await listingsDal.create(
+      toInsert(shipperId, data, expiresAt, categoryId)
+    );
 
     if (data.photos.length > 0) {
       await listingsDal.addPhotos(

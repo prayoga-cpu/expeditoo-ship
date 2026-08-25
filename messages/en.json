@@ -43,7 +43,9 @@
       "myOffers": "My offers",
       "deliveries": "Deliveries",
       "myApplication": "My application",
-      "adminPanel": "Admin Panel"
+      "adminPanel": "Admin Panel",
+      "requestTransport": "Request transport",
+      "myRequests": "My requests"
     },
     "categories": {
       "electronics": "Electronics",
@@ -618,6 +620,132 @@
       "notApprovedTitle": "Your carrier application isn't approved yet",
       "notApprovedDescription": "Bidding unlocks as soon as an operator approves your application. Check its status to see what's missing.",
       "notApprovedCta": "View my application"
+    }
+  },
+  "create": {
+    "title": "Request transport",
+    "subtitle": "Carriers bid on your request. You choose who moves it.",
+    "steps": {
+      "what": "What",
+      "where": "Where",
+      "when": "When",
+      "budget": "Budget"
+    },
+    "buttons": {
+      "back": "Back",
+      "saveDraft": "Save draft",
+      "post": "Post request",
+      "posting": "Posting…",
+      "next": "Next"
+    },
+    "toast": {
+      "posted": "Request posted — carriers can now bid",
+      "draftSaved": "Draft saved",
+      "pickupTooSoon": "Pickup is too soon for carriers to bid. Push it later.",
+      "failed": "Could not post your request. Please try again."
+    },
+    "what": {
+      "titleLabel": "What are you moving?",
+      "titlePlaceholder": "Two-seater sofa and a coffee table",
+      "descriptionLabel": "Details",
+      "descriptionPlaceholder": "Describe the load, the access, and anything a carrier should know before bidding.",
+      "weight": "Weight (kg)",
+      "quantity": "Quantity",
+      "length": "Length (cm)",
+      "width": "Width (cm)",
+      "height": "Height (cm)",
+      "fragile": "Fragile",
+      "fragileHint": "Needs careful handling",
+      "help": "Help loading",
+      "helpHint": "The carrier must help load and unload",
+      "photos": "Photos (optional)"
+    },
+    "where": {
+      "pickup": "Pickup",
+      "dropoff": "Delivery",
+      "locationType": "Location type",
+      "select": "Select",
+      "floor": "Floor",
+      "lift": "Lift available",
+      "liftHint": "Is there a lift to this floor?"
+    },
+    "locationTypes": {
+      "house": "House",
+      "apartment": "Apartment",
+      "warehouse": "Warehouse",
+      "factory": "Factory",
+      "construction_site": "Construction site",
+      "shop": "Shop",
+      "office": "Office",
+      "storage_unit": "Storage unit",
+      "farm": "Farm",
+      "port": "Port",
+      "airport": "Airport",
+      "rail_terminal": "Rail terminal",
+      "other": "Other"
+    },
+    "when": {
+      "pickupFrom": "Pickup from",
+      "pickupUntil": "Pickup until",
+      "dropoffFrom": "Delivery from",
+      "dropoffUntil": "Delivery until",
+      "flexible": "Dates are flexible",
+      "flexibleHint": "Let carriers propose times outside your windows"
+    },
+    "budget": {
+      "label": "What do you expect to pay? (€)",
+      "hint": "This is an expectation, not a limit. Carriers may bid above or below it, and you choose which offer to accept."
+    },
+    "dropzone": {
+      "title": "Add photos",
+      "subtitle": "Drag and drop, or click to upload",
+      "uploading": "{count} photo(s) uploaded",
+      "uploadError": "Some photos could not be uploaded",
+      "takePhoto": "Take a photo",
+      "remove": "Remove this photo"
+    },
+    "validation": {
+      "titleShort": "At least 5 characters",
+      "descriptionShort": "At least 20 characters",
+      "aboveZero": "Must be above 0",
+      "weightMax": "That is above the 44 t we can carry",
+      "dimensionsPartial": "Give all three dimensions, or none",
+      "addressRequired": "Address is required",
+      "cityRequired": "City is required",
+      "postalCode": "Must be 5 digits",
+      "pinRequired": "Place the pin on the map",
+      "outsideFrance": "We only carry within France",
+      "floorRequired": "Floor is required for an apartment",
+      "liftRequired": "Tell carriers whether there is a lift",
+      "tooClose": "Pickup and delivery are too close together",
+      "dateRequired": "Pick a date and time",
+      "pickupWindow": "The pickup window must end after it starts",
+      "deliveryBeforePickup": "Delivery cannot start before pickup",
+      "deliveryWindow": "The delivery window must end after it starts",
+      "budgetRequired": "Enter what you expect to pay"
+    }
+  },
+  "myJobs": {
+    "title": "My requests",
+    "postJob": "Request transport",
+    "empty": "No requests yet",
+    "emptyDesc": "Post a transport request and carriers will start bidding.",
+    "emptyFiltered": "No requests with this status",
+    "emptyFilteredDesc": "Try a different status filter.",
+    "loadFailed": "Could not load your requests",
+    "offers": "{count, plural, =0 {No offers} one {# offer} other {# offers}}",
+    "posted": "Posted {date}",
+    "filters": {
+      "all": "All statuses"
+    },
+    "status": {
+      "draft": "Draft",
+      "open": "Open",
+      "awarded": "Awarded",
+      "in_progress": "In progress",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "expired": "Expired"
     }
   },
   "driver": {

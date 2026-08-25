@@ -1,14 +1,13 @@
-import { redirect } from "next/navigation";
+import { MyJobs } from "./MyJobs";
 
 /**
- * "My jobs" was the shipper's own listings, back when shippers posted work
- * here. Expedion escalation is the only inlet now, so there is no such thing as
- * a job you posted — there is only the board of jobs to bid on.
+ * The requests this person has posted, in any state.
  *
- * Kept as a redirect rather than deleted because the route was in the sidebar,
- * the mobile bar and the draft-save path, so it is bookmarked and linked from
- * outside this codebase.
+ * This route redirected to /expedion while Expedion escalation was the only
+ * inlet and nobody could post work here. Direct transport requests brought a
+ * requester back, and a request you cannot find again is not a request — the
+ * draft that /create saves lands here too.
  */
 export default function MyJobsPage() {
-  redirect("/expedion");
+  return <MyJobs />;
 }

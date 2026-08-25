@@ -89,7 +89,14 @@ const requireApartmentDetail = (
 const baseListingSchema = z.object({
   title: z.string().min(5).max(120),
   description: z.string().min(20).max(5000),
-  categoryId: z.string().min(1),
+  /**
+   * Optional because a person requesting transport is not asked to file their
+   * own belongings into a taxonomy — they describe an object and two addresses.
+   * When it is absent the service resolves a default, the same way escalation
+   * already does for a quote arriving from Expedion. An explicit id is still
+   * honoured, so an internal caller that knows the right category keeps it.
+   */
+  categoryId: z.string().min(1).optional(),
 
   weightKg: z.number().positive().max(MAX_WEIGHT_KG),
   lengthCm: z.number().positive().optional(),

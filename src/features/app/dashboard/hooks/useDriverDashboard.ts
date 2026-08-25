@@ -23,9 +23,12 @@ export function useDriverDashboard() {
   const application = useCarrierApplication();
 
   // `limit: 1` because only the total is rendered; the page never lists these.
+  // Unpinned from `origin: "expedion"` so the count matches what the board
+  // actually shows — a driver reading "3 open jobs" and finding five is worse
+  // than either number on its own.
   const openJobs = useQuery({
     queryKey: ["dashboard", "open-jobs"],
-    queryFn: () => listingsApi.browse({ origin: "expedion", limit: 1 }),
+    queryFn: () => listingsApi.browse({ limit: 1 }),
   });
 
   const liveOffers = useQuery({
