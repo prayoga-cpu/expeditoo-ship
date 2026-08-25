@@ -1,0 +1,143 @@
+name: Auth preflight
+
+# Asks the live deployment whether every origin we sign people in from is still
+# registered in every allowlist that gates authentication — Firebase authorized
+# domains, Better Auth `trustedOrigins`, and the CORS allowlist in proxy.ts.
+# `scripts/auth-preflight.mjs` carries the full explanation, including which
+# fourth allowlist it deliberately cannot cover.
+#
+# ---------------------------------------------------------------------------
+# Why this runs on a schedule and not only on pull requests
+# ---------------------------------------------------------------------------
+#
+# The PR run is the cheap half, and it is worth being precise about what it can
+# and cannot see. It asks the LIVE deployment, not the branch: the preflight has
+# no build step and no local server, so a pull request that deletes an origin
+# from auth.ts or proxy.ts still passes here, because the deployment it
+# questioned is the one running the old code. What the PR run actually buys is
+# freshness — it puts the current state of all three allowlists in front of
+# whoever is about to merge, which is the moment somebody is most likely to act
+# on a red one. Catching the diff itself is the type checker's job and the
+# reviewer's; catching the console is this workflow's.
+#
+# The nightly run is the half that actually matters, and it is the ONLY check
+# anywhere in this repository that can catch it. Two of these allowlists do not
+# live in the codebase at all — Firebase Auth → Settings → Authorized domains,
+# and Google Cloud → Credentials → Authorized JavaScript origins are rows in a
+# console that any project owner can edit from a browser. Nothing is committed,
+# no build runs, no test changes colour, and the repository looks exactly as it
+# did the day before. Sign-in simply stops working for everybody, and the first
+# report arrives from a customer rather than from us. That is precisely how
+# Expedion's Google sign-in broke: the origin was never added to Firebase, and
+# no code change would ever have revealed it. A nightly poll of the live
+# consoles is the only instrument that sees it.
+#
+# So: a red nightly run means somebody changed a console, or a deployment
+# domain moved. It is never noise, and it must not be muted.
+#
+# ---------------------------------------------------------------------------
+# Configuration, in repo Settings
+# ---------------------------------------------------------------------------
+#
+#   Variables → APP_URL                the Next.js deployment serving /api/auth
+#                                      (shared with scheduled-jobs.yml)
+#   Variables → EXPEDION_APP_ORIGINS   the same comma-separated list the Vercel
+#                                      project sets, passed through verbatim so
+#                                      the two cannot drift apart
+#   Variables → FIREBASE_API_KEY       optional. The Firebase *web* API key is
+#                                      public by design — it ships inside every
+#                                      browser bundle — so it belongs in
+#                                      Variables, not Secrets. Left unset, the
+#                                      script uses its built-in default.
+#
+# Deliberately no secrets: this workflow only makes unauthenticated requests
+# that any visitor could make, and it never signs in as anybody. Keeping it
+# credential-free is what lets it run on every pull request without thought.
+
+on:
+  pull_request:
+  schedule:
+    # Nightly, off the hour on purpose: GitHub queues scheduled workflows and
+    # the top of the hour is its busiest slot, so a job pinned to :00 is the
+    # one most likely to be delayed or dropped.
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+    inputs:
+      app_origins:
+        description: Origins to check (comma-separated). Defaults to the EXPEDION_APP_ORIGINS repo variable.
+        required: false
+        type: string
+      ship:
+        description: Deployment serving /api/auth. Defaults to the APP_URL repo variable.
+        required: false
+        type: string
+
+# One run per ref. Two concurrent runs would tell the same truth twice while
+# doubling the request rate against Google's config endpoint.
+concurrency:
+  group: auth-preflight-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      # No `pnpm install`. The preflight is deliberately dependency-free ESM,
+      # so it runs from a bare checkout — which also means a lockfile problem
+      # or a registry outage can never be the reason the auth check did not run.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Run preflight
+        env:
+          APP_URL: ${{ vars.APP_URL }}
+          EXPEDION_APP_ORIGINS: ${{ vars.EXPEDION_APP_ORIGINS }}
+          FIREBASE_API_KEY: ${{ vars.FIREBASE_API_KEY }}
+          INPUT_ORIGINS: ${{ inputs.app_origins }}
+          INPUT_SHIP: ${{ inputs.ship }}
+        run: |
+          set -euo pipefail
+
+          origins="${INPUT_ORIGINS:-${EXPEDION_APP_ORIGINS:-}}"
+          ship="${INPUT_SHIP:-${APP_URL:-}}"
+
+          if [ -z "$origins" ]; then
+            echo "::error::No origins to check. Set the repo variable EXPEDION_APP_ORIGINS to the same comma-separated list the Vercel project uses."
+            exit 1
+          fi
+          if [ -z "$ship" ]; then
+            echo "::error::Repo variable APP_URL is unset — there is no deployment to ask."
+            exit 1
+          fi
+
+          # --require-firebase is left at its default (on). Passing
+          # --no-require-firebase here would turn a missing or rejected API key
+          # into a green run, which is the exact failure this workflow exists
+          # to make impossible: a preflight that skips its only console check
+          # is worse than no preflight, because somebody trusts it.
+          node scripts/auth-preflight.mjs \
+            --app-origin="$origins" \
+            --ship="$ship" \
+            | tee preflight.log
+
+      - name: Attach the report to the run summary
+        # Runs on failure too — the summary is most useful precisely when the
+        # log ends in a list of failures somebody has to act on.
+        if: always()
+        run: |
+          {
+            echo '## Auth preflight'
+            echo ''
+            echo '```'
+            cat preflight.log 2>/dev/null || echo '(the preflight did not produce output — see the step log)'
+            echo '```'
+            echo ''
+            echo '> Allowlist #4 — Google Cloud → APIs & Services → Credentials → the OAuth'
+            echo '> client'"'"'s **Authorized JavaScript origins** and **Authorized redirect URIs** —'
+            echo '> is NOT covered by this run and cannot be. Google exposes no read API for it.'
+            echo '> A green run above means the three allowlists we can read are correct.'
+          } >> "$GITHUB_STEP_SUMMARY"

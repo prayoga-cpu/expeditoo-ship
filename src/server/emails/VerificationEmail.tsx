@@ -14,23 +14,35 @@ import {
 interface VerificationEmailProps {
   verificationUrl: string;
   userName?: string;
+  /**
+   * Which product this account belongs to, as the recipient knows it.
+   *
+   * EXPEDITOO and Expedion share one Better Auth instance, so this template
+   * also greets auction buyers who have never heard of a freight marketplace.
+   * The caller resolves the name from `user.origin`
+   * (src/server/services/auth.service.ts); the default keeps every existing
+   * caller, and every mail sent for an account with no Expedion app to point
+   * at, reading exactly as it did before.
+   */
+  productName?: string;
 }
 
 export function VerificationEmail({
   verificationUrl,
   userName = "there",
+  productName = "EXPEDITOO",
 }: VerificationEmailProps) {
   return (
     <Html>
       <Head />
-      <Preview>Verify your EXPEDITOO account</Preview>
+      <Preview>Verify your {productName} account</Preview>
       <Body style={main}>
         <Container style={container}>
-          <Heading style={h1}>Welcome to EXPEDITOO!</Heading>
+          <Heading style={h1}>Welcome to {productName}!</Heading>
           <Text style={text}>Hi {userName},</Text>
           <Text style={text}>
             Thank you for signing up. Please verify your email address to get
-            started with EXPEDITOO.
+            started with {productName}.
           </Text>
           <Section style={buttonContainer}>
             <Button style={button} href={verificationUrl}>
@@ -38,7 +50,7 @@ export function VerificationEmail({
             </Button>
           </Section>
           <Text style={footer}>
-            If you didn't create an account with EXPEDITOO, you can safely
+            If you didn't create an account with {productName}, you can safely
             ignore this email.
           </Text>
           <Text style={footer}>

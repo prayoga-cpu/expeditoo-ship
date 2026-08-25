@@ -5,13 +5,14 @@ import { bearer, customSession } from "better-auth/plugins";
 import { db } from "@/db";
 import * as schema from "@/db/schema";
 import {
+  claimExpedionQuotesForUser,
   handlePostSignup,
   recordLogin,
   rejectIfBanned,
   sendPasswordResetEmail,
   sendVerificationEmail,
 } from "@/server/services/auth.service";
-import { getUserRoles } from "@/server/services/user.service";
+import { getProfile, getUserRoles } from "@/server/services/user.service";
 import { impersonation } from "@/lib/auth-impersonation";
 import { originOfRequest } from "@/lib/app-origins";
 import type {
@@ -114,6 +115,35 @@ const options = {
     },
   },
 
+  // Linking a Google sign-in onto an account that already exists.
+  //
+  // Better Auth already merges the two identities in the ordinary case, so
+  // this block is narrower than it looks. The refusal that produces "account
+  // not linked" (node_modules/better-auth/dist/api-D0cF0fk5.mjs:801) fires
+  // only when the provider is untrusted *and* the profile Google returned has
+  // `emailVerified` false — or when linking has been explicitly switched off.
+  // Google reports an ordinary consumer address as verified, so somebody who
+  // signed up with a password and later presses "Continue with Google"
+  // already lands on their own account rather than a second one.
+  //
+  // The gap is the Workspace account on a domain Google has not verified.
+  // That profile comes back unverified, takes the refusal branch, and the
+  // person is told their account is not linked with no way to act on it. It
+  // is survivable today only because the Expedion Flutter client can still
+  // fall back to Firebase; the moment that fallback is deleted, an affected
+  // user has no second way in. Naming google as a trusted provider drops the
+  // `emailVerified` half of that condition and closes it.
+  //
+  // `enabled: true` is already the library default and is written out only so
+  // the intent is readable next to the provider list — the same condition
+  // refuses everything when it is set to false.
+  account: {
+    accountLinking: {
+      enabled: true,
+      trustedProviders: ["google"],
+    },
+  },
+
   // Post-signup role assignment.
   //
   // Runs exactly once per user creation, for BOTH email/password and Google
@@ -182,6 +212,44 @@ const options = {
           } catch (error) {
             console.error(
               "[Better Auth] Failed to stamp last login for user:",
+              session.userId,
+              error
+            );
+          }
+
+          // Historical Expedion quotes are claimed here as well as at signup,
+          // and this is the copy that actually reaches most people. The signup
+          // hook above only ever fires once, at account creation, so every
+          // client who already had an account when the Airtable rows were
+          // imported — or who signed up before the claim existed at all — never
+          // triggered it and cannot trigger it again. Sign-in is the only
+          // recurring moment we get.
+          //
+          // Running it on every sign-in is affordable because the claim only
+          // ever looks at quotes no Better Auth account owns yet, and it takes
+          // ownership of the ones it finds. So it matches nothing for the
+          // overwhelming majority of sign-ins, and nothing again for the person
+          // it did fire for.
+          //
+          // A session row carries nothing but `userId`, so the address has to
+          // be read back here, and `emailVerified` travels with it rather than
+          // being assumed — an unverified address is a claim, and claiming
+          // quotes on one would hand a stranger somebody else's history.
+          //
+          // Logged and swallowed, exactly like the stamp above and like the
+          // signup call: picking up an old quote is a nicety, and it must never
+          // be the reason a sign-in fails.
+          try {
+            const profile = await getProfile(session.userId);
+
+            await claimExpedionQuotesForUser(
+              profile.id,
+              profile.email,
+              profile.emailVerified
+            );
+          } catch (error) {
+            console.error(
+              "[Better Auth] Expedion quote claim failed for user:",
               session.userId,
               error
             );

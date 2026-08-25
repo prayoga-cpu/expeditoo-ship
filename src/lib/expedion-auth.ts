@@ -86,6 +86,43 @@ function safeEqual(a: string, b: string): boolean {
 }
 
 /**
+ * Records which credential answered for a caller, and returns them unchanged
+ * so it can wrap a `return`.
+ *
+ * `via` has always been on [ExpedionCaller] and has always been read by
+ * nobody, which left the one question that matters unanswerable: how many
+ * requests still arrive on the Firebase path. That count is the gate for
+ * deleting it. While it is above zero there is a legacy client in the field
+ * that would be locked out, and no amount of reasoning about who *should* have
+ * migrated substitutes for watching it fall to nothing and stay there.
+ *
+ * These lines go to Vercel's log drain, which is neither access-controlled the
+ * way the database is nor something we want holding identities, so nothing
+ * identifying is written: no user id, no address, no token, not even a hash
+ * that could be replayed against a list of addresses. `hasEmail` is enough to
+ * tell a session or a Google-signed token apart from a shared-key call that
+ * only asserted a UID, which is the only distinction the count needs.
+ *
+ * This measures one half of the traffic. A legacy user who signs in and then
+ * never fetches a quote passes through no route that calls this, so the
+ * Flutter client has to report its own auth path separately; the deletion
+ * decision needs both numbers, and this one alone will read low.
+ */
+function recordVia(caller: ExpedionCaller): ExpedionCaller {
+  console.log(
+    JSON.stringify({
+      tag: "expedion-auth",
+      via: caller.via,
+      isAdmin: caller.isAdmin,
+      hasEmail: Boolean(caller.email),
+      emailVerified: caller.emailVerified === true,
+    })
+  );
+
+  return caller;
+}
+
+/**
  * Resolves a Better Auth session from the request, if there is one.
  *
  * Returns null rather than throwing when there is no session, because the
@@ -134,7 +171,7 @@ export async function requireExpedionCaller(
 ): Promise<ExpedionCaller> {
   // 1. A real user session wins, and needs no shared secret.
   const fromSession = await sessionCaller(req);
-  if (fromSession) return fromSession;
+  if (fromSession) return recordVia(fromSession);
 
   const presented = bearer(req);
   if (!presented) throw new ExpedionAuthError("UNAUTHORIZED", 401);
@@ -158,13 +195,13 @@ export async function requireExpedionCaller(
     } catch (error) {
       console.error("[expedion-auth] firebase role lookup failed", error);
     }
-    return {
+    return recordVia({
       userId: firebase.uid,
       isAdmin,
       email: firebase.email ?? undefined,
       emailVerified: firebase.emailVerified ?? false,
       via: "firebase",
-    };
+    });
   }
 
   // 3. Otherwise fall back to the app-level keys.
@@ -195,7 +232,11 @@ export async function requireExpedionCaller(
     );
   }
 
-  return { userId, isAdmin, via: isAdmin ? "admin-key" : "client-key" };
+  return recordVia({
+    userId,
+    isAdmin,
+    via: isAdmin ? "admin-key" : "client-key",
+  });
 }
 
 /**

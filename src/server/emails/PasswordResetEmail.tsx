@@ -14,22 +14,34 @@ import {
 interface PasswordResetEmailProps {
   resetUrl: string;
   userName?: string;
+  /**
+   * Which product this account belongs to, as the recipient knows it.
+   *
+   * The two products share one Better Auth instance and one password, so this
+   * mail goes out to Expedion clients as readily as to EXPEDITOO carriers, and
+   * a reset mail branded for the wrong product reads like a phishing attempt at
+   * the one moment a user is most right to be suspicious. The caller resolves
+   * the name from `user.origin` (src/server/services/auth.service.ts); the
+   * default preserves the wording every existing caller already sends.
+   */
+  productName?: string;
 }
 
 export function PasswordResetEmail({
   resetUrl,
   userName = "there",
+  productName = "EXPEDITOO",
 }: PasswordResetEmailProps) {
   return (
     <Html>
       <Head />
-      <Preview>Reset your EXPEDITOO password</Preview>
+      <Preview>Reset your {productName} password</Preview>
       <Body style={main}>
         <Container style={container}>
           <Heading style={h1}>Password Reset Request</Heading>
           <Text style={text}>Hi {userName},</Text>
           <Text style={text}>
-            We received a request to reset your password for your EXPEDITOO
+            We received a request to reset your password for your {productName}{" "}
             account.
           </Text>
           <Section style={buttonContainer}>
