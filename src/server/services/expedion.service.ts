@@ -9,7 +9,10 @@ import {
   type PriceSuggestion,
 } from "@/server/services/expedion-price-suggestion.service";
 import { notifyExpedionAdmins } from "@/server/services/expedion-realtime.service";
-import { imageUrlToBase64DataUrl } from "@/lib/ai/openai";
+import {
+  attachUploadedFilesToQuote,
+  bordereauDataUrl,
+} from "@/server/services/expedion-files.service";
 import { searchAddress } from "@/lib/geocoding";
 import type {
   CreateExpedionQuoteInput,
@@ -369,6 +372,20 @@ export const expedionService = {
       return created;
     });
 
+    // Links the bordereau and photos this quote was filed with back to it.
+    // They were uploaded before the quote existed — the client picks a
+    // document on a form it may still abandon — so `quote_id` can only be
+    // filled from here. Provenance only: a read is authorised against the
+    // file's own owner, so this failing must never fail a quote.
+    //
+    // Scoped to `ownerId`, because these URLs are whatever the body said: an
+    // unscoped update would let a quote naming somebody else's file id claim
+    // that row, and unclaim it from the quote it belongs to.
+    void attachUploadedFilesToQuote(quote.id, ownerId, [
+      input.bordereauDocUrl,
+      ...(input.photoUrls ?? []),
+    ]);
+
     // A new quote is exactly what the dashboard's "Recent quotes" panel
     // exists to surface; an operator watching it should see this land
     // without a refresh.
@@ -601,7 +618,19 @@ export const expedionService = {
       throw err("NO_DOCUMENT", 422, "Aucun bordereau à analyser pour ce devis");
     }
 
-    const dataUrl = await imageUrlToBase64DataUrl(quote.bordereauDocUrl);
+    // Resolved rather than fetched: a bordereau uploaded since the storage
+    // move lives behind this app's own owner-gated file route, which an
+    // internal `fetch()` could not authenticate against. Firebase-era URLs
+    // still go over HTTP, unchanged.
+    //
+    // `firebaseUid` is passed because the column is client-written and this
+    // function runs unattended off `createQuote`. A quote may name a file id,
+    // but only its own owner's — otherwise this would read a stranger's
+    // document and write what the model found onto a quote the caller owns.
+    const dataUrl = await bordereauDataUrl(
+      quote.bordereauDocUrl,
+      quote.firebaseUid
+    );
     if (!dataUrl) {
       throw err("NO_DOCUMENT", 422, "Le document est introuvable ou illisible");
     }

@@ -7,7 +7,9 @@ import {
   shipmentEvents,
 } from "@/db/schema";
 import { messages } from "@/db/schema/messages";
+import { expedionQuotes } from "@/db/schema/expedion";
 import { storageService } from "@/server/services/storage.service";
+import { expedionFilesDal } from "@/server/dal/expedion-files.dal";
 import { isNotNull } from "drizzle-orm";
 
 export class ImageCleanupService {
@@ -127,6 +129,36 @@ export class ImageCleanupService {
       }
     });
     console.log(`Scanned ${eventImageCount} images impacts from ${events.length} events`);
+
+    // 7. Expedion documents.
+    //
+    // Belt and braces. These objects are meant to live in a private bucket of
+    // their own (`expedion-storage.service.ts` refuses to start against
+    // `R2_BUCKET_NAME` precisely so this sweep can never see them), but that is
+    // one environment variable away from being wrong, and the failure mode if
+    // it is wrong is this cron deleting every bordereau on the platform on its
+    // first non-dry run. So the keys are declared here anyway.
+    //
+    // `expedion_files.object_key` is the real reference — the quote columns
+    // hold `/api/expedion/files/<id>`, whose pathname is a route, not a key.
+    // The two quote columns are still scanned for the pre-migration rows,
+    // whose values are Firebase URLs this bucket never held: harmless entries
+    // in a set that only ever spares objects.
+    const expedionKeys = await expedionFilesDal.listObjectKeys();
+    expedionKeys.forEach((key) => validKeys.add(key));
+    console.log(`Scanned ${expedionKeys.length} Expedion documents`);
+
+    const quoteDocs = await db
+      .select({
+        bordereauDocUrl: expedionQuotes.bordereauDocUrl,
+        photoUrls: expedionQuotes.photoUrls,
+      })
+      .from(expedionQuotes);
+    quoteDocs.forEach((q) => {
+      addUrl(q.bordereauDocUrl);
+      (q.photoUrls ?? []).forEach((u) => addUrl(u));
+    });
+    console.log(`Scanned ${quoteDocs.length} Expedion quotes`);
 
     return validKeys;
   }

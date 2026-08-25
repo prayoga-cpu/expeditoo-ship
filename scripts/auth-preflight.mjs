@@ -44,6 +44,12 @@
  *      Google OAuth works; it means the three allowlists we *can* read are
  *      right. Do not let this script talk you out of opening the console.
  *
+ *      This one now matters more than it used to: since the Flutter client
+ *      stopped using Firebase for Google sign-in, "Authorized JavaScript
+ *      origins" is the entry the web button depends on. See the note above
+ *      checkTrustedOriginAndGoogle for a probe that looks like it verifies
+ *      this and does not.
+ *
  * ---------------------------------------------------------------------------
  * Usage
  * ---------------------------------------------------------------------------
@@ -416,6 +422,32 @@ async function checkTrustedOriginAndGoogle(origin) {
     );
   }
 }
+
+/*
+ * A note for whoever tries to automate allowlist #4 next, so the same dead end
+ * is not explored twice.
+ *
+ * `accounts.google.com/gsi/button` genuinely does validate the requesting
+ * origin against the OAuth client's Authorized JavaScript origins, and under
+ * curl it discriminates exactly as you would want:
+ *
+ *   allowed origin   + real client_id  -> 400   (origin accepted, params thin)
+ *   forbidden origin + real client_id  -> 403
+ *   allowed origin   + bogus client_id -> 403
+ *
+ * It still does not make a usable check. The same request issued from Node's
+ * fetch returns 403 for an origin that is definitely allowlisted, and 400 when
+ * the Referer is omitted entirely — so the answer turns on subtle differences
+ * in how the client presents itself, not on the allowlist alone. A check that
+ * fails for reasons unrelated to the thing it claims to test is worse than no
+ * check: it goes red, someone learns to ignore the preflight, and the next real
+ * failure is ignored with it.
+ *
+ * What DOES verify this reliably is a real browser. Load the sign-in page with
+ * Playwright and watch for the `gsi/button` response and a console error
+ * matching /origin is not allowed/. That belongs in an end-to-end test rather
+ * than in a dependency-free preflight script.
+ */
 
 // ============================================================================
 // Negative control

@@ -291,6 +291,69 @@ export const expedionQuoteEvents = pgTable(
 );
 
 // ========================================
+// Uploaded documents
+// ========================================
+//
+// Bordereaux and lot photos used to live in Firebase Storage under
+// `users/<uid>/uploads/…`, protected by a rule matching `request.auth.uid`
+// against that path segment. Once Expedion moved onto Better Auth there was no
+// `request.auth` any more, so every upload by a post-migration account was
+// denied and the bordereau form — which will not submit without a document URL
+// — stopped working entirely.
+//
+// The replacement writes the bytes to a private R2 bucket and records the
+// object key here. Nothing in `expedion_quotes` ever holds the key: the quote
+// stores `/api/expedion/files/<id>`, and this row is the indirection that turns
+// that id back into a key *after* the reader has been authorised. That is the
+// whole point of the table — a key in the column would be a bearer token for
+// the object the moment anything presigned it, which is the Firebase
+// `?token=…` leak all over again.
+//
+// The row is written before the quote exists (the client uploads at pick time,
+// on a form it may still abandon), so `quoteId` is nullable and is not what
+// authorises a read; `ownerUserId` is. It carries the same value as
+// `expedion_quotes.firebase_uid` — the caller's Better Auth user id — so
+// "owner of the file" and "owner of the quote" are comparable identifiers.
+
+export const expedionFiles = pgTable(
+  "expedion_files",
+  {
+    id: text("id").primaryKey(),
+
+    /**
+     * Who uploaded it, and the only thing a read is authorised against
+     * (admins excepted). Deliberately not a foreign key to `user`: the legacy
+     * shared-key path can name a Firebase UID that has no row there, and a
+     * dangling reference must not stop a document being stored.
+     */
+    ownerUserId: text("owner_user_id").notNull(),
+
+    /**
+     * Set once the quote it belongs to is filed, if ever. `set null` rather
+     * than `cascade`: deleting a quote should not silently orphan an object in
+     * R2 that nothing will ever clean up.
+     */
+    quoteId: text("quote_id").references(() => expedionQuotes.id, {
+      onDelete: "set null",
+    }),
+
+    /** `bordereau` | `photo`. */
+    kind: text("kind").notNull(),
+
+    /** Key inside the private Expedion bucket. Never leaves the server. */
+    objectKey: text("object_key").notNull(),
+    mimeType: text("mime_type").notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("expedion_file_owner_idx").on(table.ownerUserId),
+    index("expedion_file_quote_idx").on(table.quoteId),
+  ]
+);
+
+// ========================================
 // Relations
 // ========================================
 
@@ -310,8 +373,16 @@ export const expedionQuotesRelations = relations(
       references: [listings.id],
     }),
     events: many(expedionQuoteEvents),
+    files: many(expedionFiles),
   })
 );
+
+export const expedionFilesRelations = relations(expedionFiles, ({ one }) => ({
+  quote: one(expedionQuotes, {
+    fields: [expedionFiles.quoteId],
+    references: [expedionQuotes.id],
+  }),
+}));
 
 export const expedionQuoteEventsRelations = relations(
   expedionQuoteEvents,
@@ -331,6 +402,8 @@ export type ExpedionQuote = typeof expedionQuotes.$inferSelect;
 export type InsertExpedionQuote = typeof expedionQuotes.$inferInsert;
 export type ExpedionQuoteEvent = typeof expedionQuoteEvents.$inferSelect;
 export type InsertExpedionQuoteEvent = typeof expedionQuoteEvents.$inferInsert;
+export type ExpedionFile = typeof expedionFiles.$inferSelect;
+export type InsertExpedionFile = typeof expedionFiles.$inferInsert;
 
 export type ExpedionQuoteStatus =
   (typeof expedionQuoteStatusEnum.enumValues)[number];

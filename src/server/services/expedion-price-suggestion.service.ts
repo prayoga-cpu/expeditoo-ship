@@ -18,7 +18,8 @@
  */
 
 import { z } from "zod";
-import { getOpenAIClient, imageUrlToBase64DataUrl, isOpenAIAvailable } from "@/lib/ai/openai";
+import { getOpenAIClient, isOpenAIAvailable } from "@/lib/ai/openai";
+import { bordereauDataUrl } from "@/server/services/expedion-files.service";
 import { PRICING_CONFIG } from "@/lib/pricing/config";
 import { expedionDal } from "@/server/dal/expedion.dal";
 import { pricingService } from "@/server/services/pricing.service";
@@ -120,7 +121,11 @@ async function buildDocumentParts(quote: ExpedionQuote): Promise<ContentPart[]> 
 
   const parts: ContentPart[] = [];
   for (const url of urls) {
-    const dataUrl = await imageUrlToBase64DataUrl(url);
+    // Handles both shapes the column holds: a Firebase download URL is
+    // fetched, a `/api/expedion/files/<id>` URL is read straight out of R2 —
+    // and only when the file belongs to this quote's own owner, since the
+    // column holds whatever the client last submitted.
+    const dataUrl = await bordereauDataUrl(url, quote.firebaseUid);
     if (!dataUrl) continue;
     if (dataUrl.startsWith("data:application/pdf") || url.toLowerCase().endsWith(".pdf")) {
       parts.push({ type: "file", file: { filename: "bordereau.pdf", file_data: dataUrl } });
