@@ -18,6 +18,7 @@
  */
 
 import { getOpenAIClient, isOpenAIAvailable } from "@/lib/ai/openai";
+import { parseFrenchName } from "@/lib/french-names";
 import { z } from "zod";
 
 // ========================================
@@ -53,6 +54,15 @@ export const bordereauExtractionSchema = z.object({
 });
 
 export type BordereauExtraction = z.infer<typeof bordereauExtractionSchema>;
+
+/** Any extraction patch, named structurally so `writableFields` can gate the
+ *  name pair without referring to the service that produces it. */
+type NamedPatch = {
+  firstName: string | null;
+  lastName: string | null;
+};
+/** Just enough of the stored quote to know whether a name is already on it. */
+type CurrentName = NamedPatch;
 
 export interface ExtractionOutcome {
   extraction: BordereauExtraction;
@@ -390,7 +400,10 @@ export const expedionExtractionService = {
 
   /** Maps an extraction onto the quote columns it can populate. */
   toQuotePatch(extraction: BordereauExtraction) {
-    const [firstName, ...rest] = (extraction.buyerName ?? "").split(" ");
+    // Word order is read off the slip rather than assumed: a bordereau prints
+    // "DUPONT Jean" as readily as "M. Jean DUPONT", and taking the first token
+    // as the given name got the first of those backwards every time.
+    const { firstName, lastName } = parseFrenchName(extraction.buyerName);
     const saleDate = extraction.saleDate
       ? new Date(extraction.saleDate)
       : null;
@@ -399,8 +412,8 @@ export const expedionExtractionService = {
       bordereauNumber: extraction.bordereauNumber,
       saleDate:
         saleDate && !Number.isNaN(saleDate.getTime()) ? saleDate : null,
-      firstName: firstName || null,
-      lastName: rest.join(" ") || null,
+      firstName,
+      lastName,
       clientAddress: extraction.buyerAddress,
       clientPostalCode: extraction.buyerPostalCode,
       clientCity: extraction.buyerCity,
@@ -421,4 +434,35 @@ export const expedionExtractionService = {
           : Math.round(extraction.declaredValueEur * 100),
     };
   },
+
+  /**
+   * The part of a patch it is safe to write over a quote that already exists.
+   *
+   * Two rules, and they used to be one rule duplicated at both call sites.
+   *
+   * A null means the model could not read that field, so the column is left
+   * alone rather than blanked — somebody who corrected a field by hand keeps
+   * their correction through a re-extraction.
+   *
+   * `firstName` and `lastName` then move as a pair. The parser deliberately
+   * returns a surname with no given name when the buyer is a company
+   * ("SARL Brocante du Centre") or the slip printed one word, and dropping only
+   * the null half would marry a client's own first name to a company's
+   * surname. So the pair is written only when the model supplied both halves,
+   * or when the row has neither and there is nothing to contradict.
+   */
+  writableFields<T extends NamedPatch>(patch: T, current: CurrentName) {
+    const complete = patch.firstName !== null && patch.lastName !== null;
+    const empty = !current.firstName && !current.lastName;
+    const nameIsSafe = complete || empty;
+
+    return Object.fromEntries(
+      Object.entries(patch).filter(([column, value]) => {
+        if (value === null || value === undefined) return false;
+        if (column === "firstName" || column === "lastName") return nameIsSafe;
+        return true;
+      })
+    ) as Partial<T>;
+  },
 };
+

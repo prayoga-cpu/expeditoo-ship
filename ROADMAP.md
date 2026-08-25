@@ -221,12 +221,15 @@ beyond France.
    what the client already paid Expedion; the driver bids below it and the
    difference is the margin. Nothing names how that splits. Payouts cannot go
    live until it does — this is the blocking one.
-2. **Who calls `/api/expedion/quotes/:id/paid`.** The endpoint exists and starts
-   the escalation clock, but nothing on the Expedion side posts to it, so
-   auto-escalation is inert on real data.
-3. **Whether person-level driver applications survive French licensing.** KBIS is
+2. **Whether person-level driver applications survive French licensing.** KBIS is
    no longer required, but SIRET and a transport licence still are for anything
    at or above 7.5 t. If regulation pushes back, the company layer returns.
-4. Auto-escalation window duration (currently 48 h)
-5. Insurance partner selection
-6. KYC vendor selection
+3. Auto-escalation window duration (currently 48 h)
+4. Insurance partner selection
+5. KYC vendor selection
+
+**Closed:** "who calls `/api/expedion/quotes/:id/paid`" was open here until the
+Expedion payment server started posting to it — `api/_payment_core.js` in
+`expedion_encheres` verifies the Checkout session with Stripe and reports the
+payment, which is what stamps the escalation clock. Auto-escalation is no longer
+inert on real data.

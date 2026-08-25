@@ -643,12 +643,9 @@ export const expedionService = {
       filename: "bordereau",
     });
 
-    const patch = expedionExtractionService.toQuotePatch(outcome.extraction);
-    // Same rule as the upload-time extraction: only overwrite what the model
-    // actually filled, so a re-run never blanks a field someone already
-    // corrected by hand.
-    const nonNull = Object.fromEntries(
-      Object.entries(patch).filter(([, v]) => v !== null && v !== undefined)
+    const nonNull = expedionExtractionService.writableFields(
+      expedionExtractionService.toQuotePatch(outcome.extraction),
+      quote
     );
 
     const updated = await db.transaction(async (tx) => {

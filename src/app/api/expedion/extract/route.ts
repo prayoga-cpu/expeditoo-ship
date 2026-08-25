@@ -45,14 +45,14 @@ export async function POST(req: NextRequest) {
     });
 
     if (input.quoteId) {
-      // Ownership check before writing anything.
-      await expedionService.getQuote(input.quoteId, caller);
+      // Ownership check before writing anything. The row it returns is also
+      // what decides whether the extracted name may overwrite the one already
+      // on the quote — see `writableFields`.
+      const quote = await expedionService.getQuote(input.quoteId, caller);
 
-      const patch = expedionExtractionService.toQuotePatch(outcome.extraction);
-      // Only overwrite columns the model actually filled, so a re-run never
-      // blanks a field the client already corrected by hand.
-      const nonNull = Object.fromEntries(
-        Object.entries(patch).filter(([, v]) => v !== null && v !== undefined)
+      const nonNull = expedionExtractionService.writableFields(
+        expedionExtractionService.toQuotePatch(outcome.extraction),
+        quote
       );
 
       await expedionDal.update(input.quoteId, {
