@@ -42,6 +42,7 @@ beforeEach(() => {
     browse: vi.fn().mockResolvedValue({ items: [], total: 0 }),
     getByShipperId: vi.fn().mockResolvedValue([]),
     incrementViews: vi.fn(),
+    ensureDefaultCategory: vi.fn().mockResolvedValue("transport-general"),
   });
   vi.mocked(offersService.expirePendingOffers).mockResolvedValue([]);
 });
@@ -345,5 +346,93 @@ describe("listingsService.expireDueListings", () => {
 
     expect(count).toBe(0);
     expect(listingsDal.update).not.toHaveBeenCalled();
+  });
+});
+
+// ========================================
+// Creating a request — transport_request_spec.md §4 and §5
+// ========================================
+
+/** A minimally valid create payload; the DTO has already validated by here. */
+const createInput = (over: Record<string, unknown> = {}) =>
+  ({
+    title: "Two-seater sofa to Marseille",
+    description: "A sofa and a coffee table, ground floor both ends.",
+    weightKg: 80,
+    quantity: 1,
+    isFragile: false,
+    needsHelp: false,
+    pickup: { lat: 45.75, lng: 4.85, address: "12 rue A", city: "Lyon" },
+    dropoff: { lat: 43.3, lng: 5.37, address: "3 rue B", city: "Marseille" },
+    pickupFrom: at(48 * HOUR),
+    pickupUntil: at(56 * HOUR),
+    dropoffFrom: at(72 * HOUR),
+    dropoffUntil: at(80 * HOUR),
+    isFlexible: false,
+    budgetCents: 25_000,
+    photos: [],
+    publish: true,
+    ...over,
+  }) as never;
+
+describe("createListing", () => {
+  it("stamps origin as direct, whatever the caller passed", async () => {
+    // origin is not on the DTO, but a caller could still smuggle the key in.
+    // acceptOffer reads listing.origin to decide whether an operator may award
+    // in the owner's place, so a client-chosen origin is a privilege escalation.
+    await listingsService.createListing(
+      "user-1",
+      createInput({ origin: "expedion" })
+    );
+
+    const row = vi.mocked(listingsDal.create).mock.calls[0][0];
+    expect(row.origin).toBe("direct");
+  });
+
+  it("resolves a category when the caller names none", async () => {
+    await listingsService.createListing("user-1", createInput());
+
+    expect(listingsDal.ensureDefaultCategory).toHaveBeenCalled();
+    const row = vi.mocked(listingsDal.create).mock.calls[0][0];
+    expect(row.categoryId).toBe("transport-general");
+  });
+
+  it("honours an explicit category and does not resolve one", async () => {
+    await listingsService.createListing(
+      "user-1",
+      createInput({ categoryId: "encheres" })
+    );
+
+    expect(listingsDal.ensureDefaultCategory).not.toHaveBeenCalled();
+    const row = vi.mocked(listingsDal.create).mock.calls[0][0];
+    expect(row.categoryId).toBe("encheres");
+  });
+
+  it("refuses to publish a job whose pickup has already passed", async () => {
+    const code = await codeFrom(() =>
+      listingsService.createListing(
+        "user-1",
+        createInput({ pickupFrom: at(-HOUR) })
+      )
+    );
+
+    expect(code).toBe("PICKUP_IN_PAST");
+  });
+
+  // Pinning existing behaviour rather than endorsing it. `createListing` says
+  // the pickup window "is only enforced when the job actually goes live", and
+  // its own PICKUP_IN_PAST check is indeed gated on `publish` — but
+  // `resolveExpiresAt` runs unconditionally straight afterwards and rejects the
+  // same date under a different code. So a draft with a past pickup is refused
+  // too, just not by the check that was written to refuse it.
+  it("also refuses a draft with a past pickup, via the expiry calculation", async () => {
+    const code = await codeFrom(() =>
+      listingsService.createListing(
+        "user-1",
+        createInput({ pickupFrom: at(-HOUR), publish: false })
+      )
+    );
+
+    expect(code).toBe("PICKUP_TOO_SOON");
   });
 });

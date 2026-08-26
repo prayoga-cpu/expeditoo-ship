@@ -18,6 +18,7 @@
     "db:mirror": "bash scripts/db-mirror.sh",
     "db:seed:dev-users": "tsx src/scripts/seed-dev-users.ts",
     "db:seed:expedion-demo": "tsx src/scripts/seed-expedion-demo.ts",
+    "db:seed:approved-carrier": "tsx src/scripts/seed-approved-carrier.ts",
     "env:list": "bash scripts/env-list.sh",
     "env:set": "bash scripts/env-set.sh",
     "env:pull:production": "vercel env pull .env.production.local --environment=production",

@@ -294,7 +294,19 @@ async function extractWithOpenAI(
 }
 
 /**
- * Gemini 2.5 Pro fallback over the REST API.
+ * The fallback model.
+ *
+ * A floating `-latest` alias rather than a pinned version, because this path is
+ * exercised only when OpenAI is down — which is exactly when nobody wants to
+ * discover that the pinned model was retired months ago. `gemini-2.5-pro` was
+ * hardcoded here and now answers "no longer available to new users", so the
+ * fallback had been silently dead: `extractWithGemini` returned null on a 404
+ * and the caller could not tell that apart from "no key configured".
+ */
+const GEMINI_MODEL = "gemini-pro-latest";
+
+/**
+ * Gemini fallback over the REST API.
  *
  * Called through `fetch` rather than the Google SDK deliberately: the fallback
  * should not add a dependency that the primary path never touches.
@@ -310,7 +322,7 @@ async function extractWithGemini(
     : input.data;
 
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${key}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${key}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -334,7 +346,14 @@ async function extractWithGemini(
   );
 
   if (!res.ok) {
-    console.error("[expedion] Gemini extraction failed", res.status);
+    // The status is the whole diagnosis and used to be thrown away: 404 means
+    // the model name has been retired, 429 means the key has no quota left,
+    // 403 means it is not enabled for this project. All three previously
+    // surfaced as "the fallback did nothing".
+    console.error(
+      `[expedion] Gemini extraction failed: HTTP ${res.status} on ${GEMINI_MODEL}`,
+      (await res.text().catch(() => "")).slice(0, 300)
+    );
     return null;
   }
 
