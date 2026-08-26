@@ -45,7 +45,9 @@
       "myApplication": "Mon dossier",
       "adminPanel": "Panneau d'administration",
       "requestTransport": "Demander un transport",
-      "myRequests": "Mes demandes"
+      "myRequests": "Mes demandes",
+      "myTrips": "Mes trajets",
+      "myEarnings": "Mes gains"
     },
     "categories": {
       "electronics": "Électronique",
@@ -228,7 +230,8 @@
       "adminSupport": "Chats de support",
       "driverSupport": "Support Chauffeur",
       "driverDashboard": "Tableau de bord chauffeur",
-      "becomeDriver": "Devenir chauffeur"
+      "becomeDriver": "Devenir chauffeur",
+      "myInvoices": "Mes factures"
     },
     "myAuctions": {
       "title": "Mes enchères",
@@ -434,7 +437,14 @@
         "void": "Annulée"
       },
       "title": "Factures",
-      "view": "Voir"
+      "view": "Voir",
+      "downloadPeriod": "Télécharger toutes les factures de la période",
+      "periods": {
+        "all": "Toutes périodes",
+        "thisMonth": "Ce mois-ci",
+        "lastMonth": "Le mois dernier",
+        "thisYear": "Cette année"
+      }
     }
   },
   "settings": {
@@ -1592,7 +1602,8 @@
       "profile": "Profil",
       "expedion": "Passerelle Expedion",
       "awards": "File d'attribution",
-      "applications": "Dossiers chauffeurs"
+      "applications": "Dossiers chauffeurs",
+      "withdrawals": "Retraits"
     },
     "table": {
       "rowsSelected": "{count} sur {total} ligne(s) sélectionnée(s)",
@@ -2453,6 +2464,135 @@
       "vehicleRemoved": "Véhicule supprimé",
       "vehicleInUse": "Ce véhicule est engagé sur une offre en cours. Désactivez-le plutôt.",
       "vehicleRemoveFailed": "Suppression du véhicule impossible"
+    },
+    "trips": {
+      "title": "Mes trajets",
+      "pageSubtitle": "Les trajets que vous effectuez, et les transports que vous avez réalisés.",
+      "subtitle": "Déclarez les trajets que vous faites déjà pour filtrer les annonces dessus.",
+      "add": "Ajouter un trajet",
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "paused": "En pause",
+      "toggleActive": "Activer ce trajet",
+      "seeMatching": "Voir les courses correspondantes",
+      "radiusLabel": "Dans un rayon de {km} km autour du départ",
+      "tabs": {
+        "planned": "Prévus",
+        "completed": "Effectués"
+      },
+      "kinds": {
+        "recurring": "Régulier",
+        "occasional": "Occasionnel"
+      },
+      "weekdaysShort": {
+        "1": "Lun",
+        "2": "Mar",
+        "3": "Mer",
+        "4": "Jeu",
+        "5": "Ven",
+        "6": "Sam",
+        "7": "Dim"
+      },
+      "empty": {
+        "title": "Aucun trajet déclaré",
+        "description": "Ajoutez les trajets que vous effectuez régulièrement ou à des dates précises, et trouvez les courses qui s'y greffent sans éplucher tout le tableau."
+      },
+      "noCarrier": {
+        "title": "Les trajets sont réservés aux transporteurs validés",
+        "description": "Terminez d'abord votre dossier transporteur : un trajet se rattache à un profil transporteur."
+      },
+      "deleteConfirm": {
+        "title": "Supprimer ce trajet ?",
+        "description": "Le trajet et ses dates sont supprimés. Les offres déjà déposées ne bougent pas.",
+        "cancel": "Annuler",
+        "confirm": "Supprimer"
+      },
+      "toast": {
+        "created": "Trajet ajouté",
+        "updated": "Trajet mis à jour",
+        "deleted": "Trajet supprimé",
+        "saveFailed": "Impossible d'enregistrer le trajet",
+        "deleteFailed": "Impossible de supprimer le trajet"
+      },
+      "errors": {
+        "limitReached": "Vous avez atteint le nombre maximum de trajets. Supprimez-en un d'abord.",
+        "suspended": "Votre compte transporteur est suspendu.",
+        "noCarrier": "Aucun profil transporteur pour ce compte.",
+        "vehicleNotFound": "Ce véhicule ne fait pas partie de votre flotte.",
+        "notFound": "Ce trajet n'existe plus."
+      },
+      "form": {
+        "createTitle": "Nouveau trajet",
+        "editTitle": "Modifier le trajet",
+        "description": "Où vous allez, à quelle fréquence, et ce que vous pouvez charger. Vous seul le voyez.",
+        "label": "Nom",
+        "labelPlaceholder": "Retour Bordeaux–Paris",
+        "kind": "Fréquence",
+        "kinds": {
+          "recurring": "Régulièrement",
+          "occasional": "À des dates précises"
+        },
+        "origin": "Départ",
+        "destination": "Arrivée",
+        "days": "Jours de la semaine",
+        "dates": "Dates",
+        "addDate": "Ajouter",
+        "removeDate": "Retirer cette date",
+        "radius": "Rayon de recherche",
+        "radiusHint": "Les courses sont rapprochées du point de départ.",
+        "vehicle": "Véhicule",
+        "vehiclePlaceholder": "Choisir un véhicule",
+        "noVehicle": "Aucun véhicule précis",
+        "capacity": "Capacité disponible (kg)",
+        "capacityPlaceholder": "ex. 800",
+        "notify": "M'alerter des courses correspondantes",
+        "notifyHint": "Bientôt disponible — la préférence est déjà enregistrée.",
+        "cancel": "Annuler",
+        "create": "Ajouter le trajet",
+        "save": "Enregistrer"
+      },
+      "completed": {
+        "searchPlaceholder": "Rechercher par désignation, référence, ville…",
+        "downloadStatement": "Télécharger le relevé de la période",
+        "closedOn": "Clôturé le {date}",
+        "reference": "Référence {ref}",
+        "untitled": "Transport",
+        "commission": "Commission",
+        "net": "Net",
+        "periods": {
+          "all": "Toutes périodes",
+          "thisMonth": "Ce mois-ci",
+          "lastMonth": "Le mois dernier",
+          "thisYear": "Cette année"
+        },
+        "status": {
+          "DELIVERED": "Livré",
+          "CANCELLED": "Annulé",
+          "PENDING": "En attente",
+          "ASSIGNED": "Attribué",
+          "PICKED_UP": "Enlevé",
+          "IN_TRANSIT": "En transit"
+        },
+        "payout": {
+          "scheduled": "Versement programmé",
+          "processing": "Versement en cours",
+          "paid": "Versé",
+          "failed": "Versement échoué",
+          "cancelled": "Versement annulé"
+        },
+        "summary": {
+          "deliveries": "Livraisons",
+          "gross": "Montant total",
+          "commission": "Commission",
+          "net": "Net",
+          "commissionNotice": "Pendant la phase de test, la plateforme conserve la totalité du montant : aucun versement n'est dû. La répartition définitive reste à arrêter."
+        },
+        "empty": {
+          "title": "Aucun transport effectué",
+          "description": "Dès qu'une course est livrée, elle apparaît ici avec ce qu'elle a rapporté et les documents correspondants."
+        }
+      },
+      "runsOn": "Jours de circulation : {days}"
     }
   },
   "dashboard": {
@@ -2505,5 +2645,51 @@
     "viewingAs": "Connecté en tant que",
     "endsIn": "expire dans {time}",
     "stop": "Quitter"
+  },
+  "withdrawals": {
+    "available": "Disponible au retrait",
+    "fromDeliveries": "Sur {count, plural, =0 {aucune livraison} one {# livraison} other {# livraisons}}",
+    "requestCta": "Demander un retrait",
+    "requesting": "Envoi…",
+    "requested": "Demande de retrait envoyée",
+    "belowMinimum": "Un retrait démarre à {minimum}. Votre solde est conservé et augmente à la prochaine livraison.",
+    "footnote": "Les paiements sont encaissés par Expeditoo. Un retrait est une demande qu’un opérateur approuve puis vire manuellement — ce n’est pas immédiat.",
+    "historyTitle": "Retraits passés",
+    "status": {
+      "requested": "Demandé",
+      "approved": "Approuvé",
+      "paid": "Payé",
+      "rejected": "Refusé"
+    },
+    "openHint": {
+      "requested": "En attente d’examen par un opérateur.",
+      "approved": "Approuvé. Le virement est en cours.",
+      "paid": "Viré.",
+      "rejected": "Refusé. Votre solde est de nouveau disponible."
+    },
+    "queueTitle": "Retraits",
+    "queueSubtitle": "Les transporteurs demandent l’argent qu’ils ont gagné. Approuver ne le vire pas — enregistrez le virement une fois effectué.",
+    "queueEmpty": "Rien ici",
+    "queueEmptyHint": "Aucun retrait n’a ce statut.",
+    "all": "Tous",
+    "approve": "Approuver",
+    "reject": "Refuser",
+    "markPaid": "Enregistrer le virement",
+    "referenceLabel": "Référence du virement",
+    "referencePlaceholder": "ex. VIR-2026-0001",
+    "decided": {
+      "approve": "Approuvé",
+      "reject": "Refusé",
+      "mark_paid": "Virement enregistré"
+    },
+    "errors": {
+      "WITHDRAWAL_ALREADY_OPEN": "Vous avez déjà un retrait en attente.",
+      "NOTHING_TO_WITHDRAW": "Vous n’avez rien à retirer pour l’instant.",
+      "BELOW_MINIMUM": "Votre solde est inférieur au minimum.",
+      "REFERENCE_REQUIRED": "Ajoutez d’abord la référence du virement.",
+      "WITHDRAWAL_ALREADY_SETTLED": "Ce retrait a déjà été traité.",
+      "WITHDRAWAL_NOT_REQUESTED": "Ce retrait n’est plus en attente d’approbation.",
+      "generic": "Une erreur est survenue. Veuillez réessayer."
+    }
   }
 }

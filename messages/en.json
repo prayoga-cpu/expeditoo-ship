@@ -45,7 +45,9 @@
       "myApplication": "My application",
       "adminPanel": "Admin Panel",
       "requestTransport": "Request transport",
-      "myRequests": "My requests"
+      "myRequests": "My requests",
+      "myTrips": "My trips",
+      "myEarnings": "My earnings"
     },
     "categories": {
       "electronics": "Electronics",
@@ -228,7 +230,8 @@
       "adminSupport": "Support Chats",
       "driverSupport": "Driver Support",
       "driverDashboard": "Driver Dashboard",
-      "becomeDriver": "Become a Driver"
+      "becomeDriver": "Become a Driver",
+      "myInvoices": "My invoices"
     },
     "myAuctions": {
       "title": "My Auctions",
@@ -416,7 +419,14 @@
         "void": "Void"
       },
       "download": "Download PDF",
-      "view": "View"
+      "view": "View",
+      "downloadPeriod": "Download all invoices for the period",
+      "periods": {
+        "all": "All periods",
+        "thisMonth": "This month",
+        "lastMonth": "Last month",
+        "thisYear": "This year"
+      }
     },
     "reviews": {
       "title": "Reviews & Ratings",
@@ -1592,7 +1602,8 @@
       "profile": "Profile",
       "expedion": "Expedion bridge",
       "awards": "Award queue",
-      "applications": "Driver applications"
+      "applications": "Driver applications",
+      "withdrawals": "Withdrawals"
     },
     "table": {
       "total": "total",
@@ -2453,6 +2464,135 @@
       "vehicleRemoved": "Vehicle removed",
       "vehicleInUse": "This vehicle backs a live offer. Deactivate it instead.",
       "vehicleRemoveFailed": "Could not remove vehicle"
+    },
+    "trips": {
+      "title": "My trips",
+      "pageSubtitle": "The routes you run, and the transports you have carried out.",
+      "subtitle": "Declare the routes you already drive so the board can be filtered down to them.",
+      "add": "Add a trip",
+      "edit": "Edit",
+      "delete": "Delete",
+      "paused": "Paused",
+      "toggleActive": "Enable this trip",
+      "seeMatching": "See matching jobs",
+      "radiusLabel": "Within {km} km of the departure point",
+      "tabs": {
+        "planned": "Planned",
+        "completed": "Carried out"
+      },
+      "kinds": {
+        "recurring": "Regular",
+        "occasional": "Occasional"
+      },
+      "weekdaysShort": {
+        "1": "Mon",
+        "2": "Tue",
+        "3": "Wed",
+        "4": "Thu",
+        "5": "Fri",
+        "6": "Sat",
+        "7": "Sun"
+      },
+      "empty": {
+        "title": "No trip declared yet",
+        "description": "Add the routes you drive regularly or on specific dates, and find the jobs that fit them without combing the whole board."
+      },
+      "noCarrier": {
+        "title": "Trips are for approved carriers",
+        "description": "Finish your carrier application first — trips attach to a carrier profile."
+      },
+      "deleteConfirm": {
+        "title": "Delete this trip?",
+        "description": "The trip and its dates are removed. Jobs you already bid on are untouched.",
+        "cancel": "Cancel",
+        "confirm": "Delete"
+      },
+      "toast": {
+        "created": "Trip added",
+        "updated": "Trip updated",
+        "deleted": "Trip deleted",
+        "saveFailed": "Could not save the trip",
+        "deleteFailed": "Could not delete the trip"
+      },
+      "errors": {
+        "limitReached": "You have reached the maximum number of trips. Delete one first.",
+        "suspended": "Your carrier account is suspended.",
+        "noCarrier": "No carrier profile found for this account.",
+        "vehicleNotFound": "That vehicle is not in your fleet.",
+        "notFound": "That trip no longer exists."
+      },
+      "form": {
+        "createTitle": "New trip",
+        "editTitle": "Edit trip",
+        "description": "Where you go, how often, and what you can carry. Only you see this.",
+        "label": "Name",
+        "labelPlaceholder": "Bordeaux–Paris return",
+        "kind": "How often",
+        "kinds": {
+          "recurring": "Regularly",
+          "occasional": "On specific dates"
+        },
+        "origin": "Departure",
+        "destination": "Arrival",
+        "days": "Days of the week",
+        "dates": "Dates",
+        "addDate": "Add",
+        "removeDate": "Remove this date",
+        "radius": "Search radius",
+        "radiusHint": "Jobs are matched around the departure point.",
+        "vehicle": "Vehicle",
+        "vehiclePlaceholder": "Choose a vehicle",
+        "noVehicle": "No specific vehicle",
+        "capacity": "Available capacity (kg)",
+        "capacityPlaceholder": "e.g. 800",
+        "notify": "Alert me about matching jobs",
+        "notifyHint": "Coming soon — the preference is saved now.",
+        "cancel": "Cancel",
+        "create": "Add trip",
+        "save": "Save"
+      },
+      "completed": {
+        "searchPlaceholder": "Search by title, reference, city…",
+        "downloadStatement": "Download the period statement",
+        "closedOn": "Closed on {date}",
+        "reference": "Reference {ref}",
+        "untitled": "Transport",
+        "commission": "Commission",
+        "net": "Net",
+        "periods": {
+          "all": "All periods",
+          "thisMonth": "This month",
+          "lastMonth": "Last month",
+          "thisYear": "This year"
+        },
+        "status": {
+          "DELIVERED": "Delivered",
+          "CANCELLED": "Cancelled",
+          "PENDING": "Pending",
+          "ASSIGNED": "Assigned",
+          "PICKED_UP": "Picked up",
+          "IN_TRANSIT": "In transit"
+        },
+        "payout": {
+          "scheduled": "Payout scheduled",
+          "processing": "Payout processing",
+          "paid": "Paid",
+          "failed": "Payout failed",
+          "cancelled": "Payout cancelled"
+        },
+        "summary": {
+          "deliveries": "Deliveries",
+          "gross": "Total amount",
+          "commission": "Commission",
+          "net": "Net",
+          "commissionNotice": "During the testing phase the platform retains the full amount, so no payout is due. The final split has not been set."
+        },
+        "empty": {
+          "title": "No transport carried out yet",
+          "description": "Once you have delivered a job it appears here, with what it paid and the paperwork for it."
+        }
+      },
+      "runsOn": "Runs on {days}"
     }
   },
   "dashboard": {
@@ -2505,5 +2645,51 @@
     "viewingAs": "Viewing as",
     "endsIn": "ends in {time}",
     "stop": "Stop"
+  },
+  "withdrawals": {
+    "available": "Available to withdraw",
+    "fromDeliveries": "From {count, plural, =0 {no deliveries} one {# delivery} other {# deliveries}}",
+    "requestCta": "Request a withdrawal",
+    "requesting": "Requesting…",
+    "requested": "Withdrawal requested",
+    "belowMinimum": "A withdrawal starts at {minimum}. Your balance stays and grows with the next delivery.",
+    "footnote": "Payments are collected by Expeditoo. A withdrawal is a request an operator approves and transfers by hand — it is not instant.",
+    "historyTitle": "Past withdrawals",
+    "status": {
+      "requested": "Requested",
+      "approved": "Approved",
+      "paid": "Paid",
+      "rejected": "Refused"
+    },
+    "openHint": {
+      "requested": "Waiting for an operator to review it.",
+      "approved": "Approved. The transfer is being made.",
+      "paid": "Transferred.",
+      "rejected": "Refused. Your balance is available again."
+    },
+    "queueTitle": "Withdrawals",
+    "queueSubtitle": "Drivers asking for money they have earned. Approving does not move it — record the transfer once it is made.",
+    "queueEmpty": "Nothing here",
+    "queueEmptyHint": "No withdrawal has this status.",
+    "all": "All",
+    "approve": "Approve",
+    "reject": "Refuse",
+    "markPaid": "Record transfer",
+    "referenceLabel": "Transfer reference",
+    "referencePlaceholder": "e.g. VIR-2026-0001",
+    "decided": {
+      "approve": "Approved",
+      "reject": "Refused",
+      "mark_paid": "Transfer recorded"
+    },
+    "errors": {
+      "WITHDRAWAL_ALREADY_OPEN": "You already have a withdrawal waiting.",
+      "NOTHING_TO_WITHDRAW": "You have nothing to withdraw yet.",
+      "BELOW_MINIMUM": "Your balance is below the minimum.",
+      "REFERENCE_REQUIRED": "Add the transfer reference first.",
+      "WITHDRAWAL_ALREADY_SETTLED": "This withdrawal has already been settled.",
+      "WITHDRAWAL_NOT_REQUESTED": "This withdrawal is no longer waiting for approval.",
+      "generic": "Something went wrong. Please try again."
+    }
   }
 }

@@ -34,6 +34,7 @@ import {
   TrendingUp,
   Users,
   DollarSign,
+  Receipt,
 } from "lucide-react";
 import Link from "next/link";
 import { useProfile } from "../hooks/useProfile";
@@ -362,6 +363,13 @@ const baseQuickLinks: { href: string; labelKey: string; icon: LucideIcon }[] = [
     href: "/profile/payment-methods",
     labelKey: "paymentMethods",
     icon: CreditCard,
+  },
+  // /profile/invoices existed but was linked from nowhere except an email
+  // body, so the only way in was to know the URL.
+  {
+    href: "/profile/invoices",
+    labelKey: "myInvoices",
+    icon: Receipt,
   },
   {
     href: "/help",

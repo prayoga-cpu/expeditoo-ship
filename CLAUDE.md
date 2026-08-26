@@ -250,7 +250,24 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
   once per day). Needs repo variable `APP_URL` and repo secret `CRON_SECRET`.
 - Theme-aware loader (light/dark `.lottie` cuts, picked by `resolvedTheme`); one shared
   `BrandWordmark` lockup across sidebar, mobile header and marketing
-- FR/EN parity exact, 1433 keys (verified by key diff, not by eye)
+- FR/EN parity exact, 1715 keys (verified by key diff, not by eye)
+- **Carrier trips** at `/carrier/trips`: one screen, two tabs, as the client asked.
+  *Prévus* is the new `carrier_routes` / `carrier_route_dates` pair — routes a
+  carrier declares as recurring (weekdays) or occasional (specific dates),
+  **private to them**, rendered as a saved query against the board's existing
+  `nearLat`/`radiusKm`/`pickupFrom` filters, so there is no matching engine.
+  *Effectués* reuses `GET /api/shipments` and joins `/api/carrier/earnings` for
+  the money. Pulls `ROADMAP.md` §8 Phase D forward and makes the marketing
+  claim about filtering on existing trips true. 44 tests.
+  `docs/specs/carrier_trips_spec.md`
+- **Billing documents**: `invoicesService.createFromPayment` was dead code —
+  called from nowhere but its own test — so no invoice had ever been created.
+  It now fires from `settleDelivery`, in its own try so paperwork cannot strand
+  a captured payment. `/profile/invoices` was linked from nothing but an email
+  body and is now in the profile quick links, with the Cocolis period filter and
+  a bundle download. The carrier's half is a **relevé d'activité**, not a
+  facture: while `COMMISSION_RATE` is 1.0 the net is €0 and the screen says so
+  rather than inventing a split. `docs/specs/billing_documents_spec.md`
 
 **Not done**
 - **Real Stripe hold/capture** — runs under `MOCK_PAYMENTS`; needs SetupIntent
@@ -262,7 +279,9 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
 - **Commission split on Expedion-origin jobs is undecided** (`ROADMAP.md` §10).
   `budgetCents` is what the client already paid; the margin is whatever the driver
   bids below it. Payouts cannot go live until this is named.
-- Payouts stop at `scheduled`; no driver earnings screen
+- Payouts stop at `scheduled`. A carrier earnings *view* now exists at
+  `/carrier/trips` → Effectués, but it reports €0 net because the platform
+  retains 100% during testing — nothing moves money
 - Realtime shipment data: the Ably path exists on both ends but is not connected
 - `seller`/`buyer` vocabulary still in ~50 files (live paths fixed; the rest cosmetic)
 - Marketing copy still describes a two-sided marketplace and oversells (J+7 payout,

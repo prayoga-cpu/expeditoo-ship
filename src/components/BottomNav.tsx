@@ -11,6 +11,7 @@ import {
   MessageCircle,
   User,
   Gavel,
+  Route,
   Truck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -68,10 +69,15 @@ export function BottomNav() {
       labelKey: "myOffers",
       icon: <Gavel className="w-5 h-5" />,
     },
+    // The bar holds six; trips takes the application's slot rather than
+    // becoming a seventh. Only an approved carrier holds the `carrier` role
+    // (`enrolAsOwnDriver` grants it on approval), so the screen this displaces
+    // is a status page they have already finished with — and it stays in the
+    // sidebar and on /profile.
     {
-      href: "/carrier/application",
-      labelKey: "myApplication",
-      icon: <FileText className="w-5 h-5" />,
+      href: "/carrier/trips",
+      labelKey: "myTrips",
+      icon: <Route className="w-5 h-5" />,
     },
     messages,
     account,

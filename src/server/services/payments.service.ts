@@ -29,29 +29,26 @@ const err = (code: string, status: number, message?: string) =>
   new PaymentError(code, status, message);
 
 /**
- * TODO(EXPEDITOO-TESTING): the platform keeps 100% during the testing phase.
+ * 10% commission on each completed delivery (ROADMAP.md §1).
  *
- * Decided by the client on 2026-08-26: "for now no commission/split, everything
- * 100% goes to this Stripe API key". Reversing it is this one number.
+ * The other 90% is genuinely owed to the driver — it is simply not *sent*
+ * automatically. Every payment is captured into the platform's own Stripe
+ * account, and the driver's share accrues there as a balance they withdraw on
+ * request: they ask, an operator approves, and the transfer is made by hand.
+ * `withdrawals.service.ts` is that flow, and `payouts` is the ledger it draws
+ * on — a payout row is what the driver has earned, not money already moved.
  *
- * It is set to 1.0 rather than left at 0.1 because 0.1 would be a lie the
- * ledger tells. No money reaches a driver today under any code path —
- * `executePayout` is the only function that calls `stripe.transfers.create`
- * and nothing calls it, while `carriers.stripe_account_id` is a column no code
- * ever writes. A payout is a recorded row and nothing more. At 0.1 the database
- * would assert a 90% liability to drivers that the business has decided not to
- * owe, and `admin.dal.ts` would report platform revenue as a tenth of what
- * actually arrived. At 1.0 the ledger says what is true: everything is kept,
- * nothing is owed.
+ * This briefly read 1.0 on 2026-08-26 while the split was undecided. It is back
+ * to 0.1 because the split *is* decided: the platform takes a tenth, the driver
+ * is owed the rest, and the rest reaches them through withdrawal rather than
+ * through Stripe Connect. Connect (`executePayout`) stays unused — it needs
+ * `carriers.stripe_account_id`, which nothing writes.
  *
- * Two things this does NOT fix, both tracked in ROADMAP.md §10:
- *   - `payments` records no rate per row, so historical 10% rows are
- *     indistinguishable from new 100% rows except by date.
- *   - `/terms` still tells the public that "the balance is paid out to the
- *     carrier". At this rate the balance is zero, so that sentence is now
- *     false and is a legal question, not an engineering one.
+ * `payments` still records no rate per row, so a row's commission can only be
+ * read back as an amount, not as a rate. That matters the day this number
+ * changes again (ROADMAP.md §10).
  */
-export const COMMISSION_RATE = 1.0;
+export const COMMISSION_RATE = 0.1;
 
 export const commissionFor = (amountCents: number) =>
   Math.round(amountCents * COMMISSION_RATE);

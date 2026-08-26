@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { invoicesService } from '../invoices.service';
+import { invoicesService, MAX_STATEMENT_INVOICES } from '../invoices.service';
 import { invoicesDal } from '@/server/dal/invoices.dal';
 import { paymentsDal } from '@/server/dal/payments.dal';
 import * as usersDal from '@/server/dal/users.dal';
@@ -12,6 +12,7 @@ vi.mock('@/server/dal/invoices.dal', () => ({
     getByPaymentId: vi.fn(),
     create: vi.fn(),
     getById: vi.fn(),
+    getByUserId: vi.fn(),
     updatePdfUrl: vi.fn(),
   }
 }));
@@ -90,5 +91,52 @@ describe('invoicesService', () => {
              expect(result.id).toBe('inv1');
              expect(invoicesDal.create).not.toHaveBeenCalled();
         });
+    });
+});
+
+// ========================================
+// Period filtering and the bulk download
+// ========================================
+// billing_documents_spec.md §4.2, §4.3, §7.
+
+describe('invoice periods', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('passes the period bounds through to the DAL', async () => {
+        vi.mocked(invoicesDal.getByUserId).mockResolvedValue({
+            items: [], total: 0, page: 1, limit: 20, totalPages: 0,
+        } as any);
+
+        const from = new Date('2026-01-01');
+        const to = new Date('2026-03-31');
+
+        await invoicesService.getUserInvoices('u1', {
+            page: 1, limit: 20, from, to,
+        } as any);
+
+        expect(invoicesDal.getByUserId).toHaveBeenCalledWith('u1', {
+            page: 1, limit: 20, status: undefined, from, to,
+        });
+    });
+
+    it('refuses a period wider than the row cap', async () => {
+        vi.mocked(invoicesDal.getByUserId).mockResolvedValue({
+            items: [], total: MAX_STATEMENT_INVOICES + 1,
+            page: 1, limit: MAX_STATEMENT_INVOICES, totalPages: 2,
+        } as any);
+
+        await expect(
+            invoicesService.getPeriodInvoices('u1', {})
+        ).rejects.toMatchObject({ code: 'STATEMENT_TOO_LARGE', status: 400 });
+    });
+
+    it('returns an empty period rather than failing', async () => {
+        vi.mocked(invoicesDal.getByUserId).mockResolvedValue({
+            items: [], total: 0, page: 1, limit: 500, totalPages: 0,
+        } as any);
+
+        await expect(invoicesService.getPeriodInvoices('u1', {})).resolves.toEqual([]);
     });
 });

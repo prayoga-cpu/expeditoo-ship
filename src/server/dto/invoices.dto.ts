@@ -20,11 +20,20 @@ export const updateInvoiceSchema = z.object({
     paidAt: z.date().optional(),
 });
 
-export const invoiceQuerySchema = z.object({
-    page: z.coerce.number().int().positive().default(1),
-    limit: z.coerce.number().int().positive().max(50).default(20),
-    status: invoiceStatusSchema.optional(),
-});
+export const invoiceQuerySchema = z
+    .object({
+        page: z.coerce.number().int().positive().default(1),
+        limit: z.coerce.number().int().positive().max(50).default(20),
+        status: invoiceStatusSchema.optional(),
+        // The Cocolis period filter. Both bounds optional: "toutes périodes"
+        // is the default (billing_documents_spec.md §4.2).
+        from: z.coerce.date().optional(),
+        to: z.coerce.date().optional(),
+    })
+    .refine((q) => !q.from || !q.to || q.from <= q.to, {
+        path: ["to"],
+        message: "INVALID_PERIOD",
+    });
 
 export type CreateInvoiceInput = z.infer<typeof createInvoiceSchema>;
 export type UpdateInvoiceInput = z.infer<typeof updateInvoiceSchema>;

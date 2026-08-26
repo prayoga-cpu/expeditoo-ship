@@ -8,6 +8,7 @@ import {
   notifyExpedion,
 } from "@/server/services/expedion-bridge.service";
 import { paymentsService } from "@/server/services/payments.service";
+import { invoicesService } from "@/server/services/invoices.service";
 import type {
   ShipmentStatusType,
   ActorRoleType,
@@ -376,8 +377,17 @@ async function notify(
  */
 async function settleDelivery(shipmentId: string, carrierId: string) {
   try {
-    await paymentsService.captureForShipment(shipmentId);
+    const payment = await paymentsService.captureForShipment(shipmentId);
     await paymentsService.schedulePayout(shipmentId, carrierId);
+
+    // The paperwork, in its own try: an invoice that fails to write must not
+    // strand a captured payment (billing_documents_spec.md §4.1). It is
+    // idempotent on the payment, so the two delivery paths cannot mint two.
+    try {
+      await invoicesService.createFromPayment(payment.id);
+    } catch (error) {
+      console.error(`Invoice creation failed for shipment ${shipmentId}`, error);
+    }
   } catch (error) {
     console.error(`Settlement failed for shipment ${shipmentId}`, error);
   }

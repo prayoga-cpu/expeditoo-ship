@@ -5,6 +5,20 @@ import { type InvoiceQuery } from "@/server/dto/invoices.dto";
 import { notificationsService } from "@/server/services/notifications.service";
 import { emailService } from "@/server/services/email.service";
 
+export class InvoiceError extends Error {
+    constructor(
+        readonly code: string,
+        readonly status: number,
+        message?: string
+    ) {
+        super(message ?? code);
+        this.name = "InvoiceError";
+    }
+}
+
+/** A bundle wider than this is refused rather than rendered. */
+export const MAX_STATEMENT_INVOICES = 500;
+
 export const invoicesService = {
     /**
      * Create an invoice for a completed payment
@@ -89,7 +103,35 @@ export const invoicesService = {
             page: query.page,
             limit: query.limit,
             status: query.status,
+            from: query.from,
+            to: query.to,
         });
+    },
+
+    /**
+     * Every invoice in a period, for the bulk download. Capped rather than
+     * paginated: a PDF render is not something to hold open indefinitely
+     * (billing_documents_spec.md §4.3).
+     */
+    async getPeriodInvoices(
+        userId: string,
+        period: { from?: Date; to?: Date }
+    ) {
+        const page = await invoicesDal.getByUserId(userId, {
+            ...period,
+            page: 1,
+            limit: MAX_STATEMENT_INVOICES,
+        });
+
+        if (page.total > MAX_STATEMENT_INVOICES) {
+            throw new InvoiceError(
+                "STATEMENT_TOO_LARGE",
+                400,
+                `Narrow the period: ${page.total} invoices exceeds the ${MAX_STATEMENT_INVOICES} row limit`
+            );
+        }
+
+        return page.items;
     },
 
     /**

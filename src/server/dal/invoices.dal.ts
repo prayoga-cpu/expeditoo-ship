@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { invoices, type InsertInvoice, type InvoiceStatus } from "@/db/schema/invoices";
-import { eq, desc, and, sql } from "drizzle-orm";
+import { eq, desc, and, gte, lte, sql, type SQL } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 // ========================================
@@ -55,7 +55,7 @@ export const invoicesDal = {
         return db.query.invoices.findFirst({
             where: eq(invoices.id, id),
             with: {
-                payment: true,
+                payment: { with: { listing: true } },
                 user: true,
             },
         });
@@ -68,7 +68,7 @@ export const invoicesDal = {
         return db.query.invoices.findFirst({
             where: eq(invoices.paymentId, paymentId),
             with: {
-                payment: true,
+                payment: { with: { listing: true } },
                 user: true,
             },
         });
@@ -79,20 +79,38 @@ export const invoicesDal = {
      */
     async getByUserId(
         userId: string,
-        options: { page?: number; limit?: number; status?: InvoiceStatus } = {}
+        options: {
+            page?: number;
+            limit?: number;
+            status?: InvoiceStatus;
+            from?: Date;
+            to?: Date;
+        } = {}
     ) {
-        const { page = 1, limit = 20, status } = options;
+        const { page = 1, limit = 20, status, from, to } = options;
         const offset = (page - 1) * limit;
 
-        const whereConditions = [eq(invoices.userId, userId)];
+        const whereConditions: SQL[] = [eq(invoices.userId, userId)];
         if (status) {
             whereConditions.push(eq(invoices.status, status));
+        }
+        // Bounded on the issue date, falling back to creation for a row that
+        // was never issued (billing_documents_spec.md §4.2).
+        if (from) {
+            whereConditions.push(
+                gte(sql`coalesce(${invoices.issuedAt}, ${invoices.createdAt})`, from)
+            );
+        }
+        if (to) {
+            whereConditions.push(
+                lte(sql`coalesce(${invoices.issuedAt}, ${invoices.createdAt})`, to)
+            );
         }
 
         const items = await db.query.invoices.findMany({
             where: and(...whereConditions),
             with: {
-                payment: true,
+                payment: { with: { listing: true } },
             },
             orderBy: desc(invoices.createdAt),
             limit,

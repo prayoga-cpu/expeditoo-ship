@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { invoicesDal } from "@/server/dal/invoices.dal";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { InvoicePDF } from "@/server/pdf/InvoicePDF";
+import { invoicePdfProps } from "@/lib/invoice-pdf-props";
 
 interface RouteParams {
     params: Promise<{ id: string }>;
@@ -36,40 +37,7 @@ export async function GET(request: Request, { params }: RouteParams) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
         }
 
-        // Generate PDF
-        const pdfBuffer = await renderToBuffer(
-            InvoicePDF({
-                invoiceNumber: invoice.invoiceNumber,
-                invoiceDate: invoice.issuedAt
-                    ? new Date(invoice.issuedAt).toLocaleDateString("fr-FR")
-                    : new Date(invoice.createdAt).toLocaleDateString("fr-FR"),
-                dueDate: invoice.dueAt
-                    ? new Date(invoice.dueAt).toLocaleDateString("fr-FR")
-                    : undefined,
-                isPaid: invoice.status === "paid",
-                paidDate: invoice.paidAt
-                    ? new Date(invoice.paidAt).toLocaleDateString("fr-FR")
-                    : undefined,
-                companyName: "Expeditoo",
-                companyAddress: "Paris, France",
-                companyEmail: "invoices@expeditoo.com",
-                buyerName: invoice.user?.name || "Customer",
-                buyerEmail: invoice.user?.email || "",
-                buyerAddress: undefined, // Could be fetched from addresses if needed
-                items: [
-                    {
-                        description: "Marketplace Purchase",
-                        quantity: 1,
-                        unitPrice: invoice.amount,
-                    },
-                ],
-                subtotal: invoice.amount,
-                shippingFee: 0, // Could be included from payment details
-                tax: 0,
-                total: invoice.amount,
-                currency: invoice.currency.toUpperCase(),
-            })
-        );
+        const pdfBuffer = await renderToBuffer(InvoicePDF(invoicePdfProps(invoice)));
 
         // Return PDF as downloadable file
         // Convert Buffer to Uint8Array for NextResponse compatibility

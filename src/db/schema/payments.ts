@@ -10,6 +10,7 @@ import { relations } from "drizzle-orm";
 import { user } from "./users";
 import { listings } from "./listings";
 import { shipments } from "./shipments";
+import { withdrawals } from "./withdrawals";
 
 // ========================================
 // Enums
@@ -119,6 +120,17 @@ export const payouts = pgTable(
 
     stripeTransferId: text("stripe_transfer_id"),
     failureReason: text("failure_reason"),
+
+    /**
+     * The withdrawal request this payout has been claimed by, if any.
+     *
+     * Null means earned and available. A payout is the driver's ledger of what
+     * they are owed, not money that has moved — nothing on this path transfers
+     * funds — so "available balance" is the sum of the rows where this is null.
+     */
+    withdrawalId: text("withdrawal_id").references(() => withdrawals.id, {
+      onDelete: "set null",
+    }),
 
     scheduledFor: timestamp("scheduled_for"),
     paidAt: timestamp("paid_at"),

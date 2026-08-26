@@ -21,6 +21,8 @@ import {
   ClipboardList,
   PackagePlus,
   Boxes,
+  Route,
+  Wallet,
   Shield,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
@@ -67,6 +69,16 @@ export function MainLayout({ children }: MainLayoutProps) {
       href: "/listings/me",
       label: t("myRequests"),
       icon: Boxes,
+    },
+    {
+      href: "/carrier/trips",
+      label: t("myTrips"),
+      icon: Route,
+    },
+    {
+      href: "/carrier/withdrawals",
+      label: t("myEarnings"),
+      icon: Wallet,
     },
     {
       href: "/carrier/application",

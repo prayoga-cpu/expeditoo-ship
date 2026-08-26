@@ -32,6 +32,9 @@ export interface InvoiceQueryParams {
     page?: number;
     limit?: number;
     status?: "draft" | "issued" | "paid" | "void";
+    /** ISO bounds for the Cocolis period filter. */
+    from?: string;
+    to?: string;
 }
 
 // Standard API response wrapper
@@ -53,6 +56,8 @@ async function fetchInvoices(params: InvoiceQueryParams = {}): Promise<InvoicesR
     if (params.page) searchParams.set("page", params.page.toString());
     if (params.limit) searchParams.set("limit", params.limit.toString());
     if (params.status) searchParams.set("status", params.status);
+    if (params.from) searchParams.set("from", params.from);
+    if (params.to) searchParams.set("to", params.to);
 
     const response = await fetch(`/api/user/invoices?${searchParams.toString()}`);
     const json: ApiResponse<InvoicesResponse> = await response.json();
@@ -107,4 +112,14 @@ export function useInvoice(id: string | null) {
  */
 export function getInvoicePdfUrl(invoiceId: string): string {
     return `/api/user/invoices/${invoiceId}/pdf`;
+}
+
+/** Every invoice in a period, as one PDF — the bulk download button. */
+export function getInvoiceStatementUrl(period: { from?: string; to?: string }): string {
+    const searchParams = new URLSearchParams();
+    if (period.from) searchParams.set("from", period.from);
+    if (period.to) searchParams.set("to", period.to);
+
+    const query = searchParams.toString();
+    return `/api/user/invoices/statement${query ? `?${query}` : ""}`;
 }

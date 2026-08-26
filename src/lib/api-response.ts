@@ -4,6 +4,10 @@ import { OfferError } from "@/server/services/offers.service";
 import { ListingError } from "@/server/services/listings.service";
 import { ShipmentError } from "@/server/services/shipment.service";
 import { CarrierError } from "@/server/services/carrier.service";
+import { CarrierRouteError } from "@/server/services/carrier-routes.service";
+import { EarningsError } from "@/server/services/earnings.service";
+import { WithdrawalError } from "@/server/services/withdrawals.service";
+import { InvoiceError } from "@/server/services/invoices.service";
 import { ReviewError } from "@/server/services/reviews.service";
 import { AdminError } from "@/server/services/admin.service";
 import { ContactError } from "@/server/services/contact.service";
@@ -36,6 +40,10 @@ export function handleError(error: unknown, context: string) {
     error instanceof ListingError ||
     error instanceof ShipmentError ||
     error instanceof CarrierError ||
+    error instanceof CarrierRouteError ||
+    error instanceof EarningsError ||
+    error instanceof WithdrawalError ||
+    error instanceof InvoiceError ||
     error instanceof ReviewError ||
     error instanceof AdminError ||
     error instanceof ContactError

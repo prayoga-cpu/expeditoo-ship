@@ -14,6 +14,7 @@ import {
   DollarSign,
   Gavel,
   ClipboardCheck,
+  Wallet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -109,6 +110,11 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       href: "/admin/payments",
       icon: DollarSign,
       badge: "payments",
+    },
+    {
+      title: t("navigation.withdrawals"),
+      href: "/admin/withdrawals",
+      icon: Wallet,
     },
     {
       title: t("navigation.supportChats"),

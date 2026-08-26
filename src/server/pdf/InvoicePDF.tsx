@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
     },
 });
 
-interface InvoicePDFProps {
+export interface InvoicePDFProps {
     invoiceNumber: string;
     invoiceDate: string;
     dueDate?: string;
@@ -175,7 +175,11 @@ interface InvoicePDFProps {
     currency?: string;
 }
 
-export const InvoicePDF = ({
+/**
+ * One invoice as a single page, so the same layout serves both a standalone
+ * download and the period bundle (billing_documents_spec.md §4.3).
+ */
+export const InvoicePage = ({
     invoiceNumber,
     invoiceDate,
     dueDate,
@@ -194,7 +198,6 @@ export const InvoicePDF = ({
     total,
     currency = "EUR",
 }: InvoicePDFProps) => (
-    <Document>
         <Page size="A4" style={styles.page}>
             {/* Header */}
             <View style={styles.header}>
@@ -298,6 +301,48 @@ export const InvoicePDF = ({
                 </Text>
             </View>
         </Page>
+);
+
+export const InvoicePDF = (props: InvoicePDFProps) => (
+    <Document>
+        <InvoicePage {...props} />
+    </Document>
+);
+
+/**
+ * Every invoice in a period, one page each — the Cocolis bulk download.
+ *
+ * An empty period still produces a document: an empty statement is a
+ * meaningful accounting artefact, and @react-pdf cannot render a Document with
+ * no pages at all (billing_documents_spec.md §6.4).
+ */
+export const InvoiceBatchPDF = ({
+    invoices,
+    periodLabel,
+    emptyLabel,
+}: {
+    invoices: (InvoicePDFProps & { key: string })[];
+    periodLabel: string;
+    emptyLabel: string;
+}) => (
+    <Document>
+        {invoices.length === 0 ? (
+            <Page size="A4" style={styles.page}>
+                <View style={styles.header}>
+                    <Text style={styles.logo}>Expeditoo</Text>
+                    <View>
+                        <Text style={styles.invoiceTitle}>FACTURES</Text>
+                        <Text style={styles.invoiceNumber}>{periodLabel}</Text>
+                    </View>
+                </View>
+                <View style={styles.divider} />
+                <Text>{emptyLabel}</Text>
+            </Page>
+        ) : (
+            invoices.map(({ key, ...invoice }) => (
+                <InvoicePage key={key} {...invoice} />
+            ))
+        )}
     </Document>
 );
 

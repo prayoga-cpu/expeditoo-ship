@@ -120,15 +120,13 @@ afterEach(() => {
 });
 
 // ========================================
-// Commission math — 100% during the testing phase (ROADMAP.md §10)
+// Commission math — 10% at source, the rest owed and withdrawable
 // ========================================
 //
-// The rate is deliberately not hardcoded in the expectations below. It moved
-// from 0.1 to 1.0 once, it will move again when the split is decided, and a
-// test that restates the number just has to be edited in lockstep without ever
-// catching anything. What is worth pinning is the arithmetic: the commission
-// is the rate applied to the price, it rounds to whole cents, and it never
-// exceeds the amount charged.
+// Most of these expectations derive from the constant rather than restating
+// it, so they keep testing the arithmetic — rate applied, rounds to whole
+// cents, never more than was charged — when the rate next moves. The one that
+// does pin the number is marked as pinning it on purpose.
 
 describe("commissionFor", () => {
   it("applies the configured rate to the job price", () => {
@@ -145,11 +143,13 @@ describe("commissionFor", () => {
     expect(commissionFor(18_000)).toBeLessThanOrEqual(18_000);
   });
 
-  it("keeps the whole amount while the testing-phase rate is in force", () => {
-    // The client's 2026-08-26 decision, pinned so that reverting the constant
-    // without revisiting this file fails loudly rather than quietly.
-    expect(COMMISSION_RATE).toBe(1);
-    expect(commissionFor(18_000)).toBe(18_000);
+  it("takes a tenth, and leaves the rest owed to the driver", () => {
+    // Pinned deliberately: the rate has moved once already, and the withdrawal
+    // flow only makes sense while the driver's share is non-zero. Changing the
+    // constant without revisiting this file should fail loudly.
+    expect(COMMISSION_RATE).toBe(0.1);
+    expect(commissionFor(18_000)).toBe(1_800);
+    expect(18_000 - commissionFor(18_000)).toBe(16_200);
   });
 });
 
