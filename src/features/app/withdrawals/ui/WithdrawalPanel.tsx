@@ -1,13 +1,15 @@
 "use client";
 
-import { Wallet } from "lucide-react";
+import { RefreshCw, Wallet, WalletMinimal } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { CenteredEmptyState } from "@/components/ui/centered-empty-state";
 import { PageLoader } from "@/components/ui/page-loader";
 import { formatCurrency } from "@/lib/currency";
+import { cn } from "@/lib/utils";
 import {
   useRequestWithdrawal,
   useWithdrawalBalance,
@@ -32,11 +34,38 @@ const TONE: Record<Withdrawal["status"], string> = {
 export function WithdrawalPanel() {
   const t = useTranslations("withdrawals");
   const format = useFormatter();
-  const { data, isLoading } = useWithdrawalBalance();
+  const { data, isLoading, isError, refetch, isRefetching } =
+    useWithdrawalBalance();
   const request = useRequestWithdrawal();
 
   if (isLoading) return <PageLoader />;
-  if (!data) return null;
+
+  // A failed balance call used to `return null`, which rendered the driver an
+  // entirely blank screen — no heading, no error, nothing to retry. The page
+  // stayed blank for as long as the endpoint was broken and said nothing about
+  // why, so the only way to find out was the browser console.
+  if (isError || !data) {
+    return (
+      <CenteredEmptyState
+        icon={WalletMinimal}
+        title={t("loadFailed")}
+        description={t("loadFailedHint")}
+        variant="page"
+      >
+        <Button
+          type="button"
+          variant="outline"
+          disabled={isRefetching}
+          onClick={() => refetch()}
+        >
+          <RefreshCw
+            className={cn("h-4 w-4", isRefetching && "animate-spin")}
+          />
+          {t("retry")}
+        </Button>
+      </CenteredEmptyState>
+    );
+  }
 
   const open = data.openRequest;
 

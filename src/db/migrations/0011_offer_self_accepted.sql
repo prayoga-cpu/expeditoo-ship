@@ -1,8 +1,14 @@
 -- Distinguishes a job a carrier took themselves from one somebody awarded them.
 --
--- Hand-written for the same reason 0002-0008 were: 0002 left no snapshot, so
+-- Hand-written for the same reason 0002-0010 were: 0002 left no snapshot, so
 -- `drizzle-kit generate` would diff against 0001 and re-emit the whole
 -- transport realignment on a database that already has it.
+--
+-- Numbered 0011, not 0009: it was written as 0009 and never added to
+-- `_journal.json`, and the migrator walks the journal rather than the
+-- directory, so it never ran. Renumbering above `0010_carrier_routes` is what
+-- makes it run at all -- drizzle applies a migration only when its journal
+-- timestamp is newer than the newest one the database has already recorded.
 --
 -- Self-accept lets an approved carrier take an open job without waiting to be
 -- picked. The row it produces is otherwise identical to one an operator awarded

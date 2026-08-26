@@ -71,6 +71,20 @@
       "when": 1787788800000,
       "tag": "0010_carrier_routes",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1787875200000,
+      "tag": "0011_offer_self_accepted",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1787878800000,
+      "tag": "0012_withdrawals",
+      "breakpoints": true
     }
   ]
 }
