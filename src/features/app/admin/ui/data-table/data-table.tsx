@@ -44,6 +44,12 @@ interface DataTableProps<TData, TValue> {
   dateFilterKey?: string;
   /** Columns offered by the toolbar's "sort by" dropdown, alongside per-column header sorting. */
   sortFields?: SortField[];
+  /**
+   * Seeds the search box, for a caller arriving with the term already decided
+   * — a `?search=` link, say. The toolbar owns the value from then on; this is
+   * a starting point, not a controlled prop.
+   */
+  initialSearch?: string;
 }
 
 export function DataTable<TData, TValue>({
@@ -56,6 +62,7 @@ export function DataTable<TData, TValue>({
   onRowClick,
   dateFilterKey,
   sortFields,
+  initialSearch = "",
 }: DataTableProps<TData, TValue>) {
   // Simple local state - no URL sync to avoid re-render issues
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -112,7 +119,7 @@ export function DataTable<TData, TValue>({
           searchKey={searchKey}
           searchPlaceholder={searchPlaceholder}
           onSearchChange={handleSearchChange}
-          initialValue=""
+          initialValue={initialSearch}
           dateFilterKey={dateFilterKey}
           sortFields={sortFields}
         />

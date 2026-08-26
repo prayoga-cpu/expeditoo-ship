@@ -12,6 +12,7 @@ import {
   DollarSign,
   Headset,
   Car,
+  UsersRound,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
@@ -24,6 +25,19 @@ interface NavItem {
   icon: React.ReactNode;
   /** Which sidebar count rides on this entry; see `BADGE_TONE` in AdminLayout. */
   badge?: keyof AdminNavCounts;
+}
+
+/**
+ * Whether this entry owns the current path.
+ *
+ * A bare `startsWith` lit two tabs at once the moment a route became the prefix
+ * of another: `/admin/expedion-clients` starts with `/admin/expedion`, so both
+ * read as active and the auto-scroll centred on whichever came last. Matching
+ * the segment boundary keeps `/admin/users/123` under `/admin/users` without
+ * making `/admin/expedion` claim its neighbour.
+ */
+function isCurrent(pathname: string | null, href: string) {
+  return pathname === href || Boolean(pathname?.startsWith(`${href}/`));
 }
 
 export function AdminBottomNav() {
@@ -46,6 +60,11 @@ export function AdminBottomNav() {
       label: t("users"),
       icon: <Users className="w-5 h-5" />,
       badge: "users",
+    },
+    {
+      href: "/admin/expedion-clients",
+      label: t("expedionClients"),
+      icon: <UsersRound className="w-5 h-5" />,
     },
     {
       href: "/admin/listings",
@@ -112,7 +131,7 @@ export function AdminBottomNav() {
         style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
       >
         {navItems.map((item) => {
-          const isActive = pathname?.startsWith(item.href);
+          const isActive = isCurrent(pathname, item.href);
           const badge = item.badge ? counts?.[item.badge] : undefined;
           return (
             <Link

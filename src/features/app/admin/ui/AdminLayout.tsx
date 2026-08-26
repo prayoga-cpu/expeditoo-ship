@@ -11,6 +11,7 @@ import {
   Truck,
   Headset,
   UserCircle,
+  UsersRound,
   DollarSign,
   Gavel,
   ClipboardCheck,
@@ -74,6 +75,15 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       href: "/admin/users",
       icon: Users,
       badge: "users",
+    },
+    {
+      // Expedion's customers, who are mostly not in `/admin/users` and cannot
+      // be: they are quote owners, and the overwhelming majority have no
+      // account in this database. Sits next to Users because that is the
+      // screen an admin looks at first and does not find them on.
+      title: t("navigation.expedionClients"),
+      href: "/admin/expedion-clients",
+      icon: UsersRound,
     },
     {
       title: t("navigation.awards"),

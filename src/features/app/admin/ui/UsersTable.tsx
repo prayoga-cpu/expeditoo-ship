@@ -67,6 +67,8 @@ interface UsersTableProps {
   viewMode?: "users" | "drivers";
   className?: string;
   tableMinHeight?: string;
+  /** Seeds the search box — see `DataTable.initialSearch`. */
+  initialSearch?: string;
 }
 
 function StatusBadge({ status }: { status: User["status"] }) {
@@ -303,6 +305,7 @@ export function UsersTable({
   viewMode = "users",
   className,
   tableMinHeight,
+  initialSearch,
 }: UsersTableProps) {
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
@@ -555,6 +558,7 @@ export function UsersTable({
         tableMinHeight={tableMinHeight}
         dateFilterKey="joinDate"
         sortFields={sortFields}
+        initialSearch={initialSearch}
       />
 
       <AlertDialog

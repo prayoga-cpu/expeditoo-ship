@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { UsersTable, RoleManagementDialog } from "@/features/app/admin/ui";
 import { useAdmin } from "@/features/app/admin/hooks/useAdmin";
 import { Users } from "lucide-react";
@@ -9,6 +10,16 @@ import { PublicProfile } from "@/features/app/profile/ui/PublicProfile";
 import { useTranslations } from "next-intl";
 
 export default function UsersPage() {
+  // useSearchParams suspends during prerender, and this page is a client
+  // component with no other boundary of its own.
+  return (
+    <Suspense fallback={<PageLoader />}>
+      <UsersPageContent />
+    </Suspense>
+  );
+}
+
+function UsersPageContent() {
   const {
     users,
     roleDialogOpen,
@@ -22,6 +33,10 @@ export default function UsersPage() {
   } = useAdmin();
   const [profileUserId, setProfileUserId] = useState<string | null>(null);
   const t = useTranslations("admin.users");
+  // Seeds the table's search box. `/admin/expedion-clients` links here with the
+  // client's address when their quotes are owned by an account, and without
+  // this the link landed on an unfiltered list and left the admin to find them.
+  const initialSearch = useSearchParams().get("search") ?? "";
 
   // "View profile" used to be a menu item wired to nothing: this page never
   // passed the callback, so the only place it worked was /admin/drivers.
@@ -58,6 +73,7 @@ export default function UsersPage() {
         }}
         onViewProfile={(user) => setProfileUserId(user.id)}
         onUserUpdated={() => refetchUsers()}
+        initialSearch={initialSearch}
       />
 
       <RoleManagementDialog

@@ -11,6 +11,7 @@ import { InvoiceError } from "@/server/services/invoices.service";
 import { ReviewError } from "@/server/services/reviews.service";
 import { AdminError } from "@/server/services/admin.service";
 import { ContactError } from "@/server/services/contact.service";
+import { ExpedionClientError } from "@/server/services/expedion-clients.service";
 
 /**
  * Shared response shape for the REST layer.
@@ -46,7 +47,8 @@ export function handleError(error: unknown, context: string) {
     error instanceof InvoiceError ||
     error instanceof ReviewError ||
     error instanceof AdminError ||
-    error instanceof ContactError
+    error instanceof ContactError ||
+    error instanceof ExpedionClientError
   ) {
     return fail(error.code, error.message, error.status);
   }
