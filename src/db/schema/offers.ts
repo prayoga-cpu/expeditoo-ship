@@ -4,6 +4,7 @@ import {
   timestamp,
   integer,
   pgEnum,
+  boolean,
   index,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
@@ -55,6 +56,17 @@ export const offers = pgTable(
     message: text("message"),
 
     status: offerStatusEnum("status").default("pending").notNull(),
+
+    /**
+     * True when the carrier took the job themselves rather than being chosen.
+     *
+     * Without it a self-taken award and an operator's decision are the same row,
+     * and every number built on the award queue — how long a job waits, how
+     * often an operator intervenes, what the auction actually saved — silently
+     * starts counting one as the other. `expedion_quotes.assigned_directly`
+     * exists for the same reason on the pool-assignment lane.
+     */
+    selfAccepted: boolean("self_accepted").default(false).notNull(),
 
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")

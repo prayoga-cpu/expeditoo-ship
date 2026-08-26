@@ -118,6 +118,16 @@ export const offersDal = {
     return result;
   },
 
+  /** Records that the carrier took this job themselves rather than being picked. */
+  async markSelfAccepted(id: string, tx: Executor = db) {
+    const [result] = await tx
+      .update(offers)
+      .set({ selfAccepted: true, updatedAt: new Date() })
+      .where(eq(offers.id, id))
+      .returning();
+    return result;
+  },
+
   /** Used by the accept transaction to reject every losing bid at once. */
   async setPendingStatusForListing(
     listingId: string,

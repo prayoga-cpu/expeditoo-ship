@@ -6,7 +6,7 @@ import { FileClock, Truck, type LucideIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { SubmitOfferForm } from "@/features/app/offers/ui";
+import { SubmitOfferForm, TakeJobPanel } from "@/features/app/offers/ui";
 import { useAuth } from "@/lib/auth-context";
 import { ApiError } from "@/lib/fetcher";
 import type { Job } from "../types";
@@ -51,7 +51,15 @@ export function JobBidSection({ job, viewerId }: JobBidSectionProps) {
   if (!roles.includes("carrier")) return <BecomeCarrierCard />;
   if (notApprovedSubmits.length > 0) return <NotApprovedCard />;
 
-  return <SubmitOfferForm job={job} />;
+  // Both routes are offered, take-it-now first. A driver who wants the job at
+  // the posted price should not have to compose a bid to say so, and a driver
+  // who wants to bid under it still can.
+  return (
+    <div className="space-y-4">
+      <TakeJobPanel job={job} />
+      <SubmitOfferForm job={job} />
+    </div>
+  );
 }
 
 function BecomeCarrierCard() {

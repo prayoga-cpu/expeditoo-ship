@@ -619,7 +619,24 @@
       "becomeCarrierCta": "Become a carrier",
       "notApprovedTitle": "Your carrier application isn't approved yet",
       "notApprovedDescription": "Bidding unlocks as soon as an operator approves your application. Check its status to see what's missing.",
-      "notApprovedCta": "View my application"
+      "notApprovedCta": "View my application",
+      "takeJobTitle": "Take this job now",
+      "takeJobDescription": "Accept it at the posted price of {price}. No bidding, no waiting to be picked.",
+      "takeJobVehicle": "Vehicle",
+      "takeJobVehiclePlaceholder": "Choose a vehicle",
+      "takeJobCta": "Take this job",
+      "taking": "Taking…",
+      "takeSuccess": "The job is yours. It is now in your shipments.",
+      "takeJobFootnote": "An operator can still see and reverse this while the job has not been collected.",
+      "errors": {
+        "LISTING_NOT_OPEN": "Another driver got there first. This job is no longer open.",
+        "LISTING_EXPIRED": "The window for this job has closed.",
+        "CARRIER_NOT_APPROVED": "Your carrier application is not approved yet.",
+        "VEHICLE_CAPACITY_WEIGHT": "That vehicle cannot carry this load.",
+        "VEHICLE_CAPACITY_DIMENSIONS": "That vehicle is too small for this load.",
+        "OFFER_ALREADY_EXISTS": "You already have a live offer on this job.",
+        "generic": "Could not take this job. Please try again."
+      }
     }
   },
   "create": {

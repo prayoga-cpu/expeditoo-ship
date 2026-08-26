@@ -619,7 +619,24 @@
       "becomeCarrierCta": "Devenir transporteur",
       "notApprovedTitle": "Votre candidature transporteur n'est pas encore approuvee",
       "notApprovedDescription": "Les offres se debloquent des qu'un operateur approuve votre candidature. Consultez son statut pour voir ce qu'il manque.",
-      "notApprovedCta": "Voir ma candidature"
+      "notApprovedCta": "Voir ma candidature",
+      "takeJobTitle": "Prendre cette course maintenant",
+      "takeJobDescription": "Acceptez-la au prix affiché de {price}. Sans enchère, sans attendre d’être choisi.",
+      "takeJobVehicle": "Véhicule",
+      "takeJobVehiclePlaceholder": "Choisir un véhicule",
+      "takeJobCta": "Prendre cette course",
+      "taking": "Attribution…",
+      "takeSuccess": "La course est à vous. Elle figure dans vos expéditions.",
+      "takeJobFootnote": "Un opérateur peut toujours la voir et la reprendre tant que le lot n’a pas été récupéré.",
+      "errors": {
+        "LISTING_NOT_OPEN": "Un autre transporteur a été plus rapide. Cette course n’est plus disponible.",
+        "LISTING_EXPIRED": "Le délai pour cette course est écoulé.",
+        "CARRIER_NOT_APPROVED": "Votre dossier de transporteur n’est pas encore validé.",
+        "VEHICLE_CAPACITY_WEIGHT": "Ce véhicule ne peut pas transporter ce chargement.",
+        "VEHICLE_CAPACITY_DIMENSIONS": "Ce véhicule est trop petit pour ce chargement.",
+        "OFFER_ALREADY_EXISTS": "Vous avez déjà une offre en cours sur cette course.",
+        "generic": "Impossible de prendre cette course. Veuillez réessayer."
+      }
     }
   },
   "create": {

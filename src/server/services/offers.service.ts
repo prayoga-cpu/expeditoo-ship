@@ -157,6 +157,57 @@ export const offersService = {
     return offer;
   },
 
+  /**
+   * An approved carrier takes an open job outright, instead of bidding and
+   * waiting to be picked.
+   *
+   * Composed from `submitOffer` + `acceptOffer` rather than written as its own
+   * path, exactly the way `expedionEscalationService.assignDirect` already
+   * composes the same two calls. That is not tidiness — it is the whole
+   * concurrency argument. The guarantee that two drivers cannot both take one
+   * job lives in `commitAward`'s `SELECT … FOR UPDATE` on the listing plus the
+   * re-check inside that lock. Reusing `acceptOffer` inherits it verbatim: both
+   * drivers mint an offer, both reach `commitAward`, and the second blocks on
+   * the row and is refused. Fusing the insert and the award into one new
+   * transaction would mean threading `tx` through the payments service and
+   * forking the money path, which is the mistake `assignDirect` records having
+   * already made and reverted.
+   *
+   * The price is the listing's budget. There is no negotiation on this lane —
+   * the driver is accepting the job as posted, not bidding under it.
+   */
+  async takeJob(
+    carrierUserId: string,
+    listingId: string,
+    data: { vehicleId: string; message?: string }
+  ) {
+    const listing = await listingsDal.getById(listingId);
+    assertListingOpen(listing);
+
+    const offer = await this.submitOffer(carrierUserId, listingId, {
+      vehicleId: data.vehicleId,
+      priceCents: listing.budgetCents,
+      estimatedPickup: listing.pickupFrom,
+      estimatedDelivery: listing.dropoffFrom,
+      message: data.message,
+    });
+
+    // Marked before the award so the flag is already on the row every later
+    // reader sees — the award queue, the KPIs, and the admin's view of who
+    // decided this. Failing to mark it must not fail the award, so this is
+    // best-effort: a job taken and unmarked is recoverable, a job refused
+    // because a boolean would not write is not.
+    await offersDal
+      .markSelfAccepted(offer.id)
+      .catch((e) => console.error("[offers] self-accept mark failed", e));
+
+    const award = await this.acceptOffer(carrierUserId, offer.id, {
+      selfAward: true,
+    });
+
+    return { ...award, offer: { ...award.offer, selfAccepted: true } };
+  },
+
   /** Withdraw a live bid. The carrier may then submit one replacement. */
   async withdrawOffer(carrierUserId: string, offerId: string) {
     const offer = await offersDal.getById(offerId);
@@ -179,12 +230,24 @@ export const offersService = {
    * Idempotent: re-accepting an already-accepted offer returns the existing
    * shipment rather than creating a second one.
    */
-  async acceptOffer(actorUserId: string, offerId: string) {
+  async acceptOffer(
+    actorUserId: string,
+    offerId: string,
+    opts: { selfAward?: boolean } = {}
+  ) {
     const existing = await offersDal.getById(offerId);
     if (!existing) throw err("OFFER_NOT_FOUND", 404);
 
     const listing = await listingsDal.getById(existing.listingId);
     if (!listing) throw err("LISTING_NOT_FOUND", 404);
+
+    // A carrier taking their own offer. Passed explicitly by `takeJob` rather
+    // than inferred from `actorUserId === existing.carrierId`, because this
+    // branch is the difference between "a driver took an open job" and "anyone
+    // who can create an offer can award it to themselves". The caller has to
+    // say so, and only `takeJob` does.
+    const isSelfAward =
+      opts.selfAward === true && existing.carrierId === actorUserId;
 
     // Who may award depends on where the job came from.
     //
@@ -192,7 +255,7 @@ export const offersService = {
     // Expedion job is owned by a system account nobody signs into, so there is
     // no shipper to do the picking — an operator awards in the client's place.
     // Without this branch every escalated job would be unawardable.
-    if (listing.shipperId !== actorUserId) {
+    if (!isSelfAward && listing.shipperId !== actorUserId) {
       if (listing.origin !== "expedion") {
         throw err("FORBIDDEN_NOT_SHIPPER", 403);
       }
@@ -342,6 +405,75 @@ export const offersService = {
     console.error(
       `Award compensated for listing ${listingId}; payment authorisation failed`
     );
+  },
+
+  /**
+   * An operator takes an award back and puts the job on the board again.
+   *
+   * This is the control half of self-accept. Before it, the only way to undo an
+   * award was to cancel the shipment, which sets the listing to `cancelled` and
+   * destroys the job — fine when a job is genuinely off, useless when the point
+   * is "the wrong driver took this, let somebody else have it". The rollback
+   * shape already existed but was private to the payment-failure path.
+   *
+   * The money is released first and deliberately. If the hold survived the
+   * un-award, the job would go back on the board with the client's funds still
+   * ring-fenced against a driver who is no longer doing it, and the next award
+   * would place a second hold on the same client.
+   */
+  async revokeAward(actorUserId: string, listingId: string, reason?: string) {
+    const [isOperator, isAdmin] = await Promise.all([
+      userHasRole(actorUserId, "operator"),
+      userHasRole(actorUserId, "admin"),
+    ]);
+    if (!isOperator && !isAdmin) throw err("FORBIDDEN_NOT_OPERATOR", 403);
+
+    const listing = await listingsDal.getById(listingId);
+    if (!listing) throw err("LISTING_NOT_FOUND", 404);
+    if (listing.status !== "awarded") throw err("LISTING_NOT_AWARDED", 409);
+
+    const offerId = listing.acceptedOfferId;
+    if (!offerId) throw err("LISTING_HAS_NO_AWARD", 409);
+
+    const winner = await offersDal.getById(offerId);
+    const shipment = await listingsDal.getShipmentByOfferId(offerId);
+    if (shipment) {
+      // Anything already collected is a real-world event that un-awarding
+      // cannot undo. Past that point the honest action is cancel-with-refund,
+      // not a quiet hand-back to the board.
+      if (shipment.status !== "PENDING" && shipment.status !== "ASSIGNED") {
+        throw err("SHIPMENT_ALREADY_STARTED", 409);
+      }
+      await paymentsService
+        .releaseForShipment(shipment.id)
+        .catch((e) => console.error("[offers] hold release on revoke", e));
+    }
+
+    // The rivals this award rejected, so they go back to pending alongside the
+    // winner and the job returns to the board with its bids intact.
+    const rivals = await offersDal.listByListing(listingId);
+    const rejectedIds = rivals
+      .filter((offer) => offer.status === "rejected")
+      .map((offer) => offer.id);
+
+    await this.compensateFailedAward(listingId, offerId, rejectedIds);
+
+    if (winner) {
+      await notificationsService
+        .createNotification({
+          userId: winner.carrierId,
+          type: "offer_rejected",
+          title: "A job was taken back",
+          message:
+            reason ??
+            `"${listing.title}" was returned to the board by an operator.`,
+          linkUrl: `/listing/${listingId}`,
+          data: { listingId, offerId },
+        })
+        .catch((e) => console.error("revoke notification failed", e));
+    }
+
+    return { listingId, offerId, shipmentId: shipment?.id ?? null };
   },
 
   /**

@@ -2,7 +2,12 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { offersApi, type SubmitOfferInput } from "../api/offers.api";
+import { useTranslations } from "next-intl";
+import {
+  offersApi,
+  type SubmitOfferInput,
+  type TakeJobInput,
+} from "../api/offers.api";
 import { ApiError } from "@/lib/fetcher";
 
 /** Maps the service's error codes to something a carrier can act on. */
@@ -55,5 +60,42 @@ export function useWithdrawOffer() {
     },
     onError: (error) =>
       toast.error(error instanceof Error ? error.message : "Could not withdraw"),
+  });
+}
+
+/**
+ * Take a job outright.
+ *
+ * The error worth naming is LISTING_NOT_OPEN: two drivers tapping at the same
+ * moment is the expected case, and the loser needs to be told somebody beat
+ * them to it rather than shown a generic failure. Messages go through
+ * next-intl rather than the hardcoded English map above, which predates it.
+ */
+export function useTakeJob(listingId: string) {
+  const queryClient = useQueryClient();
+  const t = useTranslations("listing.bid");
+
+  return useMutation({
+    mutationFn: (input: TakeJobInput) => offersApi.take(listingId, input),
+    onSuccess: () => {
+      toast.success(t("takeSuccess"));
+      queryClient.invalidateQueries({ queryKey: ["job", listingId] });
+      queryClient.invalidateQueries({ queryKey: ["carrier-offers"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+    onError: (error) => {
+      const code = error instanceof ApiError ? error.code : "";
+      const known = [
+        "LISTING_NOT_OPEN",
+        "LISTING_EXPIRED",
+        "CARRIER_NOT_APPROVED",
+        "VEHICLE_CAPACITY_WEIGHT",
+        "VEHICLE_CAPACITY_DIMENSIONS",
+        "OFFER_ALREADY_EXISTS",
+      ];
+      toast.error(
+        known.includes(code) ? t(`errors.${code}`) : t("errors.generic")
+      );
+    },
   });
 }

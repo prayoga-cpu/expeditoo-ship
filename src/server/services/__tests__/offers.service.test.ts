@@ -565,3 +565,132 @@ describe("offersService.getOffersForViewer", () => {
     expect(result.offers?.map((o) => o.id)).toEqual(["o2", "o1"]);
   });
 });
+
+// ========================================
+// Take it now — transport self-accept
+// ========================================
+
+describe("offersService.takeJob", () => {
+  beforeEach(() => {
+    Object.assign(offersDal, {
+      ...offersDal,
+      markSelfAccepted: vi.fn(async (id) => ({ id, selfAccepted: true })),
+      getById: vi.fn().mockResolvedValue({
+        id: "offer-1",
+        listingId: "job-1",
+        carrierId: "carrier-1",
+        status: "pending",
+        priceCents: 20_000,
+      }),
+      getByIdForUpdate: vi.fn().mockResolvedValue({
+        id: "offer-1",
+        listingId: "job-1",
+        carrierId: "carrier-1",
+        status: "pending",
+        priceCents: 20_000,
+      }),
+      updateStatus: vi.fn(async (id, status) => ({ id, status })),
+      setPendingStatusForListing: vi.fn().mockResolvedValue([]),
+    });
+    Object.assign(listingsDal, {
+      ...listingsDal,
+      getByIdForUpdate: vi.fn().mockResolvedValue(listing()),
+      createShipment: vi.fn(async (row) => row),
+      update: vi.fn(async (id, data) => ({ id, ...data })),
+      getShipmentByOfferId: vi.fn().mockResolvedValue(null),
+    });
+    vi.mocked(paymentsService.authoriseForShipment).mockResolvedValue({
+      payment: { id: "pay-1", status: "authorised" },
+    } as never);
+  });
+
+  it("takes the job at the posted budget, not at a price the caller names", async () => {
+    // The whole difference between this and a bid is that there is no
+    // negotiation, so the amount must come off the listing.
+    await offersService.takeJob("carrier-1", "job-1", { vehicleId: "veh-1" });
+
+    const created = vi.mocked(offersDal.create).mock.calls[0][0];
+    expect(created.priceCents).toBe(20_000);
+  });
+
+  it("marks the offer as self-accepted so an operator can tell it apart", async () => {
+    await offersService.takeJob("carrier-1", "job-1", { vehicleId: "veh-1" });
+
+    // The id is minted inside submitOffer, so the assertion follows the row
+    // that was actually created rather than a fixture id.
+    const created = vi.mocked(offersDal.create).mock.calls[0][0];
+    expect(offersDal.markSelfAccepted).toHaveBeenCalledWith(created.id);
+  });
+
+  it("refuses a job that is no longer open, which is the two-drivers race", async () => {
+    vi.mocked(listingsDal).getById = vi
+      .fn()
+      .mockResolvedValue(listing({ status: "awarded" }));
+
+    const code = await codeFrom(() =>
+      offersService.takeJob("carrier-1", "job-1", { vehicleId: "veh-1" })
+    );
+
+    expect(code).toBe("LISTING_NOT_OPEN");
+  });
+
+  it("refuses a carrier who is not approved", async () => {
+    vi.mocked(carriersDal).getByUserId = vi
+      .fn()
+      .mockResolvedValue({ id: "carrier-co-1", status: "submitted" });
+
+    const code = await codeFrom(() =>
+      offersService.takeJob("carrier-1", "job-1", { vehicleId: "veh-1" })
+    );
+
+    expect(code).toBe("CARRIER_NOT_APPROVED");
+  });
+});
+
+// ========================================
+// Self-award is opt-in, never ambient
+// ========================================
+
+describe("offersService.acceptOffer self-award gate", () => {
+  it("refuses a carrier accepting their own offer without the flag", async () => {
+    // The permission rule is shared with the operator award queue, so widening
+    // it in place would let anyone with an offer award themselves from there.
+    Object.assign(offersDal, {
+      ...offersDal,
+      getById: vi.fn().mockResolvedValue({
+        id: "offer-1",
+        listingId: "job-1",
+        carrierId: "carrier-1",
+        status: "pending",
+      }),
+    });
+    vi.mocked(listingsDal).getById = vi.fn().mockResolvedValue(listing());
+    vi.mocked(userHasRole).mockResolvedValue(false);
+
+    const code = await codeFrom(() =>
+      offersService.acceptOffer("carrier-1", "offer-1")
+    );
+
+    expect(code).toBe("FORBIDDEN_NOT_SHIPPER");
+  });
+
+  it("refuses the flag when the offer belongs to somebody else", async () => {
+    Object.assign(offersDal, {
+      ...offersDal,
+      getById: vi.fn().mockResolvedValue({
+        id: "offer-1",
+        listingId: "job-1",
+        carrierId: "someone-else",
+        status: "pending",
+      }),
+    });
+    vi.mocked(listingsDal).getById = vi.fn().mockResolvedValue(listing());
+    vi.mocked(userHasRole).mockResolvedValue(false);
+
+    const code = await codeFrom(() =>
+      offersService.acceptOffer("carrier-1", "offer-1", { selfAward: true })
+    );
+
+    expect(code).toBe("FORBIDDEN_NOT_SHIPPER");
+  });
+});
