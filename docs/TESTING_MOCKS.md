@@ -24,7 +24,7 @@ capture threw `PAYMENT_NOT_AUTHORISED` at delivery, and payout never ran. Rather
 guess at your Stripe test setup, the money chain now runs behind a flag.
 
 With `MOCK_PAYMENTS=true`, accepting an offer records the payment as authorised with a
-synthetic `pi_mock_<shipmentId>` intent; delivery captures it, computes the 10%
+synthetic `pi_mock_<shipmentId>` intent; delivery captures it, computes the
 commission exactly as the real path does, and records the payout. **The real Stripe
 code path is untouched when the flag is off.**
 
@@ -149,7 +149,8 @@ pnpm dev
    and a shipment is created.
 6. Assign a driver, then walk `ASSIGNED → PICKED_UP → IN_TRANSIT → DELIVERED` in
    `/driver/shipments/[id]`, finishing with the proof-of-delivery upload.
-7. Delivery captures the mock payment, takes the 10% commission and records the payout.
+7. Delivery captures the mock payment, takes the commission at the configured
+   rate — 100% during the testing phase, so the payout row is 0 — and records it.
 8. Both sides can review from the delivery detail page.
 
 ### Expedion escalation

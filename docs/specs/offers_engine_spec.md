@@ -165,7 +165,9 @@ All of the following commit together or none do:
    `shipperId = listing.shipperId`, `status = 'PENDING'`, pickup/dropoff copied
    from the listing, `priceCents = offer.priceCents`.
 6. Create the `payment` row: `amountCents = offer.priceCents`,
-   `commissionCents = round(offer.priceCents * 0.10)`, `status = 'authorising'`.
+   `commissionCents = round(offer.priceCents * COMMISSION_RATE)`,
+   `status = 'authorising'`. The rate is 1.0 during the testing phase — see
+   `payments.service.ts`, and ROADMAP.md §10.
 7. Open the `conversation` between shipper and carrier if none exists.
 
 ### After commit
@@ -245,7 +247,8 @@ When a listing passes `expiresAt` with no accepted offer (cron, per
 - Each authorisation failure in §3 and §5.
 - Each validation rule in §3, both sides of every boundary.
 - The full accept transaction: winner accepted, all others rejected, listing
-  awarded, shipment created, payment row created, commission = 10%.
+  awarded, shipment created, payment row created, commission at the configured
+  rate (100% during the testing phase).
 - Concurrent accept — only one wins (edge case 1).
 - Accept idempotency (§5).
 - Stripe-failure compensation restores `open` + `pending` (§5.8).

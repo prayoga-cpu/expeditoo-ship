@@ -80,6 +80,7 @@ import {
   paymentsService,
   PaymentError,
   commissionFor,
+  COMMISSION_RATE,
 } from "../payments.service";
 import { stripe } from "@/lib/stripe";
 
@@ -119,17 +120,36 @@ afterEach(() => {
 });
 
 // ========================================
-// Commission math — ROADMAP.md §1, 10% at source
+// Commission math — 100% during the testing phase (ROADMAP.md §10)
 // ========================================
+//
+// The rate is deliberately not hardcoded in the expectations below. It moved
+// from 0.1 to 1.0 once, it will move again when the split is decided, and a
+// test that restates the number just has to be edited in lockstep without ever
+// catching anything. What is worth pinning is the arithmetic: the commission
+// is the rate applied to the price, it rounds to whole cents, and it never
+// exceeds the amount charged.
 
 describe("commissionFor", () => {
-  it("takes 10% of the job price", () => {
-    expect(commissionFor(18_000)).toBe(1_800);
+  it("applies the configured rate to the job price", () => {
+    expect(commissionFor(18_000)).toBe(Math.round(18_000 * COMMISSION_RATE));
   });
 
   it("rounds to the nearest cent", () => {
-    expect(commissionFor(999)).toBe(100);
-    expect(commissionFor(994)).toBe(99);
+    expect(commissionFor(999)).toBe(Math.round(999 * COMMISSION_RATE));
+    expect(commissionFor(994)).toBe(Math.round(994 * COMMISSION_RATE));
+    expect(Number.isInteger(commissionFor(999))).toBe(true);
+  });
+
+  it("never takes more than was charged", () => {
+    expect(commissionFor(18_000)).toBeLessThanOrEqual(18_000);
+  });
+
+  it("keeps the whole amount while the testing-phase rate is in force", () => {
+    // The client's 2026-08-26 decision, pinned so that reverting the constant
+    // without revisiting this file fails loudly rather than quietly.
+    expect(COMMISSION_RATE).toBe(1);
+    expect(commissionFor(18_000)).toBe(18_000);
   });
 });
 
@@ -166,7 +186,7 @@ describe("paymentsService.authoriseForShipment (mock path)", () => {
       shipmentId: "ship-1",
       listingId: "job-1",
       amountCents: 18_000,
-      commissionCents: 1_800,
+      commissionCents: Math.round(18_000 * COMMISSION_RATE),
       currency: "eur",
       transferGroup: "shipment_ship-1",
     });
@@ -308,7 +328,7 @@ describe("paymentsService.releaseForShipment", () => {
 // ========================================
 
 describe("paymentsService.schedulePayout", () => {
-  it("owes the carrier the price minus the 10% commission", async () => {
+  it("owes the carrier the price minus the commission", async () => {
     await paymentsService.authoriseForShipment(authoriseParams());
     await paymentsService.captureForShipment("ship-1");
 
@@ -317,7 +337,7 @@ describe("paymentsService.schedulePayout", () => {
     expect(payout).toMatchObject({
       carrierId: "carrier-1",
       shipmentId: "ship-1",
-      amountCents: 16_200,
+      amountCents: 18_000 - Math.round(18_000 * COMMISSION_RATE),
       currency: "eur",
       status: "scheduled",
     });

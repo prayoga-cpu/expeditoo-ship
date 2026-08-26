@@ -45,7 +45,11 @@ export const payments = pgTable(
     stripeCheckoutSessionId: text("stripe_checkout_session_id").unique(),
 
     amountCents: integer("amount_cents").notNull(),
-    // 10% commission on each completed delivery (ROADMAP.md §1), held at source.
+    // The platform's cut, held at source. The rate lives in one place —
+    // `COMMISSION_RATE` in payments.service.ts — and is 100% during the testing
+    // phase, so this column currently equals `amount_cents` and the payout is 0.
+    // No rate is recorded per row, so an old 10% row and a new 100% row are
+    // told apart only by date (ROADMAP.md §10).
     commissionCents: integer("commission_cents").notNull(),
     currency: text("currency").default("eur").notNull(),
     status: paymentStatusEnum("status").default("pending").notNull(),

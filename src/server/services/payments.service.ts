@@ -28,8 +28,30 @@ export class PaymentError extends Error {
 const err = (code: string, status: number, message?: string) =>
   new PaymentError(code, status, message);
 
-/** 10% commission on each completed delivery (ROADMAP.md §1). */
-export const COMMISSION_RATE = 0.1;
+/**
+ * TODO(EXPEDITOO-TESTING): the platform keeps 100% during the testing phase.
+ *
+ * Decided by the client on 2026-08-26: "for now no commission/split, everything
+ * 100% goes to this Stripe API key". Reversing it is this one number.
+ *
+ * It is set to 1.0 rather than left at 0.1 because 0.1 would be a lie the
+ * ledger tells. No money reaches a driver today under any code path —
+ * `executePayout` is the only function that calls `stripe.transfers.create`
+ * and nothing calls it, while `carriers.stripe_account_id` is a column no code
+ * ever writes. A payout is a recorded row and nothing more. At 0.1 the database
+ * would assert a 90% liability to drivers that the business has decided not to
+ * owe, and `admin.dal.ts` would report platform revenue as a tenth of what
+ * actually arrived. At 1.0 the ledger says what is true: everything is kept,
+ * nothing is owed.
+ *
+ * Two things this does NOT fix, both tracked in ROADMAP.md §10:
+ *   - `payments` records no rate per row, so historical 10% rows are
+ *     indistinguishable from new 100% rows except by date.
+ *   - `/terms` still tells the public that "the balance is paid out to the
+ *     carrier". At this rate the balance is zero, so that sentence is now
+ *     false and is a legal question, not an engineering one.
+ */
+export const COMMISSION_RATE = 1.0;
 
 export const commissionFor = (amountCents: number) =>
   Math.round(amountCents * COMMISSION_RATE);

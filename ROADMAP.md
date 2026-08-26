@@ -219,8 +219,21 @@ beyond France.
 
 1. **Commission split when a job originates from Expedion.** `budgetCents` is
    what the client already paid Expedion; the driver bids below it and the
-   difference is the margin. Nothing names how that splits. Payouts cannot go
-   live until it does — this is the blocking one.
+   difference is the margin.
+
+   **Answered for the testing phase, 2026-08-26:** no split. `COMMISSION_RATE`
+   is `1.0`, so the platform keeps everything and a payout row is written at 0.
+   This matches what the system already did — no code path has ever moved money
+   to a driver — it just stops the ledger claiming otherwise.
+
+   Still open, and all of it blocks paying a real driver:
+   - the actual split, whenever a driver is to be paid;
+   - `payments` records no rate per row, so a 10% row and a 100% row are told
+     apart only by date;
+   - **`/terms` still says "the balance is paid out to the carrier"**, which at
+     this rate is false. That is a legal question, not an engineering one;
+   - `carriers.stripe_account_id` is written by nothing, so `executePayout`
+     would throw `CARRIER_ACCOUNT_MISSING` even if it were called.
 2. **Whether person-level driver applications survive French licensing.** KBIS is
    no longer required, but SIRET and a transport licence still are for anything
    at or above 7.5 t. If regulation pushes back, the company layer returns.
