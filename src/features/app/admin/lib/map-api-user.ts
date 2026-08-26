@@ -1,3 +1,5 @@
+import { primaryRole } from "@/lib/primary-role";
+
 import type { User } from "../types";
 
 /**
@@ -19,17 +21,6 @@ export interface ApiUser {
 }
 
 /**
- * The role shown in the table: the most privileged one the user holds, since
- * a driver who is also an operator should not read as "User".
- */
-function primaryRole(roles: string[]): string {
-  if (roles.includes("admin")) return "admin";
-  if (roles.includes("operator")) return "operator";
-  if (roles.includes("driver") || roles.includes("carrier")) return "driver";
-  return roles[0] ?? "user";
-}
-
-/**
  * Status, in precedence order.
  *
  * `banned` is checked first on purpose. Both admin tables used to derive this
@@ -48,6 +39,10 @@ export function mapApiUser(user: ApiUser): User {
     id: user.id,
     name: user.name || "Unknown",
     email: user.email,
+    // Shared with the sidebar badge rather than ranked again here. The
+    // local copy fell through to `roles[0]` for anything it did not name, and
+    // that array's order is whatever the join returned — which is how a
+    // support or finance account came to read "Shipper" in this table.
     role: primaryRole(user.roles ?? []),
     status: status(user),
     joinDate: user.createdAt
