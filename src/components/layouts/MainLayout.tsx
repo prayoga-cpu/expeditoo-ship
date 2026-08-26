@@ -4,6 +4,7 @@ import type React from "react";
 import { BottomNav } from "../BottomNav";
 import { NotificationBell } from "../NotificationBell";
 import { ThemeToggle } from "../ui/theme-toggle";
+import { LangToggle } from "../ui/lang-toggle";
 import { AppSidebarHeader } from "./AppSidebarHeader";
 import { BrandWordmark } from "@/components/ui/brand-mark";
 
@@ -193,7 +194,12 @@ function Header() {
         </div>
 
         {/* Right Actions */}
+        {/* Language first, then theme, then the bell — the same order and the
+            same FR | EN control the landing header and the Expedion app use,
+            so someone crossing between the three surfaces finds it in the
+            same place. */}
         <div className="flex items-center gap-1 shrink-0 ml-auto">
+          <LangToggle className="mr-1" />
           <ThemeToggle />
           <NotificationBell />
         </div>

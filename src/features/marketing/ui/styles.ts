@@ -31,7 +31,12 @@ export const LP_BTN_PRIMARY =
 export const LP_BTN_GHOST =
   "rounded-xl border border-[var(--lp-line2)] font-medium text-[var(--lp-text)] transition-colors hover:bg-[var(--lp-chip)] hover:text-[var(--lp-text)]";
 
-export const EXPEDION_URL = "https://expedion-encheres.vercel.app/";
+/**
+ * Re-exported so the landing call sites keep importing it from the module
+ * they always have. The value lives in `@/lib/constants/expedion` now that
+ * the job board links out too.
+ */
+export { EXPEDION_URL } from "@/lib/constants/expedion";
 
 /**
  * Content pages sit narrower than the landing grid: the landing rows are

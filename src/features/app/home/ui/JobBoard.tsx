@@ -22,6 +22,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { CenteredEmptyState } from "@/components/ui/centered-empty-state";
 import { JobCard } from "./JobCard";
+import { ExpedionSourceBanner } from "./ExpedionSourceBanner";
 import { useTranslations } from "next-intl";
 import { useJobBoard } from "../hooks/useJobBoard";
 import type { JobSort } from "../types";
@@ -67,6 +68,8 @@ export function JobBoard({ origin }: { origin?: "direct" | "expedion" } = {}) {
               : t("count", { count: total })}
         </p>
       </header>
+
+      <ExpedionSourceBanner />
 
       <div className="flex gap-2">
         <div className="relative flex-1">

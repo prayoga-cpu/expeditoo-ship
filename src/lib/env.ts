@@ -15,6 +15,39 @@ function isAppEnv(value: string | undefined): value is AppEnv {
 }
 
 /**
+ * The four variables `resolveAppEnv` reads, each spelled out as a literal
+ * `process.env.X`.
+ *
+ * That spelling is the whole point. A bundler substitutes the literal token
+ * `process.env.NEXT_PUBLIC_APP_ENV`; it does not substitute `env.NEXT_PUBLIC_APP_ENV`
+ * on a parameter that merely happens to default to `process.env`. Passing
+ * `process.env` straight in therefore worked on the server and failed silently
+ * in the browser, where `process.env` carries nothing: every client bundle fell
+ * through to "local", so a production page subscribed to
+ * `local:user:<id>:stream` while its Ably token granted `user:<id>:*`, and the
+ * channel was refused with 40160.
+ *
+ * `APP_ENV`, `VERCEL` and `VERCEL_ENV` resolve to undefined in the browser,
+ * which is correct: `NEXT_PUBLIC_APP_ENV` is the only one it can know, and
+ * next.config.mjs injects it precisely so it agrees with the server.
+ */
+export interface AppEnvSource {
+  NEXT_PUBLIC_APP_ENV?: string;
+  APP_ENV?: string;
+  VERCEL?: string;
+  VERCEL_ENV?: string;
+}
+
+function processEnvSnapshot(): AppEnvSource {
+  return {
+    NEXT_PUBLIC_APP_ENV: process.env.NEXT_PUBLIC_APP_ENV,
+    APP_ENV: process.env.APP_ENV,
+    VERCEL: process.env.VERCEL,
+    VERCEL_ENV: process.env.VERCEL_ENV,
+  };
+}
+
+/**
  * Resolve the environment from the process env.
  *
  * Order matters:
@@ -31,7 +64,9 @@ function isAppEnv(value: string | undefined): value is AppEnv {
  *  4. On Vercel, `VERCEL_ENV` is authoritative and distinguishes the three
  *     scopes the CLI also uses (production / preview / development).
  */
-export function resolveAppEnv(env: NodeJS.ProcessEnv = process.env): AppEnv {
+export function resolveAppEnv(
+  env: AppEnvSource = processEnvSnapshot()
+): AppEnv {
   if (isAppEnv(env.NEXT_PUBLIC_APP_ENV)) return env.NEXT_PUBLIC_APP_ENV;
   if (isAppEnv(env.APP_ENV)) return env.APP_ENV;
 
