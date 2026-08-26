@@ -47,7 +47,8 @@
       "requestTransport": "Demander un transport",
       "myRequests": "Mes demandes",
       "myTrips": "Mes trajets",
-      "myEarnings": "Mes gains"
+      "myEarnings": "Mes gains",
+      "language": "Langue"
     },
     "categories": {
       "electronics": "Électronique",
@@ -111,6 +112,17 @@
       "address": "Adresse",
       "postalCode": "Code postal",
       "city": "Ville"
+    },
+    "roles": {
+      "admin": "Admin",
+      "finance": "Finance",
+      "support": "Support",
+      "operator": "Opérateur",
+      "driver": "Chauffeur",
+      "carrier": "Chauffeur",
+      "shipper": "Expéditeur",
+      "user": "Utilisateur",
+      "hint": "Votre niveau d'accès"
     }
   },
   "auth": {
@@ -1603,7 +1615,8 @@
       "expedion": "Passerelle Expedion",
       "awards": "File d'attribution",
       "applications": "Dossiers chauffeurs",
-      "withdrawals": "Retraits"
+      "withdrawals": "Retraits",
+      "expedionClients": "Clients Expedion"
     },
     "table": {
       "rowsSelected": "{count} sur {total} ligne(s) sélectionnée(s)",
@@ -2215,6 +2228,72 @@
         "title": "Impossible de charger la file",
         "description": "Réessayez dans un instant."
       }
+    },
+    "expedionClients": {
+      "title": "Clients Expedion",
+      "subtitle": "Toutes les personnes ayant demandé un devis via Expedion. La plupart n'ont pas de compte Expeditoo et n'apparaissent donc pas dans Utilisateurs.",
+      "searchPlaceholder": "Nom, e-mail, téléphone, ville, bordereau…",
+      "filter": {
+        "label": "Compte",
+        "all": "Tous les clients",
+        "withAccount": "Avec compte Expeditoo",
+        "withoutAccount": "Sans compte Expeditoo"
+      },
+      "sort": {
+        "label": "Trier par",
+        "lastSeen": "Plus récents",
+        "quotes": "Plus de devis",
+        "value": "Montant le plus élevé",
+        "name": "Nom (A–Z)"
+      },
+      "table": {
+        "client": "Client",
+        "contact": "Contact",
+        "quotes": "Devis",
+        "value": "Payé",
+        "lastSeen": "Dernière activité",
+        "account": "Compte Expeditoo"
+      },
+      "noName": "Nom non renseigné",
+      "paidOf": "{paid} payé(s)",
+      "openAccount": "Ouvrir le compte",
+      "noAccount": "Aucun",
+      "ownerIdCopied": "Identifiant client copié",
+      "count": "{total, plural, =0 {Aucun client} one {# client} other {# clients}}",
+      "pageOf": "Page {page} sur {totalPages}",
+      "previousPage": "Page précédente",
+      "nextPage": "Page suivante",
+      "empty": "Aucun client Expedion",
+      "emptyHint": "Aucun devis n'a encore été déposé via Expedion.",
+      "emptySearch": "Aucun client ne correspond à cette recherche.",
+      "loadFailed": "Impossible de charger la liste des clients",
+      "loadFailedHint": "La requête a échoué. Réessayez dans un instant.",
+      "detail": {
+        "title": "Client Expedion",
+        "error": "Impossible de charger ce client.",
+        "quotes": "Devis",
+        "paid": "Payés",
+        "delivered": "Livrés",
+        "value": "Total payé",
+        "since": "Premier devis le {date}",
+        "hasAccount": "Possède un compte Expeditoo : {email}",
+        "accountSuspended": "Suspendu",
+        "noAccountHint": "Pas de compte Expeditoo. Ce client se connecte uniquement via Expedion : il n'y a donc rien à suspendre ni à réinitialiser ici.",
+        "quotesTitle": "Devis déposés",
+        "noQuotes": "Aucun devis."
+      },
+      "quoteStatus": {
+        "pending": "En attente",
+        "awaiting_confirmation": "À confirmer",
+        "quoted": "Devis envoyé",
+        "accepted": "Accepté",
+        "paid": "Payé",
+        "assigned": "Chauffeur assigné",
+        "escalated": "Publié sur la marketplace",
+        "picked_up": "Enlevé",
+        "delivered": "Livré",
+        "cancelled": "Annulé"
+      }
     }
   },
   "reviews": {
@@ -2619,6 +2698,10 @@
     "loading": "Chargement…",
     "count": "{count} missions ouvertes aux offres",
     "countOne": "{count} mission ouverte aux offres",
+    "source": {
+      "description": "Les missions marquées « via Expedion » en proviennent — un client a accepté un devis et a déjà payé.",
+      "cta": "Ouvrir Expedion"
+    },
     "search": "Rechercher une mission",
     "clearSearch": "Effacer la recherche",
     "filters": "Filtres",
@@ -2690,6 +2773,9 @@
       "WITHDRAWAL_ALREADY_SETTLED": "Ce retrait a déjà été traité.",
       "WITHDRAWAL_NOT_REQUESTED": "Ce retrait n’est plus en attente d’approbation.",
       "generic": "Une erreur est survenue. Veuillez réessayer."
-    }
+    },
+    "loadFailed": "Gains indisponibles",
+    "loadFailedHint": "Impossible de charger votre solde. Réessayez dans un instant — si le problème persiste, contactez le support.",
+    "retry": "Réessayer"
   }
 }

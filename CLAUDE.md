@@ -268,8 +268,39 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
   a bundle download. The carrier's half is a **relevé d'activité**, not a
   facture: while `COMMISSION_RATE` is 1.0 the net is €0 and the screen says so
   rather than inventing a split. `docs/specs/billing_documents_spec.md`
+- **Two migrations had never run anywhere.** `0009_offer_self_accepted` and a
+  second `0010_withdrawals` were absent from `meta/_journal.json`, and the
+  migrator walks the journal, not the directory — so production had no
+  `withdrawals` table, `GET /api/carrier/withdrawals` answered 500 and "My
+  earnings" was a blank page. Renumbered to `0011`/`0012` **above**
+  `0010_carrier_routes`, because drizzle applies a migration only when its
+  journal `when` beats the newest one already recorded; a backdated entry is
+  silently skipped. `src/db/__tests__/migrations-journal.test.ts` now fails on
+  an unregistered `.sql`, a missing file, a non-increasing timestamp or a
+  duplicate prefix. **Nothing in CI runs migrations** — no workflow does it and
+  the Vercel build is a plain `next build` — so production still needs
+  `MIGRATE_TARGET=production pnpm db:migrate`.
+- **Expedion clients** at `/admin/expedion-clients`: the client book, grouped by
+  `expedion_quotes.firebase_uid`, server-paginated over 4,592 owners. It exists
+  because `/admin/users` structurally cannot show these people — they are quote
+  owners and **none** has a `user` row. The account column joins on
+  `user.id = firebase_uid` (proof the client authenticated here) and never on
+  `user_id`, which is email-matched claiming. Read-only: quotes are edited at
+  `/admin/expedion`. `/admin/users` learned `?search=` so the link lands on the
+  account. 18 tests. `docs/specs/admin_expedion_clients_spec.md`
+- **Role badge in the sidebar**, from `AppSidebarHeader`, so all three shells
+  show which access the session carries. Precedence lives once in
+  `src/lib/primary-role.ts`; `map-api-user.ts` had its own copy that fell
+  through to `roles[0]`, and that array's order is whatever the join returned,
+  so a support or finance account could read "Shipper" in the admin table. A
+  test asserts the list covers `userRoleEnum` exactly.
 
 **Not done**
+- **`EXPEDION_APP_ORIGINS` is unset**, in `.env.local` and in the deployment, so
+  `user.origin` never reads `expedion` and every account wears the Expeditoo
+  badge in `/admin/users`. Setting it fixes the label *from that moment* — it
+  back-fills nothing, deliberately (`admin_user_management_spec.md` §1.2).
+  `/admin/expedion-clients` does not depend on it.
 - **Real Stripe hold/capture** — runs under `MOCK_PAYMENTS`; needs SetupIntent
   confirmation and `amount_capturable_updated` webhook handling
 - **Driver pay on either lane.** Escalation hands the driver the full
@@ -304,6 +335,10 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
    marketplace are stale. The Phase A specs listed above are current.
 8. **Never restate the role enum.** Derive from `userRoleEnum`. A restated copy
    in `user.dto.ts` silently broke every admin role assignment.
-9. `.prettierc` is misnamed (missing an `r`), so Prettier never loads it and
+9. **A query hook that returns `null` on failure renders a blank page.** That is
+   what hid the withdrawals 500 for as long as it did — no heading, no error,
+   nothing to retry, and the only evidence in the browser console. Give every
+   `useQuery` surface an `isError` branch.
+10. `.prettierc` is misnamed (missing an `r`), so Prettier never loads it and
    falls back to `trailingComma: "all"`. Running Prettier reformats whole files.
    Match surrounding style by hand instead.

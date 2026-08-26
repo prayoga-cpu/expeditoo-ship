@@ -47,7 +47,8 @@
       "requestTransport": "Request transport",
       "myRequests": "My requests",
       "myTrips": "My trips",
-      "myEarnings": "My earnings"
+      "myEarnings": "My earnings",
+      "language": "Language"
     },
     "categories": {
       "electronics": "Electronics",
@@ -111,6 +112,17 @@
       "address": "Address",
       "postalCode": "Postal code",
       "city": "City"
+    },
+    "roles": {
+      "admin": "Admin",
+      "finance": "Finance",
+      "support": "Support",
+      "operator": "Operator",
+      "driver": "Driver",
+      "carrier": "Driver",
+      "shipper": "Shipper",
+      "user": "User",
+      "hint": "Your access level"
     }
   },
   "auth": {
@@ -1603,7 +1615,8 @@
       "expedion": "Expedion bridge",
       "awards": "Award queue",
       "applications": "Driver applications",
-      "withdrawals": "Withdrawals"
+      "withdrawals": "Withdrawals",
+      "expedionClients": "Expedion clients"
     },
     "table": {
       "total": "total",
@@ -2215,6 +2228,72 @@
         "title": "Could not load the queue",
         "description": "Try again in a moment."
       }
+    },
+    "expedionClients": {
+      "title": "Expedion clients",
+      "subtitle": "Everyone who has requested a quote through Expedion. Most have no Expeditoo account, so they do not appear under Users.",
+      "searchPlaceholder": "Name, email, phone, city, bordereau…",
+      "filter": {
+        "label": "Account",
+        "all": "All clients",
+        "withAccount": "With an Expeditoo account",
+        "withoutAccount": "No Expeditoo account"
+      },
+      "sort": {
+        "label": "Sort by",
+        "lastSeen": "Most recent",
+        "quotes": "Most quotes",
+        "value": "Highest value",
+        "name": "Name (A–Z)"
+      },
+      "table": {
+        "client": "Client",
+        "contact": "Contact",
+        "quotes": "Quotes",
+        "value": "Paid",
+        "lastSeen": "Last seen",
+        "account": "Expeditoo account"
+      },
+      "noName": "No name given",
+      "paidOf": "{paid} paid",
+      "openAccount": "Open account",
+      "noAccount": "None",
+      "ownerIdCopied": "Client ID copied",
+      "count": "{total, plural, =0 {No clients} one {# client} other {# clients}}",
+      "pageOf": "Page {page} of {totalPages}",
+      "previousPage": "Previous page",
+      "nextPage": "Next page",
+      "empty": "No Expedion clients",
+      "emptyHint": "No quote has been filed through Expedion yet.",
+      "emptySearch": "No client matches this search.",
+      "loadFailed": "Could not load the client list",
+      "loadFailedHint": "The request failed. Try again in a moment.",
+      "detail": {
+        "title": "Expedion client",
+        "error": "Could not load this client.",
+        "quotes": "Quotes",
+        "paid": "Paid",
+        "delivered": "Delivered",
+        "value": "Total paid",
+        "since": "First quote {date}",
+        "hasAccount": "Has an Expeditoo account: {email}",
+        "accountSuspended": "Suspended",
+        "noAccountHint": "No Expeditoo account. This client signs in through Expedion only, so there is nothing here to suspend or reset.",
+        "quotesTitle": "Quotes filed",
+        "noQuotes": "No quotes."
+      },
+      "quoteStatus": {
+        "pending": "Pending",
+        "awaiting_confirmation": "Awaiting confirmation",
+        "quoted": "Quoted",
+        "accepted": "Accepted",
+        "paid": "Paid",
+        "assigned": "Driver assigned",
+        "escalated": "On the marketplace",
+        "picked_up": "Picked up",
+        "delivered": "Delivered",
+        "cancelled": "Cancelled"
+      }
     }
   },
   "shipments": {
@@ -2619,6 +2698,10 @@
     "loading": "Loading…",
     "count": "{count} jobs accepting offers",
     "countOne": "{count} job accepting offers",
+    "source": {
+      "description": "Jobs badged “via Expedion” arrive from there — a client accepted a quote and has already paid.",
+      "cta": "Open Expedion"
+    },
     "search": "Search jobs",
     "clearSearch": "Clear search",
     "filters": "Filters",
@@ -2690,6 +2773,9 @@
       "WITHDRAWAL_ALREADY_SETTLED": "This withdrawal has already been settled.",
       "WITHDRAWAL_NOT_REQUESTED": "This withdrawal is no longer waiting for approval.",
       "generic": "Something went wrong. Please try again."
-    }
+    },
+    "loadFailed": "Earnings unavailable",
+    "loadFailedHint": "We could not load your balance. Try again in a moment — if it keeps failing, contact support.",
+    "retry": "Try again"
   }
 }
