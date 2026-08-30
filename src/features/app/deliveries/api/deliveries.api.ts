@@ -39,6 +39,20 @@ export interface ShipmentOffer {
   estimatedDelivery: string;
 }
 
+/**
+ * The client's half of the timeline. Present on every shipment payload, so a
+ * surface never needs a second call to know whether the client signed off.
+ * The two identity columns are stripped for a driver viewer.
+ */
+export interface ShipmentConfirmationSummary {
+  id: string;
+  milestone: "PICKED_UP" | "DELIVERED";
+  channel: "expedion_app" | "link";
+  /** `operator` when staff answered on the client's behalf. */
+  confirmedByRole: "client" | "operator";
+  createdAt: string;
+}
+
 export interface ShipmentEvent {
   id: string;
   status: ShipmentStatus;
@@ -66,13 +80,13 @@ export interface Shipment {
   priceCents?: number;
   scheduledPickup: string | null;
   scheduledDelivery: string | null;
-  proofOfDeliveryUrl: string | null;
   pickedUpAt: string | null;
   deliveredAt: string | null;
   cancelledAt: string | null;
   cancellationReason: string | null;
   listing: ShipmentListing | null;
   offer?: ShipmentOffer | null;
+  confirmations: ShipmentConfirmationSummary[];
   shipper: ShipmentParty;
   carrier: ShipmentParty;
   driver: ShipmentParty | null;

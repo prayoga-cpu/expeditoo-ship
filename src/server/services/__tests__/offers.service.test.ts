@@ -16,7 +16,10 @@ vi.mock("@/server/services/notifications.service", () => ({
   notificationsService: { createNotification: vi.fn().mockResolvedValue({}) },
 }));
 vi.mock("@/server/services/payments.service", () => ({
-  paymentsService: { authoriseForShipment: vi.fn() },
+  paymentsService: {
+    chargeForShipment: vi.fn(),
+    refundForShipment: vi.fn().mockResolvedValue({}),
+  },
 }));
 vi.mock("@/server/services/expedion-bridge.service", () => ({
   expedionBridgeService: { onOfferAccepted: vi.fn() },
@@ -29,6 +32,12 @@ import { listingsDal } from "@/server/dal/listings.dal";
 import { carriersDal } from "@/server/dal/carriers.dal";
 import { userHasRole } from "@/server/dal/users.dal";
 import { paymentsService } from "@/server/services/payments.service";
+import {
+  TIME_SLOTS,
+  slotInterval,
+  toDayString,
+  type TimeSlot,
+} from "@/lib/availability-window";
 
 // ========================================
 // Fixtures
@@ -50,6 +59,8 @@ const listing = (over: Record<string, unknown> = {}) => ({
   isFlexible: false,
   pickupFrom: soon(24 * HOUR),
   pickupUntil: soon(32 * HOUR),
+  dropoffFrom: soon(56 * HOUR),
+  dropoffUntil: soon(64 * HOUR),
   expiresAt: soon(18 * HOUR),
   acceptedOfferId: null,
   pickupLat: 48.86,
@@ -72,11 +83,39 @@ const vehicle = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
+const TZ = new Date().getTimezoneOffset();
+
+/**
+ * The first `(day, time of day)` pair overlapping a window.
+ *
+ * The listing fixture's window is relative to the moment the suite runs, so a
+ * hardcoded "25 August, morning" would pass or fail depending on the hour of
+ * the day — and the vocabulary has no slot between 22:00 and 06:00, so the
+ * right slot is not always the obvious one either.
+ */
+function slotWithin(from: Date, until: Date): { day: string; slot: TimeSlot } {
+  for (let ahead = 0; ahead <= 1; ahead++) {
+    const day = toDayString(new Date(from.getTime() + ahead * 24 * HOUR));
+    for (const slot of TIME_SLOTS) {
+      const { start, end } = slotInterval(day, slot, TZ);
+      if (start < until && end > from) return { day, slot };
+    }
+  }
+  throw new Error("no slot overlaps this window");
+}
+
+/** A slot days clear of the fixture's window, whatever the clock says. */
+const slotOutside = () => ({
+  day: toDayString(soon(80 * HOUR)),
+  slot: "morning" as TimeSlot,
+});
+
 const offerInput = (over: Record<string, unknown> = {}) => ({
   vehicleId: "veh-1",
   priceCents: 18_000,
-  estimatedPickup: soon(25 * HOUR),
-  estimatedDelivery: soon(48 * HOUR),
+  slots: [slotWithin(soon(24 * HOUR), soon(32 * HOUR))],
+  deliveryLeadDays: 0,
+  tzOffset: TZ,
   message: "Can do this easily",
   ...over,
 });
@@ -99,6 +138,7 @@ beforeEach(() => {
   Object.assign(offersDal, {
     getLiveByCarrierAndListing: vi.fn().mockResolvedValue(undefined),
     create: vi.fn(async (row) => row),
+    createSlots: vi.fn(async (rows) => rows),
     incrementListingOffersCount: vi.fn(),
   });
 });
@@ -221,19 +261,19 @@ describe("offersService.submitOffer", () => {
     ).resolves.toBeDefined();
   });
 
-  it("rejects a pickup outside the shipper's window", async () => {
+  it("rejects a slot outside the shipper's window", async () => {
     expect(
       await codeFrom(() =>
         offersService.submitOffer(
           "carrier-1",
           "job-1",
-          offerInput({ estimatedPickup: soon(80 * HOUR) })
+          offerInput({ slots: [slotOutside()] })
         )
       )
     ).toBe("PICKUP_OUTSIDE_WINDOW");
   });
 
-  it("permits a pickup outside the window when the job is flexible", async () => {
+  it("permits a slot outside the window when the job is flexible", async () => {
     Object.assign(listingsDal, {
       getById: vi.fn().mockResolvedValue(listing({ isFlexible: true })),
     });
@@ -242,7 +282,7 @@ describe("offersService.submitOffer", () => {
       offersService.submitOffer(
         "carrier-1",
         "job-1",
-        offerInput({ estimatedPickup: soon(80 * HOUR) })
+        offerInput({ slots: [slotOutside()] })
       )
     ).resolves.toBeDefined();
   });
@@ -320,6 +360,7 @@ describe("offersService.acceptOffer", () => {
     priceCents: 18_000,
     estimatedPickup: soon(25 * HOUR),
     estimatedDelivery: soon(48 * HOUR),
+    slots: [],
     status: "pending",
   };
 
@@ -327,6 +368,7 @@ describe("offersService.acceptOffer", () => {
     Object.assign(offersDal, {
       getById: vi.fn().mockResolvedValue({ ...winning }),
       getByIdForUpdate: vi.fn().mockResolvedValue({ ...winning }),
+      updateSchedule: vi.fn(async (id, schedule) => ({ ...winning, ...schedule })),
       updateStatus: vi.fn(async (id, status) => ({ id, status })),
       setPendingStatusForListing: vi
         .fn()
@@ -339,7 +381,7 @@ describe("offersService.acceptOffer", () => {
       createShipment: vi.fn(async (row) => row),
       getShipmentByOfferId: vi.fn().mockResolvedValue({ id: "ship-existing" }),
     });
-    vi.mocked(paymentsService.authoriseForShipment).mockResolvedValue({
+    vi.mocked(paymentsService.chargeForShipment).mockResolvedValue({
       payment: { id: "pay-1" },
     } as never);
   });
@@ -428,8 +470,22 @@ describe("offersService.acceptOffer", () => {
 
       await offersService.acceptOffer("op-1", "offer-1");
 
-      expect(paymentsService.authoriseForShipment).toHaveBeenCalledWith(
+      expect(paymentsService.chargeForShipment).toHaveBeenCalledWith(
         expect.objectContaining({ shipperId: "expedion-system" })
+      );
+    });
+
+    // The client paid in Expedion when they accepted the quote. Charging here
+    // would be a second debit — and could not succeed anyway, since the system
+    // account that owns the listing has no card
+    // (docs/specs/payment_at_booking_spec.md §2.1).
+    it("records the money as taken elsewhere rather than charging again", async () => {
+      vi.mocked(userHasRole).mockResolvedValue(true);
+
+      await offersService.acceptOffer("op-1", "offer-1");
+
+      expect(paymentsService.chargeForShipment).toHaveBeenCalledWith(
+        expect.objectContaining({ source: "expedion" })
       );
     });
   });
@@ -477,7 +533,7 @@ describe("offersService.acceptOffer", () => {
   });
 
   it("returns the job to the marketplace when payment authorisation fails", async () => {
-    vi.mocked(paymentsService.authoriseForShipment).mockRejectedValue(
+    vi.mocked(paymentsService.chargeForShipment).mockRejectedValue(
       new Error("card declined")
     );
     const compensate = vi
@@ -492,11 +548,19 @@ describe("offersService.acceptOffer", () => {
     compensate.mockRestore();
   });
 
-  it("authorises the winning bid, not the shipper's budget", async () => {
+  it("charges the winning bid, not the shipper's budget", async () => {
     await offersService.acceptOffer("shipper-1", "offer-1");
 
-    expect(paymentsService.authoriseForShipment).toHaveBeenCalledWith(
+    expect(paymentsService.chargeForShipment).toHaveBeenCalledWith(
       expect.objectContaining({ amountCents: 18_000 })
+    );
+  });
+
+  it("takes the money from the poster, on their own card", async () => {
+    await offersService.acceptOffer("shipper-1", "offer-1");
+
+    expect(paymentsService.chargeForShipment).toHaveBeenCalledWith(
+      expect.objectContaining({ source: "stripe", shipperId: "shipper-1" })
     );
   });
 });
@@ -599,7 +663,7 @@ describe("offersService.takeJob", () => {
       update: vi.fn(async (id, data) => ({ id, ...data })),
       getShipmentByOfferId: vi.fn().mockResolvedValue(null),
     });
-    vi.mocked(paymentsService.authoriseForShipment).mockResolvedValue({
+    vi.mocked(paymentsService.chargeForShipment).mockResolvedValue({
       payment: { id: "pay-1", status: "authorised" },
     } as never);
   });
@@ -692,5 +756,248 @@ describe("offersService.acceptOffer self-award gate", () => {
     );
 
     expect(code).toBe("FORBIDDEN_NOT_SHIPPER");
+  });
+});
+
+// ========================================
+// Time slots — docs/specs/offer_time_slots_spec.md
+// ========================================
+
+describe("proposed time slots", () => {
+  const flexible = () => {
+    Object.assign(listingsDal, {
+      getById: vi.fn().mockResolvedValue(listing({ isFlexible: true })),
+    });
+  };
+
+  it("stores the earliest slot as the offer's schedule", async () => {
+    flexible();
+
+    const offer = await offersService.submitOffer(
+      "carrier-1",
+      "job-1",
+      offerInput({
+        // Deliberately out of order: the row must carry the earliest, because
+        // `pickup_asc` sorts the board and the award queue by this column.
+        slots: [
+          { day: "2026-09-02", slot: "morning" },
+          { day: "2026-08-25", slot: "evening" },
+        ],
+        deliveryLeadDays: 1,
+        tzOffset: 0,
+      })
+    );
+
+    expect(offer.estimatedPickup.toISOString()).toBe("2026-08-25T18:00:00.000Z");
+    expect(offer.estimatedDelivery.toISOString()).toBe("2026-08-26T22:00:00.000Z");
+    expect(offer.deliveryLeadDays).toBe(1);
+  });
+
+  it("writes one row per proposed slot, earliest first", async () => {
+    flexible();
+
+    await offersService.submitOffer(
+      "carrier-1",
+      "job-1",
+      offerInput({
+        slots: [
+          { day: "2026-09-02", slot: "morning" },
+          { day: "2026-08-25", slot: "evening" },
+        ],
+        tzOffset: 0,
+      })
+    );
+
+    const [rows] = vi.mocked(offersDal.createSlots).mock.calls[0];
+    expect(rows.map((row) => `${row.day} ${row.slot}`)).toEqual([
+      "2026-08-25 evening",
+      "2026-09-02 morning",
+    ]);
+    expect(rows.every((row) => row.offerId)).toBe(true);
+  });
+
+  // Taking a job as posted is not a proposal, so there is nothing to book and
+  // the job keeps its own window (spec §3.4).
+  it("writes no slot rows when nothing is proposed", async () => {
+    const offer = await offersService.submitOffer("carrier-1", "job-1", {
+      vehicleId: "veh-1",
+      priceCents: 18_000,
+      slots: [],
+      deliveryLeadDays: 0,
+      tzOffset: 0,
+    });
+
+    expect(offersDal.createSlots).toHaveBeenCalledWith([], expect.anything());
+
+    const job = await vi.mocked(listingsDal.getById).mock.results[0].value;
+    // Named explicitly rather than read off the fixture: the fixture carried no
+    // dropoffFrom until this assertion needed one, so the comparison was
+    // undefined against undefined and passed on nothing.
+    expect(job.dropoffFrom).toBeInstanceOf(Date);
+    expect(offer.estimatedPickup).toEqual(job.pickupFrom);
+    expect(offer.estimatedDelivery).toEqual(job.dropoffFrom);
+  });
+});
+
+describe("booking a slot on award", () => {
+  const slotA = {
+    id: "slot-a",
+    startsAt: new Date("2026-08-25T04:00:00Z"),
+    endsAt: new Date("2026-08-25T10:00:00Z"),
+    deliveryAt: new Date("2026-08-25T20:00:00Z"),
+  };
+  const slotB = {
+    id: "slot-b",
+    startsAt: new Date("2026-08-27T10:00:00Z"),
+    endsAt: new Date("2026-08-27T16:00:00Z"),
+    deliveryAt: new Date("2026-08-27T20:00:00Z"),
+  };
+
+  const proposing = {
+    id: "offer-1",
+    listingId: "job-1",
+    carrierId: "carrier-1",
+    priceCents: 18_000,
+    estimatedPickup: slotA.startsAt,
+    estimatedDelivery: slotA.deliveryAt,
+    slots: [slotA, slotB],
+    status: "pending",
+  };
+
+  beforeEach(() => {
+    Object.assign(offersDal, {
+      getById: vi.fn().mockResolvedValue({ ...proposing }),
+      getByIdForUpdate: vi.fn().mockResolvedValue({ ...proposing }),
+      updateSchedule: vi.fn(async (id, schedule) => ({ ...proposing, ...schedule })),
+      updateStatus: vi.fn(async (id, status) => ({ id, status })),
+      setPendingStatusForListing: vi.fn().mockResolvedValue([]),
+    });
+    Object.assign(listingsDal, {
+      getById: vi.fn().mockResolvedValue(listing()),
+      getByIdForUpdate: vi.fn().mockResolvedValue(listing()),
+      update: vi.fn(),
+      createShipment: vi.fn(async (row) => row),
+      getShipmentByOfferId: vi.fn().mockResolvedValue({ id: "ship-existing" }),
+    });
+    vi.mocked(paymentsService.chargeForShipment).mockResolvedValue({
+      payment: { id: "pay-1" },
+    } as never);
+  });
+
+  it("schedules the shipment from the slot the acceptor named", async () => {
+    const { shipment } = await offersService.acceptOffer("shipper-1", "offer-1", {
+      slotId: "slot-b",
+    });
+
+    expect(shipment!.scheduledPickup).toEqual(slotB.startsAt);
+    expect(shipment!.scheduledDelivery).toEqual(slotB.deliveryAt);
+  });
+
+  // Writing it back onto the offer is what makes the booked slot the answer
+  // for the offer card, the carrier's list and the Expedion write-back too.
+  it("rewrites the offer's own schedule to the booked slot", async () => {
+    await offersService.acceptOffer("shipper-1", "offer-1", { slotId: "slot-b" });
+
+    expect(offersDal.updateSchedule).toHaveBeenCalledWith(
+      "offer-1",
+      { estimatedPickup: slotB.startsAt, estimatedDelivery: slotB.deliveryAt },
+      expect.anything()
+    );
+  });
+
+  it("takes the earliest slot when none is named, touching nothing", async () => {
+    const { shipment } = await offersService.acceptOffer("shipper-1", "offer-1");
+
+    expect(offersDal.updateSchedule).not.toHaveBeenCalled();
+    expect(shipment!.scheduledPickup).toEqual(slotA.startsAt);
+  });
+
+  it("refuses a slot belonging to another offer", async () => {
+    expect(
+      await codeFrom(() =>
+        offersService.acceptOffer("shipper-1", "offer-1", { slotId: "slot-z" })
+      )
+    ).toBe("SLOT_NOT_ON_OFFER");
+  });
+});
+
+// ========================================
+// Revoking an award — the money goes back before the job does
+// ========================================
+//
+// The client pays at booking (docs/specs/payment_at_booking_spec.md), so an
+// un-award has real money to undo. Before that change this released a hold;
+// now it refunds a charge, and getting it wrong means the job returns to the
+// board with the client's money still spent on a driver who is not doing it.
+
+describe("offersService.revokeAward", () => {
+  beforeEach(() => {
+    vi.mocked(userHasRole).mockResolvedValue(true);
+    Object.assign(offersDal, {
+      getById: vi
+        .fn()
+        .mockResolvedValue({ id: "offer-1", carrierId: "carrier-1" }),
+      listByListing: vi.fn().mockResolvedValue([]),
+      updateStatus: vi.fn(async (id, status) => ({ id, status })),
+    });
+    Object.assign(listingsDal, {
+      getById: vi
+        .fn()
+        .mockResolvedValue(
+          listing({ status: "awarded", acceptedOfferId: "offer-1" })
+        ),
+      update: vi.fn(),
+      getShipmentByOfferId: vi
+        .fn()
+        .mockResolvedValue({ id: "ship-1", status: "PENDING" }),
+    });
+    vi.mocked(paymentsService.refundForShipment).mockResolvedValue({} as never);
+  });
+
+  it("refunds the client before putting the job back on the board", async () => {
+    await offersService.revokeAward("op-1", "job-1");
+
+    expect(paymentsService.refundForShipment).toHaveBeenCalledWith("ship-1");
+    expect(listingsDal.update).toHaveBeenCalledWith(
+      "job-1",
+      { status: "open", acceptedOfferId: null },
+      expect.anything()
+    );
+  });
+
+  it("still un-awards when the refund is not ours to make", async () => {
+    // An Expedion job's money was taken in that app, so `refundForShipment`
+    // throws REFUND_NOT_LOCAL. The operator's un-award must still stand.
+    vi.mocked(paymentsService.refundForShipment).mockRejectedValue(
+      new Error("REFUND_NOT_LOCAL")
+    );
+
+    await offersService.revokeAward("op-1", "job-1");
+
+    expect(listingsDal.update).toHaveBeenCalledWith(
+      "job-1",
+      { status: "open", acceptedOfferId: null },
+      expect.anything()
+    );
+  });
+
+  it("refuses once the goods have been collected, and refunds nothing", async () => {
+    vi.mocked(listingsDal.getShipmentByOfferId).mockResolvedValue({
+      id: "ship-1",
+      status: "IN_TRANSIT",
+    } as never);
+
+    expect(
+      await codeFrom(() => offersService.revokeAward("op-1", "job-1"))
+    ).toBe("SHIPMENT_ALREADY_STARTED");
+    expect(paymentsService.refundForShipment).not.toHaveBeenCalled();
+  });
+
+  it("is an operator action, not something a shipper can do", async () => {
+    vi.mocked(userHasRole).mockResolvedValue(false);
+
+    expect(
+      await codeFrom(() => offersService.revokeAward("shipper-1", "job-1"))
+    ).toBe("FORBIDDEN_NOT_OPERATOR");
   });
 });

@@ -3,6 +3,8 @@ import { ZodError } from "zod";
 import { OfferError } from "@/server/services/offers.service";
 import { ListingError } from "@/server/services/listings.service";
 import { ShipmentError } from "@/server/services/shipment.service";
+import { PaymentError } from "@/server/services/payments.service";
+import { ConfirmationError } from "@/server/services/shipment-confirmations.service";
 import { CarrierError } from "@/server/services/carrier.service";
 import { CarrierRouteError } from "@/server/services/carrier-routes.service";
 import { EarningsError } from "@/server/services/earnings.service";
@@ -12,6 +14,7 @@ import { ReviewError } from "@/server/services/reviews.service";
 import { AdminError } from "@/server/services/admin.service";
 import { ContactError } from "@/server/services/contact.service";
 import { ExpedionClientError } from "@/server/services/expedion-clients.service";
+import { ThreadOfferError } from "@/server/services/thread-offers.service";
 
 /**
  * Shared response shape for the REST layer.
@@ -40,6 +43,11 @@ export function handleError(error: unknown, context: string) {
     error instanceof OfferError ||
     error instanceof ListingError ||
     error instanceof ShipmentError ||
+    // Untranslated until 2026-08-29, so every payment failure on an accept
+    // reached the client as a bare 500 and `useJobDetail`'s
+    // PAYMENT_METHOD_REQUIRED branch could never fire.
+    error instanceof PaymentError ||
+    error instanceof ConfirmationError ||
     error instanceof CarrierError ||
     error instanceof CarrierRouteError ||
     error instanceof EarningsError ||
@@ -48,7 +56,8 @@ export function handleError(error: unknown, context: string) {
     error instanceof ReviewError ||
     error instanceof AdminError ||
     error instanceof ContactError ||
-    error instanceof ExpedionClientError
+    error instanceof ExpedionClientError ||
+    error instanceof ThreadOfferError
   ) {
     return fail(error.code, error.message, error.status);
   }

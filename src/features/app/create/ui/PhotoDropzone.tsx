@@ -10,8 +10,12 @@ import { LottieLoader } from "@/components/ui/lottie-loader";
 import { Button } from "@/components/ui/button";
 import { uploadImage } from "../api";
 
-/** Matches the `photos` cap the server enforces on a listing. */
-const MAX_PHOTOS = 5;
+/**
+ * Matches the `photos` cap the server enforces on a listing — `.max(10)` in
+ * `listings.dto.ts`. It used to be 5 while claiming to match, so half the
+ * allowance was unreachable.
+ */
+const MAX_PHOTOS = 10;
 
 interface PhotoDropzoneProps {
   photos: string[];
@@ -23,13 +27,17 @@ export function PhotoDropzone({ photos, onPhotosChange }: PhotoDropzoneProps) {
   const [isDragActive, setIsDragActive] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // A second input, because "Prendre une photo" shared the gallery picker's and
+  // so opened the gallery on a phone: a button that could not take a photo.
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const remaining = MAX_PHOTOS - photos.length;
+  const isFull = remaining <= 0;
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsDragActive(e.type === "dragenter" || e.type === "dragover");
+    setIsDragActive(!isFull && (e.type === "dragenter" || e.type === "dragover"));
   };
 
   const uploadFiles = async (files: File[]) => {
@@ -53,21 +61,35 @@ export function PhotoDropzone({ photos, onPhotosChange }: PhotoDropzoneProps) {
     }
   };
 
+  /**
+   * Extras beyond the cap were silently discarded, which reads as photos
+   * failing to attach. They are still dropped — the server would refuse them —
+   * but the person is told how many made it.
+   */
+  const acceptFiles = async (selected: FileList) => {
+    const files = Array.from(selected);
+    const accepted = files.slice(0, remaining);
+    if (accepted.length < files.length) {
+      toast.warning(t("tooMany", { count: accepted.length, max: MAX_PHOTOS }));
+    }
+    await uploadFiles(accepted);
+  };
+
   const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragActive(false);
 
-    if (e.dataTransfer.files?.length) {
-      await uploadFiles(Array.from(e.dataTransfer.files).slice(0, remaining));
+    if (!isFull && e.dataTransfer.files?.length) {
+      await acceptFiles(e.dataTransfer.files);
     }
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.length) {
-      await uploadFiles(Array.from(e.target.files).slice(0, remaining));
-    }
-    if (fileInputRef.current) fileInputRef.current.value = "";
+    const input = e.target;
+    if (input.files?.length) await acceptFiles(input.files);
+    // Cleared so picking the same file twice still fires a change event.
+    input.value = "";
   };
 
   const removePhoto = (index: number) =>
@@ -83,17 +105,27 @@ export function PhotoDropzone({ photos, onPhotosChange }: PhotoDropzoneProps) {
         multiple
         onChange={handleFileSelect}
       />
+      <input
+        type="file"
+        ref={cameraInputRef}
+        className="hidden"
+        accept="image/*"
+        capture="environment"
+        onChange={handleFileSelect}
+      />
 
       <div
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
         onDragOver={handleDrag}
         onDrop={handleDrop}
-        onClick={() => fileInputRef.current?.click()}
-        className={`group flex cursor-pointer flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed p-8 text-center transition-all duration-200 ${
-          isDragActive
-            ? "scale-[1.01] border-primary bg-primary/5"
-            : "border-border/50 bg-muted/20 hover:border-primary/50 hover:bg-muted/40"
+        onClick={() => !isFull && fileInputRef.current?.click()}
+        className={`group flex flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed p-8 text-center transition-all duration-200 ${
+          isFull
+            ? "cursor-not-allowed border-border/50 bg-muted/20 opacity-60"
+            : isDragActive
+              ? "scale-[1.01] cursor-pointer border-primary bg-primary/5"
+              : "cursor-pointer border-border/50 bg-muted/20 hover:border-primary/50 hover:bg-muted/40"
         }`}
       >
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-background shadow-sm transition-transform duration-200 group-hover:scale-110">
@@ -105,7 +137,12 @@ export function PhotoDropzone({ photos, onPhotosChange }: PhotoDropzoneProps) {
         </div>
         <div className="space-y-1">
           <p className="text-lg font-semibold text-foreground">{t("title")}</p>
-          <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
+          <p className="text-sm text-muted-foreground">
+            {isFull ? t("full", { max: MAX_PHOTOS }) : t("subtitle")}
+          </p>
+          <p className="font-mono text-xs text-muted-foreground">
+            {t("count", { count: photos.length, max: MAX_PHOTOS })}
+          </p>
         </div>
       </div>
 
@@ -130,12 +167,12 @@ export function PhotoDropzone({ photos, onPhotosChange }: PhotoDropzoneProps) {
         </div>
       )}
 
-      {remaining > 0 && (
+      {!isFull && (
         <Button
           variant="outline"
           className="h-12 w-full gap-2 rounded-xl border-primary/20 text-primary transition-all hover:border-primary/50 hover:bg-primary/5 hover:text-primary"
           type="button"
-          onClick={() => fileInputRef.current?.click()}
+          onClick={() => cameraInputRef.current?.click()}
           disabled={isUploading}
         >
           <Camera className="h-5 w-5" />

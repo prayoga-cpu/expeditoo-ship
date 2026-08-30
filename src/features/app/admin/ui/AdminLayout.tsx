@@ -10,6 +10,7 @@ import {
   ArrowLeft,
   Truck,
   Headset,
+  AlertTriangle,
   UserCircle,
   UsersRound,
   DollarSign,
@@ -125,6 +126,11 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       title: t("navigation.withdrawals"),
       href: "/admin/withdrawals",
       icon: Wallet,
+    },
+    {
+      title: t("navigation.incidents"),
+      href: "/admin/incidents",
+      icon: AlertTriangle,
     },
     {
       title: t("navigation.supportChats"),

@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { format } from "date-fns";
 import { ClipboardList, Gavel, MapPin, Plus, AlertTriangle } from "lucide-react";
+import { useFormatter, useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -17,9 +17,8 @@ import {
 import { CenteredEmptyState } from "@/components/ui/centered-empty-state";
 import { PageLoader } from "@/components/ui/page-loader";
 import { formatCurrency } from "@/lib/currency";
-import { useTranslations } from "next-intl";
-import type { Job, ListingStatus } from "@/features/app/listing/types";
-import { useMyJobs } from "./useMyJobs";
+import { useMyRequests } from "../hooks/useMyRequests";
+import type { Job, ListingStatus } from "../types";
 
 const STATUSES: ListingStatus[] = [
   "draft",
@@ -42,42 +41,41 @@ const STATUS_TONE: Record<ListingStatus, string> = {
   expired: "bg-warning/15 text-warning border-warning/30",
 };
 
-/** Every job the shipper has posted, in any state. */
-export function MyJobs() {
+/** Every request the caller has posted, in any state. */
+export function MyRequestsPanel() {
   const t = useTranslations("myJobs");
   const [status, setStatus] = useState<ListingStatus | "all">("all");
-  const { data: jobs, isLoading, isError } = useMyJobs(
-    status === "all" ? undefined : status
-  );
+  const {
+    data: jobs,
+    isLoading,
+    isError,
+  } = useMyRequests(status === "all" ? undefined : status);
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-4 p-4 sm:p-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
-        <div className="flex items-center gap-2">
-          <Select
-            value={status}
-            onValueChange={(value) => setStatus(value as ListingStatus | "all")}
-          >
-            <SelectTrigger className="w-[160px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t("filters.all")}</SelectItem>
-              {STATUSES.map((value) => (
-                <SelectItem key={value} value={value}>
-                  {t(`status.${value}`)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button asChild>
-            <Link href="/create">
-              <Plus className="h-4 w-4" />
-              {t("postJob")}
-            </Link>
-          </Button>
-        </div>
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <Select
+          value={status}
+          onValueChange={(value) => setStatus(value as ListingStatus | "all")}
+        >
+          <SelectTrigger className="w-[160px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{t("filters.all")}</SelectItem>
+            {STATUSES.map((value) => (
+              <SelectItem key={value} value={value}>
+                {t(`status.${value}`)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button asChild>
+          <Link href="/create">
+            <Plus className="h-4 w-4" />
+            {t("postJob")}
+          </Link>
+        </Button>
       </div>
 
       {isLoading ? (
@@ -116,6 +114,7 @@ export function MyJobs() {
 
 function JobRow({ job }: { job: Job }) {
   const t = useTranslations("myJobs");
+  const format = useFormatter();
 
   return (
     <Link href={`/listing/${job.id}`} className="block">
@@ -153,7 +152,12 @@ function JobRow({ job }: { job: Job }) {
         </div>
 
         <p className="mt-3 border-t border-border pt-3 text-xs text-muted-foreground">
-          {t("posted", { date: format(new Date(job.createdAt), "d MMM yyyy") })}
+          {/* Was `date-fns` with no locale, so a French reader got "2 Aug 2026". */}
+          {t("posted", {
+            date: format.dateTime(new Date(job.createdAt), {
+              dateStyle: "medium",
+            }),
+          })}
         </p>
       </Card>
     </Link>

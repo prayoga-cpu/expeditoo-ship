@@ -60,10 +60,21 @@ pnpm test           # Unit tests (Vitest)
 pnpm test:e2e       # E2E tests (Playwright)
 npx tsc --noEmit    # Typecheck — the gate that matters during the pivot
 
-pnpm db:generate    # Generate Drizzle migration from schema
+pnpm db:generate    # DO NOT USE - see below; hand-write the .sql instead
 pnpm db:migrate     # Apply migrations
 pnpm db:studio      # Drizzle Studio
 ```
+
+**`pnpm db:generate` is not usable in this repo.** `0002` left no meta
+snapshot, so drizzle-kit diffs the schema against `0001` and re-emits the whole
+transport realignment: on a database that already has it, that means `CREATE
+TABLE` for tables that exist and — the dangerous part — `DROP COLUMN` for
+columns a live deployment still needs. It also numbers the file from its own
+count, colliding with the hand-written ones, and stamps a `when` that can be
+*lower* than the newest journal entry, which drizzle then skips in silence.
+Every migration from `0002` on is hand-written for this reason; write the
+`.sql` yourself, add the journal entry with a strictly increasing `when`, and
+let `src/db/__tests__/migrations-journal.test.ts` check it.
 
 ---
 
@@ -79,10 +90,11 @@ Quote becomes a listing (origin='expedion', externalRef=quote id)
 Approved drivers submit offers
    ↓  price + ETA + vehicle + message
 An operator compares and accepts one
-   ↓  Stripe authorised (held, not captured), shipment created
+   ↓  the client pays, shipment created (nothing to pay on an escalated job —
+      that client already paid Expedion when they accepted the quote)
    ↓  status writes back to Expedion
 Pickup → In transit → Delivered
-   ↓  payment captured
+   ↓  payout recorded; the client's card is not touched again
 Payout to driver, two-way review
 ```
 
@@ -212,8 +224,8 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
 - Listings as transport jobs: DTO, DAL, service, routes. 25 tests
 - Driver KYC (person-level): application, private document storage, vehicle, admin
   approve/reject/suspend, expiry cron. 26 tests
-- Payments: held on acceptance, captured on delivery, released on cancellation,
-  commission at source, payout recorded
+- Payments: taken on acceptance, refunded on cancellation, commission at source,
+  payout recorded
 - Driver UI: shipment list and detail, status transitions, proof-of-delivery upload
 - Admin UI: driver application review, award queue, Expedion bridge monitor — the
   last two were previously orphaned and are now in the sidebar
@@ -277,9 +289,12 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
   journal `when` beats the newest one already recorded; a backdated entry is
   silently skipped. `src/db/__tests__/migrations-journal.test.ts` now fails on
   an unregistered `.sql`, a missing file, a non-increasing timestamp or a
-  duplicate prefix. **Nothing in CI runs migrations** — no workflow does it and
-  the Vercel build is a plain `next build` — so production still needs
-  `MIGRATE_TARGET=production pnpm db:migrate`.
+  duplicate prefix. The Vercel build is still a plain `next build`, so a deploy
+  never migrates: run **Actions → Migrate database** (`.github/workflows/migrate.yml`,
+  `workflow_dispatch`, type `migrate` to confirm) **before** the deploy goes out.
+  It is the only place that can: every production variable in Vercel is marked
+  Sensitive, so `vercel env pull` returns `[SENSITIVE]` and a laptop has no way
+  to reach the production database. Needs repo secret `POSTGRES_URL_PRODUCTION`.
 - **Expedion clients** at `/admin/expedion-clients`: the client book, grouped by
   `expedion_quotes.firebase_uid`, server-paginated over 4,592 owners. It exists
   because `/admin/users` structurally cannot show these people — they are quote
@@ -288,21 +303,151 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
   `user_id`, which is email-matched claiming. Read-only: quotes are edited at
   `/admin/expedion`. `/admin/users` learned `?search=` so the link lands on the
   account. 18 tests. `docs/specs/admin_expedion_clients_spec.md`
+- **Cargo asked the way people answer it** on `/create` step 1: weight is six
+  brackets rather than an empty spinner, size is a standard format (S…XXL, "a
+  bike", "a watch") or exact dimensions, and the dropzone says it takes several
+  photos. **The stored shape is unchanged** — a bracket resolves to its
+  **ceiling** in `toCreatePayload` and nothing downstream learns a new
+  vocabulary, because `TakeJobPanel` matches a vehicle on
+  `maxWeightKg >= weightKg` and rounding down would put a 90 kg load in a 50 kg
+  van. `over1000` is the one bracket that still asks for a figure, so the 44 t
+  the DTO accepts stays reachable. Fixed beside it: the photo cap was 5 while
+  its comment claimed to match the server's 10, and "Prendre une photo" shared
+  the gallery picker's input so it could not take a photo. 46 tests.
+  `docs/specs/cargo_input_spec.md`
 - **Role badge in the sidebar**, from `AppSidebarHeader`, so all three shells
   show which access the session carries. Precedence lives once in
   `src/lib/primary-role.ts`; `map-api-user.ts` had its own copy that fell
   through to `roles[0]`, and that array's order is whatever the join returned,
   so a support or finance account could read "Shipper" in the admin table. A
   test asserts the list covers `userRoleEnum` exactly.
+- **An offer proposes several time slots, and the award books one.** A driver
+  free on the 25th *or* the 27th had to pick one and hope: the offer carried a
+  single `estimated_pickup`. A slot is now a day plus a time of day —
+  `morning` / `afternoon` / `evening`, the vocabulary the board search already
+  speaks — one to twelve of them over at most four days, in `offer_slots`.
+  Delivery is one control, not a second calendar: a lead in days, promising
+  22:00 local on the day it names, which is what makes a
+  delivery-before-pickup offer unrepresentable rather than merely refused.
+  **`estimated_pickup` / `estimated_delivery` stayed** and hold the *booked*
+  slot — the earliest until one is chosen — so `pickup_asc`, the shipment write
+  and the Expedion write-back read the pair they always have. `slots: []` means
+  "the job's own window" and is the lane `takeJob` and `assignDirect` take; the
+  DTO forbids it over the wire. **The form gates periods, not just days**: an
+  offer is refused *whole*, and `SLOT_IN_PAST` / `PICKUP_OUTSIDE_WINDOW` are
+  decided per slot while a calendar can only close a day — so
+  `offerablePeriods` asks the service's own question at the service's own
+  granularity, and a job collecting 09:00–11:00 no longer defaults its one
+  allowed day to "en journée" and loses the driver the bid. `SubmitOfferForm`
+  and `OfferCard` were translated on the way past — both were hardcoded
+  English. 65 new tests, 106 across the suites it touches.
+  `docs/specs/offer_time_slots_spec.md`
+- **Pickup and delivery photos, with the location burned in.** There was one
+  photo: `shipments.proof_of_delivery_url`, a single **public** R2 URL, taken
+  only at delivery, by a call that also captured the payment — so "attach
+  evidence" and "the goods arrived" could not be separated. It is replaced by
+  `shipment_photos`: several photos per stage, each carrying a live
+  `navigator.geolocation` fix that is **stamped into the pixels** before the
+  object is stored, so no unstamped copy exists anywhere. EXIF is dropped, not
+  read — its GPS tags are editable with a text editor, which is the opposite of
+  what this is for. **The two moves that change hands are now gated**:
+  `→ PICKED_UP` and `→ DELIVERED` are refused without a photo of that stage,
+  staff included, and the gate runs *before* any money moves. Storage is
+  private, on the `kyc`/`expedion` pattern — `R2_SHIPMENT_BUCKET_NAME`, never
+  `R2_BUCKET_NAME`, which the image-cleanup cron sweeps. **There is no update
+  path in the stack**: no PATCH, no service method, for the image, the location
+  or the timestamps. Removal is admin-only (not operator) and soft. The client
+  reads them at `/deliveries/[id]` and — for an escalated job, whose client has
+  no `user` row and no party seat — over `GET /api/expedion/quotes/:id/photos`,
+  rendered on the Flutter `suivi_de_livraison` screen. 68 tests.
+  `docs/specs/shipment_photos_spec.md`
+- **The client pays at booking, and the money is taken rather than held.**
+  The client asked for it plainly: payment happens once the transport is
+  confirmed and chosen, before delivery. Both inlets were half-right in
+  opposite directions — a direct job had the right *timing* (money event at
+  award) but only placed a hold captured days later, while an Expedion job took
+  real money at the wrong *moment* (quote acceptance, before any driver
+  existed) and was then charged a **second** time at award. That second charge
+  went to the system account that owns escalated listings, which has no card,
+  so `authoriseForShipment` threw `PAYMENT_METHOD_REQUIRED` and
+  `compensateFailedAward` unwound it: **no escalated job could be awarded at
+  all with `MOCK_PAYMENTS` off.** `chargeForShipment` now confirms an
+  automatic-capture, off-session PaymentIntent for a direct job, and for an
+  Expedion job records `source='expedion'` with no Stripe call — the money
+  moved in that app. `settleDelivery` stopped capturing and only settles the
+  driver; cancel and revoke **refund** instead of releasing, and refuse
+  (`REFUND_NOT_LOCAL`) on money Expedion took. A direct job may not reach the
+  board without a card, so `/create` gained a fifth step that collects one —
+  nothing is charged there, because the amount is the winning offer and no
+  carrier has bid yet. Found on the way past: `PaymentError` was missing from
+  `handleError`, so every payment failure on an accept reached the browser as a
+  bare 500 and `useJobDetail`'s `PAYMENT_METHOD_REQUIRED` branch had never
+  fired. 61 tests. `docs/specs/payment_at_booking_spec.md`
+
+- **The transporter moves the status; the client attests it.** Status was
+  driver-only: `updateStatus` accepts `carrier`, `driver` or `staff` and throws
+  `FORBIDDEN` for the shipper, so `/deliveries` was read-only tracking and the
+  client had no say in the record. They now confirm the two moments goods
+  change hands — `PICKED_UP` and `DELIVERED` — in `shipment_confirmations`,
+  which is a **separate fact** from `shipment_events`: that table records who
+  *moved* the status, not who *agreed it happened*. **An attestation grants
+  nothing** — it cannot move a status, capture a payment, close a listing or
+  write an event — and that is the only reason the one-tap link is safe to text
+  to someone with no account. Two channels: the Expedion app
+  (`POST /api/expedion/quotes/:id/confirm`, authorised through
+  `expedionService.getQuote`, so a non-owner gets 404 not 403) and a signed
+  stateless link (`POST /api/shipments/confirm`, the app's only unauthenticated
+  write) that rides on the SMS the bridge already sends rather than a second
+  one. `confirmed_by_role` records *who* answered as distinct from `channel`'s
+  *how*, so an operator answering for a client never reads as the client. The
+  public payload carries **cities, not street addresses** — the link lives 30
+  days in an SMS and the dropoff is the client's home — and every write path
+  returns a projection, never the audit columns. Statuses relabelled to the
+  client's vocabulary: *En préparation*, *En retrait*, *En cours de livraison*.
+  The Flutter `suivi_de_livraison` screen grew the matching card. 83 tests.
+  `docs/specs/transport_status_confirmation_spec.md`
+- **A price offer inside the message thread.** The client asked for a form
+  behind a button in a thread, sending a price with pickup and delivery dates,
+  beside ordinary messages. It is one `thread_offers` row plus a `messages` row
+  pointing at it: `messages.thread_offer_id IS NOT NULL` is the whole
+  discriminator, so price, dates and status are read from the join at render
+  time and an operator awarding at `/admin/awards` flips the winner's card to
+  accepted and every rival's to rejected with **no message rewrite**. Two lanes
+  share one form. On a thread about an **open** job it also mints a real
+  `offers` row through `offersService.submitOffer`, so the chat feeds the
+  reverse auction rather than shadowing it, and accepting in the bubble is
+  `acceptOffer` — the one money path. On any other thread, including the
+  listing-less one the client screenshotted, it is a standalone quote that
+  moves no money and says so. The chat offer proposes **one** slot, never the
+  twelve `SubmitOfferForm` allows, and that is what makes accept-in-bubble
+  safe: `acceptOffer` needs no `slotId` for a one-slot offer, so there is no
+  wrong slot to book. `getThread` computes the whole gate once
+  (`contextFor`) and **contains its failure** — a gate that cannot answer costs
+  the button, not the conversation. Found on the way past: the job's owner, who
+  is exactly who accepts, was getting `viewerCanAward: false`; and
+  `useMessageDetail` read `listing.images` where the DAL returns `photos`, so
+  the thread header had *always* shown the placeholder. 88 tests.
+  `docs/specs/thread_offer_spec.md`
 
 **Not done**
-- **`EXPEDION_APP_ORIGINS` is unset**, in `.env.local` and in the deployment, so
-  `user.origin` never reads `expedion` and every account wears the Expeditoo
-  badge in `/admin/users`. Setting it fixes the label *from that moment* — it
+- **`EXPEDION_APP_ORIGINS` is set in Vercel Production but not in `.env.local`**,
+  so `user.origin` reads `expedion` on the deployment and never locally — an
+  account created since it was set wears the right badge in `/admin/users`, one
+  created before it does not, and one created on a laptop never will. It
   back-fills nothing, deliberately (`admin_user_management_spec.md` §1.2).
   `/admin/expedion-clients` does not depend on it.
-- **Real Stripe hold/capture** — runs under `MOCK_PAYMENTS`; needs SetupIntent
-  confirmation and `amount_capturable_updated` webhook handling
+- **The photo burn-in needs a bundled font on Vercel.** librsvg finds fonts
+  through fontconfig, i.e. through whatever the host provides. The band renders
+  correctly in local development; on a host with no system fonts it renders
+  without glyphs. The fix is a TTF in the repo plus `FONTCONFIG_PATH` — a
+  licensing and bundle-size call, not a code one. The database row is
+  unaffected and every surface prints the same three lines as text beside the
+  photo, so a fontless deployment loses the convenience, not the evidence.
+  `TODO(EXPEDITOO-TESTING)` in `photo-stamp.service.ts`.
+- **Real Stripe charging** — the code path is written and the card is collected
+  for real at `/create`, but `MOCK_PAYMENTS` still short-circuits the charge
+  itself. Turning it off needs `pi_mock_` rows purged first: each is a captured
+  payment with no money behind it (`docs/TESTING_MOCKS.md` §1)
 - **Driver pay on either lane.** Escalation hands the driver the full
   `acceptedPriceCents` as the bid ceiling; direct assignment writes it as the
   offer price. The commission split (`ROADMAP.md` §10) is what decides how much
@@ -326,8 +471,13 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
 2. A listing is a *job*. `budgetCents` is what the Expedion client already paid,
    **not a cap** — it is the ceiling the platform's margin comes out of.
 3. Lowest price never wins automatically. An **operator** chooses.
-4. Money is **held** on acceptance and captured on delivery. Never capture early.
-   The payer is `listing.shipperId`, never whoever clicked accept.
+4. Money is **taken when the transport is chosen**, not on delivery — the client
+   pays at booking (`docs/specs/payment_at_booking_spec.md`). Delivery settles
+   only what the driver is owed, and cancelling **refunds** rather than releasing
+   a hold. The payer is `listing.shipperId`, never whoever clicked accept — and
+   on an escalated job nobody is charged here at all, because that client paid
+   in Expedion. `payments.source` records which of the two happened; it is not
+   `listings.origin` under another name.
 5. KYC documents are private. Never serve them by direct URL, and never persist
    a full IBAN — only the last 4.
 6. No feature flags, no backwards-compatibility shims. Make changes directly.
@@ -339,6 +489,11 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
    what hid the withdrawals 500 for as long as it did — no heading, no error,
    nothing to retry, and the only evidence in the browser console. Give every
    `useQuery` surface an `isError` branch.
-10. `.prettierc` is misnamed (missing an `r`), so Prettier never loads it and
+10. **A confirmation is not a status change.** The client attests; only the
+   transporter moves the run. Nothing in `shipment-confirmations.service.ts`
+   may start writing `shipments.status`, `shipment_events`, a payment or a
+   listing status — the public unauthenticated link is only defensible while
+   that holds, and a test asserts it directly.
+11. `.prettierc` is misnamed (missing an `r`), so Prettier never loads it and
    falls back to `trailingComma: "all"`. Running Prettier reformats whole files.
    Match surrounding style by hand instead.

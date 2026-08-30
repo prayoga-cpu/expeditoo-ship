@@ -1,5 +1,6 @@
 import { api } from "@/lib/fetcher";
 import type { Job } from "@/features/app/listing/types";
+import { resolveDimensions, resolveWeightKg } from "../cargo";
 import type { JobFormOutput } from "../schemas";
 
 /**
@@ -9,15 +10,17 @@ import type { JobFormOutput } from "../schemas";
  * not have to file it into a taxonomy, so the service resolves one. `origin` is
  * absent for a stronger reason — it decides who may award the job, and is
  * stamped server-side so a caller cannot post work into the operator queue.
+ *
+ * This is also where a weight bracket and a size preset become the numbers the
+ * API has always wanted, which is what lets `createListingSchema` stay exactly
+ * as it was (docs/specs/cargo_input_spec.md §2).
  */
 export function toCreatePayload(values: JobFormOutput, publish: boolean) {
   return {
     title: values.title,
     description: values.description,
-    weightKg: values.weightKg,
-    lengthCm: values.lengthCm,
-    widthCm: values.widthCm,
-    heightCm: values.heightCm,
+    weightKg: resolveWeightKg(values.weightBracket, values.exactWeightKg),
+    ...resolveDimensions(values.sizeMode, values.sizePreset, values),
     quantity: values.quantity,
     isFragile: values.isFragile,
     needsHelp: values.needsHelp,

@@ -15,9 +15,15 @@ import { withdrawals } from "./withdrawals";
 // ========================================
 // Enums
 // ========================================
-// Stripe holds and releases payment (ROADMAP.md §1): accepting an offer
-// authorises a manual-capture PaymentIntent, and the money is only captured on
-// delivery. "released" is an authorisation cancelled without ever capturing.
+// The client pays at booking, not on delivery: accepting an offer charges the
+// card outright, so a payment goes "pending" -> "captured" in one step and
+// delivery only settles what the driver is owed
+// (docs/specs/payment_at_booking_spec.md).
+//
+// "authorising", "authorised" and "released" belong to the era when acceptance
+// placed a manual-capture hold. Nothing writes them now. They stay in the enum
+// because rows that predate the change still carry them, and a pgEnum value
+// cannot be dropped while any row references it.
 
 export const paymentStatusEnum = pgEnum("payment_status", [
   "pending",
@@ -27,6 +33,23 @@ export const paymentStatusEnum = pgEnum("payment_status", [
   "failed",
   "refunded",
   "released",
+]);
+
+/**
+ * Who actually debited the client.
+ *
+ * `stripe` is a charge this platform made. `expedion` is a job that arrived
+ * already paid: the Expedion client was charged in that app when they accepted
+ * the quote, so awarding the escalated job here charges nobody and the row
+ * records an amount with no PaymentIntent of ours.
+ *
+ * Not a restatement of `listings.origin`. That says where the job came from;
+ * this says where the money moved. They agree today, and a reader who conflates
+ * them will one day refund the wrong Stripe account.
+ */
+export const paymentSourceEnum = pgEnum("payment_source", [
+  "stripe",
+  "expedion",
 ]);
 
 // ========================================
@@ -54,6 +77,7 @@ export const payments = pgTable(
     commissionCents: integer("commission_cents").notNull(),
     currency: text("currency").default("eur").notNull(),
     status: paymentStatusEnum("status").default("pending").notNull(),
+    source: paymentSourceEnum("source").default("stripe").notNull(),
 
     transferGroup: text("transfer_group"),
     failureReason: text("failure_reason"),
@@ -81,6 +105,7 @@ export const payments = pgTable(
     index("payment_stripe_pi_idx").on(table.stripePaymentIntentId),
     index("payment_shipment_idx").on(table.shipmentId),
     index("payment_status_idx").on(table.status),
+    index("payment_source_idx").on(table.source),
   ]
 );
 
@@ -190,6 +215,7 @@ export const payoutsRelations = relations(payouts, ({ one }) => ({
 export type Payment = typeof payments.$inferSelect;
 export type InsertPayment = typeof payments.$inferInsert;
 export type PaymentStatus = (typeof paymentStatusEnum.enumValues)[number];
+export type PaymentSource = (typeof paymentSourceEnum.enumValues)[number];
 
 export type Payout = typeof payouts.$inferSelect;
 export type InsertPayout = typeof payouts.$inferInsert;

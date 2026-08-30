@@ -114,11 +114,18 @@ hold a request open indefinitely.
 `invoicesService.createFromPayment` exists, is tested, and is **called from
 nowhere**. It is now called from `settleDelivery` in
 [shipment.service.ts](../../src/server/services/shipment.service.ts),
-immediately after `captureForShipment` and `schedulePayout`:
+immediately after `schedulePayout`:
 
 ```
-capture → schedule payout → create invoice
+read the payment → schedule payout → create invoice
 ```
+
+**There is no capture step here any more.** The client is charged when the
+transport is chosen, not on delivery
+(`docs/specs/payment_at_booking_spec.md` §5), so `settleDelivery` reads a
+payment that is already `captured` rather than capturing one. A payment in any
+other state means the money never arrived: the payout and the invoice are both
+skipped and the delivery still stands.
 
 Behaviour:
 

@@ -8,6 +8,8 @@ import { Send, ArrowLeft, ArrowDown } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { ChatMessage, Conversation } from "../types";
+import { ThreadOfferAction, ThreadOfferNotice } from "./ThreadOfferAction";
+import { ThreadOfferBubble } from "./ThreadOfferBubble";
 import { useTranslations } from "next-intl";
 
 /**
@@ -185,21 +187,34 @@ export function MessageDetail({
         onScroll={handleScroll}
         className="flex-1 min-h-0 overflow-y-auto p-4 md:p-6 space-y-2 relative"
       >
-        {messages.map((message) => (
-          <ChatBubble
-            key={message.id}
-            message={message.text}
-            isOwn={message.sentByMe}
-            timestamp={message.timestamp}
-            avatar={conversation.recipient.avatar}
-            readByOther={message.readByOther}
-            onDelete={
-              message.sentByMe && onDeleteMessage
-                ? () => onDeleteMessage(message.id)
-                : undefined
-            }
-          />
-        ))}
+        {messages.map((message) =>
+          message.offer ? (
+            <ThreadOfferBubble
+              key={message.id}
+              conversationId={conversation.id}
+              offer={message.offer}
+              isOwn={message.sentByMe}
+              timestamp={message.timestamp}
+              avatar={conversation.recipient.avatar}
+              readByOther={message.readByOther}
+              viewerCanAward={conversation.offerContext?.viewerCanAward ?? false}
+            />
+          ) : (
+            <ChatBubble
+              key={message.id}
+              message={message.text}
+              isOwn={message.sentByMe}
+              timestamp={message.timestamp}
+              avatar={conversation.recipient.avatar}
+              readByOther={message.readByOther}
+              onDelete={
+                message.sentByMe && onDeleteMessage
+                  ? () => onDeleteMessage(message.id)
+                  : undefined
+              }
+            />
+          )
+        )}
         {/* Invisible element at bottom for scroll target */}
         <div ref={messagesEndRef} />
       </div>
@@ -222,8 +237,13 @@ export function MessageDetail({
       )}
 
       {/* Message Composer */}
-      <div className="border-t border-border p-4 md:p-6 bg-background sticky bottom-0 z-10">
-        <div className="flex gap-2">
+      <div className="border-t border-border bg-background sticky bottom-0 z-10">
+        <ThreadOfferNotice context={conversation.offerContext} />
+        <div className="flex gap-2 p-4 md:p-6">
+          <ThreadOfferAction
+            conversationId={conversation.id}
+            context={conversation.offerContext}
+          />
           <Input
             type="text"
             placeholder={t("typeMessage")}

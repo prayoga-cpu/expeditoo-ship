@@ -17,7 +17,16 @@ import {
 import { jobsApi } from "../api/jobs.api";
 
 /** Step order. Labels are looked up from `create.steps.*`, never shown raw. */
-export const JOB_STEPS = ["what", "where", "when", "budget"] as const;
+export const JOB_STEPS = [
+  "what",
+  "where",
+  "when",
+  "budget",
+  // The client pays when a carrier is chosen, so the card is collected before
+  // the job reaches the board rather than at the award
+  // (docs/specs/payment_at_booking_spec.md §7).
+  "payment",
+] as const;
 
 /**
  * `datetime-local` speaks "YYYY-MM-DDTHH:mm" in the viewer's own time zone, and
@@ -58,6 +67,8 @@ export function useJobForm() {
   const t = useTranslations("create");
   const [currentStep, setCurrentStep] = useState(0);
   const [photos, setPhotos] = useState<string[]>([]);
+  // Reported by the payment step. A draft needs no card; a posted job does.
+  const [hasCard, setHasCard] = useState(false);
 
   const form = useForm<JobFormValues>({
     resolver: zodResolver(jobFormSchema),
@@ -65,6 +76,9 @@ export function useJobForm() {
     defaultValues: {
       title: "",
       description: "",
+      // No `weightBracket`: it is a required choice, and seeding one would
+      // submit a weight nobody picked.
+      sizeMode: "preset",
       quantity: 1,
       isFragile: false,
       needsHelp: false,
@@ -95,6 +109,15 @@ export function useJobForm() {
       // own sentence rather than the raw code.
       if (error instanceof ApiError && error.code === "PICKUP_TOO_SOON") {
         toast.error(t("toast.pickupTooSoon"));
+        return;
+      }
+      // The card was detached between the step and the post, or Stripe lost
+      // it. Either way the person can act on it, so it gets its own sentence.
+      if (
+        error instanceof ApiError &&
+        error.code === "PAYMENT_METHOD_REQUIRED"
+      ) {
+        toast.error(t("toast.cardRequired"));
         return;
       }
       toast.error(t("toast.failed"));
@@ -142,6 +165,8 @@ export function useJobForm() {
     isFirstStep: currentStep === 0,
     isLastStep: currentStep === JOB_STEPS.length - 1,
     isSubmitting: createJob.isPending,
+    hasCard,
+    setHasCard,
     handlePhotosChange,
     handleNext,
     handlePrev,
@@ -149,3 +174,11 @@ export function useJobForm() {
     saveDraft: () => submit(false),
   };
 }
+
+/**
+ * Taken from the hook rather than written as `UseFormReturn<JobFormValues>`: a
+ * resolver adds a third generic for the transformed output, so the spelled-out
+ * version is a different type from the one `useJobForm` actually returns. It
+ * lives here so every step component can name it without importing the form.
+ */
+export type JobFormApi = ReturnType<typeof useJobForm>;

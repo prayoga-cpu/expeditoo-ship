@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Truck, TriangleAlert } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,7 +18,9 @@ import {
 import { CenteredEmptyState } from "@/components/ui/centered-empty-state";
 import { useVehicles } from "@/features/app/carrier/hooks/useCarrier";
 import { useSubmitOffer } from "../hooks/useCarrierOffers";
+import { OfferSlotsField } from "./OfferSlotsField";
 import type { Job } from "@/features/app/listing/types";
+import type { OfferSlotInput } from "@/lib/offer-slots";
 import { formatCurrency } from "@/lib/currency";
 
 interface SubmitOfferFormProps {
@@ -26,23 +29,26 @@ interface SubmitOfferFormProps {
 
 const euros = formatCurrency;
 
-const toLocalInput = (iso: string) => iso.slice(0, 16);
-
 /**
  * The carrier's side of the reverse auction.
  *
  * Vehicles too small for the load are shown but disabled, rather than hidden:
  * a carrier who cannot see why their van is missing will assume the form is
  * broken. The server re-checks capacity regardless.
+ *
+ * Timing is a set of proposed slots rather than one datetime — a driver free on
+ * the 25th or the 27th should be able to say both, and whoever awards the job
+ * books one of them (offer_time_slots_spec.md).
  */
 export function SubmitOfferForm({ job }: SubmitOfferFormProps) {
+  const t = useTranslations("listing.bid.form");
   const { data: vehicles, isLoading } = useVehicles();
   const submitOffer = useSubmitOffer(job.id);
 
   const [vehicleId, setVehicleId] = useState("");
   const [priceEuros, setPriceEuros] = useState(String(job.budgetCents / 100));
-  const [pickup, setPickup] = useState(toLocalInput(job.pickupFrom));
-  const [delivery, setDelivery] = useState(toLocalInput(job.dropoffFrom));
+  const [slots, setSlots] = useState<OfferSlotInput[]>([]);
+  const [deliveryLeadDays, setDeliveryLeadDays] = useState(0);
   const [message, setMessage] = useState("");
 
   if (isLoading) return null;
@@ -51,11 +57,11 @@ export function SubmitOfferForm({ job }: SubmitOfferFormProps) {
     return (
       <CenteredEmptyState
         icon={Truck}
-        title="Add a vehicle first"
-        description="An offer names the vehicle that will do the job, so your fleet needs at least one."
+        title={t("noVehicleTitle")}
+        description={t("noVehicleDescription")}
       >
         <Button asChild>
-          <a href="/carrier/fleet">Manage fleet</a>
+          <a href="/carrier/fleet">{t("noVehicleCta")}</a>
         </Button>
       </CenteredEmptyState>
     );
@@ -76,23 +82,24 @@ export function SubmitOfferForm({ job }: SubmitOfferFormProps) {
   const priceCents = Math.round(Number(priceEuros) * 100);
   const overBudget = priceCents > job.budgetCents;
   const canSubmit =
-    vehicleId && priceCents >= 100 && pickup && delivery && !submitOffer.isPending;
+    vehicleId && priceCents >= 100 && slots.length > 0 && !submitOffer.isPending;
 
   return (
     <Card className="space-y-5 p-4 sm:p-6">
       <div>
-        <h2 className="font-semibold">Submit an offer</h2>
+        <h2 className="font-semibold">{t("title")}</h2>
         <p className="text-sm text-muted-foreground">
-          Budget {euros(job.budgetCents)}
-          {job.offersCount > 0 && ` · ${job.offersCount} carrier(s) already bid`}
+          {t("budget", { price: euros(job.budgetCents) })}
+          {job.offersCount > 0 &&
+            ` · ${t("rivals", { count: job.offersCount })}`}
         </p>
       </div>
 
       <div>
-        <Label htmlFor="vehicle">Vehicle</Label>
+        <Label htmlFor="vehicle">{t("vehicle")}</Label>
         <Select value={vehicleId} onValueChange={setVehicleId}>
           <SelectTrigger id="vehicle">
-            <SelectValue placeholder="Choose a vehicle" />
+            <SelectValue placeholder={t("vehiclePlaceholder")} />
           </SelectTrigger>
           <SelectContent>
             {vehicles.map((vehicle) => {
@@ -106,8 +113,8 @@ export function SubmitOfferForm({ job }: SubmitOfferFormProps) {
                   {vehicle.plateNumber} ·{" "}
                   {[vehicle.make, vehicle.model].filter(Boolean).join(" ") ||
                     vehicle.type.replace(/_/g, " ")}
-                  {!suitable && " — too small for this load"}
-                  {suitable && !vehicle.isActive && " — inactive"}
+                  {!suitable && ` — ${t("vehicleTooSmall")}`}
+                  {suitable && !vehicle.isActive && ` — ${t("vehicleInactive")}`}
                 </SelectItem>
               );
             })}
@@ -116,7 +123,7 @@ export function SubmitOfferForm({ job }: SubmitOfferFormProps) {
       </div>
 
       <div>
-        <Label htmlFor="price">Your price (€)</Label>
+        <Label htmlFor="price">{t("price")}</Label>
         <Input
           id="price"
           type="number"
@@ -128,49 +135,32 @@ export function SubmitOfferForm({ job }: SubmitOfferFormProps) {
         {overBudget && (
           <p className="mt-1 flex items-center gap-1.5 text-sm text-warning">
             <TriangleAlert className="h-3.5 w-3.5" />
-            Above the shipper&apos;s budget. Allowed — explain why below.
+            {t("overBudget")}
           </p>
         )}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <Label htmlFor="pickup">Estimated pickup</Label>
-          <Input
-            id="pickup"
-            type="datetime-local"
-            value={pickup}
-            onChange={(e) => setPickup(e.target.value)}
-          />
-        </div>
-        <div>
-          <Label htmlFor="delivery">Estimated delivery</Label>
-          <Input
-            id="delivery"
-            type="datetime-local"
-            value={delivery}
-            onChange={(e) => setDelivery(e.target.value)}
-          />
-        </div>
-      </div>
-
-      {!job.isFlexible && (
-        <p className="text-sm text-muted-foreground">
-          Pickup must fall between{" "}
-          {new Date(job.pickupFrom).toLocaleString("fr-FR")} and{" "}
-          {new Date(job.pickupUntil).toLocaleString("fr-FR")}.
-        </p>
-      )}
+      <OfferSlotsField
+        slots={slots}
+        onSlotsChange={setSlots}
+        deliveryLeadDays={deliveryLeadDays}
+        onDeliveryLeadChange={setDeliveryLeadDays}
+        window={{
+          from: new Date(job.pickupFrom),
+          until: new Date(job.pickupUntil),
+          isFlexible: job.isFlexible,
+        }}
+      />
 
       <div>
-        <Label htmlFor="message">Message (optional)</Label>
+        <Label htmlFor="message">{t("message")}</Label>
         <Textarea
           id="message"
           rows={3}
           maxLength={1000}
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          placeholder="Tell the shipper why you are the right carrier for this job."
+          placeholder={t("messagePlaceholder")}
         />
       </div>
 
@@ -181,13 +171,16 @@ export function SubmitOfferForm({ job }: SubmitOfferFormProps) {
           submitOffer.mutate({
             vehicleId,
             priceCents,
-            estimatedPickup: new Date(pickup).toISOString(),
-            estimatedDelivery: new Date(delivery).toISOString(),
+            slots,
+            deliveryLeadDays,
+            // Resolved server-side into instants, so "matin" is the driver's
+            // morning and not the (UTC) server's.
+            tzOffset: new Date().getTimezoneOffset(),
             message: message || undefined,
           })
         }
       >
-        {submitOffer.isPending ? "Submitting…" : "Submit offer"}
+        {submitOffer.isPending ? t("submitting") : t("submit")}
       </Button>
     </Card>
   );

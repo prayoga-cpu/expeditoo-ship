@@ -8,7 +8,6 @@ vi.mock("@/server/dal/shipments.dal", () => ({
   shipmentsDal: {
     getOwnership: vi.fn(),
     updateStatus: vi.fn(),
-    updateProofOfDelivery: vi.fn(),
     createEvent: vi.fn().mockResolvedValue({}),
   },
 }));
@@ -25,13 +24,31 @@ vi.mock("@/server/services/expedion-bridge.service", () => ({
 }));
 vi.mock("@/server/services/payments.service", () => ({
   paymentsService: {
-    captureForShipment: vi.fn().mockResolvedValue({ id: "pay-1" }),
+    getForShipment: vi.fn().mockResolvedValue({ id: "pay-1" }),
+    chargeForShipment: vi.fn().mockResolvedValue({}),
     schedulePayout: vi.fn().mockResolvedValue({}),
-    releaseForShipment: vi.fn().mockResolvedValue({}),
+    refundForShipment: vi.fn().mockResolvedValue({}),
   },
 }));
 vi.mock("@/server/services/invoices.service", () => ({
   invoicesService: { createFromPayment: vi.fn().mockResolvedValue({}) },
+}));
+// Delivery asks the client to confirm the milestone. Unmocked, that reached a
+// real Postgres and every case here died before the settlement it is about.
+vi.mock("@/server/services/shipment-confirmations.service", () => ({
+  shipmentConfirmationsService: {
+    requestConfirmation: vi.fn().mockResolvedValue({}),
+  },
+}));
+// `-> DELIVERED` is gated on a delivery photo existing
+// (shipment_photos_spec.md §3.6). These cases are about what happens *after*
+// the gate opens, so it is stubbed open; `shipment-photo-gate.test.ts` is
+// where the gate itself is exercised.
+vi.mock("@/server/services/shipment-photos.service", () => ({
+  shipmentPhotosService: {
+    hasStagePhoto: vi.fn().mockResolvedValue(true),
+    stageCounts: vi.fn().mockResolvedValue({ pickup: 1, delivery: 1 }),
+  },
 }));
 
 import { shipmentService } from "../shipment.service";
@@ -57,41 +74,30 @@ beforeEach(() => {
     ...OWNERSHIP,
     status: "DELIVERED",
   } as never);
-  vi.mocked(shipmentsDal.updateProofOfDelivery).mockResolvedValue({
-    ...OWNERSHIP,
-    status: "DELIVERED",
-  } as never);
-  vi.mocked(paymentsService.captureForShipment).mockResolvedValue({
+  vi.mocked(paymentsService.getForShipment).mockResolvedValue({
     id: "pay-1",
+    status: "captured",
   } as never);
 });
 
 describe("settlement on delivery", () => {
-  it("captures, schedules the payout, then raises the invoice", async () => {
+  it("schedules the payout and raises the invoice, taking no more money", async () => {
     await shipmentService.updateStatus("ship-1", "DELIVERED", CARRIER);
 
-    expect(paymentsService.captureForShipment).toHaveBeenCalledWith("ship-1");
     expect(paymentsService.schedulePayout).toHaveBeenCalledWith(
       "ship-1",
       "carrier-1"
     );
     expect(invoicesService.createFromPayment).toHaveBeenCalledWith("pay-1");
+    // The client paid at booking. Delivery settles the driver's half and
+    // nothing else (docs/specs/payment_at_booking_spec.md §5).
+    expect(paymentsService.chargeForShipment).not.toHaveBeenCalled();
   });
 
   it("raises exactly one invoice per delivery", async () => {
     await shipmentService.updateStatus("ship-1", "DELIVERED", CARRIER);
 
     expect(invoicesService.createFromPayment).toHaveBeenCalledTimes(1);
-  });
-
-  it("raises the invoice on the proof-of-delivery path too", async () => {
-    await shipmentService.uploadProofOfDelivery(
-      "ship-1",
-      "https://example.com/pod.jpg",
-      CARRIER
-    );
-
-    expect(invoicesService.createFromPayment).toHaveBeenCalledWith("pay-1");
   });
 
   it("does not fail the delivery when the invoice write throws", async () => {
@@ -110,9 +116,30 @@ describe("settlement on delivery", () => {
     expect(paymentsService.schedulePayout).toHaveBeenCalled();
   });
 
-  it("does not attempt an invoice when the capture itself fails", async () => {
-    vi.mocked(paymentsService.captureForShipment).mockRejectedValue(
-      new Error("stripe unreachable")
+  it("pays nobody when the money never arrived", async () => {
+    // A charge that failed at booking should have compensated the award, so a
+    // delivery on an unpaid shipment is a state for support to look at — not a
+    // reason to pay a driver out of a payment that was never taken.
+    vi.mocked(paymentsService.getForShipment).mockResolvedValue({
+      id: "pay-1",
+      status: "failed",
+    } as never);
+
+    const result = await shipmentService.updateStatus(
+      "ship-1",
+      "DELIVERED",
+      CARRIER
+    );
+
+    // The goods still arrived, so the delivery itself stands.
+    expect(result).toMatchObject({ status: "DELIVERED" });
+    expect(paymentsService.schedulePayout).not.toHaveBeenCalled();
+    expect(invoicesService.createFromPayment).not.toHaveBeenCalled();
+  });
+
+  it("pays nobody when the shipment has no payment at all", async () => {
+    vi.mocked(paymentsService.getForShipment).mockResolvedValue(
+      undefined as never
     );
 
     const result = await shipmentService.updateStatus(
@@ -122,7 +149,7 @@ describe("settlement on delivery", () => {
     );
 
     expect(result).toMatchObject({ status: "DELIVERED" });
-    expect(invoicesService.createFromPayment).not.toHaveBeenCalled();
+    expect(paymentsService.schedulePayout).not.toHaveBeenCalled();
   });
 
   it("settles nothing on a status that is not a delivery", async () => {
@@ -133,7 +160,7 @@ describe("settlement on delivery", () => {
 
     await shipmentService.updateStatus("ship-1", "IN_TRANSIT", CARRIER);
 
-    expect(paymentsService.captureForShipment).not.toHaveBeenCalled();
+    expect(paymentsService.getForShipment).not.toHaveBeenCalled();
     expect(invoicesService.createFromPayment).not.toHaveBeenCalled();
   });
 });

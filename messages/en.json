@@ -123,6 +123,9 @@
       "shipper": "Shipper",
       "user": "User",
       "hint": "Your access level"
+    },
+    "cityField": {
+      "clear": "Clear city"
     }
   },
   "auth": {
@@ -514,6 +517,58 @@
       "unknown": "Unknown",
       "you": "You"
     },
+    "offer": {
+      "button": "Make an offer",
+      "dialogTitle": "Make an offer",
+      "dialogDescriptionJob": "{title} — budget {price}",
+      "dialogDescriptionStandalone": "Propose a price, a pickup date and a delivery time.",
+      "pickupLabel": "Pickup date",
+      "pickupPlaceholder": "Choose a day",
+      "periodLabel": "Time of day",
+      "cancel": "Cancel",
+      "send": "Send the offer",
+      "success": "Offer sent.",
+      "accepted": "Offer accepted.",
+      "declined": "Offer declined.",
+      "withdrawn": "Offer withdrawn.",
+      "alreadyBid": "You already have a live offer here. Withdraw it to send another.",
+      "manageOffers": "Manage my offers",
+      "slotBurnt": "Bidding on this job is closed for you.",
+      "retry": "Try again",
+      "fleetErrorTitle": "Could not load your vehicles",
+      "fleetErrorDescription": "An offer names the vehicle that will do the job, so we need your fleet first.",
+      "card": {
+        "title": "Offer",
+        "pickup": "Pickup",
+        "delivery": "Delivery",
+        "accept": "Accept",
+        "decline": "Decline",
+        "withdraw": "Withdraw this offer",
+        "viewJob": "View the job",
+        "operatorDecides": "An operator decides on this job.",
+        "noPayment": "Agreed in the chat — no payment is taken.",
+        "status": {
+          "pending": "Pending",
+          "accepted": "Accepted",
+          "declined": "Declined",
+          "rejected": "Not selected",
+          "withdrawn": "Withdrawn",
+          "expired": "Expired"
+        }
+      },
+      "errors": {
+        "CONVERSATION_HAS_NO_LISTING": "This conversation is not about a job.",
+        "THREAD_OFFER_LIVE": "You already have a live offer in this conversation.",
+        "NOT_YOUR_OFFER": "You cannot respond to your own offer.",
+        "OFFER_NOT_PENDING": "This offer has already been answered.",
+        "SLOT_IN_PAST": "That pickup time has already passed.",
+        "PRICE_OUT_OF_RANGE": "That price is outside the allowed range.",
+        "PICKUP_OUTSIDE_WINDOW": "That day is outside the job's pickup window.",
+        "VEHICLE_NOT_OWNED": "That vehicle is not in your fleet.",
+        "CANNOT_BID_OWN_LISTING": "You cannot bid on your own job.",
+        "generic": "Could not send this offer. Please try again."
+      }
+    },
     "item": {
       "noListing": "No listing"
     },
@@ -550,8 +605,7 @@
       "dropoff": "Dropoff",
       "carrier": "Carrier",
       "shipper": "Shipper",
-      "cancellationReason": "Cancellation reason",
-      "proofOfDelivery": "View proof of delivery"
+      "cancellationReason": "Cancellation reason"
     },
     "buttons": {
       "cancelShipment": "Cancel Shipment",
@@ -575,8 +629,8 @@
     "events": {
       "PENDING": "Shipment created",
       "ASSIGNED": "Driver assigned",
-      "PICKED_UP": "Package picked up",
-      "IN_TRANSIT": "In transit",
+      "PICKED_UP": "Pickup completed",
+      "IN_TRANSIT": "Delivery under way",
       "DELIVERED": "Delivered",
       "CANCELLED": "Cancelled"
     },
@@ -588,9 +642,9 @@
     },
     "shipmentStatus": {
       "PENDING": "Pending",
-      "ASSIGNED": "Assigned",
-      "PICKED_UP": "Picked up",
-      "IN_TRANSIT": "In transit",
+      "ASSIGNED": "Preparing",
+      "PICKED_UP": "At pickup",
+      "IN_TRANSIT": "Out for delivery",
       "DELIVERED": "Delivered",
       "CANCELLED": "Cancelled"
     },
@@ -598,6 +652,15 @@
       "success": "Shipment cancelled — the held payment was released",
       "requiresSupport": "The goods are already on the move — contact support to cancel",
       "failed": "Could not cancel the shipment"
+    },
+    "confirmation": {
+      "confirmedByClient": "Confirmed by the client",
+      "awaitingClient": "Awaiting the client's confirmation",
+      "channel": {
+        "expedion_app": "via the Expedion app",
+        "link": "via the link they received"
+      },
+      "confirmedByOperator": "Confirmed by an operator on the client's behalf"
     }
   },
   "listing": {
@@ -658,6 +721,60 @@
         "VEHICLE_CAPACITY_DIMENSIONS": "That vehicle is too small for this load.",
         "OFFER_ALREADY_EXISTS": "You already have a live offer on this job.",
         "generic": "Could not take this job. Please try again."
+      },
+      "form": {
+        "title": "Submit an offer",
+        "budget": "Budget {price}",
+        "rivals": "{count} carrier(s) already bid",
+        "noVehicleTitle": "Add a vehicle first",
+        "noVehicleDescription": "An offer names the vehicle that will do the job, so your fleet needs at least one.",
+        "noVehicleCta": "Manage fleet",
+        "vehicle": "Vehicle",
+        "vehiclePlaceholder": "Choose a vehicle",
+        "vehicleTooSmall": "too small for this load",
+        "vehicleInactive": "inactive",
+        "price": "Your price (€)",
+        "overBudget": "Above the client's budget. Allowed — explain why below.",
+        "message": "Message (optional)",
+        "messagePlaceholder": "Tell the client why you are the right carrier for this job.",
+        "submit": "Submit offer",
+        "submitting": "Submitting…"
+      },
+      "slots": {
+        "label": "Your time slots",
+        "addDay": "Add a day",
+        "dayLimit": "{count} days maximum.",
+        "dayLimitReached": "{count} days maximum. Remove one to propose another.",
+        "empty": "Add at least one day when you can do this job.",
+        "removeDay": "Remove this day",
+        "slot": {
+          "morning": "Morning",
+          "afternoon": "Afternoon",
+          "evening": "Evening"
+        },
+        "deliveryLabel": "Delivery",
+        "leadSameDay": "Same day",
+        "leadDays": "D+{count}",
+        "deliveryHint": "By 22:00 at the latest, on the stated day after collection."
+      },
+      "offerCard": {
+        "selected": "Selected",
+        "lowest": "Lowest",
+        "schedule": "Pickup {pickup} · Delivery {delivery}",
+        "deliveryBy": "{day} by 22:00",
+        "proposedSlots": "Proposed slots",
+        "otherSlots": "{count, plural, one {+# other slot proposed} other {+# other slots proposed}}",
+        "chooseSlot": "Choose the slot to book",
+        "slotLine": "{day} — {period}",
+        "slot": {
+          "morning": "morning",
+          "afternoon": "afternoon",
+          "evening": "evening"
+        },
+        "vsBudget": "{amount} vs budget",
+        "accept": "Accept",
+        "acceptSlot": "Accept this slot",
+        "accepting": "Accepting…"
       }
     }
   },
@@ -668,7 +785,8 @@
       "what": "What",
       "where": "Where",
       "when": "When",
-      "budget": "Budget"
+      "budget": "Budget",
+      "payment": "Payment"
     },
     "buttons": {
       "back": "Back",
@@ -681,14 +799,15 @@
       "posted": "Request posted — carriers can now bid",
       "draftSaved": "Draft saved",
       "pickupTooSoon": "Pickup is too soon for carriers to bid. Push it later.",
-      "failed": "Could not post your request. Please try again."
+      "failed": "Could not post your request. Please try again.",
+      "cardRequired": "Add a card before posting — your job is charged when you choose a carrier."
     },
     "what": {
       "titleLabel": "What are you moving?",
       "titlePlaceholder": "Two-seater sofa and a coffee table",
       "descriptionLabel": "Details",
       "descriptionPlaceholder": "Describe the load, the access, and anything a carrier should know before bidding.",
-      "weight": "Weight (kg)",
+      "weight": "Weight",
       "quantity": "Quantity",
       "length": "Length (cm)",
       "width": "Width (cm)",
@@ -697,7 +816,64 @@
       "fragileHint": "Needs careful handling",
       "help": "Help loading",
       "helpHint": "The carrier must help load and unload",
-      "photos": "Photos (optional)"
+      "photos": "Photos (optional)",
+      "weightExact": "Exact weight (kg)",
+      "weightBrackets": {
+        "upTo5": {
+          "label": "Up to 5 kg",
+          "example": "A parcel, a watch"
+        },
+        "upTo30": {
+          "label": "5 – 30 kg",
+          "example": "A suitcase, a box"
+        },
+        "upTo100": {
+          "label": "30 – 100 kg",
+          "example": "A washing machine, an armchair"
+        },
+        "upTo500": {
+          "label": "100 – 500 kg",
+          "example": "A motorbike, several pieces of furniture"
+        },
+        "upTo1000": {
+          "label": "500 kg – 1 t",
+          "example": "A full pallet"
+        },
+        "over1000": {
+          "label": "Over 1 t",
+          "example": "Tell us the weight"
+        }
+      },
+      "size": "Size (optional)",
+      "sizeHint": "Size helps the carrier pick a vehicle. Skip it if you don't know.",
+      "sizeModes": {
+        "preset": "Standard size",
+        "exact": "Exact dimensions"
+      },
+      "sizePresets": {
+        "s": {
+          "label": "S",
+          "example": "A watch, a small parcel"
+        },
+        "m": {
+          "label": "M",
+          "example": "A suitcase, a moving box"
+        },
+        "l": {
+          "label": "L",
+          "example": "A bike, a washing machine"
+        },
+        "xl": {
+          "label": "XL",
+          "example": "A sofa, a fridge"
+        },
+        "xxl": {
+          "label": "XXL",
+          "example": "A full pallet, a double bed"
+        }
+      },
+      "sizeUpTo": "Up to {lengthCm} × {widthCm} × {heightCm} cm",
+      "photosHint": "You can add several at once."
     },
     "where": {
       "pickup": "Pickup",
@@ -735,13 +911,28 @@
       "label": "What do you expect to pay? (€)",
       "hint": "This is an expectation, not a limit. Carriers may bid above or below it, and you choose which offer to accept."
     },
+    "payment": {
+      "title": "How you'll pay",
+      "description": "Add a card now. Nothing is charged yet — carriers haven't bid, so there is no amount.",
+      "savedDescription": "This is the card your job will be charged to.",
+      "chargedLater": "Charged when you choose a carrier, for the amount they bid.",
+      "cardFallback": "Card",
+      "unavailable": "Card payment is unavailable right now. Save this as a draft and post it once it's back.",
+      "saveCard": "Save card",
+      "saving": "Saving…",
+      "saved": "Card saved",
+      "saveFailed": "Could not save that card. Please try again."
+    },
     "dropzone": {
       "title": "Add photos",
-      "subtitle": "Drag and drop, or click to upload",
+      "subtitle": "Drag and drop, or click to pick several",
       "uploading": "{count} photo(s) uploaded",
       "uploadError": "Some photos could not be uploaded",
       "takePhoto": "Take a photo",
-      "remove": "Remove this photo"
+      "remove": "Remove this photo",
+      "count": "{count} of {max}",
+      "full": "You have reached the limit of {max} photos",
+      "tooMany": "Only {count} photos were added — the limit is {max}."
     },
     "validation": {
       "titleShort": "At least 5 characters",
@@ -761,7 +952,9 @@
       "pickupWindow": "The pickup window must end after it starts",
       "deliveryBeforePickup": "Delivery cannot start before pickup",
       "deliveryWindow": "The delivery window must end after it starts",
-      "budgetRequired": "Enter what you expect to pay"
+      "budgetRequired": "Enter what you expect to pay",
+      "weightRequired": "Choose a weight range",
+      "weightAboveBracket": "Enter a weight above 1,000 kg"
     }
   },
   "myJobs": {
@@ -774,6 +967,20 @@
     "loadFailed": "Could not load your requests",
     "offers": "{count, plural, =0 {No offers} one {# offer} other {# offers}}",
     "posted": "Posted {date}",
+    "tabs": {
+      "requests": "Requests",
+      "history": "History"
+    },
+    "history": {
+      "empty": "No deliveries yet",
+      "emptyDesc": "Once one of your requests is delivered, it appears here with the carrier's name.",
+      "loadFailed": "Could not load your delivery history",
+      "deliveredOn": "Delivered {date}",
+      "carrier": "Carrier",
+      "unknownCarrier": "Carrier account removed",
+      "proof": "Proof of delivery",
+      "count": "{count, plural, one {# delivery} other {# deliveries}}"
+    },
     "filters": {
       "all": "All statuses"
     },
@@ -860,7 +1067,7 @@
       "updating": "Updating...",
       "navigateToPickup": "Navigate to Pickup",
       "navigateToDropoff": "Navigate to Dropoff",
-      "inTransit": "In Transit",
+      "inTransit": "Out for delivery",
       "inTransitDesc": "Package is in transit. Update status when delivered.",
       "deliveryCompleted": "Delivery Completed",
       "deliveryCompletedDesc": "Great job! This shipment has been delivered.",
@@ -871,23 +1078,18 @@
       "pickedUpTitle": "Load on board",
       "pickedUpDesc": "Start the run when you leave the pickup location.",
       "startTransit": "Start transit",
-      "deliverWithPhoto": "Confirm delivery with photo",
       "markDelivered": "Mark delivered without photo",
-      "podHint": "A photo of the delivered load closes the run and protects you in a dispute.",
-      "uploadingProof": "Uploading proof...",
-      "proofUploaded": "Delivery confirmed",
       "statusUpdated": "Status updated",
-      "viewProof": "View proof of delivery",
       "cancelledTitle": "Delivery cancelled",
       "cancelledDesc": "This run was cancelled. No further action is needed.",
       "errors": {
         "staleStatus": "This delivery has moved on. Refresh to see its current state.",
         "forbidden": "You are not allowed to update this delivery.",
         "notFound": "Delivery not found.",
-        "podNotInTransit": "Proof of delivery can only be added while in transit.",
-        "invalidFile": "The proof of delivery must be a photo.",
         "generic": "Something went wrong. Please try again.",
-        "notInFleet": "You are not registered as a driver for this carrier."
+        "notInFleet": "You are not registered as a driver for this carrier.",
+        "pickupPhotoRequired": "Take a photo of the load before confirming pickup.",
+        "deliveryPhotoRequired": "Take a photo of the delivered load before confirming delivery."
       },
       "unassignedTitle": "Job won, not started",
       "unassignedDesc": "This job is yours. Take it on to unlock pickup and delivery.",
@@ -904,9 +1106,9 @@
     },
     "status": {
       "PENDING": "Pending",
-      "ASSIGNED": "Assigned",
-      "PICKED_UP": "Picked up",
-      "IN_TRANSIT": "In transit",
+      "ASSIGNED": "Preparing",
+      "PICKED_UP": "At pickup",
+      "IN_TRANSIT": "Out for delivery",
       "DELIVERED": "Delivered",
       "CANCELLED": "Cancelled"
     }
@@ -1616,7 +1818,8 @@
       "awards": "Award queue",
       "applications": "Driver applications",
       "withdrawals": "Withdrawals",
-      "expedionClients": "Expedion clients"
+      "expedionClients": "Expedion clients",
+      "incidents": "Incidents"
     },
     "table": {
       "total": "total",
@@ -2714,7 +2917,9 @@
       "newest": "Newest",
       "budgetDesc": "Highest budget",
       "budgetAsc": "Lowest budget",
-      "pickupAsc": "Earliest pickup"
+      "pickupAsc": "Earliest pickup",
+      "distanceAsc": "Closest first",
+      "detourAsc": "Least detour"
     },
     "empty": {
       "title": "No jobs match",
@@ -2722,7 +2927,37 @@
       "none": "No jobs are open right now. New ones appear as Expedion escalates them."
     },
     "previous": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "route": {
+      "modeLabel": "Search type",
+      "around": "Around",
+      "onMyWay": "On my way",
+      "nearCity": "Around which city?",
+      "fromCity": "Departure city",
+      "toCity": "Arrival city",
+      "swap": "Swap departure and arrival",
+      "radiusLabel": "Within",
+      "detourLabel": "Detour allowed",
+      "km": "{km} km"
+    },
+    "availability": {
+      "empty": "My availability",
+      "count": "{count} days",
+      "slotsLabel": "Time of day",
+      "slot": {
+        "morning": "Morning",
+        "afternoon": "Afternoon",
+        "evening": "Evening"
+      },
+      "slotsHint": "Applies to every selected day. Leave empty for the whole day.",
+      "slotsHintEmpty": "Pick one or more days first.",
+      "clear": "Clear dates"
+    },
+    "error": {
+      "title": "Could not load jobs",
+      "description": "The search did not go through. Try again, or widen your filters."
+    },
+    "sortLabel": "Sort jobs"
   },
   "impersonation": {
     "viewingAs": "Viewing as",
@@ -2776,6 +3011,166 @@
     },
     "loadFailed": "Earnings unavailable",
     "loadFailedHint": "We could not load your balance. Try again in a moment — if it keeps failing, contact support.",
-    "retry": "Try again"
+    "retry": "Try again",
+    "emptyTitle": "Nothing earned yet",
+    "empty": {
+      "approved": "You earn by delivering. Bid on an open job, and what you are paid lands here once the delivery is confirmed.",
+      "underReview": "Your driver application is with our team. Once it is approved you can bid on jobs, and your earnings appear here.",
+      "draft": "Your driver application is not finished. Complete it to start bidding on jobs — earnings show up here after your first delivery.",
+      "blocked": "You cannot take jobs at the moment. Open your application to see why, and what to do about it.",
+      "none": "Only approved drivers can take jobs. Apply once, and everything you earn on a delivery shows up here."
+    },
+    "emptyCta": {
+      "approved": "Browse jobs",
+      "underReview": "Check my application",
+      "draft": "Finish my application",
+      "blocked": "Open my application",
+      "none": "Become a driver"
+    }
+  },
+  "confirm": {
+    "title": {
+      "PICKED_UP": "Confirm the pickup",
+      "DELIVERED": "Confirm delivery"
+    },
+    "lead": {
+      "PICKED_UP": "The transporter has recorded collecting your goods.",
+      "DELIVERED": "The transporter has recorded delivering your goods."
+    },
+    "action": {
+      "PICKED_UP": "Yes, the pickup happened",
+      "DELIVERED": "Yes, I received my goods"
+    },
+    "submitting": "Sending…",
+    "route": "Route",
+    "reference": "Reference",
+    "done": {
+      "title": "Thank you, that's recorded",
+      "body": "Your confirmation has been saved. You can close this page."
+    },
+    "already": {
+      "title": "Already confirmed",
+      "body": "This step has already been confirmed. There is nothing more to do."
+    },
+    "notYet": {
+      "title": "Nothing to confirm yet",
+      "body": "The transporter has not recorded this step yet. You will get another message when they do."
+    },
+    "invalid": {
+      "title": "This link is no longer valid",
+      "body": "It may have expired. Contact our support and we will confirm with you."
+    },
+    "error": "The confirmation could not be saved. Please try again in a moment.",
+    "disclaimer": "Confirming commits no payment and does not change your transport.",
+    "unavailable": {
+      "title": "Confirmation unavailable",
+      "body": "We could not load this confirmation. Try again in a moment, or contact our support."
+    },
+    "cancelled": {
+      "title": "Transport cancelled",
+      "body": "This transport was cancelled, so there is nothing to confirm. Contact our support if you think that is a mistake."
+    }
+  },
+  "shipmentPhotos": {
+    "sectionTitle": "Photos of the load",
+    "pickupTitle": "Photos at pickup",
+    "deliveryTitle": "Photos at delivery",
+    "noneAtPickup": "No pickup photos yet.",
+    "noneAtDelivery": "No delivery photos yet.",
+    "added": "Photo sent",
+    "locating": "Getting your location…",
+    "sending": "Sending the photo…",
+    "takeFirst": "Take a photo of the load",
+    "takeAnother": "Take another photo",
+    "locationHint": "Each photo records where and when it was taken.",
+    "required": "Take at least one photo of the load first.",
+    "errors": {
+      "locationDenied": "Location is required for delivery photos. Allow location access and try again.",
+      "locationUnavailable": "Could not get your location. Move somewhere with a clearer view of the sky and try again.",
+      "locationUnsupported": "This device cannot report a location, so photos cannot be sent from it.",
+      "stageClosed": "This step has moved on — photos can no longer be added to it.",
+      "limitReached": "You have already sent the maximum number of photos for this step.",
+      "tooLarge": "That photo is too large. Try again with a smaller one.",
+      "invalidType": "That file is not an image.",
+      "loadFailed": "The photos could not be loaded.",
+      "generic": "The photo could not be sent. Try again."
+    }
+  },
+  "incidents": {
+    "section": {
+      "title": "Incidents",
+      "subtitle": "Report a problem with this job, or see what has already been reported."
+    },
+    "report": {
+      "trigger": "Report an incident",
+      "title": "Report an incident",
+      "description": "Tell us what has gone wrong. An operator is notified straight away, and a support conversation opens so you can follow it up.",
+      "submit": "Send report",
+      "submitting": "Sending...",
+      "cancel": "Cancel"
+    },
+    "fields": {
+      "category": "What happened",
+      "severity": "How serious",
+      "description": "Describe the problem",
+      "descriptionPlaceholder": "What happened, where, and what you need.",
+      "descriptionHint": "At least {min} characters."
+    },
+    "categories": {
+      "damage": "Damaged goods",
+      "delay": "Delay",
+      "access": "Cannot access the site",
+      "vehicle": "Vehicle problem",
+      "cargo_mismatch": "Cargo does not match",
+      "safety": "Safety concern",
+      "other": "Something else"
+    },
+    "severities": {
+      "low": "Minor",
+      "medium": "Moderate",
+      "high": "Serious"
+    },
+    "statuses": {
+      "OPEN": "Open",
+      "ACKNOWLEDGED": "Acknowledged",
+      "RESOLVED": "Resolved"
+    },
+    "roles": {
+      "system": "System",
+      "shipper": "Client",
+      "carrier": "Carrier",
+      "driver": "Driver",
+      "operator": "Operator",
+      "admin": "Admin"
+    },
+    "photos": {
+      "label": "Photos (optional)",
+      "remove": "Remove photo",
+      "uploadError": "That photo could not be uploaded."
+    },
+    "list": {
+      "empty": "Nothing has been reported on this job.",
+      "error": "The incidents could not be loaded. Refresh to try again.",
+      "reportedBy": "Reported by {name} ({role})",
+      "unknownReporter": "a former member",
+      "resolution": "Resolution"
+    },
+    "feedback": {
+      "reported": "Incident reported. An operator has been notified.",
+      "updated": "Incident updated.",
+      "runClosed": "This job is finished — contact support instead.",
+      "failed": "The report could not be sent. Try again."
+    },
+    "queue": {
+      "title": "Incidents",
+      "subtitle": "What has gone wrong on live jobs, worst first.",
+      "acknowledge": "Acknowledge",
+      "resolve": "Resolve",
+      "resolveTitle": "Resolve this incident",
+      "resolvePlaceholder": "What was done about it?",
+      "emptyTitle": "Nothing to deal with",
+      "emptyDescription": "No incidents in this state.",
+      "error": "The queue could not be loaded. Refresh to try again."
+    }
   }
 }

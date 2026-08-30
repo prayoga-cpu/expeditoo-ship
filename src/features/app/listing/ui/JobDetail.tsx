@@ -157,7 +157,7 @@ export function JobDetail({
           job={job}
           canAccept={canAccept}
           isAccepting={acceptOffer.isPending}
-          onAccept={(id) => acceptOffer.mutate(id)}
+          onAccept={(offerId, slotId) => acceptOffer.mutate({ offerId, slotId })}
         />
       </section>
 
@@ -264,7 +264,7 @@ function OfferSection({
   job: Job;
   canAccept: boolean;
   isAccepting: boolean;
-  onAccept: (id: string) => void;
+  onAccept: (offerId: string, slotId?: string) => void;
 }) {
   if (!offers) return null;
 

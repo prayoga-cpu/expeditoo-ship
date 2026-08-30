@@ -12,6 +12,13 @@ import { ApiError } from "@/lib/fetcher";
 
 /** Maps the service's error codes to something a carrier can act on. */
 const SUBMIT_MESSAGES: Record<string, string> = {
+  SLOTS_REQUIRED: "Add at least one day you could do this job",
+  SLOT_IN_PAST: "One of your time slots has already passed",
+  SLOT_DUPLICATE: "You proposed the same slot twice",
+  SLOT_DAY_INVALID: "One of the days you picked is not a real date",
+  TOO_MANY_SLOTS: "That is more time slots than an offer can carry",
+  TOO_MANY_SLOT_DAYS: "An offer can cover at most four days",
+  DELIVERY_LEAD_OUT_OF_RANGE: "Delivery cannot be more than a week after collection",
   CARRIER_NOT_APPROVED: "Your carrier application is not approved yet",
   LISTING_NOT_OPEN: "This job is no longer accepting offers",
   LISTING_EXPIRED: "The bidding window for this job has closed",
@@ -40,9 +47,18 @@ export function useSubmitOffer(listingId: string) {
       queryClient.invalidateQueries({ queryKey: ["carrier-offers"] });
     },
     onError: (error) => {
-      const code = error instanceof ApiError ? error.code : "";
+      // A DTO refusal arrives as VALIDATION_ERROR with the real code buried in
+      // `issues[].message` (api-response.ts), so reading `error.code` alone
+      // showed the carrier "Invalid input" for every slot rule they broke.
+      const coded =
+        error instanceof ApiError
+          ? [error.code, ...(error.issues ?? []).map((issue) => issue.message)]
+          : [];
+
+      const known = coded.find((code) => code in SUBMIT_MESSAGES);
+
       toast.error(
-        SUBMIT_MESSAGES[code] ??
+        (known && SUBMIT_MESSAGES[known]) ??
           (error instanceof Error ? error.message : "Could not submit offer")
       );
     },

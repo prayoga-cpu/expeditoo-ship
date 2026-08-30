@@ -1,7 +1,10 @@
 import { nanoid } from "nanoid";
 import { listingsDal, type BrowseFilters } from "@/server/dal/listings.dal";
+import { shipmentsDal } from "@/server/dal/shipments.dal";
 import { offersService } from "@/server/services/offers.service";
 import { notificationsService } from "@/server/services/notifications.service";
+import { paymentsService } from "@/server/services/payments.service";
+import { isMockPaymentsEnabled } from "@/lib/stripe/mock-payments";
 import {
   MATERIAL_FIELDS,
   type CreateListingInput,
@@ -25,6 +28,28 @@ export class ListingError extends Error {
 }
 
 const err = (code: string, status: number) => new ListingError(code, status);
+
+/**
+ * A direct job may not reach the board until its poster has a card on file.
+ *
+ * The client pays the moment a carrier is chosen
+ * (docs/specs/payment_at_booking_spec.md §4), so a job posted without a card is
+ * a job that cannot be awarded — and every carrier who bids on it spends
+ * effort on work that was never payable. The check belongs here rather than at
+ * the award, where the only people it could disappoint are the driver who won
+ * and the operator who picked them.
+ *
+ * A draft is exempt: it is not on the board, nobody can bid on it, and asking
+ * for a card to save one would be a toll on a form that has committed to
+ * nothing.
+ */
+async function assertPayable(shipperId: string) {
+  // TODO(EXPEDITOO-TESTING): MOCK_PAYMENTS — the charge this guards is mocked, so demanding a real card would only block the testing journey (see docs/TESTING_MOCKS.md).
+  if (isMockPaymentsEnabled()) return;
+  if (await paymentsService.hasSavedCard(shipperId)) return;
+
+  throw err("PAYMENT_METHOD_REQUIRED", 402);
+}
 
 /** Bidding closes 6 h before pickup, unless the job is posted later than that. */
 const BIDDING_LEAD_MS = 6 * 60 * 60 * 1000;
@@ -108,12 +133,26 @@ function assertOwner(listing: Listing | undefined, userId: string): Listing {
 }
 
 export const listingsService = {
-  async createListing(shipperId: string, data: CreateListingInput) {
+  /**
+   * @param opts.prepaid the job's client has already paid somewhere else, so
+   *   no card is required here. Passed explicitly by `expedionEscalationService`
+   *   and by nothing else: an escalated listing is owned by a system account
+   *   that no card belongs to, and its client paid in Expedion when they
+   *   accepted the quote. Inferring this from `shipperId` would make the one
+   *   caller allowed to skip the check indistinguishable from a mistake.
+   */
+  async createListing(
+    shipperId: string,
+    data: CreateListingInput,
+    opts: { prepaid?: boolean } = {}
+  ) {
     // A draft may sit unposted, so the pickup window is only enforced when the
     // job actually goes live.
     if (data.publish && data.pickupFrom <= new Date()) {
       throw err("PICKUP_IN_PAST", 400);
     }
+
+    if (data.publish && !opts.prepaid) await assertPayable(shipperId);
 
     const expiresAt = resolveExpiresAt(data.pickupFrom);
     // A requester describes an object, not a taxonomy node, so the category is
@@ -142,6 +181,9 @@ export const listingsService = {
     const listing = assertOwner(await listingsDal.getById(listingId), shipperId);
     if (listing.status !== "draft") throw err("LISTING_NOT_DRAFT", 409);
     if (listing.pickupFrom <= new Date()) throw err("PICKUP_IN_PAST", 400);
+    // No exemption here: `assertOwner` has already established that a person is
+    // publishing their own draft, and the system account owns no drafts.
+    await assertPayable(shipperId);
 
     return await listingsDal.update(listingId, {
       status: "open",
@@ -226,8 +268,37 @@ export const listingsService = {
     return listing;
   },
 
+  /**
+   * The caller's own jobs, each carrying its delivery once one happened.
+   *
+   * The delivery is fetched in a second batched query rather than through a
+   * relation: `shipments.ts` already imports `listings.ts`, so declaring the
+   * reverse would put a cycle in the schema layer, and `getByShipperId` has a
+   * second caller that wants it left alone
+   * (my_requests_history_spec.md §4.3).
+   */
   async getMyListings(shipperId: string, status?: Listing["status"]) {
-    return await listingsDal.getByShipperId(shipperId, status);
+    const listings = await listingsDal.getByShipperId(shipperId, status);
+    if (listings.length === 0) return [];
+
+    const deliveries = await shipmentsDal.listDeliveredForListings(
+      listings.map((listing) => listing.id)
+    );
+
+    // `shipment_listing_idx` is not unique, so a listing can in principle carry
+    // more than one delivered shipment - an award revoked after delivery would
+    // do it. The rows arrive newest first, and `new Map(entries)` keeps the
+    // *last* of a repeated key, which would surface the oldest delivery. Keep
+    // the first one seen instead.
+    const byListing = new Map<string, (typeof deliveries)[number]>();
+    for (const row of deliveries) {
+      if (!byListing.has(row.listingId)) byListing.set(row.listingId, row);
+    }
+
+    return listings.map((listing) => ({
+      ...listing,
+      delivery: toDelivery(byListing.get(listing.id)),
+    }));
   },
 
   /** Expiry cron: a job whose window closed with no carrier selected. */
@@ -252,6 +323,44 @@ export const listingsService = {
     return due.length;
   },
 };
+
+type DeliveredRow = Awaited<
+  ReturnType<typeof shipmentsDal.listDeliveredForListings>
+>[number];
+
+/**
+ * The delivery block the requester's history is drawn from.
+ *
+ * Carrier fields are limited to what is already rendered to this same viewer -
+ * name, avatar, rating - and the delivery photos become a boolean, because a
+ * marker is all the card needs and the photos themselves are a click away on
+ * the shipment (my_requests_history_spec.md §4.1).
+ *
+ * `carrier` is null rather than the delivery being dropped when the row does
+ * not resolve: a delivery that happened is history either way.
+ */
+function toDelivery(row: DeliveredRow | undefined) {
+  if (!row) return null;
+
+  return {
+    shipmentId: row.shipmentId,
+    deliveredAt: row.deliveredAt,
+    priceCents: row.priceCents,
+    hasProofOfDelivery: row.hasDeliveryPhoto,
+    // Both columns come from the same LEFT JOIN, so they resolve together or
+    // not at all. Requiring the name too keeps the card from ever pairing
+    // "account removed" with a live rating.
+    carrier:
+      row.carrierId && row.carrierName
+        ? {
+            id: row.carrierId,
+            name: row.carrierName,
+            image: row.carrierImage,
+            rating: row.carrierRating ?? 0,
+          }
+        : null,
+  };
+}
 
 /** Maps the nested pickup/dropoff DTO shape onto flat columns. */
 function flattenUpdate(data: UpdateListingInput): Record<string, unknown> {

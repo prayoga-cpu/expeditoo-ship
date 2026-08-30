@@ -217,7 +217,18 @@ export const messagesDAL = {
             name: true,
             image: true,
           }
-        }
+        },
+        // The offer this message carries, if any. Price, dates and status are
+        // read here rather than copied onto the message, so a withdrawn or
+        // awarded offer renders its current state with no message rewrite.
+        threadOffer: {
+          with: {
+            offer: { columns: { id: true, listingId: true, status: true } },
+            vehicle: {
+              columns: { id: true, type: true, make: true, model: true },
+            },
+          },
+        },
       }
     });
   },
@@ -240,7 +251,27 @@ export const messagesDAL = {
             }
           }
         },
+        // Narrowed deliberately. This was a bare relation, so the entire
+        // listings row - budgetCents, shipperId, addresses, origin,
+        // externalRef - shipped to every thread participant. The offer context
+        // now depends on this row, so it is narrowed rather than built on.
         listing: {
+          columns: {
+            id: true,
+            title: true,
+            status: true,
+            origin: true,
+            shipperId: true,
+            budgetCents: true,
+            expiresAt: true,
+            isFlexible: true,
+            weightKg: true,
+            lengthCm: true,
+            widthCm: true,
+            heightCm: true,
+            pickupFrom: true,
+            pickupUntil: true,
+          },
           with: {
             photos: {
               limit: 1,

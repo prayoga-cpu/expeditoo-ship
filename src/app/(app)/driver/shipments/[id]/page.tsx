@@ -3,6 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { ShipmentRouteMap } from "@/features/app/driver/ui";
 import { ShipmentActions } from "@/features/app/driver/ui/ShipmentActions";
+import { ShipmentIncidentsSection } from "@/features/app/incidents/ui";
 import { ShipmentStatusBadge } from "@/features/app/driver/ui/ShipmentStatusBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +16,8 @@ import {
   Box,
   History,
   ArrowLeft,
+  BadgeCheck,
+  Hourglass,
 } from "lucide-react";
 import { useDriverShipmentDetail } from "@/features/app/driver/hooks/useDriverShipments";
 import type {
@@ -82,6 +85,12 @@ export default function ShipmentDetailPage() {
           <RouteCard shipment={shipment} />
           <CargoCard shipment={shipment} />
           <TimelineCard shipment={shipment} />
+          <ShipmentIncidentsSection
+            shipmentId={shipment.id}
+            canReport={
+              shipment.status !== "DELIVERED" && shipment.status !== "CANCELLED"
+            }
+          />
         </div>
 
         {/* Right Column - Actions (Desktop Only) */}
@@ -309,11 +318,59 @@ function TimelineCard({ shipment }: { shipment: DriverShipmentDetail }) {
                     {event.note}
                   </p>
                 )}
+                <ClientConfirmation
+                  shipment={shipment}
+                  status={event.status}
+                />
               </div>
             </li>
           ))}
         </ol>
       </CardContent>
     </Card>
+  );
+}
+
+/** The two steps the client is asked to attest. */
+const ATTESTABLE = ["PICKED_UP", "DELIVERED"];
+
+/**
+ * Whether the client has signed off on this step, so a driver knows before
+ * chasing. Nothing here is actionable by the driver: the client's half of the
+ * timeline is theirs to fill in.
+ */
+function ClientConfirmation({
+  shipment,
+  status,
+}: {
+  shipment: DriverShipmentDetail;
+  status: string;
+}) {
+  const t = useTranslations("deliveries.confirmation");
+  if (!ATTESTABLE.includes(status)) return null;
+
+  const match = (shipment.confirmations ?? []).find(
+    (c) => c.milestone === status
+  );
+
+  return (
+    <p
+      className={`mt-1.5 flex flex-wrap items-center gap-1.5 text-xs ${
+        match ? "text-primary" : "text-muted-foreground"
+      }`}
+    >
+      {match ? (
+        <BadgeCheck className="w-3.5 h-3.5 shrink-0" />
+      ) : (
+        <Hourglass className="w-3.5 h-3.5 shrink-0" />
+      )}
+      <span>
+        {!match
+          ? t("awaitingClient")
+          : match.confirmedByRole === "operator"
+            ? t("confirmedByOperator")
+            : t("confirmedByClient")}
+      </span>
+    </p>
   );
 }

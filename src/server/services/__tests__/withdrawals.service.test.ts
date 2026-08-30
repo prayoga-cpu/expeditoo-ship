@@ -4,6 +4,7 @@ vi.mock("@/db", () => ({
   db: { transaction: async (fn: (tx: unknown) => unknown) => await fn({}) },
 }));
 vi.mock("@/server/dal/withdrawals.dal", () => ({ withdrawalsDal: {} }));
+vi.mock("@/server/dal/carriers.dal", () => ({ carriersDal: {} }));
 vi.mock("@/server/dal/users.dal", () => ({ userHasRole: vi.fn() }));
 vi.mock("@/server/services/notifications.service", () => ({
   notificationsService: { createNotification: vi.fn().mockResolvedValue({}) },
@@ -15,6 +16,7 @@ import {
   MIN_WITHDRAWAL_CENTS,
 } from "../withdrawals.service";
 import { withdrawalsDal } from "@/server/dal/withdrawals.dal";
+import { carriersDal } from "@/server/dal/carriers.dal";
 import { userHasRole } from "@/server/dal/users.dal";
 
 const request = (over: Record<string, unknown> = {}) => ({
@@ -41,6 +43,10 @@ beforeEach(() => {
     update: vi.fn(async (id, data) => ({ id, carrierId: "carrier-1", ...data })),
     setPayoutWithdrawal: vi.fn(),
     payoutIdsFor: vi.fn().mockResolvedValue(["po-1"]),
+    hasAnyPayout: vi.fn().mockResolvedValue(true),
+  });
+  Object.assign(carriersDal, {
+    getByUserId: vi.fn().mockResolvedValue({ id: "c-1", status: "approved" }),
   });
   vi.mocked(userHasRole).mockResolvedValue(true);
 });
@@ -145,6 +151,49 @@ describe("withdrawalsService.getBalance", () => {
     expect((await withdrawalsService.getBalance("carrier-1")).canRequest).toBe(
       false
     );
+  });
+
+  it("reports no earnings for a driver with no payout row", async () => {
+    Object.assign(withdrawalsDal, {
+      ...withdrawalsDal,
+      availableFor: vi.fn().mockResolvedValue({ amountCents: 0, deliveries: 0 }),
+      hasAnyPayout: vi.fn().mockResolvedValue(false),
+    });
+
+    expect((await withdrawalsService.getBalance("carrier-1")).hasEverEarned).toBe(
+      false
+    );
+  });
+
+  it("still counts a claimed payout as earned, though nothing is available", async () => {
+    // The distinction the empty state hangs off: `deliveries` counts only
+    // unclaimed `scheduled` rows, so a driver waiting on a withdrawal reports
+    // zero available and would otherwise read as somebody who never worked.
+    Object.assign(withdrawalsDal, {
+      ...withdrawalsDal,
+      availableFor: vi.fn().mockResolvedValue({ amountCents: 0, deliveries: 0 }),
+      hasAnyPayout: vi.fn().mockResolvedValue(true),
+    });
+
+    const balance = await withdrawalsService.getBalance("carrier-1");
+
+    expect(balance.availableCents).toBe(0);
+    expect(balance.deliveries).toBe(0);
+    expect(balance.hasEverEarned).toBe(true);
+  });
+
+  it("passes the application status through, and null when there is none", async () => {
+    expect((await withdrawalsService.getBalance("carrier-1")).carrierStatus).toBe(
+      "approved"
+    );
+
+    Object.assign(carriersDal, {
+      getByUserId: vi.fn().mockResolvedValue(undefined),
+    });
+
+    expect(
+      (await withdrawalsService.getBalance("nobody")).carrierStatus
+    ).toBeNull();
   });
 });
 

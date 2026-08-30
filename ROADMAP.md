@@ -69,7 +69,7 @@ without leaving their app.
 |---|---|
 | **Public** | Splash, landing, pricing, FAQ, terms, privacy |
 | **Auth** | Login, register, forgot password, reset password, verify email |
-| **Driver** | Dashboard (`/home`), job board (`/expedion`), job details, submit offer, my offers, my application, deliveries, active delivery, proof of delivery, chat, profile, settings, notifications |
+| **Driver** | Dashboard (`/home`), job board (`/expedion`), job details, submit offer, my offers, my application, deliveries, active delivery, pickup and delivery photos, chat, profile, settings, notifications |
 | **Operator / Admin** | Award queue, Expedion bridge, driver applications, users, listings, shipments, payments, support, reports, statistics |
 
 ## 5. Data entities

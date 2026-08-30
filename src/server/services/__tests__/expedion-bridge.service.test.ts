@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { expedionBridgeService } from "../expedion-bridge.service";
 import { expedionDal } from "@/server/dal/expedion.dal";
 import { carriersDal } from "@/server/dal/carriers.dal";
+import { expedionSmsService } from "@/server/services/expedion-sms.service";
 
 /**
  * The return leg: an award on Expeditoo landing on the Expedion quote.
@@ -184,5 +185,57 @@ describe("expedionBridgeService.onOfferAccepted", () => {
       status: "assigned",
       assignedCarrierId: "car_1",
     });
+  });
+});
+
+/**
+ * The client's confirmation link rides on the SMS the bridge already sends.
+ * Covers docs/specs/transport_status_confirmation_spec.md §8 and §12.
+ */
+describe("expedionBridgeService — the confirmation link on the SMS", () => {
+  const CONFIRM_URL = "https://app.example.com/confirm/tok_1";
+
+  it("appends the link to the pickup SMS rather than sending a second one", async () => {
+    getQuote.mockResolvedValue(escalatedQuote({ status: "assigned" }) as never);
+
+    await expedionBridgeService.onShipmentStatus({
+      listingId: "lst_1",
+      shipmentStatus: "PICKED_UP",
+      confirmUrl: CONFIRM_URL,
+    });
+
+    expect(expedionSmsService.deliveryUpdate).toHaveBeenCalledTimes(1);
+    expect(expedionSmsService.deliveryUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "picked_up", confirmUrl: CONFIRM_URL })
+    );
+  });
+
+  it("sends the pickup link once across the PICKED_UP → IN_TRANSIT pair", async () => {
+    // Both shipment states map onto the quote's single `picked_up` stage, and
+    // the bridge refuses to re-report a status the quote already holds — so
+    // the client is asked exactly once, not twice for one event.
+    getQuote.mockResolvedValue(escalatedQuote({ status: "picked_up" }) as never);
+
+    await expedionBridgeService.onShipmentStatus({
+      listingId: "lst_1",
+      shipmentStatus: "IN_TRANSIT",
+      confirmUrl: CONFIRM_URL,
+    });
+
+    expect(expedionSmsService.deliveryUpdate).not.toHaveBeenCalled();
+    expect(updateMock).not.toHaveBeenCalled();
+  });
+
+  it("still sends the update when no link could be minted", async () => {
+    getQuote.mockResolvedValue(escalatedQuote({ status: "picked_up" }) as never);
+
+    await expedionBridgeService.onShipmentStatus({
+      listingId: "lst_1",
+      shipmentStatus: "DELIVERED",
+    });
+
+    expect(expedionSmsService.deliveryUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "delivered", confirmUrl: undefined })
+    );
   });
 });

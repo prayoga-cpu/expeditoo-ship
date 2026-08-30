@@ -1,4 +1,8 @@
 import { z } from "zod";
+import {
+  MAX_AVAILABILITY_DAYS,
+  TIME_SLOTS,
+} from "@/lib/availability-window";
 
 // ========================================
 // Listings DTO — the transport job
@@ -213,6 +217,19 @@ export const MATERIAL_FIELDS = [
   "dropoffUntil",
 ] as const satisfies readonly (keyof UpdateListingInput)[];
 
+/** A comma-separated query parameter, as the URL carries it. */
+const csv = <T extends z.ZodTypeAny>(item: T) =>
+  z.preprocess(
+    (value) =>
+      typeof value === "string"
+        ? value
+            .split(",")
+            .map((entry) => entry.trim())
+            .filter(Boolean)
+        : value,
+    z.array(item)
+  );
+
 export const browseListingsQuerySchema = z.object({
   categoryId: z.string().optional(),
   q: z.string().optional(),
@@ -222,9 +239,36 @@ export const browseListingsQuerySchema = z.object({
    * from the shipper-posting era — off the carrier's list.
    */
   origin: z.enum(["direct", "expedion"]).optional(),
-  nearLat: z.coerce.number().optional(),
-  nearLng: z.coerce.number().optional(),
+
+  /**
+   * Where the driver starts, and — in "sur mon trajet" — where they are going.
+   *
+   * The search mode is derived rather than declared: an arrival makes the
+   * filter a corridor, its absence makes it a radius. There is no `mode`
+   * parameter, so no request can claim one thing and carry the other
+   * (board_route_search_spec.md §2).
+   */
+  fromLat: z.coerce.number().optional(),
+  fromLng: z.coerce.number().optional(),
+  toLat: z.coerce.number().optional(),
+  toLng: z.coerce.number().optional(),
+  /** Radius around the departure, or half-width of the corridor. */
   radiusKm: z.coerce.number().positive().max(1000).optional(),
+
+  /**
+   * The days the driver can drive, and the times of day within them. A job
+   * matches when its pickup window overlaps any one of them — overlap, not
+   * containment, because a fortnight-wide window is exactly what the driver is
+   * trying to narrow (board_route_search_spec.md §5).
+   */
+  days: csv(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "INVALID_DAY"))
+    .refine((values) => values.length <= MAX_AVAILABILITY_DAYS, {
+      message: "TOO_MANY_DAYS",
+    })
+    .optional(),
+  slots: csv(z.enum(TIME_SLOTS)).optional(),
+  /** The client's `getTimezoneOffset()`, so a slot means their hour, not UTC. */
+  tzOffset: z.coerce.number().int().min(-840).max(840).default(0),
   minBudget: z.coerce.number().int().optional(),
   maxBudget: z.coerce.number().int().optional(),
   pickupFrom: z.coerce.date().optional(),

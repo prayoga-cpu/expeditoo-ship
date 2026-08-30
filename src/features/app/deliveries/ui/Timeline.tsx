@@ -5,11 +5,14 @@ import {
   Truck,
   CircleCheck,
   CircleX,
+  BadgeCheck,
+  Hourglass,
   type LucideIcon,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import type { ShipmentStatus } from "../api/deliveries.api";
-import type { TimelineStep } from "../types";
+import type { TimelineConfirmation, TimelineStep } from "../types";
 
 const STATUS_ICON: Record<ShipmentStatus, LucideIcon> = {
   PENDING: Package,
@@ -20,7 +23,13 @@ const STATUS_ICON: Record<ShipmentStatus, LucideIcon> = {
   CANCELLED: CircleX,
 };
 
-/** The recorded status history of a shipment, oldest first. */
+/**
+ * The recorded status history of a shipment, oldest first.
+ *
+ * Two facts per step where both exist: the transporter moved it, and the
+ * client did or did not attest it. They are separate lines because they are
+ * separate facts — the second is never inferred from the first.
+ */
 export function Timeline({ steps }: { steps: TimelineStep[] }) {
   return (
     <div className="space-y-0">
@@ -61,10 +70,50 @@ export function Timeline({ steps }: { steps: TimelineStep[] }) {
                   {step.note}
                 </p>
               )}
+              <ConfirmationLine confirmation={step.confirmation} />
             </div>
           </div>
         );
       })}
     </div>
+  );
+}
+
+/** The client's half of a step. Absent where no attestation is asked for. */
+function ConfirmationLine({
+  confirmation,
+}: {
+  confirmation: TimelineConfirmation | null;
+}) {
+  const t = useTranslations("deliveries.confirmation");
+  if (!confirmation) return null;
+
+  const confirmed = confirmation.state === "confirmed";
+  const Icon = confirmed ? BadgeCheck : Hourglass;
+
+  return (
+    <p
+      className={cn(
+        "mt-1.5 flex flex-wrap items-center gap-1.5 text-xs",
+        confirmed ? "text-primary" : "text-muted-foreground"
+      )}
+    >
+      <Icon className="h-3.5 w-3.5 shrink-0" />
+      <span>
+        {!confirmed
+          ? t("awaitingClient")
+          : confirmation.role === "operator"
+            ? t("confirmedByOperator")
+            : t("confirmedByClient")}
+      </span>
+      {confirmed && confirmation.channel && (
+        <span className="text-muted-foreground">
+          · {t(`channel.${confirmation.channel}`)}
+        </span>
+      )}
+      {confirmed && confirmation.date && (
+        <span className="text-muted-foreground">· {confirmation.date}</span>
+      )}
+    </p>
   );
 }

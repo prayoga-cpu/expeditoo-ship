@@ -5,6 +5,7 @@ import { PaymentReceiptEmail } from "@/server/emails/PaymentReceiptEmail";
 import { ShipmentAssignedEmail } from "@/server/emails/ShipmentAssignedEmail";
 import { OrderConfirmationEmail } from "@/server/emails/OrderConfirmationEmail";
 import { ShipmentUpdateEmail } from "@/server/emails/ShipmentUpdateEmail";
+import { ConfirmationRequestEmail } from "@/server/emails/ConfirmationRequestEmail";
 import { render } from "@react-email/components";
 
 export const emailService = {
@@ -204,6 +205,34 @@ export const emailService = {
     return this.sendEmail({
       to,
       subject: `🚚 ${statusTitles[status]} - ${itemTitle}`,
+      html: emailHtml,
+    });
+  },
+
+  /**
+   * Ask the client to attest a milestone the transporter just recorded.
+   *
+   * French, because the recipients are Expedion clients and the SMS that
+   * carries the same link is French too.
+   */
+  async sendConfirmationRequestEmail(
+    to: string,
+    params: {
+      recipientName?: string | null;
+      milestone: "PICKED_UP" | "DELIVERED";
+      confirmUrl: string;
+      reference?: string | null;
+      dropoffAddress?: string | null;
+    }
+  ) {
+    const emailHtml = await render(ConfirmationRequestEmail(params));
+
+    return this.sendEmail({
+      to,
+      subject:
+        params.milestone === "PICKED_UP"
+          ? "Confirmez le retrait de votre lot"
+          : "Confirmez la réception de votre lot",
       html: emailHtml,
     });
   },

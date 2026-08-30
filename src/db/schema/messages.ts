@@ -2,6 +2,7 @@ import { pgTable, text, timestamp, boolean, index } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { user } from "./users";
 import { listings } from "./listings";
+import { threadOffers } from "./thread-offers";
 
 // ========================================
 // Conversations Table
@@ -63,6 +64,21 @@ export const messages = pgTable(
       .references(() => user.id, { onDelete: "cascade" }),
     content: text("content").notNull(), // Text only
     attachmentUrl: text("attachment_url"), // Optional image/file
+    /**
+     * The formal price this message carries, if any.
+     *
+     * `threadOfferId IS NOT NULL` is the whole discriminator - there is no
+     * message-kind enum and no payload column. Price, dates and status are read
+     * from the joined row at render time, so a withdrawn or awarded offer shows
+     * its current state without the message ever being rewritten.
+     *
+     * SET NULL, not cascade: the chat line degrades to its plain-text summary
+     * rather than the conversation losing a turn.
+     * See docs/specs/thread_offer_spec.md §3.2.
+     */
+    threadOfferId: text("thread_offer_id").references(() => threadOffers.id, {
+      onDelete: "set null",
+    }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     isRead: boolean("is_read").default(false).notNull(),
   },
@@ -110,6 +126,10 @@ export const messagesRelations = relations(messages, ({ one }) => ({
   sender: one(user, {
     fields: [messages.senderId],
     references: [user.id],
+  }),
+  threadOffer: one(threadOffers, {
+    fields: [messages.threadOfferId],
+    references: [threadOffers.id],
   }),
 }));
 

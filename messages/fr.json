@@ -123,6 +123,9 @@
       "shipper": "Expéditeur",
       "user": "Utilisateur",
       "hint": "Votre niveau d'accès"
+    },
+    "cityField": {
+      "clear": "Effacer la ville"
     }
   },
   "auth": {
@@ -514,6 +517,58 @@
       "unknown": "Inconnu",
       "you": "Vous"
     },
+    "offer": {
+      "button": "Faire une offre",
+      "dialogTitle": "Faire une offre",
+      "dialogDescriptionJob": "{title} — budget {price}",
+      "dialogDescriptionStandalone": "Proposez un prix, une date d'enlèvement et un délai de livraison.",
+      "pickupLabel": "Date d'enlèvement",
+      "pickupPlaceholder": "Choisir un jour",
+      "periodLabel": "Moment de la journée",
+      "cancel": "Annuler",
+      "send": "Envoyer l'offre",
+      "success": "Offre envoyée.",
+      "accepted": "Offre acceptée.",
+      "declined": "Offre refusée.",
+      "withdrawn": "Offre retirée.",
+      "alreadyBid": "Vous avez déjà une offre en cours ici. Retirez-la pour en envoyer une autre.",
+      "manageOffers": "Gérer mes offres",
+      "slotBurnt": "Les enchères sur cette annonce vous sont fermées.",
+      "retry": "Réessayer",
+      "fleetErrorTitle": "Impossible de charger vos véhicules",
+      "fleetErrorDescription": "Une offre nomme le véhicule qui fera le transport : il nous faut d'abord votre flotte.",
+      "card": {
+        "title": "Offre",
+        "pickup": "Enlèvement",
+        "delivery": "Livraison",
+        "accept": "Accepter",
+        "decline": "Refuser",
+        "withdraw": "Retirer cette offre",
+        "viewJob": "Voir l'annonce",
+        "operatorDecides": "Un opérateur décide sur cette annonce.",
+        "noPayment": "Accord dans la conversation — aucun paiement n'est prélevé.",
+        "status": {
+          "pending": "En attente",
+          "accepted": "Acceptée",
+          "declined": "Refusée",
+          "rejected": "Non retenue",
+          "withdrawn": "Retirée",
+          "expired": "Expirée"
+        }
+      },
+      "errors": {
+        "CONVERSATION_HAS_NO_LISTING": "Cette conversation ne porte pas sur une annonce.",
+        "THREAD_OFFER_LIVE": "Vous avez déjà une offre en cours dans cette conversation.",
+        "NOT_YOUR_OFFER": "Vous ne pouvez pas répondre à votre propre offre.",
+        "OFFER_NOT_PENDING": "Cette offre a déjà reçu une réponse.",
+        "SLOT_IN_PAST": "Ce créneau d'enlèvement est déjà passé.",
+        "PRICE_OUT_OF_RANGE": "Ce prix est en dehors des limites autorisées.",
+        "PICKUP_OUTSIDE_WINDOW": "Ce jour est en dehors de la fenêtre d'enlèvement de l'annonce.",
+        "VEHICLE_NOT_OWNED": "Ce véhicule ne fait pas partie de votre flotte.",
+        "CANNOT_BID_OWN_LISTING": "Vous ne pouvez pas enchérir sur votre propre annonce.",
+        "generic": "Impossible d'envoyer cette offre. Réessayez."
+      }
+    },
     "item": {
       "noListing": "Aucune annonce"
     },
@@ -550,8 +605,7 @@
       "dropoff": "Livraison",
       "carrier": "Transporteur",
       "shipper": "Expéditeur",
-      "cancellationReason": "Motif d'annulation",
-      "proofOfDelivery": "Voir la preuve de livraison"
+      "cancellationReason": "Motif d'annulation"
     },
     "buttons": {
       "cancelShipment": "Annuler la livraison",
@@ -575,8 +629,8 @@
     "events": {
       "PENDING": "Livraison créée",
       "ASSIGNED": "Chauffeur assigné",
-      "PICKED_UP": "Colis récupéré",
-      "IN_TRANSIT": "En transit",
+      "PICKED_UP": "Retrait effectué",
+      "IN_TRANSIT": "Livraison en cours",
       "DELIVERED": "Livré",
       "CANCELLED": "Annulé"
     },
@@ -588,9 +642,9 @@
     },
     "shipmentStatus": {
       "PENDING": "En attente",
-      "ASSIGNED": "Assignée",
-      "PICKED_UP": "Enlevée",
-      "IN_TRANSIT": "En transit",
+      "ASSIGNED": "En préparation",
+      "PICKED_UP": "En retrait",
+      "IN_TRANSIT": "En cours de livraison",
       "DELIVERED": "Livrée",
       "CANCELLED": "Annulée"
     },
@@ -598,6 +652,15 @@
       "success": "Expédition annulée — le paiement retenu a été libéré",
       "requiresSupport": "La marchandise est déjà en route — contactez le support pour annuler",
       "failed": "Impossible d'annuler l'expédition"
+    },
+    "confirmation": {
+      "confirmedByClient": "Confirmé par le client",
+      "awaitingClient": "En attente de confirmation du client",
+      "channel": {
+        "expedion_app": "via l'application Expedion",
+        "link": "via le lien reçu"
+      },
+      "confirmedByOperator": "Confirmé par un opérateur pour le client"
     }
   },
   "listing": {
@@ -658,6 +721,60 @@
         "VEHICLE_CAPACITY_DIMENSIONS": "Ce véhicule est trop petit pour ce chargement.",
         "OFFER_ALREADY_EXISTS": "Vous avez déjà une offre en cours sur cette course.",
         "generic": "Impossible de prendre cette course. Veuillez réessayer."
+      },
+      "form": {
+        "title": "Faire une offre",
+        "budget": "Budget {price}",
+        "rivals": "{count} transporteur(s) ont déjà proposé",
+        "noVehicleTitle": "Ajoutez d'abord un véhicule",
+        "noVehicleDescription": "Une offre nomme le véhicule qui fera la course : votre flotte doit en compter au moins un.",
+        "noVehicleCta": "Gérer ma flotte",
+        "vehicle": "Véhicule",
+        "vehiclePlaceholder": "Choisir un véhicule",
+        "vehicleTooSmall": "trop petit pour ce chargement",
+        "vehicleInactive": "inactif",
+        "price": "Votre prix (€)",
+        "overBudget": "Au-dessus du budget du client. Autorisé — expliquez pourquoi ci-dessous.",
+        "message": "Message (facultatif)",
+        "messagePlaceholder": "Dites au client pourquoi vous êtes le bon transporteur pour cette course.",
+        "submit": "Envoyer l'offre",
+        "submitting": "Envoi…"
+      },
+      "slots": {
+        "label": "Vos créneaux",
+        "addDay": "Ajouter un jour",
+        "dayLimit": "{count} jours maximum.",
+        "dayLimitReached": "{count} jours maximum. Retirez-en un pour en proposer un autre.",
+        "empty": "Ajoutez au moins un jour où vous pouvez faire cette course.",
+        "removeDay": "Retirer ce jour",
+        "slot": {
+          "morning": "Matin",
+          "afternoon": "Après-midi",
+          "evening": "Soir"
+        },
+        "deliveryLabel": "Livraison",
+        "leadSameDay": "Le jour même",
+        "leadDays": "J+{count}",
+        "deliveryHint": "Au plus tard à 22 h, le jour indiqué après l'enlèvement."
+      },
+      "offerCard": {
+        "selected": "Retenue",
+        "lowest": "Moins-disante",
+        "schedule": "Enlèvement {pickup} · Livraison {delivery}",
+        "deliveryBy": "{day} avant 22 h",
+        "proposedSlots": "Créneaux proposés",
+        "otherSlots": "{count, plural, one {+# autre créneau proposé} other {+# autres créneaux proposés}}",
+        "chooseSlot": "Choisissez le créneau à réserver",
+        "slotLine": "{day} — {period}",
+        "slot": {
+          "morning": "matin",
+          "afternoon": "après-midi",
+          "evening": "soir"
+        },
+        "vsBudget": "{amount} vs budget",
+        "accept": "Accepter",
+        "acceptSlot": "Accepter ce créneau",
+        "accepting": "Acceptation…"
       }
     }
   },
@@ -668,7 +785,8 @@
       "what": "Quoi",
       "where": "Où",
       "when": "Quand",
-      "budget": "Budget"
+      "budget": "Budget",
+      "payment": "Paiement"
     },
     "buttons": {
       "back": "Retour",
@@ -681,14 +799,15 @@
       "posted": "Demande publiée — les transporteurs peuvent enchérir",
       "draftSaved": "Brouillon enregistré",
       "pickupTooSoon": "Le retrait est trop proche pour laisser le temps d'enchérir. Reportez-le.",
-      "failed": "Impossible de publier votre demande. Veuillez réessayer."
+      "failed": "Impossible de publier votre demande. Veuillez réessayer.",
+      "cardRequired": "Ajoutez une carte avant de publier — votre demande est débitée au moment où vous choisissez un transporteur."
     },
     "what": {
       "titleLabel": "Que transportez-vous ?",
       "titlePlaceholder": "Un canapé deux places et une table basse",
       "descriptionLabel": "Détails",
       "descriptionPlaceholder": "Décrivez le chargement, l'accès, et tout ce qu'un transporteur doit savoir avant d'enchérir.",
-      "weight": "Poids (kg)",
+      "weight": "Poids",
       "quantity": "Quantité",
       "length": "Longueur (cm)",
       "width": "Largeur (cm)",
@@ -697,7 +816,64 @@
       "fragileHint": "Nécessite une manipulation soignée",
       "help": "Aide au chargement",
       "helpHint": "Le transporteur doit aider à charger et décharger",
-      "photos": "Photos (facultatif)"
+      "photos": "Photos (facultatif)",
+      "weightExact": "Poids exact (kg)",
+      "weightBrackets": {
+        "upTo5": {
+          "label": "Jusqu'à 5 kg",
+          "example": "Un colis, une montre"
+        },
+        "upTo30": {
+          "label": "5 – 30 kg",
+          "example": "Une valise, un carton"
+        },
+        "upTo100": {
+          "label": "30 – 100 kg",
+          "example": "Un lave-linge, un fauteuil"
+        },
+        "upTo500": {
+          "label": "100 – 500 kg",
+          "example": "Une moto, plusieurs meubles"
+        },
+        "upTo1000": {
+          "label": "500 kg – 1 t",
+          "example": "Une palette complète"
+        },
+        "over1000": {
+          "label": "Plus d'1 t",
+          "example": "Indiquez le poids"
+        }
+      },
+      "size": "Taille (facultatif)",
+      "sizeHint": "La taille aide le transporteur à choisir son véhicule. Passez cette étape si vous ne savez pas.",
+      "sizeModes": {
+        "preset": "Taille standard",
+        "exact": "Dimensions exactes"
+      },
+      "sizePresets": {
+        "s": {
+          "label": "S",
+          "example": "Une montre, un petit colis"
+        },
+        "m": {
+          "label": "M",
+          "example": "Une valise, un carton de déménagement"
+        },
+        "l": {
+          "label": "L",
+          "example": "Un vélo, un lave-linge"
+        },
+        "xl": {
+          "label": "XL",
+          "example": "Un canapé, un réfrigérateur"
+        },
+        "xxl": {
+          "label": "XXL",
+          "example": "Une palette complète, un lit double"
+        }
+      },
+      "sizeUpTo": "Jusqu'à {lengthCm} × {widthCm} × {heightCm} cm",
+      "photosHint": "Vous pouvez en ajouter plusieurs à la fois."
     },
     "where": {
       "pickup": "Retrait",
@@ -735,13 +911,28 @@
       "label": "Combien pensez-vous payer ? (€)",
       "hint": "C'est une estimation, pas une limite. Les transporteurs peuvent enchérir au-dessus ou en dessous, et vous choisissez l'offre que vous acceptez."
     },
+    "payment": {
+      "title": "Votre moyen de paiement",
+      "description": "Ajoutez une carte maintenant. Rien n'est débité pour l'instant : aucun transporteur n'a encore enchéri, il n'y a donc pas de montant.",
+      "savedDescription": "C'est la carte qui sera débitée pour cette demande.",
+      "chargedLater": "Débitée au moment où vous choisissez un transporteur, du montant de son enchère.",
+      "cardFallback": "Carte",
+      "unavailable": "Le paiement par carte est indisponible pour le moment. Enregistrez un brouillon et publiez-le dès son rétablissement.",
+      "saveCard": "Enregistrer la carte",
+      "saving": "Enregistrement…",
+      "saved": "Carte enregistrée",
+      "saveFailed": "Impossible d'enregistrer cette carte. Veuillez réessayer."
+    },
     "dropzone": {
       "title": "Ajouter des photos",
-      "subtitle": "Glissez-déposez, ou cliquez pour téléverser",
+      "subtitle": "Glissez-déposez, ou cliquez pour en choisir plusieurs",
       "uploading": "{count} photo(s) téléversée(s)",
       "uploadError": "Certaines photos n'ont pas pu être téléversées",
       "takePhoto": "Prendre une photo",
-      "remove": "Supprimer cette photo"
+      "remove": "Supprimer cette photo",
+      "count": "{count} sur {max}",
+      "full": "Vous avez atteint la limite de {max} photos",
+      "tooMany": "Seules {count} photos ont été ajoutées — la limite est de {max}."
     },
     "validation": {
       "titleShort": "Au moins 5 caractères",
@@ -761,7 +952,9 @@
       "pickupWindow": "Le créneau de retrait doit se terminer après son début",
       "deliveryBeforePickup": "La livraison ne peut pas commencer avant le retrait",
       "deliveryWindow": "Le créneau de livraison doit se terminer après son début",
-      "budgetRequired": "Indiquez le montant que vous prévoyez"
+      "budgetRequired": "Indiquez le montant que vous prévoyez",
+      "weightRequired": "Choisissez une tranche de poids",
+      "weightAboveBracket": "Indiquez un poids supérieur à 1 000 kg"
     }
   },
   "myJobs": {
@@ -774,6 +967,20 @@
     "loadFailed": "Impossible de charger vos demandes",
     "offers": "{count, plural, =0 {Aucune offre} one {# offre} other {# offres}}",
     "posted": "Publiée le {date}",
+    "tabs": {
+      "requests": "Demandes",
+      "history": "Historique"
+    },
+    "history": {
+      "empty": "Aucune livraison pour l'instant",
+      "emptyDesc": "Dès qu'une de vos demandes est livrée, elle apparaît ici avec le nom du transporteur.",
+      "loadFailed": "Impossible de charger votre historique de livraisons",
+      "deliveredOn": "Livrée le {date}",
+      "carrier": "Transporteur",
+      "unknownCarrier": "Compte transporteur supprimé",
+      "proof": "Preuve de livraison",
+      "count": "{count, plural, one {# livraison} other {# livraisons}}"
+    },
     "filters": {
       "all": "Tous les statuts"
     },
@@ -860,7 +1067,7 @@
       "updating": "Mise à jour...",
       "navigateToPickup": "Naviguer vers le retrait",
       "navigateToDropoff": "Naviguer vers la livraison",
-      "inTransit": "En transit",
+      "inTransit": "En cours de livraison",
       "inTransitDesc": "Le colis est en transit. Mettez à jour le statut une fois livré.",
       "deliveryCompleted": "Livraison terminée",
       "deliveryCompletedDesc": "Excellent travail ! Cette expédition a été livrée.",
@@ -871,23 +1078,18 @@
       "pickedUpTitle": "Chargement à bord",
       "pickedUpDesc": "Démarrez la course en quittant le lieu de retrait.",
       "startTransit": "Démarrer le transport",
-      "deliverWithPhoto": "Confirmer la livraison avec photo",
       "markDelivered": "Marquer livrée sans photo",
-      "podHint": "Une photo du chargement livré clôture la course et vous protège en cas de litige.",
-      "uploadingProof": "Envoi de la preuve...",
-      "proofUploaded": "Livraison confirmée",
       "statusUpdated": "Statut mis à jour",
-      "viewProof": "Voir la preuve de livraison",
       "cancelledTitle": "Livraison annulée",
       "cancelledDesc": "Cette course a été annulée. Aucune action n'est requise.",
       "errors": {
         "staleStatus": "Cette livraison a évolué. Actualisez pour voir son état actuel.",
         "forbidden": "Vous n'êtes pas autorisé à mettre à jour cette livraison.",
         "notFound": "Livraison introuvable.",
-        "podNotInTransit": "La preuve de livraison ne peut être ajoutée qu'en transit.",
-        "invalidFile": "La preuve de livraison doit être une photo.",
         "generic": "Une erreur est survenue. Veuillez réessayer.",
-        "notInFleet": "Vous n'êtes pas enregistré comme chauffeur de ce transporteur."
+        "notInFleet": "Vous n'êtes pas enregistré comme chauffeur de ce transporteur.",
+        "pickupPhotoRequired": "Prenez une photo du colis avant de confirmer le retrait.",
+        "deliveryPhotoRequired": "Prenez une photo du colis livré avant de confirmer la livraison."
       },
       "unassignedTitle": "Mission remportée, non démarrée",
       "unassignedDesc": "Cette course est la vôtre. Prenez-la en charge pour débloquer le retrait et la livraison.",
@@ -904,9 +1106,9 @@
     },
     "status": {
       "PENDING": "En attente",
-      "ASSIGNED": "Assignée",
-      "PICKED_UP": "Récupérée",
-      "IN_TRANSIT": "En transit",
+      "ASSIGNED": "En préparation",
+      "PICKED_UP": "En retrait",
+      "IN_TRANSIT": "En cours de livraison",
       "DELIVERED": "Livrée",
       "CANCELLED": "Annulée"
     }
@@ -1616,7 +1818,8 @@
       "awards": "File d'attribution",
       "applications": "Dossiers chauffeurs",
       "withdrawals": "Retraits",
-      "expedionClients": "Clients Expedion"
+      "expedionClients": "Clients Expedion",
+      "incidents": "Incidents"
     },
     "table": {
       "rowsSelected": "{count} sur {total} ligne(s) sélectionnée(s)",
@@ -2714,7 +2917,9 @@
       "newest": "Plus récentes",
       "budgetDesc": "Budget le plus élevé",
       "budgetAsc": "Budget le plus bas",
-      "pickupAsc": "Enlèvement le plus proche"
+      "pickupAsc": "Enlèvement le plus proche",
+      "distanceAsc": "Les plus proches",
+      "detourAsc": "Le moins de détour"
     },
     "empty": {
       "title": "Aucune mission correspondante",
@@ -2722,7 +2927,37 @@
       "none": "Aucune mission ouverte pour le moment. Elles apparaissent dès qu'Expedion en escalade une."
     },
     "previous": "Précédent",
-    "next": "Suivant"
+    "next": "Suivant",
+    "route": {
+      "modeLabel": "Type de recherche",
+      "around": "Autour de",
+      "onMyWay": "Sur mon trajet",
+      "nearCity": "Autour de quelle ville ?",
+      "fromCity": "Ville de départ",
+      "toCity": "Ville d'arrivée",
+      "swap": "Inverser départ et arrivée",
+      "radiusLabel": "Dans un rayon de",
+      "detourLabel": "Détour accepté",
+      "km": "{km} km"
+    },
+    "availability": {
+      "empty": "Mes disponibilités",
+      "count": "{count} jours",
+      "slotsLabel": "À quel moment de la journée",
+      "slot": {
+        "morning": "Matin",
+        "afternoon": "Après-midi",
+        "evening": "Soir"
+      },
+      "slotsHint": "S'applique à chaque jour sélectionné. Sans choix, la journée entière.",
+      "slotsHintEmpty": "Choisissez d'abord un ou plusieurs jours.",
+      "clear": "Effacer les dates"
+    },
+    "error": {
+      "title": "Impossible de charger les missions",
+      "description": "La recherche n'a pas abouti. Réessayez, ou élargissez vos filtres."
+    },
+    "sortLabel": "Trier les missions"
   },
   "impersonation": {
     "viewingAs": "Connecté en tant que",
@@ -2776,6 +3011,166 @@
     },
     "loadFailed": "Gains indisponibles",
     "loadFailedHint": "Impossible de charger votre solde. Réessayez dans un instant — si le problème persiste, contactez le support.",
-    "retry": "Réessayer"
+    "retry": "Réessayer",
+    "emptyTitle": "Aucun gain pour l’instant",
+    "empty": {
+      "approved": "Vous gagnez en livrant. Faites une offre sur une mission ouverte : ce qui vous est payé apparaît ici une fois la livraison confirmée.",
+      "underReview": "Votre dossier de transporteur est en cours d’examen. Une fois approuvé, vous pourrez faire des offres et vos gains s’afficheront ici.",
+      "draft": "Votre dossier de transporteur n’est pas terminé. Complétez-le pour commencer à faire des offres — les gains apparaissent ici après votre première livraison.",
+      "blocked": "Vous ne pouvez pas prendre de mission pour le moment. Ouvrez votre dossier pour en connaître la raison et la marche à suivre.",
+      "none": "Seuls les transporteurs approuvés peuvent prendre des missions. Déposez un dossier : tout ce que vous gagnez sur une livraison s’affiche ici."
+    },
+    "emptyCta": {
+      "approved": "Voir les missions",
+      "underReview": "Voir mon dossier",
+      "draft": "Terminer mon dossier",
+      "blocked": "Ouvrir mon dossier",
+      "none": "Devenir transporteur"
+    }
+  },
+  "confirm": {
+    "title": {
+      "PICKED_UP": "Confirmez le retrait",
+      "DELIVERED": "Confirmez la réception"
+    },
+    "lead": {
+      "PICKED_UP": "Le transporteur nous indique avoir effectué le retrait de votre lot.",
+      "DELIVERED": "Le transporteur nous indique avoir livré votre lot."
+    },
+    "action": {
+      "PICKED_UP": "Oui, le retrait a bien eu lieu",
+      "DELIVERED": "Oui, j'ai bien reçu mon lot"
+    },
+    "submitting": "Envoi en cours…",
+    "route": "Trajet",
+    "reference": "Référence",
+    "done": {
+      "title": "Merci, c'est enregistré",
+      "body": "Votre confirmation a bien été prise en compte. Vous pouvez fermer cette page."
+    },
+    "already": {
+      "title": "Déjà confirmé",
+      "body": "Cette étape a déjà été confirmée. Il n'y a rien de plus à faire."
+    },
+    "notYet": {
+      "title": "Rien à confirmer pour l'instant",
+      "body": "Le transporteur n'a pas encore enregistré cette étape. Vous recevrez un nouveau message le moment venu."
+    },
+    "invalid": {
+      "title": "Ce lien n'est plus valide",
+      "body": "Il a peut-être expiré. Contactez notre support et nous confirmerons avec vous."
+    },
+    "error": "La confirmation n'a pas pu être enregistrée. Réessayez dans un instant.",
+    "disclaimer": "Confirmer n'engage aucun paiement et ne modifie pas votre transport.",
+    "unavailable": {
+      "title": "Suivi indisponible",
+      "body": "Nous n'avons pas pu charger cette confirmation. Réessayez dans un instant ou contactez notre support."
+    },
+    "cancelled": {
+      "title": "Transport annulé",
+      "body": "Ce transport a été annulé, il n'y a rien à confirmer. Contactez notre support si vous pensez qu'il s'agit d'une erreur."
+    }
+  },
+  "shipmentPhotos": {
+    "sectionTitle": "Photos du colis",
+    "pickupTitle": "Photos au retrait",
+    "deliveryTitle": "Photos à la livraison",
+    "noneAtPickup": "Aucune photo au retrait pour l'instant.",
+    "noneAtDelivery": "Aucune photo à la livraison pour l'instant.",
+    "added": "Photo envoyée",
+    "locating": "Localisation en cours…",
+    "sending": "Envoi de la photo…",
+    "takeFirst": "Prendre une photo du colis",
+    "takeAnother": "Prendre une autre photo",
+    "locationHint": "Chaque photo enregistre le lieu et l'heure de la prise de vue.",
+    "required": "Prenez d'abord au moins une photo du colis.",
+    "errors": {
+      "locationDenied": "La localisation est obligatoire pour les photos. Autorisez l'accès à votre position puis réessayez.",
+      "locationUnavailable": "Impossible d'obtenir votre position. Déplacez-vous vers un endroit plus dégagé puis réessayez.",
+      "locationUnsupported": "Cet appareil ne peut pas transmettre de position : les photos ne peuvent pas être envoyées depuis celui-ci.",
+      "stageClosed": "Cette étape est terminée : plus aucune photo ne peut y être ajoutée.",
+      "limitReached": "Vous avez déjà envoyé le nombre maximum de photos pour cette étape.",
+      "tooLarge": "Cette photo est trop volumineuse. Réessayez avec une photo plus légère.",
+      "invalidType": "Ce fichier n'est pas une image.",
+      "loadFailed": "Les photos n'ont pas pu être chargées.",
+      "generic": "La photo n'a pas pu être envoyée. Réessayez."
+    }
+  },
+  "incidents": {
+    "section": {
+      "title": "Incidents",
+      "subtitle": "Signalez un problème sur cette mission, ou consultez ce qui a déjà été signalé."
+    },
+    "report": {
+      "trigger": "Signaler un incident",
+      "title": "Signaler un incident",
+      "description": "Dites-nous ce qui s'est passé. Un opérateur est prévenu immédiatement, et une conversation avec le support s'ouvre pour assurer le suivi.",
+      "submit": "Envoyer le signalement",
+      "submitting": "Envoi...",
+      "cancel": "Annuler"
+    },
+    "fields": {
+      "category": "Que s'est-il passé",
+      "severity": "Gravité",
+      "description": "Décrivez le problème",
+      "descriptionPlaceholder": "Ce qui s'est passé, où, et ce dont vous avez besoin.",
+      "descriptionHint": "Au moins {min} caractères."
+    },
+    "categories": {
+      "damage": "Marchandise endommagée",
+      "delay": "Retard",
+      "access": "Accès au site impossible",
+      "vehicle": "Problème de véhicule",
+      "cargo_mismatch": "Marchandise non conforme",
+      "safety": "Problème de sécurité",
+      "other": "Autre chose"
+    },
+    "severities": {
+      "low": "Mineur",
+      "medium": "Modéré",
+      "high": "Grave"
+    },
+    "statuses": {
+      "OPEN": "Ouvert",
+      "ACKNOWLEDGED": "Pris en compte",
+      "RESOLVED": "Résolu"
+    },
+    "roles": {
+      "system": "Système",
+      "shipper": "Client",
+      "carrier": "Transporteur",
+      "driver": "Chauffeur",
+      "operator": "Opérateur",
+      "admin": "Admin"
+    },
+    "photos": {
+      "label": "Photos (facultatif)",
+      "remove": "Retirer la photo",
+      "uploadError": "Cette photo n'a pas pu être envoyée."
+    },
+    "list": {
+      "empty": "Aucun signalement sur cette mission.",
+      "error": "Impossible de charger les incidents. Actualisez pour réessayer.",
+      "reportedBy": "Signalé par {name} ({role})",
+      "unknownReporter": "un ancien membre",
+      "resolution": "Résolution"
+    },
+    "feedback": {
+      "reported": "Incident signalé. Un opérateur a été prévenu.",
+      "updated": "Incident mis à jour.",
+      "runClosed": "Cette mission est terminée — contactez le support.",
+      "failed": "Le signalement n'a pas pu être envoyé. Réessayez."
+    },
+    "queue": {
+      "title": "Incidents",
+      "subtitle": "Ce qui ne va pas sur les missions en cours, le plus grave d'abord.",
+      "acknowledge": "Prendre en compte",
+      "resolve": "Résoudre",
+      "resolveTitle": "Résoudre cet incident",
+      "resolvePlaceholder": "Qu'avez-vous fait ?",
+      "emptyTitle": "Rien à traiter",
+      "emptyDescription": "Aucun incident dans cet état.",
+      "error": "Impossible de charger la file. Actualisez pour réessayer."
+    }
   }
 }

@@ -106,10 +106,16 @@ Carriers may bid above budget (`offers_engine_spec.md` edge case 7).
 ### Browse filters (`GET /api/listings`)
 
 `categoryId`, `q` (FTS over title + description, French config — the existing
-`listing_search_idx` GIN index is retained), `nearLat`/`nearLng`/`radiusKm`,
-`minBudget`/`maxBudget`, `pickupFrom`/`pickupUntil`, `maxWeightKg`, `sort`
+`listing_search_idx` GIN index is retained), `fromLat`/`fromLng`/`radiusKm`,
+`toLat`/`toLng`, `days`/`slots`/`tzOffset`, `minBudget`/`maxBudget`,
+`pickupFrom`/`pickupUntil`, `maxWeightKg`, `sort`
 (`created_desc` default, `budget_desc`, `budget_asc`, `pickup_asc`, `distance_asc`),
 `page`/`limit` (limit ≤ 50).
+
+The location and availability parameters are specified in
+`board_route_search_spec.md`: an arrival turns the radius filter into a
+corridor, and `days`/`slots` narrow a job's pickup window to the times the
+driver can actually drive.
 
 A carrier browsing sees `hasBid: boolean` on each row so the UI can mark jobs
 already bid on.

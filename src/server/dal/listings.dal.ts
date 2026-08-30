@@ -20,10 +20,21 @@ import {
   gte,
   lte,
   lt,
+  or,
   sql,
   count,
+  type AnyColumn,
   type SQL,
 } from "drizzle-orm";
+import {
+  corridorFrame,
+  KM_PER_DEGREE,
+  type CorridorFrame,
+} from "@/lib/route-corridor";
+import {
+  availabilityIntervals,
+  type TimeSlot,
+} from "@/lib/availability-window";
 
 type Executor = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -31,13 +42,23 @@ export interface BrowseFilters {
   categoryId?: string;
   q?: string;
   origin?: "direct" | "expedion";
-  nearLat?: number;
-  nearLng?: number;
+  /** Where the driver starts. */
+  fromLat?: number;
+  fromLng?: number;
+  /** Where they are going. Present only for a "sur mon trajet" search. */
+  toLat?: number;
+  toLng?: number;
+  /** Radius around the departure, or half-width of the corridor. */
   radiusKm?: number;
   minBudget?: number;
   maxBudget?: number;
   pickupFrom?: Date;
   pickupUntil?: Date;
+  /** Days the driver is free, `YYYY-MM-DD`, with the times of day within them. */
+  days?: string[];
+  slots?: TimeSlot[];
+  /** The client's `getTimezoneOffset()`. */
+  tzOffset?: number;
   maxWeightKg?: number;
   sort?: string;
   page: number;
@@ -59,6 +80,65 @@ const distanceKmSql = (lat: number, lng: number): SQL<number> =>
       ))
     )
   )`;
+
+/**
+ * How far a listing endpoint sits off the corridor, in km.
+ *
+ * A transcription of `positionOnCorridor` in `src/lib/route-corridor.ts`,
+ * built from the frame that module computes — the projection, the mid-latitude
+ * scaling and the clamp are its work, and only the point-to-segment arithmetic
+ * is written twice. Change one and change the other
+ * (board_route_search_spec.md §4.2).
+ */
+const corridorDetourKmSql = (
+  frame: CorridorFrame,
+  latColumn: AnyColumn,
+  lngColumn: AnyColumn
+): SQL<number> => {
+  const dx = frame.bx - frame.ax;
+  const dy = frame.by - frame.ay;
+  const progress = corridorProgressSql(frame, latColumn, lngColumn);
+
+  return sql<number>`sqrt(
+    power(${lngColumn} * ${frame.lngScale} - (${frame.ax} + ${progress} * ${dx}), 2)
+    + power(${latColumn} * ${KM_PER_DEGREE} - (${frame.ay} + ${progress} * ${dy}), 2)
+  )`;
+};
+
+/**
+ * How far along the corridor an endpoint sits, clamped to [0, 1].
+ *
+ * A zero-length corridor — one city typed into both fields — pins every point
+ * to the departure, which turns the detour above into plain distance from it.
+ * That is the limit of point-to-segment distance as the arrival approaches the
+ * departure, so the degenerate case needs no branch.
+ */
+const corridorProgressSql = (
+  frame: CorridorFrame,
+  latColumn: AnyColumn,
+  lngColumn: AnyColumn
+): SQL<number> => {
+  if (frame.lengthSq === 0) return sql<number>`0`;
+
+  const dx = frame.bx - frame.ax;
+  const dy = frame.by - frame.ay;
+
+  return sql<number>`least(1, greatest(0, (
+    (${lngColumn} * ${frame.lngScale} - ${frame.ax}) * ${dx}
+    + (${latColumn} * ${KM_PER_DEGREE} - ${frame.ay}) * ${dy}
+  ) / ${frame.lengthSq}))`;
+};
+
+/**
+ * Photos, lowest `order` first — used by every read that returns them.
+ *
+ * `order` is the index the photo was uploaded at (`listingsService.createListing`
+ * numbers them from the array), so row zero is the photo the requester led
+ * with, and that is the one the job board puts on the card. Without an explicit
+ * order Postgres may return the rows however it likes, so "the first photo"
+ * would be a different photo between two loads of the same board.
+ */
+const photosInOrder = { orderBy: [asc(photos.order)] };
 
 export const listingsDal = {
   async create(data: InsertListing, tx: Executor = db) {
@@ -96,7 +176,7 @@ export const listingsDal = {
   async getById(id: string, tx: Executor = db) {
     return await tx.query.listings.findFirst({
       where: eq(listings.id, id),
-      with: { photos: true, shipper: true, category: true },
+      with: { photos: photosInOrder, shipper: true, category: true },
     });
   },
 
@@ -111,7 +191,7 @@ export const listingsDal = {
         eq(listings.origin, "expedion"),
         eq(listings.externalRef, externalRef)
       ),
-      with: { photos: true, shipper: true, category: true },
+      with: { photos: photosInOrder, shipper: true, category: true },
     });
   },
 
@@ -135,7 +215,7 @@ export const listingsDal = {
 
     return await tx.query.listings.findMany({
       where: and(...conditions),
-      with: { photos: true, category: true },
+      with: { photos: photosInOrder, category: true },
       orderBy: [desc(listings.createdAt)],
     });
   },
@@ -188,15 +268,66 @@ export const listingsDal = {
       conditions.push(lte(listings.weightKg, filters.maxWeightKg));
     }
 
-    const hasGeo =
-      filters.nearLat !== undefined &&
-      filters.nearLng !== undefined &&
-      filters.radiusKm !== undefined;
+    // The days a driver can drive, as instants. A job matches when its pickup
+    // window overlaps any one of them — overlap rather than containment,
+    // because narrowing a fortnight-wide window is the point.
+    const intervals = availabilityIntervals(
+      filters.days ?? [],
+      filters.slots ?? [],
+      filters.tzOffset ?? 0
+    );
 
-    if (hasGeo) {
+    if (intervals.length > 0) {
       conditions.push(
-        lte(distanceKmSql(filters.nearLat!, filters.nearLng!), filters.radiusKm!)
+        or(
+          ...intervals.map((interval) =>
+            and(
+              lte(listings.pickupFrom, interval.end),
+              gte(listings.pickupUntil, interval.start)
+            )
+          )
+        )
       );
+    }
+
+    // The search mode is derived, never declared: an arrival makes this a
+    // corridor, its absence a radius (board_route_search_spec.md §2).
+    const hasOrigin =
+      filters.fromLat !== undefined &&
+      filters.fromLng !== undefined &&
+      filters.radiusKm !== undefined;
+    const frame =
+      hasOrigin && filters.toLat !== undefined && filters.toLng !== undefined
+        ? corridorFrame(
+            { lat: filters.fromLat!, lng: filters.fromLng! },
+            { lat: filters.toLat!, lng: filters.toLng! }
+          )
+        : null;
+
+    /** Distance from the driver, however they described where they are going. */
+    const proximityKm = frame
+      ? corridorDetourKmSql(frame, listings.pickupLat, listings.pickupLng)
+      : hasOrigin
+        ? distanceKmSql(filters.fromLat!, filters.fromLng!)
+        : null;
+
+    if (frame) {
+      // Both ends inside the corridor, and the load travelling the driver's
+      // way: Bordeaux → Paris is offered Angoulême → Orléans, never the
+      // reverse.
+      conditions.push(
+        lte(proximityKm!, filters.radiusKm!),
+        lte(
+          corridorDetourKmSql(frame, listings.dropoffLat, listings.dropoffLng),
+          filters.radiusKm!
+        ),
+        lte(
+          corridorProgressSql(frame, listings.pickupLat, listings.pickupLng),
+          corridorProgressSql(frame, listings.dropoffLat, listings.dropoffLng)
+        )
+      );
+    } else if (proximityKm) {
+      conditions.push(lte(proximityKm, filters.radiusKm!));
     }
 
     const where = and(...conditions);
@@ -205,14 +336,14 @@ export const listingsDal = {
       budget_desc: [desc(listings.budgetCents)],
       budget_asc: [asc(listings.budgetCents)],
       pickup_asc: [asc(listings.pickupFrom)],
-      distance_asc: hasGeo
-        ? [asc(distanceKmSql(filters.nearLat!, filters.nearLng!))]
+      distance_asc: proximityKm
+        ? [asc(proximityKm)]
         : [desc(listings.createdAt)],
     }[filters.sort ?? "created_desc"] ?? [desc(listings.createdAt)];
 
     const items = await tx.query.listings.findMany({
       where,
-      with: { photos: true, category: true, shipper: true },
+      with: { photos: photosInOrder, category: true, shipper: true },
       orderBy,
       limit: filters.limit,
       offset: (filters.page - 1) * filters.limit,

@@ -7,17 +7,22 @@ import { useAuth } from "@/lib/auth-context";
 import {
   deliveriesApi,
   type ShipmentEvent,
+  type ShipmentStatus,
   type ShipmentWithEvents,
 } from "../api/deliveries.api";
 import type {
   DeliveryDetailView,
   DeliveryRole,
+  TimelineConfirmation,
   TimelineStep,
 } from "../types";
 import { deliveryKeys } from "./useDeliveries";
 
 /** A shipper or carrier may self-cancel until the goods are on a vehicle. */
 const CANCELLABLE = ["PENDING", "ASSIGNED"] as const;
+
+/** The two steps the client is asked to attest. */
+const ATTESTABLE = ["PICKED_UP", "DELIVERED"] as const;
 
 export function useDeliveryDetail(id: string) {
   const t = useTranslations("deliveries");
@@ -66,7 +71,6 @@ function toDetailView(
     scheduledDelivery: shipment.scheduledDelivery,
     deliveredAt: shipment.deliveredAt,
     cancellationReason: shipment.cancellationReason,
-    proofOfDeliveryUrl: shipment.proofOfDeliveryUrl,
     carrier: shipment.carrier,
     driver: shipment.driver,
     shipper: shipment.shipper,
@@ -113,5 +117,33 @@ function toTimeline(
       index < events.length - 1 || terminal
         ? ("completed" as const)
         : ("active" as const),
+    confirmation: confirmationFor(shipment, event.status),
   }));
+}
+
+/**
+ * The client's answer on a step, or the fact that we are still waiting for it.
+ *
+ * A step the client is never asked about returns null rather than "awaiting",
+ * so the timeline does not show a pending signature nobody will ever give.
+ */
+function confirmationFor(
+  shipment: ShipmentWithEvents,
+  status: ShipmentStatus
+): TimelineConfirmation | null {
+  if (!(ATTESTABLE as readonly string[]).includes(status)) return null;
+
+  const match = (shipment.confirmations ?? []).find(
+    (c) => c.milestone === status
+  );
+  if (!match) {
+    return { state: "awaiting", channel: null, role: "client", date: null };
+  }
+
+  return {
+    state: "confirmed",
+    channel: match.channel,
+    role: match.confirmedByRole ?? "client",
+    date: format(new Date(match.createdAt), "d MMM yyyy HH:mm"),
+  };
 }

@@ -129,11 +129,19 @@ export const expedionSmsService = {
     );
   },
 
-  /** Pickup, in transit, delivered. */
+  /**
+   * Pickup, in transit, delivered.
+   *
+   * `confirmUrl` appends the client's one-tap confirmation link
+   * (transport_status_confirmation_spec.md §8). It rides on this message
+   * rather than a second SMS, and `escalated` never carries one — there is no
+   * milestone to attest yet.
+   */
   async deliveryUpdate(params: {
     phone: string | null;
     status: "picked_up" | "delivered" | "escalated";
     bordereauNumber?: string | null;
+    confirmUrl?: string;
   }): Promise<SmsResult> {
     const ref = params.bordereauNumber
       ? ` (bordereau ${params.bordereauNumber})`
@@ -143,7 +151,13 @@ export const expedionSmsService = {
       delivered: `Votre lot a été livré${ref}. Merci d'avoir utilisé Expedion.`,
       escalated: `Nous mettons votre transport${ref} en concurrence auprès de notre réseau de transporteurs afin de vous proposer la meilleure offre.`,
     }[params.status];
-    return send(params.phone ?? "", message);
+
+    const confirm =
+      params.confirmUrl && params.status !== "escalated"
+        ? ` Confirmez : ${params.confirmUrl}`
+        : "";
+
+    return send(params.phone ?? "", `${message}${confirm}`);
   },
 
   /**

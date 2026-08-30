@@ -32,7 +32,7 @@ const endpoint = (over: Record<string, unknown> = {}) => ({
 const form = (over: Record<string, unknown> = {}) => ({
   title: "Two-seater sofa and a table",
   description: "A sofa and a coffee table, ground floor at both ends please.",
-  weightKg: "80",
+  weightBracket: "upTo100",
   quantity: "1",
   isFragile: false,
   needsHelp: false,
@@ -86,13 +86,24 @@ describe("jobFormSchema", () => {
     );
   });
 
-  it("wants all three dimensions or none", () => {
-    expect(messages(form({ lengthCm: "120" }))).toContain(
-      "create.validation.dimensionsPartial"
-    );
+  it("wants all three dimensions or none, in exact mode", () => {
+    expect(
+      messages(form({ sizeMode: "exact", lengthCm: "120" }))
+    ).toContain("create.validation.dimensionsPartial");
     expect(
       jobFormSchema.safeParse(
-        form({ lengthCm: "120", widthCm: "80", heightCm: "70" })
+        form({ sizeMode: "exact", lengthCm: "120", widthCm: "80", heightCm: "70" })
+      ).success
+    ).toBe(true);
+  });
+
+  it("ignores a stale dimension left behind under a size preset", () => {
+    // The three fields are off screen in `preset` mode. A value one of them
+    // still holds is not the answer the person gave, so it cannot fail a
+    // submit — `resolveDimensions` will not send it either.
+    expect(
+      jobFormSchema.safeParse(
+        form({ sizeMode: "preset", sizePreset: "l", lengthCm: "120" })
       ).success
     ).toBe(true);
   });
@@ -102,11 +113,52 @@ describe("jobFormSchema", () => {
     // `.positive()` complaining about zero — neither of which is what the
     // person did. Blank must mean "not given".
     const parsed = jobFormSchema.safeParse(
-      form({ lengthCm: "", widthCm: "", heightCm: "" })
+      form({ sizeMode: "exact", lengthCm: "", widthCm: "", heightCm: "" })
     );
 
     expect(parsed.success).toBe(true);
     if (parsed.success) expect(parsed.data.lengthCm).toBeUndefined();
+  });
+
+  it("requires a weight bracket", () => {
+    expect(messages(form({ weightBracket: undefined }))).toContain(
+      "create.validation.weightRequired"
+    );
+  });
+
+  it("accepts a bracket with no size at all", () => {
+    const parsed = jobFormSchema.safeParse(
+      form({ weightBracket: "upTo5", sizePreset: undefined })
+    );
+
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data.sizePreset).toBeUndefined();
+  });
+
+  it("makes the freight bracket state a figure", () => {
+    expect(messages(form({ weightBracket: "over1000" }))).toContain(
+      "create.validation.weightRequired"
+    );
+  });
+
+  it("rejects a freight figure that is not above the bracket it sits in", () => {
+    expect(
+      messages(form({ weightBracket: "over1000", exactWeightKg: "900" }))
+    ).toContain("create.validation.weightAboveBracket");
+  });
+
+  it("accepts a freight figure above one tonne", () => {
+    expect(
+      jobFormSchema.safeParse(
+        form({ weightBracket: "over1000", exactWeightKg: "12000" })
+      ).success
+    ).toBe(true);
+  });
+
+  it("still refuses more than the 44 t the DTO allows", () => {
+    expect(
+      messages(form({ weightBracket: "over1000", exactWeightKg: "50000" }))
+    ).toContain("create.validation.weightMax");
   });
 
   it("makes an apartment declare its floor and lift", () => {

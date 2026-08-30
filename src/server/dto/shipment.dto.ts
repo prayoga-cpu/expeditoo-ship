@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { shipmentStatusEnum } from "@/db/schema/shipments";
+import { CONFIRMABLE_MILESTONES } from "@/lib/confirmation-token";
 
 // ========================================
 // Status Types & Validation
@@ -20,6 +21,32 @@ export const VALID_STATUS_TRANSITIONS: Record<
   DELIVERED: [],
   CANCELLED: [],
 };
+
+// ========================================
+// Client confirmations
+// ========================================
+
+/**
+ * Derived from `CONFIRMABLE_MILESTONES`, never restated. The pair is named
+ * once in `confirmation-token.ts` because the token payload, the service guard
+ * and this schema all have to agree on it.
+ */
+export const confirmMilestoneSchema = z.enum(CONFIRMABLE_MILESTONES);
+
+/** The Expedion app's route: the caller is already authenticated. */
+export const confirmMilestoneBodySchema = z.object({
+  milestone: confirmMilestoneSchema,
+  note: z.string().max(500).optional(),
+});
+
+/** The one-tap link's route: the token is the whole authority. */
+export const confirmByTokenSchema = z.object({
+  token: z.string().min(1).max(2048),
+  note: z.string().max(500).optional(),
+});
+
+export type ConfirmMilestoneInput = z.infer<typeof confirmMilestoneBodySchema>;
+export type ConfirmByTokenInput = z.infer<typeof confirmByTokenSchema>;
 
 // ========================================
 // Input DTOs
@@ -133,15 +160,6 @@ export type CreateProposalInput = z.infer<typeof createProposalSchema>;
 // Proposal status
 export const ProposalStatus = ["pending", "accepted", "rejected"] as const;
 export type ProposalStatusType = (typeof ProposalStatus)[number];
-
-// Upload Proof of Delivery
-export const uploadProofOfDeliverySchema = z.object({
-  note: z.string().max(500).optional(),
-});
-
-export type UploadProofOfDeliveryInput = z.infer<
-  typeof uploadProofOfDeliverySchema
->;
 
 // ========================================
 // Query DTOs
@@ -269,8 +287,8 @@ export const shipmentDetailSchema = z.object({
   // Timeline (computed)
   timeline: z.array(shipmentTimelineItemSchema),
 
-  // Proof of Delivery
-  proofOfDeliveryUrl: z.string().nullable(),
+  // Evidence lives in `shipment_photos`, read through
+  // GET /api/shipments/:id/photos - see shipment_photos_spec.md §6.1.
   deliveredAt: z.date().nullable(),
 
   // Timestamps

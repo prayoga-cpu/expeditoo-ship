@@ -65,8 +65,10 @@ function useActionErrorMessage() {
         return t("forbidden");
       case "SHIPMENT_NOT_FOUND":
         return t("notFound");
-      case "CANNOT_UPLOAD_POD":
-        return t("podNotInTransit");
+      case "PICKUP_PHOTO_REQUIRED":
+        return t("pickupPhotoRequired");
+      case "DELIVERY_PHOTO_REQUIRED":
+        return t("deliveryPhotoRequired");
       case "DRIVER_NOT_IN_FLEET":
         return t("notInFleet");
       default:
@@ -121,28 +123,6 @@ export function useUpdateShipmentStatus(shipmentId: string) {
       driverShipmentsApi.updateStatus(shipmentId, input.status, input.note),
     onSuccess: () => {
       toast.success(t("statusUpdated"));
-      invalidateShipment(queryClient, shipmentId);
-    },
-    onError: (error) => toast.error(messageFor(error)),
-  });
-}
-
-/**
- * Proof of delivery in two legs: the photo goes to storage first, then its URL
- * is attached to the shipment, which also closes the run as DELIVERED.
- */
-export function useUploadProofOfDelivery(shipmentId: string) {
-  const queryClient = useQueryClient();
-  const t = useTranslations("driver.actions");
-  const messageFor = useActionErrorMessage();
-
-  return useMutation({
-    mutationFn: async (file: File) => {
-      const { url } = await driverShipmentsApi.uploadPodPhoto(file);
-      return driverShipmentsApi.submitProofOfDelivery(shipmentId, url);
-    },
-    onSuccess: () => {
-      toast.success(t("proofUploaded"));
       invalidateShipment(queryClient, shipmentId);
     },
     onError: (error) => toast.error(messageFor(error)),

@@ -155,26 +155,31 @@ No new engine. `routeMatchQuery(route)` maps a trip to the board's existing
 
 | Trip field | Board param |
 |---|---|
-| `originLat` / `originLng` | `nearLat` / `nearLng` |
+| `originLat` / `originLng` | `fromLat` / `fromLng` |
 | `radiusKm` | `radiusKm` |
 | `capacityKg` | `maxWeightKg` (omitted when null) |
-| next occurrence (below) | `pickupFrom` / `pickupUntil` |
+| `destination_lat` / `destination_lng` | `toLat` / `toLng` |
+| `origin_city` / `destination_city` | `fromLabel` / `toLabel` |
+| upcoming occurrences (below) | `days` |
 | — | `sort=distance_asc` |
 
-**Next occurrence.**
+**Upcoming occurrences.** The board filters on a set of days, so a trip sends
+every run a carrier could still take, soonest first, capped at
+`MAX_DEEP_LINK_DAYS` (8) and walked no more than eight weeks ahead.
 
-- `occasional`: the earliest stored date that is not in the past. `pickupFrom` is
-  the start of that day, `pickupUntil` the end of it. If every date has elapsed,
-  the date bounds are omitted entirely and the trip matches on geography alone.
-- `recurring`: the next calendar day whose ISO weekday is in `daysOfWeek`,
-  clamped to `validFrom`/`validUntil` when set. Same day bounds. If
-  `validUntil` has passed, the date bounds are omitted.
+- `occasional`: every stored date that is not in the past.
+- `recurring`: each calendar day whose ISO weekday is in `daysOfWeek`, clamped
+  to `validFrom`/`validUntil` when set.
 
-The trip card links to `/expedion?` with those parameters. The destination is
-deliberately **not** filtered on — a carrier running Bordeaux → Paris will take
-a load that ends anywhere near the corridor, and the board has no
-two-endpoint filter to express it. Distance sort from the origin is the honest
-approximation, and §10 records the limitation.
+If every occurrence has elapsed, `days` is omitted entirely and the trip
+matches on geography alone.
+
+The trip card links to `/expedion?` with those parameters. **The destination is
+now a filter.** It was not: a carrier running Bordeaux → Paris will take a load
+that ends anywhere near the corridor, and the board had no two-endpoint
+predicate to express it, so distance from the origin was the honest
+approximation. The board grew one — see `board_route_search_spec.md` §4 — and
+the trip searches its corridor.
 
 ## 8. Screen behaviour
 
@@ -225,7 +230,9 @@ move into `browseShipments`.
 
 ## 10. Known limitations
 
-1. Matching uses the origin only; the destination is not a filter (§7).
+1. ~~Matching uses the origin only; the destination is not a filter.~~ Closed:
+   the board gained a corridor predicate and §7 now sends both endpoints
+   (`board_route_search_spec.md` §4).
 2. `daysOfWeek` is jsonb rather than a Postgres array, matching how `features`
    is stored on `vehicles`. It is never queried element-wise server-side.
 3. Recurring occurrence maths runs in the server's timezone. The deadline

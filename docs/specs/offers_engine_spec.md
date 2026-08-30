@@ -17,16 +17,35 @@ offers {
   carrierId          text not null -> user.id      on delete cascade
   vehicleId          text not null -> vehicles.id  on delete restrict
   priceCents         integer not null              // total, TTC, what the shipper pays
-  estimatedPickup    timestamp not null
+  estimatedPickup    timestamp not null            // the *booked* slot, see below
   estimatedDelivery  timestamp not null
+  deliveryLeadDays   integer not null default 0    // 0 = the same day, 1 = J+1
   message            text                          // max 1000 chars
   status             offer_status not null default 'pending'
   createdAt          timestamp not null
   updatedAt          timestamp not null
 }
 
+offer_slots {
+  id           text pk
+  offerId      text not null -> offers.id  on delete cascade
+  day          text not null                       // YYYY-MM-DD, no timezone
+  slot         time_slot not null                  // morning | afternoon | evening
+  startsAt     timestamp not null
+  endsAt       timestamp not null
+  deliveryAt   timestamp not null
+}
+
 offer_status = 'pending' | 'accepted' | 'rejected' | 'withdrawn' | 'expired'
+time_slot    = 'morning' | 'afternoon' | 'evening'
 ```
+
+**An offer proposes one to twelve time slots, and the award books one.**
+`estimatedPickup` / `estimatedDelivery` hold the booked slot — the earliest
+proposed while the offer is pending, the chosen one once awarded — which is why
+every reader here still reads that pair. Full behaviour, including the derived
+delivery deadline and the empty-slot lane used by `takeJob` and `assignDirect`,
+is in `docs/specs/offer_time_slots_spec.md`.
 
 **Constraints**
 
@@ -84,8 +103,9 @@ offer_status = 'pending' | 'accepted' | 'rejected' | 'withdrawn' | 'expired'
 {
   vehicleId: string,           // cuid2
   priceCents: number,          // int, 100 ≤ p ≤ 100_000_00
-  estimatedPickup: string,     // ISO 8601
-  estimatedDelivery: string,   // ISO 8601
+  slots: { day: string, slot: TimeSlot }[],  // 1..12, over at most 4 days
+  deliveryLeadDays: number,    // 0..7, default 0
+  tzOffset: number,            // the client's getTimezoneOffset()
   message?: string,            // ≤ 1000 chars
 }
 ```
@@ -94,10 +114,16 @@ offer_status = 'pending' | 'accepted' | 'rejected' | 'withdrawn' | 'expired'
 
 1. `priceCents` is an **integer** ≥ `100` (1 €) and ≤ `10_000_000` (100 000 €).
    Non-integer → `400 PRICE_NOT_INTEGER`. Out of range → `400 PRICE_OUT_OF_RANGE`.
-2. `estimatedPickup < estimatedDelivery` → else `400 DELIVERY_BEFORE_PICKUP`.
-3. `estimatedPickup >= now` → else `400 PICKUP_IN_PAST`.
-4. `estimatedPickup` must fall within `[listing.pickupFrom, listing.pickupUntil]`
-   **unless** `listing.isFlexible` → else `400 PICKUP_OUTSIDE_WINDOW`.
+2. Between 1 and 12 slots over at most 4 distinct days, none repeated → else
+   `400 SLOTS_REQUIRED` / `TOO_MANY_SLOTS` / `TOO_MANY_SLOT_DAYS` /
+   `SLOT_DUPLICATE`.
+3. Every slot's **end** is in the future → else `400 SLOT_IN_PAST`. The end, not
+   the start: a driver bidding at 10:00 can still offer this morning.
+   `DELIVERY_BEFORE_PICKUP` is gone — the delivery is derived and cannot precede
+   the pickup (`offer_time_slots_spec.md` §3.3).
+4. **Every** slot must overlap `[listing.pickupFrom, listing.pickupUntil]`
+   **unless** `listing.isFlexible` → else `400 PICKUP_OUTSIDE_WINDOW`. Overlap,
+   not containment.
 5. The vehicle must be able to carry the job:
    `vehicle.maxWeightKg >= listing.weightKg` → else `400 VEHICLE_CAPACITY_WEIGHT`.
    Each of L/W/H, when both sides are set, must fit → else `400 VEHICLE_CAPACITY_DIMENSIONS`.
@@ -134,9 +160,14 @@ The created offer, with the carrier's public profile embedded.
 
 ## 5. Accept an offer — the critical path
 
-`POST /api/offers/:id/accept`
+`POST /api/offers/:id/accept` — body `{ slotId?: string }`, and an absent body
+is valid.
 
 This is the money path. It must be **atomic** and **idempotent**.
+
+`slotId` names which of the carrier's proposed slots is being booked; absent
+means the earliest, which the offer's stored pair already holds. A `slotId` that
+is not on this offer is `400 SLOT_NOT_ON_OFFER`.
 
 ### Authorisation
 
@@ -158,6 +189,8 @@ All of the following commit together or none do:
 1. Re-read the listing `FOR UPDATE`. Re-check `status === 'open'` and
    `acceptedOfferId IS NULL` **inside** the lock — this is what prevents two
    concurrent accepts from both winning.
+1b. If a slot was named, `offer.estimatedPickup` / `estimatedDelivery` are
+   rewritten to it, so step 5 schedules the shipment from the booked slot.
 2. `offer.status = 'accepted'`.
 3. All other `pending` offers on the listing → `rejected`.
 4. `listing.status = 'awarded'`, `listing.acceptedOfferId = offer.id`.

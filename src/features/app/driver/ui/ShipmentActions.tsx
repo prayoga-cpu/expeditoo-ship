@@ -1,26 +1,27 @@
 "use client";
 
-import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Camera,
   CheckCircle,
   Clock,
-  ImageIcon,
   Navigation,
   Package,
   Truck,
   XCircle,
   type LucideIcon,
 } from "lucide-react";
-import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import {
   useAssignSelfToShipment,
   useUpdateShipmentStatus,
-  useUploadProofOfDelivery,
 } from "../hooks/useDriverShipments";
+import { useShipmentPhotos } from "@/features/app/common/hooks/useShipmentPhotos";
+import {
+  PhotoRequirementNotice,
+  ShipmentPhotoCapture,
+} from "@/features/app/common/ui/ShipmentPhotoCapture";
+import { ShipmentPhotoGallery } from "@/features/app/common/ui/ShipmentPhotoGallery";
 import type { DriverShipment } from "../api/shipments.api";
 
 /**
@@ -28,14 +29,15 @@ import type { DriverShipment } from "../api/shipments.api";
  * shipment service exactly: PENDING → ASSIGNED → PICKED_UP → IN_TRANSIT →
  * DELIVERED. The first step is a self-assignment, because the carrier who won
  * the job is normally the person who will drive it.
- * Proof of delivery is the preferred way to close the run; a photo-less
- * DELIVERED transition stays available so a broken camera never blocks a
- * delivery.
+ * Two of those moves now need evidence first. `ASSIGNED -> PICKED_UP` and
+ * `IN_TRANSIT -> DELIVERED` are refused by the service until a photo of that
+ * stage exists (shipment_photos_spec.md §3.6), so the buttons are disabled
+ * rather than left to fail, and they say why.
  */
 
 export type ActionableShipment = Pick<
   DriverShipment,
-  "id" | "status" | "pickupAddress" | "dropoffAddress" | "proofOfDeliveryUrl"
+  "id" | "status" | "pickupAddress" | "dropoffAddress"
 >;
 
 interface ShipmentActionsProps {
@@ -121,6 +123,8 @@ function PendingActions({ shipment }: { shipment: ActionableShipment }) {
 function AssignedActions({ shipment }: { shipment: ActionableShipment }) {
   const t = useTranslations("driver.actions");
   const updateStatus = useUpdateShipmentStatus(shipment.id);
+  const { pickup } = useShipmentPhotos(shipment.id);
+  const hasEvidence = pickup.length > 0;
 
   return (
     <div className="space-y-4">
@@ -130,11 +134,13 @@ function AssignedActions({ shipment }: { shipment: ActionableShipment }) {
         title={t("assignedTitle")}
         description={t("assignedDesc")}
       />
+      <ShipmentPhotoCapture shipmentId={shipment.id} stage="pickup" />
+      <PhotoRequirementNotice show={!hasEvidence} />
       <Button
         className="w-full gap-2"
         size="lg"
         onClick={() => updateStatus.mutate({ status: "PICKED_UP" })}
-        disabled={updateStatus.isPending}
+        disabled={updateStatus.isPending || !hasEvidence}
       >
         <Package className="w-5 h-5" />
         {updateStatus.isPending ? t("updating") : t("confirmPickup")}
@@ -179,20 +185,8 @@ function PickedUpActions({ shipment }: { shipment: ActionableShipment }) {
 function InTransitActions({ shipment }: { shipment: ActionableShipment }) {
   const t = useTranslations("driver.actions");
   const updateStatus = useUpdateShipmentStatus(shipment.id);
-  const uploadPod = useUploadProofOfDelivery(shipment.id);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const isBusy = uploadPod.isPending || updateStatus.isPending;
-
-  const handlePodFile = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      toast.error(t("errors.invalidFile"));
-      return;
-    }
-    uploadPod.mutate(file);
-  };
+  const { delivery } = useShipmentPhotos(shipment.id);
+  const hasEvidence = delivery.length > 0;
 
   return (
     <div className="space-y-4">
@@ -202,31 +196,15 @@ function InTransitActions({ shipment }: { shipment: ActionableShipment }) {
         title={t("inTransit")}
         description={t("inTransitDesc")}
       />
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        className="hidden"
-        onChange={handlePodFile}
-      />
+      <ShipmentPhotoCapture shipmentId={shipment.id} stage="delivery" />
+      <PhotoRequirementNotice show={!hasEvidence} />
       <Button
         className="w-full gap-2"
         size="lg"
-        onClick={() => fileInputRef.current?.click()}
-        disabled={isBusy}
-      >
-        <Camera className="w-5 h-5" />
-        {uploadPod.isPending ? t("uploadingProof") : t("deliverWithPhoto")}
-      </Button>
-      <p className="text-xs text-center text-muted-foreground">{t("podHint")}</p>
-      <Button
-        variant="outline"
-        className="w-full gap-2"
         onClick={() => updateStatus.mutate({ status: "DELIVERED" })}
-        disabled={isBusy}
+        disabled={updateStatus.isPending || !hasEvidence}
       >
-        <CheckCircle className="w-4 h-4" />
+        <CheckCircle className="w-5 h-5" />
         {updateStatus.isPending ? t("updating") : t("markDelivered")}
       </Button>
       <NavigateButton
@@ -239,6 +217,8 @@ function InTransitActions({ shipment }: { shipment: ActionableShipment }) {
 
 function DeliveredState({ shipment }: { shipment: ActionableShipment }) {
   const t = useTranslations("driver.actions");
+  const photos = useTranslations("shipmentPhotos");
+  const { pickup, delivery } = useShipmentPhotos(shipment.id);
 
   return (
     <div className="space-y-4">
@@ -248,18 +228,16 @@ function DeliveredState({ shipment }: { shipment: ActionableShipment }) {
         title={t("deliveryCompleted")}
         description={t("deliveryCompletedDesc")}
       />
-      {shipment.proofOfDeliveryUrl && (
-        <Button variant="outline" className="w-full gap-2" asChild>
-          <a
-            href={shipment.proofOfDeliveryUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <ImageIcon className="w-4 h-4" />
-            {t("viewProof")}
-          </a>
-        </Button>
-      )}
+      <ShipmentPhotoGallery
+        title={photos("pickupTitle")}
+        photos={pickup}
+        emptyLabel={photos("noneAtPickup")}
+      />
+      <ShipmentPhotoGallery
+        title={photos("deliveryTitle")}
+        photos={delivery}
+        emptyLabel={photos("noneAtDelivery")}
+      />
     </div>
   );
 }

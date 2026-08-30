@@ -1,6 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
+import { useTranslations } from "next-intl";
 import { Gavel, Truck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,10 @@ const STATUS_TONE: Record<OfferStatus, string> = {
 
 /** The carrier's own bids across every job. */
 export function MyOffers() {
+  // Only the slot count goes through next-intl; the rest of this screen is
+  // hardcoded English and predates the translation layer. A new string had no
+  // business joining it.
+  const t = useTranslations("listing.bid.offerCard");
   const { data: offers, isLoading } = useMyOffers();
   const withdraw = useWithdrawOffer();
 
@@ -59,6 +64,11 @@ export function MyOffers() {
               <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
                 <Truck className="h-3.5 w-3.5" />
                 Pickup {format(new Date(offer.estimatedPickup), "d MMM HH:mm")}
+                {/* Only the earliest is shown above, so a driver who proposed
+                    several needs telling the others were kept — otherwise the
+                    list reads as if the form dropped them. */}
+                {offer.slots.length > 1 &&
+                  ` · ${t("otherSlots", { count: offer.slots.length - 1 })}`}
               </p>
             </div>
 

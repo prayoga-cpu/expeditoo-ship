@@ -10,6 +10,11 @@ import {
   expedionBridgeService,
   notifyExpedion,
 } from "@/server/services/expedion-bridge.service";
+import {
+  overlapsWindow,
+  resolveOfferSlots,
+  type ResolvedOfferSlot,
+} from "@/lib/offer-slots";
 import type { CreateOfferInput } from "@/server/dto/offers.dto";
 import type { Listing } from "@/db/schema/listings";
 import type { Offer } from "@/db/schema/offers";
@@ -38,23 +43,64 @@ const err = (code: string, status: number, message?: string) =>
 // Guards
 // ========================================
 
-/**
- * Validates the parts of an offer that need the listing and the vehicle.
- * Purely-input rules live in the DTO.
- */
-function assertOfferFitsJob(
-  data: CreateOfferInput,
-  listing: Listing,
-  vehicle: Vehicle
-): void {
-  const withinWindow =
-    data.estimatedPickup >= listing.pickupFrom &&
-    data.estimatedPickup <= listing.pickupUntil;
+/** What the carrier proposed, and the pair the offer row stores for it. */
+interface OfferSchedule {
+  slots: ResolvedOfferSlot[];
+  estimatedPickup: Date;
+  estimatedDelivery: Date;
+}
 
-  if (!listing.isFlexible && !withinWindow) {
+/**
+ * The carrier's proposed slots, checked against the job and turned into the
+ * schedule the offer row carries.
+ *
+ * **Every** slot must overlap the pickup window, not merely one of them: an
+ * offer is refused whole rather than having a proposal silently dropped. The
+ * form does not let a driver reach this state — days outside the window are
+ * disabled in the calendar.
+ *
+ * Overlap rather than containment, matching the board filter
+ * (board_route_search_spec.md §5): a morning against a window opening at 09:00
+ * is a real proposal, and demanding containment would mean no driver could
+ * offer the first morning of any job.
+ */
+function resolveSchedule(data: CreateOfferInput, listing: Listing): OfferSchedule {
+  // No proposal: the job's own window. The DTO requires at least one slot, so
+  // only the internal lanes reach this — `takeJob` and `assignDirect`, where
+  // the driver is accepting the job as posted rather than proposing anything
+  // (offer_time_slots_spec.md §3.4).
+  if (data.slots.length === 0) {
+    return {
+      slots: [],
+      estimatedPickup: listing.pickupFrom,
+      estimatedDelivery: listing.dropoffFrom,
+    };
+  }
+
+  const slots = resolveOfferSlots(
+    data.slots,
+    data.deliveryLeadDays,
+    data.tzOffset
+  );
+
+  const window = { from: listing.pickupFrom, until: listing.pickupUntil };
+  if (!listing.isFlexible && !slots.every((s) => overlapsWindow(s, window))) {
     throw err("PICKUP_OUTSIDE_WINDOW", 400);
   }
 
+  // The earliest, so `pickup_asc` still sorts by when the job actually starts.
+  return {
+    slots,
+    estimatedPickup: slots[0].startsAt,
+    estimatedDelivery: slots[0].deliveryAt,
+  };
+}
+
+/**
+ * Validates the parts of an offer that need the vehicle.
+ * Purely-input rules live in the DTO; timing lives in `resolveSchedule`.
+ */
+function assertVehicleFitsJob(listing: Listing, vehicle: Vehicle): void {
   if (vehicle.maxWeightKg < listing.weightKg) {
     throw err("VEHICLE_CAPACITY_WEIGHT", 400);
   }
@@ -116,7 +162,9 @@ export const offersService = {
       throw err("VEHICLE_NOT_OWNED", 403);
     }
 
-    assertOfferFitsJob(data, listing, vehicle);
+    assertVehicleFitsJob(listing, vehicle);
+
+    const schedule = resolveSchedule(data, listing);
 
     const existing = await offersDal.getLiveByCarrierAndListing(
       listingId,
@@ -132,11 +180,16 @@ export const offersService = {
           carrierId: carrierUserId,
           vehicleId: data.vehicleId,
           priceCents: data.priceCents,
-          estimatedPickup: data.estimatedPickup,
-          estimatedDelivery: data.estimatedDelivery,
+          estimatedPickup: schedule.estimatedPickup,
+          estimatedDelivery: schedule.estimatedDelivery,
+          deliveryLeadDays: data.deliveryLeadDays,
           message: data.message ?? null,
           status: "pending",
         },
+        tx
+      );
+      await offersDal.createSlots(
+        schedule.slots.map((slot) => ({ id: nanoid(), offerId: created.id, ...slot })),
         tx
       );
       await offersDal.incrementListingOffersCount(listingId, 1, tx);
@@ -187,8 +240,10 @@ export const offersService = {
     const offer = await this.submitOffer(carrierUserId, listingId, {
       vehicleId: data.vehicleId,
       priceCents: listing.budgetCents,
-      estimatedPickup: listing.pickupFrom,
-      estimatedDelivery: listing.dropoffFrom,
+      // Nothing is proposed on this lane, so the job keeps its own window.
+      slots: [],
+      deliveryLeadDays: 0,
+      tzOffset: 0,
       message: data.message,
     });
 
@@ -233,10 +288,18 @@ export const offersService = {
   async acceptOffer(
     actorUserId: string,
     offerId: string,
-    opts: { selfAward?: boolean } = {}
+    opts: { selfAward?: boolean; slotId?: string } = {}
   ) {
     const existing = await offersDal.getById(offerId);
     if (!existing) throw err("OFFER_NOT_FOUND", 404);
+
+    // Which of the carrier's proposed slots is being booked. Absent means the
+    // earliest, which is already the offer's stored pair — so an offer with one
+    // slot, and the lanes that propose none, need name nothing.
+    const booked = opts.slotId
+      ? existing.slots.find((slot) => slot.id === opts.slotId)
+      : undefined;
+    if (opts.slotId && !booked) throw err("SLOT_NOT_ON_OFFER", 400);
 
     const listing = await listingsDal.getById(existing.listingId);
     if (!listing) throw err("LISTING_NOT_FOUND", 404);
@@ -283,13 +346,17 @@ export const offersService = {
       throw err("CARRIER_NO_LONGER_APPROVED", 409);
     }
 
-    const result = await this.commitAward(offerId, listing.id);
+    const result = await this.commitAward(offerId, listing.id, booked);
 
     // Stripe is called after the commit, never inside it: an HTTP call holding
     // a row lock open would block every other accept on this listing.
+    //
+    // This is the booking, so this is when the client pays
+    // (docs/specs/payment_at_booking_spec.md). Delivery no longer touches their
+    // card; it only settles what the driver is owed.
     let payment;
     try {
-      payment = await paymentsService.authoriseForShipment({
+      payment = await paymentsService.chargeForShipment({
         // The listing's shipper, not whoever clicked. When an operator awards
         // an escalated job the two differ, and the payment belongs to the
         // account that owns the job — never to the operator.
@@ -298,10 +365,15 @@ export const offersService = {
         listingId: listing.id,
         amountCents: existing.priceCents,
         stripeCustomerId: listing.shipper?.stripeCustomerId ?? null,
+        // An escalated job's client already paid, in Expedion, when they
+        // accepted the quote. Charging the system account that owns the
+        // listing would be a second debit against a party that never had a
+        // card — the payment is recorded, not taken.
+        source: listing.origin === "expedion" ? "expedion" : "stripe",
       });
     } catch (cause) {
       // The award is undone so the job returns to the marketplace with every
-      // bid intact, rather than sitting awarded but unfunded.
+      // bid intact, rather than sitting awarded but unpaid.
       await this.compensateFailedAward(
         listing.id,
         offerId,
@@ -330,8 +402,19 @@ export const offersService = {
    * The atomic core of acceptance. The listing row is locked and re-checked
    * inside the lock, which is what stops two concurrent accepts from both
    * winning the job.
+   *
+   * `booked` is the slot the acceptor chose. Writing it onto the offer here,
+   * rather than recording it on a column of its own, is what makes the booked
+   * slot the answer everywhere: the offer card, the carrier's offer list, the
+   * shipment and the Expedion write-back all already read that pair. The
+   * `offer_slots` rows stay, so what was proposed remains legible beside what
+   * was booked (offer_time_slots_spec.md §4).
    */
-  async commitAward(offerId: string, listingId: string) {
+  async commitAward(
+    offerId: string,
+    listingId: string,
+    booked?: { startsAt: Date; deliveryAt: Date }
+  ) {
     return await db.transaction(async (tx) => {
       const locked = await listingsDal.getByIdForUpdate(listingId, tx);
       if (!locked) throw err("LISTING_NOT_FOUND", 404);
@@ -343,7 +426,22 @@ export const offersService = {
         throw err("OFFER_NOT_PENDING", 409);
       }
 
-      await offersDal.updateStatus(offerId, "accepted", tx);
+      const scheduled = booked
+        ? await offersDal.updateSchedule(
+            offerId,
+            {
+              estimatedPickup: booked.startsAt,
+              estimatedDelivery: booked.deliveryAt,
+            },
+            tx
+          )
+        : offer;
+
+      // The row as written, not as read: it carries both the booked slot and
+      // the accepted status, so the response cannot contradict the database or
+      // the shipment shipping beside it.
+      const accepted = await offersDal.updateStatus(offerId, "accepted", tx);
+
       const rejected = await offersDal.setPendingStatusForListing(
         listingId,
         "rejected",
@@ -366,8 +464,8 @@ export const offersService = {
           dropoffLng: locked.dropoffLng,
           dropoffAddress: locked.dropoffAddress,
           priceCents: offer.priceCents,
-          scheduledPickup: offer.estimatedPickup,
-          scheduledDelivery: offer.estimatedDelivery,
+          scheduledPickup: scheduled.estimatedPickup,
+          scheduledDelivery: scheduled.estimatedDelivery,
         },
         tx
       );
@@ -378,12 +476,12 @@ export const offersService = {
         tx
       );
 
-      return { offer, shipment, rejectedOffers: rejected };
+      return { offer: accepted, shipment, rejectedOffers: rejected };
     });
   },
 
   /**
-   * Undoes an award when payment authorisation fails, returning the job to the
+   * Undoes an award when the charge fails, returning the job to the
    * marketplace with every bid intact (offers_engine_spec.md §5.8).
    */
   async compensateFailedAward(
@@ -403,7 +501,7 @@ export const offersService = {
       );
     });
     console.error(
-      `Award compensated for listing ${listingId}; payment authorisation failed`
+      `Award compensated for listing ${listingId}; payment failed`
     );
   },
 
@@ -416,10 +514,13 @@ export const offersService = {
    * is "the wrong driver took this, let somebody else have it". The rollback
    * shape already existed but was private to the payment-failure path.
    *
-   * The money is released first and deliberately. If the hold survived the
-   * un-award, the job would go back on the board with the client's funds still
-   * ring-fenced against a driver who is no longer doing it, and the next award
-   * would place a second hold on the same client.
+   * The money is given back first and deliberately. The client was charged at
+   * booking, so if the refund did not happen here the job would go back on the
+   * board with their money already spent on a driver who is no longer doing
+   * it — and the next award would charge them a second time.
+   *
+   * An Expedion job throws `REFUND_NOT_LOCAL` and is caught below: that refund
+   * belongs to the app that took the money, and the un-award still stands.
    */
   async revokeAward(actorUserId: string, listingId: string, reason?: string) {
     const [isOperator, isAdmin] = await Promise.all([
@@ -445,8 +546,8 @@ export const offersService = {
         throw err("SHIPMENT_ALREADY_STARTED", 409);
       }
       await paymentsService
-        .releaseForShipment(shipment.id)
-        .catch((e) => console.error("[offers] hold release on revoke", e));
+        .refundForShipment(shipment.id)
+        .catch((e) => console.error("[offers] refund on revoke", e));
     }
 
     // The rivals this award rejected, so they go back to pending alongside the

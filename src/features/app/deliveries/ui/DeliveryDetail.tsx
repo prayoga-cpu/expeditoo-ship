@@ -32,6 +32,9 @@ import { formatCurrency } from "@/lib/currency";
 import { CreateReviewModal } from "@/features/app/common/ui/CreateReviewModal";
 import { useCanReview } from "@/features/app/common/hooks/useCanReview";
 import { useTranslations } from "next-intl";
+import { useShipmentPhotos } from "@/features/app/common/hooks/useShipmentPhotos";
+import { ShipmentPhotoGallery } from "@/features/app/common/ui/ShipmentPhotoGallery";
+import { ShipmentIncidentsSection } from "@/features/app/incidents/ui";
 import { ShipmentStatusBadge } from "./ShipmentStatusBadge";
 import { Timeline } from "./Timeline";
 import type { DeliveryDetailView } from "../types";
@@ -87,6 +90,13 @@ export function DeliveryDetail({
 
       <RouteCard delivery={delivery} />
 
+      <ShipmentIncidentsSection
+        shipmentId={delivery.id}
+        canReport={
+          delivery.status !== "DELIVERED" && delivery.status !== "CANCELLED"
+        }
+      />
+
       <CounterpartCard
         delivery={delivery}
         onContact={onContact}
@@ -104,22 +114,54 @@ export function DeliveryDetail({
           </p>
         )}
 
-        {delivery.proofOfDeliveryUrl && (
-          <Button variant="outline" className="gap-2" asChild>
-            <a
-              href={delivery.proofOfDeliveryUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Camera className="h-4 w-4" />
-              {t("details.proofOfDelivery")}
-            </a>
-          </Button>
-        )}
       </Card>
+
+      <ShipmentPhotosCard shipmentId={delivery.id} />
 
       {delivery.status === "DELIVERED" && <ReviewSection delivery={delivery} />}
     </div>
+  );
+}
+
+/**
+ * What the transporter photographed at each end, for the person whose goods
+ * they are.
+ *
+ * Both groups render even when empty: a client looking for pickup photos on a
+ * run that has not been collected should read that from the screen rather than
+ * wonder whether the section is missing.
+ *
+ * Nothing is hidden behind the run being finished, either - a pickup photo is
+ * most useful while the goods are still in transit.
+ */
+function ShipmentPhotosCard({ shipmentId }: { shipmentId: string }) {
+  const t = useTranslations("shipmentPhotos");
+  const { pickup, delivery, isError } = useShipmentPhotos(shipmentId);
+
+  return (
+    <Card className="space-y-4 p-4 sm:p-5">
+      <h2 className="flex items-center gap-2 font-semibold">
+        <Camera className="h-4 w-4 text-muted-foreground" />
+        {t("sectionTitle")}
+      </h2>
+      <Separator />
+      {isError ? (
+        <p className="text-sm text-destructive">{t("errors.loadFailed")}</p>
+      ) : (
+        <>
+          <ShipmentPhotoGallery
+            title={t("pickupTitle")}
+            photos={pickup}
+            emptyLabel={t("noneAtPickup")}
+          />
+          <ShipmentPhotoGallery
+            title={t("deliveryTitle")}
+            photos={delivery}
+            emptyLabel={t("noneAtDelivery")}
+          />
+        </>
+      )}
+    </Card>
   );
 }
 

@@ -43,7 +43,7 @@ function ensureClient() {
    * omission is load-bearing rather than an oversight:
    * `imageCleanupService.performCleanup` lists every object in that bucket and
    * deletes anything not referenced by `user.image`, `categories.image`,
-   * `photos.url`, `shipments.proofOfDeliveryUrl` or `messages.attachmentUrl`.
+   * `photos.url` or `messages.attachmentUrl`.
    * Bordereaux are referenced by none of those, so the nightly cron would
    * delete every one of them on its first non-dry run. Failing to start is a
    * far better outcome than starting and being quietly emptied.

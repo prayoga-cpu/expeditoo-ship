@@ -3,7 +3,6 @@ import {
   user,
   categories,
   photos,
-  shipments,
   shipmentEvents,
 } from "@/db/schema";
 import { messages } from "@/db/schema/messages";
@@ -72,13 +71,10 @@ export class ImageCleanupService {
     lImages.forEach((i) => addUrl(i.url));
     console.log(`Scanned ${lImages.length} listing images`);
 
-    // 4. Shipments (Proof of Delivery)
-    const ships = await db
-      .select({ proofOfDeliveryUrl: shipments.proofOfDeliveryUrl })
-      .from(shipments)
-      .where(isNotNull(shipments.proofOfDeliveryUrl));
-    ships.forEach((s) => addUrl(s.proofOfDeliveryUrl));
-    console.log(`Scanned ${ships.length} shipments`);
+    // 4. Shipment photos are NOT scanned, and must not be: they live in a
+    // private bucket of their own (shipment_photos_spec.md §4), so nothing
+    // here can reach them and nothing here should try. This sweep only ever
+    // sees the public bucket.
 
     // 5. Messages (Attachments)
     const msgs = await db

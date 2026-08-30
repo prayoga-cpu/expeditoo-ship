@@ -6,6 +6,7 @@ import { NotificationBell } from "../NotificationBell";
 import { ThemeToggle } from "../ui/theme-toggle";
 import { LangToggle } from "../ui/lang-toggle";
 import { AppSidebarHeader } from "./AppSidebarHeader";
+import { HeaderQuickActions } from "./HeaderQuickActions";
 import { BrandWordmark } from "@/components/ui/brand-mark";
 
 import Link from "next/link";
@@ -194,11 +195,15 @@ function Header() {
         </div>
 
         {/* Right Actions */}
-        {/* Language first, then theme, then the bell — the same order and the
-            same FR | EN control the landing header and the Expedion app use,
-            so someone crossing between the three surfaces finds it in the
-            same place. */}
-        <div className="flex items-center gap-1 shrink-0 ml-auto">
+        {/* A driver's two verbs first — post a request, see the board — then
+            the utility controls: language, theme, bell. That trio keeps its
+            order and its adjacency because the same FR | EN control sits in
+            the landing header and in the Expedion app, so someone crossing
+            between the three surfaces finds it in the same place; the driver
+            actions arrive to the left of it, behind a rule, rather than
+            splitting it up. */}
+        <div className="flex items-center gap-1 min-w-0 ml-auto">
+          <HeaderQuickActions />
           <LangToggle className="mr-1" />
           <ThemeToggle />
           <NotificationBell />

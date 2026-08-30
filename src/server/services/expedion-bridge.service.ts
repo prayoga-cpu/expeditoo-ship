@@ -82,7 +82,7 @@ export const expedionBridgeService = {
    * route needs to report that as a 404 — the silent variants below are the
    * ones Expeditoo's internal flows call.
    */
-  async writeBack(input: ExpedionWriteBackInput) {
+  async writeBack(input: ExpedionWriteBackInput & { confirmUrl?: string }) {
     const quote = await expedionDal.getByListingId(input.listingId);
     if (!quote) {
       throw err(
@@ -157,6 +157,9 @@ export const expedionBridgeService = {
           phone: updated.phone,
           status: input.status,
           bordereauNumber: updated.bordereauNumber,
+          // The client's half of the timeline rides on the message they were
+          // already getting, rather than a second SMS about one event.
+          confirmUrl: input.confirmUrl,
         })
         .catch(() => undefined);
     }
@@ -191,6 +194,14 @@ export const expedionBridgeService = {
   async onShipmentStatus(params: {
     listingId: string;
     shipmentStatus: string;
+    /** One-tap link asking the client to attest this milestone (§8). */
+    confirmUrl?: string;
+    /**
+     * How many pickup and delivery photos exist right now
+     * (shipment_photos_spec.md §7.3). Carried on the event so the client's
+     * tracking screen knows there is something to open without asking.
+     */
+    photoCounts?: { pickup: number; delivery: number };
   }): Promise<void> {
     const status = SHIPMENT_STATUS_MAP[params.shipmentStatus];
     if (!status) return; // Nothing meaningful to say on the Expedion side.
@@ -210,7 +221,16 @@ export const expedionBridgeService = {
         delivered: "Lot livré",
         cancelled: "Transport annulé",
       }[status as string],
-      metadata: { shipmentStatus: params.shipmentStatus },
+      metadata: {
+        shipmentStatus: params.shipmentStatus,
+        ...(params.photoCounts
+          ? {
+              pickupPhotoCount: params.photoCounts.pickup,
+              deliveryPhotoCount: params.photoCounts.delivery,
+            }
+          : {}),
+      },
+      confirmUrl: params.confirmUrl,
     });
   },
 };

@@ -66,8 +66,8 @@ BEGIN
   SELECT count(*) INTO n FROM "impersonation_sessions";
   IF n > 0 THEN leaks := leaks || format('impersonation_sessions: %s rows', n); END IF;
 
-  SELECT count(*) INTO n FROM "shipments" WHERE proof_of_delivery_url IS NOT NULL;
-  IF n > 0 THEN leaks := leaks || format('shipments.proof_of_delivery_url: %s rows', n); END IF;
+  SELECT count(*) INTO n FROM "shipment_photos";
+  IF n > 0 THEN leaks := leaks || format('shipment_photos: %s rows', n); END IF;
 
   IF array_length(leaks, 1) IS NOT NULL THEN
     RAISE EXCEPTION 'Anonymisation incomplete: %', array_to_string(leaks, '; ');

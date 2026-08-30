@@ -7,8 +7,8 @@ import {
   type GetConversationsQuery,
 } from "@/server/dto/messages.dto";
 import { nanoid } from "nanoid";
-import { ablyServer } from "@/lib/ably-server";
-import type { NewMessageEvent, MessageBadgeEvent } from "@/server/dto/ably-events.dto";
+import { publishNewMessage } from "./message-publish";
+import { threadOffersService } from "./thread-offers.service";
 
 export const messagesService = {
   /**
@@ -79,39 +79,14 @@ export const messagesService = {
       content: input.content,
     });
 
-    // Fire-and-forget: Publish real-time events via Ably (don't await)
-    // This significantly reduces response time since Ably publish is ~50-100ms
-    const messageEvent: NewMessageEvent = {
-      id: message.id,
+    publishNewMessage({
       conversationId: conversationId!,
       senderId,
+      recipientId,
+      message,
       content: input.content,
-      createdAt: message.createdAt.toISOString(),
-      isOwn: false,
-      senderName: senderInfo?.name || undefined,
-      senderImage: senderInfo?.image || null,
-    };
-
-    // Publish both events in parallel, fire-and-forget (no await)
-    // Skip during tests since Ably mock is not configured
-    if (process.env.NODE_ENV !== 'test') {
-      Promise.all([
-        ablyServer.publishMessage(conversationId!, messageEvent),
-        recipientId
-          ? messagesDAL.getUnreadCount(recipientId).then(unreadCount => {
-            const badgeEvent: MessageBadgeEvent = {
-              unreadCount,
-              lastMessagePreview: input.content.substring(0, 50),
-              conversationId: conversationId!,
-            };
-            return ablyServer.publishMessageBadge(recipientId!, badgeEvent);
-          })
-          : Promise.resolve(),
-      ]).catch(err => {
-        // Log but don't throw - real-time failures shouldn't break the main flow
-        console.error('[messages.service] Ably publish error:', err);
-      });
-    }
+      senderInfo,
+    });
 
     return {
       message,
@@ -285,6 +260,15 @@ export const messagesService = {
       conversation,
       otherParticipant: otherParticipantData, // Add this for frontend
       messages,
+      // Whether this viewer may put a price on the table here, decided once on
+      // the server so no client re-derives a permission and all three shells
+      // agree. See docs/specs/thread_offer_spec.md §7.
+      //
+      // Contained, and loudly: the offer button is an addition to a surface
+      // people depend on, so a gate that cannot answer costs them the button
+      // and not the conversation. Without this, an unapplied migration takes
+      // every thread in the app down with it.
+      offerContext: await offerContextOrNull(userId, conversation),
       page: query.page,
       limit: query.limit,
     };
@@ -327,3 +311,23 @@ export const messagesService = {
     return await messagesDAL.softDeleteConversation(conversationId, userId);
   },
 };
+
+/**
+ * The offer gate, or nothing.
+ *
+ * Never throws: a thread must render even when the thread-offer table is
+ * missing or its query fails. The error is logged rather than swallowed, so a
+ * broken gate is visible in the server log instead of only in the absence of a
+ * button. See docs/specs/thread_offer_spec.md §7.
+ */
+async function offerContextOrNull(
+  userId: string,
+  conversation: Parameters<typeof threadOffersService.contextFor>[1]
+) {
+  try {
+    return await threadOffersService.contextFor(userId, conversation);
+  } catch (error) {
+    console.error("[messages.service] offer context failed:", error);
+    return null;
+  }
+}

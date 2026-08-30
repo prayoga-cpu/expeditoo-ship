@@ -1,11 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("@/server/dal/listings.dal", () => ({ listingsDal: {} }));
+vi.mock("@/server/dal/shipments.dal", () => ({ shipmentsDal: {} }));
 vi.mock("@/server/services/offers.service", () => ({
   offersService: { expirePendingOffers: vi.fn().mockResolvedValue([]) },
 }));
 vi.mock("@/server/services/notifications.service", () => ({
   notificationsService: { createNotification: vi.fn().mockResolvedValue({}) },
+}));
+// A job only reaches the board once its poster can be charged
+// (docs/specs/payment_at_booking_spec.md §4). Defaulted to "has a card" so the
+// cases below stay about publishing; the ones that care override it.
+vi.mock("@/server/services/payments.service", () => ({
+  paymentsService: { hasSavedCard: vi.fn() },
 }));
 
 import {
@@ -14,7 +21,9 @@ import {
   ListingError,
 } from "../listings.service";
 import { listingsDal } from "@/server/dal/listings.dal";
+import { shipmentsDal } from "@/server/dal/shipments.dal";
 import { offersService } from "@/server/services/offers.service";
+import { paymentsService } from "@/server/services/payments.service";
 
 const HOUR = 60 * 60 * 1000;
 const MINUTE = 60 * 1000;
@@ -44,7 +53,11 @@ beforeEach(() => {
     incrementViews: vi.fn(),
     ensureDefaultCategory: vi.fn().mockResolvedValue("transport-general"),
   });
+  Object.assign(shipmentsDal, {
+    listDeliveredForListings: vi.fn().mockResolvedValue([]),
+  });
   vi.mocked(offersService.expirePendingOffers).mockResolvedValue([]);
+  vi.mocked(paymentsService.hasSavedCard).mockResolvedValue(true);
 });
 
 async function codeFrom(fn: () => Promise<unknown>): Promise<string> {
@@ -434,5 +447,223 @@ describe("createListing", () => {
     );
 
     expect(code).toBe("PICKUP_TOO_SOON");
+  });
+});
+
+// ========================================
+// Delivery history — my_requests_history_spec.md §10
+// ========================================
+
+/** One row as `shipmentsDal.listDeliveredForListings` returns it. */
+const delivered = (over: Record<string, unknown> = {}) => ({
+  listingId: "job-1",
+  shipmentId: "ship-1",
+  deliveredAt: new Date("2026-08-20T09:00:00Z"),
+  priceCents: 12_000,
+  hasDeliveryPhoto: true,
+  carrierId: "carrier-1",
+  carrierName: "Jean Dupont",
+  carrierImage: null,
+  carrierRating: 4.5,
+  ...over,
+});
+
+describe("getMyListings", () => {
+  it("attaches the delivery, and the transporter, to a delivered job", async () => {
+    vi.mocked(listingsDal.getByShipperId).mockResolvedValue([
+      job({ status: "completed" }),
+    ] as never);
+    vi.mocked(shipmentsDal.listDeliveredForListings).mockResolvedValue([
+      delivered(),
+    ] as never);
+
+    const [row] = await listingsService.getMyListings("shipper-1");
+
+    expect(row.delivery).toEqual({
+      shipmentId: "ship-1",
+      deliveredAt: new Date("2026-08-20T09:00:00Z"),
+      priceCents: 12_000,
+      hasProofOfDelivery: true,
+      carrier: {
+        id: "carrier-1",
+        name: "Jean Dupont",
+        image: null,
+        rating: 4.5,
+      },
+    });
+  });
+
+  it("leaves delivery null when nothing was delivered", async () => {
+    vi.mocked(listingsDal.getByShipperId).mockResolvedValue([job()] as never);
+
+    const [row] = await listingsService.getMyListings("shipper-1");
+
+    expect(row.delivery).toBeNull();
+  });
+
+  // The shipment is the fact; `listings.status = 'completed'` is a second,
+  // non-transactional write that can lag behind it (spec §3).
+  it("reads the shipment, so a delivered job whose listing still says in_progress counts", async () => {
+    vi.mocked(listingsDal.getByShipperId).mockResolvedValue([
+      job({ status: "in_progress" }),
+    ] as never);
+    vi.mocked(shipmentsDal.listDeliveredForListings).mockResolvedValue([
+      delivered(),
+    ] as never);
+
+    const [row] = await listingsService.getMyListings("shipper-1");
+
+    expect(row.status).toBe("in_progress");
+    expect(row.delivery?.shipmentId).toBe("ship-1");
+  });
+
+  it("never asks for deliveries when the requester has no jobs", async () => {
+    vi.mocked(listingsDal.getByShipperId).mockResolvedValue([] as never);
+
+    await expect(listingsService.getMyListings("shipper-1")).resolves.toEqual(
+      []
+    );
+    expect(shipmentsDal.listDeliveredForListings).not.toHaveBeenCalled();
+  });
+
+  it("keeps a delivery whose carrier no longer resolves, unnamed", async () => {
+    vi.mocked(listingsDal.getByShipperId).mockResolvedValue([job()] as never);
+    vi.mocked(shipmentsDal.listDeliveredForListings).mockResolvedValue([
+      delivered({
+        carrierId: null,
+        carrierName: null,
+        carrierImage: null,
+        carrierRating: null,
+      }),
+    ] as never);
+
+    const [row] = await listingsService.getMyListings("shipper-1");
+
+    expect(row.delivery?.shipmentId).toBe("ship-1");
+    expect(row.delivery?.carrier).toBeNull();
+  });
+
+  // The photos live in a private bucket and are read one at a time through an
+  // authorising route, so the history payload carries the marker and not the
+  // evidence.
+  it("reports the delivery photos as a flag, carrying no object key", async () => {
+    vi.mocked(listingsDal.getByShipperId).mockResolvedValue([job()] as never);
+    vi.mocked(shipmentsDal.listDeliveredForListings).mockResolvedValue([
+      delivered({ hasDeliveryPhoto: false }),
+    ] as never);
+
+    const [row] = await listingsService.getMyListings("shipper-1");
+
+    expect(row.delivery?.hasProofOfDelivery).toBe(false);
+    expect(JSON.stringify(row.delivery)).not.toContain("objectKey");
+  });
+
+  // `shipment_listing_idx` is not unique, so a revoked award redelivered later
+  // would leave two DELIVERED rows on one listing. The DAL orders them newest
+  // first; the history must show that one, not the one it superseded.
+  it("shows the most recent delivery when a listing carries two", async () => {
+    vi.mocked(listingsDal.getByShipperId).mockResolvedValue([job()] as never);
+    vi.mocked(shipmentsDal.listDeliveredForListings).mockResolvedValue([
+      delivered({
+        shipmentId: "ship-new",
+        deliveredAt: new Date("2026-08-25T09:00:00Z"),
+      }),
+      delivered({
+        shipmentId: "ship-old",
+        deliveredAt: new Date("2026-08-20T09:00:00Z"),
+      }),
+    ] as never);
+
+    const [row] = await listingsService.getMyListings("shipper-1");
+
+    expect(row.delivery?.shipmentId).toBe("ship-new");
+  });
+
+  it("passes the status filter straight through to the DAL", async () => {
+    vi.mocked(listingsDal.getByShipperId).mockResolvedValue([] as never);
+
+    await listingsService.getMyListings("shipper-1", "completed");
+
+    expect(listingsDal.getByShipperId).toHaveBeenCalledWith(
+      "shipper-1",
+      "completed"
+    );
+  });
+});
+
+// ========================================
+// A job may not reach the board unless it can be paid for
+// ========================================
+//
+// docs/specs/payment_at_booking_spec.md §4. The client is charged the moment a
+// carrier is chosen, so a job posted without a card is a job that cannot be
+// awarded — and every carrier who bids on it has spent effort on work that was
+// never payable.
+
+describe("the card a posted job will be charged to", () => {
+  beforeEach(() => {
+    delete process.env.MOCK_PAYMENTS;
+    Object.assign(listingsDal, {
+      getById: vi.fn().mockResolvedValue(job({ status: "draft" })),
+    });
+  });
+
+  it("stops a draft going live without one", async () => {
+    vi.mocked(paymentsService.hasSavedCard).mockResolvedValue(false);
+
+    expect(
+      await codeFrom(() => listingsService.publishListing("shipper-1", "job-1"))
+    ).toBe("PAYMENT_METHOD_REQUIRED");
+    expect(listingsDal.update).not.toHaveBeenCalled();
+  });
+
+  it("stops a job being posted straight to the board without one", async () => {
+    vi.mocked(paymentsService.hasSavedCard).mockResolvedValue(false);
+
+    expect(
+      await codeFrom(() =>
+        listingsService.createListing("user-1", createInput({ publish: true }))
+      )
+    ).toBe("PAYMENT_METHOD_REQUIRED");
+    expect(listingsDal.create).not.toHaveBeenCalled();
+  });
+
+  it("lets a draft be saved without one", async () => {
+    // A draft is not on the board and nobody can bid on it, so asking for a
+    // card to save one would be a toll on a form that committed to nothing.
+    vi.mocked(paymentsService.hasSavedCard).mockResolvedValue(false);
+
+    await listingsService.createListing(
+      "user-1",
+      createInput({ publish: false })
+    );
+
+    expect(listingsDal.create).toHaveBeenCalled();
+  });
+
+  it("waives the check for a job that was paid somewhere else", async () => {
+    // An escalated Expedion listing is owned by a system account no card
+    // belongs to, and its client paid in Expedion when they accepted the quote.
+    vi.mocked(paymentsService.hasSavedCard).mockResolvedValue(false);
+
+    await listingsService.createListing(
+      "expedion-system",
+      createInput({ publish: true }),
+      { prepaid: true }
+    );
+
+    expect(listingsDal.create).toHaveBeenCalled();
+    expect(paymentsService.hasSavedCard).not.toHaveBeenCalled();
+  });
+
+  it("skips the check entirely while payments are mocked", async () => {
+    // TODO(EXPEDITOO-TESTING): MOCK_PAYMENTS — the charge this guards is mocked too.
+    process.env.MOCK_PAYMENTS = "true";
+    vi.mocked(paymentsService.hasSavedCard).mockResolvedValue(false);
+
+    const result = await listingsService.publishListing("shipper-1", "job-1");
+
+    expect(result.status).toBe("open");
+    expect(paymentsService.hasSavedCard).not.toHaveBeenCalled();
   });
 });

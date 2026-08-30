@@ -22,12 +22,27 @@ export interface DeliverySummaryView {
 
 export type TimelineStepStatus = "completed" | "active" | "pending";
 
+/**
+ * The client's attestation of a step, where one is asked for. Null on the
+ * steps §4 of transport_status_confirmation_spec.md excludes — a client
+ * witnesses neither the assignment nor the departure, so there is nothing to
+ * be waiting for on those.
+ */
+export interface TimelineConfirmation {
+  state: "confirmed" | "awaiting";
+  channel: "expedion_app" | "link" | null;
+  /** Who answered — an operator's answer must not read as the client's. */
+  role: "client" | "operator";
+  date: string | null;
+}
+
 export interface TimelineStep {
   status: ShipmentStatus;
   label: string;
   date: string;
   note: string | null;
   step: TimelineStepStatus;
+  confirmation: TimelineConfirmation | null;
 }
 
 export interface DeliveryDetailView {
@@ -43,7 +58,6 @@ export interface DeliveryDetailView {
   scheduledDelivery: string | null;
   deliveredAt: string | null;
   cancellationReason: string | null;
-  proofOfDeliveryUrl: string | null;
   carrier: { id: string; name: string; image: string | null };
   driver: { id: string; name: string; image: string | null } | null;
   shipper: { id: string; name: string; image: string | null };

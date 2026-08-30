@@ -63,6 +63,17 @@ export function useMessageDetail(conversationId: string) {
         // Don't process our own messages (already handled by optimistic update)
         if (eventData.senderId === user.id) return;
 
+        // An offer cannot be synthesised from this event: the card's price,
+        // dates and status come from a join the event does not carry. Refetch
+        // instead, or the recipient sees a bare text bubble until they reload.
+        if (eventData.threadOfferId) {
+          queryClient.invalidateQueries({
+            queryKey: ["messages", "thread", conversationId],
+          });
+          messagesApi.markAsRead(conversationId).catch(() => {});
+          return;
+        }
+
         // Instantly inject message into cache (no refetch needed!)
         queryClient.setQueryData<ThreadResponse>(
           ["messages", "thread", conversationId],
@@ -171,8 +182,9 @@ export function useMessageDetail(conversationId: string) {
         reviewsCount: other?.reviewsCount,
       },
       listing: threadData.conversation.listing?.title || "",
-      listingImage: threadData.conversation.listing?.images?.[0]?.url,
+      listingImage: threadData.conversation.listing?.photos?.[0]?.url,
       messages: [],
+      offerContext: threadData.offerContext,
     };
   }, [threadData, conversationId, t]);
 
@@ -189,6 +201,7 @@ export function useMessageDetail(conversationId: string) {
       }),
       sentByMe: msg.isOwn,
       readByOther: msg.readByOther,
+      offer: msg.threadOffer ?? undefined,
     }));
   }, [threadData, locale]);
 

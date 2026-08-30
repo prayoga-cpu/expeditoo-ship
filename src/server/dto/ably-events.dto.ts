@@ -23,6 +23,12 @@ export const newMessageEventSchema = z.object({
   isOwn: z.boolean(),
   senderName: z.string().optional(),
   senderImage: z.string().nullable().optional(),
+  /**
+   * Set when the message carries an offer. Only the id travels: the card's
+   * price, dates and status come from a join the event does not carry, so the
+   * client refetches the thread rather than synthesising a bubble.
+   */
+  threadOfferId: z.string().nullable().optional(),
 });
 
 export type NewMessageEvent = z.infer<typeof newMessageEventSchema>;

@@ -1,0 +1,91 @@
+name: Migrate database
+
+# Nothing else in this repo applies migrations. The Vercel build is a plain
+# `next build`, so a deploy ships code that expects columns the database may not
+# have — which is how `withdrawals` reached production as a 500 and a blank
+# "My earnings" page (CLAUDE.md, "Two migrations had never run anywhere").
+#
+# This is the sanctioned place to run them, because it is the only place the
+# production connection string exists. `vercel env pull` cannot help: every
+# production variable is marked Sensitive, so it returns `[SENSITIVE]` rather
+# than a value, and a laptop therefore has no way to reach the production
+# database — deliberately. `src/db/migrate.ts` enforces the same thing from the
+# other side: it refuses any target that is not an allow-listed development
+# database unless MIGRATE_TARGET=production is set explicitly.
+#
+# Requires, in repo Settings → Secrets:
+#   - POSTGRES_URL_PRODUCTION   the production (Supabase) connection string,
+#                               the same value as POSTGRES_URL in Vercel
+#                               Production. Prefer the NON-POOLING/direct URL:
+#                               migrations take DDL locks and a pooled
+#                               connection can drop them mid-statement.
+#
+# Manual on purpose. Auto-migrating on every push to main would apply a bad
+# migration to production before anyone read it, and migrations here are
+# hand-written rather than generated (0002 left no snapshot, so `drizzle-kit
+# generate` would re-emit the whole transport realignment). Run this, read the
+# output, then deploy.
+#
+# Order matters: migrate FIRST, then let the deploy go out. A migration is
+# additive in this repo, so the running old code tolerates the new columns,
+# whereas new code against an un-migrated database 500s.
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Which database to migrate
+        required: true
+        type: choice
+        default: production
+        options:
+          - production
+      confirm:
+        description: Type "migrate" to confirm
+        required: true
+        type: string
+
+# Two migration runs at once would race for the same DDL locks and the same
+# journal rows.
+concurrency:
+  group: migrate-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Refuse an unconfirmed run
+        if: inputs.confirm != 'migrate'
+        run: |
+          echo "::error::Type \"migrate\" in the confirm box to run this."
+          exit 1
+
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # The journal is what the migrator walks — not the directory — so a .sql
+      # that was never registered is silently skipped. Fail here rather than
+      # report a successful migration that applied nothing.
+      - name: Check every migration is registered
+        run: pnpm vitest run src/db/__tests__/migrations-journal.test.ts
+
+      - name: Apply migrations
+        env:
+          POSTGRES_URL: ${{ secrets.POSTGRES_URL_PRODUCTION }}
+          MIGRATE_TARGET: production
+        run: |
+          if [ -z "$POSTGRES_URL" ]; then
+            echo "::error::secrets.POSTGRES_URL_PRODUCTION is not set — see the header of this workflow."
+            exit 1
+          fi
+          pnpm db:migrate

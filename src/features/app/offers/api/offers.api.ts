@@ -1,11 +1,16 @@
 import { api, toQuery } from "@/lib/fetcher";
+import type { TimeSlot } from "@/lib/availability-window";
 import type { Offer } from "@/features/app/listing/types";
 
 export interface SubmitOfferInput {
   vehicleId: string;
   priceCents: number;
-  estimatedPickup: string;
-  estimatedDelivery: string;
+  /** The days and times of day the carrier can do the job. At least one. */
+  slots: { day: string; slot: TimeSlot }[];
+  /** 0 = delivered the same day, 1 = J+1. */
+  deliveryLeadDays: number;
+  /** `getTimezoneOffset()`, so "matin" reaches the server as the driver's. */
+  tzOffset: number;
   message?: string;
 }
 
@@ -38,8 +43,9 @@ export const offersApi = {
       { reason }
     ),
 
-  accept: (offerId: string) =>
-    api.post<AcceptOfferResult>(`/api/offers/${offerId}/accept`),
+  /** `slotId` books one of the carrier's proposed slots; absent takes the earliest. */
+  accept: (offerId: string, slotId?: string) =>
+    api.post<AcceptOfferResult>(`/api/offers/${offerId}/accept`, { slotId }),
 
   withdraw: (offerId: string) =>
     api.post<Offer>(`/api/offers/${offerId}/withdraw`),

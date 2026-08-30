@@ -1,7 +1,8 @@
 import { nanoid } from "nanoid";
 import { db } from "@/db";
 import { eq } from "drizzle-orm";
-import { payments, payouts } from "@/db/schema/payments";
+import { payments, payouts, type PaymentSource } from "@/db/schema/payments";
+import { user } from "@/db/schema/users";
 import { stripe } from "@/lib/stripe";
 import {
   MOCK_INTENT_PREFIX,
@@ -54,51 +55,97 @@ export const commissionFor = (amountCents: number) =>
   Math.round(amountCents * COMMISSION_RATE);
 
 // ========================================
-// MOCK_PAYMENTS test path
+// Helpers
 // ========================================
 
-// TODO(EXPEDITOO-TESTING): MOCK_PAYMENTS — replace with SetupIntent confirmation + amount_capturable_updated webhook handling (see docs/TESTING_MOCKS.md).
-/**
- * Records an authorised hold without calling Stripe at all. Writes the same
- * two steps as the real path (insert as `authorising`, then mark
- * `authorised`) so the row is byte-for-byte the shape the rest of the chain
- * expects, with a synthetic intent id in place of a real one.
- */
-async function mockAuthoriseForShipment(params: {
+type ChargeParams = {
   shipperId: string;
   shipmentId: string;
   listingId: string;
   amountCents: number;
-}) {
-  const commissionCents = commissionFor(params.amountCents);
-  const transferGroup = `shipment_${params.shipmentId}`;
+  stripeCustomerId: string | null;
+  source: PaymentSource;
+};
 
+/** The card an off-session charge will be put on, or null if there is none. */
+async function firstSavedCard(customerId: string): Promise<string | null> {
+  const methods = await stripe.paymentMethods.list({
+    customer: customerId,
+    type: "card",
+  });
+  return methods.data[0]?.id ?? null;
+}
+
+/** The row every branch below starts from: the attempt, before its outcome. */
+function baseRow(params: ChargeParams) {
+  return {
+    id: nanoid(),
+    userId: params.shipperId,
+    amountCents: params.amountCents,
+    commissionCents: commissionFor(params.amountCents),
+    currency: "eur" as const,
+    transferGroup: `shipment_${params.shipmentId}`,
+    listingId: params.listingId,
+    shipmentId: params.shipmentId,
+  };
+}
+
+async function markFailed(rowId: string, reason: string, intentId?: string) {
+  await db
+    .update(payments)
+    .set({
+      status: "failed",
+      failureReason: reason,
+      ...(intentId ? { stripePaymentIntentId: intentId } : {}),
+    })
+    .where(eq(payments.id, rowId));
+}
+
+/**
+ * Records a charge that already happened somewhere else.
+ *
+ * An escalated job's client paid in the Expedion app when they accepted the
+ * quote — before this repo had a listing, let alone a driver. Awarding it here
+ * must therefore charge nobody, and the row that records the money carries no
+ * PaymentIntent of ours because the charge lives in Expedion's Stripe account.
+ *
+ * Written as `captured` because it is: the client really has been debited. That
+ * is what lets `schedulePayout`, invoicing and the earnings screen go on keying
+ * off `captured` without learning that some captures are not captures.
+ */
+async function recordExternalCharge(params: ChargeParams) {
   const [row] = await db
     .insert(payments)
     .values({
-      id: nanoid(),
-      userId: params.shipperId,
-      amountCents: params.amountCents,
-      commissionCents,
-      currency: "eur",
-      status: "authorising",
-      transferGroup,
-      listingId: params.listingId,
-      shipmentId: params.shipmentId,
+      ...baseRow(params),
+      status: "captured",
+      source: "expedion",
+      capturedAt: new Date(),
     })
     .returning();
 
-  const [updated] = await db
-    .update(payments)
-    .set({
+  return row;
+}
+
+// TODO(EXPEDITOO-TESTING): MOCK_PAYMENTS — replace with a real off-session charge against the card saved at posting (see docs/TESTING_MOCKS.md).
+/**
+ * Records a settled charge without calling Stripe at all, with a synthetic
+ * intent id in place of a real one. The row is the shape the real path
+ * produces, so everything downstream of `captured` is exercised for real.
+ */
+async function mockChargeForShipment(params: ChargeParams) {
+  const [row] = await db
+    .insert(payments)
+    .values({
+      ...baseRow(params),
       stripePaymentIntentId: `${MOCK_INTENT_PREFIX}${params.shipmentId}`,
-      status: "authorised",
-      authorisedAt: new Date(),
+      status: "captured",
+      source: "stripe",
+      capturedAt: new Date(),
     })
-    .where(eq(payments.id, row.id))
     .returning();
 
-  return { payment: updated, clientSecret: null, requiresAction: false };
+  return row;
 }
 
 // ========================================
@@ -107,46 +154,56 @@ async function mockAuthoriseForShipment(params: {
 
 export const paymentsService = {
   /**
-   * Authorises, but does not take, the money when an offer is accepted.
+   * Takes the money when an offer is accepted.
    *
-   * Manual capture is the whole point: the shipper's card is held so the
-   * carrier knows the job is funded, and the funds only move once the goods
-   * are delivered (ROADMAP.md §1, "Stripe holds and releases payment").
+   * The client pays at booking, once the transport is confirmed and chosen —
+   * not on delivery (docs/specs/payment_at_booking_spec.md). This used to place
+   * a manual-capture hold that `settleDelivery` captured days later; it now
+   * charges outright, and delivery only settles what the driver is owed.
+   *
+   * Two lanes reach this, and they differ in who has already been charged:
+   * a direct job's poster is debited here, an Expedion client was debited in
+   * that app long before the award.
    */
-  async authoriseForShipment(params: {
-    shipperId: string;
-    shipmentId: string;
-    listingId: string;
-    amountCents: number;
-    stripeCustomerId: string | null;
-    paymentMethodId?: string;
-  }) {
-    // TODO(EXPEDITOO-TESTING): MOCK_PAYMENTS — replace with SetupIntent confirmation + amount_capturable_updated webhook handling (see docs/TESTING_MOCKS.md).
+  async chargeForShipment(params: ChargeParams) {
+    // Charging twice for one shipment would double-debit the client, so an
+    // existing settled charge is returned rather than repeated. `acceptOffer`
+    // returns early on a re-accept, but a compensated award that is then
+    // re-awarded reaches here a second time.
+    const existing = await db.query.payments.findFirst({
+      where: eq(payments.shipmentId, params.shipmentId),
+    });
+    if (existing?.status === "captured") return existing;
+
+    // Ahead of the mock branch on purpose. A job paid in Expedion is not a
+    // mock of anything — it is the real shape of that lane, and it is what
+    // makes an escalated award possible at all: the listing is owned by a
+    // system account nobody signs into and no card belongs to, so any branch
+    // that reaches the `stripeCustomerId` guard below would fail every time.
+    if (params.source === "expedion") {
+      return await recordExternalCharge(params);
+    }
+
+    // TODO(EXPEDITOO-TESTING): MOCK_PAYMENTS — replace with a real off-session charge against the card saved at posting (see docs/TESTING_MOCKS.md).
     // Before the customer check on purpose: a test shipper has no saved card.
     if (isMockPaymentsEnabled()) {
-      return await mockAuthoriseForShipment(params);
+      return await mockChargeForShipment(params);
     }
 
     if (!params.stripeCustomerId) {
       throw err("PAYMENT_METHOD_REQUIRED", 402, "Add a payment method first");
     }
 
-    const commissionCents = commissionFor(params.amountCents);
-    const transferGroup = `shipment_${params.shipmentId}`;
+    // The card was collected before the job went on the board, so its absence
+    // here means it was detached between posting and award.
+    const card = await firstSavedCard(params.stripeCustomerId);
+    if (!card) {
+      throw err("PAYMENT_METHOD_REQUIRED", 402, "Add a payment method first");
+    }
 
     const [row] = await db
       .insert(payments)
-      .values({
-        id: nanoid(),
-        userId: params.shipperId,
-        amountCents: params.amountCents,
-        commissionCents,
-        currency: "eur",
-        status: "authorising",
-        transferGroup,
-        listingId: params.listingId,
-        shipmentId: params.shipmentId,
-      })
+      .values({ ...baseRow(params), status: "pending", source: "stripe" })
       .returning();
 
     try {
@@ -154,116 +211,109 @@ export const paymentsService = {
         amount: params.amountCents,
         currency: "eur",
         customer: params.stripeCustomerId,
-        payment_method: params.paymentMethodId,
-        // Hold now, take on delivery.
-        capture_method: "manual",
-        confirm: Boolean(params.paymentMethodId),
-        transfer_group: transferGroup,
+        payment_method: card,
+        // Taken now, not held.
+        capture_method: "automatic",
+        confirm: true,
+        // An operator may award an escalated job with the client nowhere near
+        // a browser, so an SCA challenge fails the charge rather than
+        // prompting someone who is not there.
+        off_session: true,
+        transfer_group: row.transferGroup ?? undefined,
         metadata: {
           shipmentId: params.shipmentId,
           listingId: params.listingId,
         },
       });
 
-      const [updated] = await db
+      if (intent.status !== "succeeded") {
+        // The intent id is kept so support can find the attempt at Stripe.
+        await markFailed(row.id, `intent ${intent.status}`, intent.id);
+        throw err("PAYMENT_CHARGE_FAILED", 402, "Could not take payment");
+      }
+
+      const [captured] = await db
         .update(payments)
         .set({
           stripePaymentIntentId: intent.id,
-          status: intent.status === "requires_capture" ? "authorised" : "pending",
-          authorisedAt: intent.status === "requires_capture" ? new Date() : null,
+          status: "captured",
+          capturedAt: new Date(),
         })
         .where(eq(payments.id, row.id))
         .returning();
 
-      return {
-        payment: updated,
-        clientSecret: intent.client_secret,
-        requiresAction: intent.status !== "requires_capture",
-      };
+      return captured;
     } catch (cause) {
-      await db
-        .update(payments)
-        .set({
-          status: "failed",
-          failureReason: cause instanceof Error ? cause.message : "unknown",
-        })
-        .where(eq(payments.id, row.id));
+      // The branch above already marked the row and is only passing through.
+      if (cause instanceof PaymentError) throw cause;
 
-      throw err(
-        "PAYMENT_AUTHORISATION_FAILED",
-        402,
-        "Could not authorise payment"
+      await markFailed(
+        row.id,
+        cause instanceof Error ? cause.message : "unknown"
       );
+      throw err("PAYMENT_CHARGE_FAILED", 402, "Could not take payment");
     }
   },
 
   /**
-   * Captures the held funds on delivery and records what the carrier is owed.
-   * The transfer itself is Phase C; Phase A records the obligation so nothing
-   * is lost between delivery and payout.
+   * Whether this user has a card the platform could charge.
+   *
+   * Read before a direct job goes on the board, so no carrier spends effort
+   * bidding on work that cannot be paid for
+   * (docs/specs/payment_at_booking_spec.md §4).
    */
-  async captureForShipment(shipmentId: string) {
-    const payment = await db.query.payments.findFirst({
-      where: eq(payments.shipmentId, shipmentId),
-    });
+  async hasSavedCard(userId: string) {
+    const record = await db.query.user.findFirst({ where: eq(user.id, userId) });
+    if (!record?.stripeCustomerId) return false;
 
-    if (!payment) throw err("PAYMENT_NOT_FOUND", 404);
-    // Capturing twice would double-charge, so an already-captured payment is
-    // a no-op rather than an error.
-    if (payment.status === "captured") return payment;
-    if (payment.status !== "authorised") {
-      throw err("PAYMENT_NOT_AUTHORISED", 409);
-    }
-    if (!payment.stripePaymentIntentId) {
-      throw err("PAYMENT_INTENT_MISSING", 409);
-    }
-
-    // TODO(EXPEDITOO-TESTING): MOCK_PAYMENTS — replace with SetupIntent confirmation + amount_capturable_updated webhook handling (see docs/TESTING_MOCKS.md).
-    // A mock hold has nothing at Stripe to capture; the row alone advances.
-    if (!isMockIntent(payment.stripePaymentIntentId)) {
-      await stripe.paymentIntents.capture(payment.stripePaymentIntentId);
-    }
-
-    const [captured] = await db
-      .update(payments)
-      .set({ status: "captured", capturedAt: new Date() })
-      .where(eq(payments.id, payment.id))
-      .returning();
-
-    return captured;
+    return (await firstSavedCard(record.stripeCustomerId)) !== null;
   },
 
   /**
-   * Releases an authorisation without ever taking the money - used when an
-   * awarded job is cancelled before delivery.
+   * Gives the money back when an awarded job is cancelled or un-awarded.
+   *
+   * This replaced `releaseForShipment`: there is no longer a hold to let go of,
+   * because the client was charged the moment the transport was chosen.
    */
-  async releaseForShipment(shipmentId: string) {
+  async refundForShipment(shipmentId: string) {
     const payment = await db.query.payments.findFirst({
       where: eq(payments.shipmentId, shipmentId),
     });
 
     if (!payment) return null;
-    if (payment.status === "released") return payment;
-    if (payment.status === "captured") {
-      throw err("PAYMENT_ALREADY_CAPTURED", 409, "Refund instead of release");
+    if (payment.status === "refunded") return payment;
+
+    // Expedion took this money, into Expedion's own Stripe account. There is
+    // nothing here to give back, and refunding the client is that app's to do —
+    // `reportToExpedion(..., "CANCELLED")` is what tells it the job is off.
+    if (payment.source === "expedion") {
+      throw err("REFUND_NOT_LOCAL", 409, "Refund this in Expedion");
     }
 
-    // TODO(EXPEDITOO-TESTING): MOCK_PAYMENTS — replace with SetupIntent confirmation + amount_capturable_updated webhook handling (see docs/TESTING_MOCKS.md).
-    // A mock hold has nothing at Stripe to cancel; only the row is released.
+    // A payment that never reached `captured` took nothing from the client, so
+    // there is nothing to give back and nothing to restate. Marking it
+    // `refunded` would put a refund in front of an operator that never
+    // happened; the row is left as it is.
+    if (payment.status !== "captured") return payment;
+
+    // TODO(EXPEDITOO-TESTING): MOCK_PAYMENTS — a synthetic charge has nothing at Stripe to refund; only the row moves.
     if (
       payment.stripePaymentIntentId &&
       !isMockIntent(payment.stripePaymentIntentId)
     ) {
-      await stripe.paymentIntents.cancel(payment.stripePaymentIntentId);
+      await stripe.refunds.create({
+        payment_intent: payment.stripePaymentIntentId,
+        reason: "requested_by_customer",
+      });
     }
 
-    const [released] = await db
+    const [refunded] = await db
       .update(payments)
-      .set({ status: "released" })
+      .set({ status: "refunded", refundedAt: new Date() })
       .where(eq(payments.id, payment.id))
       .returning();
 
-    return released;
+    return refunded;
   },
 
   /**

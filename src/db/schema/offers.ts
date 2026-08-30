@@ -9,6 +9,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
+import { TIME_SLOTS } from "@/lib/availability-window";
 import { user } from "./users";
 import { listings } from "./listings";
 import { vehicles } from "./carriers";
@@ -27,6 +28,14 @@ export const offerStatusEnum = pgEnum("offer_status", [
   "withdrawn",
   "expired",
 ]);
+
+// ========================================
+// Time Slot Enum
+// ========================================
+// Derived from TIME_SLOTS rather than restated, so the board filter and an
+// offer's proposal cannot drift apart (CLAUDE.md gotcha 8).
+
+export const timeSlotEnum = pgEnum("time_slot", TIME_SLOTS);
 
 // ========================================
 // Offers Table
@@ -51,8 +60,22 @@ export const offers = pgTable(
       .references(() => vehicles.id, { onDelete: "restrict" }),
 
     priceCents: integer("price_cents").notNull(),
+
+    /**
+     * The **booked** slot, not the proposal.
+     *
+     * While the offer is pending this is the earliest slot the carrier
+     * proposed; once awarded it is the one actually chosen. Keeping it here
+     * rather than following `offer_slots` is what leaves `pickup_asc` sorting,
+     * the shipment write and the Expedion write-back reading one pair of
+     * columns, as they always have (offer_time_slots_spec.md §2).
+     */
     estimatedPickup: timestamp("estimated_pickup").notNull(),
     estimatedDelivery: timestamp("estimated_delivery").notNull(),
+
+    /** 0 = delivered the same day, 1 = J+1. See `deliveryInstant`. */
+    deliveryLeadDays: integer("delivery_lead_days").default(0).notNull(),
+
     message: text("message"),
 
     status: offerStatusEnum("status").default("pending").notNull(),
@@ -88,10 +111,42 @@ export const offers = pgTable(
 );
 
 // ========================================
+// Offer Slots Table
+// ========================================
+// The carrier's answer to "when can you do it", given more than once. A child
+// table rather than a JSON column because one of these rows is *booked* on
+// award and has to be addressable by id from the accept request.
+
+export const offerSlots = pgTable(
+  "offer_slots",
+  {
+    id: text("id").primaryKey(),
+    offerId: text("offer_id")
+      .notNull()
+      .references(() => offers.id, { onDelete: "cascade" }),
+
+    // What the driver said: a day with no timezone and a time of day. Stored
+    // beside the instants because it renders identically wherever it is read.
+    day: text("day").notNull(),
+    slot: timeSlotEnum("slot").notNull(),
+
+    // What the server compares and schedules from - resolved once, at submit,
+    // in the driver's timezone, so no later reader needs to know what it was.
+    startsAt: timestamp("starts_at").notNull(),
+    endsAt: timestamp("ends_at").notNull(),
+    deliveryAt: timestamp("delivery_at").notNull(),
+  },
+  (table) => [
+    index("offer_slot_offer_idx").on(table.offerId),
+    uniqueIndex("offer_slot_unique").on(table.offerId, table.day, table.slot),
+  ]
+);
+
+// ========================================
 // Relations
 // ========================================
 
-export const offersRelations = relations(offers, ({ one }) => ({
+export const offersRelations = relations(offers, ({ one, many }) => ({
   listing: one(listings, {
     fields: [offers.listingId],
     references: [listings.id],
@@ -104,6 +159,14 @@ export const offersRelations = relations(offers, ({ one }) => ({
     fields: [offers.vehicleId],
     references: [vehicles.id],
   }),
+  slots: many(offerSlots),
+}));
+
+export const offerSlotsRelations = relations(offerSlots, ({ one }) => ({
+  offer: one(offers, {
+    fields: [offerSlots.offerId],
+    references: [offers.id],
+  }),
 }));
 
 // ========================================
@@ -112,5 +175,8 @@ export const offersRelations = relations(offers, ({ one }) => ({
 
 export type Offer = typeof offers.$inferSelect;
 export type InsertOffer = typeof offers.$inferInsert;
+
+export type OfferSlot = typeof offerSlots.$inferSelect;
+export type InsertOfferSlot = typeof offerSlots.$inferInsert;
 
 export type OfferStatus = (typeof offerStatusEnum.enumValues)[number];

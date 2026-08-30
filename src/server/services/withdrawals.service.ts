@@ -2,6 +2,7 @@ import { nanoid } from "nanoid";
 import { z } from "zod";
 
 import { db } from "@/db";
+import { carriersDal } from "@/server/dal/carriers.dal";
 import { withdrawalsDal } from "@/server/dal/withdrawals.dal";
 import { userHasRole } from "@/server/dal/users.dal";
 import { notificationsService } from "@/server/services/notifications.service";
@@ -50,13 +51,25 @@ async function requireOperator(actorUserId: string) {
 }
 
 export const withdrawalsService = {
-  /** What this driver has earned and not yet asked for. */
+  /**
+   * What this driver has earned and not yet asked for.
+   *
+   * `hasEverEarned` and `carrierStatus` are here for the screen's empty state
+   * rather than for the money: a balance of €0 means one thing to a driver
+   * between withdrawals and another to someone who has not been approved yet,
+   * and the difference decides what the screen tells them to do next
+   * (carrier_earnings_empty_state_spec.md §1). Neither gates anything — this
+   * route answers for any session, including one with no carrier record.
+   */
   async getBalance(carrierUserId: string) {
-    const [available, open, history] = await Promise.all([
-      withdrawalsDal.availableFor(carrierUserId),
-      withdrawalsDal.findOpenFor(carrierUserId),
-      withdrawalsDal.listForCarrier(carrierUserId),
-    ]);
+    const [available, open, history, hasEverEarned, carrier] =
+      await Promise.all([
+        withdrawalsDal.availableFor(carrierUserId),
+        withdrawalsDal.findOpenFor(carrierUserId),
+        withdrawalsDal.listForCarrier(carrierUserId),
+        withdrawalsDal.hasAnyPayout(carrierUserId),
+        carriersDal.getByUserId(carrierUserId),
+      ]);
 
     return {
       availableCents: available.amountCents,
@@ -65,6 +78,8 @@ export const withdrawalsService = {
       canRequest: !open && available.amountCents >= MIN_WITHDRAWAL_CENTS,
       openRequest: open ?? null,
       history,
+      hasEverEarned,
+      carrierStatus: carrier?.status ?? null,
     };
   },
 

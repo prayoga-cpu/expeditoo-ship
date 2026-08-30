@@ -264,6 +264,10 @@ export const expedionEscalationService = {
     let createdListing = false;
 
     try {
+      // `prepaid` waives the card check that guards a direct posting. This
+      // quote was paid in Expedion when the client accepted it, and the check
+      // could not pass anyway: an escalated listing is owned by a system
+      // account no card belongs to (docs/specs/payment_at_booking_spec.md §4).
       const listing =
         adopted ??
         (await listingsService.createListing(systemShipperId(), {
@@ -306,7 +310,7 @@ export const expedionEscalationService = {
           budgetCents: quote.acceptedPriceCents!,
           photos: (quote.photoUrls ?? []).slice(0, 10),
           publish: true,
-        }));
+        }, { prepaid: true }));
 
       if (!adopted) {
         createdListing = true;
@@ -496,8 +500,12 @@ export const expedionEscalationService = {
         // What the client already paid. There is no negotiation on this lane,
         // so there is nothing to bid down to.
         priceCents: quote.acceptedPriceCents!,
-        estimatedPickup: listing.pickupFrom,
-        estimatedDelivery: listing.dropoffFrom,
+        // No slot is proposed on this lane: nobody bid, so there is nothing to
+        // choose between and the job keeps its own window
+        // (offer_time_slots_spec.md §3.4).
+        slots: [],
+        deliveryLeadDays: 0,
+        tzOffset: 0,
         message: "Course attribuée directement, sans mise en concurrence.",
       });
 

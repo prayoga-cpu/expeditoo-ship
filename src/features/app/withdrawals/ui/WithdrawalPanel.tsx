@@ -1,6 +1,7 @@
 "use client";
 
-import { RefreshCw, Wallet, WalletMinimal } from "lucide-react";
+import { PiggyBank, RefreshCw, Wallet, WalletMinimal } from "lucide-react";
+import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +15,7 @@ import {
   useRequestWithdrawal,
   useWithdrawalBalance,
 } from "../hooks/useWithdrawals";
-import type { Withdrawal } from "../api/withdrawals.api";
+import type { WithdrawalBalance, Withdrawal } from "../api/withdrawals.api";
 
 /** Theme tokens, so the badge reads in light and dark alike. */
 const TONE: Record<Withdrawal["status"], string> = {
@@ -22,6 +23,27 @@ const TONE: Record<Withdrawal["status"], string> = {
   approved: "bg-primary/15 text-primary border-primary/30",
   paid: "bg-success/15 text-success border-success/30",
   rejected: "bg-destructive/15 text-destructive border-destructive/30",
+};
+
+/**
+ * What stands between this driver and their first euro.
+ *
+ * An empty balance has one cause per application state, and only one of them
+ * is "go and bid on something". Telling an unapproved applicant to browse the
+ * job board sends them to a board they cannot bid on, so the advice is chosen
+ * rather than generic (carrier_earnings_empty_state_spec.md §3).
+ */
+const NEXT_STEP: Record<
+  NonNullable<WithdrawalBalance["carrierStatus"]> | "none",
+  { key: string; href: string }
+> = {
+  approved: { key: "approved", href: "/expedion" },
+  submitted: { key: "underReview", href: "/carrier/application" },
+  under_review: { key: "underReview", href: "/carrier/application" },
+  draft: { key: "draft", href: "/carrier/application" },
+  rejected: { key: "blocked", href: "/carrier/application" },
+  suspended: { key: "blocked", href: "/carrier/application" },
+  none: { key: "none", href: "/carrier/application" },
 };
 
 /**
@@ -68,6 +90,28 @@ export function WithdrawalPanel() {
   }
 
   const open = data.openRequest;
+
+  // Nothing has ever landed here. The card would say "€0.00 — from no
+  // deliveries" over a greyed-out button, which is a fact and a dead end; say
+  // instead what would put money in it. `hasEverEarned` rather than
+  // `deliveries`, so a driver whose payouts are already claimed by an open
+  // withdrawal is not told they have never earned (§1.1).
+  if (!data.hasEverEarned && !open && data.history.length === 0) {
+    const step = NEXT_STEP[data.carrierStatus ?? "none"];
+
+    return (
+      <CenteredEmptyState
+        icon={PiggyBank}
+        title={t("emptyTitle")}
+        description={t(`empty.${step.key}`)}
+        variant="page"
+      >
+        <Button asChild>
+          <Link href={step.href}>{t(`emptyCta.${step.key}`)}</Link>
+        </Button>
+      </CenteredEmptyState>
+    );
+  }
 
   return (
     <div className="space-y-6">

@@ -1,3 +1,4 @@
+import type { CarrierStatus } from "@/db/schema/carriers";
 import { api, toQuery } from "@/lib/fetcher";
 
 export interface Withdrawal {
@@ -20,6 +21,14 @@ export interface WithdrawalBalance {
   canRequest: boolean;
   openRequest: Withdrawal | null;
   history: Withdrawal[];
+  /**
+   * Any payout row, in any status — not the same question as
+   * `deliveries > 0`, which counts only unclaimed ones. The empty state hangs
+   * off this so a driver mid-withdrawal is not greeted as a newcomer.
+   */
+  hasEverEarned: boolean;
+  /** Their application state, or `null` if they never made one. */
+  carrierStatus: CarrierStatus | null;
 }
 
 export interface ReviewRow extends Withdrawal {

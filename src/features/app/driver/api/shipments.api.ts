@@ -30,6 +30,19 @@ export interface DriverShipmentListing {
   needsHelp: boolean;
 }
 
+/**
+ * The client's attestation of a milestone. A driver sees *that* the client
+ * confirmed, never who they are — the service drops both identity columns for
+ * a driver viewer (transport_status_confirmation_spec.md §9.4).
+ */
+export interface DriverShipmentConfirmation {
+  id: string;
+  milestone: "PICKED_UP" | "DELIVERED";
+  channel: "expedion_app" | "link";
+  confirmedByRole: "client" | "operator";
+  createdAt: string;
+}
+
 export interface DriverShipmentEvent {
   id: string;
   status: DriverShipmentStatus;
@@ -50,12 +63,12 @@ export interface DriverShipment {
   dropoffAddress: string;
   scheduledPickup: string | null;
   scheduledDelivery: string | null;
-  proofOfDeliveryUrl: string | null;
   pickedUpAt: string | null;
   deliveredAt: string | null;
   cancelledAt: string | null;
   cancellationReason: string | null;
   listing: DriverShipmentListing | null;
+  confirmations: DriverShipmentConfirmation[];
   createdAt: string;
   updatedAt: string;
 }

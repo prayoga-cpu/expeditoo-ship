@@ -38,6 +38,22 @@ vi.mock('@/server/services/user.service', () => ({
   hasRole: vi.fn(),
 }));
 
+// getThread computes the offer gate. Its own behaviour has a dedicated suite;
+// stubbed here so this file stays a unit test of the messaging service and
+// does not reach the database through the thread-offer DAL.
+vi.mock('@/server/services/thread-offers.service', () => ({
+  threadOffersService: {
+    contextFor: vi.fn().mockResolvedValue({
+      lane: 'standalone',
+      canOffer: true,
+      blockedBy: null,
+      job: null,
+      viewerCanAward: false,
+    }),
+  },
+  ThreadOfferError: class extends Error {},
+}));
+
 vi.mock('@/server/services/reviews.service', () => ({
   reviewsService: {
     getUserStats: vi.fn(),

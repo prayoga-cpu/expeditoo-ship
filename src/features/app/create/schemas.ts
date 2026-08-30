@@ -1,5 +1,13 @@
 import { z } from "zod";
 
+import {
+  HEAVY_BRACKET_ID,
+  HEAVY_BRACKET_MIN_KG,
+  SIZE_MODES,
+  SIZE_PRESET_IDS,
+  WEIGHT_BRACKET_IDS,
+} from "./cargo";
+
 /**
  * Client-side mirror of `src/server/dto/listings.dto.ts`.
  *
@@ -13,6 +21,11 @@ import { z } from "zod";
  * Messages are translation keys rather than English, resolved through
  * `create.validation.*`. A Zod schema cannot call `useTranslations`, so the
  * alternative is a form that validates in one language.
+ *
+ * Two fields deliberately have no counterpart over there. `weightBracket` and
+ * `sizePreset` are how a person answers "how heavy" and "how big"; the numbers
+ * the API wants are resolved from them in `api/jobs.api.ts`, which is the only
+ * seam that had to move. See docs/specs/cargo_input_spec.md §2.
  */
 
 export const LOCATION_TYPES = [
@@ -131,10 +144,26 @@ export const jobFormSchema = z
       .min(20, "create.validation.descriptionShort")
       .max(5000),
 
-    weightKg: z.coerce
-      .number()
-      .positive("create.validation.aboveZero")
-      .max(44_000, "create.validation.weightMax"),
+    /**
+     * Weight is picked from a bracket, not typed: a person moving a sofa does
+     * not know it weighs 78 kg. `exactWeightKg` is the one free entry left, and
+     * only `over1000` asks for it — the DTO accepts up to 44 t and no ladder of
+     * chips can express a part-loaded lorry.
+     */
+    weightBracket: z.enum(WEIGHT_BRACKET_IDS, {
+      message: "create.validation.weightRequired",
+    }),
+    exactWeightKg: z.preprocess(
+      blankToUndefined,
+      z.coerce
+        .number()
+        .positive("create.validation.aboveZero")
+        .max(44_000, "create.validation.weightMax")
+        .optional()
+    ),
+
+    sizeMode: z.enum(SIZE_MODES).default("preset"),
+    sizePreset: z.enum(SIZE_PRESET_IDS).optional(),
     lengthCm: optionalPositive,
     widthCm: optionalPositive,
     heightCm: optionalPositive,
@@ -161,14 +190,34 @@ export const jobFormSchema = z
     photos: z.array(z.string().url()).max(10).default([]),
   })
   .superRefine((data, ctx) => {
-    const dims = [data.lengthCm, data.widthCm, data.heightCm];
-    const given = dims.filter((d) => d !== undefined).length;
-    if (given !== 0 && given !== 3) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "create.validation.dimensionsPartial",
-        path: ["lengthCm"],
-      });
+    if (data.weightBracket === HEAVY_BRACKET_ID) {
+      if (data.exactWeightKg === undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "create.validation.weightRequired",
+          path: ["exactWeightKg"],
+        });
+      } else if (data.exactWeightKg <= HEAVY_BRACKET_MIN_KG) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "create.validation.weightAboveBracket",
+          path: ["exactWeightKg"],
+        });
+      }
+    }
+
+    // Only in `exact` mode: the three fields are off screen under a preset, and
+    // a stale value one of them still holds must not fail a submit.
+    if (data.sizeMode === "exact") {
+      const dims = [data.lengthCm, data.widthCm, data.heightCm];
+      const given = dims.filter((d) => d !== undefined).length;
+      if (given !== 0 && given !== 3) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "create.validation.dimensionsPartial",
+          path: ["lengthCm"],
+        });
+      }
     }
 
     if (
@@ -214,8 +263,18 @@ export type JobFormOutput = z.output<typeof jobFormSchema>;
 
 /** Fields validated at each step, so Next only gates on what is on screen. */
 export const STEP_FIELDS = [
-  ["title", "description", "weightKg", "quantity", "lengthCm"],
+  [
+    "title",
+    "description",
+    "weightBracket",
+    "exactWeightKg",
+    "quantity",
+    "lengthCm",
+  ],
   ["pickup", "dropoff"],
   ["pickupFrom", "pickupUntil", "dropoffFrom", "dropoffUntil"],
   ["budgetEuros"],
+  // The payment step owns no form field: the card lives at Stripe, not in the
+  // job. `handleNext` validates an empty list and passes straight through.
+  [],
 ] as const;

@@ -1,6 +1,13 @@
 "use client";
 
-import { PackageSearch, SlidersHorizontal, Search, X } from "lucide-react";
+import {
+  AlertCircle,
+  PackageSearch,
+  SlidersHorizontal,
+  Search,
+  X,
+} from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -23,9 +30,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CenteredEmptyState } from "@/components/ui/centered-empty-state";
 import { JobCard } from "./JobCard";
 import { ExpedionSourceBanner } from "./ExpedionSourceBanner";
+import { RouteSearchBar } from "./RouteSearchBar";
+import { AvailabilityField } from "./AvailabilityField";
 import { useTranslations } from "next-intl";
 import { useJobBoard } from "../hooks/useJobBoard";
-import type { JobSort } from "../types";
+import type { JobSort, SearchMode } from "../types";
 
 const SORTS: { value: JobSort; labelKey: string }[] = [
   { value: "created_desc", labelKey: "newest" },
@@ -48,6 +57,7 @@ export function JobBoard({ origin }: { origin?: "direct" | "expedion" } = {}) {
     jobs,
     total,
     isLoading,
+    isError,
     filters,
     updateFilters,
     resetFilters,
@@ -55,6 +65,29 @@ export function JobBoard({ origin }: { origin?: "direct" | "expedion" } = {}) {
     page,
     setPage,
   } = useJobBoard({ origin });
+
+  // Which shape the location filter wears. A deep link carrying an arrival
+  // opens on the corridor it describes.
+  const [mode, setMode] = useState<SearchMode>(filters.to ? "route" : "around");
+
+  const changeMode = (next: SearchMode) => {
+    setMode(next);
+    // "Autour de" has no arrival field, so leaving one behind would filter on
+    // a corridor the driver can no longer see.
+    if (next === "around" && filters.to) updateFilters({ to: null });
+  };
+
+  // Distance only means something once there is a point to measure from, and
+  // in "sur mon trajet" it measures the detour rather than the distance.
+  const sorts = filters.from
+    ? [
+        ...SORTS,
+        {
+          value: "distance_asc" as JobSort,
+          labelKey: filters.to ? "detourAsc" : "distanceAsc",
+        },
+      ]
+    : SORTS;
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-4 p-4 sm:p-6">
@@ -71,8 +104,15 @@ export function JobBoard({ origin }: { origin?: "direct" | "expedion" } = {}) {
 
       <ExpedionSourceBanner />
 
-      <div className="flex gap-2">
-        <div className="relative flex-1">
+      <RouteSearchBar
+        mode={mode}
+        onModeChange={changeMode}
+        filters={filters}
+        onChange={updateFilters}
+      />
+
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="relative sm:flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={filters.q}
@@ -92,95 +132,114 @@ export function JobBoard({ origin }: { origin?: "direct" | "expedion" } = {}) {
           )}
         </div>
 
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button variant="outline" className="shrink-0">
-              <SlidersHorizontal className="h-4 w-4" />
-              {activeFilterCount > 0 && (
-                <Badge className="ml-2 px-1.5">{activeFilterCount}</Badge>
-              )}
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="right" className="w-full sm:max-w-sm">
-            <SheetHeader>
-              <SheetTitle>{t("filters")}</SheetTitle>
-            </SheetHeader>
+        <div className="flex gap-2">
+          <AvailabilityField
+            days={filters.days}
+            slots={filters.slots}
+            onChange={updateFilters}
+            className="min-w-0 flex-1 sm:flex-none"
+          />
 
-            <div className="mt-6 space-y-5">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label htmlFor="minBudget">{t("minBudget")}</Label>
-                  <Input
-                    id="minBudget"
-                    type="number"
-                    min={0}
-                    value={filters.minBudget ?? ""}
-                    onChange={(e) =>
-                      updateFilters({
-                        minBudget: e.target.value ? Number(e.target.value) : null,
-                      })
-                    }
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="maxBudget">{t("maxBudget")}</Label>
-                  <Input
-                    id="maxBudget"
-                    type="number"
-                    min={0}
-                    value={filters.maxBudget ?? ""}
-                    onChange={(e) =>
-                      updateFilters({
-                        maxBudget: e.target.value ? Number(e.target.value) : null,
-                      })
-                    }
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="maxWeight">{t("maxWeight")}</Label>
-                <Input
-                  id="maxWeight"
-                  type="number"
-                  min={0}
-                  value={filters.maxWeightKg ?? ""}
-                  onChange={(e) =>
-                    updateFilters({
-                      maxWeightKg: e.target.value ? Number(e.target.value) : null,
-                    })
-                  }
-                />
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {t("maxWeightHint")}
-                </p>
-              </div>
-
-              <Button variant="ghost" onClick={resetFilters} className="w-full">
-                {t("clearFilters")}
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="outline" className="shrink-0">
+                <SlidersHorizontal className="h-4 w-4" />
+                {activeFilterCount > 0 && (
+                  <Badge className="ml-2 px-1.5">{activeFilterCount}</Badge>
+                )}
               </Button>
-            </div>
-          </SheetContent>
-        </Sheet>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-full sm:max-w-sm">
+              <SheetHeader>
+                <SheetTitle>{t("filters")}</SheetTitle>
+              </SheetHeader>
 
-        <Select
-          value={filters.sort}
-          onValueChange={(v) => updateFilters({ sort: v as JobSort })}
-        >
-          <SelectTrigger className="w-[150px] shrink-0">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {SORTS.map((sort) => (
-              <SelectItem key={sort.value} value={sort.value}>
-                {t(`sort.${sort.labelKey}`)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+              <div className="mt-6 space-y-5">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label htmlFor="minBudget">{t("minBudget")}</Label>
+                    <Input
+                      id="minBudget"
+                      type="number"
+                      min={0}
+                      value={filters.minBudget ?? ""}
+                      onChange={(e) =>
+                        updateFilters({
+                          minBudget: e.target.value ? Number(e.target.value) : null,
+                        })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="maxBudget">{t("maxBudget")}</Label>
+                    <Input
+                      id="maxBudget"
+                      type="number"
+                      min={0}
+                      value={filters.maxBudget ?? ""}
+                      onChange={(e) =>
+                        updateFilters({
+                          maxBudget: e.target.value ? Number(e.target.value) : null,
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="maxWeight">{t("maxWeight")}</Label>
+                  <Input
+                    id="maxWeight"
+                    type="number"
+                    min={0}
+                    value={filters.maxWeightKg ?? ""}
+                    onChange={(e) =>
+                      updateFilters({
+                        maxWeightKg: e.target.value ? Number(e.target.value) : null,
+                      })
+                    }
+                  />
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {t("maxWeightHint")}
+                  </p>
+                </div>
+
+                <Button variant="ghost" onClick={resetFilters} className="w-full">
+                  {t("clearFilters")}
+                </Button>
+              </div>
+            </SheetContent>
+          </Sheet>
+
+          <Select
+            value={filters.sort}
+            onValueChange={(v) => updateFilters({ sort: v as JobSort })}
+          >
+            <SelectTrigger className="w-[140px] shrink-0" aria-label={t("sortLabel")}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {sorts.map((sort) => (
+                <SelectItem key={sort.value} value={sort.value}>
+                  {t(`sort.${sort.labelKey}`)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
-      {isLoading ? (
+      {isError ? (
+        <CenteredEmptyState
+          icon={AlertCircle}
+          title={t("error.title")}
+          description={t("error.description")}
+        >
+          <Button variant="outline" onClick={resetFilters}>
+            {t("clearFilters")}
+          </Button>
+        </CenteredEmptyState>
+      ) : isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-36 w-full rounded-lg" />

@@ -10,6 +10,7 @@ import {
   MAX_ROUTES_PER_CARRIER,
 } from "@/server/dto/carrier-routes.dto";
 import {
+  MAX_DEEP_LINK_DAYS,
   nextOccurrence,
   routeMatchQuery,
 } from "@/lib/carrier-route-matching";
@@ -390,21 +391,41 @@ describe("routeMatchQuery", () => {
     dates: [],
     validFrom: null,
     validUntil: null,
+    originCity: "Paris",
     originLat: 48.86,
     originLng: 2.34,
+    destinationCity: "Bordeaux",
+    destinationLat: 44.84,
+    destinationLng: -0.58,
     radiusKm: 75,
     capacityKg: null,
   };
 
   const now = new Date(2026, 8, 9, 12, 0, 0);
 
-  it("maps the origin, radius and sort onto the board's parameters", () => {
+  it("maps both endpoints, radius and sort onto the board's parameters", () => {
     const query = routeMatchQuery(base, now);
 
-    expect(query.nearLat).toBe("48.86");
-    expect(query.nearLng).toBe("2.34");
+    expect(query.fromLat).toBe("48.86");
+    expect(query.fromLng).toBe("2.34");
     expect(query.radiusKm).toBe("75");
     expect(query.sort).toBe("distance_asc");
+  });
+
+  it("filters on the destination, so a trip searches its corridor", () => {
+    // The limitation carrier_trips_spec.md §10.1 recorded: the board had no
+    // two-endpoint predicate, so the destination could not be a filter.
+    const query = routeMatchQuery(base, now);
+
+    expect(query.toLat).toBe("44.84");
+    expect(query.toLng).toBe("-0.58");
+  });
+
+  it("carries the city names so the board can label the search", () => {
+    const query = routeMatchQuery(base, now);
+
+    expect(query.fromLabel).toBe("Paris");
+    expect(query.toLabel).toBe("Bordeaux");
   });
 
   it("omits maxWeightKg when no capacity is declared", () => {
@@ -416,23 +437,52 @@ describe("routeMatchQuery", () => {
     expect(query.maxWeightKg).toBe("800");
   });
 
-  it("omits the date bounds when every occurrence has elapsed", () => {
+  it("omits the days when every occurrence has elapsed", () => {
     const query = routeMatchQuery(
       { ...base, validUntil: new Date(2026, 7, 1) },
       now
     );
 
-    expect(query.pickupFrom).toBeUndefined();
-    expect(query.pickupUntil).toBeUndefined();
+    expect(query.days).toBeUndefined();
     // Geography still narrows the board even with no upcoming run.
-    expect(query.nearLat).toBe("48.86");
+    expect(query.fromLat).toBe("48.86");
   });
 
-  it("bounds the day when there is an upcoming run", () => {
-    const query = routeMatchQuery(base, now);
+  it("lists several upcoming runs, not just the next one", () => {
+    // 9 September 2026 is a Wednesday, and the trip runs on Wednesdays.
+    const days = routeMatchQuery(base, now).days.split(",");
 
-    expect(new Date(query.pickupFrom).getDate()).toBe(9);
-    expect(new Date(query.pickupUntil).getDate()).toBe(9);
+    expect(days[0]).toBe("2026-09-09");
+    expect(days[1]).toBe("2026-09-16");
+    expect(days).toHaveLength(MAX_DEEP_LINK_DAYS);
+  });
+
+  it("stops listing runs at validUntil", () => {
+    const query = routeMatchQuery(
+      { ...base, validUntil: new Date(2026, 8, 20) },
+      now
+    );
+
+    expect(query.days.split(",")).toEqual(["2026-09-09", "2026-09-16"]);
+  });
+
+  it("lists an occasional trip's own dates", () => {
+    const query = routeMatchQuery(
+      {
+        ...base,
+        kind: "occasional",
+        daysOfWeek: [],
+        dates: [
+          { date: new Date(2026, 8, 12) },
+          { date: new Date(2026, 7, 1) },
+          { date: new Date(2026, 8, 30) },
+        ],
+      },
+      now
+    );
+
+    // Elapsed dates drop out; the rest come back soonest first.
+    expect(query.days).toBe("2026-09-12,2026-09-30");
   });
 });
 

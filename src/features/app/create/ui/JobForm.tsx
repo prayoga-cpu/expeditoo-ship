@@ -15,12 +15,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Stepper } from "@/components/Stepper";
+import { PaymentStep } from "./PaymentStep";
 import { LocationPickerField } from "@/components/ui/location-picker-field";
 import { PhotoDropzone } from "./PhotoDropzone";
+import { FieldError } from "./FieldError";
+import { SizeField } from "./SizeField";
+import { WeightBracketField } from "./WeightBracketField";
 import { LOCATION_TYPES, type LocationType } from "../schemas";
-import { useJobForm } from "../hooks/useJobForm";
-
-type JobFormApi = ReturnType<typeof useJobForm>;
+import type { JobFormApi } from "../hooks/useJobForm";
 
 /**
  * Requesting transport: what moves, from where to where, when, and what the
@@ -40,6 +42,8 @@ export function JobForm(props: JobFormApi) {
     isFirstStep,
     isLastStep,
     isSubmitting,
+    hasCard,
+    setHasCard,
     handlePhotosChange,
     handleNext,
     handlePrev,
@@ -70,6 +74,7 @@ export function JobForm(props: JobFormApi) {
         {currentStep === 1 && <WhereStep form={form} />}
         {currentStep === 2 && <WhenStep form={form} />}
         {currentStep === 3 && <BudgetStep form={form} />}
+        {currentStep === 4 && <PaymentStep onCardChange={setHasCard} />}
       </Card>
 
       <div className="flex items-center justify-between gap-3">
@@ -92,7 +97,14 @@ export function JobForm(props: JobFormApi) {
             {t("buttons.saveDraft")}
           </Button>
           {isLastStep ? (
-            <Button type="button" onClick={publish} disabled={isSubmitting}>
+            // A job with no card cannot be awarded, so it does not go on the
+            // board. "Save draft" stays open beside this — a draft costs
+            // nobody anything (docs/specs/payment_at_booking_spec.md §4).
+            <Button
+              type="button"
+              onClick={publish}
+              disabled={isSubmitting || !hasCard}
+            >
               {isSubmitting ? t("buttons.posting") : t("buttons.post")}
             </Button>
           ) : (
@@ -107,24 +119,13 @@ export function JobForm(props: JobFormApi) {
 }
 
 /**
- * Taken from the hook rather than written as `UseFormReturn<JobFormValues>`:
- * a resolver adds a third generic for the transformed output, so the spelled-out
- * version is a different type from the one `useJobForm` actually returns.
+ * `JobFormApi` is taken from the hook rather than written as
+ * `UseFormReturn<JobFormValues>`: a resolver adds a third generic for the
+ * transformed output, so the spelled-out version is a different type from the
+ * one `useJobForm` actually returns.
  */
 interface StepProps {
   form: JobFormApi["form"];
-}
-
-/**
- * Validation messages are translation keys, not sentences — a Zod schema has no
- * access to `useTranslations`. Anything that is not a known key is shown as-is
- * so a server message still reaches the reader rather than vanishing.
- */
-function FieldError({ message }: { message?: string }) {
-  const t = useTranslations();
-  if (!message) return null;
-  const text = message.startsWith("create.validation.") ? t(message) : message;
-  return <p className="mt-1 text-sm text-destructive">{text}</p>;
 }
 
 function WhatStep({
@@ -159,39 +160,15 @@ function WhatStep({
         <FieldError message={errors.description?.message} />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="weightKg">{t("weight")}</Label>
-          <Input
-            id="weightKg"
-            type="number"
-            step="0.1"
-            {...register("weightKg")}
-          />
-          <FieldError message={errors.weightKg?.message} />
-        </div>
-        <div>
-          <Label htmlFor="quantity">{t("quantity")}</Label>
-          <Input id="quantity" type="number" min={1} {...register("quantity")} />
-          <FieldError message={errors.quantity?.message} />
-        </div>
-      </div>
+      <WeightBracketField form={form} />
 
-      <div className="grid grid-cols-3 gap-3">
-        <div>
-          <Label htmlFor="lengthCm">{t("length")}</Label>
-          <Input id="lengthCm" type="number" step="1" {...register("lengthCm")} />
-        </div>
-        <div>
-          <Label htmlFor="widthCm">{t("width")}</Label>
-          <Input id="widthCm" type="number" step="1" {...register("widthCm")} />
-        </div>
-        <div>
-          <Label htmlFor="heightCm">{t("height")}</Label>
-          <Input id="heightCm" type="number" step="1" {...register("heightCm")} />
-        </div>
+      <SizeField form={form} />
+
+      <div className="w-32">
+        <Label htmlFor="quantity">{t("quantity")}</Label>
+        <Input id="quantity" type="number" min={1} {...register("quantity")} />
+        <FieldError message={errors.quantity?.message} />
       </div>
-      <FieldError message={errors.lengthCm?.message} />
 
       <div className="space-y-3">
         <ToggleRow
@@ -212,6 +189,9 @@ function WhatStep({
 
       <div>
         <Label>{t("photos")}</Label>
+        <p className="mb-2 mt-1 text-xs text-muted-foreground">
+          {t("photosHint")}
+        </p>
         <PhotoDropzone photos={photos} onPhotosChange={onPhotosChange} />
       </div>
     </div>

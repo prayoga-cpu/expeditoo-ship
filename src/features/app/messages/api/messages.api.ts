@@ -3,6 +3,42 @@
  * Wrapper for REST API calls to messages endpoints
  */
 
+import type { ThreadOfferContext, ThreadOfferView } from "../types";
+
+/** Thrown so a caller can branch on the server's code, not its wording. */
+export class ThreadOfferApiError extends Error {
+  constructor(
+    readonly code: string,
+    message: string,
+    readonly issues?: Array<{ path: string; message: string }>
+  ) {
+    super(message);
+    this.name = "ThreadOfferApiError";
+  }
+}
+
+async function unwrap<T>(res: Response, fallback: string): Promise<T> {
+  const data = await res.json();
+  if (!data.success) {
+    throw new ThreadOfferApiError(
+      data.error?.code ?? "UNKNOWN",
+      data.error?.message ?? fallback,
+      data.error?.issues
+    );
+  }
+  return data.data;
+}
+
+export interface SubmitThreadOfferInput {
+  priceCents: number;
+  pickupDay: string;
+  pickupSlot: "morning" | "afternoon" | "evening";
+  deliveryLeadDays: number;
+  tzOffset: number;
+  vehicleId?: string;
+  message?: string;
+}
+
 // Types for API responses
 export interface ConversationResponse {
   id: string;
@@ -34,6 +70,8 @@ export interface MessageResponse {
     name: string;
     image: string | null;
   };
+  /** Present when this message carries a formal price. */
+  threadOffer?: ThreadOfferView | null;
 }
 
 export interface ThreadResponse {
@@ -51,7 +89,10 @@ export interface ThreadResponse {
     listing: {
       id: string;
       title: string;
-      images?: Array<{ url: string }>;
+      // The DAL returns this relation as `photos`. It was read as `images`
+      // for as long as the thread has existed, so the header always fell
+      // back to the placeholder.
+      photos?: Array<{ url: string }>;
     } | null;
   };
   otherParticipant: {
@@ -62,6 +103,7 @@ export interface ThreadResponse {
     reviewsCount?: number;
   } | null;
   messages: MessageResponse[];
+  offerContext: ThreadOfferContext | null;
   page: number;
   limit: number;
 }
@@ -217,5 +259,53 @@ export const messagesApi = {
       throw new Error(data.error?.message || "Failed to create support chat");
     }
     return data.data;
+  },
+
+  /**
+   * Put a price on the table inside a thread.
+   *
+   * The listing is never sent: the server reads it from the conversation, the
+   * same reasoning that keeps `origin` off the create-listing contract.
+   */
+  async submitOffer(
+    conversationId: string,
+    input: SubmitThreadOfferInput
+  ): Promise<{ threadOffer: ThreadOfferView; message: MessageResponse }> {
+    const res = await fetch(
+      `/api/messages/conversations/${conversationId}/offer`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      }
+    );
+    return unwrap(res, "Failed to send offer");
+  },
+
+  async acceptOffer(
+    threadOfferId: string
+  ): Promise<{ threadOffer: ThreadOfferView; shipmentId: string | null }> {
+    const res = await fetch(`/api/messages/offers/${threadOfferId}/accept`, {
+      method: "POST",
+    });
+    return unwrap(res, "Failed to accept offer");
+  },
+
+  async declineOffer(
+    threadOfferId: string
+  ): Promise<{ threadOffer: ThreadOfferView }> {
+    const res = await fetch(`/api/messages/offers/${threadOfferId}/decline`, {
+      method: "POST",
+    });
+    return unwrap(res, "Failed to decline offer");
+  },
+
+  async withdrawOffer(
+    threadOfferId: string
+  ): Promise<{ threadOffer: ThreadOfferView }> {
+    const res = await fetch(`/api/messages/offers/${threadOfferId}/withdraw`, {
+      method: "POST",
+    });
+    return unwrap(res, "Failed to withdraw offer");
   },
 };

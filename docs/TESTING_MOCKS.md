@@ -11,32 +11,42 @@ grep -rn "TODO(EXPEDITOO-TESTING)" src/ scripts/ .env.local
 grep -rn "TODO(EXPEDITOO-TESTING)" ../expedion_encheres/lib ../expedion_encheres/vercel-build.sh
 ```
 
-**Nothing ships to production while those commands return matches.** 12 markers in
+**Nothing ships to production while those commands return matches.** 13 markers in
 `expeditoo-ship`, 9 in `expedion_encheres` at the time of writing.
 
 ---
 
 ## 1. Payments — `MOCK_PAYMENTS`
 
-The Stripe hold was never real: the PaymentIntent was created with `confirm: false`
-and no caller ever passed a payment method, so every payment sat at `pending`,
-capture threw `PAYMENT_NOT_AUTHORISED` at delivery, and payout never ran. Rather than
-guess at your Stripe test setup, the money chain now runs behind a flag.
+**The client pays at booking, not on delivery** — accepting an offer charges the
+card outright (`docs/specs/payment_at_booking_spec.md`). What is mocked is that
+charge: rather than guess at your Stripe test setup, `chargeForShipment` writes
+the row straight to `captured` with a synthetic `pi_mock_<shipmentId>` intent.
+Delivery then schedules the payout and raises the invoice against it, computing
+the commission exactly as the real path does. **The real Stripe code path is
+untouched when the flag is off.**
 
-With `MOCK_PAYMENTS=true`, accepting an offer records the payment as authorised with a
-synthetic `pi_mock_<shipmentId>` intent; delivery captures it, computes the
-commission exactly as the real path does, and records the payout. **The real Stripe
-code path is untouched when the flag is off.**
+Two things are *not* mocked and must not be confused with one:
+
+- **An Expedion-origin job charges nobody, flag or no flag.** Its client paid in
+  the Expedion app when they accepted the quote, so the row is written
+  `source='expedion'`, `captured`, with no PaymentIntent. That is the real
+  behaviour of that lane, which is why it is checked *before* the flag.
+- **`isMockIntent` decides by id, never by the flag**, so a real `pi_...` stays
+  real while the flag is on and a `pi_mock_...` stays recognisable after it is
+  turned off.
 
 | What is mocked | Where | What you must do |
 |---|---|---|
-| Flag helper + synthetic intent prefix | `src/lib/stripe/mock-payments.ts:11` | Delete the file once the real flow lands, then drop its imports from `payments.service.ts` |
-| `authoriseForShipment` skips Stripe | `src/server/services/payments.service.ts:41,105` | Collect a card via SetupIntent, pass `paymentMethodId` (or return `clientSecret` for client confirmation), and mark the row authorised from the `amount_capturable_updated` webhook instead of synchronously |
-| `captureForShipment` skips capture for `pi_mock_` ids | `src/server/services/payments.service.ts:202` | Remove the `isMockIntent` guard. **Purge `pi_mock_` rows from the DB first** — they have no real PaymentIntent to capture |
-| `releaseForShipment` skips cancel | `src/server/services/payments.service.ts:232` | Same: remove the guard, purge mock rows first |
-| `MOCK_PAYMENTS=true` in the local env | `.env.local:41-46` | Delete the block. **Never set this flag in production** |
+| Flag helper + synthetic intent prefix | `src/lib/stripe/mock-payments.ts:13` | Delete the file once the real flow lands, then drop its imports from `payments.service.ts` and `listings.service.ts` |
+| `chargeForShipment` skips Stripe | `src/server/services/payments.service.ts:130,187` | Nothing to build — the real branch beside it already confirms an off-session PaymentIntent against the card saved at posting. Just stop setting the flag |
+| `refundForShipment` skips the refund for `pi_mock_` ids | `src/server/services/payments.service.ts:299` | Remove the `isMockIntent` guard. **Purge `pi_mock_` rows from the DB first** — they have no real PaymentIntent to refund |
+| The card a direct job needs before going live is not demanded | `src/server/services/listings.service.ts:47` | Remove the early return in `assertPayable`. `/create`'s payment step already collects the card for real, against your Stripe test keys |
+| `MOCK_PAYMENTS=true` in the local env | `.env.local:93` | Delete the line. **Never set this flag in production** |
 
----
+**Purge before you switch it off.** Any `pi_mock_` row is a captured payment
+with no money behind it. Left in place, `/carrier/trips` → Effectués reports
+earnings that do not exist and a refund on one silently succeeds.
 
 ## 2. Expedion → Expeditoo escalation bridge
 
@@ -110,11 +120,32 @@ idempotent, so the already-approved branch runs the enrolment and returns.
 
 ---
 
-## 5. Known gaps left standing (not mocked — just not done)
+## 5. Photo location stamp — fonts on the host
+
+`shipment-photo` evidence is stamped with its GPS fix **into the pixels** before the
+object is stored, so no unstamped copy exists anywhere (`photo-stamp.service.ts`,
+`docs/specs/shipment_photos_spec.md`). The band is drawn through librsvg, and librsvg
+finds fonts through fontconfig — i.e. through whatever the host happens to provide.
+
+Locally that is the system font stack and the band renders correctly. On a Vercel
+build image with no system fonts it renders **without glyphs**: a coloured bar and no
+text. Marked with `TODO(EXPEDITOO-TESTING)` at the service.
+
+Finishing it means committing a TTF to the repo and pointing `FONTCONFIG_PATH` at it —
+a licensing and bundle-size decision, not a code one. Until then the loss is the
+convenience, not the evidence: the database row is unaffected and **every surface
+prints the same three lines as text beside the photo**, so a fontless deployment still
+shows where and when the photo was taken.
+
+---
+
+## 6. Known gaps left standing (not mocked — just not done)
 
 - **Payouts stop at `scheduled`.** `executePayout` has no callers and banking details
-  are never forwarded to Stripe (`carrier.service.ts` TODO). Carriers have no earnings
-  screen. This is the documented Phase C boundary.
+  are never forwarded to Stripe (`carrier.service.ts` TODO). A carrier earnings *view*
+  exists at `/carrier/trips` → Effectués, but it reports €0 net because the platform
+  retains 100% while `COMMISSION_RATE` is 1.0 — nothing moves money. This is the
+  documented Phase C boundary.
 - **No realtime shipment data.** Only the notification bell is pushed over Ably; the
   shipment-data path (`publishDataUpdate` server-side, the `data:update` handler
   client-side) exists on both ends but was never connected, and shipment queries have

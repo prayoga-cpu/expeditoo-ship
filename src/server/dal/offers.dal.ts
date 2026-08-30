@@ -1,5 +1,11 @@
 import { db } from "@/db";
-import { offers, type InsertOffer, type OfferStatus } from "@/db/schema/offers";
+import {
+  offerSlots,
+  offers,
+  type InsertOffer,
+  type InsertOfferSlot,
+  type OfferStatus,
+} from "@/db/schema/offers";
 import { listings } from "@/db/schema/listings";
 import { and, asc, desc, eq, min, ne, sql, count } from "drizzle-orm";
 
@@ -9,14 +15,59 @@ import { and, asc, desc, eq, min, ne, sql, count } from "drizzle-orm";
  */
 type Executor = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
 
+/**
+ * Slots come back earliest first, everywhere. Nothing downstream wants the
+ * order the carrier typed them in — the offer card, the shipment and the
+ * stored schedule all want the clock.
+ *
+ * Held apart from the `as const` below on purpose: that assertion would make
+ * `orderBy` a readonly tuple, and drizzle's relational config asks for a
+ * mutable array.
+ */
+const slotsEarliestFirst = { orderBy: [asc(offerSlots.startsAt)] };
+
 const withCarrierAndVehicle = {
   carrier: true,
   vehicle: true,
+  slots: slotsEarliestFirst,
 } as const;
 
 export const offersDal = {
   async create(data: InsertOffer, tx: Executor = db) {
     const [result] = await tx.insert(offers).values(data).returning();
+    return result;
+  },
+
+  /** The carrier's proposal. Empty for the lanes that propose nothing. */
+  async createSlots(rows: InsertOfferSlot[], tx: Executor = db) {
+    if (rows.length === 0) return [];
+    return await tx.insert(offerSlots).values(rows).returning();
+  },
+
+  async listSlots(offerId: string, tx: Executor = db) {
+    return await tx
+      .select()
+      .from(offerSlots)
+      .where(eq(offerSlots.offerId, offerId))
+      .orderBy(asc(offerSlots.startsAt));
+  },
+
+  /**
+   * Books a slot: the offer's schedule becomes the one actually chosen.
+   *
+   * Called inside `commitAward`'s transaction so the shipment reads the booked
+   * pair rather than the earliest proposal (offer_time_slots_spec.md §4).
+   */
+  async updateSchedule(
+    id: string,
+    schedule: { estimatedPickup: Date; estimatedDelivery: Date },
+    tx: Executor = db
+  ) {
+    const [result] = await tx
+      .update(offers)
+      .set({ ...schedule, updatedAt: new Date() })
+      .where(eq(offers.id, id))
+      .returning();
     return result;
   },
 

@@ -36,7 +36,8 @@ export function useAcceptOffer(listingId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (offerId: string) => offersApi.accept(offerId),
+    mutationFn: ({ offerId, slotId }: { offerId: string; slotId?: string }) =>
+      offersApi.accept(offerId, slotId),
     onSuccess: (result) => {
       toast.success(
         result.alreadyAccepted

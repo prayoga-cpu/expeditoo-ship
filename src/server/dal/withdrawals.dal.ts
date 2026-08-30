@@ -35,6 +35,24 @@ export const withdrawalsDal = {
     return row ?? { amountCents: 0, deliveries: 0 };
   },
 
+  /**
+   * Has this driver ever been paid for anything, in any status.
+   *
+   * `availableFor` cannot answer this: it counts only unclaimed `scheduled`
+   * rows, so a driver waiting on a withdrawal — or one whose single payout
+   * failed — reports zero and would be shown the "you have never earned"
+   * onboarding pitch. This asks the honest question instead.
+   */
+  async hasAnyPayout(carrierUserId: string, tx: Executor = db) {
+    const [row] = await tx
+      .select({ id: payouts.id })
+      .from(payouts)
+      .where(eq(payouts.carrierId, carrierUserId))
+      .limit(1);
+
+    return Boolean(row);
+  },
+
   /** The unclaimed payout rows themselves, for stamping into a request. */
   async availableRows(carrierUserId: string, tx: Executor = db) {
     return await tx

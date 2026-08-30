@@ -1,23 +1,30 @@
 "use client";
 
+import { useState } from "react";
 import { format } from "date-fns";
+import { enUS, fr } from "date-fns/locale";
 import { Truck, Clock, Star, BadgeCheck } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { addDays } from "@/lib/offer-slots";
+import { parseDayString } from "@/lib/availability-window";
 import { formatCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
-import type { Offer } from "../types";
+import type { Offer, OfferSlot } from "../types";
 
 interface OfferCardProps {
   offer: Offer;
   budgetCents: number;
-  /** Only the shipper who owns the job may accept. */
+  /** Only the job's owner, or an operator on an escalated job, may accept. */
   canAccept: boolean;
   isAccepting: boolean;
   isLowest: boolean;
-  onAccept: (offerId: string) => void;
+  onAccept: (offerId: string, slotId?: string) => void;
 }
 
 const euros = formatCurrency;
@@ -30,10 +37,34 @@ export function OfferCard({
   isLowest,
   onAccept,
 }: OfferCardProps) {
+  const t = useTranslations("listing.bid.offerCard");
+  const locale = useLocale();
+  const dateLocale = locale === "fr" ? fr : enUS;
+
+  // The earliest is pre-selected because it is what the offer already promises:
+  // `estimatedPickup` holds it, and accepting without naming a slot books it.
+  const [slotId, setSlotId] = useState(offer.slots[0]?.id ?? "");
+
   // The budget is an expectation, not a cap, so bidding over it is normal and
   // is surfaced rather than treated as an error.
   const overBudget = offer.priceCents > budgetCents;
   const difference = offer.priceCents - budgetCents;
+
+  const pending = offer.status === "pending";
+  const choosable = canAccept && pending && offer.slots.length > 1;
+
+  // What clicking accept would actually book. The schedule line has to follow
+  // it, or the awarder reads one date and commits to another.
+  const booked = offer.slots.find((s) => s.id === slotId) ?? offer.slots[0];
+
+  // From the driver's own `day` string, never from the instant: the instant
+  // renders in the *viewer's* timezone, so a 06:00 Paris pickup read from
+  // London would name the same day only by luck, and from Réunion would not.
+  const dayLabel = (day: string) =>
+    format(parseDayString(day), "EEE d MMM", { locale: dateLocale });
+
+  const slotLabel = (slot: OfferSlot) =>
+    t("slotLine", { day: dayLabel(slot.day), period: t(`slot.${slot.slot}`) });
 
   return (
     <Card
@@ -57,11 +88,11 @@ export function OfferCard({
               {offer.status === "accepted" && (
                 <Badge className="bg-success/15 text-success border-success/30">
                   <BadgeCheck className="mr-1 h-3 w-3" />
-                  Selected
+                  {t("selected")}
                 </Badge>
               )}
-              {isLowest && offer.status === "pending" && (
-                <Badge variant="secondary">Lowest</Badge>
+              {isLowest && pending && (
+                <Badge variant="secondary">{t("lowest")}</Badge>
               )}
             </div>
 
@@ -82,13 +113,72 @@ export function OfferCard({
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Clock className="h-4 w-4 shrink-0" />
                 <dd>
-                  Pickup {format(new Date(offer.estimatedPickup), "d MMM, HH:mm")}
-                  {" · "}
-                  Delivery{" "}
-                  {format(new Date(offer.estimatedDelivery), "d MMM, HH:mm")}
+                  {booked
+                    ? t("schedule", {
+                        pickup: slotLabel(booked),
+                        delivery: t("deliveryBy", {
+                          day: dayLabel(
+                            addDays(booked.day, offer.deliveryLeadDays)
+                          ),
+                        }),
+                      })
+                    : t("schedule", {
+                        // No slot was proposed — this offer took the job's own
+                        // window, so the stored instants are all there is.
+                        pickup: format(
+                          new Date(offer.estimatedPickup),
+                          "d MMM, HH:mm",
+                          { locale: dateLocale }
+                        ),
+                        delivery: format(
+                          new Date(offer.estimatedDelivery),
+                          "d MMM, HH:mm",
+                          { locale: dateLocale }
+                        ),
+                      })}
                 </dd>
               </div>
             </dl>
+
+            {/* Several proposals and nobody here who can book one: the list is
+                still worth reading — it is what the carrier committed to. */}
+            {offer.slots.length > 1 && !choosable && (
+              <div className="mt-3">
+                <p className="text-sm font-medium">{t("proposedSlots")}</p>
+                <ul className="mt-1 space-y-0.5 text-sm text-muted-foreground">
+                  {offer.slots.map((slot) => (
+                    <li key={slot.id}>{slotLabel(slot)}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {choosable && (
+              <div className="mt-3 space-y-2">
+                <Label className="text-sm font-medium">{t("chooseSlot")}</Label>
+                <RadioGroup
+                  value={slotId}
+                  onValueChange={setSlotId}
+                  aria-label={t("chooseSlot")}
+                >
+                  {offer.slots.map((slot) => (
+                    <div key={slot.id} className="flex items-center gap-2">
+                      <RadioGroupItem
+                        value={slot.id}
+                        id={`slot-${slot.id}`}
+                        disabled={isAccepting}
+                      />
+                      <Label
+                        htmlFor={`slot-${slot.id}`}
+                        className="text-sm font-normal"
+                      >
+                        {slotLabel(slot)}
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+              </div>
+            )}
 
             {offer.message && (
               <p className="mt-3 text-sm text-foreground/80 leading-relaxed">
@@ -110,17 +200,21 @@ export function OfferCard({
               )}
             >
               {overBudget ? "+" : ""}
-              {euros(difference)} vs budget
+              {t("vsBudget", { amount: euros(difference) })}
             </p>
           </div>
 
-          {canAccept && offer.status === "pending" && (
+          {canAccept && pending && (
             <Button
-              onClick={() => onAccept(offer.id)}
+              onClick={() => onAccept(offer.id, slotId || undefined)}
               disabled={isAccepting}
               className="shrink-0"
             >
-              {isAccepting ? "Accepting…" : "Accept"}
+              {isAccepting
+                ? t("accepting")
+                : choosable
+                  ? t("acceptSlot")
+                  : t("accept")}
             </Button>
           )}
         </div>

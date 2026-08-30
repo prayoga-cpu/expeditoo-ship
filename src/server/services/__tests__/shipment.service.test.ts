@@ -10,16 +10,31 @@ vi.mock("@/server/services/expedion-bridge.service", () => ({
   expedionBridgeService: { onShipmentStatus: vi.fn().mockResolvedValue({}) },
   notifyExpedion: vi.fn(),
 }));
+// The status gate calls this, and an unmocked one reaches a real database.
+vi.mock("@/server/services/shipment-photos.service", () => ({
+  shipmentPhotosService: {
+    hasStagePhoto: vi.fn().mockResolvedValue(true),
+    stageCounts: vi.fn().mockResolvedValue({ pickup: 0, delivery: 0 }),
+  },
+}));
+vi.mock("@/server/services/shipment-confirmations.service", () => ({
+  shipmentConfirmationsService: {
+    requestConfirmation: vi.fn().mockResolvedValue(undefined),
+  },
+}));
 vi.mock("@/server/services/payments.service", () => ({
   paymentsService: {
-    captureForShipment: vi.fn().mockResolvedValue({}),
+    getForShipment: vi.fn().mockResolvedValue({ id: "pay-1", status: "captured" }),
     schedulePayout: vi.fn().mockResolvedValue({}),
-    releaseForShipment: vi.fn().mockResolvedValue({}),
+    refundForShipment: vi.fn().mockResolvedValue({}),
   },
 }));
 
 import { shipmentService, ShipmentError } from "../shipment.service";
 import { shipmentsDal } from "@/server/dal/shipments.dal";
+import { listingsDal } from "@/server/dal/listings.dal";
+import { shipmentConfirmationsService } from "@/server/services/shipment-confirmations.service";
+import { paymentsService } from "@/server/services/payments.service";
 
 /** A full user row as the DAL loads it - permission-blind by design. */
 /**
@@ -211,5 +226,145 @@ describe("shipmentService.getShipmentDetail (shipper and carrier)", () => {
         shipmentService.getShipmentDetail("ship-1", { userId: "nobody" })
       )
     ).toBe("FORBIDDEN");
+  });
+});
+
+/**
+ * Asking the client to confirm what the transporter just recorded.
+ * Covers docs/specs/transport_status_confirmation_spec.md §8.
+ */
+describe("shipmentService.updateStatus — the confirmation request", () => {
+  const requestConfirmation = vi.mocked(
+    shipmentConfirmationsService.requestConfirmation
+  );
+
+  const ownership = (status: string) => ({
+    id: "ship-1",
+    shipperId: "shipper-1",
+    carrierId: "carrier-1",
+    driverId: "driver-1",
+    status,
+    listingId: "job-1",
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Object.assign(shipmentsDal, {
+      getOwnership: vi.fn(),
+      updateStatus: vi.fn().mockResolvedValue({ id: "ship-1" }),
+      createEvent: vi.fn().mockResolvedValue({}),
+    });
+    Object.assign(listingsDal, { update: vi.fn().mockResolvedValue({}) });
+  });
+
+  const move = (from: string, to: string) => {
+    vi.mocked(shipmentsDal.getOwnership).mockResolvedValue(
+      ownership(from) as never
+    );
+    return shipmentService.updateStatus("ship-1", to as never, {
+      userId: "carrier-1",
+    });
+  };
+
+  it("asks the client to confirm the pickup when the run reaches it", async () => {
+    await move("ASSIGNED", "PICKED_UP");
+
+    expect(requestConfirmation).toHaveBeenCalledWith("ship-1", "PICKED_UP");
+  });
+
+  it("does not ask a second time when the run moves on to in-transit", async () => {
+    // The regression: `IN_TRANSIT` also maps onto the pickup milestone for the
+    // SMS, where the bridge dedupes. The email has no such guard, so mapping
+    // it here mailed the same client the same question twice for one pickup.
+    await move("PICKED_UP", "IN_TRANSIT");
+
+    expect(requestConfirmation).not.toHaveBeenCalled();
+  });
+
+  it("asks the client to confirm reception on delivery", async () => {
+    await move("IN_TRANSIT", "DELIVERED");
+
+    expect(requestConfirmation).toHaveBeenCalledWith("ship-1", "DELIVERED");
+  });
+
+  it("asks for nothing on a stage the client never witnesses", async () => {
+    await move("PENDING", "CANCELLED");
+
+    expect(requestConfirmation).not.toHaveBeenCalled();
+  });
+});
+
+// ========================================
+// Cancelling gives the money back
+// ========================================
+//
+// docs/specs/payment_at_booking_spec.md §6. The client is charged at booking,
+// so a cancellation has a real charge to undo — it is no longer a matter of
+// letting a hold expire.
+
+describe("shipmentService.cancelShipment", () => {
+  const ownership = (status: string) => ({
+    id: "ship-1",
+    listingId: "job-1",
+    shipperId: "shipper-1",
+    carrierId: "carrier-1",
+    driverId: "driver-1",
+    status,
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Object.assign(shipmentsDal, {
+      getOwnership: vi.fn().mockResolvedValue(ownership("ASSIGNED")),
+      cancel: vi.fn().mockResolvedValue({ id: "ship-1", status: "CANCELLED" }),
+      createEvent: vi.fn().mockResolvedValue({}),
+    });
+    Object.assign(listingsDal, { update: vi.fn().mockResolvedValue({}) });
+    vi.mocked(paymentsService.refundForShipment).mockResolvedValue({} as never);
+  });
+
+  it("refunds the client", async () => {
+    await shipmentService.cancelShipment("ship-1", "client changed plans", {
+      userId: "shipper-1",
+    });
+
+    expect(paymentsService.refundForShipment).toHaveBeenCalledWith("ship-1");
+    expect(shipmentsDal.cancel).toHaveBeenCalledWith(
+      "ship-1",
+      "client changed plans"
+    );
+  });
+
+  it("still cancels when the refund is not ours to make", async () => {
+    // An Expedion job's money was taken in that app, so `refundForShipment`
+    // throws REFUND_NOT_LOCAL. Refusing the cancellation over it would leave a
+    // job nobody is doing marked as live; Expedion learns from the write-back.
+    vi.mocked(paymentsService.refundForShipment).mockRejectedValue(
+      new Error("REFUND_NOT_LOCAL")
+    );
+
+    const result = await shipmentService.cancelShipment("ship-1", "off", {
+      userId: "shipper-1",
+    });
+
+    expect(result).toMatchObject({ status: "CANCELLED" });
+    expect(listingsDal.update).toHaveBeenCalledWith("job-1", {
+      status: "cancelled",
+    });
+  });
+
+  it("will not let a party cancel a run that is already on the road", async () => {
+    vi.mocked(shipmentsDal.getOwnership).mockResolvedValue(
+      ownership("IN_TRANSIT") as never
+    );
+
+    expect(
+      await codeFrom(() =>
+        shipmentService.cancelShipment("ship-1", "too late", {
+          userId: "shipper-1",
+        })
+      )
+    ).toBe("CANCEL_REQUIRES_SUPPORT");
+    expect(paymentsService.refundForShipment).not.toHaveBeenCalled();
   });
 });

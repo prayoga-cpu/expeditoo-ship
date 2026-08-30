@@ -5,12 +5,20 @@ export interface BrowseParams {
   categoryId?: string;
   q?: string;
   origin?: "direct" | "expedion";
-  nearLat?: number;
-  nearLng?: number;
+  /** Where the driver starts, and where they are going on a corridor search. */
+  fromLat?: number;
+  fromLng?: number;
+  toLat?: number;
+  toLng?: number;
+  /** Radius around the departure, or half-width of the corridor. */
   radiusKm?: number;
   minBudget?: number;
   maxBudget?: number;
   maxWeightKg?: number;
+  /** `YYYY-MM-DD` days, comma-joined by `toQuery`. */
+  days?: string[];
+  slots?: string[];
+  tzOffset?: number;
   sort?: string;
   page?: number;
   limit?: number;

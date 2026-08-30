@@ -82,7 +82,11 @@ export async function POST(req: Request) {
         let code = "INTERNAL_ERROR";
         let status = 500;
 
-        if (message.includes("not found")) {
+        if (message.startsWith("Refund not local")) {
+            // Charged in Expedion, so refundable only there.
+            code = "REFUND_NOT_LOCAL";
+            status = 409;
+        } else if (message.includes("not found")) {
             code = "NOT_FOUND";
             status = 404;
         } else if (message.includes("already refunded")) {

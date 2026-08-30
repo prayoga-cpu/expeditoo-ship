@@ -164,9 +164,18 @@ SET pickup_address = right(id, 3) || ' rue de Départ',
     dropoff_address = right(id, 3) || ' rue d''Arrivée',
     dropoff_lat = round(dropoff_lat::numeric, 2)::double precision,
     dropoff_lng = round(dropoff_lng::numeric, 2)::double precision,
-    -- Delivery photos show doorways, faces and house numbers.
-    proof_of_delivery_url = NULL,
     cancellation_reason = CASE WHEN cancellation_reason IS NULL THEN NULL ELSE 'Dev cancellation reason.' END;
+
+-- Pickup and delivery photos show doorways, faces and house numbers, and each
+-- row carries the exact coordinates the photo was taken at. `shipments.
+-- proof_of_delivery_url` used to hold the single delivery photo; it was
+-- dropped in 0015 and this is where that evidence lives now.
+--
+-- Deleted outright rather than blanked: the columns are NOT NULL, the object
+-- keys point at a private bucket a dev environment cannot read anyway, and a
+-- row whose coordinates were rounded away would still say a delivery happened
+-- at an address it did not.
+DELETE FROM "shipment_photos";
 
 UPDATE "shipment_events"
 SET note = CASE WHEN note IS NULL THEN NULL ELSE 'Dev note.' END,
