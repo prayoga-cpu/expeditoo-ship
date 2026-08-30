@@ -102,14 +102,10 @@ export const driverShipmentsApi = {
   updateStatus: (id: string, status: DriverShipmentStatus, note?: string) =>
     api.patch<DriverShipment>(`/api/shipments/${id}/status`, { status, note }),
 
-  /** Step 1 of proof of delivery: put the photo in storage. */
-  uploadPodPhoto: (file: File) => {
-    const body = new FormData();
-    body.append("file", file);
-    return api.post<{ url: string }>("/api/upload", body);
-  },
-
-  /** Step 2: attach the photo, which also closes the run as DELIVERED. */
-  submitProofOfDelivery: (id: string, url: string) =>
-    api.post<DriverShipment>(`/api/shipments/${id}/proof-of-delivery`, { url }),
+  // `uploadPodPhoto` / `submitProofOfDelivery` were removed with the single
+  // public proof-of-delivery URL they served. Evidence is now several private,
+  // location-stamped photos per stage under `/api/shipments/:id/photos`, and
+  // the `-> DELIVERED` transition is refused without one, so attaching a photo
+  // and closing the run are no longer the same call
+  // (docs/specs/shipment_photos_spec.md).
 };

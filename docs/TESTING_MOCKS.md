@@ -50,10 +50,13 @@ earnings that do not exist and a refund on one silently succeeds.
 
 ## 2. Expedion → Expeditoo escalation bridge
 
-The bridge is mechanically sound but starved: `expedionService.markPaid` is the only
-writer of `escalateAfter` and **has zero callers**, so no real quote ever becomes due
-and the 10-minute cron sweeps an empty set. A seed script gives you a working demo
-without that wiring.
+**The bridge is live.** `POST /api/expedion/quotes/:id/paid` calls
+`expedionService.markPaid`, which stamps `escalateAfter`, and the Expedion payment
+server does call it — `api/confirm-payment.js` in `expedion_encheres` verifies the
+Checkout session with Stripe and posts here. Auto-escalation is no longer dead code.
+
+What is still mocked is the *demo data*, not the wiring: a seed script fabricates a
+paid quote so you can watch the sweep fire without going through Stripe.
 
 ```bash
 npx tsx src/scripts/seed-expedion-demo.ts   # idempotent; prints a curl crib sheet
@@ -63,23 +66,25 @@ npx tsx src/scripts/seed-expedion-demo.ts   # idempotent; prints a curl crib she
 |---|---|---|
 | Fake platform shipper `expedion-system@expeditoo.test` owns escalated listings (no credentials, no Better Auth row) | `src/scripts/seed-expedion-demo.ts:47` | Create a real platform-owned shipper account and point `EXPEDION_SYSTEM_USER_ID` at it |
 | Fabricated `DEMO-DEVIS-001` quote inserted directly at `status=paid` | `src/scripts/seed-expedion-demo.ts:68` | Real quotes must arrive from the Flutter app via `POST /api/expedion/quotes` and reach `paid` through a payment webhook. **Delete this row before production** |
-| `escalateAfter` forced to NOW | `src/scripts/seed-expedion-demo.ts:111` | Wire `markPaid` so it stamps `now + EXPEDION_ESCALATE_AFTER_HOURS` when payment settles, then stop seeding the timestamp |
+| `escalateAfter` forced to NOW | `src/scripts/seed-expedion-demo.ts:111` | Only so the demo does not wait. Real quotes get `now + EXPEDION_ESCALATE_AFTER_HOURS` from `markPaid` already — stop seeding the timestamp, nothing to wire |
 | `EXPEDION_SYSTEM_USER_ID` → fake shipper | `.env.local:49` | Point at the real platform account |
 | `EXPEDION_CATEGORY_ID` → seeded `encheres` category | `.env.local:53` | Confirm the category belongs in production or repoint |
 | `EXPEDION_ESCALATE_AFTER_HOURS=0.01` (~36 s) | `.env.local:57` | Restore a real window (48). Note: a literal `0` is **rejected** and silently falls back to 48h |
 
-### Two structural risks recorded, deliberately not fixed
+### Two structural risks that were recorded here — both now fixed
 
-These are pre-existing design bugs, not mocks — fix them before real money flows:
+Left in place as a record, because the second one is easy to "fix" a second time and
+the first depends on code that looks redundant until you know why it is there:
 
-1. **Duplicate listings on retry** (`expedion-escalation.service.ts:194`) — listing
-   creation sits outside the claim's cleanup. If the bridge-stamp or quote-update
-   after creation fails, the catch releases `escalatedAt` while the listing exists,
-   and the next sweep mints a second one. *Fix:* make creation + stamp + quote update
-   one transaction, or check for an existing listing with `externalRef = quote.id` first.
-2. **No payment → `markPaid` wiring** (`expedion.service.ts:423`) — call it from the
-   payment webhook when a quote's payment settles. Until then auto-escalation is dead
-   code and only manual admin force-escalation works.
+1. **Duplicate listings on retry — fixed.** `escalateQuote` now looks for an
+   existing listing by `externalRef` and adopts it, and tracks `createdListing`
+   so the catch **refuses to release the claim** once a listing exists
+   (`expedion-escalation.service.ts`, the `if (createdListing)` branch). A stuck
+   quote is visible and repairable; a duplicate is not. Do not "simplify" that
+   branch into an unconditional release.
+2. **Payment → `markPaid` wiring — fixed.** `POST /api/expedion/quotes/:id/paid`
+   is the caller, and `expedion_encheres/api/confirm-payment.js` posts to it after
+   verifying the Stripe Checkout session.
 
 ---
 

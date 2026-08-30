@@ -1,5 +1,21 @@
 # Transporter Proposal API Specification
 
+> **STALE — v1 goods marketplace. Do not implement against this.**
+>
+> Nothing on this page matches the shipping code. `/api/shipments/:id/proposals`
+> never existed in v2: a driver's bid is an **offer**
+> (`POST /api/listings/:id/offers`), it carries slots rather than a single
+> `estimatedPickup`/`estimatedDelivery` pair, and an **operator** awards it on an
+> escalated job. `POST /api/shipments/:id/proof-of-delivery` (§4) was **deleted**
+> — evidence is now several private, location-stamped photos per stage under
+> `POST /api/shipments/:id/photos`, and the `→ DELIVERED` transition is refused
+> without one, so attaching a photo and closing the run are no longer one call.
+>
+> Current contracts: `docs/specs/offers_engine_spec.md`,
+> `docs/specs/offer_time_slots_spec.md`, `docs/specs/shipment_photos_spec.md`,
+> `docs/specs/transport_status_confirmation_spec.md`. Kept only as a record of
+> the v1 shape (CLAUDE.md gotcha 7).
+
 ## Overview
 
 API untuk driver/transporter mengajukan proposal harga dan user menerima proposal. Mengikuti spesifikasi dari `docs/api.md` Section 6.

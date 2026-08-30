@@ -69,6 +69,21 @@ BEGIN
   SELECT count(*) INTO n FROM "shipment_photos";
   IF n > 0 THEN leaks := leaks || format('shipment_photos: %s rows', n); END IF;
 
+  -- Free text people wrote to each other. Checked by content rather than by
+  -- row count: unlike the tables above these rows are kept, so the question is
+  -- whether the scrub actually reached them.
+  SELECT count(*) INTO n FROM "shipment_incidents"
+   WHERE description IS DISTINCT FROM 'Dev incident description.';
+  IF n > 0 THEN leaks := leaks || format('shipment_incidents.description: %s rows', n); END IF;
+
+  SELECT count(*) INTO n FROM "shipment_confirmations"
+   WHERE note IS NOT NULL AND note <> 'Dev confirmation note.';
+  IF n > 0 THEN leaks := leaks || format('shipment_confirmations.note: %s rows', n); END IF;
+
+  SELECT count(*) INTO n FROM "thread_offers"
+   WHERE note IS NOT NULL AND note <> 'Dev offer note.';
+  IF n > 0 THEN leaks := leaks || format('thread_offers.note: %s rows', n); END IF;
+
   IF array_length(leaks, 1) IS NOT NULL THEN
     RAISE EXCEPTION 'Anonymisation incomplete: %', array_to_string(leaks, '; ');
   END IF;

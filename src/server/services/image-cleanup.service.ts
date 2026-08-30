@@ -4,6 +4,7 @@ import {
   categories,
   photos,
   shipmentEvents,
+  shipmentIncidents,
 } from "@/db/schema";
 import { messages } from "@/db/schema/messages";
 import { expedionQuotes } from "@/db/schema/expedion";
@@ -75,6 +76,20 @@ export class ImageCleanupService {
     // private bucket of their own (shipment_photos_spec.md §4), so nothing
     // here can reach them and nothing here should try. This sweep only ever
     // sees the public bucket.
+
+    // 4b. Incident photos. Unlike shipment photos above, these ARE in the
+    // public bucket - `uploadIncidentPhoto` posts to /api/upload, which writes
+    // to R2_BUCKET_NAME - so they have to be declared here or every one of them
+    // is an orphan by construction and this sweep deletes it on the next
+    // Sunday run. They are the evidence a damage or loss dispute is argued
+    // from, so losing them is the expensive kind of silent.
+    const incidents = await db
+      .select({ photoUrls: shipmentIncidents.photoUrls })
+      .from(shipmentIncidents);
+    incidents.forEach((incident) =>
+      (incident.photoUrls ?? []).forEach((url) => addUrl(url))
+    );
+    console.log(`Scanned ${incidents.length} shipment incidents`);
 
     // 5. Messages (Attachments)
     const msgs = await db

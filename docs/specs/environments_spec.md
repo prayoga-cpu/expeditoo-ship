@@ -116,10 +116,15 @@ amounts, listing titles/descriptions, listing photo URLs (already public),
 city + coordinates rounded to ~1 km.
 
 **Destroyed** — names, emails, phones, street addresses; KYC document
-storage keys and proof-of-delivery photos (both point at real R2 objects);
-every free-text field people wrote to each other; all session tokens,
-password hashes, OAuth tokens; every live Stripe id (`payment_intent`,
-`checkout_session`, `transfer`, `account`).
+storage keys, shipment photos and incident photos (all point at real R2
+objects); every free-text field people wrote to each other — chat messages,
+offer messages, chat-offer notes, confirmation notes and incident
+descriptions; all session tokens, password hashes, OAuth tokens; every live
+Stripe id (`payment_intent`, `checkout_session`, `transfer`, `account`).
+
+The free-text list is exhaustive on purpose: it is the half that grows every
+time a feature adds a place for someone to type, and `verify-anonymized.sql`
+only fails loudly on what it has been told to check.
 
 After mirroring, sign in locally with `pnpm db:seed:dev-users` — mirrored
 password hashes are wiped, so the mirror alone has no working credentials.

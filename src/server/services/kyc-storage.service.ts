@@ -28,12 +28,20 @@ function ensureClient() {
   const accountId = process.env.R2_ACCOUNT_ID;
   const accessKeyId = process.env.R2_ACCESS_KEY_ID;
   const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
-  // Falls back to the main bucket; a dedicated private bucket is preferable in
-  // production and is what R2_KYC_BUCKET_NAME selects.
-  const bucketName = process.env.R2_KYC_BUCKET_NAME ?? process.env.R2_BUCKET_NAME;
+  // Never R2_BUCKET_NAME. That is the public bucket, and the image-cleanup cron
+  // lists every object in it and deletes anything it cannot match to a listing
+  // photo - which is every KYC document on the platform. Falling back to it
+  // used to be the behaviour here, and with R2_KYC_BUCKET_NAME unset in the
+  // deployment it meant identity documents sat in a public bucket on a weekly
+  // delete timer. `expedion-storage.service.ts` has refused the same fallback
+  // for the same reason since it was written; this now matches it.
+  const bucketName =
+    process.env.R2_KYC_BUCKET_NAME ?? process.env.R2_EXPEDION_BUCKET_NAME;
 
   if (!accountId || !accessKeyId || !secretAccessKey || !bucketName) {
-    throw new Error("Missing R2 configuration for KYC storage");
+    throw new Error(
+      "Missing R2 configuration for KYC storage (set R2_KYC_BUCKET_NAME - R2_BUCKET_NAME is the public bucket and is swept by the image-cleanup cron)"
+    );
   }
 
   client = new S3Client({

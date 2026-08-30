@@ -8,20 +8,33 @@ Version 2.0 · 04/08/2026 · PRIONATION.io for Atout Global Services
 ## 1. What this product is
 
 Expedion escalates paid transport jobs that no driver in its own pool has taken.
-Approved drivers on Expeditoo bid with price, ETA and vehicle. An operator
-compares the bids and picks a carrier. Stripe holds and releases payment.
+Approved drivers on Expeditoo bid with price, slots and vehicle. An operator
+compares the bids and picks a carrier.
 
-Shippers do not post jobs here — Expedion is the only inlet. There are no goods
-auctions either; the only auction is the **reverse auction on transport**,
-drivers competing downward on price.
+**There are two inlets.** Expedion escalation, and a direct transport request
+posted at `/create` by anyone with a session — deleted in `7a455c0` and restored
+on 2026-08-26 because the client asked for it back. Anything below that still
+reads "Expedion is the only inlet" is older than that decision. The two differ
+in who awards: an escalated job is owned by the Expedion system account and
+awarded by an **operator**; a direct request is owned by whoever posted it and
+awarded by **them**. There are no goods auctions; the only auction is the
+**reverse auction on transport**, drivers competing downward on price.
+
+**The client pays at booking, and the money is taken rather than held.** A
+direct job confirms an automatic-capture, off-session PaymentIntent when the
+transport is chosen; an escalated job was already paid in Expedion and is not
+charged again here. Delivery settles only what the driver is owed, and
+cancelling **refunds** rather than releasing a hold. Anything describing a
+manual-capture hold released on delivery predates
+`docs/specs/payment_at_booking_spec.md`.
 
 | | |
 |---|---|
 | Market | France, road transport, any category |
-| Model | Driver-side marketplace on escalated demand, competitive bidding |
+| Model | Driver-side marketplace, competitive bidding on escalated **and** directly posted demand |
 | Revenue | Commission on each completed delivery — split undecided, see §10 |
-| Selection | **An operator selects** the driver from submitted bids |
-| Demand | Escalated jobs from Expedion when no driver is available |
+| Selection | **An operator selects** on an escalated job; the poster selects on a direct one |
+| Demand | Escalated jobs from Expedion, plus direct requests posted at `/create` |
 
 ---
 

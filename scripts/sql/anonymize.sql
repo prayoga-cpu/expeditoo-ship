@@ -12,8 +12,9 @@
 --   * city names and coordinates rounded to ~1 km
 --
 -- What is destroyed: names, emails, phones, street addresses, KYC document
--- keys, avatars, proof-of-delivery photos, free-text people write to each
--- other, every credential and every live third-party id.
+-- keys, avatars, shipment and incident photos, free-text people write to each
+-- other (chat, chat-offer notes, confirmation notes, incident reports), every
+-- credential and every live third-party id.
 --
 -- :keep_emails is a comma-separated allow-list of accounts to leave readable
 -- (normally your own), passed by the mirror script.
@@ -195,6 +196,26 @@ UPDATE "notifications"
 SET title = 'Dev notification',
     message = 'Dev notification body.',
     data = NULL;
+
+-- An offer put on the table inside a chat. The note is the carrier's own words
+-- to one client, so it belongs with `messages` above, not with `offers`.
+UPDATE "thread_offers"
+SET note = CASE WHEN note IS NULL THEN NULL ELSE 'Dev offer note.' END;
+
+-- What a client or driver typed when confirming a step, and what either party
+-- wrote when reporting damage. `description` is the free-text half of an
+-- incident report and routinely names people, addresses and what was in the
+-- box; `resolution_note` is the operator's reply to it.
+UPDATE "shipment_confirmations"
+SET note = CASE WHEN note IS NULL THEN NULL ELSE 'Dev confirmation note.' END;
+
+UPDATE "shipment_incidents"
+SET description = 'Dev incident description.',
+    resolution_note = CASE
+      WHEN resolution_note IS NULL THEN NULL
+      ELSE 'Dev resolution note.'
+    END,
+    photo_urls = '[]'::jsonb;
 
 UPDATE "reviews"
 SET comment = CASE WHEN comment IS NULL THEN NULL ELSE 'Dev review comment.' END;
