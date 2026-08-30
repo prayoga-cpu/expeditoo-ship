@@ -11,12 +11,22 @@ import {
   TIME_SLOTS,
   type TimeSlot,
 } from "@/lib/availability-window";
+import { MAX_PATH_POINTS } from "@/lib/route-corridor";
 import {
   DEFAULT_JOB_FILTERS,
+  DEFAULT_RADIUS_KM,
+  isResolvedPlace,
   type JobFilters,
   type JobSort,
   type PlaceValue,
 } from "../types";
+
+/**
+ * The étapes that actually describe a path: chosen ones, and only when there is
+ * an arrival to route towards.
+ */
+const resolvedVia = (filters: JobFilters) =>
+  filters.to ? filters.via.filter(isResolvedPlace) : [];
 
 /**
  * Drives the job board.
@@ -62,9 +72,16 @@ export function useJobBoard(options: { origin?: "direct" | "expedion" } = {}) {
       fromLng: filters.from?.lng,
       toLat: filters.to?.lat,
       toLng: filters.to?.lng,
-      // A point with no radius filters nothing; default rather than drop it, so
-      // choosing a city always narrows the board.
-      radiusKm: filters.from ? (filters.radiusKm ?? undefined) : undefined,
+      // Étapes ride on the arrival: waypoints with nowhere to go describe no
+      // path, so they are dropped rather than half-applied.
+      via: resolvedVia(filters)
+        .map((place) => `${place.lat},${place.lng}`)
+        .join(";") || undefined,
+      // A point with no radius filters nothing, and the DAL needs all three
+      // before it applies either predicate. A deep link may carry coordinates
+      // without one, so default to the same figure the search bar displays
+      // rather than silently dropping the location filter.
+      radiusKm: filters.from ? (filters.radiusKm ?? DEFAULT_RADIUS_KM) : undefined,
       days: filters.days.length > 0 ? filters.days : undefined,
       slots: filters.slots.length > 0 ? filters.slots : undefined,
       // Sent alongside the days so a slot means the driver's hour, not the
@@ -174,7 +191,35 @@ export function filtersFromParams(params: URLSearchParams): JobFilters {
   };
 
   const from = place("from");
+  const to = from ? place("to") : null;
   const sort = params.get("sort");
+
+  // Labels are a convenience a deep link may or may not carry; coordinates are
+  // what filters, so a waypoint without them is dropped rather than rendered
+  // as an empty field the driver cannot fill in.
+  const viaLabels = (params.get("viaLabels") ?? "").split("|");
+  const via = to
+    ? (params.get("via") ?? "")
+        .split(";")
+        .filter(Boolean)
+        .map((pair, index) => {
+          // `Number("")` is 0, so "45.7," would survive the finite check below
+          // as a point in the Atlantic that `isResolvedPlace` cannot spot.
+          const halves = pair.split(",");
+          const [lat, lng] =
+            halves.length === 2 && halves.every((half) => half.trim() !== "")
+              ? halves.map(Number)
+              : [Number.NaN, Number.NaN];
+          if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+          return {
+            label: viaLabels[index] || formatPoint(lat, lng),
+            lat,
+            lng,
+          };
+        })
+        .filter((place): place is PlaceValue => place !== null)
+        .slice(0, MAX_PATH_POINTS - 2)
+    : [];
 
   return {
     ...DEFAULT_JOB_FILTERS,
@@ -183,7 +228,8 @@ export function filtersFromParams(params: URLSearchParams): JobFilters {
     maxBudget: number("maxBudget"),
     maxWeightKg: number("maxWeightKg"),
     from,
-    to: from ? place("to") : null,
+    to,
+    via,
     radiusKm: number("radiusKm"),
     days: (params.get("days") ?? "")
       .split(",")
@@ -222,6 +268,14 @@ export function paramsFromFilters(filters: JobFilters): URLSearchParams {
       set("toLat", filters.to.lat);
       set("toLng", filters.to.lng);
       set("toLabel", filters.to.label);
+
+      const via = resolvedVia(filters);
+      if (via.length > 0) {
+        set("via", via.map((p) => `${p.lat},${p.lng}`).join(";"));
+        // Pipe-joined: a city name may contain a comma or a semicolon, and
+        // both already separate coordinates.
+        set("viaLabels", via.map((p) => p.label).join("|"));
+      }
     }
   }
 

@@ -19,6 +19,10 @@ export interface CityValue {
 interface CityFieldProps {
   id: string;
   value: CityValue | null;
+  /**
+   * `null` means the field no longer names a resolved place — because the
+   * driver edited it or cleared it. It does **not** mean "remove this field".
+   */
   onChange: (value: CityValue | null) => void;
   placeholder: string;
   /** Rendered inside the field, before the text. */
@@ -50,13 +54,25 @@ export function CityField({
   const [results, setResults] = useState<CityValue[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // A deep link seeds the value after mount, and the swap button rewrites both
-  // fields at once; either way the text follows the value it stands for.
+  /**
+   * While the driver is typing, the text belongs to them; otherwise it belongs
+   * to the value the parent holds.
+   *
+   * Editing a chosen city drops its coordinates, which lands back here as a
+   * `null` value — following that blindly wiped the characters being typed. A
+   * "was this my own edit" flag looks simpler but strands: a parent that maps
+   * `null` back to the same placeholder object leaves the value identity
+   * unchanged, the effect never runs, and the flag stays set until it swallows
+   * a real external change. Focus cannot strand, and resyncs on blur either
+   * way.
+   */
   useEffect(() => {
+    if (isFocused) return;
     setText(value?.label ?? "");
-  }, [value]);
+  }, [value, isFocused]);
 
   useEffect(
     () => () => {
@@ -68,8 +84,11 @@ export function CityField({
   const handleChange = useCallback(
     (query: string) => {
       setText(query);
-      // Clearing the box clears the filter; editing a chosen city drops the
-      // stale coordinates rather than keeping them under a new name.
+      // Editing a chosen city drops the stale coordinates rather than keeping
+      // them under a new name. `null` means "no longer resolved" — never
+      // "remove me": what that should do is the parent's business, and a
+      // waypoint row that deleted itself on the first keystroke could never be
+      // filled in at all.
       if (value) onChange(null);
 
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -122,9 +141,15 @@ export function CityField({
         autoComplete="off"
         className="pr-9 pl-9"
         onChange={(event) => handleChange(event.target.value)}
-        onFocus={() => results.length > 0 && setIsOpen(true)}
-        // Late enough for a click on a suggestion to land first.
-        onBlur={() => setTimeout(() => setIsOpen(false), 200)}
+        onFocus={() => {
+          setIsFocused(true);
+          if (results.length > 0) setIsOpen(true);
+        }}
+        onBlur={() => {
+          setIsFocused(false);
+          // Late enough for a click on a suggestion to land first.
+          setTimeout(() => setIsOpen(false), 200);
+        }}
       />
 
       {isSearching ? (

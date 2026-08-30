@@ -2,24 +2,32 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { format } from "date-fns";
+import { format, isSameDay } from "date-fns";
+import type { Locale } from "date-fns";
 import {
-  ArrowRight,
-  Weight,
-  CalendarClock,
-  Gavel,
-  CheckCircle2,
   AlertTriangle,
+  CalendarClock,
+  CheckCircle2,
+  CircleDot,
+  Gavel,
+  MapPin,
   Package,
+  Weight,
 } from "lucide-react";
+import { useTranslations, useLocale } from "next-intl";
+import { enUS, fr } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
+import { cargoSizeLabel } from "@/lib/cargo-size";
+import { nearestReferenceCity } from "@/lib/french-cities";
 import type { BoardJob } from "../types";
 
 interface JobCardProps {
   job: BoardJob;
+  /** True while the matching map pin is hovered, so the pair reads as one. */
+  isHighlighted?: boolean;
 }
 
 const euros = (cents: number) => formatCurrency(cents, { fractionDigits: 0 });
@@ -89,44 +97,75 @@ function JobThumbnail({ url, title }: { url?: string; title: string }) {
  * whether "Chaise" is a dining chair or an armchair, and the answer decides
  * whether the rest is worth reading.
  */
-export function JobCard({ job }: JobCardProps) {
+export function JobCard({ job, isHighlighted = false }: JobCardProps) {
+  const t = useTranslations("jobBoard.card");
+  const locale = useLocale();
+  const dateLocale = locale === "fr" ? fr : enUS;
+
   const remaining = hoursLeft(job.expiresAt);
   const closingSoon = remaining !== null && remaining < 6;
 
+  const size = cargoSizeLabel(job);
+  const pickupWindow = describeWindow(
+    job.pickupFrom,
+    job.pickupUntil,
+    dateLocale,
+    t
+  );
+
   return (
-    <Link href={`/listing/${job.id}`} className="block group">
+    <Link href={`/listing/${job.id}`} className="group block">
       <Card
         className={cn(
           "p-4 transition-colors duration-200",
-          "hover:border-primary/40 group-focus-visible:border-primary"
+          "hover:border-primary/40 group-focus-visible:border-primary",
+          isHighlighted && "border-primary"
         )}
       >
         <div className="flex items-start gap-3 sm:gap-4">
           <JobThumbnail url={leadPhotoUrl(job.photos)} title={job.title} />
 
           <div className="min-w-0 flex-1">
-            {/* Route first: it is what decides whether the job is worth reading */}
-            <div className="flex items-center gap-2 text-sm font-medium">
-              <span className="truncate">{job.pickupCity}</span>
-              <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-              <span className="truncate">{job.dropoffCity}</span>
+            <h3 className="truncate text-base font-semibold">{job.title}</h3>
+
+            {/*
+              Both ends, each on its own line and placed against a city the
+              driver knows. A commune name alone is unreadable: France has
+              ~35,000 of them and "Riom" only means something as "12 km from
+              Clermont-Ferrand".
+            */}
+            <div className="mt-2 space-y-1.5">
+              <Endpoint
+                city={job.pickupCity}
+                postalCode={job.pickupPostalCode}
+                lat={job.pickupLat}
+                lng={job.pickupLng}
+                icon={<CircleDot className="h-3.5 w-3.5" />}
+              />
+              <Endpoint
+                city={job.dropoffCity}
+                postalCode={job.dropoffPostalCode}
+                lat={job.dropoffLat}
+                lng={job.dropoffLng}
+                icon={<MapPin className="h-3.5 w-3.5" />}
+              />
             </div>
 
-            <h3 className="mt-1 truncate text-base font-semibold">{job.title}</h3>
-
-            <dl className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-sm text-muted-foreground">
+            <dl className="text-muted-foreground mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm">
               <div className="flex items-center gap-1.5">
-                <Weight className="h-3.5 w-3.5" />
+                <CalendarClock className="h-3.5 w-3.5 shrink-0" />
+                <dd>{pickupWindow}</dd>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Weight className="h-3.5 w-3.5 shrink-0" />
                 <dd className="font-mono">{job.weightKg} kg</dd>
               </div>
               <div className="flex items-center gap-1.5">
-                <CalendarClock className="h-3.5 w-3.5" />
-                <dd>{format(new Date(job.pickupFrom), "d MMM")}</dd>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Gavel className="h-3.5 w-3.5" />
+                <Gavel className="h-3.5 w-3.5 shrink-0" />
                 <dd className="font-mono">
-                  {job.offersCount} {job.offersCount === 1 ? "offer" : "offers"}
+                  {job.offersCount === 1
+                    ? t("offersOne", { count: job.offersCount })
+                    : t("offers", { count: job.offersCount })}
                 </dd>
               </div>
             </dl>
@@ -136,7 +175,7 @@ export function JobCard({ job }: JobCardProps) {
             <p className="font-mono text-lg font-semibold tabular-nums">
               {euros(job.budgetCents)}
             </p>
-            <p className="text-xs text-muted-foreground">budget</p>
+            <p className="text-muted-foreground text-xs">{t("budget")}</p>
           </div>
         </div>
 
@@ -144,27 +183,99 @@ export function JobCard({ job }: JobCardProps) {
           {job.hasBid && (
             <Badge className="border-success/30 bg-success/15 text-success">
               <CheckCircle2 className="mr-1 h-3 w-3" />
-              You bid
+              {t("youBid")}
             </Badge>
           )}
           {closingSoon && (
             <Badge className="border-warning/30 bg-warning/15 text-warning">
               <AlertTriangle className="mr-1 h-3 w-3" />
-              Closes in {remaining}h
+              {t("urgent")}
             </Badge>
           )}
           {job.origin === "expedion" && (
-            <Badge variant="secondary">via Expedion</Badge>
+            <Badge variant="secondary">{t("viaExpedion")}</Badge>
           )}
-          {job.isFragile && <Badge variant="outline">Fragile</Badge>}
-          {job.needsHelp && <Badge variant="outline">Help loading</Badge>}
-          {job.category && (
-            <Badge variant="outline" className="ml-auto">
-              {job.category.name}
+          {job.isFragile && <Badge variant="outline">{t("fragile")}</Badge>}
+          {job.needsHelp && <Badge variant="outline">{t("needsHelp")}</Badge>}
+
+          {/*
+            Size sits where the price does — hard right — because the two
+            together are what a driver matches against their van.
+          */}
+          {size && (
+            <Badge
+              variant="outline"
+              title={t("sizeTitle", { size: size.toUpperCase() })}
+              className="ml-auto font-mono"
+            >
+              {size.toUpperCase()}
             </Badge>
           )}
         </div>
       </Card>
     </Link>
+  );
+}
+
+/**
+ * "Entre le 26 août et le 9 sept.", or "Le 2 sept." when the job can only
+ * happen on one day.
+ *
+ * The board used to print `pickupFrom` alone, which said "2 Sep" for a job
+ * collectable across a fortnight — the precise-looking half of a vague answer.
+ */
+function describeWindow(
+  from: string,
+  until: string,
+  dateLocale: Locale,
+  t: ReturnType<typeof useTranslations<"jobBoard.card">>
+): string {
+  const start = new Date(from);
+  const end = new Date(until);
+  const day = (date: Date) => format(date, "d MMM", { locale: dateLocale });
+
+  return isSameDay(start, end)
+    ? t("dateOne", { date: day(start) })
+    : t("dateRange", { from: day(start), to: day(end) });
+}
+
+/**
+ * One end of the job: the commune with its postcode, and the well-known city
+ * it sits near. The second line is dropped when the commune *is* the landmark,
+ * or when nothing well-known is close enough to help.
+ */
+function Endpoint({
+  city,
+  postalCode,
+  lat,
+  lng,
+  icon,
+}: {
+  city: string;
+  postalCode: string;
+  lat: number;
+  lng: number;
+  icon: React.ReactNode;
+}) {
+  const t = useTranslations("jobBoard.card");
+  const bearing = nearestReferenceCity({ lat, lng }, city);
+
+  return (
+    <div className="flex items-start gap-1.5 text-sm">
+      <span className="text-muted-foreground mt-0.5 shrink-0">{icon}</span>
+      <div className="min-w-0">
+        <p className="truncate font-medium">
+          {city}{" "}
+          <span className="text-muted-foreground font-mono text-xs">
+            ({postalCode})
+          </span>
+        </p>
+        {bearing && (
+          <p className="text-muted-foreground truncate text-xs">
+            {t("nearCity", { km: bearing.km, city: bearing.city })}
+          </p>
+        )}
+      </div>
+    </div>
   );
 }

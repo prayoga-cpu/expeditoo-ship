@@ -1,6 +1,13 @@
 "use client";
 
-import { ArrowUpDown, CircleDot, Flag, MapPin } from "lucide-react";
+import {
+  ArrowUpDown,
+  CircleDot,
+  Flag,
+  MapPin,
+  Plus,
+  X,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
@@ -14,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { MAX_PATH_POINTS } from "@/lib/route-corridor";
 import {
   DEFAULT_RADIUS_KM,
   RADIUS_OPTIONS,
@@ -21,6 +29,18 @@ import {
   type PlaceValue,
   type SearchMode,
 } from "../types";
+
+/** Étapes only; the two ends are not "steps" the driver can remove. */
+const MAX_WAYPOINTS = MAX_PATH_POINTS - 2;
+
+/**
+ * The empty row a new étape starts as.
+ *
+ * Its coordinates are the departure's until a city is chosen, so a half-added
+ * étape lengthens the path by nothing and the board keeps answering the same
+ * question. `CityField` renders the empty label as an empty box.
+ */
+const PENDING_WAYPOINT: PlaceValue = { label: "", lat: 0, lng: 0 };
 
 interface RouteSearchBarProps {
   mode: SearchMode;
@@ -56,7 +76,28 @@ export function RouteSearchBar({
       radiusKm: filters.radiusKm ?? DEFAULT_RADIUS_KM,
     });
 
-  const swap = () => onChange({ from: filters.to, to: filters.from });
+  // Swapping reverses the whole trajet, étapes included — the same road driven
+  // the other way passes through them in the opposite order.
+  const swap = () =>
+    onChange({
+      from: filters.to,
+      to: filters.from,
+      via: [...filters.via].reverse(),
+    });
+
+  /**
+   * A `null` from the field means "no longer a resolved place", not "delete
+   * this row" — the row keeps its place so the driver can finish typing into
+   * it. Removing is the ✕ button's job, below.
+   */
+  const setWaypoint = (index: number) => (place: PlaceValue | null) => {
+    const via = [...filters.via];
+    via[index] = place ?? PENDING_WAYPOINT;
+    onChange({ via });
+  };
+
+  const removeWaypoint = (index: number) =>
+    onChange({ via: filters.via.filter((_, at) => at !== index) });
 
   // A trip card deep-links the radius the carrier declared, which is any
   // integer up to 1000 and rarely one of the four presets. Without folding it
@@ -99,13 +140,44 @@ export function RouteSearchBar({
           />
 
           {mode === "route" && (
-            <CityField
-              id="board-to"
-              value={filters.to}
-              onChange={setPlace("to")}
-              placeholder={t("toCity")}
-              icon={<Flag className="h-4 w-4" />}
-            />
+            <>
+              {filters.via.map((place, index) => (
+                <div
+                  // Keyed by position, not by value: a key that moves with the
+                  // value remounts the field the instant the driver types into
+                  // it, taking the focus and the half-typed name with it.
+                  key={index}
+                  className="flex items-center gap-2"
+                >
+                  <CityField
+                    id={`board-via-${index}`}
+                    value={place}
+                    onChange={setWaypoint(index)}
+                    placeholder={t("viaCity", { n: index + 1 })}
+                    icon={<Plus className="h-4 w-4" />}
+                    className="min-w-0 flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeWaypoint(index)}
+                    aria-label={t("removeStep", { n: index + 1 })}
+                    className="shrink-0"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+
+              <CityField
+                id="board-to"
+                value={filters.to}
+                onChange={setPlace("to")}
+                placeholder={t("toCity")}
+                icon={<Flag className="h-4 w-4" />}
+              />
+            </>
           )}
         </div>
 
@@ -115,6 +187,11 @@ export function RouteSearchBar({
             variant="ghost"
             size="icon"
             onClick={swap}
+            // With one end empty, swapping would move the only place into the
+            // arrival — and an arrival with no departure describes neither a
+            // corridor nor a circle, so the board would silently stop
+            // filtering (board_route_search_spec.md §2).
+            disabled={!filters.from || !filters.to}
             aria-label={t("swap")}
             className="shrink-0"
           >
@@ -122,6 +199,20 @@ export function RouteSearchBar({
           </Button>
         )}
       </div>
+
+      {mode === "route" && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          disabled={!filters.to || filters.via.length >= MAX_WAYPOINTS}
+          onClick={() => onChange({ via: [...filters.via, PENDING_WAYPOINT] })}
+          className="text-muted-foreground -ml-2"
+        >
+          <Plus className="h-4 w-4" />
+          {t("addStep")}
+        </Button>
+      )}
 
       <div className="flex items-center gap-3">
         <Label htmlFor="board-radius" className="text-muted-foreground text-sm">

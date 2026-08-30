@@ -1,8 +1,22 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render as rtlRender, screen } from "@testing-library/react";
+import { NextIntlClientProvider } from "next-intl";
 import { describe, expect, it } from "vitest";
 
+import fr from "../../../../../../messages/fr.json";
 import type { BoardJob } from "../../types";
 import { JobCard } from "../JobCard";
+
+/**
+ * The card reads its own labels now, so it needs the provider. Real messages
+ * rather than stubs: a key the card asks for and `fr.json` does not have is a
+ * bug this test should catch.
+ */
+const render = (ui: React.ReactElement) =>
+  rtlRender(
+    <NextIntlClientProvider locale="fr" messages={fr}>
+      {ui}
+    </NextIntlClientProvider>
+  );
 
 /**
  * The card's photo slot.
@@ -109,9 +123,99 @@ describe("JobCard photo", () => {
   it("still leads with the route, the load and the money", () => {
     render(<JobCard job={{ ...JOB, photos: [photo("https://cdn.test/first.jpg", 0)] }} />);
 
-    expect(screen.getByText("Voisins-le-Bretonneux")).toBeInTheDocument();
-    expect(screen.getByText("Landres")).toBeInTheDocument();
+    // Each end is its commune and its postcode, on its own line.
+    expect(screen.getByText(/Voisins-le-Bretonneux/)).toBeInTheDocument();
+    expect(screen.getByText("(78960)")).toBeInTheDocument();
+    expect(screen.getByText(/Landres/)).toBeInTheDocument();
+    expect(screen.getByText("(54970)")).toBeInTheDocument();
     expect(screen.getByText("2 kg")).toBeInTheDocument();
-    expect(screen.getByText("budget")).toBeInTheDocument();
+    expect(screen.getByText(fr.jobBoard.card.budget)).toBeInTheDocument();
+  });
+});
+
+/**
+ * What the client asked the card to say: where, precisely enough to place it,
+ * and when, across the whole window rather than its first day.
+ */
+describe("JobCard detail", () => {
+  const withPhotos = (job: Partial<BoardJob> = {}) => ({
+    ...JOB,
+    photos: [],
+    ...job,
+  });
+
+  it("places a commune against the city a driver knows", () => {
+    // Riom means nothing; twelve kilometres from Clermont-Ferrand does.
+    render(
+      <JobCard
+        job={withPhotos({
+          pickupCity: "Riom",
+          pickupPostalCode: "63200",
+          pickupLat: 45.894,
+          pickupLng: 3.113,
+        })}
+      />
+    );
+
+    expect(screen.getByText(/Clermont-Ferrand/)).toBeInTheDocument();
+  });
+
+  it("says nothing when the commune is the city", () => {
+    render(
+      <JobCard
+        job={withPhotos({
+          pickupCity: "Lyon",
+          pickupPostalCode: "69000",
+          pickupLat: 45.764,
+          pickupLng: 4.8357,
+        })}
+      />
+    );
+
+    // "Lyon, à 2 km de Lyon" is noise.
+    expect(screen.queryByText(/de Lyon/)).toBeNull();
+  });
+
+  it("gives the whole window, not just the day it opens", () => {
+    // The board used to print `pickupFrom` alone, which read as a precise
+    // answer to a question spanning three days.
+    render(<JobCard job={withPhotos()} />);
+
+    expect(screen.getByText(/Entre le .* et le /)).toBeInTheDocument();
+  });
+
+  it("collapses a one-day window", () => {
+    // Built from local components: "the same day" is the driver's day, so a
+    // pair of fixed UTC instants would be one day here and two somewhere else.
+    const localHour = (hour: number) =>
+      new Date(2026, 7, 27, hour).toISOString();
+
+    render(
+      <JobCard
+        job={withPhotos({
+          pickupFrom: localHour(8),
+          pickupUntil: localHour(18),
+        })}
+      />
+    );
+
+    expect(screen.getByText(/^Le /)).toBeInTheDocument();
+  });
+
+  it("badges the size when the job said how big it is", () => {
+    render(
+      <JobCard
+        job={withPhotos({ lengthCm: 180, widthCm: 80, heightCm: 120 })}
+      />
+    );
+
+    expect(screen.getByText("L")).toBeInTheDocument();
+  });
+
+  it("shows no size badge when it did not", () => {
+    render(<JobCard job={withPhotos()} />);
+
+    // JOB carries no dimensions, and a guess would be worse than silence.
+    expect(screen.queryByTitle(/Taille/)).toBeNull();
   });
 });

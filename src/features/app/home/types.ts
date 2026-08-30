@@ -24,6 +24,8 @@ export interface JobFilters {
   from: PlaceValue | null;
   /** Where they are going. Null in "autour de", which has no arrival field. */
   to: PlaceValue | null;
+  /** Étapes between the two, in order — "Ajouter une étape". */
+  via: PlaceValue[];
   radiusKm: number | null;
   /** The days the driver can drive, `YYYY-MM-DD`. */
   days: string[];
@@ -40,6 +42,16 @@ export interface PlaceValue {
 }
 
 /**
+ * Has this place actually been chosen?
+ *
+ * An étape starts as a blank row so the driver has somewhere to type, and a
+ * blank row must filter nothing — sending its placeholder coordinates would
+ * route the corridor through the Gulf of Guinea. Every path that reaches the
+ * API or the URL drops the unresolved ones.
+ */
+export const isResolvedPlace = (place: PlaceValue) => place.label !== "";
+
+/**
  * Which shape the location filter takes. Held in the UI only — the query
  * derives its mode from whether an arrival is present
  * (board_route_search_spec.md §2).
@@ -50,6 +62,9 @@ export type SearchMode = "around" | "route";
 export const RADIUS_OPTIONS = [25, 50, 100, 200] as const;
 
 export const DEFAULT_RADIUS_KM = 50;
+
+/** Which half of the board a phone is showing. Desktop shows both at once. */
+export type BoardPane = "list" | "map";
 
 export type JobSort =
   | "created_desc"
@@ -66,6 +81,7 @@ export const DEFAULT_JOB_FILTERS: JobFilters = {
   maxWeightKg: null,
   from: null,
   to: null,
+  via: [],
   radiusKm: null,
   days: [],
   slots: [],

@@ -33,13 +33,17 @@ takes renames rather than aliases (CLAUDE.md gotcha 6).
 |---|---|---|
 | `fromLat`, `fromLng` | number | Where the driver starts |
 | `toLat`, `toLng` | number | Where the driver is going. Absent in *Autour de* |
+| `via` | `lat,lng` pairs joined by `;`, ≤ 3 | The étapes between them, in order. A comma already separates one pair's halves, hence the semicolon |
 | `radiusKm` | number, ≤ 1000 | Radius around the point, **or** half-width of the corridor |
 | `days` | `YYYY-MM-DD,…`, ≤ 31 entries | The days the driver is available |
 | `slots` | `morning,afternoon,evening` | Time of day, applied to every selected day |
 | `tzOffset` | integer minutes | The client's `getTimezoneOffset()`, so a slot means the same hour to the driver as to the database |
 
 **The mode is derived, never declared.** `toLat` + `toLng` present means
-corridor; otherwise the point and radius mean radius. There is no `mode`
+corridor; otherwise the point and radius mean radius. Étapes ride on the
+arrival: waypoints with nowhere to route describe no path and are dropped, and a
+half-added étape — a blank row the driver has not filled in — filters nothing
+rather than sending its placeholder coordinates. There is no `mode`
 parameter, so there is no state where the two disagree. The UI toggle is UI
 only: switching to *Autour de* drops the arrival coordinates, and a *Sur mon
 trajet* search with the arrival field still empty degrades to a radius search
@@ -59,14 +63,25 @@ the board with jobs whose collection is 500 km away.
 
 ## 4. Sur mon trajet — corridor
 
+A trajet is a **path**, not a segment: départ, up to three étapes, arrivée
+(`MAX_PATH_POINTS` = 5). A plain two-city search is the one-leg case and needs
+no special handling.
+
 A job is on the way when all three hold:
 
-1. its pickup lies within `radiusKm` of the segment departure → arrival;
-2. its dropoff lies within `radiusKm` of that same segment;
-3. the pickup is **no further along** the segment than the dropoff.
+1. its pickup lies within `radiusKm` of the **nearest leg**;
+2. its dropoff lies within `radiusKm` of its own nearest leg;
+3. the pickup is **no further along the whole path** than the dropoff.
 
 Rule 3 is what makes it a *trajet* rather than a bounding box: a driver running
 Bordeaux → Paris is offered Angoulême → Orléans and never Orléans → Angoulême.
+With étapes the same rule reads along the whole path, so a load may not double
+back through one either.
+
+Because progress is measured along the path rather than within a leg, the
+nearest leg has to be identified before progress can be read — an argmin, not a
+minimum. Adding Lyon between Bordeaux and Paris reaches jobs the straight
+corridor cannot, and drops ones it could.
 
 ### 4.1 The maths
 
@@ -77,21 +92,23 @@ corridor's mid latitude:
 x = lng · cos(latMid) · 111.32      y = lat · 111.32
 ```
 
-For a segment A→B and a point P, with `t` clamped to [0, 1]:
+For a leg A→B and a point P, with `t` clamped to [0, 1]:
 
 ```
 t        = clamp( ((P−A)·(B−A)) / |B−A|² , 0, 1 )
 detour   = | P − (A + t(B−A)) |
-progress = t
+progress = startKm + t · lengthKm      // distance along the whole path
 ```
 
-`detour` answers rules 1 and 2; `progress` answers rule 3.
+`detour` answers rules 1 and 2; `progress` answers rule 3. Across a path,
+`detour` is the least over the legs and `progress` is the one belonging to that
+same leg.
 
 Equirectangular projection over a segment shorter than metropolitan France errs
 by well under a percent — the same trade `distanceKmSql` already makes, and the
 same answer applies: PostGIS is the move if this ever needs to be exact.
 
-**Degenerate segment.** When departure and arrival are the same place,
+**Degenerate leg.** When a leg's two ends are the same place,
 `|B−A|² = 0` and `t` is undefined. The DAL falls back to plain distance from the
 departure point, which is the limit of point-to-segment distance as B→A — so
 this is the correct answer rather than a guard, and a driver who types one city
@@ -101,9 +118,13 @@ into both fields gets a radius search instead of a 500.
 
 `src/lib/route-corridor.ts` holds the reference implementation and carries the
 unit tests. `listings.dal.ts` transcribes the same expression into SQL, built
-from constants the TypeScript frame computes. The projection, the mid-latitude
-scaling and the clamp therefore exist once; only the six-line point-to-segment
-expression is written twice, and both copies name the other in a comment.
+from the path the TypeScript computes. The projection, the mean-latitude scaling
+and the clamp therefore exist once; only the point-to-segment expression is
+written twice, and both copies name the other in a comment.
+
+The argmin is a correlated subquery over the legs (`select … union all … order
+by d limit 1`), which is one term per leg. Spelled as a nested `CASE` it would
+repeat the detour expression once per leg *per leg*.
 
 ## 5. Availability — days and time of day
 
@@ -175,19 +196,77 @@ suggestion filters nothing; only a chosen place carries coordinates.
 The active-filter badge counts location and availability alongside the numeric
 filters. Clearing filters clears the URL too.
 
-## 8. Non-goals
+## 8. The map
 
-- No waypoints. Cocolis's "Ajouter une étape" is a polyline; this is one
-  segment. The frame generalises to a polyline by taking the minimum over
-  segments, and nothing here forecloses it.
+The board is a list **and** a map, as Cocolis is: the pins are the rows, placed.
+
+- One pin per job, at its **pickup** point — the place a driver has to
+  physically reach before anything else about the job matters. Not the midpoint,
+  which is nowhere.
+- A pin carries the two things that decide whether it is worth a click: the
+  price and the size badge.
+- Hovering either half highlights the other, so a card and its pin read as one.
+  Clicking a pin opens the job.
+- When the driver has named a trajet, the path is drawn under the pins — étapes
+  and all — so *sur mon trajet* is something they can see rather than infer from
+  a list that got shorter.
+- The view refits whenever the answer changes. `fitBounds` frames the *points*,
+  but a pin is a pill centred on its point, so the padding covers the label's
+  overhang; without it the outermost price is clipped, and that is precisely the
+  price a driver at that end of the trajet is looking for.
+- Tiles come from `getMapStyle()`, the source `LocationPickerField` already
+  renders, so the board inherits the light and dark cuts.
+
+**Layout.** Desktop puts the list and the map side by side, the list scrolling
+and the map fixed. A phone has room for one, so it gets a *Liste* / *Carte*
+switch — placed **above** both, never inside the half it hides, and choosing
+*Carte* scrolls the map into view rather than leaving the driver looking at the
+filters they just used.
+
+The map needs a **definite** height, not a minimum: it fills its box with
+`height: 100%`, and a percentage against a parent that only has a `min-height`
+resolves to zero.
+
+## 9. The card
+
+A commune name alone is unreadable — France has ~35,000 of them. The card
+therefore says, for each end:
+
+```
+○ Riom (63200)
+  à 13 km de Clermont-Ferrand
+```
+
+- **Postcode** disambiguates the ~1,400 commune names France reuses.
+- **"à X km de <ville>"** places it against a city the driver knows, from the
+  forty-row table in `src/lib/french-cities.ts` — a static list because it is
+  forty rows that never change inside a release, and a geocode per card on a
+  twenty-row board would be absurd. Dropped when the commune *is* the landmark
+  ("Lyon, à 2 km de Lyon" is noise) or when nothing well known is inside 60 km.
+- **The full window**, "Entre le 2 sept. et le 16 sept.", collapsing to "Le 2
+  sept." for a single day. The board previously printed `pickupFrom` alone,
+  which said "2 Sep" for a job collectable across a fortnight — the
+  precise-looking half of a vague answer, and the thing the client asked to fix.
+- **Size badge**, S…XXXL, from `cargoSizeLabel`: the smallest `/create` preset
+  whose every dimension still contains the load, compared longest side to
+  longest side so a plank on its end is the same load. `xxxl` is a badge rather
+  than a preset because nothing offers it as an input. No dimensions, no badge —
+  never a guess.
+- **URGENT** where the board already knew bidding closes within six hours.
+
+## 10. Non-goals
+
 - No per-day slot overrides. Slots apply to every selected day. The wire format
   is already per-day capable if that changes.
-- No road distance. The corridor is a straight line, not an OSRM route, so a
-  job across an estuary can read as on-corridor when the drive is not.
+- No road distance. The corridor is straight lines between the stops, not an
+  OSRM route, so a job across an estuary can read as on-corridor when the drive
+  is not. The same caveat applies to "à X km de": it is as the crow flies, which
+  is why the reference says 13 km where a road atlas says 12.
+- No clustering. Twenty pins is the page size, and twenty pins do not need it.
 - Availability filters the **pickup** window only. Dropoff windows are not
   matched.
 
-## 9. Test coverage required
+## 11. Test coverage required
 
 - [x] Projection: a point on the segment has detour ≈ 0
 - [x] A point perpendicular to the segment measures its true offset
@@ -200,3 +279,12 @@ filters. Clearing filters clears the URL too.
 - [x] More than 31 days is rejected by the schema
 - [x] `routeMatchQuery` emits both endpoints for a route with a destination
 - [x] The board seeds its filters from the URL and writes them back
+- [x] A path adds up its legs, and reports progress along the whole path
+- [x] An étape reaches a job the straight corridor cannot
+- [x] A load doubling back through an étape is still refused
+- [x] The nearest leg decides, not the first
+- [x] Étapes round-trip through the URL, in order, and are dropped without an
+      arrival
+- [x] More than three étapes is rejected by the schema
+- [x] `cargoSizeLabel` is orientation-independent, and silent without dimensions
+- [x] `nearestReferenceCity` says nothing when the place is the reference

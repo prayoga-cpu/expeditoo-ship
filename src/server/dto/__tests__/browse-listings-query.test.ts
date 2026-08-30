@@ -59,10 +59,41 @@ describe("browseListingsQuerySchema", () => {
     expect(() => parse({ tzOffset: "5000" })).toThrow();
   });
 
+  it("splits the étapes on semicolons, not commas", () => {
+    // A comma already separates one pair's halves.
+    const parsed = parse({ via: "45.76,4.84;47.90,1.90" });
+
+    expect(parsed.via).toEqual([
+      { lat: 45.76, lng: 4.84 },
+      { lat: 47.9, lng: 1.9 },
+    ]);
+  });
+
+  it("rejects a half-written étape rather than inventing a point", () => {
+    // `Number("")` is 0, which would pass as a real point in the Atlantic.
+    expect(() => parse({ via: "45.7," })).toThrow();
+    expect(() => parse({ via: ",4.84" })).toThrow();
+    expect(() => parse({ via: "45.7" })).toThrow();
+  });
+
+  it("rejects more étapes than a path may hold", () => {
+    const many = ["45.7,4.8", "47.9,1.9", "46.5,0.3", "45.0,1.0"].join(";");
+
+    expect(() => parse({ via: many })).toThrow();
+  });
+
+  it("bounds the corridor endpoints to real coordinates", () => {
+    // Unbounded, these reach the trigonometric SQL as Infinity.
+    expect(() => parse({ fromLat: "Infinity" })).toThrow();
+    expect(() => parse({ fromLat: "91" })).toThrow();
+    expect(() => parse({ toLng: "-181" })).toThrow();
+  });
+
   it("leaves the location filters absent when nothing is passed", () => {
     const parsed = parse({});
 
     expect(parsed.fromLat).toBeUndefined();
+    expect(parsed.via).toBeUndefined();
     expect(parsed.days).toBeUndefined();
     expect(parsed.slots).toBeUndefined();
   });

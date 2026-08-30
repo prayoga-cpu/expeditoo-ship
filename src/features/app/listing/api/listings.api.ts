@@ -10,6 +10,8 @@ export interface BrowseParams {
   fromLng?: number;
   toLat?: number;
   toLng?: number;
+  /** Étapes as `lat,lng` pairs joined by `;`. */
+  via?: string;
   /** Radius around the departure, or half-width of the corridor. */
   radiusKm?: number;
   minBudget?: number;

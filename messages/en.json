@@ -2938,7 +2938,10 @@
       "swap": "Swap departure and arrival",
       "radiusLabel": "Within",
       "detourLabel": "Detour allowed",
-      "km": "{km} km"
+      "km": "{km} km",
+      "viaCity": "Stop {n}",
+      "addStep": "Add a stop",
+      "removeStep": "Remove stop {n}"
     },
     "availability": {
       "empty": "My availability",
@@ -2957,7 +2960,30 @@
       "title": "Could not load jobs",
       "description": "The search did not go through. Try again, or widen your filters."
     },
-    "sortLabel": "Sort jobs"
+    "sortLabel": "Sort jobs",
+    "card": {
+      "nearCity": "{km} km from {city}",
+      "dateOne": "On {date}",
+      "dateRange": "Between {from} and {to}",
+      "offers": "{count} offers",
+      "offersOne": "{count} offer",
+      "budget": "budget",
+      "youBid": "You bid",
+      "urgent": "URGENT",
+      "viaExpedion": "via Expedion",
+      "fragile": "Fragile",
+      "needsHelp": "Help loading",
+      "sizeTitle": "Size {size}"
+    },
+    "map": {
+      "openJob": "Open the “{title}” job",
+      "empty": "No jobs in this area"
+    },
+    "paneLabel": "View",
+    "pane": {
+      "list": "List",
+      "map": "Map"
+    }
   },
   "impersonation": {
     "viewingAs": "Viewing as",

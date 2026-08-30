@@ -27,9 +27,11 @@ import {
   type SQL,
 } from "drizzle-orm";
 import {
-  corridorFrame,
+  corridorPath,
   KM_PER_DEGREE,
-  type CorridorFrame,
+  type CorridorPath,
+  type CorridorSegment,
+  type LatLng,
 } from "@/lib/route-corridor";
 import {
   availabilityIntervals,
@@ -48,6 +50,8 @@ export interface BrowseFilters {
   /** Where they are going. Present only for a "sur mon trajet" search. */
   toLat?: number;
   toLng?: number;
+  /** Étapes between the two, in order. */
+  via?: LatLng[];
   /** Radius around the departure, or half-width of the corridor. */
   radiusKm?: number;
   minBudget?: number;
@@ -82,54 +86,6 @@ const distanceKmSql = (lat: number, lng: number): SQL<number> =>
   )`;
 
 /**
- * How far a listing endpoint sits off the corridor, in km.
- *
- * A transcription of `positionOnCorridor` in `src/lib/route-corridor.ts`,
- * built from the frame that module computes — the projection, the mid-latitude
- * scaling and the clamp are its work, and only the point-to-segment arithmetic
- * is written twice. Change one and change the other
- * (board_route_search_spec.md §4.2).
- */
-const corridorDetourKmSql = (
-  frame: CorridorFrame,
-  latColumn: AnyColumn,
-  lngColumn: AnyColumn
-): SQL<number> => {
-  const dx = frame.bx - frame.ax;
-  const dy = frame.by - frame.ay;
-  const progress = corridorProgressSql(frame, latColumn, lngColumn);
-
-  return sql<number>`sqrt(
-    power(${lngColumn} * ${frame.lngScale} - (${frame.ax} + ${progress} * ${dx}), 2)
-    + power(${latColumn} * ${KM_PER_DEGREE} - (${frame.ay} + ${progress} * ${dy}), 2)
-  )`;
-};
-
-/**
- * How far along the corridor an endpoint sits, clamped to [0, 1].
- *
- * A zero-length corridor — one city typed into both fields — pins every point
- * to the departure, which turns the detour above into plain distance from it.
- * That is the limit of point-to-segment distance as the arrival approaches the
- * departure, so the degenerate case needs no branch.
- */
-const corridorProgressSql = (
-  frame: CorridorFrame,
-  latColumn: AnyColumn,
-  lngColumn: AnyColumn
-): SQL<number> => {
-  if (frame.lengthSq === 0) return sql<number>`0`;
-
-  const dx = frame.bx - frame.ax;
-  const dy = frame.by - frame.ay;
-
-  return sql<number>`least(1, greatest(0, (
-    (${lngColumn} * ${frame.lngScale} - ${frame.ax}) * ${dx}
-    + (${latColumn} * ${KM_PER_DEGREE} - ${frame.ay}) * ${dy}
-  ) / ${frame.lengthSq}))`;
-};
-
-/**
  * Photos, lowest `order` first — used by every read that returns them.
  *
  * `order` is the index the photo was uploaded at (`listingsService.createListing`
@@ -139,6 +95,107 @@ const corridorProgressSql = (
  * would be a different photo between two loads of the same board.
  */
 const photosInOrder = { orderBy: [asc(photos.order)] };
+
+/**
+ * A projected constant, pinned to a floating-point type.
+ *
+ * Every one of these reaches Postgres as a bind parameter whose type is
+ * inferred from its surroundings. A zero-length leg contributes a literal `0`
+ * to that context, which was enough to infer *integer* for the whole
+ * expression — so `ax = 375.894` arrived as "invalid input syntax for type
+ * integer" and the board 500'd for anyone who typed one city into both fields.
+ * Stating the type removes the inference.
+ */
+const real = (value: number): SQL<number> =>
+  sql<number>`${value}::double precision`;
+
+/**
+ * One leg's point-to-segment terms, as SQL.
+ *
+ * A transcription of `positionOnSegment` in `src/lib/route-corridor.ts`, built
+ * from the path that module computes — the projection, the mean-latitude
+ * scaling and the clamp are its work, and only this arithmetic is written
+ * twice. Change one and change the other (board_route_search_spec.md §4.2).
+ */
+const segmentTerms = (
+  segment: CorridorSegment,
+  lngScale: number,
+  latColumn: AnyColumn,
+  lngColumn: AnyColumn
+) => {
+  const dx = segment.bx - segment.ax;
+  const dy = segment.by - segment.ay;
+
+  const px = sql`(${lngColumn} * ${real(lngScale)})`;
+  const py = sql`(${latColumn} * ${real(KM_PER_DEGREE)})`;
+
+  // A zero-length leg pins every point to its start, which turns the detour
+  // below into plain distance from it — the limit as the end approaches the
+  // start, so the degenerate case needs no branch.
+  const t =
+    segment.lengthSq === 0
+      ? real(0)
+      : sql`least(1, greatest(0, (
+          (${px} - ${real(segment.ax)}) * ${real(dx)}
+          + (${py} - ${real(segment.ay)}) * ${real(dy)}
+        ) / ${real(segment.lengthSq)}))`;
+
+  return {
+    detourKm: sql<number>`sqrt(
+      power(${px} - (${real(segment.ax)} + ${t} * ${real(dx)}), 2)
+      + power(${py} - (${real(segment.ay)} + ${t} * ${real(dy)}), 2)
+    )`,
+    progressKm: sql<number>`(${real(segment.startKm)} + ${t} * ${real(segment.lengthKm)})`,
+  };
+};
+
+/** How far a listing endpoint sits off the nearest leg, in km. */
+const pathDetourKmSql = (
+  path: CorridorPath,
+  latColumn: AnyColumn,
+  lngColumn: AnyColumn
+): SQL<number> => {
+  const detours = path.segments.map(
+    (segment) => segmentTerms(segment, path.lngScale, latColumn, lngColumn).detourKm
+  );
+
+  return detours.length === 1
+    ? detours[0]
+    : sql<number>`least(${sql.join(detours, sql`, `)})`;
+};
+
+/**
+ * How far along the whole path the nearest leg places an endpoint, in km.
+ *
+ * The nearest leg decides, so this is an argmin rather than a `least`. A
+ * correlated subquery over the legs says that in one pass; spelling it as a
+ * nested `CASE` would repeat the detour expression once per leg per leg.
+ */
+const pathProgressKmSql = (
+  path: CorridorPath,
+  latColumn: AnyColumn,
+  lngColumn: AnyColumn
+): SQL<number> => {
+  const rows = path.segments.map((segment) => {
+    const { detourKm, progressKm } = segmentTerms(
+      segment,
+      path.lngScale,
+      latColumn,
+      lngColumn
+    );
+    return sql`select ${detourKm} as d, ${progressKm} as g`;
+  });
+
+  if (rows.length === 1) {
+    return segmentTerms(path.segments[0], path.lngScale, latColumn, lngColumn)
+      .progressKm;
+  }
+
+  return sql<number>`(
+    select leg.g from (${sql.join(rows, sql` union all `)}) as leg
+    order by leg.d limit 1
+  )`;
+};
 
 export const listingsDal = {
   async create(data: InsertListing, tx: Executor = db) {
@@ -291,39 +348,42 @@ export const listingsDal = {
     }
 
     // The search mode is derived, never declared: an arrival makes this a
-    // corridor, its absence a radius (board_route_search_spec.md §2).
+    // corridor, its absence a radius (board_route_search_spec.md §2). Étapes
+    // ride on the arrival — waypoints with nowhere to go describe no path.
     const hasOrigin =
       filters.fromLat !== undefined &&
       filters.fromLng !== undefined &&
       filters.radiusKm !== undefined;
-    const frame =
+
+    const path =
       hasOrigin && filters.toLat !== undefined && filters.toLng !== undefined
-        ? corridorFrame(
+        ? corridorPath([
             { lat: filters.fromLat!, lng: filters.fromLng! },
-            { lat: filters.toLat!, lng: filters.toLng! }
-          )
+            ...((filters.via ?? []) as LatLng[]),
+            { lat: filters.toLat!, lng: filters.toLng! },
+          ])
         : null;
 
     /** Distance from the driver, however they described where they are going. */
-    const proximityKm = frame
-      ? corridorDetourKmSql(frame, listings.pickupLat, listings.pickupLng)
+    const proximityKm = path
+      ? pathDetourKmSql(path, listings.pickupLat, listings.pickupLng)
       : hasOrigin
         ? distanceKmSql(filters.fromLat!, filters.fromLng!)
         : null;
 
-    if (frame) {
+    if (path) {
       // Both ends inside the corridor, and the load travelling the driver's
       // way: Bordeaux → Paris is offered Angoulême → Orléans, never the
       // reverse.
       conditions.push(
         lte(proximityKm!, filters.radiusKm!),
         lte(
-          corridorDetourKmSql(frame, listings.dropoffLat, listings.dropoffLng),
+          pathDetourKmSql(path, listings.dropoffLat, listings.dropoffLng),
           filters.radiusKm!
         ),
         lte(
-          corridorProgressSql(frame, listings.pickupLat, listings.pickupLng),
-          corridorProgressSql(frame, listings.dropoffLat, listings.dropoffLng)
+          pathProgressKmSql(path, listings.pickupLat, listings.pickupLng),
+          pathProgressKmSql(path, listings.dropoffLat, listings.dropoffLng)
         )
       );
     } else if (proximityKm) {

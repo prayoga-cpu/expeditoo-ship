@@ -3,6 +3,7 @@ import {
   MAX_AVAILABILITY_DAYS,
   TIME_SLOTS,
 } from "@/lib/availability-window";
+import { MAX_PATH_POINTS } from "@/lib/route-corridor";
 
 // ========================================
 // Listings DTO — the transport job
@@ -248,10 +249,49 @@ export const browseListingsQuerySchema = z.object({
    * parameter, so no request can claim one thing and carry the other
    * (board_route_search_spec.md §2).
    */
-  fromLat: z.coerce.number().optional(),
-  fromLng: z.coerce.number().optional(),
-  toLat: z.coerce.number().optional(),
-  toLng: z.coerce.number().optional(),
+  fromLat: z.coerce.number().min(-90).max(90).optional(),
+  fromLng: z.coerce.number().min(-180).max(180).optional(),
+  toLat: z.coerce.number().min(-90).max(90).optional(),
+  toLng: z.coerce.number().min(-180).max(180).optional(),
+  /**
+   * The étapes between them: `lat,lng` pairs joined by `;`, because a comma
+   * already separates the halves of one pair — Cocolis's "Ajouter une étape".
+   * A driver routing Bordeaux → Limoges → Paris is describing a different
+   * corridor from the straight line, and the filter follows the path they
+   * named rather than the one geometry would infer.
+   */
+  via: z
+    .preprocess(
+      (value) =>
+        typeof value === "string"
+          ? value
+              .split(";")
+              .map((entry) => entry.trim())
+              .filter(Boolean)
+              .map((entry) => {
+                // `Number("")` is 0, so a half-written pair like "45.7," would
+                // otherwise pass as a real point in the Atlantic. NaN is what
+                // makes `z.number()` reject it.
+                const halves = entry.split(",");
+                const [lat, lng] = halves.map((half) =>
+                  halves.length === 2 && half.trim() !== ""
+                    ? Number(half)
+                    : Number.NaN
+                );
+                return { lat, lng };
+              })
+          : value,
+      z.array(
+        z.object({
+          lat: z.number().min(-90).max(90),
+          lng: z.number().min(-180).max(180),
+        })
+      )
+    )
+    .refine((values) => values.length <= MAX_PATH_POINTS - 2, {
+      message: "TOO_MANY_WAYPOINTS",
+    })
+    .optional(),
   /** Radius around the departure, or half-width of the corridor. */
   radiusKm: z.coerce.number().positive().max(1000).optional(),
 

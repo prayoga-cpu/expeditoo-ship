@@ -1,13 +1,16 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import {
   AlertCircle,
+  List,
+  Map as MapIcon,
   PackageSearch,
   SlidersHorizontal,
   Search,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -27,14 +30,17 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { cn } from "@/lib/utils";
 import { CenteredEmptyState } from "@/components/ui/centered-empty-state";
 import { JobCard } from "./JobCard";
 import { ExpedionSourceBanner } from "./ExpedionSourceBanner";
 import { RouteSearchBar } from "./RouteSearchBar";
+import { BoardMap } from "./BoardMap";
 import { AvailabilityField } from "./AvailabilityField";
 import { useTranslations } from "next-intl";
 import { useJobBoard } from "../hooks/useJobBoard";
-import type { JobSort, SearchMode } from "../types";
+import type { BoardPane, JobSort, SearchMode } from "../types";
 
 const SORTS: { value: JobSort; labelKey: string }[] = [
   { value: "created_desc", labelKey: "newest" },
@@ -66,15 +72,41 @@ export function JobBoard({ origin }: { origin?: "direct" | "expedion" } = {}) {
     setPage,
   } = useJobBoard({ origin });
 
+  const router = useRouter();
+
   // Which shape the location filter wears. A deep link carrying an arrival
   // opens on the corridor it describes.
   const [mode, setMode] = useState<SearchMode>(filters.to ? "route" : "around");
 
+  // Desktop shows both halves side by side; a phone has room for one, so it
+  // gets a switch rather than a squeezed map.
+  const [pane, setPane] = useState<BoardPane>("list");
+
+  // The card and the pin for one job light up together, whichever the pointer
+  // is over.
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
+
+  const mapRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * On a phone the map sits below the controls, so switching to it without
+   * scrolling leaves the driver looking at the same filters they just used.
+   */
+  const changePane = (next: BoardPane) => {
+    setPane(next);
+    if (next === "map") {
+      requestAnimationFrame(() =>
+        mapRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+      );
+    }
+  };
+
   const changeMode = (next: SearchMode) => {
     setMode(next);
     // "Autour de" has no arrival field, so leaving one behind would filter on
-    // a corridor the driver can no longer see.
-    if (next === "around" && filters.to) updateFilters({ to: null });
+    // a corridor the driver can no longer see — and étapes with nowhere to go
+    // describe no path.
+    if (next === "around" && filters.to) updateFilters({ to: null, via: [] });
   };
 
   // Distance only means something once there is a point to measure from, and
@@ -90,7 +122,12 @@ export function JobBoard({ origin }: { origin?: "direct" | "expedion" } = {}) {
     : SORTS;
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-4 p-4 sm:p-6">
+    <div className="flex w-full flex-col lg:h-[calc(100dvh-4rem)] lg:flex-row lg:overflow-hidden">
+      {/*
+        The search and the results scroll; the map does not. On a phone the two
+        are alternatives, chosen by the switch below the filters.
+      */}
+      <div className="w-full space-y-4 p-4 sm:p-6 lg:max-w-2xl lg:shrink-0 lg:overflow-y-auto">
       <header className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
         <p className="text-sm text-muted-foreground">
@@ -229,6 +266,25 @@ export function JobBoard({ origin }: { origin?: "direct" | "expedion" } = {}) {
         </div>
       </div>
 
+      <ToggleGroup
+        type="single"
+        value={pane}
+        onValueChange={(next) => next && changePane(next as BoardPane)}
+        variant="outline"
+        className="w-full lg:hidden"
+        aria-label={t("paneLabel")}
+      >
+        <ToggleGroupItem value="list" className="flex-1">
+          <List className="h-4 w-4" />
+          {t("pane.list")}
+        </ToggleGroupItem>
+        <ToggleGroupItem value="map" className="flex-1">
+          <MapIcon className="h-4 w-4" />
+          {t("pane.map")}
+        </ToggleGroupItem>
+      </ToggleGroup>
+
+      <div className={cn("space-y-4", pane === "map" && "hidden lg:block")}>
       {isError ? (
         <CenteredEmptyState
           icon={AlertCircle}
@@ -265,7 +321,14 @@ export function JobBoard({ origin }: { origin?: "direct" | "expedion" } = {}) {
         <>
           <div className="space-y-3">
             {jobs.map((job) => (
-              <JobCard key={job.id} job={job} />
+              <div
+                key={job.id}
+                id={`job-${job.id}`}
+                onMouseEnter={() => setHighlightedId(job.id)}
+                onMouseLeave={() => setHighlightedId(null)}
+              >
+                <JobCard job={job} isHighlighted={job.id === highlightedId} />
+              </div>
             ))}
           </div>
 
@@ -292,6 +355,35 @@ export function JobBoard({ origin }: { origin?: "direct" | "expedion" } = {}) {
           )}
         </>
       )}
+      </div>
+      </div>
+
+      {/*
+        The map is the other half of the same answer: the pins are the rows,
+        placed. It renders on every viewport so the switch has something to
+        switch to, and fills the column on a desktop.
+      */}
+      <div
+        ref={mapRef}
+        className={cn(
+          // A definite height, not a min-height: the map fills its box with
+          // `height: 100%`, and a percentage against a parent that only has a
+          // minimum resolves to zero. On a desktop the flex row supplies the
+          // height instead.
+          "h-[70vh] w-full border-t lg:h-auto lg:flex-1 lg:border-t-0 lg:border-l",
+          pane === "list" && "hidden lg:block"
+        )}
+      >
+        <BoardMap
+          jobs={jobs}
+          filters={filters}
+          isLoading={isLoading}
+          highlightedId={highlightedId}
+          onHighlight={setHighlightedId}
+          onSelect={(id) => router.push(`/listing/${id}`)}
+          className="h-full"
+        />
+      </div>
     </div>
   );
 }

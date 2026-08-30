@@ -2938,7 +2938,10 @@
       "swap": "Inverser départ et arrivée",
       "radiusLabel": "Dans un rayon de",
       "detourLabel": "Détour accepté",
-      "km": "{km} km"
+      "km": "{km} km",
+      "viaCity": "Étape {n}",
+      "addStep": "Ajouter une étape",
+      "removeStep": "Supprimer l'étape {n}"
     },
     "availability": {
       "empty": "Mes disponibilités",
@@ -2957,7 +2960,30 @@
       "title": "Impossible de charger les missions",
       "description": "La recherche n'a pas abouti. Réessayez, ou élargissez vos filtres."
     },
-    "sortLabel": "Trier les missions"
+    "sortLabel": "Trier les missions",
+    "card": {
+      "nearCity": "à {km} km de {city}",
+      "dateOne": "Le {date}",
+      "dateRange": "Entre le {from} et le {to}",
+      "offers": "{count} offres",
+      "offersOne": "{count} offre",
+      "budget": "budget",
+      "youBid": "Vous avez enchéri",
+      "urgent": "URGENT",
+      "viaExpedion": "via Expedion",
+      "fragile": "Fragile",
+      "needsHelp": "Aide au chargement",
+      "sizeTitle": "Taille {size}"
+    },
+    "map": {
+      "openJob": "Ouvrir la mission « {title} »",
+      "empty": "Aucune mission sur cette zone"
+    },
+    "paneLabel": "Affichage",
+    "pane": {
+      "list": "Liste",
+      "map": "Carte"
+    }
   },
   "impersonation": {
     "viewingAs": "Connecté en tant que",
