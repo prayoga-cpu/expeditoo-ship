@@ -7,10 +7,21 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 // marker the harness matches rows against.
 const harness = vi.hoisted(() => {
   type Row = Record<string, unknown>;
-  type Where = { column: string; value: unknown } | undefined;
+  type Leaf = { column: string; value: unknown };
+  type Where = Leaf | { all: Where[] } | undefined;
 
-  const paymentsTable = { id: "id", shipmentId: "shipmentId" };
-  const payoutsTable = { id: "id", shipmentId: "shipmentId", carrierId: "carrierId" };
+  const paymentsTable = {
+    id: "id",
+    shipmentId: "shipmentId",
+    listingId: "listingId",
+    createdAt: "createdAt",
+  };
+  const payoutsTable = {
+    id: "id",
+    shipmentId: "shipmentId",
+    carrierId: "carrierId",
+    status: "status",
+  };
   const userTable = { id: "id", stripeCustomerId: "stripeCustomerId" };
 
   const paymentRows: Row[] = [];
@@ -23,14 +34,26 @@ const harness = vi.hoisted(() => {
         ? payoutRows
         : userRows;
 
-  const matches = (row: Row, where: Where) =>
-    !where || row[where.column] === where.value;
+  // `and(...)` composes into `{ all: [...] }` so a multi-column predicate is
+  // actually applied. Without it every clause but the shape of the first is
+  // ignored, and a test that means to pin "only a *scheduled* payout" passes
+  // whatever the row says.
+  const matches = (row: Row, where: Where): boolean => {
+    if (!where) return true;
+    if ("all" in where) return where.all.every((w) => matches(row, w));
+    return row[where.column] === where.value;
+  };
 
   const query = (store: Row[]) => ({
     findFirst: async (opts: { where?: Where } = {}) =>
       store.find((row) => matches(row, opts.where)),
-    findMany: async (opts: { where?: Where } = {}) =>
-      store.filter((row) => matches(row, opts.where)),
+    // `orderBy` is accepted and ignored: insertion order is already newest-last
+    // in this harness, and the only caller reverses it, so the rows are handed
+    // back reversed to match `desc(createdAt)`.
+    findMany: async (opts: { where?: Where; orderBy?: unknown } = {}) => {
+      const hit = store.filter((row) => matches(row, opts.where));
+      return opts.orderBy ? [...hit].reverse() : hit;
+    },
   });
 
   const db = {
@@ -91,6 +114,8 @@ vi.mock("@/db/schema/users", () => ({ user: harness.userTable }));
 vi.mock("drizzle-orm", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   eq: (column: unknown, value: unknown) => ({ column, value }),
+  and: (...parts: unknown[]) => ({ all: parts.filter(Boolean) }),
+  desc: (column: unknown) => ({ column, direction: "desc" }),
 }));
 vi.mock("@/lib/stripe", () => ({
   stripe: {
@@ -425,11 +450,11 @@ describe("hasSavedCard", () => {
 // Refund — cancelling an awarded job gives the money back
 // ========================================
 
-describe("refundForShipment", () => {
+describe("refundForJob", () => {
   it("refunds a mock charge without calling Stripe", async () => {
     await paymentsService.chargeForShipment(chargeParams());
 
-    const refunded = await paymentsService.refundForShipment("ship-1");
+    const refunded = await paymentsService.refundForJob("job-1");
 
     expect(refunded?.status).toBe("refunded");
     expect(refunded?.refundedAt).toBeInstanceOf(Date);
@@ -440,12 +465,13 @@ describe("refundForShipment", () => {
     harness.paymentRows.push({
       id: "pay-1",
       shipmentId: "ship-1",
+      listingId: "job-1",
       status: "captured",
       source: "stripe",
       stripePaymentIntentId: "pi_real_1",
     });
 
-    const refunded = await paymentsService.refundForShipment("ship-1");
+    const refunded = await paymentsService.refundForJob("job-1");
 
     expect(stripe.refunds.create).toHaveBeenCalledWith(
       expect.objectContaining({ payment_intent: "pi_real_1" })
@@ -459,7 +485,7 @@ describe("refundForShipment", () => {
     );
 
     expect(
-      await codeFrom(() => paymentsService.refundForShipment("ship-1"))
+      await codeFrom(() => paymentsService.refundForJob("job-1"))
     ).toBe("REFUND_NOT_LOCAL");
     expect(stripe.refunds.create).not.toHaveBeenCalled();
   });
@@ -468,13 +494,14 @@ describe("refundForShipment", () => {
     harness.paymentRows.push({
       id: "pay-1",
       shipmentId: "ship-1",
+      listingId: "job-1",
       status: "captured",
       source: "stripe",
       stripePaymentIntentId: "pi_real_1",
     });
 
-    await paymentsService.refundForShipment("ship-1");
-    const again = await paymentsService.refundForShipment("ship-1");
+    await paymentsService.refundForJob("job-1");
+    const again = await paymentsService.refundForJob("job-1");
 
     expect(again?.status).toBe("refunded");
     expect(stripe.refunds.create).toHaveBeenCalledTimes(1);
@@ -486,18 +513,141 @@ describe("refundForShipment", () => {
     harness.paymentRows.push({
       id: "pay-1",
       shipmentId: "ship-1",
+      listingId: "job-1",
       status: "failed",
       source: "stripe",
     });
 
-    const result = await paymentsService.refundForShipment("ship-1");
+    const result = await paymentsService.refundForJob("job-1");
 
     expect(result?.status).toBe("failed");
     expect(stripe.refunds.create).not.toHaveBeenCalled();
   });
 
-  it("returns null when the shipment was never paid for", async () => {
-    expect(await paymentsService.refundForShipment("ghost")).toBeNull();
+  it("returns null when the job was never paid for", async () => {
+    expect(await paymentsService.refundForJob("ghost")).toBeNull();
+  });
+
+  it("finds the money even when its shipment is gone", async () => {
+    // A withdrawal kills the shipment and leaves the job on the board. Keyed on
+    // the shipment, this refund would walk straight past the client's money.
+    harness.paymentRows.push({
+      id: "pay-1",
+      shipmentId: null,
+      listingId: "job-1",
+      status: "captured",
+      source: "stripe",
+      stripePaymentIntentId: "pi_real_1",
+    });
+
+    const refunded = await paymentsService.refundForJob("job-1");
+
+    expect(refunded?.status).toBe("refunded");
+    expect(stripe.refunds.create).toHaveBeenCalledWith(
+      expect.objectContaining({ payment_intent: "pi_real_1" })
+    );
+  });
+
+  it("prefers the captured row over a dead attempt on the same job", async () => {
+    harness.paymentRows.push({
+      id: "pay-failed",
+      shipmentId: "ship-0",
+      listingId: "job-1",
+      status: "failed",
+      source: "stripe",
+    });
+    harness.paymentRows.push({
+      id: "pay-live",
+      shipmentId: "ship-1",
+      listingId: "job-1",
+      status: "captured",
+      source: "stripe",
+      stripePaymentIntentId: "pi_real_1",
+    });
+
+    const refunded = await paymentsService.refundForJob("job-1");
+
+    expect(refunded?.id).toBe("pay-live");
+  });
+});
+
+// ========================================
+// One Expedion payment, however many awards
+// ========================================
+
+describe("paymentsService.chargeForShipment — the escalated lane", () => {
+  it("re-points the existing charge instead of recording a second one", async () => {
+    // Award -> withdraw -> re-award mints a fresh shipment each time, but the
+    // Expedion client paid once, for the quote. A second `captured` row would
+    // inflate recorded revenue by the whole price of the job.
+    await paymentsService.chargeForShipment(
+      chargeParams({ source: "expedion" })
+    );
+
+    const second = await paymentsService.chargeForShipment(
+      chargeParams({ source: "expedion", shipmentId: "ship-2" })
+    );
+
+    expect(harness.paymentRows).toHaveLength(1);
+    expect(second.shipmentId).toBe("ship-2");
+    expect(second.status).toBe("captured");
+  });
+
+  it("carries the replacement driver's price, not the one who walked", async () => {
+    // `schedulePayout` reads `amountCents` and `commissionCents` off this row
+    // to decide what the driver is owed. Moving only the pointer pays the
+    // second driver the first one's bid — short or over, depending which way
+    // the two happen to differ.
+    await paymentsService.chargeForShipment(
+      chargeParams({ source: "expedion", amountCents: 40_000 })
+    );
+
+    const second = await paymentsService.chargeForShipment(
+      chargeParams({
+        source: "expedion",
+        shipmentId: "ship-2",
+        amountCents: 48_000,
+      })
+    );
+
+    expect(second.amountCents).toBe(48_000);
+    expect(second.commissionCents).toBe(commissionFor(48_000));
+    expect(second.transferGroup).toBe("shipment_ship-2");
+  });
+});
+
+// ========================================
+// Money that has gone back owes the driver nothing
+// ========================================
+
+describe("paymentsService.cancelPayoutForShipment", () => {
+  it("voids a payout the webhook scheduled at award", async () => {
+    harness.payoutRows.push({
+      id: "pyt-1",
+      shipmentId: "ship-1",
+      carrierId: "carrier-1",
+      status: "scheduled",
+    });
+
+    const cancelled = await paymentsService.cancelPayoutForShipment("ship-1");
+
+    expect(cancelled?.status).toBe("cancelled");
+  });
+
+  it("returns null when there is nothing scheduled", async () => {
+    expect(await paymentsService.cancelPayoutForShipment("ship-1")).toBeNull();
+  });
+
+  it("leaves a payout that has already been paid alone", async () => {
+    harness.payoutRows.push({
+      id: "pyt-1",
+      shipmentId: "ship-1",
+      carrierId: "carrier-1",
+      status: "paid",
+    });
+
+    expect(await paymentsService.cancelPayoutForShipment("ship-1")).toBeNull();
+    expect(harness.payoutRows[0].status).toBe("paid");
   });
 });
 

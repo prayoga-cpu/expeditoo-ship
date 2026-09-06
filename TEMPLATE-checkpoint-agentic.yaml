@@ -1,0 +1,49 @@
+# AGENTIC CHECKPOINT
+# Minimal closeout record for one session. Copy, fill, attach to the PR or the
+# STATUS.md entry. See AGENTS.md §8 for the full session discipline.
+#
+# The point of this file is the two fields nothing else captures: what was
+# NOT verified, and how to undo it.
+
+task: "short-kebab-slug-of-the-session"
+version: "2.0.0" # must equal package.json, src/lib/version.ts, and the top CHANGELOG.md header
+tag: "feat" # feat | fix | infra | ux
+gate: "ok" # ok | failed | partial — "ok" means every check below actually passed
+
+success: >
+  One or two sentences: what the product can now do, or what visibly broken
+  thing now works. Written so an operator understands it.
+
+evidence:
+  changed_files:
+    - "src/server/services/example.service.ts"
+    - "src/db/migrations/00XX_example.sql"
+  checks:
+    - "npx tsc --noEmit" # the gate that matters
+    - "pnpm lint"
+    - "pnpm test" # record the real count in STATUS.md, e.g. "1154 passed"
+    - "pnpm changelog:check"
+  rollback: "git revert <sha>"
+
+records:
+  changelog: true # CHANGELOG.md entry added (false only when nothing is user-facing)
+  status: true # STATUS.md entry added — never false
+  version_bumped: true # package.json AND src/lib/version.ts
+  spec: "docs/specs/<feature>_spec.md" # or "none"
+  migration: "none" # .sql path, and confirm its meta/_journal.json entry ships with it
+
+risks:
+  sensitive_without_escalation: false # touched money, KYC, auth or an unauthenticated write without flagging it
+  over_engineering: false # built beyond what was asked
+  claim_without_evidence: false # asserted a check or a number that was not actually run
+
+not_verified:
+  - "Anything you could not check. Be specific — an empty list here is a claim
+     in itself, and an untrue one is worse than an honest gap."
+
+operator_todo:
+  - "Work that needs a human hand outside the codebase: an env var, a migration
+     run, a Stripe or Twilio setting. Mirror this into STATUS.md — it must not
+     live only here."
+
+next: "none" # the obvious next session, or "none"

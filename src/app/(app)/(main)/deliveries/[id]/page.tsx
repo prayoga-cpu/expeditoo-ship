@@ -82,7 +82,7 @@ export default function DeliveryDetailPage({
     <DeliveryDetail
       delivery={delivery}
       onContact={handleContact}
-      onCancel={(reason) => cancelShipment.mutate({ id, reason })}
+      onCancel={(input) => cancelShipment.mutateAsync({ id, ...input })}
       isCancelling={cancelShipment.isPending}
       isContacting={isContacting}
     />

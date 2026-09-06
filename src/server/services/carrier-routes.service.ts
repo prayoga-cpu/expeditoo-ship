@@ -60,6 +60,7 @@ function toColumns(input: CreateCarrierRouteInput, carrierId: string) {
     capacityKg: input.capacityKg ?? null,
     notifyOnMatch: input.notifyOnMatch,
     isActive: input.isActive,
+    isDiscoverable: input.isDiscoverable,
   };
 }
 
@@ -91,6 +92,7 @@ function toInput(route: CarrierRouteRow): CreateCarrierRouteInput {
     capacityKg: route.capacityKg ?? undefined,
     notifyOnMatch: route.notifyOnMatch,
     isActive: route.isActive,
+    isDiscoverable: route.isDiscoverable,
   };
 }
 

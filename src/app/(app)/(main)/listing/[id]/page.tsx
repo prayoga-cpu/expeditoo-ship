@@ -1,6 +1,8 @@
+import { Suspense } from "react";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { JobDetail } from "@/features/app/listing/ui";
+import { PageLoader } from "@/components/ui/page-loader";
 import { getUserRoles } from "@/server/dal/users.dal";
 
 interface PageProps {
@@ -22,11 +24,16 @@ export default async function ListingPage({ params }: PageProps) {
     isOperator = roles.some((r) => OPERATING_ROLES.includes(r.role));
   }
 
+  // `Suspense` is load-bearing: the screen holds its tab in the URL and so
+  // reads `useSearchParams`, which builds without one and then fails
+  // `next build`. The same trap is documented in `listings/me/page.tsx`.
   return (
-    <JobDetail
-      listingId={id}
-      viewerId={session?.user.id ?? null}
-      isOperator={isOperator}
-    />
+    <Suspense fallback={<PageLoader />}>
+      <JobDetail
+        listingId={id}
+        viewerId={session?.user.id ?? null}
+        isOperator={isOperator}
+      />
+    </Suspense>
   );
 }

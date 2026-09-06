@@ -7,7 +7,6 @@ import {
   ArrowLeft,
   MapPin,
   MessageCircle,
-  AlertTriangle,
   Star,
   Camera,
   CalendarClock,
@@ -16,17 +15,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { LottieLoader } from "@/components/ui/lottie-loader";
 import { formatCurrency } from "@/lib/currency";
 import { CreateReviewModal } from "@/features/app/common/ui/CreateReviewModal";
@@ -35,6 +23,8 @@ import { useTranslations } from "next-intl";
 import { useShipmentPhotos } from "@/features/app/common/hooks/useShipmentPhotos";
 import { ShipmentPhotoGallery } from "@/features/app/common/ui/ShipmentPhotoGallery";
 import { ShipmentIncidentsSection } from "@/features/app/incidents/ui";
+import { StopTransportDialog } from "@/features/app/common/ui/StopTransportDialog";
+import type { CancellationCategory } from "@/lib/cancellation-policy";
 import { ShipmentStatusBadge } from "./ShipmentStatusBadge";
 import { Timeline } from "./Timeline";
 import type { DeliveryDetailView } from "../types";
@@ -42,7 +32,10 @@ import type { DeliveryDetailView } from "../types";
 interface DeliveryDetailProps {
   delivery: DeliveryDetailView;
   onContact?: () => void;
-  onCancel?: (reason: string) => void;
+  onCancel?: (input: {
+    category: CancellationCategory;
+    reason?: string;
+  }) => Promise<unknown>;
   isCancelling?: boolean;
   isContacting?: boolean;
 }
@@ -84,7 +77,13 @@ export function DeliveryDetail({
         </div>
 
         {delivery.canCancel && onCancel && (
-          <CancelDialog onCancel={onCancel} isCancelling={isCancelling} />
+          <div className="w-full sm:w-auto sm:min-w-56">
+            <StopTransportDialog
+              side="requester"
+              onConfirm={onCancel}
+              isPending={isCancelling}
+            />
+          </div>
         )}
       </header>
 
@@ -108,11 +107,7 @@ export function DeliveryDetail({
         <Separator />
         <Timeline steps={delivery.timeline} />
 
-        {delivery.status === "CANCELLED" && delivery.cancellationReason && (
-          <p className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-            {t("details.cancellationReason")}: {delivery.cancellationReason}
-          </p>
-        )}
+        {delivery.status === "CANCELLED" && <CancellationNote delivery={delivery} />}
 
       </Card>
 
@@ -272,69 +267,36 @@ function CounterpartCard({
   );
 }
 
-function CancelDialog({
-  onCancel,
-  isCancelling,
-}: {
-  onCancel: (reason: string) => void;
-  isCancelling: boolean;
-}) {
-  const t = useTranslations("deliveries");
-  const [open, setOpen] = useState(false);
-  const [reason, setReason] = useState("");
+/**
+ * Who stopped it, and why.
+ *
+ * The free-text reason was all this ever showed, so a client whose transporter
+ * dropped out read the same box as one whose own request had been called off.
+ * The side and the category are the part that answers the question actually
+ * being asked.
+ */
+function CancellationNote({ delivery }: { delivery: DeliveryDetailView }) {
+  const t = useTranslations("shipments.stop");
+  const d = useTranslations("deliveries");
 
-  const handleConfirm = () => {
-    if (!reason.trim()) return;
-    onCancel(reason.trim());
-    setOpen(false);
-  };
+  if (!delivery.cancelledBySide && !delivery.cancellationReason) return null;
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="destructive" size="sm" className="gap-2">
-          <AlertTriangle className="h-4 w-4" />
-          {t("buttons.cancelShipment")}
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{t("dialogs.cancel.title")}</DialogTitle>
-          <DialogDescription>
-            {t("dialogs.cancel.description")}
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-2 py-2">
-          <Label htmlFor="cancel-reason">
-            {t("dialogs.cancel.reasonLabel")}
-          </Label>
-          <Textarea
-            id="cancel-reason"
-            placeholder={t("dialogs.cancel.reasonPlaceholder")}
-            value={reason}
-            onChange={(event) => setReason(event.target.value)}
-          />
-        </div>
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => setOpen(false)}
-            disabled={isCancelling}
-          >
-            {t("buttons.keepShipment")}
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={handleConfirm}
-            disabled={reason.trim().length < 3 || isCancelling}
-          >
-            {isCancelling
-              ? t("buttons.cancelling")
-              : t("buttons.confirmCancellation")}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <div className="space-y-1 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+      {delivery.cancelledBySide && (
+        <p className="font-medium">
+          {t(`by.${delivery.cancelledBySide}`)}
+          {delivery.cancellationCategory
+            ? ` — ${t(`categories.${delivery.cancellationCategory}`)}`
+            : ""}
+        </p>
+      )}
+      {delivery.cancellationReason && (
+        <p>
+          {d("details.cancellationReason")}: {delivery.cancellationReason}
+        </p>
+      )}
+    </div>
   );
 }
 

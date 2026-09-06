@@ -39,6 +39,10 @@ const typeColors: Record<NotificationType, string> = {
   delivery: "bg-success/15 text-success",
   shipment_update: "bg-success/15 text-success",
   shipment_assigned: "bg-primary/10 text-primary",
+  shipment_cancelled: "bg-destructive/15 text-destructive",
+  // The job is not off — it is back on the board — so this is not a red one.
+  shipment_withdrawn: "bg-warning/15 text-warning",
+  job_reopened: "bg-primary/10 text-primary",
   carrier_application: "bg-warning/15 text-warning",
   review: "bg-warning/15 text-warning",
   payment: "bg-success/15 text-success",

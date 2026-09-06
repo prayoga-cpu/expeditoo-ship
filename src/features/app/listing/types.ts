@@ -70,6 +70,12 @@ export interface Job {
   offersCount: number;
   views: number;
   expiresAt: string;
+  /**
+   * Set when a transporter withdrew and the job came back. Its bidding window
+   * was extended and its pickup window may have slid forward, so it is not the
+   * job that was posted — and a carrier bidding on it is entitled to know.
+   */
+  reopenedAt: string | null;
   createdAt: string;
 
   /**

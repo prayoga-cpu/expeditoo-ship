@@ -1,4 +1,8 @@
 import { api, toQuery } from "@/lib/fetcher";
+import type {
+  CancellationCategory,
+  CancellationSide,
+} from "@/lib/cancellation-policy";
 
 /**
  * Client API for the driver execution surface.
@@ -8,6 +12,7 @@ import { api, toQuery } from "@/lib/fetcher";
  * contain nothing price-shaped. Do not add money fields here.
  */
 
+/** Every state a run can be *read* in. */
 export type DriverShipmentStatus =
   | "PENDING"
   | "ASSIGNED"
@@ -15,6 +20,16 @@ export type DriverShipmentStatus =
   | "IN_TRANSIT"
   | "DELIVERED"
   | "CANCELLED";
+
+/**
+ * Every state this surface may *move* a run to.
+ *
+ * `CANCELLED` is absent, and that absence is the point: the status endpoint no
+ * longer accepts it. Ending a run is a different verb with different
+ * consequences for the money and the board, and it lives at `/withdraw`
+ * (docs/specs/cancellations_spec.md §7).
+ */
+export type DriverStatusMove = Exclude<DriverShipmentStatus, "CANCELLED" | "PENDING">;
 
 /** The cargo facts a driver needs from the underlying job. */
 export interface DriverShipmentListing {
@@ -67,6 +82,8 @@ export interface DriverShipment {
   deliveredAt: string | null;
   cancelledAt: string | null;
   cancellationReason: string | null;
+  cancelledBySide: CancellationSide | null;
+  cancellationCategory: CancellationCategory | null;
   listing: DriverShipmentListing | null;
   confirmations: DriverShipmentConfirmation[];
   createdAt: string;
@@ -99,8 +116,15 @@ export const driverShipmentsApi = {
   assign: (id: string, driverId: string) =>
     api.post<DriverShipment>(`/api/shipments/${id}/assign`, { driverId }),
 
-  updateStatus: (id: string, status: DriverShipmentStatus, note?: string) =>
+  updateStatus: (id: string, status: DriverStatusMove, note?: string) =>
     api.patch<DriverShipment>(`/api/shipments/${id}/status`, { status, note }),
+
+  /**
+   * Hand the job back. The client's job survives this — it goes back on the
+   * board with its rival bids restored — which is why it is not "cancel".
+   */
+  withdraw: (id: string, body: { category: string; reason?: string }) =>
+    api.post<{ listingId: string }>(`/api/shipments/${id}/withdraw`, body),
 
   // `uploadPodPhoto` / `submitProofOfDelivery` were removed with the single
   // public proof-of-delivery URL they served. Evidence is now several private,

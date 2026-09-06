@@ -5,22 +5,17 @@ import { CONFIRMABLE_MILESTONES } from "@/lib/confirmation-token";
 // ========================================
 // Status Types & Validation
 // ========================================
+//
+// The v1 cancellation helpers that lived here — `VALID_STATUS_TRANSITIONS`,
+// `isValidStatusTransition`, `canCancelShipment` and a `cancelShipmentSchema`
+// with a different minimum length — are gone. All four had zero importers and
+// all four disagreed with the service that actually enforced the rules. The
+// one state machine is `TRANSITIONS` in `shipment.service.ts`; the one
+// cancellability rule is `src/lib/cancellation-policy.ts`; the one cancel
+// schema is `src/server/dto/cancellation.dto.ts`.
 
 export const ShipmentStatus = shipmentStatusEnum.enumValues;
 export type ShipmentStatusType = (typeof ShipmentStatus)[number];
-
-// Valid status transitions (state machine)
-export const VALID_STATUS_TRANSITIONS: Record<
-  ShipmentStatusType,
-  ShipmentStatusType[]
-> = {
-  PENDING: ["ASSIGNED", "CANCELLED"],
-  ASSIGNED: ["PICKED_UP", "IN_TRANSIT", "DELIVERED", "CANCELLED"], // Relaxed for flexibility
-  PICKED_UP: ["IN_TRANSIT", "DELIVERED", "CANCELLED"],
-  IN_TRANSIT: ["DELIVERED", "PICKED_UP"], // Allow rollback if mistake
-  DELIVERED: [],
-  CANCELLED: [],
-};
 
 // ========================================
 // Client confirmations
@@ -139,13 +134,6 @@ export const assignDriverSchema = z.object({
 });
 
 export type AssignDriverInput = z.infer<typeof assignDriverSchema>;
-
-// Cancel Shipment
-export const cancelShipmentSchema = z.object({
-  reason: z.string().min(5).max(500),
-});
-
-export type CancelShipmentInput = z.infer<typeof cancelShipmentSchema>;
 
 // Create Proposal (Driver submits a price proposal)
 export const createProposalSchema = z.object({
@@ -327,16 +315,6 @@ export const shipmentErrorResponseSchema = z.object({
 // ========================================
 
 /**
- * Validate if a status transition is allowed
- */
-export function isValidStatusTransition(
-  currentStatus: ShipmentStatusType,
-  newStatus: ShipmentStatusType
-): boolean {
-  return VALID_STATUS_TRANSITIONS[currentStatus].includes(newStatus);
-}
-
-/**
  * Get human-readable status label (for timeline)
  */
 export function getStatusLabel(status: ShipmentStatusType): string {
@@ -351,14 +329,5 @@ export function getStatusLabel(status: ShipmentStatusType): string {
   return labels[status];
 }
 
-/**
- * Check if shipment can be cancelled
- */
-export function canCancelShipment(status: ShipmentStatusType): boolean {
-  // Cannot cancel if already picked up, in transit, or delivered
-  return !["PICKED_UP", "IN_TRANSIT", "DELIVERED", "CANCELLED"].includes(
-    status
-  );
-}
 
 

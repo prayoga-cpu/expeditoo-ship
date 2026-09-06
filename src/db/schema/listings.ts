@@ -133,6 +133,11 @@ export const listings = pgTable(
     offersCount: integer("offers_count").default(0).notNull(),
     views: integer("views").default(0).notNull(),
     expiresAt: timestamp("expires_at").notNull(),
+    // Set when a transporter withdrew and the job went back on the board. Its
+    // bidding window was machine-extended and its pickup window may have slid
+    // forward, so it is not the job that was posted — and a carrier bidding on
+    // it is entitled to know that (cancellations_spec.md §3.4).
+    reopenedAt: timestamp("reopened_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()

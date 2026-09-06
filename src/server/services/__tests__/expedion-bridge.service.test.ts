@@ -22,8 +22,12 @@ import { expedionSmsService } from "@/server/services/expedion-sms.service";
 vi.mock("@/server/dal/expedion.dal", () => ({
   expedionDal: {
     getByListingId: vi.fn(),
+    getById: vi.fn(),
     update: vi.fn(),
     addEvent: vi.fn(),
+    // `findPaymentReference` walks the quote's timeline looking for the Stripe
+    // handle the payment event carried.
+    listEvents: vi.fn().mockResolvedValue([]),
   },
 }));
 
@@ -35,6 +39,8 @@ vi.mock("@/server/services/expedion-sms.service", () => ({
   expedionSmsService: {
     driverAssigned: vi.fn().mockResolvedValue(undefined),
     deliveryUpdate: vi.fn().mockResolvedValue(undefined),
+    transportCancelled: vi.fn().mockResolvedValue(undefined),
+    transporterWithdrew: vi.fn().mockResolvedValue(undefined),
   },
 }));
 
@@ -236,6 +242,171 @@ describe("expedionBridgeService — the confirmation link on the SMS", () => {
 
     expect(expedionSmsService.deliveryUpdate).toHaveBeenCalledWith(
       expect.objectContaining({ status: "delivered", confirmUrl: undefined })
+    );
+  });
+});
+
+// ========================================
+// Cancellations, both shapes
+// ========================================
+//
+// Neither can go through `writeBack`: its carrier patch is spread conditionally
+// on a truthy id, so it can only ever *set* `assigned_carrier_id` and never
+// clear it — which is exactly what an un-assignment has to do.
+
+describe("expedionBridgeService.onAwardWithdrawn", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    updateMock.mockResolvedValue(
+      escalatedQuote({ status: "escalated" }) as never
+    );
+  });
+
+  it("sends the job back to the market and clears the carrier", async () => {
+    getQuote.mockResolvedValue(
+      escalatedQuote({ status: "assigned", assignedCarrierId: "car_1" }) as never
+    );
+
+    await expedionBridgeService.onAwardWithdrawn({ listingId: "lst_1" });
+
+    // All three together. A row left with a listing, no carrier and
+    // `assigned_directly` still true falls out of *both* buckets of the
+    // escalation-rate KPI and vanishes from the funnel, silently.
+    expect(updateMock).toHaveBeenCalledWith(
+      "q_1",
+      {
+        status: "escalated",
+        assignedCarrierId: null,
+        assignedAt: null,
+        assignedDirectly: false,
+      },
+      expect.anything()
+    );
+  });
+
+  it("tells the client a replacement is being found, not that it is off", async () => {
+    getQuote.mockResolvedValue(
+      escalatedQuote({ status: "assigned" }) as never
+    );
+
+    await expedionBridgeService.onAwardWithdrawn({ listingId: "lst_1" });
+
+    expect(expedionSmsService.transporterWithdrew).toHaveBeenCalled();
+    expect(expedionSmsService.transportCancelled).not.toHaveBeenCalled();
+  });
+
+  it("is a no-op for a direct listing", async () => {
+    getQuote.mockResolvedValue(undefined as never);
+
+    await expedionBridgeService.onAwardWithdrawn({ listingId: "lst_1" });
+
+    expect(updateMock).not.toHaveBeenCalled();
+  });
+
+  it("writes nothing once the lot has been collected", async () => {
+    // `picked_up -> escalated` is not a legal edge, and inventing one would let
+    // every caller of `adminUpdate` rewind a settled quote.
+    getQuote.mockResolvedValue(
+      escalatedQuote({ status: "picked_up" }) as never
+    );
+
+    await expedionBridgeService.onAwardWithdrawn({ listingId: "lst_1" });
+
+    expect(updateMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("expedionBridgeService.onJobCancelled", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    updateMock.mockResolvedValue(
+      escalatedQuote({ status: "cancelled" }) as never
+    );
+  });
+
+  it("leaves an operator over there something to refund against", async () => {
+    // This app holds a record of that money, not the money. What it can do is
+    // say how much, against what, and that nobody has paid it back yet.
+    getQuote.mockResolvedValue(
+      escalatedQuote({ status: "assigned", acceptedPriceCents: 24_000 }) as never
+    );
+
+    await expedionBridgeService.onJobCancelled({
+      listingId: "lst_1",
+      side: "requester",
+      reason: "plans changed",
+    });
+
+    expect(updateMock).toHaveBeenCalledWith(
+      "q_1",
+      { status: "cancelled" },
+      expect.anything()
+    );
+    expect(expedionDal.addEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metadata: expect.objectContaining({
+          refundedCents: 24_000,
+          refundIssued: false,
+          cancelledBySide: "requester",
+        }),
+      }),
+      expect.anything()
+    );
+  });
+
+  it("texts the client that the transport is off", async () => {
+    getQuote.mockResolvedValue(escalatedQuote({ status: "assigned" }) as never);
+
+    await expedionBridgeService.onJobCancelled({
+      listingId: "lst_1",
+      side: "operator",
+    });
+
+    expect(expedionSmsService.transportCancelled).toHaveBeenCalled();
+  });
+
+  it("absorbs a repeat rather than writing twice", async () => {
+    getQuote.mockResolvedValue(escalatedQuote({ status: "cancelled" }) as never);
+
+    await expedionBridgeService.onJobCancelled({
+      listingId: "lst_1",
+      side: "requester",
+    });
+
+    expect(updateMock).not.toHaveBeenCalled();
+  });
+
+  it("is a no-op for a direct listing", async () => {
+    getQuote.mockResolvedValue(undefined as never);
+
+    await expedionBridgeService.onJobCancelled({
+      listingId: "lst_1",
+      side: "requester",
+    });
+
+    expect(updateMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("expedionBridgeService.onQuoteCancelled", () => {
+  it("cancels a quote that never reached the board", async () => {
+    vi.clearAllMocks();
+    vi.mocked(expedionDal.getById).mockResolvedValue(
+      escalatedQuote({ status: "paid" }) as never
+    );
+    updateMock.mockResolvedValue(
+      escalatedQuote({ status: "cancelled" }) as never
+    );
+
+    await expedionBridgeService.onQuoteCancelled({
+      quoteId: "q_1",
+      side: "requester",
+    });
+
+    expect(updateMock).toHaveBeenCalledWith(
+      "q_1",
+      { status: "cancelled" },
+      expect.anything()
     );
   });
 });

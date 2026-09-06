@@ -2,6 +2,7 @@ import { stripe } from "@/lib/stripe";
 import { db } from "@/db";
 import { payments } from "@/db/schema/payments";
 import { eq } from "drizzle-orm";
+import { paymentsService } from "@/server/services/payments.service";
 
 export const refundService = {
     /**
@@ -46,11 +47,13 @@ export const refundService = {
         });
 
         if (refund.status === "succeeded" || refund.status === "pending") {
-            // Update database
-            await db
-                .update(payments)
-                .set({ status: "refunded", updatedAt: new Date() })
-                .where(eq(payments.id, paymentId));
+            // Through the one transition, never with a bare UPDATE here. The
+            // client now holds an invoice raised when the money was taken, so
+            // giving it back has to raise the correction — and this route is
+            // ungated on shipment status, which makes it the path most likely
+            // to refund a delivered, invoiced job
+            // (docs/specs/invoice_at_payment_spec.md §5).
+            await paymentsService.markRefunded(paymentId);
         }
 
         return refund;

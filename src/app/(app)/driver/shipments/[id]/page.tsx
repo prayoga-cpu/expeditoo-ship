@@ -248,15 +248,8 @@ function CargoCard({ shipment }: { shipment: DriverShipmentDetail }) {
           </div>
         )}
 
-        {shipment.status === "CANCELLED" && shipment.cancellationReason && (
-          <div>
-            <h3 className="font-medium mb-2 text-sm md:text-base">
-              {t("cancellationReason")}
-            </h3>
-            <p className="text-muted-foreground leading-relaxed text-sm md:text-base">
-              {shipment.cancellationReason}
-            </p>
-          </div>
+        {shipment.status === "CANCELLED" && (
+          <CancellationNote shipment={shipment} />
         )}
       </CardContent>
     </Card>
@@ -279,6 +272,40 @@ function CargoFact({
         <span className="text-xs md:text-sm">{label}</span>
       </div>
       <p className="font-medium text-sm md:text-base">{value}</p>
+    </div>
+  );
+}
+
+/**
+ * Who stopped this run, and why.
+ *
+ * A driver reading "annulée" needs to know whether the client called it off or
+ * an operator ended it — those are different conversations, and the free-text
+ * reason alone never said which.
+ */
+function CancellationNote({ shipment }: { shipment: DriverShipmentDetail }) {
+  const t = useTranslations("driver.shipmentDetail");
+  const stop = useTranslations("shipments.stop");
+
+  if (!shipment.cancelledBySide && !shipment.cancellationReason) return null;
+
+  return (
+    <div>
+      <h3 className="font-medium mb-2 text-sm md:text-base">
+        {shipment.cancelledBySide
+          ? stop(`by.${shipment.cancelledBySide}`)
+          : t("cancellationReason")}
+      </h3>
+      {shipment.cancellationCategory && (
+        <p className="text-sm text-muted-foreground">
+          {stop(`categories.${shipment.cancellationCategory}`)}
+        </p>
+      )}
+      {shipment.cancellationReason && (
+        <p className="text-muted-foreground leading-relaxed text-sm md:text-base">
+          {shipment.cancellationReason}
+        </p>
+      )}
     </div>
   );
 }

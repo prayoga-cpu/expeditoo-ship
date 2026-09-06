@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-import { offersService } from "@/server/services/offers.service";
+import { shipmentCancellationService } from "@/server/services/shipment-cancellation.service";
 import { ok, unauthorised, handleError } from "@/lib/api-response";
 
 interface RouteParams {
@@ -28,7 +28,7 @@ export async function POST(req: Request, { params }: RouteParams) {
     if (!session) return unauthorised();
 
     const { reason } = revokeSchema.parse(await req.json().catch(() => ({})));
-    const result = await offersService.revokeAward(
+    const result = await shipmentCancellationService.revokeAward(
       session.user.id,
       listingId,
       reason

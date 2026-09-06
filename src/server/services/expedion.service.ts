@@ -226,7 +226,9 @@ function isSupplyingMissingPrice(
  * this side never interprets it — but a refund has to be issued against
  * something, and this is the only handle that exists.
  */
-async function findPaymentReference(quoteId: string): Promise<string | null> {
+export async function findPaymentReference(
+  quoteId: string
+): Promise<string | null> {
   const events = await expedionDal.listEvents(quoteId);
   for (let i = events.length - 1; i >= 0; i--) {
     const meta = events[i].metadata as Record<string, unknown> | null;

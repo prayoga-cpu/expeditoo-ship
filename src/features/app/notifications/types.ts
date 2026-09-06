@@ -18,7 +18,10 @@ export type NotificationType =
   | "listing"
   | "carrier_application"
   | "shipment_update"
-  | "shipment_assigned";
+  | "shipment_assigned"
+  | "shipment_cancelled"
+  | "shipment_withdrawn"
+  | "job_reopened";
 
 export type NotificationTab = "all" | "unread" | "message";
 

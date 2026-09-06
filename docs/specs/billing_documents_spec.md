@@ -22,6 +22,10 @@ payer is not a person at all.
 
 ## 2. The honesty constraint
 
+**Stale:** `COMMISSION_RATE` is `0.1`, not `1.0` — the split was decided and the
+driver's 90% accrues as a withdrawable balance. The reasoning below stands for
+any rate; only the figure moved.
+
 `COMMISSION_RATE = 1.0` in
 [payments.service.ts](../../src/server/services/payments.service.ts): the
 platform keeps 100% during the testing phase, decided by the client on
@@ -111,6 +115,14 @@ hold a request open indefinitely.
 
 ### 4.1 Generation — the missing wire
 
+> **Superseded on 2026-09-05 by `invoice_at_payment_spec.md`.** The wire below is
+> now a *backstop*, not the trigger: the document is raised the moment the money
+> is taken, which is at booking. Two of this section's conclusions were also
+> reversed. An escalated job gets **no document at all** here (that client was
+> invoiced by Expedion — this section's own reasoning, followed through), and the
+> row is written `paid` rather than `issued`, because the money is already taken.
+> The rest of the section still describes the delivery-time call accurately.
+
 `invoicesService.createFromPayment` exists, is tested, and is **called from
 nowhere**. It is now called from `settleDelivery` in
 [shipment.service.ts](../../src/server/services/shipment.service.ts),
@@ -182,9 +194,12 @@ screen so the surface is reachable without knowing the URL.
 
 1. **Delivered before this change shipped.** No invoice exists and none is
    backfilled. The earnings row still appears, sourced from `payments`.
-2. **Cancelled shipment.** Payment is `released`, never captured, so no invoice
-   and no payout. It appears in the Effectués list with a `CANCELLED` pill and
-   no money figures.
+2. **Cancelled shipment.** ~~Payment is `released`, never captured, so no invoice
+   and no payout.~~ **Stale since `payment_at_booking_spec.md`**: the client is
+   charged at award, so a cancelled shipment *has* a captured payment, which is
+   refunded rather than released. Since `invoice_at_payment_spec.md` it also has
+   a document, corrected by a credit note when the refund is made. It still
+   appears in the Effectués list with a `CANCELLED` pill and no money figures.
 3. **Delivery with `MOCK_PAYMENTS` on.** Real `payments` row, real payout row,
    real invoice. The synthetic intent id is the only difference.
 4. **Empty period.** The statement route answers a valid PDF containing the
@@ -195,6 +210,10 @@ screen so the surface is reachable without knowing the URL.
    recorded as a known gap in `payments.service.ts`; this spec does not fix it.
 
 ## 7. Test coverage required
+
+The invoicing half of this list is superseded by
+`invoice_at_payment_spec.md` §12, which covers issuance at capture, the escalated
+lane, the credit note and the numbering. The earnings half below still stands.
 
 - [ ] `settleDelivery` creates exactly one invoice per shipment
 - [ ] A second delivery transition does not mint a second invoice

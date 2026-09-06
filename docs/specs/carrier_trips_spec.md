@@ -1,7 +1,8 @@
 # Specification: Carrier trips (`/carrier/trips`)
 
 **Plan:** `docs/plans/plan_carrier_trips_and_billing.md`
-**Related:** `docs/specs/billing_documents_spec.md`, `docs/specs/carrier_kyc_spec.md`
+**Related:** `docs/specs/billing_documents_spec.md`, `docs/specs/carrier_kyc_spec.md`,
+`docs/specs/carriers_on_route_spec.md`
 **Date:** 2026-08-26
 
 ---
@@ -15,8 +16,12 @@ One screen for the carrier, two tabs, as asked:
 | **Planifiés** (`planned`) | Routes the carrier *runs* — recurring (weekdays) or occasional (specific dates). Declared supply. |
 | **Effectués** (`completed`) | Transports the carrier *carried out*. Execution history, with the money and documents attached. |
 
-A trip is **private to the carrier**. It is a saved query against the job board,
-not an offer, not a commitment, and no operator sees it. See §9.
+A trip is **private by default**. It is a saved query against the job board, not
+an offer, not a commitment, and no operator sees it. A carrier may opt one trip
+into being findable (`is_discoverable`), and even then it stays private in
+substance: a requester whose own job runs along that trajet sees the carrier, the
+trajet's two cities and its upcoming dates — never an address, a postal code, a
+coordinate, a vehicle or a capacity. See §9 and `carriers_on_route_spec.md` §4.
 
 ## 2. User stories
 
@@ -47,10 +52,11 @@ not an offer, not a commitment, and no operator sees it. See §9.
 | `vehicle_id` | text NULL → `vehicles.id` set null | which vehicle runs it |
 | `capacity_kg` | double NULL | usable payload on this trip |
 | `notify_on_match` | boolean NOT NULL default true | stored now, consumed by a later cron |
+| `is_discoverable` | boolean NOT NULL default true | publication consent, §9; existing rows backfilled `false` (`carriers_on_route_spec.md` §4.2) |
 | `is_active` | boolean NOT NULL default true | pause without deleting |
 | `created_at` / `updated_at` | timestamp NOT NULL | |
 
-Indexes: `carrier_id`, `is_active`.
+Indexes: `carrier_id`, `is_active`, `(is_discoverable, is_active)`.
 
 ### 3.2 `carrier_route_dates`
 
@@ -98,7 +104,11 @@ documents surfaces use. Consequences:
 | Carrier owns the route | allowed |
 | Carrier does not own the route | `ROUTE_NOT_FOUND` 404 — never 403, so the id space is not probeable |
 
-Admins and operators have **no** trip surface in this pass. Trips are private.
+Admins and operators have **no** trip surface, and this API serves nobody but the
+owning carrier. The one thing anyone else may read of a trip is the nine-field
+projection of a **discoverable** trip (`carriers_on_route_spec.md` §4.3), shown to
+a requester whose own job is on that trajet and served by
+`carrier-discovery.service.ts` — never by a route in this spec.
 
 `vehicleId`, when supplied, must belong to the same carrier — otherwise
 `VEHICLE_NOT_FOUND` 404.
@@ -199,7 +209,9 @@ link. Default is `planned`.
 - Empty state through `centered-empty-state.tsx`.
 - The form is a dialog: label, kind toggle, two `LocationPickerField`s, radius
   slider, weekday multi-select **or** a date list, vehicle select, capacity,
-  notify switch.
+  notify switch, and a discoverability switch whose hint states exactly what a
+  requester would see (§9, `carriers_on_route_spec.md` §4.3) — the old
+  « Vous seul le voyez » copy is false once the switch exists.
 
 ### 8.3 Effectués
 
@@ -224,8 +236,17 @@ move into `browseShipments`.
 
 ## 9. Non-goals, stated so they are not re-litigated
 
-- A trip is **not** visible to operators and does not enter the award queue.
-- A trip is **not** a price or availability commitment.
+- ~~A trip is **not** visible to anyone but its carrier.~~ **Reversed on
+  2026-09-05 by `carriers_on_route_spec.md` §4**: the client asked that a
+  requester be able to see who already drives their trajet, so a carrier may now
+  publish a trip to that surface. The reversal is opt-in per trip
+  (`is_discoverable`) and bounded by the §4.3 projection — carrier, the two
+  cities, the upcoming dates.
+- What remains a non-goal: a trip is still **not** an offer, still **not** a price
+  or availability commitment, and still does not enter the award queue. Being
+  discoverable buys a conversation, nothing more.
+- A trip is still not visible to operators as a trip; an operator reaches the
+  same projection only through a job they may act on.
 - `notifyOnMatch` is persisted and read by nothing yet.
 
 ## 10. Known limitations
@@ -238,6 +259,11 @@ move into `browseShipments`.
 3. Recurring occurrence maths runs in the server's timezone. The deadline
    columns elsewhere in this repo have the same property
    (`plan_expedion_post_payment_fork.md` §2.2); production runs `TZ=UTC`.
+4. Every trip that existed before `is_discoverable` was backfilled to `false`,
+   because it was declared under a dialog reading « Vous seul le voyez » and that
+   promise outlives the change. New trips default to `true`, so the discoverable
+   pool starts empty and fills only as drivers opt in — a product fact to
+   communicate, not a bug (`carriers_on_route_spec.md` §4.2).
 
 ## 11. Test coverage required
 

@@ -1,88 +1,21 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+"use client";
 
-// ========================================
-// Types
-// ========================================
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
+import { toast } from "sonner";
 
-export interface Invoice {
-    id: string;
-    invoiceNumber: string;
-    paymentId: string;
-    userId: string;
-    amount: number;
-    currency: string;
-    status: "draft" | "issued" | "paid" | "void";
-    issuedAt: string | null;
-    dueAt: string | null;
-    paidAt: string | null;
-    pdfUrl: string | null;
-    createdAt: string;
-    updatedAt: string;
-}
+import { ApiError } from "@/lib/fetcher";
+import {
+    invoicesApi,
+    getInvoicePdfUrl,
+    getInvoiceStatementUrl,
+    type Invoice,
+    type InvoiceQueryParams,
+    type InvoicesResponse,
+} from "../api/invoices.api";
 
-export interface InvoicesResponse {
-    items: Invoice[];
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-}
-
-export interface InvoiceQueryParams {
-    page?: number;
-    limit?: number;
-    status?: "draft" | "issued" | "paid" | "void";
-    /** ISO bounds for the Cocolis period filter. */
-    from?: string;
-    to?: string;
-}
-
-// Standard API response wrapper
-interface ApiResponse<T> {
-    success: boolean;
-    data: T;
-    error?: {
-        code: string;
-        message: string;
-    };
-}
-
-// ========================================
-// API Functions
-// ========================================
-
-async function fetchInvoices(params: InvoiceQueryParams = {}): Promise<InvoicesResponse> {
-    const searchParams = new URLSearchParams();
-    if (params.page) searchParams.set("page", params.page.toString());
-    if (params.limit) searchParams.set("limit", params.limit.toString());
-    if (params.status) searchParams.set("status", params.status);
-    if (params.from) searchParams.set("from", params.from);
-    if (params.to) searchParams.set("to", params.to);
-
-    const response = await fetch(`/api/user/invoices?${searchParams.toString()}`);
-    const json: ApiResponse<InvoicesResponse> = await response.json();
-
-    if (!response.ok || !json.success) {
-        throw new Error(json.error?.message || "Failed to fetch invoices");
-    }
-
-    return json.data;
-}
-
-async function fetchInvoiceById(id: string): Promise<{ invoice: Invoice }> {
-    const response = await fetch(`/api/user/invoices/${id}`);
-    const json: ApiResponse<{ invoice: Invoice }> = await response.json();
-
-    if (!response.ok || !json.success) {
-        throw new Error(json.error?.message || "Failed to fetch invoice");
-    }
-
-    return json.data;
-}
-
-// ========================================
-// Hooks
-// ========================================
+export type { Invoice, InvoiceQueryParams, InvoicesResponse };
+export { getInvoicePdfUrl, getInvoiceStatementUrl };
 
 /**
  * Hook to fetch user invoices with pagination
@@ -90,7 +23,7 @@ async function fetchInvoiceById(id: string): Promise<{ invoice: Invoice }> {
 export function useInvoices(params: InvoiceQueryParams = {}) {
     return useQuery({
         queryKey: ["invoices", params],
-        queryFn: () => fetchInvoices(params),
+        queryFn: () => invoicesApi.list(params),
         staleTime: 60 * 1000, // 1 minute
     });
 }
@@ -101,25 +34,36 @@ export function useInvoices(params: InvoiceQueryParams = {}) {
 export function useInvoice(id: string | null) {
     return useQuery({
         queryKey: ["invoice", id],
-        queryFn: () => fetchInvoiceById(id!),
+        queryFn: () => invoicesApi.byId(id!),
         enabled: !!id,
         staleTime: 60 * 1000,
     });
 }
 
 /**
- * Get PDF download URL for an invoice
+ * Send a document to the address on the account.
+ *
+ * The error copy keys off the server's code, which is why this goes through
+ * `@/lib/fetcher` rather than the hand-rolled `fetch` that used to live here:
+ * that one threw `new Error(message)` and discarded the code, so every failure
+ * read the same.
  */
-export function getInvoicePdfUrl(invoiceId: string): string {
-    return `/api/user/invoices/${invoiceId}/pdf`;
-}
+export function useEmailInvoice() {
+    const queryClient = useQueryClient();
+    const t = useTranslations("profile.invoices");
 
-/** Every invoice in a period, as one PDF — the bulk download button. */
-export function getInvoiceStatementUrl(period: { from?: string; to?: string }): string {
-    const searchParams = new URLSearchParams();
-    if (period.from) searchParams.set("from", period.from);
-    if (period.to) searchParams.set("to", period.to);
-
-    const query = searchParams.toString();
-    return `/api/user/invoices/statement${query ? `?${query}` : ""}`;
+    return useMutation({
+        mutationFn: (id: string) => invoicesApi.email(id),
+        onSuccess: (data) => {
+            toast.success(t("emailSent", { address: data.sentTo }));
+            queryClient.invalidateQueries({ queryKey: ["invoices"] });
+        },
+        onError: (error) => {
+            const code = error instanceof ApiError ? error.code : "";
+            const known = ["RATE_LIMITED", "INVOICE_EMAIL_FAILED", "INVOICE_NOT_YOURS"];
+            toast.error(
+                known.includes(code) ? t(`errors.${code}`) : t("errors.generic")
+            );
+        },
+    });
 }

@@ -1,4 +1,8 @@
 import { api, toQuery } from "@/lib/fetcher";
+import type {
+  CancellationCategory,
+  CancellationSide,
+} from "@/lib/cancellation-policy";
 
 /**
  * Client API for the shipper-side tracking surface.
@@ -84,6 +88,8 @@ export interface Shipment {
   deliveredAt: string | null;
   cancelledAt: string | null;
   cancellationReason: string | null;
+  cancelledBySide: CancellationSide | null;
+  cancellationCategory: CancellationCategory | null;
   listing: ShipmentListing | null;
   offer?: ShipmentOffer | null;
   confirmations: ShipmentConfirmationSummary[];
@@ -119,6 +125,8 @@ export const deliveriesApi = {
 
   getById: (id: string) => api.get<ShipmentWithEvents>(`/api/shipments/${id}`),
 
-  cancel: (id: string, reason: string) =>
-    api.post<Shipment>(`/api/shipments/${id}/cancel`, { reason }),
+  cancel: (
+    id: string,
+    body: { category: CancellationCategory; reason?: string }
+  ) => api.post<Shipment>(`/api/shipments/${id}/cancel`, body),
 };

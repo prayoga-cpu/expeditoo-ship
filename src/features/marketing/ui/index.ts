@@ -17,3 +17,4 @@ export * from "./MarketingPageShell";
 export * from "./LegalDocument";
 export * from "./MarketingCardGrid";
 export * from "./ContactForm";
+export * from "./ChangelogView";

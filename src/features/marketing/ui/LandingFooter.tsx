@@ -31,6 +31,7 @@ const COLUMNS = [
     links: [
       { key: "expedionBuyers", href: EXPEDION_URL, external: true },
       { key: "auctionHouses", href: "/auction-houses" },
+      { key: "changelog", href: "/changelog" },
       { key: "contact", href: "/contact" },
     ],
   },

@@ -441,7 +441,18 @@
         "thisMonth": "This month",
         "lastMonth": "Last month",
         "thisYear": "This year"
-      }
+      },
+      "retry": "Try again",
+      "sendByEmail": "Send by email",
+      "emailSent": "Document sent to {address}",
+      "creditNote": "Credit note",
+      "errors": {
+        "RATE_LIMITED": "Too many sends for this document. Try again in a moment.",
+        "INVOICE_EMAIL_FAILED": "The email could not be sent. The document is still downloadable.",
+        "INVOICE_NOT_YOURS": "This document is not yours.",
+        "generic": "The email could not be sent. Try again later."
+      },
+      "creditNoteFor": "Credit note for {number}"
     },
     "reviews": {
       "title": "Reviews & Ratings",
@@ -649,9 +660,12 @@
       "CANCELLED": "Cancelled"
     },
     "cancelFeedback": {
-      "success": "Shipment cancelled — the held payment was released",
+      "success": "Transport cancelled — your payment is being refunded",
       "requiresSupport": "The goods are already on the move — contact support to cancel",
-      "failed": "Could not cancel the shipment"
+      "failed": "Could not cancel the shipment",
+      "useWithdraw": "You cannot cancel the client's request. Withdraw from the job screen instead.",
+      "systemAccount": "This transport belongs to Expedion — only an operator can cancel it",
+      "badCategory": "That reason does not match your role on this transport"
     },
     "confirmation": {
       "confirmedByClient": "Confirmed by the client",
@@ -992,6 +1006,68 @@
       "completed": "Completed",
       "cancelled": "Cancelled",
       "expired": "Expired"
+    },
+    "detail": {
+      "tab": "Details",
+      "viaExpedion": "via Expedion",
+      "fragile": "Fragile",
+      "needsHelp": "Loading help",
+      "budget": "Budget {amount}",
+      "load": "Load",
+      "weight": "Weight",
+      "quantity": "Quantity",
+      "dimensions": "Dimensions",
+      "route": "Route",
+      "pickup": "Pickup",
+      "dropoff": "Dropoff",
+      "flexibleDates": "Dates are flexible — carriers may propose times outside these windows.",
+      "offers": "Offers",
+      "bidCount": "{count, plural, =0 {No offers yet.} one {# carrier has bid on this request.} other {# carriers have bid on this request.}}",
+      "lowestFrom": "from {amount}",
+      "noOffers": "No offers yet",
+      "noOffersDesc": "Carriers are notified as soon as a request is published. The first offers usually arrive within a few hours.",
+      "sort": {
+        "priceAsc": "Price: lowest first",
+        "priceDesc": "Price: highest first",
+        "ratingDesc": "Best rated",
+        "pickupAsc": "Earliest pickup",
+        "createdDesc": "Most recent"
+      },
+      "accept": {
+        "awarded": "Carrier selected",
+        "alreadyAccepted": "This offer was already accepted",
+        "alreadyAwarded": "Another offer was just accepted for this job",
+        "paymentMethodRequired": "Add a payment method before accepting an offer",
+        "failed": "Could not accept this offer"
+      },
+      "reopened": "Back on the board"
+    },
+    "carriers": {
+      "tab": "Available carriers",
+      "intro": "Carriers will get in touch as soon as they see your request. In the meantime, here are the ones making this trip soon — you can contact them right now.",
+      "reviews": "{count, plural, =0 {(no reviews)} one {(# review)} other {(# reviews)}}",
+      "detour": "{km} km from your route",
+      "upcomingRuns": "Upcoming trips",
+      "contact": "Contact",
+      "contacting": "Sending…",
+      "loadError": {
+        "title": "Could not load carriers",
+        "description": "The list could not be loaded. Try again in a moment.",
+        "retry": "Try again"
+      },
+      "empty": {
+        "title": "No carrier on this route yet",
+        "description": "No carrier has declared a trip that covers your request yet. They can still make you an offer from the job board."
+      },
+      "errors": {
+        "matchNotFound": "This carrier no longer makes this trip.",
+        "listingNotOpen": "This request is no longer open.",
+        "notListingOwner": "You are not allowed to contact carriers for this request.",
+        "rateLimited": "Too many contacts for this request. Try again in an hour.",
+        "contactFailed": "Could not contact this carrier.",
+        "listingNotFound": "This request could not be found."
+      },
+      "truncated": "Showing {shown} carriers out of {total}."
     }
   },
   "driver": {
@@ -1089,14 +1165,20 @@
         "generic": "Something went wrong. Please try again.",
         "notInFleet": "You are not registered as a driver for this carrier.",
         "pickupPhotoRequired": "Take a photo of the load before confirming pickup.",
-        "deliveryPhotoRequired": "Take a photo of the delivered load before confirming delivery."
+        "deliveryPhotoRequired": "Take a photo of the delivered load before confirming delivery.",
+        "withdrawAfterPickup": "The goods are already loaded — contact support",
+        "driverCannotWithdraw": "Only the carrier who won the job can withdraw",
+        "requiresSupport": "The goods are already on the move — contact support"
       },
       "unassignedTitle": "Job won, not started",
       "unassignedDesc": "This job is yours. Take it on to unlock pickup and delivery.",
       "startJob": "Start this job",
       "startingJob": "Starting...",
       "startJobHint": "This assigns the run to you. Driving it yourself is the norm; a fleet driver can take it over later.",
-      "jobStarted": "Job started. Head to the pickup address."
+      "jobStarted": "Job started. Head to the pickup address.",
+      "withdraw": {
+        "success": "You have withdrawn — the job is back on the board"
+      }
     },
     "apply": {
       "title": "Become a Driver",
@@ -1285,7 +1367,8 @@
       "legalNotice": "Legal notice",
       "privacy": "Privacy policy",
       "copyright": "© 2026 Expeditoo — Expedion Group",
-      "sameGroup": "Expedion and Expeditoo are part of the same company"
+      "sameGroup": "Expedion and Expeditoo are part of the same company",
+      "changelog": "Changelog"
     },
     "actions": {
       "bid": {
@@ -1607,8 +1690,8 @@
         {
           "title": "Payment",
           "paragraphs": [
-            "Funds are authorised when a job is awarded and held. They are captured when delivery is confirmed, never before.",
-            "If a job is cancelled before delivery, the authorisation is released. The platform's commission is deducted at source, and the balance is paid out to the carrier.",
+            "Payment is taken when the transport is confirmed and awarded, before delivery. A receipt is emailed to you at that point.",
+            "If a job is cancelled before delivery, the amount is refunded and a credit note is sent to you. The platform's commission is deducted at source, and the balance is paid out to the carrier.",
             "The payer is the client who commissioned the job in Expedion. Nothing here creates a payment obligation on an operator personally."
           ]
         },
@@ -1744,6 +1827,18 @@
           ]
         }
       ]
+    },
+    "changelog": {
+      "eyebrow": "CHANGELOG",
+      "title": "What has changed",
+      "intro": "Every release that has shipped to this platform, newest first. Written for the people who use it — drivers, operators and clients — not for the people who built it.",
+      "empty": "No releases recorded yet.",
+      "tags": {
+        "feat": "NEW",
+        "fix": "FIXED",
+        "ux": "IMPROVED",
+        "infra": "UNDER THE HOOD"
+      }
     }
   },
   "help": {
@@ -1769,7 +1864,7 @@
       },
       "q3": {
         "question": "Can I cancel a shipment?",
-        "answer": "You can cancel a shipment request as long as it hasn't been picked up by a driver. Go to the shipment details page and look for the \"Cancel\" option. Cancellation fees may apply if a driver has already been assigned."
+        "answer": "Yes, as long as the goods have not been loaded. Open the delivery page and choose “Cancel this transport”: you are refunded in full, with no cancellation fee. Once the goods have been collected, cancelling goes through our support team. If your carrier is the one who pulls out, your transport is not cancelled — the job goes back out to other carriers and you are told."
       },
       "q4": {
         "question": "How do I contact a seller?",
@@ -1800,7 +1895,10 @@
       "review": "Review",
       "payment": "Payment",
       "listing": "Listing",
-      "shipment_assigned": "Shipment Assigned"
+      "shipment_assigned": "Shipment Assigned",
+      "shipment_cancelled": "Transport cancelled",
+      "shipment_withdrawn": "Carrier withdrew",
+      "job_reopened": "Job available again"
     }
   },
   "admin": {
@@ -2531,6 +2629,44 @@
       "cancel": "Cancel",
       "assigning": "Assigning...",
       "acceptAssign": "Accept Proposal & Assign"
+    },
+    "stop": {
+      "categoryLabel": "Reason",
+      "reasonLabel": "Details",
+      "keep": "Go back",
+      "submitting": "Sending…",
+      "requester": {
+        "trigger": "Cancel this transport",
+        "title": "Cancel this transport?",
+        "description": "The transport is cancelled and your payment is refunded. Bidding carriers are told. This cannot be undone.",
+        "reasonPlaceholder": "Explain why you no longer need this transport…",
+        "confirm": "Confirm cancellation"
+      },
+      "transporter": {
+        "trigger": "I cannot do this job",
+        "title": "Withdraw from this job?",
+        "description": "The job goes back on the board for another carrier to take. The client's transport is not cancelled. Your offer is withdrawn.",
+        "reasonPlaceholder": "Explain what stops you doing this job…",
+        "confirm": "Withdraw"
+      },
+      "by": {
+        "requester": "Cancelled by the client",
+        "transporter": "Cancelled by the carrier",
+        "operator": "Cancelled by Expeditoo"
+      },
+      "categories": {
+        "vehicle_breakdown": "Vehicle breakdown",
+        "driver_unavailable": "Driver unavailable",
+        "cargo_mismatch": "Cargo does not match the job",
+        "access_impossible": "Cannot access the pickup",
+        "no_longer_needed": "No longer needed",
+        "date_changed": "The dates changed",
+        "arranged_elsewhere": "Arranged elsewhere",
+        "no_driver_found": "No carrier found",
+        "fraud_or_abuse": "Fraud or abuse",
+        "support_resolution": "Support decision",
+        "other": "Other"
+      }
     }
   },
   "reviews": {
@@ -2755,9 +2891,11 @@
       "edit": "Edit",
       "delete": "Delete",
       "paused": "Paused",
+      "discoverable": "Findable",
+      "notDiscoverable": "Private",
       "toggleActive": "Enable this trip",
       "seeMatching": "See matching jobs",
-      "radiusLabel": "Within {km} km of the departure point",
+      "radiusLabel": "Up to {km} km either side of the trip",
       "tabs": {
         "planned": "Planned",
         "completed": "Carried out"
@@ -2806,7 +2944,7 @@
       "form": {
         "createTitle": "New trip",
         "editTitle": "Edit trip",
-        "description": "Where you go, how often, and what you can carry. Only you see this.",
+        "description": "Where you go, how often, and what you can carry. You choose below who can see it.",
         "label": "Name",
         "labelPlaceholder": "Bordeaux–Paris return",
         "kind": "How often",
@@ -2821,7 +2959,7 @@
         "addDate": "Add",
         "removeDate": "Remove this date",
         "radius": "Search radius",
-        "radiusHint": "Jobs are matched around the departure point.",
+        "radiusHint": "A job is matched when both its pickup and its dropoff lie within this distance of your trip.",
         "vehicle": "Vehicle",
         "vehiclePlaceholder": "Choose a vehicle",
         "noVehicle": "No specific vehicle",
@@ -2829,6 +2967,8 @@
         "capacityPlaceholder": "e.g. 800",
         "notify": "Alert me about matching jobs",
         "notifyHint": "Coming soon — the preference is saved now.",
+        "discoverableLabel": "Be findable on this trip",
+        "discoverableHint": "People whose job runs along this trip, and the platform's operators, can see that you pass by and contact you. They never see your address: only the two cities and the upcoming dates.",
         "cancel": "Cancel",
         "create": "Add trip",
         "save": "Save"

@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { auth } from "@/lib/auth";
+import { ok, unauthorised, handleError } from "@/lib/api-response";
 import { invoicesService } from "@/server/services/invoices.service";
 
 interface RouteParams {
@@ -9,61 +9,22 @@ interface RouteParams {
 
 /**
  * GET /api/user/invoices/[id]
- * Get a specific invoice by ID
+ * Get a specific document by ID.
+ *
+ * Refusals come from the service as typed errors now. This handler used to
+ * match on the *text* of a bare `Error` to decide between 403 and 500, which
+ * held only for as long as nobody rephrased the message.
  */
 export async function GET(request: Request, { params }: RouteParams) {
     try {
-        const session = await auth.api.getSession({
-            headers: await headers(),
-        });
-
-        if (!session?.user?.id) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    error: { code: "UNAUTHORIZED", message: "Unauthorized" },
-                },
-                { status: 401 }
-            );
-        }
+        const session = await auth.api.getSession({ headers: await headers() });
+        if (!session?.user?.id) return unauthorised();
 
         const { id } = await params;
+        const invoice = await invoicesService.getOwnedInvoice(id, session.user.id);
 
-        const invoice = await invoicesService.getById(id, session.user.id);
-
-        if (!invoice) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    error: { code: "NOT_FOUND", message: "Invoice not found" },
-                },
-                { status: 404 }
-            );
-        }
-
-        return NextResponse.json({ success: true, data: { invoice } });
+        return ok({ invoice });
     } catch (error) {
-        console.error("Error fetching invoice:", error);
-
-        if (error instanceof Error && error.message === "Unauthorized access to invoice") {
-            return NextResponse.json(
-                {
-                    success: false,
-                    error: { code: "FORBIDDEN", message: "Access denied" },
-                },
-                { status: 403 }
-            );
-        }
-
-        return NextResponse.json(
-            {
-                success: false,
-                error: {
-                    code: "INTERNAL_SERVER_ERROR",
-                    message: "Failed to fetch invoice",
-                },
-            },
-            { status: 500 }
-        );
+        return handleError(error, "Invoice");
     }
 }

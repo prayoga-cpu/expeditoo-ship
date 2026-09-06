@@ -27,12 +27,25 @@ import { notifyExpedionAdmins } from "@/server/services/expedion-realtime.servic
 import {
   ExpedionError,
   canTransition,
+  findPaymentReference,
 } from "@/server/services/expedion.service";
 import type { ExpedionQuoteStatus } from "@/db/schema/expedion";
 import type { ExpedionWriteBackInput } from "@/server/dto/expedion.dto";
 
 const err = (code: string, status: number, message?: string) =>
   new ExpedionError(code, status, message);
+
+/**
+ * Only what a cancellation write needs. Structural rather than
+ * `ReturnType<typeof expedionDal.getById>` because the two lookups differ:
+ * `getById` carries the quote's events, `getByListingId` does not, and this
+ * function is reached from both.
+ */
+interface CancellableQuote {
+  id: string;
+  status: ExpedionQuoteStatus;
+  acceptedPriceCents: number | null;
+}
 
 /**
  * Expeditoo's shipment states, mapped onto the Expedion lifecycle.
@@ -233,7 +246,148 @@ export const expedionBridgeService = {
       confirmUrl: params.confirmUrl,
     });
   },
+
+  /**
+   * The transporter backed out, and the job did **not** stop.
+   *
+   * This cannot go through `writeBack`: that method's carrier patch is spread
+   * conditionally on a truthy id, so it can only ever *set*
+   * `assigned_carrier_id` and never clear it — which is exactly what an
+   * un-assignment has to do.
+   *
+   * `assigned → escalated` is already a legal edge, so nothing here needs the
+   * transition matrix loosened. The three carrier fields are cleared
+   * **together**: a row left with a listing, no carrier and `assigned_directly`
+   * still true falls out of *both* buckets of the escalation-rate KPI and
+   * vanishes from the funnel entirely, silently.
+   *
+   * See docs/specs/cancellations_spec.md §4.2.
+   */
+  async onAwardWithdrawn(params: { listingId: string }): Promise<void> {
+    const quote = await expedionDal.getByListingId(params.listingId);
+    if (!quote) return; // A `direct` listing — nothing to write back to.
+    if (!canTransition(quote.status, "escalated")) return;
+
+    const updated = await db.transaction(async (tx) => {
+      const row = await expedionDal.update(
+        quote.id,
+        {
+          status: "escalated",
+          assignedCarrierId: null,
+          assignedAt: null,
+          assignedDirectly: false,
+        },
+        tx
+      );
+      await expedionDal.addEvent(
+        {
+          id: nanoid(),
+          quoteId: quote.id,
+          status: "escalated",
+          actor: "expeditoo",
+          message: "Le transporteur retenu s'est désisté ; retour au marché",
+          metadata: {
+            listingId: params.listingId,
+            previousCarrierId: quote.assignedCarrierId,
+            wasAssignedDirectly: quote.assignedDirectly,
+          },
+        },
+        tx
+      );
+      return row;
+    });
+
+    void notifyExpedionAdmins(quote.id);
+    void expedionSmsService
+      .transporterWithdrew({
+        phone: updated.phone,
+        bordereauNumber: updated.bordereauNumber,
+      })
+      .catch(() => undefined);
+  },
+
+  /** The job behind an escalated quote is off. */
+  async onJobCancelled(params: {
+    listingId: string;
+    side: string;
+    reason?: string | null;
+  }): Promise<void> {
+    const quote = await expedionDal.getByListingId(params.listingId);
+    if (!quote) return; // A `direct` listing — nothing to write back to.
+
+    await recordQuoteCancelled(quote, params.listingId, params.side, params.reason);
+  },
+
+  /**
+   * The same, for a quote the client called off before it ever reached the
+   * board — paid and waiting for a driver, with no listing behind it.
+   */
+  async onQuoteCancelled(params: {
+    quoteId: string;
+    side: string;
+    reason?: string | null;
+  }): Promise<void> {
+    const quote = await expedionDal.getById(params.quoteId);
+    if (!quote) return;
+
+    await recordQuoteCancelled(quote, null, params.side, params.reason);
+  },
 };
+
+/**
+ * Writes the quote off and leaves an Expedion operator something to act on.
+ *
+ * The money was taken in Expedion, into Expedion's Stripe account, so nothing
+ * here can give it back — `refundForJob` refuses that money outright. What this
+ * records is the amount, the Stripe handle and `refundIssued: false`, so nobody
+ * reads the event as "the money is back". Same shape as `cancelAndRequote`.
+ *
+ * `payment_status` deliberately stays `paid`: it becomes `refunded` only when a
+ * human confirms the money moved, and this app cannot know that.
+ */
+async function recordQuoteCancelled(
+  quote: CancellableQuote | undefined,
+  listingId: string | null,
+  side: string,
+  reason?: string | null
+): Promise<void> {
+  if (!quote) return;
+  if (quote.status === "cancelled") return; // Already off; not an error.
+  if (!canTransition(quote.status, "cancelled")) return;
+
+  const paymentReference = await findPaymentReference(quote.id);
+
+  const updated = await db.transaction(async (tx) => {
+    const row = await expedionDal.update(quote.id, { status: "cancelled" }, tx);
+    await expedionDal.addEvent(
+      {
+        id: nanoid(),
+        quoteId: quote.id,
+        status: "cancelled",
+        actor: "expeditoo",
+        message: "Transport annulé ; remboursement à émettre",
+        metadata: {
+          ...(listingId ? { listingId } : {}),
+          cancelledBySide: side,
+          reason: reason ?? null,
+          refundedCents: quote.acceptedPriceCents,
+          paymentReference,
+          refundIssued: false,
+        },
+      },
+      tx
+    );
+    return row;
+  });
+
+  void notifyExpedionAdmins(quote.id);
+  void expedionSmsService
+    .transportCancelled({
+      phone: updated.phone,
+      bordereauNumber: updated.bordereauNumber,
+    })
+    .catch(() => undefined);
+}
 
 /**
  * Fire-and-forget wrapper for Expeditoo's own flows.

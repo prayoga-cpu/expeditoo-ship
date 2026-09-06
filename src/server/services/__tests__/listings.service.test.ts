@@ -257,24 +257,44 @@ describe("listingsService.cancelListing", () => {
     });
   });
 
-  it("sends an in-progress job to support rather than self-service", async () => {
+  // This door is for a job nobody has taken yet, and only that. Once an offer
+  // has been accepted there is a shipment, a driver planning around it and the
+  // client's money — ending it here would leave the listing `cancelled` with
+  // `accepted_offer_id` still set, the run still on the driver's screen and
+  // nothing refunded, bypassing every guarantee the cancellation service makes.
+  it("refuses an awarded job and names the door that works", async () => {
+    Object.assign(listingsDal, {
+      getById: vi.fn().mockResolvedValue(job({ status: "awarded" })),
+    });
+
+    expect(
+      await codeFrom(() => listingsService.cancelListing("shipper-1", "job-1"))
+    ).toBe("CANCEL_VIA_SHIPMENT");
+    expect(listingsDal.update).not.toHaveBeenCalled();
+  });
+
+  it("refuses an awarded job to an admin too", async () => {
+    // The admin listings table calls the same route. Being staff is not a
+    // reason to end a live run without refunding it.
+    Object.assign(listingsDal, {
+      getById: vi.fn().mockResolvedValue(job({ status: "awarded" })),
+    });
+
+    expect(
+      await codeFrom(() =>
+        listingsService.cancelListing("admin-1", "job-1", true)
+      )
+    ).toBe("CANCEL_VIA_SHIPMENT");
+  });
+
+  it("refuses an in-progress job on the same grounds", async () => {
     Object.assign(listingsDal, {
       getById: vi.fn().mockResolvedValue(job({ status: "in_progress" })),
     });
 
     expect(
       await codeFrom(() => listingsService.cancelListing("shipper-1", "job-1"))
-    ).toBe("CANCEL_REQUIRES_SUPPORT");
-  });
-
-  it("lets an admin cancel an in-progress job", async () => {
-    Object.assign(listingsDal, {
-      getById: vi.fn().mockResolvedValue(job({ status: "in_progress" })),
-    });
-
-    await expect(
-      listingsService.cancelListing("admin-1", "job-1", true)
-    ).resolves.toBeDefined();
+    ).toBe("CANCEL_VIA_SHIPMENT");
   });
 
   it("refuses to cancel a completed job", async () => {

@@ -1,9 +1,11 @@
+import type { Invoice } from "@/db/schema/invoices";
+import { addressesDal } from "@/server/dal/addresses.dal";
 import { invoicesDal } from "@/server/dal/invoices.dal";
 import { paymentsDal } from "@/server/dal/payments.dal";
 import { getUserById } from "@/server/dal/users.dal";
 import { type InvoiceQuery } from "@/server/dto/invoices.dto";
 import { notificationsService } from "@/server/services/notifications.service";
-import { emailService } from "@/server/services/email.service";
+import { invoiceDocumentEmail } from "@/server/services/invoice-email.service";
 
 export class InvoiceError extends Error {
     constructor(
@@ -16,63 +18,177 @@ export class InvoiceError extends Error {
     }
 }
 
+const err = (code: string, status: number, message?: string) =>
+    new InvoiceError(code, status, message);
+
 /** A bundle wider than this is refused rather than rendered. */
 export const MAX_STATEMENT_INVOICES = 500;
 
+/** The billed party and the prestation, as they stood when the money moved. */
+async function billingSnapshot(userId: string, listingTitle?: string | null) {
+    const [account, address] = await Promise.all([
+        getUserById(userId),
+        addressesDal.getDefaultByUserId(userId),
+    ]);
+
+    if (!account) throw err("INVOICE_USER_NOT_FOUND", 404);
+
+    return {
+        account,
+        billingName: account.name || null,
+        billingEmail: account.email || null,
+        billingAddress: address
+            ? [address.street, `${address.zip} ${address.city}`, address.country]
+                  .filter(Boolean)
+                  .join(", ")
+            : null,
+        lineDescription: listingTitle
+            ? `Transport de marchandises — ${listingTitle}`
+            : "Transport de marchandises",
+    };
+}
+
+/** Whether this account asked not to be mailed about documents. */
+const wantsEmail = (preferences: {
+    notifications?: { email?: { invoiceReady?: boolean } };
+} | null | undefined) => preferences?.notifications?.email?.invoiceReady !== false;
+
 export const invoicesService = {
     /**
-     * Create an invoice for a completed payment
-     * Called automatically after payment is confirmed
+     * Raise the document for a payment that has been taken.
+     *
+     * Called from `paymentsService` the moment the charge settles — the client
+     * pays at booking, so that is when they are owed a receipt — and still from
+     * `settleDelivery` as a backstop for payments captured before this shipped
+     * (docs/specs/invoice_at_payment_spec.md §1).
+     *
+     * Idempotent on the payment, and the database enforces it too: a partial
+     * unique index on `payment_id` where `kind = 'invoice'`.
      */
     async createFromPayment(paymentId: string) {
-        // Get the payment
         const payment = await paymentsDal.getById(paymentId);
-        if (!payment) {
-            throw new Error("Payment not found");
+        if (!payment) throw err("PAYMENT_NOT_FOUND", 404);
+
+        const existing = await invoicesDal.getByPaymentId(paymentId);
+        if (existing) return existing;
+
+        // Two payments are deliberately not documented, and neither is an
+        // error — both are ordinary states this is asked about on every
+        // delivery, so they return rather than throw:
+        //
+        //  - money that never arrived. A failed or refunded charge has nothing
+        //    to receipt.
+        //  - money Expedion took. That client was invoiced in the app that
+        //    debited them; §3 of the spec is the whole argument.
+        if (payment.status !== "captured" || payment.source !== "stripe") {
+            return null;
         }
 
-        // Check if invoice already exists
-        const existingInvoice = await invoicesDal.getByPaymentId(paymentId);
-        if (existingInvoice) {
-            return existingInvoice;
-        }
+        const snapshot = await billingSnapshot(
+            payment.userId,
+            payment.listing?.title
+        );
 
-        // Get user info
-        const user = await getUserById(payment.userId);
-        if (!user) {
-            throw new Error("User not found");
-        }
-
-        // Create the invoice
         const invoice = await invoicesDal.create({
             paymentId: payment.id,
             userId: payment.userId,
             amount: payment.amountCents,
             currency: payment.currency,
+            // The money is already taken, so the document is settled the moment
+            // it exists. `issued` would describe a receivable that is not one.
+            status: "paid",
+            paidAt: payment.capturedAt ?? new Date(),
+            billingName: snapshot.billingName,
+            billingEmail: snapshot.billingEmail,
+            billingAddress: snapshot.billingAddress,
+            lineDescription: snapshot.lineDescription,
         });
 
-        // Create in-app notification
-        await notificationsService.createNotification({
-            userId: payment.userId,
-            type: "PAYMENT",
-            title: "Invoice Ready",
-            message: `Your invoice ${invoice.invoiceNumber} is ready for download.`,
-            data: {
-                invoiceId: invoice.id,
-                invoiceNumber: invoice.invoiceNumber,
-                amount: invoice.amount,
-            },
+        await this.announce(invoice, snapshot.account.preferences);
+
+        return invoice;
+    },
+
+    /**
+     * Correct an invoice whose money has been given back.
+     *
+     * Raised from the one `captured → refunded` transition, so both refund
+     * writers reach it. An issued, numbered, emailed document is corrected by a
+     * second document — never by mutating the first (§5).
+     */
+    async createCreditNoteForPayment(paymentId: string) {
+        const invoice = await invoicesDal.getByPaymentId(paymentId);
+        if (!invoice) return null;
+
+        const existing = await invoicesDal.getCreditNoteFor(invoice.id);
+        if (existing) return existing;
+
+        const creditNote = await invoicesDal.create({
+            paymentId: invoice.paymentId,
+            userId: invoice.userId,
+            kind: "credit_note",
+            relatedInvoiceId: invoice.id,
+            // The number too, not just the id: the document has to name the
+            // facture it corrects on its own face, and it is emailed, so it may
+            // not depend on a join that could later resolve differently.
+            relatedInvoiceNumber: invoice.invoiceNumber,
+            amount: -Math.abs(invoice.amount),
+            currency: invoice.currency,
+            status: "paid",
+            paidAt: new Date(),
+            billingName: invoice.billingName,
+            billingEmail: invoice.billingEmail,
+            billingAddress: invoice.billingAddress,
+            lineDescription: invoice.lineDescription,
         });
 
-        // Send email notification (if user has email preference enabled)
-        const userPrefs = user.preferences;
-        if (userPrefs?.notifications?.email?.invoiceReady !== false) {
-            try {
-                await this.sendInvoiceReadyEmail(invoice.id);
-            } catch (error) {
-                console.error("Failed to send invoice email:", error);
-            }
-        }
+        const account = await getUserById(invoice.userId);
+        await this.announce(creditNote, account?.preferences);
+
+        return creditNote;
+    },
+
+    /**
+     * Tell the client the document exists, in the app and in their inbox.
+     *
+     * Never throws: the document is written and downloadable either way, and a
+     * Resend outage must not roll back a charge.
+     */
+    async announce(
+        invoice: Invoice,
+        preferences?: { notifications?: { email?: { invoiceReady?: boolean } } } | null
+    ) {
+        const isCreditNote = invoice.kind === "credit_note";
+        const amount = Math.abs(invoice.amount) / 100;
+
+        await notificationsService
+            .createNotification({
+                userId: invoice.userId,
+                type: "payment",
+                title: isCreditNote ? "Avoir disponible" : "Votre reçu est disponible",
+                message: `${invoice.invoiceNumber} — ${amount.toFixed(2)} €`,
+                linkUrl: "/profile/invoices",
+                data: { invoiceId: invoice.id, invoiceNumber: invoice.invoiceNumber },
+            })
+            .catch((error) =>
+                console.error(`Invoice notification failed for ${invoice.id}`, error)
+            );
+
+        if (!wantsEmail(preferences)) return;
+
+        await this.sendDocumentEmail(invoice.id).catch((error) =>
+            console.error(`Invoice email failed for ${invoice.id}`, error)
+        );
+    },
+
+    /**
+     * The one row read a caller is allowed to have, with the ownership question
+     * answered here rather than in the route (docs/rules.md §8).
+     */
+    async getOwnedInvoice(invoiceId: string, userId: string) {
+        const invoice = await invoicesDal.getById(invoiceId);
+        if (!invoice) throw err("INVOICE_NOT_FOUND", 404);
+        if (invoice.userId !== userId) throw err("INVOICE_NOT_YOURS", 403);
 
         return invoice;
     },
@@ -81,18 +197,9 @@ export const invoicesService = {
      * Get invoice by ID
      */
     async getById(invoiceId: string, userId?: string) {
-        const invoice = await invoicesDal.getById(invoiceId);
+        if (userId) return this.getOwnedInvoice(invoiceId, userId);
 
-        if (!invoice) {
-            return null;
-        }
-
-        // If userId provided, verify ownership
-        if (userId && invoice.userId !== userId) {
-            throw new Error("Unauthorized access to invoice");
-        }
-
-        return invoice;
+        return (await invoicesDal.getById(invoiceId)) ?? null;
     },
 
     /**
@@ -124,7 +231,7 @@ export const invoicesService = {
         });
 
         if (page.total > MAX_STATEMENT_INVOICES) {
-            throw new InvoiceError(
+            throw err(
                 "STATEMENT_TOO_LARGE",
                 400,
                 `Narrow the period: ${page.total} invoices exceeds the ${MAX_STATEMENT_INVOICES} row limit`
@@ -172,9 +279,7 @@ export const invoicesService = {
      */
     async generatePdf(invoiceId: string): Promise<string> {
         const invoice = await invoicesDal.getById(invoiceId);
-        if (!invoice) {
-            throw new Error("Invoice not found");
-        }
+        if (!invoice) throw err("INVOICE_NOT_FOUND", 404);
 
         // PDF is generated on-demand via the API route
         const pdfUrl = `/api/user/invoices/${invoiceId}/pdf`;
@@ -186,25 +291,26 @@ export const invoicesService = {
     },
 
     /**
-     * Send invoice ready email
+     * Send the document itself, attached, to the account it belongs to.
+     *
+     * Never to an address the caller supplies: an endpoint that mails a PDF
+     * wherever it is told is an open relay with the platform's domain on it
+     * (§7.2).
      */
-    async sendInvoiceReadyEmail(invoiceId: string) {
+    async sendDocumentEmail(invoiceId: string) {
         const invoice = await invoicesDal.getById(invoiceId);
-        if (!invoice || !invoice.user) {
-            throw new Error("Invoice or user not found");
+        if (!invoice) throw err("INVOICE_NOT_FOUND", 404);
+
+        const to = invoice.billingEmail || invoice.user?.email;
+        if (!to) throw err("INVOICE_NO_RECIPIENT", 409);
+
+        try {
+            await invoiceDocumentEmail(invoice, to);
+        } catch (cause) {
+            console.error(`Invoice email failed for ${invoice.id}`, cause);
+            throw err("INVOICE_EMAIL_FAILED", 502, "Could not send the document");
         }
 
-        // Use a generic email for invoice ready notification
-        // This would ideally be a dedicated InvoiceReadyEmail template
-        await emailService.sendEmail({
-            to: invoice.user.email,
-            subject: `📄 Invoice ${invoice.invoiceNumber} Ready`,
-            html: `
-        <h1>Your invoice is ready</h1>
-        <p>Hi ${invoice.user.name},</p>
-        <p>Your invoice <strong>${invoice.invoiceNumber}</strong> for €${(invoice.amount / 100).toFixed(2)} is ready.</p>
-        <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/profile/invoices">View your invoices</a></p>
-      `,
-        });
+        return { sentTo: to };
     },
 };

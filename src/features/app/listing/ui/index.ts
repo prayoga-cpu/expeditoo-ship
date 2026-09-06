@@ -5,3 +5,5 @@ export { MyRequestsScreen } from "./MyRequestsScreen";
 export { MyRequestsPanel } from "./MyRequestsPanel";
 export { DeliveryHistoryPanel } from "./DeliveryHistoryPanel";
 export { DeliveredRequestCard } from "./DeliveredRequestCard";
+export { AvailableCarriersPanel } from "./AvailableCarriersPanel";
+export { CarrierMatchCard } from "./CarrierMatchCard";

@@ -161,6 +161,48 @@ export const expedionSmsService = {
   },
 
   /**
+   * The transport is off.
+   *
+   * The one recipient with no `user` row is the one who most needs telling: an
+   * Expedion client cannot receive an in-app notification here, because
+   * `notifications.user_id` is a NOT NULL foreign key. SMS is the only channel
+   * that reaches them (cancellations_spec.md §4.1).
+   */
+  async transportCancelled(params: {
+    phone: string | null;
+    bordereauNumber?: string | null;
+  }): Promise<SmsResult> {
+    const ref = params.bordereauNumber
+      ? ` (bordereau ${params.bordereauNumber})`
+      : "";
+    return send(
+      params.phone ?? "",
+      `Votre transport${ref} a été annulé. Notre équipe revient vers vous pour le remboursement.`
+    );
+  },
+
+  /**
+   * The transporter dropped out — and the job did **not**.
+   *
+   * Worded as a search rather than a cancellation on purpose. The client has
+   * paid, still wants the delivery, and is getting one; telling them their
+   * transport is cancelled would be false and would cost a booking that is not
+   * actually lost.
+   */
+  async transporterWithdrew(params: {
+    phone: string | null;
+    bordereauNumber?: string | null;
+  }): Promise<SmsResult> {
+    const ref = params.bordereauNumber
+      ? ` (bordereau ${params.bordereauNumber})`
+      : "";
+    return send(
+      params.phone ?? "",
+      `Le transporteur retenu s'est désisté pour votre lot${ref}. Nous recherchons un remplaçant, votre transport reste programmé.`
+    );
+  },
+
+  /**
    * Gardiennage warning — the conversion lever. Auction houses start charging
    * daily storage after a grace period, so the countdown is the reason a
    * hesitating buyer books.

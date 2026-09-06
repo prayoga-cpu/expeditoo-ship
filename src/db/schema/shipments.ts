@@ -10,6 +10,10 @@ import {
   pgEnum,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
+import {
+  CANCELLATION_CATEGORIES,
+  CANCELLATION_SIDES,
+} from "@/lib/cancellation-policy";
 import { user } from "./users";
 import { listings } from "./listings";
 import { offers } from "./offers";
@@ -29,6 +33,36 @@ export const shipmentStatusEnum = pgEnum("shipment_status", [
   "DELIVERED",
   "CANCELLED",
 ]);
+
+// ========================================
+// Cancellation Enums
+// ========================================
+// There are two verbs, and the schema has to tell them apart: a requester
+// calling the job off ends it, a transporter backing out does not.
+// See docs/specs/cancellations_spec.md §3.
+
+/**
+ * Both are **derived** from `src/lib/cancellation-policy.ts`, never restated —
+ * the same arrangement as `TIME_SLOTS`/`timeSlotEnum`. The policy module owns
+ * the vocabulary because the browser needs the labels and the per-side fence
+ * without pulling drizzle into the bundle, and a second hand-written copy is
+ * how the role enum silently broke every admin role assignment (CLAUDE.md
+ * gotcha 8).
+ *
+ * The side is deliberately not `actor_role`: a carrier and its employed driver
+ * are one commercial side, and `shipment_events.actor_role` cannot stand in for
+ * it anyway — that row is a separate insert that can fail after the shipment
+ * has already flipped, and `recordEvent` collapses staff onto `admin`.
+ */
+export const shipmentCancellationSideEnum = pgEnum(
+  "shipment_cancellation_side",
+  CANCELLATION_SIDES
+);
+
+export const shipmentCancellationCategoryEnum = pgEnum(
+  "shipment_cancellation_category",
+  CANCELLATION_CATEGORIES
+);
 
 // ========================================
 // Shipments Table
@@ -82,6 +116,20 @@ export const shipments = pgTable(
     cancelledAt: timestamp("cancelled_at"),
     cancellationReason: text("cancellation_reason"),
 
+    // Which side ended it, and why. The free-text reason above is what a human
+    // wrote; these two are what a rule and a report can read.
+    cancelledBySide: shipmentCancellationSideEnum("cancelled_by_side"),
+    cancellationCategory: shipmentCancellationCategoryEnum(
+      "cancellation_category"
+    ),
+    // Two identity columns, as on `shipment_confirmations` and for the same
+    // reason: an Expedion quote owner has no `user` row, so a foreign key alone
+    // cannot record who asked. Exactly one of the pair is set.
+    cancelledByUserId: text("cancelled_by_user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    cancelledByRef: text("cancelled_by_ref"),
+
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
@@ -94,6 +142,7 @@ export const shipments = pgTable(
     index("shipment_carrier_idx").on(table.carrierId),
     index("shipment_driver_idx").on(table.driverId),
     index("shipment_status_idx").on(table.status),
+    index("shipment_cancelled_side_idx").on(table.cancelledBySide),
   ]
 );
 
@@ -527,6 +576,11 @@ export type ShipmentConfirmationChannel =
 export type ShipmentConfirmationActor =
   (typeof shipmentConfirmationActorEnum.enumValues)[number];
 export type ActorRoleType = (typeof actorRoleEnum.enumValues)[number];
+
+export type ShipmentCancellationSide =
+  (typeof shipmentCancellationSideEnum.enumValues)[number];
+export type ShipmentCancellationCategory =
+  (typeof shipmentCancellationCategoryEnum.enumValues)[number];
 
 export type ShipmentIncident = typeof shipmentIncidents.$inferSelect;
 export type InsertShipmentIncident = typeof shipmentIncidents.$inferInsert;

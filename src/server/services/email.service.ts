@@ -22,6 +22,11 @@ export const emailService = {
       console.log("📧 EMAIL MOCK SENT (No API Key provided)");
       console.log(`To: ${validated.to}`);
       console.log(`Subject: ${validated.subject}`);
+      if (validated.attachments?.length) {
+        console.log(
+          `Attachments: ${validated.attachments.map((a) => a.filename).join(", ")}`
+        );
+      }
       console.log("--- HTML Content Preview ---");
       console.log(validated.html?.substring(0, 100) + "...");
       console.log("==========================================");
@@ -36,6 +41,9 @@ export const emailService = {
         html: validated.html || "",
         text: validated.text,
         ...(validated.replyTo ? { replyTo: validated.replyTo } : {}),
+        ...(validated.attachments?.length
+          ? { attachments: validated.attachments }
+          : {}),
       });
 
       if (error) {

@@ -31,6 +31,7 @@ const JOB: BoardJob = {
   id: "job_1",
   shipperId: "user_1",
   status: "open",
+  reopenedAt: null,
   title: "Chaise",
   description: "Une chaise à déplacer, emballée et prête au départ.",
   weightKg: 2,

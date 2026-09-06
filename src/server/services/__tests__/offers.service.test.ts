@@ -840,17 +840,20 @@ describe("proposed time slots", () => {
 });
 
 describe("booking a slot on award", () => {
+  // Relative, not fixed dates: booking a slot that has already passed is now
+  // refused at accept time (`SLOT_IN_PAST`), so a fixture pinned to a calendar
+  // date silently starts testing the refusal instead of the booking.
   const slotA = {
     id: "slot-a",
-    startsAt: new Date("2026-08-25T04:00:00Z"),
-    endsAt: new Date("2026-08-25T10:00:00Z"),
-    deliveryAt: new Date("2026-08-25T20:00:00Z"),
+    startsAt: soon(24 * HOUR),
+    endsAt: soon(30 * HOUR),
+    deliveryAt: soon(40 * HOUR),
   };
   const slotB = {
     id: "slot-b",
-    startsAt: new Date("2026-08-27T10:00:00Z"),
-    endsAt: new Date("2026-08-27T16:00:00Z"),
-    deliveryAt: new Date("2026-08-27T20:00:00Z"),
+    startsAt: soon(72 * HOUR),
+    endsAt: soon(78 * HOUR),
+    deliveryAt: soon(88 * HOUR),
   };
 
   const proposing = {
@@ -919,85 +922,219 @@ describe("booking a slot on award", () => {
       )
     ).toBe("SLOT_NOT_ON_OFFER");
   });
-});
 
-// ========================================
-// Revoking an award — the money goes back before the job does
-// ========================================
-//
-// The client pays at booking (docs/specs/payment_at_booking_spec.md), so an
-// un-award has real money to undo. Before that change this released a hold;
-// now it refunds a charge, and getting it wrong means the job returns to the
-// board with the client's money still spent on a driver who is not doing it.
-
-describe("offersService.revokeAward", () => {
-  beforeEach(() => {
-    vi.mocked(userHasRole).mockResolvedValue(true);
-    Object.assign(offersDal, {
-      getById: vi
-        .fn()
-        .mockResolvedValue({ id: "offer-1", carrierId: "carrier-1" }),
-      listByListing: vi.fn().mockResolvedValue([]),
-      updateStatus: vi.fn(async (id, status) => ({ id, status })),
-    });
-    Object.assign(listingsDal, {
-      getById: vi
-        .fn()
-        .mockResolvedValue(
-          listing({ status: "awarded", acceptedOfferId: "offer-1" })
-        ),
-      update: vi.fn(),
-      getShipmentByOfferId: vi
-        .fn()
-        .mockResolvedValue({ id: "ship-1", status: "PENDING" }),
-    });
-    vi.mocked(paymentsService.refundForShipment).mockResolvedValue({} as never);
-  });
-
-  it("refunds the client before putting the job back on the board", async () => {
-    await offersService.revokeAward("op-1", "job-1");
-
-    expect(paymentsService.refundForShipment).toHaveBeenCalledWith("ship-1");
-    expect(listingsDal.update).toHaveBeenCalledWith(
-      "job-1",
-      { status: "open", acceptedOfferId: null },
-      expect.anything()
-    );
-  });
-
-  it("still un-awards when the refund is not ours to make", async () => {
-    // An Expedion job's money was taken in that app, so `refundForShipment`
-    // throws REFUND_NOT_LOCAL. The operator's un-award must still stand.
-    vi.mocked(paymentsService.refundForShipment).mockRejectedValue(
-      new Error("REFUND_NOT_LOCAL")
-    );
-
-    await offersService.revokeAward("op-1", "job-1");
-
-    expect(listingsDal.update).toHaveBeenCalledWith(
-      "job-1",
-      { status: "open", acceptedOfferId: null },
-      expect.anything()
-    );
-  });
-
-  it("refuses once the goods have been collected, and refunds nothing", async () => {
-    vi.mocked(listingsDal.getShipmentByOfferId).mockResolvedValue({
-      id: "ship-1",
-      status: "IN_TRANSIT",
+  it("refuses a slot that has already passed", async () => {
+    // A withdrawal restores rejected bids on a listing whose window may have
+    // slid forward, so a slot on the award queue can be behind us. Booking it
+    // would write a past `scheduled_pickup` and report a past pickup date to
+    // the client. `SLOT_IN_PAST` was a submit-time rule only.
+    const stale = { ...slotA, id: "slot-stale", startsAt: soon(-2 * HOUR) };
+    vi.mocked(offersDal.getById).mockResolvedValue({
+      ...proposing,
+      slots: [stale, slotB],
     } as never);
 
     expect(
-      await codeFrom(() => offersService.revokeAward("op-1", "job-1"))
-    ).toBe("SHIPMENT_ALREADY_STARTED");
-    expect(paymentsService.refundForShipment).not.toHaveBeenCalled();
+      await codeFrom(() =>
+        offersService.acceptOffer("shipper-1", "offer-1", {
+          slotId: "slot-stale",
+        })
+      )
+    ).toBe("SLOT_IN_PAST");
+  });
+});
+
+// ========================================
+// Putting an awarded job back on the board
+// ========================================
+//
+// `revokeAward` moved to `shipment-cancellation.service.ts` — an operator
+// taking an award back and a transporter walking away are the same act, and
+// having two re-board paths is how one of them ends up forgetting a step. What
+// stays here is the mechanic both of them call.
+//
+// The step that mattered most was missing entirely: `findExpired` selects
+// `{status:'open', expires_at < now}` every fifteen minutes, and `expires_at`
+// is `pickup_from − 6 h`, so it is already past by award time. A job handed
+// back to `open` untouched was invisible, unbiddable, and expired — with every
+// bid just restored — inside a quarter of an hour.
+
+describe("offersService.reopenForRebid", () => {
+  const capturedUpdate = () =>
+    vi.mocked(listingsDal.update).mock.calls[0][1] as Record<string, unknown>;
+
+  beforeEach(() => {
+    Object.assign(offersDal, {
+      updateStatus: vi.fn(async (id, status) => ({ id, status })),
+      incrementListingOffersCount: vi.fn(),
+    });
+    Object.assign(listingsDal, {
+      getByIdForUpdate: vi.fn().mockResolvedValue(listing()),
+      update: vi.fn(),
+    });
   });
 
-  it("is an operator action, not something a shipper can do", async () => {
-    vi.mocked(userHasRole).mockResolvedValue(false);
+  it("puts the job back on the board with a live bidding window", async () => {
+    await offersService.reopenForRebid("job-1", "offer-1", ["offer-2"], {
+      winnerStatus: "withdrawn",
+      markReopened: true,
+    });
 
-    expect(
-      await codeFrom(() => offersService.revokeAward("shipper-1", "job-1"))
-    ).toBe("FORBIDDEN_NOT_OPERATOR");
+    const patch = capturedUpdate();
+    expect(patch.status).toBe("open");
+    expect(patch.acceptedOfferId).toBeNull();
+    expect(patch.expiresAt as Date).toBeInstanceOf(Date);
+    expect((patch.expiresAt as Date).getTime()).toBeGreaterThan(Date.now());
+    expect(patch.reopenedAt).toBeInstanceOf(Date);
+  });
+
+  it("takes the same lock the accept transaction takes", async () => {
+    // `commitAward`'s in-lock re-checks are the whole concurrency guarantee. A
+    // re-board that skips the lock can interleave with an accept in flight.
+    await offersService.reopenForRebid("job-1", "offer-1", [], {
+      winnerStatus: "withdrawn",
+      markReopened: true,
+    });
+
+    expect(listingsDal.getByIdForUpdate).toHaveBeenCalledWith(
+      "job-1",
+      expect.anything()
+    );
+  });
+
+  it("withdraws the winner and restores the bids it had knocked out", async () => {
+    await offersService.reopenForRebid("job-1", "offer-1", ["offer-2", "offer-3"], {
+      winnerStatus: "withdrawn",
+      markReopened: true,
+    });
+
+    expect(offersDal.updateStatus).toHaveBeenCalledWith(
+      "offer-1",
+      "withdrawn",
+      expect.anything()
+    );
+    expect(offersDal.updateStatus).toHaveBeenCalledWith(
+      "offer-2",
+      "pending",
+      expect.anything()
+    );
+    expect(offersDal.updateStatus).toHaveBeenCalledWith(
+      "offer-3",
+      "pending",
+      expect.anything()
+    );
+  });
+
+  it("slides the whole window forward when the pickup date has passed", async () => {
+    // A job whose collection date is behind us cannot be re-sold at any price,
+    // and the durations are preserved so the client's window keeps its shape.
+    const pickupFrom = soon(-48 * HOUR);
+    const pickupUntil = soon(-46 * HOUR);
+    vi.mocked(listingsDal.getByIdForUpdate).mockResolvedValue(
+      listing({
+        pickupFrom,
+        pickupUntil,
+        dropoffFrom: soon(-24 * HOUR),
+        dropoffUntil: soon(-22 * HOUR),
+      }) as never
+    );
+
+    await offersService.reopenForRebid("job-1", "offer-1", [], {
+      winnerStatus: "withdrawn",
+      markReopened: true,
+    });
+
+    const patch = capturedUpdate();
+    const from = patch.pickupFrom as Date;
+    const until = patch.pickupUntil as Date;
+    expect(from.getTime()).toBeGreaterThan(Date.now());
+    expect(until.getTime() - from.getTime()).toBe(
+      pickupUntil.getTime() - pickupFrom.getTime()
+    );
+    expect((patch.expiresAt as Date).getTime()).toBeGreaterThan(Date.now());
+  });
+
+  it("refuses to re-board into a window too short to bid in", async () => {
+    // `expiresAtFor` happily returns an expiry five minutes out — at posting
+    // time that is the poster's own choice. Here it means the 15-minute sweep
+    // expires the job and every bid just restored before anybody could use
+    // either, which is the outcome this function exists to prevent. The
+    // commonest withdrawal there is: a driver dropping a job the morning it
+    // collects.
+    vi.mocked(listingsDal.getByIdForUpdate).mockResolvedValue(
+      listing({
+        pickupFrom: soon(6 * HOUR + 5 * 60 * 1000),
+        pickupUntil: soon(8 * HOUR),
+        dropoffFrom: soon(20 * HOUR),
+        dropoffUntil: soon(22 * HOUR),
+      }) as never
+    );
+
+    await offersService.reopenForRebid("job-1", "offer-1", [], {
+      winnerStatus: "withdrawn",
+      markReopened: true,
+    });
+
+    const patch = capturedUpdate();
+    // Slid rather than published with a five-minute window.
+    expect((patch.pickupFrom as Date).getTime()).toBeGreaterThan(
+      Date.now() + 6 * HOUR
+    );
+    expect((patch.expiresAt as Date).getTime() - Date.now()).toBeGreaterThan(
+      30 * 60 * 1000
+    );
+  });
+
+  it("takes the withdrawn winner out of the listing's bid count", async () => {
+    // `offers_count` is the only signal the award queue has that there is
+    // anything to decide, and `withdrawOffer` decrements on this exact status
+    // change. Skipping it advertises a bid that is not there, permanently.
+    await offersService.reopenForRebid("job-1", "offer-1", [], {
+      winnerStatus: "withdrawn",
+      markReopened: true,
+    });
+
+    expect(offersDal.incrementListingOffersCount).toHaveBeenCalledWith(
+      "job-1",
+      -1,
+      expect.anything()
+    );
+  });
+
+  it("compensating a declined card leaves the winner biddable", async () => {
+    // Nobody walked away — a card was refused — so the same carrier is still
+    // the best bid on the job, and the listing is not marked as having gone
+    // round once.
+    await offersService.compensateFailedAward("job-1", "offer-1", []);
+
+    expect(offersDal.updateStatus).toHaveBeenCalledWith(
+      "offer-1",
+      "pending",
+      expect.anything()
+    );
+    expect(capturedUpdate().reopenedAt).toBeUndefined();
+    expect(offersDal.incrementListingOffersCount).not.toHaveBeenCalled();
+  });
+
+  it("compensating a declined card does not move the client's dates", async () => {
+    // Nobody withdrew, nothing was announced and no marker is stamped, so
+    // sliding the pickup window here would move a real-world plan on the
+    // strength of a payment failure — the one state `reopened_at` exists to
+    // make impossible.
+    vi.mocked(listingsDal.getByIdForUpdate).mockResolvedValue(
+      listing({
+        pickupFrom: soon(30 * 60 * 1000),
+        pickupUntil: soon(2 * HOUR),
+        dropoffFrom: soon(20 * HOUR),
+        dropoffUntil: soon(22 * HOUR),
+      }) as never
+    );
+
+    await offersService.compensateFailedAward("job-1", "offer-1", []);
+
+    const patch = capturedUpdate();
+    expect(patch.pickupFrom).toBeUndefined();
+    expect(patch.dropoffFrom).toBeUndefined();
+    expect(patch.reopenedAt).toBeUndefined();
   });
 });

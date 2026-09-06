@@ -61,6 +61,7 @@ interface FormState {
   capacityKg: string;
   notifyOnMatch: boolean;
   isActive: boolean;
+  isDiscoverable: boolean;
 }
 
 const blankForm = (): FormState => ({
@@ -75,6 +76,7 @@ const blankForm = (): FormState => ({
   capacityKg: "",
   notifyOnMatch: true,
   isActive: true,
+  isDiscoverable: true,
 });
 
 function formFromRoute(route: CarrierRoute): FormState {
@@ -102,6 +104,7 @@ function formFromRoute(route: CarrierRoute): FormState {
     capacityKg: route.capacityKg === null ? "" : String(route.capacityKg),
     notifyOnMatch: route.notifyOnMatch,
     isActive: route.isActive,
+    isDiscoverable: route.isDiscoverable,
   };
 }
 
@@ -142,6 +145,7 @@ function toInput(form: FormState): CarrierRouteInput {
     capacityKg: Number.isFinite(capacity) && capacity > 0 ? capacity : null,
     notifyOnMatch: form.notifyOnMatch,
     isActive: form.isActive,
+    isDiscoverable: form.isDiscoverable,
   };
 }
 
@@ -315,7 +319,7 @@ export function TripRouteFormDialog({
             </div>
           </div>
 
-          <div className="flex items-center justify-between rounded-lg border p-4">
+          <div className="flex items-center justify-between rounded-lg border border-border p-4">
             <div className="space-y-0.5 pr-4">
               <Label htmlFor="trip-notify">{t("notify")}</Label>
               <p className="text-xs text-muted-foreground">{t("notifyHint")}</p>
@@ -324,6 +328,24 @@ export function TripRouteFormDialog({
               id="trip-notify"
               checked={form.notifyOnMatch}
               onCheckedChange={(notifyOnMatch) => patch({ notifyOnMatch })}
+            />
+          </div>
+
+          {/* The hint spells the disclosure out in full because this is the
+              only place the carrier consents to it, and the trajets declared
+              before the switch existed were promised « Vous seul le voyez »
+              (carriers_on_route_spec.md §4). */}
+          <div className="flex items-center justify-between rounded-lg border border-border p-4">
+            <div className="space-y-0.5 pr-4">
+              <Label htmlFor="trip-discoverable">{t("discoverableLabel")}</Label>
+              <p className="text-xs text-muted-foreground">
+                {t("discoverableHint")}
+              </p>
+            </div>
+            <Switch
+              id="trip-discoverable"
+              checked={form.isDiscoverable}
+              onCheckedChange={(isDiscoverable) => patch({ isDiscoverable })}
             />
           </div>
         </div>

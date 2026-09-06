@@ -1,11 +1,12 @@
 {
   "name": "expeditoo-ship",
-  "version": "2.0.0",
+  "version": "2.36.0",
   "private": true,
   "scripts": {
     "build": "next build",
     "dev": "next dev",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
     "start": "next start",
     "clean:cache": "bash scripts/clean-dev-caches.sh",
     "db:start": "bash scripts/db-start.sh",
@@ -28,7 +29,8 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "changelog:check": "tsx scripts/check-changelog.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.943.0",

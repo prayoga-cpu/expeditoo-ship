@@ -171,17 +171,20 @@ describe("who the gate applies to, and what it leaves alone", () => {
     );
   });
 
-  // A job being called off is the last thing that should demand a photograph.
-  it("never blocks a cancellation", async () => {
+  // A job being called off is the last thing that should demand a photograph —
+  // and it no longer comes through here at all. `updateStatus` refuses
+  // `CANCELLED` outright, before the gate is even consulted, so the two ways
+  // this invariant could break are both covered: the gate is not reached, and
+  // the write does not happen (docs/specs/cancellations_spec.md §7).
+  it("never asks for a photo to call a job off", async () => {
     atStatus("ASSIGNED");
     hasPhoto(false);
 
-    await shipmentService.updateStatus("ship-1", "CANCELLED", DRIVER);
+    await expect(
+      shipmentService.updateStatus("ship-1", "CANCELLED", DRIVER)
+    ).rejects.toMatchObject({ code: "CANCEL_VIA_CANCEL_ENDPOINT" });
 
     expect(shipmentPhotosService.hasStagePhoto).not.toHaveBeenCalled();
-    expect(shipmentsDal.updateStatus).toHaveBeenCalledWith(
-      "ship-1",
-      "CANCELLED"
-    );
+    expect(shipmentsDal.updateStatus).not.toHaveBeenCalled();
   });
 });

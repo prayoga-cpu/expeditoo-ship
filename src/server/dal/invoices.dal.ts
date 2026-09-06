@@ -1,51 +1,104 @@
 import { db } from "@/db";
-import { invoices, type InsertInvoice, type InvoiceStatus } from "@/db/schema/invoices";
+import { documentSequences } from "@/db/schema/document-sequences";
+import {
+    invoices,
+    type InsertInvoice,
+    type InvoiceKind,
+    type InvoiceStatus,
+} from "@/db/schema/invoices";
 import { eq, desc, and, gte, lte, sql, type SQL } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 // ========================================
-// Helper: Generate invoice number
+// Helper: allocate a document number
 // ========================================
 
-async function generateInvoiceNumber(): Promise<string> {
-    const year = new Date().getFullYear();
-    const prefix = `INV-${year}-`;
+/** The prefix each kind of document is numbered under. */
+const SERIES: Record<InvoiceKind, string> = {
+    invoice: "INV",
+    credit_note: "AV",
+};
 
-    // Get the count of invoices this year
-    const result = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(invoices)
-        .where(sql`invoice_number LIKE ${prefix + '%'}`);
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
-    const count = Number(result[0]?.count) || 0;
-    const sequence = String(count + 1).padStart(4, '0');
+/**
+ * Claims the next number in a series, atomically.
+ *
+ * This used to be `count(*) + 1` over rows matching the prefix, read in one
+ * statement and inserted in another against a UNIQUE column: two documents
+ * raised in the same second computed the same string and the loser got a
+ * 23505. The count was also unrecoverable after a deletion — and both of
+ * `invoices`' foreign keys cascade — because it re-derived a number that had
+ * already been issued, on every attempt, forever.
+ *
+ * The counter row is the high-water mark and survives the rows it numbered.
+ * Claimed inside the caller's transaction so the number and the document commit
+ * together (docs/specs/invoice_at_payment_spec.md §6).
+ */
+async function nextDocumentNumber(
+    tx: Tx,
+    kind: InvoiceKind,
+    year: number
+): Promise<string> {
+    const series = SERIES[kind];
 
-    return `${prefix}${sequence}`;
+    const [row] = await tx
+        .insert(documentSequences)
+        .values({ series, year, lastValue: 1 })
+        .onConflictDoUpdate({
+            target: [documentSequences.series, documentSequences.year],
+            set: {
+                lastValue: sql`${documentSequences.lastValue} + 1`,
+                updatedAt: new Date(),
+            },
+        })
+        .returning({ lastValue: documentSequences.lastValue });
+
+    const sequence = String(row?.lastValue ?? 1).padStart(4, "0");
+
+    return `${series}-${year}-${sequence}`;
 }
 
 // ========================================
 // Invoice DAL Functions
 // ========================================
 
+/** Everything a caller may set; the number and the timestamps are ours. */
+type CreateInvoiceData = Omit<
+    InsertInvoice,
+    "id" | "invoiceNumber" | "createdAt" | "updatedAt"
+>;
+
 export const invoicesDal = {
     /**
-     * Create a new invoice
+     * Create a document and claim its number in one transaction.
+     *
+     * `status` is a parameter rather than a constant: a document raised the
+     * moment the money is taken is not "issued and awaiting payment", it is
+     * settled. The old signature accepted a status and then overwrote it with
+     * `"issued"` after the spread, so every caller was silently ignored.
      */
-    async create(data: Omit<InsertInvoice, "id" | "invoiceNumber" | "createdAt" | "updatedAt">) {
-        const invoiceNumber = await generateInvoiceNumber();
+    async create(data: CreateInvoiceData) {
+        const kind = data.kind ?? "invoice";
+        const year = new Date().getFullYear();
 
-        const [invoice] = await db
-            .insert(invoices)
-            .values({
-                id: nanoid(),
-                invoiceNumber,
-                ...data,
-                status: "issued",
-                issuedAt: new Date(),
-            })
-            .returning();
+        return db.transaction(async (tx) => {
+            const invoiceNumber = await nextDocumentNumber(tx, kind, year);
 
-        return invoice;
+            const [invoice] = await tx
+                .insert(invoices)
+                .values({
+                    id: nanoid(),
+                    invoiceNumber,
+                    issuedAt: new Date(),
+                    ...data,
+                    status: data.status ?? "issued",
+                    kind,
+                })
+                .returning();
+
+            return invoice;
+        });
     },
 
     /**
@@ -66,11 +119,29 @@ export const invoicesDal = {
      */
     async getByPaymentId(paymentId: string) {
         return db.query.invoices.findFirst({
-            where: eq(invoices.paymentId, paymentId),
+            where: and(
+                eq(invoices.paymentId, paymentId),
+                eq(invoices.kind, "invoice")
+            ),
             with: {
                 payment: { with: { listing: true } },
                 user: true,
             },
+        });
+    },
+
+    /**
+     * The correction already raised against an invoice, if there is one.
+     *
+     * Keyed on the document rather than the payment so a re-award — which mints
+     * a fresh payment for the same job — is not mistaken for a duplicate.
+     */
+    async getCreditNoteFor(invoiceId: string) {
+        return db.query.invoices.findFirst({
+            where: and(
+                eq(invoices.relatedInvoiceId, invoiceId),
+                eq(invoices.kind, "credit_note")
+            ),
         });
     },
 

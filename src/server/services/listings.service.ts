@@ -5,6 +5,7 @@ import { offersService } from "@/server/services/offers.service";
 import { notificationsService } from "@/server/services/notifications.service";
 import { paymentsService } from "@/server/services/payments.service";
 import { isMockPaymentsEnabled } from "@/lib/stripe/mock-payments";
+import { expiresAtFor } from "@/lib/listing-window";
 import {
   MATERIAL_FIELDS,
   type CreateListingInput,
@@ -51,22 +52,19 @@ async function assertPayable(shipperId: string) {
   throw err("PAYMENT_METHOD_REQUIRED", 402);
 }
 
-/** Bidding closes 6 h before pickup, unless the job is posted later than that. */
-const BIDDING_LEAD_MS = 6 * 60 * 60 * 1000;
-const MIN_BIDDING_WINDOW_MS = 30 * 60 * 1000;
-
 /**
  * A job posted well ahead closes to bids 6 h before pickup. One posted at
  * short notice still gets a 30-minute window; below that there is no time to
  * bid at all, so the job is rejected rather than published dead.
+ *
+ * The arithmetic moved to `src/lib/listing-window.ts` when re-boarding arrived:
+ * `offers.service.ts` has to compute the same window and cannot import this
+ * module, which imports it. This is the throwing wrapper; the lib returns null.
  */
 export function resolveExpiresAt(pickupFrom: Date, now = new Date()): Date {
-  const preferred = new Date(pickupFrom.getTime() - BIDDING_LEAD_MS);
-  if (preferred > now) return preferred;
-
-  const clamped = new Date(now.getTime() + MIN_BIDDING_WINDOW_MS);
-  if (clamped > pickupFrom) throw err("PICKUP_TOO_SOON", 400);
-  return clamped;
+  const expiresAt = expiresAtFor(pickupFrom, now);
+  if (!expiresAt) throw err("PICKUP_TOO_SOON", 400);
+  return expiresAt;
 }
 
 function toInsert(
@@ -229,8 +227,25 @@ export const listingsService = {
     }
 
     if (listing.status === "completed") throw err("LISTING_NOT_CANCELLABLE", 409);
-    if (listing.status === "in_progress" && !isAdmin) {
-      throw err("CANCEL_REQUIRES_SUPPORT", 409);
+
+    /**
+     * A job with a live run is not this door's to close, for **anybody**.
+     *
+     * This is only about a listing nobody has taken yet. Once an offer has been
+     * accepted there is a shipment, a driver planning around it and — since
+     * payment-at-booking — the client's money; ending it here would leave the
+     * listing `cancelled` with `accepted_offer_id` still set, the shipment
+     * still on the driver's screen and nothing refunded, which is the whole set
+     * of guarantees `shipment-cancellation.service.ts` exists to make. The
+     * refusal names the door that works rather than refusing flatly.
+     *
+     * `in_progress` is joined to `awarded` here although nothing in the repo
+     * writes it: a dead value that would silently re-open this hole the day
+     * something does is worse than a redundant branch.
+     * See docs/specs/cancellations_spec.md §10.7.
+     */
+    if (listing.status === "awarded" || listing.status === "in_progress") {
+      throw err("CANCEL_VIA_SHIPMENT", 409);
     }
 
     if (listing.status === "draft") {
@@ -238,8 +253,8 @@ export const listingsService = {
       return { deleted: true };
     }
 
-    // Releasing the Stripe authorisation for an awarded job is WP6; the
-    // listing and its offers are settled here.
+    // Nothing was ever charged: `chargeForShipment` runs at award, and an
+    // awarded job cannot reach here.
     await offersService.expirePendingOffers(listingId);
     const cancelled = await listingsDal.update(listingId, {
       status: "cancelled",

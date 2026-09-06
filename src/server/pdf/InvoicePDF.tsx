@@ -7,6 +7,7 @@ import {
     StyleSheet,
 } from "@react-pdf/renderer";
 import { formatCurrency } from "@/lib/currency";
+import type { InvoiceIssuer } from "@/lib/invoice-issuer";
 
 // Styles for the invoice PDF
 const styles = StyleSheet.create({
@@ -25,6 +26,11 @@ const styles = StyleSheet.create({
         fontSize: 24,
         fontWeight: "bold",
         color: "#000",
+    },
+    issuerLine: {
+        marginTop: 2,
+        fontSize: 8,
+        color: "#666",
     },
     invoiceTitle: {
         fontSize: 16,
@@ -52,7 +58,7 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
     label: {
-        width: 100,
+        width: 120,
         color: "#666",
     },
     value: {
@@ -102,13 +108,13 @@ const styles = StyleSheet.create({
     },
     totalRow: {
         flexDirection: "row",
-        width: 200,
+        width: 220,
         justifyContent: "space-between",
         marginBottom: 4,
     },
     grandTotal: {
         flexDirection: "row",
-        width: 200,
+        width: 220,
         justifyContent: "space-between",
         marginTop: 8,
         paddingTop: 8,
@@ -122,6 +128,19 @@ const styles = StyleSheet.create({
     grandTotalValue: {
         fontSize: 12,
         fontWeight: "bold",
+    },
+    vatMention: {
+        marginTop: 16,
+        fontSize: 9,
+        color: "#666",
+    },
+    notice: {
+        marginTop: 16,
+        padding: 8,
+        borderWidth: 1,
+        borderColor: "#f59e0b",
+        color: "#b45309",
+        fontSize: 9,
     },
     footer: {
         position: "absolute",
@@ -148,16 +167,20 @@ const styles = StyleSheet.create({
 });
 
 export interface InvoicePDFProps {
-    invoiceNumber: string;
-    invoiceDate: string;
+    /** *Facture* or *Reçu de paiement* — decided by `invoice-pdf-props.ts`, never here. */
+    documentTitle: string;
+    documentNumber: string;
+    /** The document this one corrects — an avoir must name its facture. */
+    correctsDocumentNumber?: string;
+    issueDate: string;
     dueDate?: string;
+    /** True only when real money moved through this platform's Stripe account. */
     isPaid: boolean;
     paidDate?: string;
-    // Seller/Company info
-    companyName: string;
-    companyAddress?: string;
-    companyEmail?: string;
-    // Buyer info
+    /** Printed in place of the stamp when the charge was synthetic. */
+    testNotice?: string;
+    issuer: InvoiceIssuer;
+    // Billed party
     buyerName: string;
     buyerEmail: string;
     buyerAddress?: string;
@@ -167,69 +190,99 @@ export interface InvoicePDFProps {
         quantity: number;
         unitPrice: number; // in cents
     }>;
-    // Totals
-    subtotal: number; // in cents
-    shippingFee?: number; // in cents
-    tax?: number; // in cents
-    total: number; // in cents
+    // Totals, in cents
+    subtotal: number;
+    vat: number;
+    total: number;
+    vatMention: string;
+    footerNote: string;
     currency?: string;
 }
 
+/** The issuer block, printing only the identifiers that actually exist. */
+const IssuerIdentity = ({ issuer }: { issuer: InvoiceIssuer }) => (
+    <View>
+        <Text style={styles.logo}>{issuer.name}</Text>
+        {issuer.legalForm && (
+            <Text style={styles.issuerLine}>
+                {issuer.legalForm}
+                {issuer.capital ? ` au capital de ${issuer.capital}` : ""}
+            </Text>
+        )}
+        {issuer.address && <Text style={styles.issuerLine}>{issuer.address}</Text>}
+        {issuer.siret && <Text style={styles.issuerLine}>SIRET {issuer.siret}</Text>}
+        {issuer.rcs && <Text style={styles.issuerLine}>RCS {issuer.rcs}</Text>}
+        {issuer.vatNumber && (
+            <Text style={styles.issuerLine}>TVA {issuer.vatNumber}</Text>
+        )}
+        <Text style={styles.issuerLine}>{issuer.email}</Text>
+    </View>
+);
+
 /**
- * One invoice as a single page, so the same layout serves both a standalone
- * download and the period bundle (billing_documents_spec.md §4.3).
+ * One document as a single page, so the same layout serves the download, the
+ * period bundle and the email attachment (invoice_at_payment_spec.md §7.1).
+ *
+ * French throughout. It used to read INVOICE / Bill To / "Thank you for your
+ * business!" with fr-FR dates, reached from a screen called *Mes factures* — an
+ * English document is the least defensible version of a French client's own
+ * receipt.
  */
 export const InvoicePage = ({
-    invoiceNumber,
-    invoiceDate,
+    documentTitle,
+    documentNumber,
+    correctsDocumentNumber,
+    issueDate,
     dueDate,
     isPaid,
     paidDate,
-    companyName,
-    companyAddress,
-    companyEmail,
+    testNotice,
+    issuer,
     buyerName,
     buyerEmail,
     buyerAddress,
     items,
     subtotal,
-    shippingFee = 0,
-    tax = 0,
+    vat,
     total,
+    vatMention,
+    footerNote,
     currency = "EUR",
 }: InvoicePDFProps) => (
         <Page size="A4" style={styles.page}>
             {/* Header */}
             <View style={styles.header}>
+                <IssuerIdentity issuer={issuer} />
                 <View>
-                    <Text style={styles.logo}>{companyName}</Text>
-                    {companyAddress && <Text style={{ marginTop: 4 }}>{companyAddress}</Text>}
-                    {companyEmail && <Text>{companyEmail}</Text>}
-                </View>
-                <View>
-                    <Text style={styles.invoiceTitle}>INVOICE</Text>
-                    <Text style={styles.invoiceNumber}>{invoiceNumber}</Text>
+                    <Text style={styles.invoiceTitle}>{documentTitle.toUpperCase()}</Text>
+                    <Text style={styles.invoiceNumber}>{documentNumber}</Text>
                 </View>
             </View>
 
             {/* Paid Stamp */}
-            {isPaid && <Text style={styles.paidStamp}>PAID</Text>}
+            {isPaid && <Text style={styles.paidStamp}>PAYÉ</Text>}
 
-            {/* Invoice Details */}
+            {/* Document details */}
             <View style={styles.section}>
                 <View style={styles.row}>
-                    <Text style={styles.label}>Invoice Date:</Text>
-                    <Text style={styles.value}>{invoiceDate}</Text>
+                    <Text style={styles.label}>Date d&apos;émission :</Text>
+                    <Text style={styles.value}>{issueDate}</Text>
                 </View>
+                {correctsDocumentNumber && (
+                    <View style={styles.row}>
+                        <Text style={styles.label}>Avoir sur :</Text>
+                        <Text style={styles.value}>{correctsDocumentNumber}</Text>
+                    </View>
+                )}
                 {dueDate && (
                     <View style={styles.row}>
-                        <Text style={styles.label}>Due Date:</Text>
+                        <Text style={styles.label}>Échéance :</Text>
                         <Text style={styles.value}>{dueDate}</Text>
                     </View>
                 )}
                 {isPaid && paidDate && (
                     <View style={styles.row}>
-                        <Text style={styles.label}>Paid Date:</Text>
+                        <Text style={styles.label}>Date de paiement :</Text>
                         <Text style={styles.value}>{paidDate}</Text>
                     </View>
                 )}
@@ -237,9 +290,9 @@ export const InvoicePage = ({
 
             <View style={styles.divider} />
 
-            {/* Bill To */}
+            {/* Billed party */}
             <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Bill To</Text>
+                <Text style={styles.sectionTitle}>Facturé à</Text>
                 <Text>{buyerName}</Text>
                 <Text>{buyerEmail}</Text>
                 {buyerAddress && <Text>{buyerAddress}</Text>}
@@ -248,9 +301,9 @@ export const InvoicePage = ({
             {/* Items Table */}
             <View style={styles.table}>
                 <View style={styles.tableHeader}>
-                    <Text style={styles.tableColDesc}>Description</Text>
-                    <Text style={styles.tableColQty}>Qty</Text>
-                    <Text style={styles.tableColPrice}>Unit Price</Text>
+                    <Text style={styles.tableColDesc}>Désignation</Text>
+                    <Text style={styles.tableColQty}>Qté</Text>
+                    <Text style={styles.tableColPrice}>Prix unitaire</Text>
                     <Text style={styles.tableColTotal}>Total</Text>
                 </View>
                 {items.map((item, index) => (
@@ -270,35 +323,34 @@ export const InvoicePage = ({
             {/* Totals */}
             <View style={styles.totals}>
                 <View style={styles.totalRow}>
-                    <Text>Subtotal</Text>
+                    <Text>{vat === 0 ? "Montant" : "Total HT"}</Text>
                     <Text>{formatCurrency(subtotal, { currency })}</Text>
                 </View>
-                {shippingFee > 0 && (
+                {vat !== 0 && (
                     <View style={styles.totalRow}>
-                        <Text>Shipping</Text>
-                        <Text>{formatCurrency(shippingFee, { currency })}</Text>
-                    </View>
-                )}
-                {tax > 0 && (
-                    <View style={styles.totalRow}>
-                        <Text>Tax</Text>
-                        <Text>{formatCurrency(tax, { currency })}</Text>
+                        <Text>TVA</Text>
+                        <Text>{formatCurrency(vat, { currency })}</Text>
                     </View>
                 )}
                 <View style={styles.grandTotal}>
-                    <Text style={styles.grandTotalLabel}>Total</Text>
+                    <Text style={styles.grandTotalLabel}>
+                        {vat === 0 ? "Montant réglé" : "Total TTC"}
+                    </Text>
                     <Text style={styles.grandTotalValue}>
                         {formatCurrency(total, { currency })}
                     </Text>
                 </View>
             </View>
 
+            {/* A French document states its VAT treatment or states why there is
+                none. Silence is the one option that is not available. */}
+            <Text style={styles.vatMention}>{vatMention}</Text>
+
+            {testNotice && <Text style={styles.notice}>{testNotice}</Text>}
+
             {/* Footer */}
             <View style={styles.footer}>
-                <Text>Thank you for your business!</Text>
-                <Text style={{ marginTop: 4 }}>
-                    This invoice was generated by Expeditoo
-                </Text>
+                <Text>{footerNote}</Text>
             </View>
         </Page>
 );
@@ -310,7 +362,7 @@ export const InvoicePDF = (props: InvoicePDFProps) => (
 );
 
 /**
- * Every invoice in a period, one page each — the Cocolis bulk download.
+ * Every document in a period, one page each — the Cocolis bulk download.
  *
  * An empty period still produces a document: an empty statement is a
  * meaningful accounting artefact, and @react-pdf cannot render a Document with

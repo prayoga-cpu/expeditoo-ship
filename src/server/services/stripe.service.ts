@@ -2,7 +2,6 @@ import { db } from "@/db";
 import { shipmentsDal } from "@/server/dal/shipments.dal";
 import { paymentsService } from "@/server/services/payments.service";
 import { user } from "@/db/schema/users";
-import { payments } from "@/db/schema/payments";
 import { stripe } from "@/lib/stripe";
 import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
@@ -161,11 +160,12 @@ export const stripeService = {
         const transferGroup = paymentIntent.transfer_group;
 
         if (transferGroup) {
-          // Update local payment status
-          await db
-            .update(payments)
-            .set({ status: "captured" })
-            .where(eq(payments.stripePaymentIntentId, paymentIntent.id));
+          // Through the service, never with a bare UPDATE here. This wrote no
+          // `capturedAt` and had no status predicate, so it settled payments
+          // outside every service — raising no document — and a retry arriving
+          // after a refund turned the refunded row back into a captured one
+          // (docs/specs/invoice_at_payment_spec.md §2).
+          await paymentsService.captureByIntent(paymentIntent.id);
 
           // Trigger transfers (Seller + Driver)
           // NOTE: This logic might move to a separate function triggered here

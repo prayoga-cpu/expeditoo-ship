@@ -252,6 +252,10 @@ describe("carrierRoutesService.update", () => {
     capacityKg: null,
     notifyOnMatch: true,
     isActive: true,
+    // Deliberately false: the stored value is the one a patch must carry
+    // forward, and `true` is what the schema default would supply anyway, so
+    // only `false` can catch a drop.
+    isDiscoverable: false,
     dates: [{ date: new Date("2026-09-12T00:00:00Z") }],
   };
 
@@ -266,6 +270,13 @@ describe("carrierRoutesService.update", () => {
     const [, columns, dates] = vi.mocked(carrierRoutesDal.update).mock.calls[0];
     expect(columns.radiusKm).toBe(90);
     expect(dates).toHaveLength(1);
+  });
+
+  it("keeps a carrier hidden when the patch is about something else", async () => {
+    await carrierRoutesService.update("u1", "r1", { radiusKm: 90 });
+
+    const [, columns] = vi.mocked(carrierRoutesDal.update).mock.calls[0];
+    expect(columns.isDiscoverable).toBe(false);
   });
 
   it("replaces the whole set when the patch sends dates", async () => {

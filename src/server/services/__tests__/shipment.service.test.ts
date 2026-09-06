@@ -288,83 +288,57 @@ describe("shipmentService.updateStatus — the confirmation request", () => {
   });
 
   it("asks for nothing on a stage the client never witnesses", async () => {
-    await move("PENDING", "CANCELLED");
+    await move("PENDING", "ASSIGNED");
 
     expect(requestConfirmation).not.toHaveBeenCalled();
   });
 });
 
 // ========================================
-// Cancelling gives the money back
+// Cancelling is not a status move
 // ========================================
 //
-// docs/specs/payment_at_booking_spec.md §6. The client is charged at booking,
-// so a cancellation has a real charge to undo — it is no longer a matter of
-// letting a hold expire.
+// `cancelShipment` moved to `shipment-cancellation.service.ts`, and this
+// endpoint stopped being a second way to reach it. It used to accept
+// `CANCELLED` and write `cancelled_at` with no reason, no side, no refund and
+// a listing left live — from `PICKED_UP`, where the cancel endpoint itself
+// refuses (docs/specs/cancellations_spec.md §7).
 
-describe("shipmentService.cancelShipment", () => {
-  const ownership = (status: string) => ({
-    id: "ship-1",
-    listingId: "job-1",
-    shipperId: "shipper-1",
-    carrierId: "carrier-1",
-    driverId: "driver-1",
-    status,
-  });
-
+describe("shipmentService.updateStatus — the closed back door", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     Object.assign(shipmentsDal, {
-      getOwnership: vi.fn().mockResolvedValue(ownership("ASSIGNED")),
-      cancel: vi.fn().mockResolvedValue({ id: "ship-1", status: "CANCELLED" }),
+      getOwnership: vi.fn().mockResolvedValue({
+        id: "ship-1",
+        listingId: "job-1",
+        shipperId: "shipper-1",
+        carrierId: "carrier-1",
+        driverId: "driver-1",
+        status: "ASSIGNED",
+      }),
+      updateStatus: vi.fn(),
       createEvent: vi.fn().mockResolvedValue({}),
     });
-    Object.assign(listingsDal, { update: vi.fn().mockResolvedValue({}) });
-    vi.mocked(paymentsService.refundForShipment).mockResolvedValue({} as never);
   });
 
-  it("refunds the client", async () => {
-    await shipmentService.cancelShipment("ship-1", "client changed plans", {
-      userId: "shipper-1",
-    });
-
-    expect(paymentsService.refundForShipment).toHaveBeenCalledWith("ship-1");
-    expect(shipmentsDal.cancel).toHaveBeenCalledWith(
-      "ship-1",
-      "client changed plans"
-    );
-  });
-
-  it("still cancels when the refund is not ours to make", async () => {
-    // An Expedion job's money was taken in that app, so `refundForShipment`
-    // throws REFUND_NOT_LOCAL. Refusing the cancellation over it would leave a
-    // job nobody is doing marked as live; Expedion learns from the write-back.
-    vi.mocked(paymentsService.refundForShipment).mockRejectedValue(
-      new Error("REFUND_NOT_LOCAL")
-    );
-
-    const result = await shipmentService.cancelShipment("ship-1", "off", {
-      userId: "shipper-1",
-    });
-
-    expect(result).toMatchObject({ status: "CANCELLED" });
-    expect(listingsDal.update).toHaveBeenCalledWith("job-1", {
-      status: "cancelled",
-    });
-  });
-
-  it("will not let a party cancel a run that is already on the road", async () => {
-    vi.mocked(shipmentsDal.getOwnership).mockResolvedValue(
-      ownership("IN_TRANSIT") as never
-    );
-
+  it("refuses to cancel a run", async () => {
     expect(
       await codeFrom(() =>
-        shipmentService.cancelShipment("ship-1", "too late", {
-          userId: "shipper-1",
+        shipmentService.updateStatus("ship-1", "CANCELLED", {
+          userId: "carrier-1",
         })
       )
-    ).toBe("CANCEL_REQUIRES_SUPPORT");
-    expect(paymentsService.refundForShipment).not.toHaveBeenCalled();
+    ).toBe("CANCEL_VIA_CANCEL_ENDPOINT");
+  });
+
+  it("writes nothing on the way to refusing", async () => {
+    await codeFrom(() =>
+      shipmentService.updateStatus("ship-1", "CANCELLED", {
+        userId: "carrier-1",
+      })
+    );
+
+    expect(shipmentsDal.updateStatus).not.toHaveBeenCalled();
+    expect(shipmentsDal.createEvent).not.toHaveBeenCalled();
   });
 });

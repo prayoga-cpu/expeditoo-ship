@@ -51,6 +51,8 @@ export interface CarrierRoute {
   capacityKg: number | null;
   notifyOnMatch: boolean;
   isActive: boolean;
+  /** Whether requesters whose job runs along this trajet may see and contact you. */
+  isDiscoverable: boolean;
   dates: CarrierRouteDate[];
   createdAt: string;
 }
@@ -68,6 +70,7 @@ export interface CarrierRouteInput {
   capacityKg?: number | null;
   notifyOnMatch: boolean;
   isActive: boolean;
+  isDiscoverable: boolean;
 }
 
 export interface EarningsItem {

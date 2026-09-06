@@ -15,7 +15,9 @@ import { useTranslations } from "next-intl";
 import {
   useAssignSelfToShipment,
   useUpdateShipmentStatus,
+  useWithdrawFromJob,
 } from "../hooks/useDriverShipments";
+import { StopTransportDialog } from "@/features/app/common/ui/StopTransportDialog";
 import { useShipmentPhotos } from "@/features/app/common/hooks/useShipmentPhotos";
 import {
   PhotoRequirementNotice,
@@ -116,6 +118,7 @@ function PendingActions({ shipment }: { shipment: ActionableShipment }) {
       <p className="text-xs text-center text-muted-foreground">
         {t("startJobHint")}
       </p>
+      <WithdrawAction shipmentId={shipment.id} />
     </div>
   );
 }
@@ -149,6 +152,7 @@ function AssignedActions({ shipment }: { shipment: ActionableShipment }) {
         address={shipment.pickupAddress}
         label={t("navigateToPickup")}
       />
+      <WithdrawAction shipmentId={shipment.id} />
     </div>
   );
 }
@@ -264,6 +268,28 @@ function PendingState() {
       icon={Clock}
       title={t("pendingTitle")}
       description={t("pendingDesc")}
+    />
+  );
+}
+
+/**
+ * Handing the job back, offered only while nothing has changed hands.
+ *
+ * Mounted inside the per-status blocks rather than at the `ShipmentActions`
+ * level: the driver detail page mounts that component twice — a desktop sticky
+ * column and a mobile sticky bar — so anything added at the top renders twice.
+ *
+ * The server is the authority on whether this is allowed; the button is simply
+ * not offered where it would be refused (`WITHDRAW_AFTER_PICKUP`).
+ */
+function WithdrawAction({ shipmentId }: { shipmentId: string }) {
+  const withdraw = useWithdrawFromJob(shipmentId);
+
+  return (
+    <StopTransportDialog
+      side="transporter"
+      isPending={withdraw.isPending}
+      onConfirm={(input) => withdraw.mutateAsync(input)}
     />
   );
 }

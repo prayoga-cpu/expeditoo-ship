@@ -15,8 +15,9 @@ import {
   resolveOfferSlots,
   type ResolvedOfferSlot,
 } from "@/lib/offer-slots";
+import { rearmedExpiry, rearmedWindow } from "@/lib/listing-window";
 import type { CreateOfferInput } from "@/server/dto/offers.dto";
-import type { Listing } from "@/db/schema/listings";
+import type { InsertListing, Listing } from "@/db/schema/listings";
 import type { Offer } from "@/db/schema/offers";
 import type { Vehicle } from "@/db/schema/carriers";
 
@@ -301,6 +302,16 @@ export const offersService = {
       : undefined;
     if (opts.slotId && !booked) throw err("SLOT_NOT_ON_OFFER", 400);
 
+    // `SLOT_IN_PAST` is a submit-time rule (offers.dto.ts), and until bids
+    // could be restored that was enough — an offer was accepted within its own
+    // window or not at all. A withdrawal now puts rejected bids back in play on
+    // a listing whose window may have slid forward, so the slot an operator
+    // picks off the award queue can be behind us; booking it would write a past
+    // `scheduled_pickup` and report a past pickup date to the client.
+    if (booked && booked.startsAt <= new Date()) {
+      throw err("SLOT_IN_PAST", 409);
+    }
+
     const listing = await listingsDal.getById(existing.listingId);
     if (!listing) throw err("LISTING_NOT_FOUND", 404);
 
@@ -481,100 +492,78 @@ export const offersService = {
   },
 
   /**
-   * Undoes an award when the charge fails, returning the job to the
-   * marketplace with every bid intact (offers_engine_spec.md §5.8).
+   * Puts an awarded job back on the board with its bids intact.
+   *
+   * Two callers, one mechanic: the charge failed and the award never really
+   * happened, or a transporter withdrew and somebody else should take this.
+   * They differ only in what becomes of the winning bid and whether the job is
+   * marked as having been round once (cancellations_spec.md §4.3).
+   *
+   * **Re-arming the window is not optional.** `findExpired` selects exactly
+   * `{status:'open', expires_at < now}` and the sweep runs every fifteen
+   * minutes, while `expires_at` is `pickup_from − 6 h` and is therefore already
+   * past by the time anything is awarded. A listing handed back to `open`
+   * untouched is invisible on the board, unbiddable, and expired by the cron —
+   * along with every bid just restored — inside a quarter of an hour.
+   */
+  async reopenForRebid(
+    listingId: string,
+    offerId: string,
+    rejectedOfferIds: string[],
+    opts: { winnerStatus: "pending" | "withdrawn"; markReopened: boolean }
+  ) {
+    await db.transaction(async (tx) => {
+      // The same lock `commitAward` takes. Its three in-lock re-checks are the
+      // entire concurrency guarantee, and a re-board that skips the lock can
+      // interleave with an accept that is mid-flight.
+      const listing = await listingsDal.getByIdForUpdate(listingId, tx);
+      if (!listing) throw err("LISTING_NOT_FOUND", 404);
+
+      await offersDal.updateStatus(offerId, opts.winnerStatus, tx);
+      for (const id of rejectedOfferIds) {
+        await offersDal.updateStatus(id, "pending", tx);
+      }
+
+      // A bid that lands on `withdrawn` is no longer live, and `offers_count`
+      // is the only signal the award queue has that there is anything to decide
+      // — `withdrawOffer` decrements on exactly this status change, so skipping
+      // it here would leave every re-boarded job advertising a bid that is not
+      // there.
+      if (opts.winnerStatus === "withdrawn") {
+        await offersDal.incrementListingOffersCount(listingId, -1, tx);
+      }
+
+      await listingsDal.update(
+        listingId,
+        {
+          status: "open",
+          acceptedOfferId: null,
+          ...reopenedWindow(listing, opts.markReopened),
+        },
+        tx
+      );
+    });
+  },
+
+  /**
+   * Undoes an award when the charge fails (offers_engine_spec.md §5.8).
+   *
+   * The winner goes back to `pending` rather than `withdrawn`: nobody walked
+   * away, a card was declined, and the same carrier is still the best bid on
+   * the job.
    */
   async compensateFailedAward(
     listingId: string,
     offerId: string,
     rejectedOfferIds: string[]
   ) {
-    await db.transaction(async (tx) => {
-      await offersDal.updateStatus(offerId, "pending", tx);
-      for (const id of rejectedOfferIds) {
-        await offersDal.updateStatus(id, "pending", tx);
-      }
-      await listingsDal.update(
-        listingId,
-        { status: "open", acceptedOfferId: null },
-        tx
-      );
+    await this.reopenForRebid(listingId, offerId, rejectedOfferIds, {
+      winnerStatus: "pending",
+      markReopened: false,
     });
     console.error(
       `Award compensated for listing ${listingId}; payment failed`
     );
-  },
-
-  /**
-   * An operator takes an award back and puts the job on the board again.
-   *
-   * This is the control half of self-accept. Before it, the only way to undo an
-   * award was to cancel the shipment, which sets the listing to `cancelled` and
-   * destroys the job — fine when a job is genuinely off, useless when the point
-   * is "the wrong driver took this, let somebody else have it". The rollback
-   * shape already existed but was private to the payment-failure path.
-   *
-   * The money is given back first and deliberately. The client was charged at
-   * booking, so if the refund did not happen here the job would go back on the
-   * board with their money already spent on a driver who is no longer doing
-   * it — and the next award would charge them a second time.
-   *
-   * An Expedion job throws `REFUND_NOT_LOCAL` and is caught below: that refund
-   * belongs to the app that took the money, and the un-award still stands.
-   */
-  async revokeAward(actorUserId: string, listingId: string, reason?: string) {
-    const [isOperator, isAdmin] = await Promise.all([
-      userHasRole(actorUserId, "operator"),
-      userHasRole(actorUserId, "admin"),
-    ]);
-    if (!isOperator && !isAdmin) throw err("FORBIDDEN_NOT_OPERATOR", 403);
-
-    const listing = await listingsDal.getById(listingId);
-    if (!listing) throw err("LISTING_NOT_FOUND", 404);
-    if (listing.status !== "awarded") throw err("LISTING_NOT_AWARDED", 409);
-
-    const offerId = listing.acceptedOfferId;
-    if (!offerId) throw err("LISTING_HAS_NO_AWARD", 409);
-
-    const winner = await offersDal.getById(offerId);
-    const shipment = await listingsDal.getShipmentByOfferId(offerId);
-    if (shipment) {
-      // Anything already collected is a real-world event that un-awarding
-      // cannot undo. Past that point the honest action is cancel-with-refund,
-      // not a quiet hand-back to the board.
-      if (shipment.status !== "PENDING" && shipment.status !== "ASSIGNED") {
-        throw err("SHIPMENT_ALREADY_STARTED", 409);
-      }
-      await paymentsService
-        .refundForShipment(shipment.id)
-        .catch((e) => console.error("[offers] refund on revoke", e));
-    }
-
-    // The rivals this award rejected, so they go back to pending alongside the
-    // winner and the job returns to the board with its bids intact.
-    const rivals = await offersDal.listByListing(listingId);
-    const rejectedIds = rivals
-      .filter((offer) => offer.status === "rejected")
-      .map((offer) => offer.id);
-
-    await this.compensateFailedAward(listingId, offerId, rejectedIds);
-
-    if (winner) {
-      await notificationsService
-        .createNotification({
-          userId: winner.carrierId,
-          type: "offer_rejected",
-          title: "A job was taken back",
-          message:
-            reason ??
-            `"${listing.title}" was returned to the board by an operator.`,
-          linkUrl: `/listing/${listingId}`,
-          data: { listingId, offerId },
-        })
-        .catch((e) => console.error("revoke notification failed", e));
-    }
-
-    return { listingId, offerId, shipmentId: shipment?.id ?? null };
   },
 
   /**
@@ -624,6 +613,29 @@ export const offersService = {
     return await offersDal.setPendingStatusForListing(listingId, "expired");
   },
 };
+
+/**
+ * What a re-boarded listing's dates become.
+ *
+ * The two callers are not the same event. A transporter withdrew and the job
+ * genuinely goes round again, so its window may be slid forward and is stamped
+ * as having moved. A card was declined seconds ago and nobody went anywhere —
+ * that job gets its bidding deadline repaired and its **own dates left alone**,
+ * because moving a client's collection date on the strength of a payment
+ * failure, with no marker and nobody told, is the one state `reopened_at`
+ * exists to make impossible.
+ */
+function reopenedWindow(
+  listing: Listing,
+  markReopened: boolean
+): Partial<InsertListing> {
+  if (markReopened) {
+    return { ...rearmedWindow(listing), reopenedAt: new Date() };
+  }
+
+  const expiresAt = rearmedExpiry(listing.pickupFrom);
+  return expiresAt ? { expiresAt } : {};
+}
 
 /** Rating lives on the joined carrier, so that sort is applied in memory. */
 function sortOffers<T extends { carrier?: { rating?: number } }>(

@@ -44,11 +44,25 @@ const err = shipmentErr;
 // State machine
 // ========================================
 
+/**
+ * `IN_TRANSIT → CANCELLED` exists because support has always been promised it
+ * and has never had it: `cancelShipment` exempted staff from
+ * `CANCEL_REQUIRES_SUPPORT` and then hit this table four lines later, so an
+ * operator ending a run on the road received `INVALID_STATUS_TRANSITION` while
+ * the UI copy told the client to contact support.
+ *
+ * It is only safe because `updateStatus` now refuses `CANCELLED` outright
+ * (§7): this table is shared, and the edge would otherwise hand every driver an
+ * unrefunded mid-transit cancel.
+ *
+ * `DELIVERED` keeps no outgoing edge, deliberately. A payout row and an invoice
+ * already exist by then and there is no clawback anywhere.
+ */
 const TRANSITIONS: Record<ShipmentStatusType, ShipmentStatusType[]> = {
   PENDING: ["ASSIGNED", "CANCELLED"],
   ASSIGNED: ["PICKED_UP", "CANCELLED"],
   PICKED_UP: ["IN_TRANSIT", "CANCELLED"],
-  IN_TRANSIT: ["DELIVERED"],
+  IN_TRANSIT: ["DELIVERED", "CANCELLED"],
   DELIVERED: [],
   CANCELLED: [],
 };
@@ -75,7 +89,8 @@ const PHOTO_GATED_TRANSITIONS: Partial<
 /**
  * Applies to `staff` as well as the driver. An operator moving a stuck run is
  * exactly the case where the record most needs to say what was seen, and
- * support already has `cancelShipment` for a run that genuinely cannot go on.
+ * support already has `shipmentCancellationService.cancelJob` for a run that
+ * genuinely cannot go on.
  */
 async function requirePhotoFor(shipmentId: string, next: ShipmentStatusType) {
   const gate = PHOTO_GATED_TRANSITIONS[next];
@@ -240,8 +255,15 @@ export const shipmentService = {
   },
 
   /**
-   * Advance the run. Delivery is the point at which the held payment becomes
-   * capturable - the capture itself is triggered by the payments service.
+   * Advance the run. Delivery is the point at which the driver's share is
+   * settled - the settlement itself is triggered by the payments service.
+   *
+   * This is **not** a way to cancel. It used to be: the status route accepted
+   * `CANCELLED`, and this method would take it, writing `cancelled_at` with no
+   * reason, no side, no refund and a listing left live — from `PICKED_UP`, where
+   * the cancel endpoint itself refuses. The driver client's status union already
+   * carried the value, so a cancel button wired to the wrong endpoint was one
+   * line away (cancellations_spec.md §7).
    */
   async updateStatus(
     shipmentId: string,
@@ -249,6 +271,8 @@ export const shipmentService = {
     viewer: Viewer,
     note?: string
   ) {
+    if (next === "CANCELLED") throw err("CANCEL_VIA_CANCEL_ENDPOINT", 409);
+
     const ownership = await shipmentsDal.getOwnership(shipmentId);
     if (!ownership) throw err("SHIPMENT_NOT_FOUND", 404);
 
@@ -282,47 +306,6 @@ export const shipmentService = {
     );
     reportToExpedion(ownership.listingId, next, shipmentId);
     requestClientConfirmation(shipmentId, next);
-
-    return updated;
-  },
-
-  async cancelShipment(shipmentId: string, reason: string, viewer: Viewer) {
-    const ownership = await shipmentsDal.getOwnership(shipmentId);
-    if (!ownership) throw err("SHIPMENT_NOT_FOUND", 404);
-
-    const party = partyFor(ownership, viewer);
-    if (party === "none") throw err("FORBIDDEN", 403);
-
-    // Once the goods are on a vehicle, cancelling is a support matter.
-    if (
-      ["PICKED_UP", "IN_TRANSIT"].includes(ownership.status) &&
-      party !== "staff"
-    ) {
-      throw err("CANCEL_REQUIRES_SUPPORT", 409);
-    }
-    if (!canTransition(ownership.status, "CANCELLED")) {
-      throw err("INVALID_STATUS_TRANSITION", 409);
-    }
-
-    // The client paid at booking, so cancelling gives the money back rather
-    // than letting go of a hold. An Expedion job throws `REFUND_NOT_LOCAL` and
-    // is caught here on purpose: that refund belongs to the app that took the
-    // money, which learns the job is off from the write-back below.
-    await paymentsService
-      .refundForShipment(shipmentId)
-      .catch((e) => console.error("payment refund failed", e));
-
-    const updated = await shipmentsDal.cancel(shipmentId, reason);
-    await this.recordEvent(
-      shipmentId,
-      "CANCELLED",
-      ownership.status,
-      viewer,
-      party,
-      reason
-    );
-    await listingsDal.update(ownership.listingId, { status: "cancelled" });
-    reportToExpedion(ownership.listingId, "CANCELLED", shipmentId);
 
     return updated;
   },
@@ -406,6 +389,12 @@ async function settleDelivery(shipmentId: string, carrierId: string) {
     // The paperwork, in its own try: an invoice that fails to write must not
     // strand a captured payment (billing_documents_spec.md §4.1). It is
     // idempotent on the payment, so the two delivery paths cannot mint two.
+    //
+    // This is now a backstop rather than the wire. The document is raised when
+    // the money is taken, which is at booking (invoice_at_payment_spec.md §1);
+    // what still reaches here is a payment captured before that shipped, and a
+    // payment whose issue failed at the time. It returns null, quietly, for the
+    // escalated lane and for money that never arrived.
     try {
       await invoicesService.createFromPayment(payment.id);
     } catch (error) {

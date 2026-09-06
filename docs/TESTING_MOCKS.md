@@ -22,9 +22,15 @@ grep -rn "TODO(EXPEDITOO-TESTING)" ../expedion_encheres/lib ../expedion_encheres
 card outright (`docs/specs/payment_at_booking_spec.md`). What is mocked is that
 charge: rather than guess at your Stripe test setup, `chargeForShipment` writes
 the row straight to `captured` with a synthetic `pi_mock_<shipmentId>` intent.
-Delivery then schedules the payout and raises the invoice against it, computing
-the commission exactly as the real path does. **The real Stripe code path is
-untouched when the flag is off.**
+The document is raised against that row immediately, as it is for a real charge
+(`docs/specs/invoice_at_payment_spec.md`); delivery then schedules the payout,
+computing the commission exactly as the real path does. **The real Stripe code
+path is untouched when the flag is off.**
+
+**A synthetic charge never prints as paid.** The document renders the test line
+in place of the PAYÉ stamp, decided by the intent id alone — so a tester who
+books a job and opens `/profile/invoices` gets a document that says no money
+moved, rather than one asserting a debit that never happened.
 
 Two things are *not* mocked and must not be confused with one:
 
@@ -47,6 +53,11 @@ Two things are *not* mocked and must not be confused with one:
 **Purge before you switch it off.** Any `pi_mock_` row is a captured payment
 with no money behind it. Left in place, `/carrier/trips` → Effectués reports
 earnings that do not exist and a refund on one silently succeeds.
+
+Purging cascades into `invoices`, which is why document numbers are allocated
+from `document_sequences` rather than counted: the counter is the high-water
+mark and survives the rows it numbered, so a purge cannot make the next document
+re-use a number that was already issued.
 
 ## 2. Expedion → Expeditoo escalation bridge
 

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { refundService } from '../refund.service';
 import { stripe } from '@/lib/stripe';
 import { db } from '@/db';
+import { paymentsService } from '@/server/services/payments.service';
 
 // Mock dependencies
 vi.mock('@/lib/stripe', () => ({
@@ -22,6 +23,13 @@ vi.mock('@/db', () => ({
     },
     update: vi.fn().mockReturnValue({ set: vi.fn().mockReturnValue({ where: vi.fn() }) })
   }
+}));
+
+// The row is no longer written here. Refunding is a transition, and it is the
+// transition that raises the credit note correcting the invoice the client was
+// already sent (docs/specs/invoice_at_payment_spec.md §5).
+vi.mock('@/server/services/payments.service', () => ({
+  paymentsService: { markRefunded: vi.fn().mockResolvedValue({ status: 'refunded' }) },
 }));
 
 describe('refundService', () => {
@@ -50,8 +58,26 @@ describe('refundService', () => {
                 payment_intent: 'pi_123',
                 reason: 'requested_by_customer'
             });
-            expect(db.update).toHaveBeenCalled();
+            expect(paymentsService.markRefunded).toHaveBeenCalledWith('pay-1');
+            expect(db.update).not.toHaveBeenCalled();
             expect(result.status).toBe('succeeded');
+        });
+
+        it('leaves the row alone when Stripe declines the refund', async () => {
+            vi.mocked(db.query.payments.findFirst).mockResolvedValue({
+                id: 'pay-1',
+                stripePaymentIntentId: 'pi_123',
+                status: 'captured',
+            } as never);
+            vi.mocked(stripe.refunds.create).mockResolvedValue({
+                id: 're_123',
+                status: 'failed',
+            } as never);
+
+            await refundService.processRefund('pay-1');
+
+            // No money went back, so there is nothing to correct.
+            expect(paymentsService.markRefunded).not.toHaveBeenCalled();
         });
 
         it('should throw if payment not found', async () => {

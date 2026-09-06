@@ -19,14 +19,16 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
-import { Download, FileText, Receipt } from "lucide-react";
+import { Download, FileText, Mail, Receipt } from "lucide-react";
 import { useTranslations } from "next-intl";
 import {
+    useEmailInvoice,
     useInvoices,
     getInvoicePdfUrl,
     getInvoiceStatementUrl,
 } from "../../hooks/useInvoices";
 import { InlineLoader } from "@/components/ui/page-loader";
+import { CenteredEmptyState } from "@/components/ui/centered-empty-state";
 import { periodBoundsIso, type PeriodKey } from "@/lib/statement-period";
 
 // Type for invoice status
@@ -44,7 +46,8 @@ export function InvoiceList() {
     const [period, setPeriod] = useState<PeriodKey>("all");
 
     const bounds = useMemo(() => periodBoundsIso(period), [period]);
-    const { data, isLoading, error } = useInvoices(bounds);
+    const { data, isLoading, isError, refetch } = useInvoices(bounds);
+    const emailInvoice = useEmailInvoice();
 
     const handleDownload = (invoiceId: string) => {
         // Open PDF in new tab for download
@@ -96,22 +99,24 @@ export function InvoiceList() {
                         <InlineLoader size="md" />
                         <p className="text-muted-foreground text-sm mt-4">{t("loading")}</p>
                     </div>
-                ) : error ? (
-                    <div className="flex flex-col items-center justify-center py-12">
-                        <div className="h-16 w-16 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
-                            <Receipt className="h-8 w-8 text-destructive" />
-                        </div>
-                        <h3 className="font-semibold text-lg">{t("error")}</h3>
-                        <p className="text-muted-foreground text-sm mt-1">{t("errorDesc")}</p>
-                    </div>
+                ) : isError ? (
+                    // A query hook that renders nothing on failure leaves a blank
+                    // card with nothing to retry (CLAUDE.md gotcha 9).
+                    <CenteredEmptyState
+                        icon={Receipt}
+                        title={t("error")}
+                        description={t("errorDesc")}
+                    >
+                        <Button variant="outline" onClick={() => refetch()}>
+                            {t("retry")}
+                        </Button>
+                    </CenteredEmptyState>
                 ) : invoices.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-12">
-                        <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4">
-                            <Receipt className="h-8 w-8 text-muted-foreground" />
-                        </div>
-                        <h3 className="font-semibold text-lg">{t("empty")}</h3>
-                        <p className="text-muted-foreground text-sm mt-1">{t("emptyDesc")}</p>
-                    </div>
+                    <CenteredEmptyState
+                        icon={Receipt}
+                        title={t("empty")}
+                        description={t("emptyDesc")}
+                    />
                 ) : (
                     <div className="overflow-x-auto">
                         <Table>
@@ -128,13 +133,25 @@ export function InvoiceList() {
                                 {invoices.map((invoice) => (
                                     <TableRow key={invoice.id}>
                                         <TableCell className="font-medium">
-                                            {invoice.invoiceNumber}
+                                            <span>{invoice.invoiceNumber}</span>
+                                            {invoice.kind === "credit_note" && (
+                                                <Badge variant="outline" className="ml-2">
+                                                    {invoice.relatedInvoiceNumber
+                                                        ? t("creditNoteFor", {
+                                                            number: invoice.relatedInvoiceNumber,
+                                                        })
+                                                        : t("creditNote")}
+                                                </Badge>
+                                            )}
                                         </TableCell>
                                         <TableCell className="text-muted-foreground">
-                                            {invoice.issuedAt
-                                                ? new Date(invoice.issuedAt).toLocaleDateString()
-                                                : new Date(invoice.createdAt).toLocaleDateString()
-                                            }
+                                            {/* Paris, not the viewer's zone: this is the
+                                                date printed on the document itself. */}
+                                            {new Date(
+                                                invoice.issuedAt ?? invoice.createdAt
+                                            ).toLocaleDateString("fr-FR", {
+                                                timeZone: "Europe/Paris",
+                                            })}
                                         </TableCell>
                                         <TableCell className="text-right font-semibold">
                                             €{(invoice.amount / 100).toFixed(2)}
@@ -145,6 +162,16 @@ export function InvoiceList() {
                                             </Badge>
                                         </TableCell>
                                         <TableCell className="text-right">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => emailInvoice.mutate(invoice.id)}
+                                                disabled={emailInvoice.isPending}
+                                                className="h-8"
+                                            >
+                                                <Mail className="h-4 w-4 mr-1" />
+                                                {t("sendByEmail")}
+                                            </Button>
                                             <Button
                                                 variant="ghost"
                                                 size="sm"

@@ -9,11 +9,26 @@ import {
   type InsertShipmentConfirmation,
   type ShipmentStatusType,
   type ActorRoleType,
+  type ShipmentCancellationSide,
+  type ShipmentCancellationCategory,
 } from "@/db/schema/shipments";
 import { and, desc, eq, inArray, or, sql, count } from "drizzle-orm";
 import { user } from "@/db/schema/users";
 
 type Executor = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/**
+ * Everything a cancellation records beyond the status itself. `byUserId` and
+ * `byRef` are mutually exclusive: an Expedion quote owner has no `user` row, so
+ * they arrive as a ref (cancellations_spec.md §3.3).
+ */
+export interface CancellationDetails {
+  reason: string | null;
+  side: ShipmentCancellationSide;
+  category: ShipmentCancellationCategory;
+  byUserId: string | null;
+  byRef: string | null;
+}
 
 /**
  * Shipments are created by the offer-acceptance transaction
@@ -50,11 +65,27 @@ export const shipmentsDal = {
     });
   },
 
+  /**
+   * The **live** run for a job.
+   *
+   * A listing could only ever carry one shipment until withdrawal arrived:
+   * an award created one, and cancelling killed the job with it. A transporter
+   * handing the job back now leaves a `CANCELLED` row behind and the re-award
+   * mints a second — so an unordered `findFirst` here would hand callers the
+   * dead one about half the time, and `shipment_listing_idx` is not unique.
+   *
+   * Cancelled rows are only returned when there is nothing else, so a caller
+   * asking about a job that was called off still gets told what happened rather
+   * than nothing at all.
+   */
   async getByListingId(listingId: string, tx: Executor = db) {
-    return await tx.query.shipments.findFirst({
+    const rows = await tx.query.shipments.findMany({
       where: eq(shipments.listingId, listingId),
       with: withParties,
+      orderBy: [desc(shipments.createdAt)],
     });
+
+    return rows.find((row) => row.status !== "CANCELLED") ?? rows[0];
   },
 
   /**
@@ -184,6 +215,10 @@ export const shipmentsDal = {
         driverId: shipments.driverId,
         status: shipments.status,
         listingId: shipments.listingId,
+        // Which award this run belongs to. A listing can carry more than one
+        // shipment now, so "is this the live run" is a question every write
+        // path has to be able to ask.
+        offerId: shipments.offerId,
       })
       .from(shipments)
       .where(eq(shipments.id, id));
@@ -218,12 +253,24 @@ export const shipmentsDal = {
     return result;
   },
 
-  async cancel(id: string, reason: string, tx: Executor = db) {
+  /**
+   * Ends a run, recording which side ended it as part of the same UPDATE.
+   *
+   * The side used to survive only in the `shipment_events` row, which is a
+   * separate insert that can fail after this one has landed — and which
+   * collapses staff onto `admin`. Written here it cannot disagree with the row
+   * it describes (cancellations_spec.md §3.3).
+   */
+  async cancel(id: string, details: CancellationDetails, tx: Executor = db) {
     const [result] = await tx
       .update(shipments)
       .set({
         status: "CANCELLED",
-        cancellationReason: reason,
+        cancellationReason: details.reason,
+        cancelledBySide: details.side,
+        cancellationCategory: details.category,
+        cancelledByUserId: details.byUserId,
+        cancelledByRef: details.byRef,
         cancelledAt: new Date(),
         updatedAt: new Date(),
       })

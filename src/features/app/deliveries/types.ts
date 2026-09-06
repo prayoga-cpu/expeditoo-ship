@@ -1,4 +1,8 @@
 import type { ShipmentStatus } from "./api/deliveries.api";
+import type {
+  CancellationCategory,
+  CancellationSide,
+} from "@/lib/cancellation-policy";
 
 /** View models for the shipper-side tracking surface. */
 
@@ -50,7 +54,8 @@ export interface DeliveryDetailView {
   listingId: string;
   title: string;
   status: ShipmentStatus;
-  role: DeliveryRole;
+  /** Null when the viewer is not a party — an operator or admin looking on. */
+  role: DeliveryRole | null;
   priceCents?: number;
   pickupAddress: string;
   dropoffAddress: string;
@@ -58,6 +63,9 @@ export interface DeliveryDetailView {
   scheduledDelivery: string | null;
   deliveredAt: string | null;
   cancellationReason: string | null;
+  /** Which side stopped it, and why — null on a run that is still live. */
+  cancelledBySide: CancellationSide | null;
+  cancellationCategory: CancellationCategory | null;
   carrier: { id: string; name: string; image: string | null };
   driver: { id: string; name: string; image: string | null } | null;
   shipper: { id: string; name: string; image: string | null };

@@ -45,6 +45,13 @@ const baseRouteSchema = z.object({
   capacityKg: z.number().positive().max(100_000).optional(),
   notifyOnMatch: z.boolean().default(true),
   isActive: z.boolean().default(true),
+  /**
+   * Consent to be listed to the requester whose job runs along this trajet
+   * (carriers_on_route_spec.md §4.2). New trajets opt in; the rows that predate
+   * the column were declared under « Vous seul le voyez » and the migration
+   * backfilled them out.
+   */
+  isDiscoverable: z.boolean().default(true),
 });
 
 /**

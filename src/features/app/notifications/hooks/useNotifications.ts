@@ -195,7 +195,11 @@ function getIcon(type: string) {
       return MessageCircle;
     case "delivery":
     case "shipment_assigned":
+    case "shipment_cancelled":
+    case "shipment_withdrawn":
       return Truck;
+    case "job_reopened":
+      return TrendingUp;
     case "review":
       return Star;
     case "payment":
@@ -215,7 +219,12 @@ function getLink(type: string, resourceId?: string | null) {
       return `/messages/${resourceId}`;
     case "delivery":
     case "shipment_assigned":
+    case "shipment_cancelled":
+    case "shipment_withdrawn":
       return `/deliveries/${resourceId}`;
+    // The resource is the job that came back, not a delivery that ended.
+    case "job_reopened":
+      return `/listing/${resourceId}`;
     case "review":
       return `/profile/reviews`;
     case "payment":

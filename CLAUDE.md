@@ -36,6 +36,15 @@ the same as saying nobody holds the `shipper` role — every signup does. See
 
 `ROADMAP.md` is the product source of truth. Read it before planning anything.
 
+**Session discipline is mandatory and enforced.** Every session that changes
+this repo ends with a release recorded in four places that must agree:
+`CHANGELOG.md` (what a driver, operator or client got), `STATUS.md` (why, for
+the next engineer), `package.json` and `src/lib/version.ts`. The full rule is
+[`AGENTS.md`](./AGENTS.md) §8; `pnpm changelog:check` and
+`src/lib/__tests__/changelog.test.ts` fail when they drift, and
+`.github/workflows/gates.yml` runs both. `CHANGELOG.md` is the source of truth
+the public `/changelog` page is rendered from — do not edit the page instead.
+
 **Current status:** driver-side revamp complete; the Expedion inlet needs a real
 payment signal. See §"Where Things Stand".
 
@@ -213,7 +222,9 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
 - Schema remodelled to the transport model; one clean initial migration
 - Goods-auction surface deleted, including its checkout, browse card and categories
 - **Shipper surface deleted**: job form, `create/success`, my-jobs list. `/listings/me`
-  redirects to `/expedion`
+  redirected to `/expedion` — **no longer true**: restoring `/create` brought the
+  requester back, and it now renders `MyRequestsScreen` (two URL-held tabs, the
+  `/create` draft included). A request you cannot find again is not a request.
 - **`/expedion` job board**, pinned to `origin='expedion'` (filter threaded DTO → DAL → client)
 - **`/home` is the driver dashboard**: application status, current run, open jobs,
   bids awaiting decision
@@ -262,7 +273,8 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
   once per day). Needs repo variable `APP_URL` and repo secret `CRON_SECRET`.
 - Theme-aware loader (light/dark `.lottie` cuts, picked by `resolvedTheme`); one shared
   `BrandWordmark` lockup across sidebar, mobile header and marketing
-- FR/EN parity exact, 1715 keys (verified by key diff, not by eye)
+- FR/EN parity exact, verified by key diff rather than by eye (a leaf count is
+  quoted here at your peril — it has been stale three times)
 - **Carrier trips** at `/carrier/trips`: one screen, two tabs, as the client asked.
   *Prévus* is the new `carrier_routes` / `carrier_route_dates` pair — routes a
   carrier declares as recurring (weekdays) or occasional (specific dates),
@@ -428,6 +440,117 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
   `useMessageDetail` read `listing.images` where the DAL returns `photos`, so
   the thread header had *always* shown the placeholder. 88 tests.
   `docs/specs/thread_offer_spec.md`
+- **The receipt is raised when the money is taken, and it arrives by email.**
+  The client asked for an invoice generated after payment, sendable or
+  downloadable. Downloading worked; the other two halves did not. The document
+  was raised on **delivery** — days after the card was debited, and only if the
+  job completed — and the only mail was an English `<h1>` with a *link* and no
+  attachment. It is now raised from `paymentsService`, in its own try, from the
+  single transition into `captured`; the Stripe webhook was the other capture
+  writer and wrote no `capturedAt` and had **no status predicate**, so a retry
+  after a refund flipped the row back. **`settleDelivery` keeps its call as a
+  backstop.** Predicated on `payment.source === 'stripe'`: an escalated job's
+  client was debited *in Expedion*, against a listing owned by a system account
+  nobody signs into, and that document could never be corrected —
+  `refundForJob` refuses that money outright. **The correction exists because
+  the document now precedes delivery**: a refund raises a `credit_note` row,
+  negative, on its own `AV-` series, from the one `captured → refunded`
+  transition both refund writers go through. Numbers come from
+  `document_sequences` rather than `count(*)`, which collided between two awards
+  and re-issued a used number forever once any row was deleted — and both of
+  `invoices`' foreign keys cascade. **The document says only what it can
+  prove**: while the issuer's identifiers are `TODO(EXPEDITOO-LEGAL)` it is a
+  *Reçu de paiement* footed "ne vaut pas facture", and filling
+  `INVOICE_ISSUER_*` promotes it to a *Facture* with the VAT treatment and no
+  code change; a `pi_mock_` charge never prints PAYÉ. French throughout, with
+  the billed party frozen onto the row so the emailed PDF and a later download
+  are the same document. Found on the way past: `/api/user/invoices` declared
+  `from`/`to` and never read them, so the period dropdown filtered the bulk
+  download and nothing else; and the public terms still promised funds were
+  *held* until delivery. 64 tests.
+  `docs/specs/invoice_at_payment_spec.md`
+- **A cancellation from the transporter and one from the requester are two
+  different verbs.** There was one: `cancelShipment`, reachable by shipper,
+  carrier, driver and staff alike, which always refunded and always set the
+  listing to `cancelled` — so a van breaking down at 06:00 **destroyed a paid
+  client's delivery**, and the transporter was kept out of it only by a boolean
+  in a browser hook. **Cancel** now ends the job; **withdraw** takes only the
+  transporter off it and the job goes back on the board, which is
+  `revokeAward`'s shape finished and handed to the person it belongs to — that
+  method was operator-only, reachable from no UI, wrote nothing back to
+  Expedion, and handed the re-opened job straight to the expiry cron.
+  `reopenForRebid` re-arms `expires_at` and slides the whole pickup window
+  forward when the original has passed: without it `findExpired`
+  (`status='open' AND expires_at < now`, every 15 min, against an `expires_at`
+  of `pickup_from − 6 h` that is already past by award time) eats the job and
+  every bid just restored, inside a quarter of an hour. **Both verbs refund** —
+  nobody holds a client's money for a job with no driver — and the escalated
+  lane's `REFUND_NOT_LOCAL` is caught *by name* and becomes a refund-owed event
+  on the quote, while any other failure is stamped `refundFailed` on the
+  cancellation event rather than living only in a server log.
+  `recordExternalCharge` became idempotent **per listing**: a re-award after a
+  withdrawal would otherwise write a second `captured` `expedion` row for one
+  quote. The Expedion client hears the truth — quote → `escalated` with
+  `assigned_carrier_id`/`assigned_at`/`assigned_directly` cleared *together*
+  (leave one and the row falls out of both escalation-KPI buckets), and an SMS
+  saying a replacement is being found rather than that their transport is off.
+  **The back door is closed**: `PATCH /api/shipments/:id/status` accepted
+  `CANCELLED` and reached a path with no reason, no refund and a live listing,
+  from `PICKED_UP` where the cancel endpoint refuses. `IN_TRANSIT` gained a
+  `CANCELLED` edge so the support lane the copy has always promised finally
+  works — it answered `INVALID_STATUS_TRANSITION` to operators. The requester on
+  the escalated inlet cancels at `POST /api/expedion/quotes/:id/cancel`,
+  authorised through `getQuote` (404, never 403). Found on the way past: a job
+  can now carry more than one shipment, so `getByListingId` returns the **live**
+  run instead of an unordered `findFirst` — and both verbs now refuse a shipment
+  that is *not* the one the listing holds (`SHIPMENT_NOT_CURRENT`), because a
+  declined card already left orphaned `PENDING` rows around and stopping one
+  would have refunded a different carrier's award. **A retry finishes the work**
+  rather than answering "already done": the verbs are four writes across four
+  tables and are not one transaction, so a run that flipped to `CANCELLED` and
+  then failed on the listing or the bridge was otherwise unrepairable — every
+  recovery route lands on the same shipment. Also closed: `DELETE
+  /api/listings/:id` would cancel an **awarded** job with no refund and
+  `accepted_offer_id` left set, from a client's own screen and from an admin
+  button; the re-pointed Expedion charge kept the first driver's price, which is
+  what `schedulePayout` reads; a `scheduled` payout survived the refund and went
+  on counting as withdrawable; a re-board could publish a five-minute bidding
+  window the sweep then ate; `compensateFailedAward` slid the client's dates on
+  a declined card with nothing saying so; and an operator cancelling on the
+  quote lane was recorded as the client themselves. 103 tests.
+  `docs/specs/cancellations_spec.md`
+- **The requester sees who already drives their trajet, and reaches them in one
+  tap.** `carrier_routes` gave a driver a way to declare the trip they make, but
+  it faced one way: the board filtered *jobs* by a driver's trajet, and nothing
+  answered the requester's version of the same question. `/listing/[id]` gained a
+  second tab — **Transporteurs disponibles** — listing the approved carriers whose
+  declared trajet covers *this* job, in the right direction, inside its pickup
+  window; **Contacter** opens a thread and posts the opening line. Because the
+  thread carries `listingId` it lands on the thread-offer lane, so a cold contact
+  feeds the reverse auction instead of shadowing it. **This reverses a documented
+  privacy promise, and does it with consent, not silently**: trajets were declared
+  under a dialog reading « Vous seul le voyez », so `is_discoverable` defaults true
+  for new trajets and the migration backfills every existing row to **false** —
+  the pool starts empty and fills as drivers opt in, and the copy was corrected in
+  the same change. What crosses the wire is nine fields, pinned by a DTO test that
+  fails on a tenth: the carrier, their rating, the trajet's two **cities** and its
+  next run days — never an address, a postal code, a coordinate, a vehicle or a
+  **user id**. Contact is addressed by an opaque `matchId`, and the service
+  **re-runs the match** rather than looking it up: that re-run *is* the
+  authorisation, so the endpoint cannot be walked as a carrier directory. No third
+  copy of the corridor maths — `isOnPath` decides geometry and
+  `upcomingOccurrences` the calendar; the SQL is a bounding-box prefilter that may
+  narrow the set and may never decide a match, which it briefly did not (its
+  longitude pad scaled at the job's latitude instead of the trajet's mean, making
+  the box 6% too tight on a Lille → Marseille trajet). Found on the way past:
+  `JobDetail` had **zero** `useTranslations` and was hardcoded English, so it was
+  translated to carry its own tab labels; and a requester who is also a carrier
+  matched their own job, where `findConversation(u, u, listingId)` — a
+  conversation the user is in *twice* — would have posted the opening line into a
+  different carrier's thread. **No Particuliers/Professionnels filter**: every
+  carrier here passes KYC with a `NOT NULL` SIRET and `legal_form` is optional
+  free text, so the two boxes could not partition the set. 107 tests.
+  `docs/specs/carriers_on_route_spec.md`
 
 **Not done**
 - **`EXPEDION_APP_ORIGINS` is set in Vercel Production but not in `.env.local`**,
@@ -472,9 +595,11 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
    **not a cap** — it is the ceiling the platform's margin comes out of.
 3. Lowest price never wins automatically. An **operator** chooses.
 4. Money is **taken when the transport is chosen**, not on delivery — the client
-   pays at booking (`docs/specs/payment_at_booking_spec.md`). Delivery settles
-   only what the driver is owed, and cancelling **refunds** rather than releasing
-   a hold. The payer is `listing.shipperId`, never whoever clicked accept — and
+   pays at booking (`docs/specs/payment_at_booking_spec.md`), and that is when
+   the receipt is raised and emailed (`invoice_at_payment_spec.md`). Delivery
+   settles only what the driver is owed, and cancelling **refunds** rather than
+   releasing a hold — which raises a credit note, because the document was
+   issued before the goods moved. The payer is `listing.shipperId`, never whoever clicked accept — and
    on an escalated job nobody is charged here at all, because that client paid
    in Expedion. `payments.source` records which of the two happened; it is not
    `listings.origin` under another name.
@@ -494,6 +619,16 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
    may start writing `shipments.status`, `shipment_events`, a payment or a
    listing status — the public unauthenticated link is only defensible while
    that holds, and a test asserts it directly.
-11. `.prettierc` is misnamed (missing an `r`), so Prettier never loads it and
+11. **Cancelling and withdrawing are different verbs and must stay different.**
+   The requester ends the job; a transporter only comes off it and the job goes
+   back on the board. Never route a transporter through `cancelJob` — it answers
+   `USE_WITHDRAW_ENDPOINT` on purpose — and never let a re-board skip
+   `reopenForRebid`, whose whole job is re-arming `expires_at` before the
+   15-minute expiry cron eats the job and every bid just restored.
+12. **`shipments.status = 'CANCELLED'` has exactly one writer**, and it is
+   `shipment-cancellation.service.ts`. `updateStatus` refuses the value and the
+   status route no longer accepts it; a driver-side button wired to
+   `PATCH /status` was one line from cancelling with no reason and no refund.
+13. `.prettierc` is misnamed (missing an `r`), so Prettier never loads it and
    falls back to `trailingComma: "all"`. Running Prettier reformats whole files.
    Match surrounding style by hand instead.

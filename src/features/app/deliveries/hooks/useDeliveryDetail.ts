@@ -16,16 +16,15 @@ import type {
   TimelineConfirmation,
   TimelineStep,
 } from "../types";
+import { canCancelAs } from "@/lib/cancellation-policy";
 import { deliveryKeys } from "./useDeliveries";
-
-/** A shipper or carrier may self-cancel until the goods are on a vehicle. */
-const CANCELLABLE = ["PENDING", "ASSIGNED"] as const;
 
 /** The two steps the client is asked to attest. */
 const ATTESTABLE = ["PICKED_UP", "DELIVERED"] as const;
 
 export function useDeliveryDetail(id: string) {
   const t = useTranslations("deliveries");
+  const stop = useTranslations("shipments.stop");
   const { user } = useAuth();
 
   const { data, isLoading, isError, error } = useQuery({
@@ -35,7 +34,7 @@ export function useDeliveryDetail(id: string) {
   });
 
   const delivery: DeliveryDetailView | null =
-    data && user ? toDetailView(data, user.id, t) : null;
+    data && user ? toDetailView(data, user.id, t, stop) : null;
 
   return {
     delivery,
@@ -45,16 +44,28 @@ export function useDeliveryDetail(id: string) {
   };
 }
 
-function roleFor(shipment: ShipmentWithEvents, viewerId: string): DeliveryRole {
+/**
+ * What the viewer is to this shipment.
+ *
+ * `null` for anyone who is not a party — an operator, support, or an admin
+ * looking at somebody else's run. It used to fall through to `"shipper"`, which
+ * showed staff the client's wording and, worse, the client's cancel button.
+ */
+function roleFor(
+  shipment: ShipmentWithEvents,
+  viewerId: string
+): DeliveryRole | null {
   if (shipment.carrierId === viewerId) return "carrier";
   if (shipment.driverId === viewerId) return "driver";
-  return "shipper";
+  if (shipment.shipperId === viewerId) return "shipper";
+  return null;
 }
 
 function toDetailView(
   shipment: ShipmentWithEvents,
   viewerId: string,
-  t: ReturnType<typeof useTranslations>
+  t: ReturnType<typeof useTranslations>,
+  stop: ReturnType<typeof useTranslations>
 ): DeliveryDetailView {
   const role = roleFor(shipment, viewerId);
 
@@ -71,14 +82,24 @@ function toDetailView(
     scheduledDelivery: shipment.scheduledDelivery,
     deliveredAt: shipment.deliveredAt,
     cancellationReason: shipment.cancellationReason,
+    cancelledBySide: shipment.cancelledBySide ?? null,
+    cancellationCategory: shipment.cancellationCategory ?? null,
     carrier: shipment.carrier,
     driver: shipment.driver,
     shipper: shipment.shipper,
-    counterpart: role === "shipper" ? shipment.carrier : shipment.shipper,
-    timeline: toTimeline(shipment, t),
+    // Staff are not a party, so "the other side" is the transporter — the one
+    // an operator actually needs to reach.
+    counterpart:
+      role === "carrier" || role === "driver"
+        ? shipment.shipper
+        : shipment.carrier,
+    timeline: toTimeline(shipment, t, stop),
+    // Asked of the same module the service asks, rather than guessed here.
+    // A transporter reaching this screen — a self-assigned carrier resolves to
+    // `carrier`, and the driver dashboard links straight to it — gets nothing:
+    // their verb is withdraw, and it lives on the driver surface.
     canCancel:
-      role !== "driver" &&
-      (CANCELLABLE as readonly string[]).includes(shipment.status),
+      role === "shipper" && canCancelAs("requester", shipment.status),
   };
 }
 
@@ -89,7 +110,8 @@ function toDetailView(
  */
 function toTimeline(
   shipment: ShipmentWithEvents,
-  t: ReturnType<typeof useTranslations>
+  t: ReturnType<typeof useTranslations>,
+  stop: ReturnType<typeof useTranslations>
 ): TimelineStep[] {
   const events: ShipmentEvent[] = [...shipment.events].sort(
     (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
@@ -110,7 +132,13 @@ function toTimeline(
 
   return events.map((event, index) => ({
     status: event.status,
-    label: t(`events.${event.status}`),
+    // The cancellation step says which side ended the run. Read off the
+    // shipment rather than the event's metadata: the row is the record, and it
+    // is written in the same UPDATE as the status it describes.
+    label:
+      event.status === "CANCELLED" && shipment.cancelledBySide
+        ? stop(`by.${shipment.cancelledBySide}`)
+        : t(`events.${event.status}`),
     date: format(new Date(event.createdAt), "d MMM yyyy HH:mm"),
     note: event.note,
     step:

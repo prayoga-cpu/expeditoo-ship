@@ -459,7 +459,18 @@
         "thisMonth": "Ce mois-ci",
         "lastMonth": "Le mois dernier",
         "thisYear": "Cette année"
-      }
+      },
+      "retry": "Réessayer",
+      "sendByEmail": "Envoyer par e-mail",
+      "emailSent": "Document envoyé à {address}",
+      "creditNote": "Avoir",
+      "errors": {
+        "RATE_LIMITED": "Trop d'envois pour ce document. Réessayez dans un moment.",
+        "INVOICE_EMAIL_FAILED": "L'envoi a échoué. Le document reste téléchargeable.",
+        "INVOICE_NOT_YOURS": "Ce document n'est pas le vôtre.",
+        "generic": "L'envoi a échoué. Réessayez plus tard."
+      },
+      "creditNoteFor": "Avoir sur {number}"
     }
   },
   "settings": {
@@ -649,9 +660,12 @@
       "CANCELLED": "Annulée"
     },
     "cancelFeedback": {
-      "success": "Expédition annulée — le paiement retenu a été libéré",
+      "success": "Transport annulé — votre paiement vous est remboursé",
       "requiresSupport": "La marchandise est déjà en route — contactez le support pour annuler",
-      "failed": "Impossible d'annuler l'expédition"
+      "failed": "Impossible d'annuler l'expédition",
+      "useWithdraw": "Vous ne pouvez pas annuler la demande du client. Désistez-vous depuis l'écran de la course.",
+      "systemAccount": "Ce transport appartient à Expedion — seul un opérateur peut l'annuler",
+      "badCategory": "Ce motif ne correspond pas à votre rôle sur ce transport"
     },
     "confirmation": {
       "confirmedByClient": "Confirmé par le client",
@@ -992,6 +1006,68 @@
       "completed": "Terminée",
       "cancelled": "Annulée",
       "expired": "Expirée"
+    },
+    "detail": {
+      "tab": "Détails",
+      "viaExpedion": "via Expedion",
+      "fragile": "Fragile",
+      "needsHelp": "Aide au chargement",
+      "budget": "Budget {amount}",
+      "load": "Marchandise",
+      "weight": "Poids",
+      "quantity": "Quantité",
+      "dimensions": "Dimensions",
+      "route": "Trajet",
+      "pickup": "Retrait",
+      "dropoff": "Livraison",
+      "flexibleDates": "Les dates sont flexibles — les transporteurs peuvent proposer des horaires en dehors de ces créneaux.",
+      "offers": "Offres",
+      "bidCount": "{count, plural, =0 {Aucune offre pour l'instant.} one {# transporteur a enchéri sur cette demande.} other {# transporteurs ont enchéri sur cette demande.}}",
+      "lowestFrom": "à partir de {amount}",
+      "noOffers": "Aucune offre pour l'instant",
+      "noOffersDesc": "Les transporteurs sont prévenus dès qu'une demande est publiée. Les premières offres arrivent généralement en quelques heures.",
+      "sort": {
+        "priceAsc": "Prix : croissant",
+        "priceDesc": "Prix : décroissant",
+        "ratingDesc": "Mieux notés",
+        "pickupAsc": "Retrait au plus tôt",
+        "createdDesc": "Plus récentes"
+      },
+      "accept": {
+        "awarded": "Transporteur sélectionné",
+        "alreadyAccepted": "Cette offre a déjà été acceptée",
+        "alreadyAwarded": "Une autre offre vient d'être acceptée pour cette demande",
+        "paymentMethodRequired": "Ajoutez un moyen de paiement avant d'accepter une offre",
+        "failed": "Impossible d'accepter cette offre"
+      },
+      "reopened": "Remise en ligne"
+    },
+    "carriers": {
+      "tab": "Transporteurs disponibles",
+      "intro": "Des transporteurs vous contacteront dès qu'ils verront votre demande. En attendant, voici ceux qui font ce trajet prochainement — vous pouvez les contacter dès maintenant.",
+      "reviews": "{count, plural, =0 {(aucun avis)} one {(# avis)} other {(# avis)}}",
+      "detour": "À {km} km de votre trajet",
+      "upcomingRuns": "Prochains trajets",
+      "contact": "Contacter",
+      "contacting": "Envoi…",
+      "loadError": {
+        "title": "Impossible de charger les transporteurs",
+        "description": "La liste n'a pas pu être chargée. Réessayez dans un instant.",
+        "retry": "Réessayer"
+      },
+      "empty": {
+        "title": "Aucun transporteur sur ce trajet pour l'instant",
+        "description": "Aucun transporteur n'a encore déclaré un trajet qui couvre votre demande. Ils peuvent toujours vous faire une offre depuis le tableau des demandes."
+      },
+      "errors": {
+        "matchNotFound": "Ce transporteur ne fait plus ce trajet.",
+        "listingNotOpen": "Cette demande n'est plus ouverte.",
+        "notListingOwner": "Vous n'êtes pas autorisé à contacter les transporteurs pour cette demande.",
+        "rateLimited": "Trop de contacts pour cette demande. Réessayez dans une heure.",
+        "contactFailed": "Impossible de contacter ce transporteur.",
+        "listingNotFound": "Cette demande est introuvable."
+      },
+      "truncated": "{shown} transporteurs affichés sur {total}."
     }
   },
   "driver": {
@@ -1089,14 +1165,20 @@
         "generic": "Une erreur est survenue. Veuillez réessayer.",
         "notInFleet": "Vous n'êtes pas enregistré comme chauffeur de ce transporteur.",
         "pickupPhotoRequired": "Prenez une photo du colis avant de confirmer le retrait.",
-        "deliveryPhotoRequired": "Prenez une photo du colis livré avant de confirmer la livraison."
+        "deliveryPhotoRequired": "Prenez une photo du colis livré avant de confirmer la livraison.",
+        "withdrawAfterPickup": "La marchandise est déjà chargée — contactez le support",
+        "driverCannotWithdraw": "Seul le transporteur titulaire de la course peut se désister",
+        "requiresSupport": "La marchandise est déjà en route — contactez le support"
       },
       "unassignedTitle": "Mission remportée, non démarrée",
       "unassignedDesc": "Cette course est la vôtre. Prenez-la en charge pour débloquer le retrait et la livraison.",
       "startJob": "Démarrer cette mission",
       "startingJob": "Démarrage...",
       "startJobHint": "La course vous sera attribuée. Conduire soi-même est la norme ; un chauffeur de votre flotte pourra la reprendre ensuite.",
-      "jobStarted": "Mission démarrée. Rendez-vous à l'adresse de retrait."
+      "jobStarted": "Mission démarrée. Rendez-vous à l'adresse de retrait.",
+      "withdraw": {
+        "success": "Vous vous êtes désisté — la course repart sur le tableau"
+      }
     },
     "apply": {
       "title": "Devenir chauffeur",
@@ -1127,7 +1209,10 @@
       "review": "Avis",
       "payment": "Paiement",
       "listing": "Annonce",
-      "shipment_assigned": "Livraison assignée"
+      "shipment_assigned": "Livraison assignée",
+      "shipment_cancelled": "Transport annulé",
+      "shipment_withdrawn": "Transporteur désisté",
+      "job_reopened": "Course de nouveau disponible"
     }
   },
   "marketing": {
@@ -1302,7 +1387,8 @@
       "legalNotice": "Mentions légales",
       "privacy": "Politique de confidentialité",
       "copyright": "© 2026 Expeditoo — Groupe Expedion",
-      "sameGroup": "Expedion et Expeditoo appartiennent au même groupe"
+      "sameGroup": "Expedion et Expeditoo appartiennent au même groupe",
+      "changelog": "Journal des versions"
     },
     "actions": {
       "bid": {
@@ -1624,8 +1710,8 @@
         {
           "title": "Paiement",
           "paragraphs": [
-            "Les fonds sont autorisés et bloqués lors de l'attribution de la course. Ils sont débités une fois la livraison confirmée, jamais avant.",
-            "Si une course est annulée avant livraison, l'autorisation est levée. La commission de la plateforme est prélevée à la source, et le solde est versé au transporteur.",
+            "Le paiement est prélevé lorsque le transport est confirmé et attribué, avant la livraison. Un reçu vous est adressé par e-mail à ce moment-là.",
+            "Si une course est annulée avant livraison, le montant est remboursé et un avoir vous est adressé. La commission de la plateforme est prélevée à la source, et le solde est versé au transporteur.",
             "Le payeur est le client qui a commandé la course dans Expedion. Rien ici ne crée d'obligation de paiement personnelle à la charge d'un opérateur."
           ]
         },
@@ -1761,6 +1847,18 @@
           ]
         }
       ]
+    },
+    "changelog": {
+      "eyebrow": "JOURNAL DES VERSIONS",
+      "title": "Ce qui a changé",
+      "intro": "Toutes les versions mises en ligne sur la plateforme, de la plus récente à la plus ancienne. Écrit pour celles et ceux qui l’utilisent — transporteurs, opérateurs et clients — pas pour celles et ceux qui l’ont construite.",
+      "empty": "Aucune version enregistrée pour le moment.",
+      "tags": {
+        "feat": "NOUVEAU",
+        "fix": "CORRIGÉ",
+        "ux": "AMÉLIORÉ",
+        "infra": "TECHNIQUE"
+      }
     }
   },
   "help": {
@@ -1786,7 +1884,7 @@
       },
       "q3": {
         "question": "Puis-je annuler un envoi ?",
-        "answer": "Vous pouvez annuler une demande d'envoi tant qu'elle n'a pas été récupérée par un chauffeur. Allez sur la page de détails de l'envoi et cherchez l'option \"Annuler\". Des frais d'annulation peuvent s'appliquer si un chauffeur a déjà été assigné."
+        "answer": "Oui, tant que la marchandise n'a pas été chargée. Ouvrez la page de la livraison et choisissez « Annuler le transport » : votre paiement vous est intégralement remboursé, sans frais d'annulation. Une fois la marchandise récupérée, l'annulation passe par notre support. Si c'est votre transporteur qui se désiste, votre transport n'est pas annulé : la course repart auprès d'autres transporteurs et vous êtes prévenu."
       },
       "q4": {
         "question": "Comment contacter un vendeur ?",
@@ -2552,6 +2650,44 @@
       "cancel": "Annuler",
       "assigning": "Attribution...",
       "acceptAssign": "Accepter et assigner"
+    },
+    "stop": {
+      "categoryLabel": "Motif",
+      "reasonLabel": "Précisions",
+      "keep": "Revenir",
+      "submitting": "Envoi…",
+      "requester": {
+        "trigger": "Annuler le transport",
+        "title": "Annuler ce transport ?",
+        "description": "Le transport est annulé et votre paiement vous est remboursé. Les transporteurs en lice en sont informés. Cette action est définitive.",
+        "reasonPlaceholder": "Expliquez pourquoi vous n'avez plus besoin de ce transport…",
+        "confirm": "Confirmer l'annulation"
+      },
+      "transporter": {
+        "trigger": "Je ne peux pas assurer ce transport",
+        "title": "Vous désister de cette course ?",
+        "description": "La course repart sur le tableau et un autre transporteur pourra la prendre. Le transport du client n'est pas annulé. Votre offre est retirée.",
+        "reasonPlaceholder": "Expliquez ce qui vous empêche d'assurer cette course…",
+        "confirm": "Me désister"
+      },
+      "by": {
+        "requester": "Annulée par le client",
+        "transporter": "Annulée par le transporteur",
+        "operator": "Annulée par Expeditoo"
+      },
+      "categories": {
+        "vehicle_breakdown": "Véhicule en panne",
+        "driver_unavailable": "Chauffeur indisponible",
+        "cargo_mismatch": "Marchandise non conforme à l'annonce",
+        "access_impossible": "Accès au retrait impossible",
+        "no_longer_needed": "Transport plus nécessaire",
+        "date_changed": "Les dates ont changé",
+        "arranged_elsewhere": "Transport organisé autrement",
+        "no_driver_found": "Aucun transporteur trouvé",
+        "fraud_or_abuse": "Fraude ou abus",
+        "support_resolution": "Décision du support",
+        "other": "Autre"
+      }
     }
   },
   "carrier": {
@@ -2755,9 +2891,11 @@
       "edit": "Modifier",
       "delete": "Supprimer",
       "paused": "En pause",
+      "discoverable": "Trouvable",
+      "notDiscoverable": "Privé",
       "toggleActive": "Activer ce trajet",
       "seeMatching": "Voir les courses correspondantes",
-      "radiusLabel": "Dans un rayon de {km} km autour du départ",
+      "radiusLabel": "Jusqu'à {km} km de part et d'autre du trajet",
       "tabs": {
         "planned": "Prévus",
         "completed": "Effectués"
@@ -2806,7 +2944,7 @@
       "form": {
         "createTitle": "Nouveau trajet",
         "editTitle": "Modifier le trajet",
-        "description": "Où vous allez, à quelle fréquence, et ce que vous pouvez charger. Vous seul le voyez.",
+        "description": "Où vous allez, à quelle fréquence, et ce que vous pouvez charger. Vous choisissez plus bas qui peut le voir.",
         "label": "Nom",
         "labelPlaceholder": "Retour Bordeaux–Paris",
         "kind": "Fréquence",
@@ -2821,7 +2959,7 @@
         "addDate": "Ajouter",
         "removeDate": "Retirer cette date",
         "radius": "Rayon de recherche",
-        "radiusHint": "Les courses sont rapprochées du point de départ.",
+        "radiusHint": "Une course est retenue si son départ et son arrivée se situent tous deux à moins de cette distance de votre trajet.",
         "vehicle": "Véhicule",
         "vehiclePlaceholder": "Choisir un véhicule",
         "noVehicle": "Aucun véhicule précis",
@@ -2829,6 +2967,8 @@
         "capacityPlaceholder": "ex. 800",
         "notify": "M'alerter des courses correspondantes",
         "notifyHint": "Bientôt disponible — la préférence est déjà enregistrée.",
+        "discoverableLabel": "Être trouvable sur ce trajet",
+        "discoverableHint": "Les personnes dont la course se fait le long de ce trajet, et les opérateurs de la plateforme, voient que vous passez par là et peuvent vous contacter. Ils ne voient jamais votre adresse : seulement les deux villes et les prochaines dates.",
         "cancel": "Annuler",
         "create": "Ajouter le trajet",
         "save": "Enregistrer"

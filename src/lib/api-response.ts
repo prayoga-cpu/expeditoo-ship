@@ -7,6 +7,7 @@ import { PaymentError } from "@/server/services/payments.service";
 import { ConfirmationError } from "@/server/services/shipment-confirmations.service";
 import { CarrierError } from "@/server/services/carrier.service";
 import { CarrierRouteError } from "@/server/services/carrier-routes.service";
+import { CarrierDiscoveryError } from "@/server/services/carrier-discovery.service";
 import { EarningsError } from "@/server/services/earnings.service";
 import { WithdrawalError } from "@/server/services/withdrawals.service";
 import { InvoiceError } from "@/server/services/invoices.service";
@@ -50,6 +51,7 @@ export function handleError(error: unknown, context: string) {
     error instanceof ConfirmationError ||
     error instanceof CarrierError ||
     error instanceof CarrierRouteError ||
+    error instanceof CarrierDiscoveryError ||
     error instanceof EarningsError ||
     error instanceof WithdrawalError ||
     error instanceof InvoiceError ||

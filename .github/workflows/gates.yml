@@ -1,0 +1,59 @@
+name: Gates
+
+# The four checks AGENTS.md §8 says a session is not finished without, run where
+# forgetting them is caught rather than discovered later.
+#
+# Nothing enforced these before: the Vercel build is a plain `next build` with
+# `typescript.ignoreBuildErrors: true` in next.config.mjs, so a type error, a
+# failing test and a forgotten changelog entry all shipped identically — green.
+#
+# `changelog:check` is the cheapest and the most easily forgotten, so it runs
+# first: a release whose version disagrees across CHANGELOG.md, STATUS.md,
+# package.json and src/lib/version.ts is a broken release history, and the
+# public /changelog page renders it without complaint.
+#
+# No database, no secrets. Every check here is static — the migration gate lives
+# in migrate.yml, which is a deliberate `workflow_dispatch`.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: gates-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Ordered cheapest-first so an obvious miss fails in seconds.
+      - name: Release records agree (AGENTS.md §8)
+        run: pnpm changelog:check
+
+      - name: Typecheck
+        # The real gate: next.config.mjs sets ignoreBuildErrors, so a production
+        # build will happily ship code that does not typecheck.
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Unit tests
+        run: pnpm test

@@ -17,8 +17,14 @@ import { carriers, vehicles } from "./carriers";
 // Enums
 // ========================================
 // A trip is a route the carrier already drives, declared so the job board can
-// be filtered down to it (carrier_trips_spec.md §1). It is private to the
-// carrier: not an offer, not a commitment, and no operator sees it.
+// be filtered down to it (carrier_trips_spec.md §1). It is not an offer and not
+// a commitment.
+//
+// It is private to the carrier *unless* they set `isDiscoverable`, in which case
+// the people posting jobs it covers may see that the carrier passes by, and
+// contact them (carriers_on_route_spec.md §4). Even then the disclosure is the
+// carrier plus the trajet's two cities — never an address, a postal code or a
+// coordinate.
 
 export const carrierRouteKindEnum = pgEnum("carrier_route_kind", [
   "recurring",
@@ -56,7 +62,10 @@ export const carrierRoutes = pgTable(
     destinationLat: doublePrecision("destination_lat").notNull(),
     destinationLng: doublePrecision("destination_lng").notNull(),
 
-    // How far off the origin the carrier will still take a job.
+    // How far off this trajet the carrier will still take a job: the corridor's
+    // half-width, applied to both of a job's endpoints. The board has read it
+    // that way since it gained a two-endpoint predicate
+    // (board_route_search_spec.md §4), and so does the reverse match.
     radiusKm: integer("radius_km").default(50).notNull(),
 
     // ---- When: recurring ----
@@ -77,6 +86,14 @@ export const carrierRoutes = pgTable(
     notifyOnMatch: boolean("notify_on_match").default(true).notNull(),
     isActive: boolean("is_active").default(true).notNull(),
 
+    // Consent to be found by the requester whose job runs along this trajet.
+    // Distinct from `isActive`, which pauses the carrier's own saved query, and
+    // from `notifyOnMatch`, which is about alerting the carrier rather than
+    // publishing them. New trajets opt in; the rows that predate the column were
+    // declared under a dialog promising « Vous seul le voyez » and were backfilled
+    // out (carriers_on_route_spec.md §4.2).
+    isDiscoverable: boolean("is_discoverable").default(true).notNull(),
+
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
@@ -86,6 +103,10 @@ export const carrierRoutes = pgTable(
   (table) => [
     index("carrier_route_carrier_idx").on(table.carrierId),
     index("carrier_route_active_idx").on(table.isActive),
+    index("carrier_route_discoverable_idx").on(
+      table.isDiscoverable,
+      table.isActive
+    ),
   ]
 );
 

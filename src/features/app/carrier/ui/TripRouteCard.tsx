@@ -3,7 +3,16 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { format } from "date-fns";
-import { ArrowRight, MapPin, Pencil, Search, Trash2, Truck } from "lucide-react";
+import {
+  ArrowRight,
+  Eye,
+  EyeOff,
+  MapPin,
+  Pencil,
+  Search,
+  Trash2,
+  Truck,
+} from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +55,22 @@ export function TripRouteCard({
               <Badge variant="outline">{t(`kinds.${route.kind}`)}</Badge>
               {!route.isActive && (
                 <Badge variant="secondary">{t("paused")}</Badge>
+              )}
+              {/* Consent is set in the dialog, so without a badge the only way
+                  to answer "who can see this trajet?" is to open every one. */}
+              {route.isDiscoverable ? (
+                <Badge variant="secondary" className="gap-1">
+                  <Eye className="h-3 w-3" />
+                  {t("discoverable")}
+                </Badge>
+              ) : (
+                <Badge
+                  variant="outline"
+                  className="gap-1 text-muted-foreground"
+                >
+                  <EyeOff className="h-3 w-3" />
+                  {t("notDiscoverable")}
+                </Badge>
               )}
             </div>
             <p className="text-sm text-muted-foreground">

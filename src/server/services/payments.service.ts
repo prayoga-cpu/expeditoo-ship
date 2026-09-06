@@ -1,7 +1,12 @@
 import { nanoid } from "nanoid";
 import { db } from "@/db";
-import { eq } from "drizzle-orm";
-import { payments, payouts, type PaymentSource } from "@/db/schema/payments";
+import { and, desc, eq } from "drizzle-orm";
+import {
+  payments,
+  payouts,
+  type Payment,
+  type PaymentSource,
+} from "@/db/schema/payments";
 import { user } from "@/db/schema/users";
 import { stripe } from "@/lib/stripe";
 import {
@@ -10,6 +15,7 @@ import {
   isMockPaymentsEnabled,
 } from "@/lib/stripe/mock-payments";
 import { carriersDal } from "@/server/dal/carriers.dal";
+import { invoicesService } from "@/server/services/invoices.service";
 
 // ========================================
 // Errors
@@ -114,6 +120,32 @@ async function markFailed(rowId: string, reason: string, intentId?: string) {
  * off `captured` without learning that some captures are not captures.
  */
 async function recordExternalCharge(params: ChargeParams) {
+  // Idempotent per *listing*, not per shipment. Award → withdraw → re-award
+  // mints a fresh shipment each time, and the Expedion client paid once, for
+  // the quote. A per-shipment key would write a second `captured` row for that
+  // one payment and inflate recorded revenue by the price of the job, so the
+  // existing row is re-pointed at the replacement shipment instead
+  // (cancellations_spec.md §6.4).
+  const existing = await findJobPayment(params.listingId);
+  if (existing?.status === "captured" && existing.source === "expedion") {
+    // The whole agreed row moves, not just the pointer. The replacement driver
+    // bid their own price, and `schedulePayout` reads `amountCents` and
+    // `commissionCents` off this row to decide what they are owed — leaving the
+    // first driver's numbers behind pays the second one the wrong amount, in
+    // whichever direction the two bids happen to differ.
+    const [moved] = await db
+      .update(payments)
+      .set({
+        shipmentId: params.shipmentId,
+        amountCents: params.amountCents,
+        commissionCents: commissionFor(params.amountCents),
+        transferGroup: `shipment_${params.shipmentId}`,
+      })
+      .where(eq(payments.id, existing.id))
+      .returning();
+    return moved;
+  }
+
   const [row] = await db
     .insert(payments)
     .values({
@@ -146,6 +178,58 @@ async function mockChargeForShipment(params: ChargeParams) {
     .returning();
 
   return row;
+}
+
+/**
+ * The money taken for a job, whichever shipment it happens to be attached to.
+ *
+ * A listing can carry more than one `payments` row over its life — a declined
+ * attempt, then a charge, then a refund after a withdrawal — and
+ * `payments.shipment_id` has no unique index behind it, so an unordered
+ * `findFirst` on this table is nondeterministic. The captured row is the one
+ * that matters; failing that, the most recent, so a caller asking about a job
+ * that was never successfully charged still gets told what happened rather
+ * than `null`.
+ */
+async function findJobPayment(listingId: string): Promise<Payment | null> {
+  const rows = await db.query.payments.findMany({
+    where: eq(payments.listingId, listingId),
+    orderBy: [desc(payments.createdAt)],
+  });
+
+  return rows.find((row) => row.status === "captured") ?? rows[0] ?? null;
+}
+
+/**
+ * Everything that must happen once money has actually been taken.
+ *
+ * The client is charged when the transport is chosen, so this — not delivery —
+ * is when they are owed a document. It used to be raised from `settleDelivery`,
+ * which is days later and only if the job completed at all
+ * (docs/specs/invoice_at_payment_spec.md §1).
+ *
+ * Two rules live here rather than in the invoicing service, because both are
+ * statements about *money* and this is the module that knows about money:
+ *
+ *  - Only a `stripe` charge is documented. An escalated job's client was
+ *    debited in Expedion, into Expedion's Stripe account, against a listing
+ *    owned by a system account nobody signs into. An Expeditoo invoice for that
+ *    payment would assert a charge this company never made — and could never be
+ *    corrected, because `refundForJob` refuses that money outright (§3).
+ *  - It never throws. A paperwork failure must not un-award a job whose client
+ *    has already been debited; the document can be re-raised, the charge cannot
+ *    be un-taken.
+ */
+async function afterCapture(payment: Payment): Promise<Payment> {
+  if (payment.source !== "stripe") return payment;
+
+  try {
+    await invoicesService.createFromPayment(payment.id);
+  } catch (error) {
+    console.error(`Invoice creation failed for payment ${payment.id}`, error);
+  }
+
+  return payment;
 }
 
 // ========================================
@@ -181,13 +265,13 @@ export const paymentsService = {
     // system account nobody signs into and no card belongs to, so any branch
     // that reaches the `stripeCustomerId` guard below would fail every time.
     if (params.source === "expedion") {
-      return await recordExternalCharge(params);
+      return await afterCapture(await recordExternalCharge(params));
     }
 
     // TODO(EXPEDITOO-TESTING): MOCK_PAYMENTS — replace with a real off-session charge against the card saved at posting (see docs/TESTING_MOCKS.md).
     // Before the customer check on purpose: a test shipper has no saved card.
     if (isMockPaymentsEnabled()) {
-      return await mockChargeForShipment(params);
+      return await afterCapture(await mockChargeForShipment(params));
     }
 
     if (!params.stripeCustomerId) {
@@ -242,7 +326,7 @@ export const paymentsService = {
         .where(eq(payments.id, row.id))
         .returning();
 
-      return captured;
+      return await afterCapture(captured);
     } catch (cause) {
       // The branch above already marked the row and is only passing through.
       if (cause instanceof PaymentError) throw cause;
@@ -270,18 +354,31 @@ export const paymentsService = {
   },
 
   /**
-   * Gives the money back when an awarded job is cancelled or un-awarded.
+   * Gives the money back when a job is cancelled or a transporter withdraws.
    *
    * This replaced `releaseForShipment`: there is no longer a hold to let go of,
    * because the client was charged the moment the transport was chosen.
+   *
+   * Keyed on the **listing**, not the shipment. A withdrawal kills the shipment
+   * and puts the job back on the board, so a refund keyed on the dead shipment
+   * would walk straight past money that is still the client's — and every award
+   * mints a fresh shipment, so the listing is the only stable handle on "the
+   * money taken for this job" (cancellations_spec.md §6.1).
    */
-  async refundForShipment(shipmentId: string) {
-    const payment = await db.query.payments.findFirst({
-      where: eq(payments.shipmentId, shipmentId),
-    });
+  async refundForJob(listingId: string) {
+    const payment = await findJobPayment(listingId);
 
     if (!payment) return null;
-    if (payment.status === "refunded") return payment;
+    // Already given back — but the correction may not have been written, since
+    // `markRefunded` contains its own failure rather than rolling the refund
+    // back. Retrying it here is the avoir's backstop, the same role
+    // `settleDelivery` plays for the invoice; it is idempotent on the document.
+    if (payment.status === "refunded") {
+      await invoicesService
+        .createCreditNoteForPayment(payment.id)
+        .catch((e) => console.error(`Credit note retry failed`, e));
+      return payment;
+    }
 
     // Expedion took this money, into Expedion's own Stripe account. There is
     // nothing here to give back, and refunding the client is that app's to do —
@@ -307,13 +404,95 @@ export const paymentsService = {
       });
     }
 
+    return await this.markRefunded(payment.id);
+  },
+
+  /**
+   * Voids a payout whose money has just gone back to the client.
+   *
+   * The payout is written by the Stripe webhook at **capture**, and capture is
+   * award time since payment-at-booking — so a job cancelled before anyone
+   * drives anywhere can already carry a `scheduled` payout, and
+   * `withdrawalsDal.availableFor` counts exactly that status as money the
+   * driver may ask for. `cancelled` is a value `payout_status` already had and
+   * nothing wrote (cancellations_spec.md §6.6).
+   *
+   * Contained like the refund itself: a cancellation must not fail on this.
+   */
+  async cancelPayoutForShipment(shipmentId: string) {
+    const [row] = await db
+      .update(payouts)
+      .set({ status: "cancelled" })
+      .where(
+        and(
+          eq(payouts.shipmentId, shipmentId),
+          eq(payouts.status, "scheduled")
+        )
+      )
+      .returning();
+
+    return row ?? null;
+  },
+
+  /**
+   * The only transition into `refunded`, and where the correction is raised.
+   *
+   * Both refund writers go through it — this service and
+   * `refundService.processRefund`, which is exposed at `POST /api/admin/refunds`
+   * and previously wrote the row itself. Wiring the credit note to one of them
+   * would leave the other giving money back with a paid invoice still standing
+   * (docs/specs/invoice_at_payment_spec.md §5).
+   */
+  async markRefunded(paymentId: string) {
     const [refunded] = await db
       .update(payments)
       .set({ status: "refunded", refundedAt: new Date() })
+      .where(eq(payments.id, paymentId))
+      .returning();
+
+    if (!refunded) throw err("PAYMENT_NOT_FOUND", 404);
+
+    // An issued, numbered, emailed document is corrected by a second document,
+    // never by mutating the first. Contained like the issue itself: the money
+    // is back either way.
+    try {
+      await invoicesService.createCreditNoteForPayment(refunded.id);
+    } catch (error) {
+      console.error(`Credit note failed for payment ${refunded.id}`, error);
+    }
+
+    return refunded;
+  },
+
+  /**
+   * Settles a payment Stripe has told us succeeded out of band.
+   *
+   * The webhook used to write `captured` itself, with no `capturedAt` and no
+   * status predicate. Both mattered: `chargeForShipment` stamps the intent id
+   * onto a *failed* row when the intent comes back non-succeeded, so a later
+   * `payment_intent.succeeded` settled a job outside every service and raised
+   * no document; and with no predicate, a retry arriving after a refund turned
+   * the refunded row back into a captured one.
+   */
+  async captureByIntent(intentId: string) {
+    const payment = await db.query.payments.findFirst({
+      where: eq(payments.stripePaymentIntentId, intentId),
+    });
+
+    if (!payment) return null;
+    // Already settled, or settled and since given back. Either way this event
+    // is old news, and re-running it would double the paperwork.
+    if (payment.status !== "pending" && payment.status !== "failed") {
+      return payment;
+    }
+
+    const [captured] = await db
+      .update(payments)
+      .set({ status: "captured", capturedAt: new Date(), failureReason: null })
       .where(eq(payments.id, payment.id))
       .returning();
 
-    return refunded;
+    return await afterCapture(captured);
   },
 
   /**
