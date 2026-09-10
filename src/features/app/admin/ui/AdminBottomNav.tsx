@@ -13,6 +13,7 @@ import {
   Headset,
   Car,
   UsersRound,
+  MessageSquarePlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
@@ -89,6 +90,12 @@ export function AdminBottomNav() {
       label: t("payments"),
       icon: <DollarSign className="w-5 h-5" />,
       badge: "payments",
+    },
+    {
+      href: "/admin/feedback",
+      label: t("feedback"),
+      icon: <MessageSquarePlus className="w-5 h-5" />,
+      badge: "feedback",
     },
     {
       href: "/admin/support",

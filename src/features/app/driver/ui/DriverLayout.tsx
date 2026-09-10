@@ -1,6 +1,7 @@
 "use client";
 
 import { NotificationBell } from "@/components/NotificationBell";
+import { FeedbackLauncher } from "@/features/app/feedback/ui";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -118,6 +119,7 @@ export function DriverLayout({ children }: DriverLayoutProps) {
                   {tCommon("buttons.back")}
                 </Button>
               </Link>
+              <FeedbackLauncher />
               <NotificationBell />
             </div>
           </div>

@@ -8,6 +8,7 @@ import { LangToggle } from "../ui/lang-toggle";
 import { AppVersionLink } from "../ui/app-version";
 import { AppSidebarHeader } from "./AppSidebarHeader";
 import { HeaderQuickActions } from "./HeaderQuickActions";
+import { FeedbackLauncher } from "@/features/app/feedback/ui";
 import { BrandWordmark } from "@/components/ui/brand-mark";
 
 import Link from "next/link";
@@ -205,15 +206,17 @@ function Header() {
         </div>
 
         {/* Right Actions */}
-        {/* A driver's two verbs first — post a request, see the board — then
-            the utility controls: language, theme, bell. That trio keeps its
-            order and its adjacency because the same FR | EN control sits in
-            the landing header and in the Expedion app, so someone crossing
-            between the three surfaces finds it in the same place; the driver
-            actions arrive to the left of it, behind a rule, rather than
-            splitting it up. */}
+        {/* The session's verbs first — post a request, and, for an approved
+            driver, see the board — then the utility controls: language, theme,
+            bell. That trio keeps its order and its adjacency because the same
+            FR | EN control sits in the landing header and in the Expedion app,
+            so someone crossing between the three surfaces finds it in the same
+            place; the verbs arrive to the left of it, behind a rule, rather
+            than splitting it up. How many of them there are is
+            `HeaderQuickActions`' business, not this file's. */}
         <div className="flex items-center gap-1 min-w-0 ml-auto">
           <HeaderQuickActions />
+          <FeedbackLauncher />
           <LangToggle className="mr-1" />
           <ThemeToggle />
           <NotificationBell />

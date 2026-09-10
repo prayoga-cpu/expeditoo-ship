@@ -15,3 +15,4 @@ export * from "./expedion";
 export * from "./carrier-routes";
 export * from "./withdrawals";
 export * from "./thread-offers";
+export * from "./feedback";

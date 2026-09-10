@@ -16,6 +16,8 @@ import { AdminError } from "@/server/services/admin.service";
 import { ContactError } from "@/server/services/contact.service";
 import { ExpedionClientError } from "@/server/services/expedion-clients.service";
 import { ThreadOfferError } from "@/server/services/thread-offers.service";
+import { StripeConnectError } from "@/server/services/stripe.service";
+import { FeedbackError } from "@/server/services/feedback.service";
 
 /**
  * Shared response shape for the REST layer.
@@ -59,7 +61,12 @@ export function handleError(error: unknown, context: string) {
     error instanceof AdminError ||
     error instanceof ContactError ||
     error instanceof ExpedionClientError ||
-    error instanceof ThreadOfferError
+    error instanceof ThreadOfferError ||
+    // Stripe refusing a request is a 4xx of Stripe's, not this server falling
+    // over: untranslated, the payout onboarding call answered 500 and the
+    // button had nothing to say.
+    error instanceof StripeConnectError ||
+    error instanceof FeedbackError
   ) {
     return fail(error.code, error.message, error.status);
   }

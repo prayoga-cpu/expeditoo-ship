@@ -48,7 +48,8 @@
       "myRequests": "Mes demandes",
       "myTrips": "Mes trajets",
       "myEarnings": "Mes gains",
-      "language": "Langue"
+      "language": "Langue",
+      "feedback": "Envoyer un retour"
     },
     "categories": {
       "electronics": "Électronique",
@@ -249,7 +250,8 @@
       "driverSupport": "Support Chauffeur",
       "driverDashboard": "Tableau de bord chauffeur",
       "becomeDriver": "Devenir chauffeur",
-      "myInvoices": "Mes factures"
+      "myInvoices": "Mes factures",
+      "sendFeedback": "Envoyer un retour"
     },
     "myAuctions": {
       "title": "Mes enchères",
@@ -378,7 +380,12 @@
       },
       "button": {
         "continue": "Continuer la configuration",
-        "connect": "Connecter le compte de virement"
+        "connect": "Connecter le compte de virement",
+        "loading": "Ouverture de Stripe…"
+      },
+      "error": {
+        "rejected": "Stripe a refusé la création du compte de virement. Le problème vient de chez nous, pas de vous — réessayez plus tard ou contactez le support.",
+        "generic": "Impossible de démarrer la configuration des virements. Veuillez réessayer."
       }
     },
     "picture": {
@@ -1920,7 +1927,8 @@
       "applications": "Dossiers chauffeurs",
       "withdrawals": "Retraits",
       "expedionClients": "Clients Expedion",
-      "incidents": "Incidents"
+      "incidents": "Incidents",
+      "feedback": "Retours"
     },
     "table": {
       "rowsSelected": "{count} sur {total} ligne(s) sélectionnée(s)",
@@ -3340,6 +3348,129 @@
       "emptyTitle": "Rien à traiter",
       "emptyDescription": "Aucun incident dans cet état.",
       "error": "Impossible de charger la file. Actualisez pour réessayer."
+    }
+  },
+  "feedback": {
+    "trigger": {
+      "label": "Envoyer un retour"
+    },
+    "dialog": {
+      "title": "Votre retour",
+      "description": "Signalez un bug ou proposez une idée — nous lisons tout."
+    },
+    "tabs": {
+      "new": "Nouveau retour",
+      "history": "Mes retours"
+    },
+    "types": {
+      "bug": "Un bug",
+      "idea": "Une idée",
+      "general": "Un commentaire"
+    },
+    "roles": {
+      "user": "Utilisateur",
+      "shipper": "Expéditeur",
+      "carrier": "Chauffeur",
+      "driver": "Chauffeur",
+      "operator": "Opérateur",
+      "support": "Support",
+      "finance": "Finance",
+      "admin": "Admin"
+    },
+    "surfaces": {
+      "home": "Accueil",
+      "board": "Missions ouvertes",
+      "create": "Demander un transport",
+      "myRequests": "Mes demandes",
+      "jobDetail": "Détail d'une mission",
+      "deliveries": "Suivi des livraisons",
+      "messages": "Messages",
+      "trips": "Mes trajets",
+      "earnings": "Mes gains",
+      "application": "Mon dossier",
+      "profile": "Profil",
+      "driver": "Espace chauffeur",
+      "admin": "Back-office",
+      "other": "Autre"
+    },
+    "statuses": {
+      "OPEN": "Ouvert",
+      "IN_PROGRESS": "En cours",
+      "NEEDS_REVIEW": "À revoir",
+      "RESOLVED": "Résolu",
+      "ARCHIVED": "Archivé"
+    },
+    "priorities": {
+      "urgent": "Urgente",
+      "high": "Haute",
+      "medium": "Moyenne",
+      "low": "Basse"
+    },
+    "fields": {
+      "type": "De quoi s'agit-il ?",
+      "surface": "Où ?",
+      "description": "Décrivez votre retour",
+      "descriptionPlaceholder": "Que s'est-il passé, et à quoi vous attendiez-vous ?",
+      "descriptionHint": "Au moins {min} caractères.",
+      "screenshots": "Captures d'écran (facultatif)",
+      "screenshotsHint": "Jusqu'à {max} images.",
+      "removeScreenshot": "Retirer la capture",
+      "addScreenshot": "Ajouter une capture"
+    },
+    "actions": {
+      "submit": "Envoyer",
+      "submitting": "Envoi…",
+      "cancel": "Annuler",
+      "done": "Terminé",
+      "retry": "Réessayer"
+    },
+    "success": {
+      "title": "Merci !",
+      "message": "Votre retour est bien arrivé. Nous le lisons rapidement.",
+      "reference": "Référence : #{ref}"
+    },
+    "toast": {
+      "sent": "Retour envoyé. Merci !",
+      "failed": "Le retour n'a pas pu être envoyé. Réessayez.",
+      "rateLimited": "Vous envoyez trop de retours d'affilée. Réessayez dans quelques minutes.",
+      "uploadFailed": "Cette image n'a pas pu être envoyée.",
+      "triaged": "Retour mis à jour.",
+      "noteSaved": "Note interne enregistrée."
+    },
+    "history": {
+      "emptyTitle": "Aucun retour pour l'instant",
+      "emptyDescription": "Ce que vous nous enverrez apparaîtra ici, avec son statut.",
+      "error": "Vos retours n'ont pas pu être chargés. Réessayez.",
+      "reference": "Réf.",
+      "sentOn": "Envoyé le {date}"
+    },
+    "console": {
+      "title": "Retours",
+      "subtitle": "Ce que les utilisateurs nous disent, et ce que nous en avons fait.",
+      "search": "Rechercher un retour…",
+      "allTypes": "Tous les types",
+      "allPriorities": "Toutes les priorités",
+      "clearFilters": "Effacer les filtres",
+      "showMore": "Voir plus",
+      "showLess": "Voir moins",
+      "copyReference": "Copier la référence",
+      "referenceCopied": "Référence copiée.",
+      "reportedBy": "Envoyé par {name} ({role})",
+      "deletedAccount": "compte supprimé",
+      "viewScreenshot": "Voir la capture",
+      "devNote": "Note interne",
+      "addDevNote": "Ajouter une note interne",
+      "devNotePlaceholder": "Visible uniquement par l'équipe.",
+      "saveNote": "Enregistrer",
+      "cancelNote": "Annuler",
+      "emptyTitle": "Aucun retour",
+      "emptyDescription": "Personne n'a encore écrit. C'est bon signe.",
+      "filteredEmptyTitle": "Aucun retour ne correspond",
+      "filteredEmptyDescription": "Changez ou effacez les filtres.",
+      "error": "Les retours n'ont pas pu être chargés. Actualisez pour réessayer.",
+      "previous": "Précédent",
+      "next": "Suivant",
+      "showing": "{shown} sur {total} retours"
     }
   }
 }

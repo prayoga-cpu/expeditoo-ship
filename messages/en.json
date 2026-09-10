@@ -48,7 +48,8 @@
       "myRequests": "My requests",
       "myTrips": "My trips",
       "myEarnings": "My earnings",
-      "language": "Language"
+      "language": "Language",
+      "feedback": "Send feedback"
     },
     "categories": {
       "electronics": "Electronics",
@@ -249,7 +250,8 @@
       "driverSupport": "Driver Support",
       "driverDashboard": "Driver Dashboard",
       "becomeDriver": "Become a Driver",
-      "myInvoices": "My invoices"
+      "myInvoices": "My invoices",
+      "sendFeedback": "Send feedback"
     },
     "myAuctions": {
       "title": "My Auctions",
@@ -378,7 +380,12 @@
       },
       "button": {
         "continue": "Continue Setup",
-        "connect": "Connect Payout Account"
+        "connect": "Connect Payout Account",
+        "loading": "Opening Stripe…"
+      },
+      "error": {
+        "rejected": "Stripe refused to open the payout account. This is on our side, not yours — please try again later or contact support.",
+        "generic": "Payout setup could not be started. Please try again."
       }
     },
     "picture": {
@@ -1920,7 +1927,8 @@
       "applications": "Driver applications",
       "withdrawals": "Withdrawals",
       "expedionClients": "Expedion clients",
-      "incidents": "Incidents"
+      "incidents": "Incidents",
+      "feedback": "Feedback"
     },
     "table": {
       "total": "total",
@@ -3340,6 +3348,129 @@
       "emptyTitle": "Nothing to deal with",
       "emptyDescription": "No incidents in this state.",
       "error": "The queue could not be loaded. Refresh to try again."
+    }
+  },
+  "feedback": {
+    "trigger": {
+      "label": "Send feedback"
+    },
+    "dialog": {
+      "title": "Your feedback",
+      "description": "Report a bug or share an idea — we read every message."
+    },
+    "tabs": {
+      "new": "New feedback",
+      "history": "My feedback"
+    },
+    "types": {
+      "bug": "A bug",
+      "idea": "An idea",
+      "general": "A comment"
+    },
+    "roles": {
+      "user": "User",
+      "shipper": "Shipper",
+      "carrier": "Driver",
+      "driver": "Driver",
+      "operator": "Operator",
+      "support": "Support",
+      "finance": "Finance",
+      "admin": "Admin"
+    },
+    "surfaces": {
+      "home": "Home",
+      "board": "Open jobs",
+      "create": "Request transport",
+      "myRequests": "My requests",
+      "jobDetail": "Job detail",
+      "deliveries": "Shipment tracking",
+      "messages": "Messages",
+      "trips": "My trips",
+      "earnings": "My earnings",
+      "application": "My application",
+      "profile": "Profile",
+      "driver": "Driver area",
+      "admin": "Back office",
+      "other": "Other"
+    },
+    "statuses": {
+      "OPEN": "Open",
+      "IN_PROGRESS": "In progress",
+      "NEEDS_REVIEW": "Needs review",
+      "RESOLVED": "Resolved",
+      "ARCHIVED": "Archived"
+    },
+    "priorities": {
+      "urgent": "Urgent",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "fields": {
+      "type": "What is this about?",
+      "surface": "Where?",
+      "description": "Describe your feedback",
+      "descriptionPlaceholder": "What happened, and what did you expect?",
+      "descriptionHint": "At least {min} characters.",
+      "screenshots": "Screenshots (optional)",
+      "screenshotsHint": "Up to {max} images.",
+      "removeScreenshot": "Remove screenshot",
+      "addScreenshot": "Add a screenshot"
+    },
+    "actions": {
+      "submit": "Send",
+      "submitting": "Sending…",
+      "cancel": "Cancel",
+      "done": "Done",
+      "retry": "Try again"
+    },
+    "success": {
+      "title": "Thank you!",
+      "message": "Your feedback has arrived. We read it shortly.",
+      "reference": "Reference: #{ref}"
+    },
+    "toast": {
+      "sent": "Feedback sent. Thank you!",
+      "failed": "The feedback could not be sent. Try again.",
+      "rateLimited": "You're sending feedback too quickly. Try again in a few minutes.",
+      "uploadFailed": "That image could not be uploaded.",
+      "triaged": "Feedback updated.",
+      "noteSaved": "Internal note saved."
+    },
+    "history": {
+      "emptyTitle": "Nothing yet",
+      "emptyDescription": "What you send us shows up here with its status.",
+      "error": "Your feedback could not be loaded. Try again.",
+      "reference": "Ref.",
+      "sentOn": "Sent on {date}"
+    },
+    "console": {
+      "title": "Feedback",
+      "subtitle": "What users are telling us, and what we did about it.",
+      "search": "Search feedback…",
+      "allTypes": "All types",
+      "allPriorities": "All priorities",
+      "clearFilters": "Clear filters",
+      "showMore": "Show more",
+      "showLess": "Show less",
+      "copyReference": "Copy reference",
+      "referenceCopied": "Reference copied.",
+      "reportedBy": "Sent by {name} ({role})",
+      "deletedAccount": "deleted account",
+      "viewScreenshot": "View screenshot",
+      "devNote": "Internal note",
+      "addDevNote": "Add an internal note",
+      "devNotePlaceholder": "Visible to the team only.",
+      "saveNote": "Save",
+      "cancelNote": "Cancel",
+      "emptyTitle": "No feedback",
+      "emptyDescription": "Nobody has written yet. That is a good sign.",
+      "filteredEmptyTitle": "No feedback matches",
+      "filteredEmptyDescription": "Change or clear the filters.",
+      "error": "Feedback could not be loaded. Refresh to try again.",
+      "previous": "Previous",
+      "next": "Next",
+      "showing": "{shown} of {total} feedback items"
     }
   }
 }

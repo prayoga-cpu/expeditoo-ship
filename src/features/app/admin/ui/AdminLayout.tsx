@@ -1,6 +1,7 @@
 "use client";
 
 import { NotificationBell } from "@/components/NotificationBell";
+import { FeedbackLauncher } from "@/features/app/feedback/ui";
 import { AppVersionLink } from "@/components/ui/app-version";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -11,6 +12,7 @@ import {
   ArrowLeft,
   Truck,
   Headset,
+  MessageSquarePlus,
   AlertTriangle,
   UserCircle,
   UsersRound,
@@ -47,6 +49,7 @@ const BADGE_TONE: Record<keyof AdminNavCounts, "attention" | "info"> = {
   drivers: "attention",
   payments: "attention",
   support: "attention",
+  feedback: "attention",
   users: "info",
   listings: "info",
   shipments: "info",
@@ -132,6 +135,12 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       title: t("navigation.incidents"),
       href: "/admin/incidents",
       icon: AlertTriangle,
+    },
+    {
+      title: t("navigation.feedback"),
+      href: "/admin/feedback",
+      icon: MessageSquarePlus,
+      badge: "feedback",
     },
     {
       title: t("navigation.supportChats"),
@@ -223,6 +232,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                   {tCommon("buttons.back")}
                 </Button>
               </Link>
+              <FeedbackLauncher />
               <NotificationBell />
             </div>
           </div>

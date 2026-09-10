@@ -2,8 +2,10 @@
 
 import { useRef, useState, useEffect, type ChangeEvent } from "react";
 import { usePathname } from "next/navigation";
+import { MessageSquarePlus } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PaymentMethods } from "./PaymentMethods";
+import { FeedbackDialog } from "@/features/app/feedback/ui";
 import { formatCurrency } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -46,6 +48,7 @@ import { PageWrapper } from "@/components/ui/page-wrapper";
 import { LottieLoader } from "@/components/ui/lottie-loader";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
+import { toast } from "sonner";
 
 export function Profile() {
   const {
@@ -71,6 +74,69 @@ export function Profile() {
   // File input ref for profile picture
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
+  const [isConnectingPayout, setIsConnectingPayout] = useState(false);
+
+  /**
+   * Opens Stripe onboarding, and says so when it cannot.
+   *
+   * This button was silent on every failure: it read `data.url`, found none
+   * and returned, so a refusal looked exactly like a button that does nothing.
+   * Both halves of the fix are here — a pending state while the round trip is
+   * in flight, and a toast naming what happened.
+   */
+  const handleConnectPayout = async () => {
+    setIsConnectingPayout(true);
+    try {
+      const res = await fetch("/api/stripe/connect", { method: "POST" });
+      const payload = (await res.json()) as {
+        data?: { url?: string };
+        error?: { code?: string };
+      };
+
+      if (!res.ok || !payload.data?.url) {
+        toast.error(
+          payload.error?.code === "STRIPE_REQUEST_REJECTED"
+            ? t("payout.error.rejected")
+            : t("payout.error.generic")
+        );
+        setIsConnectingPayout(false);
+        return;
+      }
+
+      // Left pending on purpose: the browser is leaving for Stripe, and
+      // restoring the idle label would flash it over a navigating page.
+      window.location.href = payload.data.url;
+    } catch (e) {
+      console.error(e);
+      toast.error(t("payout.error.generic"));
+      setIsConnectingPayout(false);
+    }
+  };
+
+  /**
+   * The other lane that fails silently.
+   *
+   * Stripe sends a user back to `/api/stripe/connect/refresh` when the
+   * onboarding link has expired, and that route redirects here with
+   * `?stripe=error` when it cannot mint a replacement — the same refusal the
+   * button now reports. Nothing read the flag, so the browser simply landed
+   * back on the profile with no explanation.
+   */
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("stripe") !== "error") return;
+
+    toast.error(t("payout.error.generic"));
+
+    // Dropped from the URL so a reload does not re-announce a stale failure.
+    params.delete("stripe");
+    const query = params.toString();
+    window.history.replaceState(
+      null,
+      "",
+      `${window.location.pathname}${query ? `?${query}` : ""}`
+    );
+  }, [t]);
 
   const handleUploadClick = () => {
     setIsAvatarModalOpen(false);
@@ -322,22 +388,20 @@ export function Profile() {
                 </p>
                 {user.stripeAccountStatus !== "active" && (
                   <Button
-                    onClick={async () => {
-                      try {
-                        const res = await fetch("/api/stripe/connect", {
-                          method: "POST",
-                        });
-                        const data = await res.json();
-                        if (data.url) window.location.href = data.url;
-                      } catch (e) {
-                        console.error(e);
-                      }
-                    }}
+                    onClick={handleConnectPayout}
+                    disabled={isConnectingPayout}
                     className="w-full sm:w-auto self-start"
                   >
-                    {user.stripeAccountStatus === "pending"
-                      ? t("payout.button.continue")
-                      : t("payout.button.connect")}
+                    {isConnectingPayout ? (
+                      <>
+                        <LottieLoader width={20} height={20} className="mr-2" />
+                        {t("payout.button.loading")}
+                      </>
+                    ) : user.stripeAccountStatus === "pending" ? (
+                      t("payout.button.continue")
+                    ) : (
+                      t("payout.button.connect")
+                    )}
                   </Button>
                 )}
               </div>
@@ -500,6 +564,29 @@ function QuickLinks({ userRoles }: { userRoles?: string[] }) {
           </Button>
         </Link>
       ))}
+      {/* Not a Link: feedback is a dialog, not a page. It sits beside Help
+          because "get help" and "tell them something" are the two things people
+          come looking for in the same place — the header launcher is always
+          there, but an icon-only button is easy to miss. */}
+      <SendFeedbackQuickLink label={t("sendFeedback")} />
+    </>
+  );
+}
+
+function SendFeedbackQuickLink({ label }: { label: string }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <Button
+        variant="ghost"
+        className="w-full justify-start gap-3 h-12 group"
+        onClick={() => setOpen(true)}
+      >
+        <MessageSquarePlus className="w-5 h-5 text-primary group-hover:text-accent-foreground" />
+        <span>{label}</span>
+      </Button>
+      <FeedbackDialog open={open} onOpenChange={setOpen} />
     </>
   );
 }

@@ -8,6 +8,7 @@ import {
 } from "@/db/schema";
 import { messages } from "@/db/schema/messages";
 import { expedionQuotes } from "@/db/schema/expedion";
+import { feedbackTickets } from "@/db/schema/feedback";
 import { storageService } from "@/server/services/storage.service";
 import { expedionFilesDal } from "@/server/dal/expedion-files.dal";
 import { isNotNull } from "drizzle-orm";
@@ -170,6 +171,21 @@ export class ImageCleanupService {
       (q.photoUrls ?? []).forEach((u) => addUrl(u));
     });
     console.log(`Scanned ${quoteDocs.length} Expedion quotes`);
+
+    // 8. Feedback screenshots.
+    //
+    // Declaring these is MANDATORY, not tidiness. This sweep deletes every
+    // object in the public bucket it cannot match to a column, so a screenshot
+    // that is not scanned here is an orphan by construction and vanishes on the
+    // next non-dry Sunday run — the same warning incident photos carry above.
+    // See docs/specs/feedback_spec.md §7 item 7.
+    const feedbackRows = await db
+      .select({ screenshotUrls: feedbackTickets.screenshotUrls })
+      .from(feedbackTickets);
+    feedbackRows.forEach((row) =>
+      (row.screenshotUrls ?? []).forEach((u) => addUrl(u))
+    );
+    console.log(`Scanned ${feedbackRows.length} feedback tickets`);
 
     return validKeys;
   }

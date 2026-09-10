@@ -1,6 +1,6 @@
 # STATUS.md
 
-## Current state: user-testing mode — driver-side revamp complete (2.37.2)
+## Current state: user-testing mode — driver-side revamp complete (2.38.0)
 
 _AI agents: add an entry here every time you finish a task. See AGENTS.md §8._
 
@@ -53,6 +53,9 @@ than leaving it in a chat message.
       step provisioned it (`NEON_AUTH_BASE_URL`, `VITE_NEON_AUTH_URL`). Nothing
       reads those — this app authenticates with Better Auth — so they are inert,
       but they are misleading to the next person reading the variable list.
+- [x] ~~Migrate production for `0022_feedback`~~ — **done 2026-09-10**, applied
+      directly with the Neon connection before the deploy. 19 columns, enums in
+      declaration order. Nothing else is outstanding for that release.
 - [ ] **Run `Actions → Migrate database` before any deploy** that ships a new
       migration. The Vercel build is a plain `next build` and never migrates.
 - [ ] **Set `EXPEDION_APP_ORIGINS` in `.env.local`** — it exists in Vercel
@@ -73,6 +76,40 @@ than leaving it in a chat message.
       in `.env.example`.
 
 ---
+
+## ✅ 2026-09-10 — In-App Feedback, And An Admin Console To Work It (2.38.0)
+
+Spec: `docs/specs/feedback_spec.md` · Plan: `docs/plans/plan_feedback.md`
+
+_« add the feedback submission on the dashboard for everyuser. and refer to Epidom for the feedback page work (only with admin role) »_
+
+Ported from the sibling **Epidom** product (`~/Code/epidom`), which has run this feature for three months. Epidom is Prisma on a different stack, so the **design** was ported and the code was not; §7 of the spec lists all thirteen places its conventions lost to ours and why. A 7-agent workflow read Epidom's model, API, submit UI and console alongside this repo's conventions and integration points before a line was written.
+
+- [x] **`feedback_tickets` + migration `0022_feedback`** (hand-written; `pnpm db:generate` is banned here). Named plural because every table here is a plural count noun and "feedback" is a mass noun that reads like a column. **All three enums declare every value in the first migration, in triage order** — Postgres orders an enum by declaration order, so `ORDER BY status, priority` *is* the queue order with no `CASE`. Epidom appended `ARCHIVED` and `NEEDS_REVIEW` later and its physical order diverged from its display order permanently; `shipment_incident_severity` here has the mirror-image bug and needs a `CASE` to stop the calmest incidents sorting first. **Already applied to production.**
+- [x] **The ticket outlives the account.** `user_id` is `ON DELETE SET NULL`, and `user_name` / `user_email` / `user_role` are frozen snapshots taken at submit time — a bug report has to stay readable after the reporter leaves. The console prefers the live join and falls back to the snapshot, reporting `accountExists` either way.
+- [x] **Four deliberate deviations from Epidom's 13 columns**, each earning its place: `screenshot_urls` as an array (a bug is often two screens; `shipment_incidents.photo_urls` is already this shape on the same upload path); `pathname` beside `surface` (surface is what the console groups by, pathname is what reproduces the bug, and our URLs carry the ids); `app_version` + `locale`, both server-stamped (this repo bumps `APP_VERSION` every session and FR/EN parity has broken three times); and `resolved_at` + `resolved_by_user_id` — Epidom needed a whole audit-log subsystem to answer "who closed this and when", and two columns answer it.
+- [x] **The privacy boundary is a mapper, not a habit.** `toFeedbackView` omits `devNote` and `priority`; Epidom's `getUserFeedback` is a bare `findMany` with no select, so its private note — whose own schema comment reads "Optional private developer/admin comment" — goes over the wire to the person it is about, and only its UI's choice not to render it hides that. A DTO test asserts an exact allowed key set **and** names twelve forbidden fields one by one, so deleting a column cannot quietly delete the assertion.
+- [x] **Filtering, ordering, counting and paging all happen in SQL.** Epidom's admin GET is a hard `take: 500` with no query parameters at all and every filter in `useMemo`, so the 501st ticket never appears and its five tiles count the fetched set rather than the table. Here `countsByStatus` reuses the queue's filter **minus the status clause** — include it and clicking one tile makes the other four read zero — and the counts ride back with the page so the tiles can never disagree with the list.
+- [x] **The staff check is in the service**, never in a route (docs/rules.md §8). `isStaff` matches `shipmentIncidentsService`. Noted honestly in the spec: `src/proxy.ts` gates `/admin` on `admin` alone, so an operator can call the API but cannot open the page — pre-existing across every admin queue.
+- [x] **`FeedbackError` registered in `src/lib/api-response.ts`, and a test that catches its absence.** That file translates only the classes it names; `PaymentError` was missing until 2026-08-29 and every payment failure reached the browser as an untyped 500 while `useJobDetail`'s branch never fired. `src/lib/__tests__/api-response.test.ts` is new — nothing covered that file before.
+- [x] **One launcher, three shells.** `MainLayout`, `DriverLayout` and `AdminLayout` all mount `FeedbackLauncher` in the header cluster — the only chrome all three render unconditionally at every width, so one placement covers desktop and mobile. Not in `Providers` (it wraps the signed-out marketing pages), not in `BottomNav` (six slots, full). **Deliberately ungated**, unlike `HeaderQuickActions`, which returns null for non-drivers and is exactly why a new signup sees an empty header. Second door in the profile quick links, beside Help.
+- [x] **The "Where?" field defaults by longest-prefix match**, which is not a nicety: `/carrier/trips` and `/carrier/application` share a prefix, and `/listings/me` and `/listing/:id` differ by one character. Eight cases asserted.
+- [x] **The console is one card list, not three views.** Epidom's Table, Board and Feed views plus their switcher, their localStorage persistence and the hydration workaround it forced, its detail dialog and lightbox come to roughly 800 of its 1374 lines. The Board has no drag-and-drop even there — a card is a button that opens a dialog — so it is a five-column re-layout of the same rows plus a second filtered set that exists only to serve it. Reasoning and the honest cost are in spec §6.
+- [x] **`screenshot_urls` declared in `image-cleanup.service.ts`**, and this was mandatory rather than tidy: that sweep deletes every object in the public bucket it cannot match to a column, so an unscanned screenshot is an orphan by construction and vanishes on the next Sunday run — the same warning incident photos already carry there.
+- [x] **Sidebar badge counts `OPEN` + `NEEDS_REVIEW`**, one more scalar subquery inside the existing single statement (the sidebar refetches on a 60s timer on every admin page). Epidom counts `OPEN` alone, hiding every ticket an admin bounced back for a second look.
+- [x] 99 i18n keys per catalogue, both written as we go. Epidom's 1374-line console contains no i18n hook at all and pins dates to `en-GB`; this repo has already had to translate `SubmitOfferForm`, `OfferCard` and `JobDetail` after the fact.
+
+**Verification**
+- `npx tsc --noEmit` 0 errors · `pnpm lint` 0 errors (the feedback slice reports none at all) · `pnpm test` **1548 passed across 117 files**, 0 failed — 79 new.
+- **Chromium against the dev server**, not jsdom: launcher present and correctly named in both locales, dialog opens with every field labelled, and the surface field pre-selected "Request transport" / "Demander un transport" on `/create`, proving the longest-prefix defaulting in a real browser. Checked at 1440 light/EN and 390 dark/FR.
+- The browser pass earned its place — it caught the `+` button taking the same accessible name as the field label above it, which jsdom's "a name exists" check passed. It now has its own.
+- Migration applied to production before the deploy; 19 columns, enum in declaration order.
+
+**Known limits**
+- "My feedback" is read-only. Editing a report an operator has already dev-noted invalidates the note, and deleting it destroys the record of a bug; if it is wanted, port Epidom's ownership rule verbatim — `NotFoundError` for missing *and* non-owned alike, so existence is never leaked.
+- The rate limit (ten per hour per user) counts in one instance's heap, so it is a brake on casual abuse, not a security control. The module's own header says so.
+- No `userAgent`, viewport, console or network capture, and no screen-capture API — same as Epidom. A 200-character UA string that mostly says "Chrome" is not worth a column until the console proves otherwise.
+- An operator cannot see all five statuses side by side, which the Board view gave. The five tiles carry the same information in one row, one click from any of them.
 
 ## ✅ 2026-09-10 — The Cutover Audit, And The Sunday That Would Have Emptied R2 (2.37.2)
 

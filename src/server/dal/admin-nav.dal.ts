@@ -37,6 +37,12 @@ export interface AdminNavCounts {
   payments: number;
   /** Support conversations with something this admin has not read. */
   support: number;
+  /**
+   * Feedback still waiting on staff. Counts NEEDS_REVIEW alongside OPEN — the
+   * sibling product counts OPEN alone, which hides every ticket an admin
+   * bounced back for a second look.
+   */
+  feedback: number;
 }
 
 /**
@@ -102,7 +108,10 @@ export async function getAdminNavCounts(
              where m.conversation_id = c.id
                and m.sender_id <> ${viewerId}
                and (p.last_read_at is null or m.created_at > p.last_read_at)
-          ))                                              as support_unread
+          ))                                              as support_unread,
+
+      (select count(*)::int from feedback_tickets
+        where status in ('OPEN','NEEDS_REVIEW'))          as feedback_waiting
   `);
 
   const r = rows[0] ?? {};
@@ -121,5 +130,6 @@ export async function getAdminNavCounts(
     shipments: n("active_shipments"),
     payments: n("payouts_scheduled") + n("payments_failed"),
     support: n("support_unread"),
+    feedback: n("feedback_waiting"),
   };
 }
