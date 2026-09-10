@@ -1,6 +1,6 @@
 # STATUS.md
 
-## Current state: user-testing mode — driver-side revamp complete (2.37.1)
+## Current state: user-testing mode — driver-side revamp complete (2.37.2)
 
 _AI agents: add an entry here every time you finish a task. See AGENTS.md §8._
 
@@ -73,6 +73,28 @@ than leaving it in a chat message.
       in `.env.example`.
 
 ---
+
+## ✅ 2026-09-10 — The Cutover Audit, And The Sunday That Would Have Emptied R2 (2.37.2)
+
+A 13-agent workflow swept the repo for what an empty database breaks — six lenses, each adversarially verified, then a completeness critic. 73 hazards survived verification. Most were duplicates of the three already handled in 2.37.1 (the boot guard, the system-shipper row, the missing categories). These are the ones that were **not** known:
+
+- [x] **The weekly image-cleanup cron would have deleted the entire public R2 bucket, and its guard was inverted.** `performCleanup` builds the set of keys the database references and deletes every object in `R2_BUCKET_NAME` that is not in it. The safety check aborted only when `validKeys.size === 0` **and** the `user` table had rows — so an **empty** database fell straight through to deletion, which is exactly the state a cutover creates. Worse, and this is the part that outlived the cutover: once a *single* image is referenced — one signup with an avatar — `validKeys.size` is non-zero and the check was skipped **entirely**, so every other object in the bucket was deleted. `.github/workflows/scheduled-jobs.yml` runs it `0 3 * * 0` with `dryRun=false`. R2 deletion is not recoverable. On the day this was found it survived only by accident: the system-shipper row seeded an hour earlier made `userCount > 0`.
+- [x] The guard is now a **proportional floor decided after the listing**, because "how much would this delete" is not knowable before it: refuse when the database references nothing at all, and refuse when a run would remove more than 20% of what it just listed. `IMAGE_CLEANUP_FORCE=true` is the deliberate human override, after reading a dry run. A dry run never aborts — it deletes nothing and the operator needs the full orphan list. 6 tests, including the single-stray-reference case that the old check waved through.
+- [x] **`categories` was empty and escalation would have stranded quotes permanently.** `resolveCategoryId()` throws `NO_CATEGORY` — and it is called **after** `claimForEscalation` has already set `escalated_at`, and **outside** the try that releases the claim. `findDueForEscalation` filters on `escalated_at IS NULL`, so a quote that hit this dropped out of the sweep silently and forever, with no listing and no operator-visible marker. Seeded `encheres` and `transport`.
+- [x] **The two Expedion id variables are now pinned to rows that exist.** Production's `EXPEDION_SYSTEM_USER_ID` and `EXPEDION_CATEGORY_ID` are marked Sensitive and unreadable, so there was no way to confirm the seeded row matched. Rather than guess, both were rewritten in Production and Preview to the ids actually seeded — correct by construction instead of by coincidence.
+- [x] **The laptop's only copy of the 4,593 quotes was one morning away from being destroyed.** `~/Library/LaunchAgents/com.expeditoo.db-mirror.plist` is loaded and runs `db:mirror` daily at 06:00; that script `DROP SCHEMA IF EXISTS public CASCADE` on the local database and restores the source over it. It is safe today only because `MIRROR_SOURCE_URL` still names the deleted Supabase host and `pg_dump` fails first — and the `.env.example` rewrite in 2.37.1 tells the next person to repoint it at Neon. An out-of-band dump was taken to `~/expeditoo-quotes-2026-09-10.dump` (739K, `expedion_quotes` + `expedion_quote_events`), which no script in this repo can reach.
+
+**The audit also overturned a recommendation made earlier in the same session.** Restoring the mirror's quotes into production was proposed as an obvious win; it is not. The anonymiser destroyed 4,590 of 4,593 `firebase_uid` values, so a restore would write **fabricated client identities** into production: every Expedion client would 404 on their own quote, the client book would show invented owners, paid quotes would re-arm the 10-minute escalation sweep, and operator actions would send SMS to fabricated French mobile numbers that pass validation. The restore is **not** to be done from this mirror. Re-import from the Expedion side instead.
+
+**Verification**
+- `npx tsc --noEmit` 0 errors · `pnpm lint` 0 errors, 85 pre-existing warnings · `pnpm test` **1438 passed across 110 files**, 0 failed.
+- Production re-probed after deploy: `sign-in/social` 200 with a real Google URL, `sign-in/email` 401 `INVALID_EMAIL_OR_PASSWORD`, `GET /api/listings` 200.
+
+**Known limits**
+- **Preview deployments will now crash at import**, and that is the guard working. Neon is connected to Preview as well as Production, and `src/db/index.ts` refuses to open a production database from a non-production process. Before the 2.37.1 guard fix this was a silent no-op and previews would have read *and written* production, so this is a loud failure replacing a dangerous silence — but Preview needs its own Neon branch before it is usable. Operator to-do.
+- The `Actions → Migrate database` workflow still reads `POSTGRES_URL_PRODUCTION`, a GitHub secret holding the deleted Supabase string. Nothing has migrated through it and it will fail if used.
+- The published privacy policy names Supabase as the database processor and discloses no transfer outside the EU. Data now rests in us-east-1. Not a code fix — flagged for the operator.
+- Invoice and credit-note numbering restarts at 0001 on the empty `document_sequences`, and could re-issue a number already sent to a client. Exposure is limited to documents issued in the last three weeks.
 
 ## ✅ 2026-09-10 — Production Moved Off A Database That No Longer Existed (2.37.1)
 

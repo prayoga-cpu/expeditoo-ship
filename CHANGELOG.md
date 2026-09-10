@@ -14,6 +14,10 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.37.2] - 2026-09-10 · fix
+
+- **The weekly image sweep can no longer empty the photo store.** It decided what to delete by asking the database which pictures are still in use, and treated anything else as rubbish — so with the platform on a fresh database it would have deleted every photo it found, at three on Sunday morning, unrecoverably. It now refuses to run when the database points at nothing, or when a single run would remove more than a fifth of what is stored.
+
 ## [2.37.1] - 2026-09-10 · fix
 
 - **Signing in works again.** For several days nobody could get in — not with Google, not with an email and password — and every page that needs an account failed. The database the platform runs on had been removed by the service hosting it. The platform has been moved to a new one and is back.

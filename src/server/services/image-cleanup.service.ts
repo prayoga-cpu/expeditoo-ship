@@ -181,20 +181,6 @@ export class ImageCleanupService {
     let cursor: string | undefined;
     const orphans: string[] = [];
     let processedCount = 0;
-    
-    // Safety check: if validKeys is suspiciously empty (e.g. validKeys.size === 0), 
-    // we should abort to prevent wiping everything if DB query fails silently.
-    if (validKeys.size === 0) {
-        // Double check: are there ANY users?
-        const userCount = await db.select({ count: user.id }).from(user).limit(1);
-        if (userCount.length > 0) {
-             console.warn("ABORTING: Database seems populated but no valid images found. Is the query correct?");
-             return {
-                 message: "Aborted: No valid images found in DB, preventing potential catastrophe.",
-                 stats: { validKeys: 0, scanned: 0, orphansFound: 0 }
-             };
-        }
-    }
 
     do {
       const result = await storageService.listObjects(cursor);
@@ -212,6 +198,52 @@ export class ImageCleanupService {
 
     console.log(`Scanned ${processedCount} objects from storage.`);
     console.log(`Found ${orphans.length} orphan images.`);
+
+    /*
+     * The safety floor, and it has to be decided here rather than up front,
+     * because "how much of the bucket would this delete" is only knowable
+     * after the listing.
+     *
+     * The check this replaces asked whether `validKeys` was exactly zero and
+     * then aborted only when the `user` table had rows — which got the
+     * dangerous case backwards twice over. An **empty** database fell straight
+     * through to deletion, and a database referencing a **single** image
+     * skipped the check outright and deleted every other object in the bucket.
+     * Both are the same error: reading "the database references little" as
+     * proof the bucket holds rubbish, when it is equally proof that this is
+     * not the database that filled the bucket. Production was re-pointed at an
+     * empty Neon database on 2026-09-10, which is exactly that situation, and
+     * this sweep runs armed every Sunday at 03:00.
+     *
+     * R2 deletion is not recoverable, so the rule is proportional and fails
+     * closed: refuse when the database references nothing at all, and refuse
+     * when the sweep wants to remove more than a fifth of what it just listed.
+     * A genuine backlog above that share is a decision for a human, taken with
+     * `IMAGE_CLEANUP_FORCE=true` after reading a dry run — not something a cron
+     * should conclude on its own at three in the morning.
+     */
+    const ORPHAN_SHARE_CEILING = 0.2;
+    const orphanShare = processedCount === 0 ? 0 : orphans.length / processedCount;
+    const forced = process.env.IMAGE_CLEANUP_FORCE === "true";
+    const refusal =
+      validKeys.size === 0
+        ? "the database references no images at all"
+        : orphanShare > ORPHAN_SHARE_CEILING
+          ? `it would delete ${orphans.length} of ${processedCount} objects (${Math.round(orphanShare * 100)}%, ceiling ${ORPHAN_SHARE_CEILING * 100}%)`
+          : null;
+
+    if (!dryRun && refusal && !forced) {
+      console.warn(`ABORTING image cleanup: ${refusal}.`);
+      return {
+        message: `Aborted: ${refusal}. Re-run as a dry run to inspect, then set IMAGE_CLEANUP_FORCE=true if this is genuinely intended.`,
+        stats: {
+          validKeys: validKeys.size,
+          scanned: processedCount,
+          orphansFound: orphans.length,
+          deleted: 0,
+        },
+      };
+    }
 
     if (!dryRun) {
       console.log("Deleting orphans...");
