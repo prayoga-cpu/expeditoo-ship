@@ -125,7 +125,6 @@ vi.mock("@/lib/stripe", () => ({
     transfers: { create: vi.fn() },
   },
 }));
-vi.mock("@/server/dal/carriers.dal", () => ({ carriersDal: {} }));
 
 import {
   paymentsService,
@@ -678,6 +677,175 @@ describe("paymentsService.schedulePayout", () => {
 
     expect(second.id).toBe(first.id);
     expect(harness.payoutRows).toHaveLength(1);
+  });
+});
+
+// ========================================
+// executePayout — the destination lives on the user row
+// ========================================
+//
+// `payouts.carrier_id` references `user.id`, and Connect onboarding writes
+// `stripeAccountId` onto that same user row. This was read off
+// `carriers.stripe_account_id` instead — a column nothing in the codebase has
+// ever written — so a driver who finished onboarding was refused
+// `CARRIER_ACCOUNT_MISSING` forever, with no write path that could clear it.
+
+/** A scheduled payout for `carrier-1`, the way a delivery mints one. */
+const givenScheduledPayout = async () => {
+  await paymentsService.chargeForShipment(chargeParams());
+  return await paymentsService.schedulePayout("ship-1", "carrier-1");
+};
+
+/** The driver's user row after Connect onboarding has reached `status`. */
+const givenConnectAccount = (status: string, id: string | null = "acct_1") =>
+  harness.userRows.push({
+    id: "carrier-1",
+    stripeAccountId: id,
+    stripeAccountStatus: status,
+  });
+
+describe("paymentsService.executePayout", () => {
+  it("sends the transfer to the account onboarding wrote on the user", async () => {
+    const payout = await givenScheduledPayout();
+    givenConnectAccount("active");
+    vi.mocked(stripe.transfers.create).mockResolvedValue({
+      id: "tr_1",
+    } as never);
+
+    const paid = await paymentsService.executePayout(payout.id);
+
+    expect(stripe.transfers.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        destination: "acct_1",
+        amount: 18_000 - commissionFor(18_000),
+        currency: "eur",
+        transfer_group: "shipment_ship-1",
+      })
+    );
+    expect(paid).toMatchObject({ status: "paid", stripeTransferId: "tr_1" });
+    expect(paid.paidAt).toBeInstanceOf(Date);
+  });
+
+  it("refuses a driver who has never connected an account", async () => {
+    const payout = await givenScheduledPayout();
+    // The shape every driver starts in, and the one that matters: the row
+    // always exists (`payouts.carrier_id` references it), `stripe_account_id`
+    // is null and `stripe_account_status` defaults to `pending`. Asserting
+    // this against a *missing* user row would prove nothing the foreign key
+    // does not already forbid.
+    givenConnectAccount("pending", null);
+
+    expect(await codeFrom(() => paymentsService.executePayout(payout.id))).toBe(
+      "CARRIER_ACCOUNT_MISSING"
+    );
+    expect(stripe.transfers.create).not.toHaveBeenCalled();
+  });
+
+  it("refuses a carrier id no user row answers to", async () => {
+    const payout = await givenScheduledPayout();
+
+    expect(await codeFrom(() => paymentsService.executePayout(payout.id))).toBe(
+      "CARRIER_ACCOUNT_MISSING"
+    );
+  });
+
+  it("refuses a driver whose onboarding is not finished", async () => {
+    const payout = await givenScheduledPayout();
+    // What `createConnectAccount` writes. Only `account.updated` promotes it.
+    givenConnectAccount("pending");
+
+    expect(await codeFrom(() => paymentsService.executePayout(payout.id))).toBe(
+      "CARRIER_ACCOUNT_NOT_READY"
+    );
+    expect(stripe.transfers.create).not.toHaveBeenCalled();
+  });
+
+  it("refuses an account Stripe has restricted", async () => {
+    const payout = await givenScheduledPayout();
+    givenConnectAccount("restricted");
+
+    expect(await codeFrom(() => paymentsService.executePayout(payout.id))).toBe(
+      "CARRIER_ACCOUNT_NOT_READY"
+    );
+  });
+
+  it("leaves the payout scheduled when it refuses", async () => {
+    // The refusals are not failed transfers, and `failed` would take the money
+    // out of `withdrawalsDal.availableFor` — earned, then gone, because the
+    // driver had not finished onboarding.
+    const payout = await givenScheduledPayout();
+    givenConnectAccount("pending");
+
+    await codeFrom(() => paymentsService.executePayout(payout.id));
+
+    expect(harness.payoutRows[0]).toMatchObject({
+      id: payout.id,
+      status: "scheduled",
+    });
+    expect(harness.payoutRows[0]).not.toHaveProperty("failureReason");
+  });
+
+  it("marks the payout failed when Stripe refuses the transfer", async () => {
+    const payout = await givenScheduledPayout();
+    givenConnectAccount("active");
+    vi.mocked(stripe.transfers.create).mockRejectedValue(
+      new Error("insufficient funds")
+    );
+
+    expect(await codeFrom(() => paymentsService.executePayout(payout.id))).toBe(
+      "PAYOUT_FAILED"
+    );
+    expect(harness.payoutRows[0]).toMatchObject({
+      status: "failed",
+      failureReason: "insufficient funds",
+    });
+  });
+
+  it("is idempotent: an already paid payout is not transferred twice", async () => {
+    const payout = await givenScheduledPayout();
+    harness.payoutRows[0].status = "paid";
+    givenConnectAccount("active");
+
+    const again = await paymentsService.executePayout(payout.id);
+
+    expect(again.status).toBe("paid");
+    expect(stripe.transfers.create).not.toHaveBeenCalled();
+  });
+
+  it("refuses a payout a refund has already voided", async () => {
+    // `cancelPayoutForShipment` writes this when the client's money goes back.
+    // Transferring it anyway pays the driver their share of a job nobody
+    // bought, out of the platform's own balance.
+    const payout = await givenScheduledPayout();
+    harness.payoutRows[0].status = "cancelled";
+    givenConnectAccount("active");
+
+    expect(await codeFrom(() => paymentsService.executePayout(payout.id))).toBe(
+      "PAYOUT_CANCELLED"
+    );
+    expect(stripe.transfers.create).not.toHaveBeenCalled();
+    expect(harness.payoutRows[0].status).toBe("cancelled");
+  });
+
+  it("refuses a payout a withdrawal request has already claimed", async () => {
+    // The by-hand withdrawal flow is how this money actually moves today.
+    // Once a request has claimed the row, `availableFor` stops counting it —
+    // so a transfer here is the same earned money paid a second time, with
+    // nothing left able to notice.
+    const payout = await givenScheduledPayout();
+    harness.payoutRows[0].withdrawalId = "wd-1";
+    givenConnectAccount("active");
+
+    expect(await codeFrom(() => paymentsService.executePayout(payout.id))).toBe(
+      "PAYOUT_ALREADY_CLAIMED"
+    );
+    expect(stripe.transfers.create).not.toHaveBeenCalled();
+  });
+
+  it("404s on a payout that does not exist", async () => {
+    expect(await codeFrom(() => paymentsService.executePayout("ghost"))).toBe(
+      "PAYOUT_NOT_FOUND"
+    );
   });
 });
 

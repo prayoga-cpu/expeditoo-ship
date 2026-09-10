@@ -12,6 +12,7 @@ export {
     submitDriverApplication,
     type DriverApplicationInput,
 } from "./driver.api";
+export { payoutApi } from "./payout.api";
 export {
     invoicesApi,
     getInvoicePdfUrl,

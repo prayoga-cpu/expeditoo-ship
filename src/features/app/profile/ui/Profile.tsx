@@ -49,6 +49,8 @@ import { LottieLoader } from "@/components/ui/lottie-loader";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
+import { ApiError } from "@/lib/fetcher";
+import { payoutApi } from "@/features/app/profile/api";
 
 export function Profile() {
   const {
@@ -87,28 +89,18 @@ export function Profile() {
   const handleConnectPayout = async () => {
     setIsConnectingPayout(true);
     try {
-      const res = await fetch("/api/stripe/connect", { method: "POST" });
-      const payload = (await res.json()) as {
-        data?: { url?: string };
-        error?: { code?: string };
-      };
-
-      if (!res.ok || !payload.data?.url) {
-        toast.error(
-          payload.error?.code === "STRIPE_REQUEST_REJECTED"
-            ? t("payout.error.rejected")
-            : t("payout.error.generic")
-        );
-        setIsConnectingPayout(false);
-        return;
-      }
+      const { url } = await payoutApi.startOnboarding();
 
       // Left pending on purpose: the browser is leaving for Stripe, and
       // restoring the idle label would flash it over a navigating page.
-      window.location.href = payload.data.url;
-    } catch (e) {
-      console.error(e);
-      toast.error(t("payout.error.generic"));
+      window.location.href = url;
+    } catch (error) {
+      console.error(error);
+      toast.error(
+        error instanceof ApiError && error.code === "STRIPE_REQUEST_REJECTED"
+          ? t("payout.error.rejected")
+          : t("payout.error.generic")
+      );
       setIsConnectingPayout(false);
     }
   };

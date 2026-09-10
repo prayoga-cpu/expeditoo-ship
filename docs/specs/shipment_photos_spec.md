@@ -235,19 +235,29 @@ is third-party input, and an unescaped `&` in it breaks the whole overlay.
 null and line 2 is omitted. A geocoder being slow must never cost a driver
 their delivery.
 
-### 5.4 Known limitation: fonts
+### 5.4 The font is bundled
 
 Sharp renders the SVG overlay through librsvg, which finds fonts through
-fontconfig — that is, through whatever the host provides. It renders correctly
-in local development on macOS. **On a host with no system fonts the band
-renders without glyphs**, and the remedy is to bundle a TTF and point
-`FONTCONFIG_PATH` at it. This is flagged rather than solved because it needs a
-font file added to the repository, which is a decision about licensing and
-bundle size rather than about code. The database row is unaffected and remains
-the authoritative record, and the UI renders the same three lines as text
-beside every photo (§7.2), so a fontless deployment loses the convenience and
-not the evidence. Tracked as `TODO(EXPEDITOO-TESTING)` in
-`photo-stamp.service.ts`.
+fontconfig — that is, through whatever the host provides. A serverless runtime
+provides nothing, so the band shipped to production as **a black bar with no
+glyphs** while rendering correctly on a developer's macOS machine, which answers
+through CoreText and ignores fontconfig entirely.
+
+Resolved in 2.39.0. `fonts/` holds Inter (SIL Open Font License) and the
+`fonts.conf` that points fontconfig at it; `photo-stamp.service.ts` sets
+`FONTCONFIG_PATH` at module scope — fontconfig reads it once, on the first
+render, so setting it inside the render call would be a race — and only when the
+config is actually present, so a wrong working directory leaves a host's own
+fontconfig alone rather than blinding it. `next.config.mjs` traces the directory
+into the function, because nothing imports these files and the tracer would
+otherwise drop them.
+
+**Still unproven from a laptop**: local rendering succeeds either way, so only a
+deploy confirms the band has letters on the live host. The database row remains
+the authoritative record and the UI renders the same three lines as text beside
+every photo (§7.2), so the failure mode was always a loss of convenience, not of
+evidence. See `docs/specs/stripe_connect_spec.md` for the sibling session's
+notes on diagnosing this class of host-only fault from `vercel logs`.
 
 ## 6. Reading, and not editing
 

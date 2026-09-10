@@ -4,10 +4,80 @@ import { paymentsService } from "@/server/services/payments.service";
 import { user } from "@/db/schema/users";
 import { stripe } from "@/lib/stripe";
 import { eq } from "drizzle-orm";
-import { headers } from "next/headers";
 import type { Stripe } from "stripe";
 
 const HOST_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+// ========================================
+// Errors
+// ========================================
+
+export class StripeConnectError extends Error {
+  constructor(
+    readonly code: string,
+    readonly status: number,
+    message?: string
+  ) {
+    super(message ?? code);
+    this.name = "StripeConnectError";
+  }
+}
+
+const err = (code: string, status: number, message?: string) =>
+  new StripeConnectError(code, status, message);
+
+/** The shape every Stripe SDK rejection carries, narrowed from `unknown`. */
+interface StripeFailure {
+  type: string;
+  message: string;
+}
+
+function asStripeFailure(error: unknown): StripeFailure | null {
+  if (typeof error !== "object" || error === null) return null;
+
+  const candidate = error as { type?: unknown; message?: unknown };
+  if (typeof candidate.type !== "string") return null;
+  if (!candidate.type.startsWith("Stripe")) return null;
+
+  return {
+    type: candidate.type,
+    message: typeof candidate.message === "string" ? candidate.message : "",
+  };
+}
+
+/**
+ * Runs a Stripe call and tells Stripe's refusals apart from our own failures.
+ *
+ * Stripe answering 400 is not this server falling over, and reporting it as a
+ * 500 is what left the payout button dead with nothing to say: the platform
+ * account was restricted from opening connected accounts ("we've temporarily
+ * restricted your ability to create this type of connected account"), which
+ * only the platform owner can clear in the Stripe dashboard.
+ *
+ * Stripe's own prose names the *platform's* account and is written for whoever
+ * reads that dashboard, so it stays in the server log and never reaches a
+ * browser. Anything that is not a Stripe rejection — a network fault, a bug of
+ * ours — is rethrown untouched and becomes the 500 it genuinely is.
+ */
+async function throughStripe<T>(
+  context: string,
+  call: () => Promise<T>
+): Promise<T> {
+  try {
+    return await call();
+  } catch (error) {
+    const failure = asStripeFailure(error);
+    if (!failure) throw error;
+
+    console.error(`Stripe ${context} failed:`, failure.type, failure.message);
+
+    if (failure.type === "StripeInvalidRequestError") {
+      throw err("STRIPE_REQUEST_REJECTED", 422, "Stripe refused this request");
+    }
+
+    throw error;
+  }
+}
 
 export const stripeService = {
   /**
@@ -18,7 +88,7 @@ export const stripeService = {
       where: eq(user.id, userId),
     });
 
-    if (!userRecord) throw new Error("User not found");
+    if (!userRecord) throw err("USER_NOT_FOUND", 404, "User not found");
 
     if (userRecord.stripeAccountId) {
       return userRecord.stripeAccountId;
@@ -26,17 +96,19 @@ export const stripeService = {
 
     // Create Express account (simplest for platforms)
     // Stripe will collect required info during onboarding
-    const account = await stripe.accounts.create({
-      type: "express",
-      email: userRecord.email,
-      capabilities: {
-        card_payments: { requested: true },
-        transfers: { requested: true },
-      },
-      metadata: {
-        userId: userId,
-      },
-    });
+    const account = await throughStripe("accounts.create", () =>
+      stripe.accounts.create({
+        type: "express",
+        email: userRecord.email,
+        capabilities: {
+          card_payments: { requested: true },
+          transfers: { requested: true },
+        },
+        metadata: {
+          userId: userId,
+        },
+      })
+    );
 
     // Save to DB
     await db
@@ -87,12 +159,14 @@ export const stripeService = {
    * Create an account link for onboarding
    */
   async createAccountLink(accountId: string) {
-    const accountLink = await stripe.accountLinks.create({
-      account: accountId,
-      refresh_url: `${HOST_URL}/api/stripe/connect/refresh`, // TODO: Create Route
-      return_url: `${HOST_URL}/api/stripe/connect/return`, // TODO: Create Route
-      type: "account_onboarding",
-    });
+    const accountLink = await throughStripe("accountLinks.create", () =>
+      stripe.accountLinks.create({
+        account: accountId,
+        refresh_url: `${HOST_URL}/api/stripe/connect/refresh`,
+        return_url: `${HOST_URL}/api/stripe/connect/return`,
+        type: "account_onboarding",
+      })
+    );
 
     return accountLink.url;
   },
@@ -107,12 +181,19 @@ export const stripeService = {
       columns: { stripeAccountId: true, stripeAccountStatus: true },
     });
 
+    // Typed, like `createConnectAccount`'s refusals: an untyped Error falls
+    // through `handleError` to a 500, and "you have not connected an account
+    // yet" is the caller's state, not this server failing.
     if (!userRecord?.stripeAccountId) {
-      throw new Error("No Stripe account connected");
+      throw err("STRIPE_ACCOUNT_MISSING", 409, "No Stripe account connected");
     }
 
     if (userRecord.stripeAccountStatus !== "active") {
-      throw new Error("Stripe account is not fully set up yet");
+      throw err(
+        "STRIPE_ACCOUNT_NOT_READY",
+        409,
+        "Stripe onboarding is not finished"
+      );
     }
 
     const loginLink = await stripe.accounts.createLoginLink(
@@ -134,8 +215,10 @@ export const stripeService = {
         sig,
         process.env.STRIPE_WEBHOOK_SECRET!
       );
-    } catch (err: any) {
-      throw new Error(`Webhook signature verification failed: ${err.message}`);
+    } catch (failure) {
+      const reason =
+        failure instanceof Error ? failure.message : String(failure);
+      throw new Error(`Webhook signature verification failed: ${reason}`);
     }
 
     switch (event.type) {

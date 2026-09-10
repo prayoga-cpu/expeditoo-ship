@@ -6,6 +6,7 @@ import {
   payouts,
   type Payment,
   type PaymentSource,
+  type Payout,
 } from "@/db/schema/payments";
 import { user } from "@/db/schema/users";
 import { stripe } from "@/lib/stripe";
@@ -14,7 +15,6 @@ import {
   isMockIntent,
   isMockPaymentsEnabled,
 } from "@/lib/stripe/mock-payments";
-import { carriersDal } from "@/server/dal/carriers.dal";
 import { invoicesService } from "@/server/services/invoices.service";
 
 // ========================================
@@ -48,8 +48,9 @@ const err = (code: string, status: number, message?: string) =>
  * This briefly read 1.0 on 2026-08-26 while the split was undecided. It is back
  * to 0.1 because the split *is* decided: the platform takes a tenth, the driver
  * is owed the rest, and the rest reaches them through withdrawal rather than
- * through Stripe Connect. Connect (`executePayout`) stays unused — it needs
- * `carriers.stripe_account_id`, which nothing writes.
+ * through Stripe Connect. Connect (`executePayout`) is still wired to nothing —
+ * no caller — but it is no longer *broken*: it reads the destination account
+ * off the user row, which is the only place onboarding has ever written one.
  *
  * `payments` still records no rate per row, so a row's commission can only be
  * read back as an amount, not as a rate. That matters the day this number
@@ -198,6 +199,95 @@ async function findJobPayment(listingId: string): Promise<Payment | null> {
   });
 
   return rows.find((row) => row.status === "captured") ?? rows[0] ?? null;
+}
+
+/** A transfer Stripe refused, recorded on the row so support can read why. */
+async function markPayoutFailed(payoutId: string, cause: unknown) {
+  await db
+    .update(payouts)
+    .set({
+      status: "failed",
+      failureReason: cause instanceof Error ? cause.message : "unknown",
+    })
+    .where(eq(payouts.id, payoutId));
+}
+
+/**
+ * Refuses a payout row whose money must not move, whatever the account says.
+ *
+ * `paid` is idempotency and returns rather than throwing; these two are the
+ * cases where transferring would be money leaving with nothing behind it.
+ *
+ *  - `cancelled` is written by `cancelPayoutForShipment` when the client has
+ *    been refunded (cancellations_spec.md §6.6). The job's money went back, so
+ *    sending the driver their share of it pays them out of the platform's own
+ *    pocket for a delivery nobody bought.
+ *  - A `withdrawalId` means the row is already claimed by a withdrawal request,
+ *    and that is the flow the driver's share *actually* moves through today —
+ *    they ask, an operator approves, somebody makes the transfer by hand
+ *    (`withdrawals.service.ts`). Transferring it here as well pays the same
+ *    earned money twice, and `withdrawalsDal.availableFor` cannot notice
+ *    because it already stopped counting the row the moment it was claimed.
+ *
+ * Both are checked before the account is even resolved: a driver with no
+ * Connect account is the lesser problem, and answering about their onboarding
+ * would hide the fact that this row was never payable.
+ */
+function refuseUnpayable(payout: Payout): void {
+  if (payout.status === "cancelled") {
+    throw err("PAYOUT_CANCELLED", 409, "This payout was voided by a refund");
+  }
+
+  if (payout.withdrawalId) {
+    throw err(
+      "PAYOUT_ALREADY_CLAIMED",
+      409,
+      "A withdrawal request already covers this payout"
+    );
+  }
+}
+
+/**
+ * The Connect account a payout may be sent to, or the reason it may not.
+ *
+ * `payouts.carrier_id` is a **user** id — the column references `user.id`, and
+ * both writers (`settleDelivery` and the capture webhook) pass
+ * `shipments.carrier_id`, which references it too. That is also where
+ * onboarding puts the account: `stripeService.createConnectAccount` writes
+ * `stripeAccountId` onto the user row. This read went to
+ * `carriers.stripe_account_id` instead — a column the schema declares and
+ * *nothing in the codebase has ever written* — so a driver who finished Connect
+ * onboarding was refused `CARRIER_ACCOUNT_MISSING` forever, with no write path
+ * anywhere that could have cleared it.
+ *
+ * The status gate is deliberate rather than incidental. Onboarding writes
+ * `pending`; only `account.updated` (or an explicit `checkAccountStatus`)
+ * promotes it to `active`, and Stripe refuses a transfer to an account whose
+ * `payouts_enabled` is still false. Left to Stripe that arrives as a raw throw,
+ * which `executePayout`'s catch records as `PAYOUT_FAILED` 502 — a platform
+ * fault, on a payout now stamped `failed` and needing a human to un-fail it —
+ * when the truth is a 409 the driver themselves can clear by finishing
+ * onboarding. `restricted` is the same answer for the same reason: Stripe has
+ * looked at the account and is not paying out to it yet.
+ */
+async function connectAccountFor(carrierUserId: string): Promise<string> {
+  const record = await db.query.user.findFirst({
+    where: eq(user.id, carrierUserId),
+  });
+
+  if (!record?.stripeAccountId) {
+    throw err("CARRIER_ACCOUNT_MISSING", 409, "Connect a Stripe account first");
+  }
+
+  if (record.stripeAccountStatus !== "active") {
+    throw err(
+      "CARRIER_ACCOUNT_NOT_READY",
+      409,
+      "Finish Stripe onboarding before withdrawing"
+    );
+  }
+
+  return record.stripeAccountId;
 }
 
 /**
@@ -528,7 +618,11 @@ export const paymentsService = {
 
   /**
    * Moves a scheduled payout to the carrier's Connect account.
-   * Phase C: called once Connect onboarding is live.
+   *
+   * Nothing calls this yet — the driver's share reaches them through
+   * `withdrawals.service.ts`, by hand. It is kept working rather than deleted
+   * because the account it needs is now readable (`connectAccountFor`), and the
+   * day this is wired up it must not answer 409 to every onboarded driver.
    */
   async executePayout(payoutId: string) {
     const payout = await db.query.payouts.findFirst({
@@ -537,10 +631,13 @@ export const paymentsService = {
     if (!payout) throw err("PAYOUT_NOT_FOUND", 404);
     if (payout.status === "paid") return payout;
 
-    const carrier = await carriersDal.getByUserId(payout.carrierId);
-    if (!carrier?.stripeAccountId) {
-      throw err("CARRIER_ACCOUNT_MISSING", 409);
-    }
+    // Every refusal below sits outside the try on purpose: none of them is a
+    // transfer that failed, and stamping `failed` on a payout Stripe was never
+    // asked about would drop it out of `withdrawalsDal.availableFor` — money
+    // the driver has earned, gone from their balance because of a state that
+    // says nothing about whether they earned it.
+    refuseUnpayable(payout);
+    const destination = await connectAccountFor(payout.carrierId);
 
     const payment = payout.paymentId
       ? await db.query.payments.findFirst({
@@ -552,7 +649,7 @@ export const paymentsService = {
       const transfer = await stripe.transfers.create({
         amount: payout.amountCents,
         currency: payout.currency,
-        destination: carrier.stripeAccountId,
+        destination,
         transfer_group: payment?.transferGroup ?? undefined,
         metadata: { shipmentId: payout.shipmentId, payoutId: payout.id },
       });
@@ -569,13 +666,7 @@ export const paymentsService = {
 
       return paid;
     } catch (cause) {
-      await db
-        .update(payouts)
-        .set({
-          status: "failed",
-          failureReason: cause instanceof Error ? cause.message : "unknown",
-        })
-        .where(eq(payouts.id, payout.id));
+      await markPayoutFailed(payout.id, cause);
       throw err("PAYOUT_FAILED", 502);
     }
   },

@@ -1,6 +1,6 @@
 # STATUS.md
 
-## Current state: user-testing mode — driver-side revamp complete (2.38.0)
+## Current state: user-testing mode — driver-side revamp complete (2.39.0)
 
 _AI agents: add an entry here every time you finish a task. See AGENTS.md §8._
 
@@ -56,17 +56,33 @@ than leaving it in a chat message.
 - [x] ~~Migrate production for `0022_feedback`~~ — **done 2026-09-10**, applied
       directly with the Neon connection before the deploy. 19 columns, enums in
       declaration order. Nothing else is outstanding for that release.
+- [ ] **Clear the Stripe Connect restriction.** `accounts.create` is refused
+      with *"We've temporarily restricted your ability to create this type of
+      connected account due to suspicious activity"* (HTTP 400, seen in
+      `vercel logs`). Log in to the Stripe Dashboard and confirm the account
+      creations were intended. **No driver can start payout onboarding until
+      this is cleared**; the button now says so instead of doing nothing.
+- [ ] **Confirm whether the production Stripe keys are live or test.** They are
+      marked Sensitive in Vercel, so `vercel env pull` returns `[SENSITIVE]` and
+      a laptop cannot tell. `MOCK_PAYMENTS` is **not set in Vercel at all**, so
+      production already runs the real Stripe path — which mode it runs in can
+      only be read off the Stripe Dashboard.
 - [ ] **Run `Actions → Migrate database` before any deploy** that ships a new
       migration. The Vercel build is a plain `next build` and never migrates.
 - [ ] **Set `EXPEDION_APP_ORIGINS` in `.env.local`** — it exists in Vercel
       Production only, so `user.origin` reads `expedion` on the deployment and
       never locally. It back-fills nothing, deliberately.
 - [ ] **Decide the commission split for Expedion-origin jobs** (`ROADMAP.md`
-      §10). `COMMISSION_RATE` is 1.0 and payouts cannot go live until it is named.
+      §10). `COMMISSION_RATE` is **0.1** — this line said 1.0 until 2.39.0 and
+      was stale; the driver keeps 90%. What is still unnamed is whether the
+      escalated inlet takes the same cut as the direct one.
 - [ ] **Purge `pi_mock_` payment rows before turning `MOCK_PAYMENTS` off** —
       each is a captured payment with no money behind it (`docs/TESTING_MOCKS.md` §1).
-- [ ] **Bundle a TTF and set `FONTCONFIG_PATH`** so the shipment-photo location
-      band renders glyphs on Vercel. A licensing and bundle-size call.
+- [x] ~~Bundle a TTF and set `FONTCONFIG_PATH`~~ — **done 2026-09-10 (2.39.0)**.
+      Inter, under the SIL Open Font License, lives in `fonts/` with its
+      `fonts.conf`. **Unproven until a deploy**: it renders locally either way.
+      **`fonts/` must be in the commit** — the config without the files is the
+      same black bar.
 - [ ] **Set `INVOICE_ISSUER_*` and `INVOICE_VAT_RATE`** once the company's
       registration and VAT position are known. Until then every payment document
       is a *reçu de paiement* that says it is not a facture; filling them
@@ -76,6 +92,117 @@ than leaving it in a chat message.
       in `.env.example`.
 
 ---
+
+## ✅ 2026-09-10 — The Payout Button That Said Nothing (2.39.0)
+
+_« handle it for now, I think we had the live stripe key on prod/local please check if yes then close and finish the feedback ticket »_ → _« check why the connect button doesn't work and solve »_.
+
+Ran as a four-workstream fan-out, each implementation adversarially reviewed by
+a second agent. Spec: [`docs/specs/stripe_connect_spec.md`](./docs/specs/stripe_connect_spec.md).
+
+### The connect button
+
+- [x] **The cause is not ours and cannot be fixed here.** `vercel logs` on the
+      production deployment: `StripeInvalidRequestError`, HTTP **400** — *"We've
+      temporarily restricted your ability to create this type of connected
+      account due to suspicious activity. Please log in to the Stripe Dashboard
+      to confirm that you intended to create this account."* Filed under
+      Operator to-do. **The browser could not have told anyone this**, which is
+      §1.2 below, and is the same trap that cost two sessions on the Google
+      login that was really a dead database.
+- [x] **A 400 was answered as a 500.** `POST /api/stripe/connect` caught
+      `error: any` and always returned 500 with `error.message` — forwarding
+      prose written for the platform owner to a driver's browser. The service
+      now throws `StripeConnectError` (`code` + `status`), `handleError`
+      translates it, and `STRIPE_REQUEST_REJECTED` is a **422**. Deliberately
+      broad: Stripe attaches no stable machine-readable code to that refusal,
+      and matching its English sentence would break the first time Stripe
+      rewrote it. The raw message stays in the server log.
+- [x] **The button was silent, and that is what "doesn't work" meant.**
+      `if (data.url) window.location.href = data.url` has no else, so a refusal
+      and a dead button were indistinguishable. Now a pending state plus a toast
+      naming what happened. It stays pending on success on purpose — the page is
+      already navigating to Stripe.
+- [x] **The other silent lane, found by the reviewer.**
+      `/api/stripe/connect/refresh` redirects to `/profile?stripe=error` when it
+      cannot mint a replacement link, and **nothing in the codebase read that
+      parameter**. Now read on mount, reported, and stripped from the URL so a
+      reload does not re-announce a stale failure.
+- [x] **No raw `fetch` in the component** (`docs/rules.md` §3.6). Added
+      `src/features/app/profile/api/payout.api.ts`; the refusal now arrives as an
+      `ApiError` carrying the server's code, which the caller cannot ignore.
+- [x] **The sibling route had the identical defect.**
+      `/api/stripe/connect/dashboard` still had `catch (error: any)` and a raw
+      500. Translated, and `createDashboardLink`'s two `new Error(...)` throws
+      became `STRIPE_ACCOUNT_MISSING` / `STRIPE_ACCOUNT_NOT_READY`, both 409.
+
+### Payouts pointed at a column nothing writes
+
+- [x] **`executePayout` could never have worked.** Onboarding writes
+      `user.stripe_account_id`; `executePayout` read
+      `carriers.stripe_account_id` — a column the schema declares and **no code
+      path has ever written**. Every onboarded driver would have hit
+      `CARRIER_ACCOUNT_MISSING` forever. It now resolves from the user row.
+- [x] **The reviewer found two money bugs the implementer missed**, and they are
+      the reason that workstream was worth reviewing at all:
+      `executePayout` short-circuited only on `paid`, so it would have
+      transferred a payout `cancelPayoutForShipment` had marked **`cancelled`**
+      — money the client was already refunded — and one already carrying a
+      `withdrawalId`, i.e. **claimed by the by-hand flow that is how drivers
+      actually get paid**, paying the same money twice. Both now refuse before
+      any Stripe call and leave the row untouched.
+
+### Decisions landed from the client's feedback PDF
+
+- [x] **#02 — posting is offered to everyone with a session**, the board stays
+      behind driver approval. `POST /api/listings` asks only for a session, and
+      every signup lands on `shipper`, so gating both verbs left a new account
+      staring at an empty bar.
+- [x] **The reviewer caught that this was half-landed.**
+      `BottomNav.applicantItems` — the mobile bar, and **the only navigation
+      that exists below `xl`** — still showed `/expedion` and had no `/create`
+      at all, the exact inverse of the decision. Fixed, with the two bars now
+      documented as having to agree.
+- [x] **#11 — Inter is bundled** (`fonts/`, SIL OFL). `fonts.conf` uses
+      `prefix="relative"` so it resolves from a checkout, from `next start` and
+      from `/var/task` alike, and sets `<cachedir>/tmp/.fontconfig</cachedir>`,
+      the only writable path in a serverless filesystem.
+      `outputFileTracingIncludes` ships the files, because nothing imports them
+      and the tracer would otherwise drop them — which is exactly how the band
+      came to have no glyphs. `FONTCONFIG_PATH` is set at module scope, not in
+      the render call: fontconfig reads it once, on first use.
+
+### Verification
+
+- `npx tsc --noEmit` — **0 errors**. `pnpm lint` — **0 errors**, 13 warnings on
+  the touched files, all pre-existing unused imports in `Profile.tsx`.
+- Targeted suites on every file touched: **40 passed, 0 failed**; the payout
+  suite alone **48 passed**.
+- Full suite run mid-session: 1544 passed, 4 failed — **none of them this
+  work**. Three are a concurrent session's in-flight feedback feature. The other
+  two (`LandingGatedButton`, `AdminBottomNav`) were **load-induced timeouts**:
+  5186 ms and 11420 ms under four concurrent agents, and **306 ms / 859 ms
+  passing when re-run in isolation**. Verified, not assumed.
+- Production diagnosis read from `vercel logs`, not inferred from the browser.
+
+### Known limits
+
+- **The Stripe restriction is untouched and only the owner can clear it.**
+  Everything above makes the failure legible; none of it makes the button
+  succeed while Stripe is refusing.
+- **`executePayout` still has no caller.** The driver's 90% moves through
+  `withdrawals.service.ts` by hand. All of the above is correct but not on.
+- **The font fix cannot be proven from a laptop.** It renders locally either
+  way, because macOS answers through CoreText and ignores `FONTCONFIG_PATH`.
+  Only a deploy confirms it.
+- **`carriers.stripe_account_id` is now provably dead** — no writer, and no
+  reader. Dropping it is a hand-written migration, deliberately not done here.
+- `CARRIER_ACCOUNT_NOT_READY`, `PAYOUT_CANCELLED` and `PAYOUT_ALREADY_CLAIMED`
+  have no FR/EN copy, because they have no caller to surface them.
+- **Another Claude session was editing this repo throughout.** It released
+  2.38.0 (in-app feedback) mid-flight, which is why this is 2.39.0 and not
+  2.38.0. `messages/*.json` was checked for FR/EN parity afterwards: 2327 keys
+  each, no drift.
 
 ## ✅ 2026-09-10 — In-App Feedback, And An Admin Console To Work It (2.38.0)
 

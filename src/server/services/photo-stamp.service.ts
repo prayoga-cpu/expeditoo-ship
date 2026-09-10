@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import path from "node:path";
 import sharp from "sharp";
 import type { ShipmentPhotoStage } from "@/db/schema/shipments";
 
@@ -15,15 +17,47 @@ import type { ShipmentPhotoStage } from "@/db/schema/shipments";
  * with a text editor and are deliberately not read; the coordinates that get
  * stamped are the live fix the client posted alongside the bytes.
  *
- * TODO(EXPEDITOO-TESTING): librsvg finds fonts through fontconfig, i.e.
- * through whatever the host provides. This renders correctly in local
- * development; on a host with no system fonts the band renders without glyphs.
- * The fix is to bundle a TTF and point `FONTCONFIG_PATH` at it, which is a
- * decision about licensing and bundle size rather than about code. The
- * database row is unaffected, and every surface renders the same three lines
- * as text beside the photo, so a fontless deployment loses the convenience and
- * not the evidence. See shipment_photos_spec.md §5.4.
+ * The letters come from a font the repository carries. Sharp draws the band
+ * through librsvg, which asks fontconfig for a face, and fontconfig only knows
+ * what the host installed — a serverless runtime installs nothing, so the band
+ * shipped to production as a black bar with no glyphs. `fonts/` now holds Inter
+ * and the `fonts.conf` that points at it, `next.config.mjs` traces both into
+ * the function, and `FONTCONFIG_PATH` below joins the two.
  */
+
+/**
+ * Why module scope and not inside `stamp`: fontconfig reads this variable once,
+ * the first time librsvg asks it for a face, and keeps that answer for the life
+ * of the process. Setting it in the render call is a race with whichever render
+ * got there first. This module is the only place in the app that draws text
+ * through Sharp, so by the time anything can ask, this has already run.
+ *
+ * Derived from the working directory rather than frozen at build time: a
+ * function runs from the project root under a path the build machine never saw.
+ * An explicit value still wins, so a host with its own fontconfig keeps it.
+ *
+ * The directory is checked rather than assumed. If the working directory turns
+ * out not to be the project root, naming a path with no `fonts.conf` in it
+ * would leave fontconfig with no fonts at all — worse than the system ones it
+ * would have found on its own, and it would take a working developer machine
+ * down with the deployment it was meant to fix.
+ */
+const BUNDLED_FONT_DIR = path.join(process.cwd(), "fonts");
+
+if (
+  !process.env.FONTCONFIG_PATH &&
+  existsSync(path.join(BUNDLED_FONT_DIR, "fonts.conf"))
+) {
+  process.env.FONTCONFIG_PATH = BUNDLED_FONT_DIR;
+}
+
+/**
+ * Inter is the bundled face and is named first so it is what production draws.
+ * The rest of the stack is for a developer machine, where pango may be talking
+ * to the operating system instead of to fontconfig — macOS answers through
+ * CoreText and ignores `FONTCONFIG_PATH` entirely.
+ */
+const FONT_STACK = "Inter, DejaVu Sans, Verdana, Arial, Helvetica, sans-serif";
 
 /** French, because the stamp is evidence for a French market. */
 const STAGE_LABEL: Record<ShipmentPhotoStage, string> = {
@@ -101,7 +135,7 @@ function buildOverlay(width: number, lines: string[]): Buffer {
       const y = padding + lineHeight * (index + 1) - Math.round(fontSize * 0.3);
       const weight = index === 0 ? "700" : "400";
       const opacity = index === 0 ? "1" : "0.92";
-      return `<text x="${padding}" y="${y}" font-family="DejaVu Sans, Verdana, Arial, Helvetica, sans-serif" font-size="${fontSize}" font-weight="${weight}" fill="#ffffff" fill-opacity="${opacity}">${escapeXml(line)}</text>`;
+      return `<text x="${padding}" y="${y}" font-family="${FONT_STACK}" font-size="${fontSize}" font-weight="${weight}" fill="#ffffff" fill-opacity="${opacity}">${escapeXml(line)}</text>`;
     })
     .join("");
 

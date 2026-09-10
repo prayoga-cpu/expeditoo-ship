@@ -14,9 +14,11 @@ import { user } from "./users";
 // ========================================
 //
 // Every payment is captured into the platform's own Stripe account. The
-// driver's 90% is real and owed, but it is not sent automatically: there is no
-// Connect transfer on the payout path, and `carriers.stripe_account_id` — the
-// column `executePayout` would need — is written by nothing.
+// driver's 90% is real and owed, but it is not sent automatically: nothing
+// calls `executePayout`, so no Connect transfer is ever attempted. (That method
+// now resolves its destination from `user.stripe_account_id`, where Connect
+// onboarding actually writes it — it used to read `carriers.stripe_account_id`,
+// which no code path has ever written.)
 //
 // So the money moves the way it actually moves in the business: the driver asks
 // for it, an operator approves, somebody makes the transfer, and the reference

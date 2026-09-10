@@ -63,7 +63,7 @@ describe("HeaderQuickActions", () => {
     expect(onError.mock.calls.map(([e]) => e.message)).toEqual([]);
   });
 
-  it.each(["driver", "carrier"])("shows for a %s", (role) => {
+  it.each(["driver", "carrier"])("gives a %s both verbs", (role) => {
     auth.user = { roles: [role] };
 
     renderWith();
@@ -71,7 +71,7 @@ describe("HeaderQuickActions", () => {
     expect(screen.getAllByRole("link")).toHaveLength(2);
   });
 
-  it("shows for an admin who is also an approved driver", () => {
+  it("shows both to an admin who is also an approved driver", () => {
     auth.user = { roles: ["admin", "carrier", "driver"] };
 
     renderWith();
@@ -80,15 +80,39 @@ describe("HeaderQuickActions", () => {
   });
 
   it.each([["shipper"], ["operator"], ["support"], ["finance"], ["admin"]])(
-    "hides from a %s, who has no driver access",
+    "gives a %s the posting verb alone, not the board they cannot bid on",
     (role) => {
       auth.user = { roles: [role] };
 
-      const { container } = renderWith();
+      renderWith();
 
-      expect(container).toBeEmptyDOMElement();
+      const links = screen.getAllByRole("link");
+      expect(links).toHaveLength(1);
+      expect(links[0]).toHaveAttribute("href", "/create");
+      expect(links[0]).toHaveAccessibleName("Request transport");
     }
   );
+
+  it("keeps the rule beside the one button a shipper does get", () => {
+    auth.user = { roles: ["shipper"] };
+
+    const { container } = renderWith();
+
+    // The rule lives in this component precisely so it never hangs next to the
+    // language toggle on its own; one button is still something to separate.
+    expect(container.querySelector("span[aria-hidden]")).toBeInTheDocument();
+  });
+
+  it("shows a signup with no role at all the posting verb", () => {
+    auth.user = { roles: [] };
+
+    renderWith();
+
+    expect(screen.getByRole("link", { name: "Request transport" })).toHaveAttribute(
+      "href",
+      "/create"
+    );
+  });
 
   it("renders nothing while the session loads, rather than shoving the chrome sideways", () => {
     auth.user = null;

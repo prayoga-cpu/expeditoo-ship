@@ -14,6 +14,14 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.39.0] - 2026-09-10 · ux
+
+- **The payout setup button works, and tells you when it cannot.** Pressing *Continuer la configuration* on your profile did nothing whatsoever — no message, no spinner, no error. It now shows that it is working, and when Stripe turns the request down it says so instead of leaving you pressing a button that appears broken. Stripe has currently suspended new payout accounts on our side, so that is what most people will see until we clear it with them; before today you had no way of knowing that.
+- **Coming back from Stripe with an expired link now explains itself too.** That trip also ended in silence, on the same profile page, with nothing said.
+- **Anyone signed in can post a transport request from anywhere in the app.** The two buttons at the top only appeared for approved drivers, so a brand-new account saw an empty bar that read as broken. Worse on a phone: the bottom bar offered the job board — which a new account cannot bid on — and no way to post a request at all. Posting is now offered to everyone with an account; the job board stays with approved drivers, who are the only people who can bid.
+- **The location stamped onto pickup and delivery photos is now readable.** The band across the bottom of each photo arrived as a black bar with no letters once the app was running on its live server. The date, the place and the reference now print properly, in the same typeface the app uses everywhere else.
+- **Payout setup now points at the right account.** When automatic payouts are switched on, they will reach the Stripe account a driver actually connected. Until today they would have failed for every driver, because the app looked for that account somewhere nothing had ever written it.
+
 ## [2.38.0] - 2026-09-10 · feat
 
 - **You can now tell us something from anywhere in the app.** A new button in the top bar opens a short form — is it a bug, an idea or a comment, which screen it happened on, what happened, and up to four screenshots. It is there on every screen, on a phone as well as a computer, and it is there for everyone, not only approved drivers.

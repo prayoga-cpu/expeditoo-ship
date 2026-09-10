@@ -102,12 +102,20 @@ export function BottomNav() {
   ];
 
   /**
-   * Anyone without an application yet. Shippers no longer post work here, so
-   * this bar's job is to show the board and the way to become a driver.
+   * Anyone without an application yet. Posting, not browsing: `/create` came
+   * back and `POST /api/listings` asks only for a session, while the board is
+   * bids this person cannot place — so showing them `/expedion` offered the one
+   * verb they have no use for and withheld the one they do. Same split the
+   * header makes (`HeaderQuickActions.tsx`); the two bars must not disagree,
+   * because below `xl` this one is the only navigation there is.
    */
   const applicantItems: NavItem[] = [
     { href: "/home", labelKey: "home", icon: <Home className="w-5 h-5" /> },
-    { href: "/expedion", labelKey: "jobs", icon: <Plus className="w-5 h-5" /> },
+    {
+      href: "/create",
+      labelKey: "requestTransport",
+      icon: <Plus className="w-5 h-5" />,
+    },
     {
       href: "/carrier/application",
       labelKey: "myApplication",
