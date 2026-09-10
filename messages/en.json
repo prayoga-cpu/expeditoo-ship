@@ -425,6 +425,7 @@
     "invoices": {
       "title": "Invoices",
       "description": "View and download your payment invoices",
+      "deliveryNotice": "Every receipt is emailed to you as an attachment as soon as payment is taken. Sending by WhatsApp is not available yet — check your inbox, or send the document again below.",
       "empty": "No invoices yet",
       "emptyDesc": "Your invoices will appear here after your first purchase.",
       "loading": "Loading invoices...",
@@ -682,9 +683,28 @@
       "awaitingClient": "Awaiting the client's confirmation",
       "channel": {
         "expedion_app": "via the Expedion app",
-        "link": "via the link they received"
+        "link": "via the link they received",
+        "app": "in the app"
       },
-      "confirmedByOperator": "Confirmed by an operator on the client's behalf"
+      "confirmedByOperator": "Confirmed by an operator on the client's behalf",
+      "confirmedByYou": "You confirmed this",
+      "selfTitle": "Confirm what happened",
+      "selfLead": "The transporter records each step; your confirmation is the second signature on it.",
+      "milestone": {
+        "PICKED_UP": "Pickup",
+        "DELIVERED": "Delivery"
+      },
+      "action": {
+        "PICKED_UP": "Yes, the pickup happened",
+        "DELIVERED": "Yes, I received my goods"
+      },
+      "disclaimer": "Confirming commits no payment and does not change your transport.",
+      "thanks": "Thank you, that's recorded",
+      "alreadyDone": "This step was already confirmed",
+      "notReached": "The transporter has not recorded this step yet.",
+      "cancelledTransport": "This transport was cancelled, so there is nothing to confirm.",
+      "notYours": "The transporter records this step; only the client confirms it.",
+      "failed": "The confirmation could not be saved. Please try again in a moment."
     }
   },
   "listing": {

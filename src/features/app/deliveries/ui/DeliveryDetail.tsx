@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import {
   ArrowLeft,
+  BadgeCheck,
   MapPin,
   MessageCircle,
   Star,
@@ -21,6 +22,10 @@ import { CreateReviewModal } from "@/features/app/common/ui/CreateReviewModal";
 import { useCanReview } from "@/features/app/common/hooks/useCanReview";
 import { useTranslations } from "next-intl";
 import { useShipmentPhotos } from "@/features/app/common/hooks/useShipmentPhotos";
+import {
+  useShipmentAttestations,
+  type MilestoneAttestation,
+} from "../hooks/useDeliveryDetail";
 import { ShipmentPhotoGallery } from "@/features/app/common/ui/ShipmentPhotoGallery";
 import { ShipmentIncidentsSection } from "@/features/app/incidents/ui";
 import { StopTransportDialog } from "@/features/app/common/ui/StopTransportDialog";
@@ -89,6 +94,8 @@ export function DeliveryDetail({
 
       <RouteCard delivery={delivery} />
 
+      <ClientAttestationCard delivery={delivery} />
+
       <ShipmentIncidentsSection
         shipmentId={delivery.id}
         canReport={
@@ -114,6 +121,100 @@ export function DeliveryDetail({
       <ShipmentPhotosCard shipmentId={delivery.id} />
 
       {delivery.status === "DELIVERED" && <ReviewSection delivery={delivery} />}
+    </div>
+  );
+}
+
+/**
+ * The client's own attestation, on the screen they are already looking at.
+ *
+ * Until now the only way to answer was the link in the SMS or the email, so a
+ * signed-in client with the delivery open in front of them had to go and find
+ * a message. Same fact, third door: it records a confirmation and moves
+ * nothing (transport_status_confirmation_spec.md §1).
+ *
+ * Only the requester sees it. The transporter *moves* the status — a record
+ * where they also signed for it would be worth nothing in a dispute — and
+ * staff answer on the Expedion lane, where the client they answer for is
+ * identified. Milestones the run has not reached are absent rather than
+ * disabled, and an answered one shows the answer instead of a button that
+ * would fail on a second press.
+ */
+function ClientAttestationCard({ delivery }: { delivery: DeliveryDetailView }) {
+  const t = useTranslations("deliveries.confirmation");
+  const { milestones, confirm, pendingMilestone } = useShipmentAttestations(
+    delivery.id
+  );
+
+  if (delivery.role !== "shipper" || milestones.length === 0) return null;
+
+  return (
+    <Card className="space-y-4 p-4 sm:p-5">
+      <div className="space-y-1">
+        <h2 className="flex items-center gap-2 font-semibold">
+          <BadgeCheck className="h-4 w-4 text-muted-foreground" />
+          {t("selfTitle")}
+        </h2>
+        <p className="text-sm text-muted-foreground">{t("selfLead")}</p>
+      </div>
+      <Separator />
+
+      <div className="space-y-4">
+        {milestones.map((milestone) => (
+          <AttestationRow
+            key={milestone.milestone}
+            attestation={milestone}
+            onConfirm={() => confirm(milestone.milestone)}
+            isPending={pendingMilestone === milestone.milestone}
+          />
+        ))}
+      </div>
+
+      <p className="text-xs text-muted-foreground">{t("disclaimer")}</p>
+    </Card>
+  );
+}
+
+function AttestationRow({
+  attestation,
+  onConfirm,
+  isPending,
+}: {
+  attestation: MilestoneAttestation;
+  onConfirm: () => void;
+  isPending: boolean;
+}) {
+  const t = useTranslations("deliveries.confirmation");
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="min-w-0">
+        <p className="font-medium">{t(`milestone.${attestation.milestone}`)}</p>
+        {attestation.confirmed && (
+          <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-sm text-primary">
+            <BadgeCheck className="h-3.5 w-3.5 shrink-0" />
+            {attestation.role === "operator"
+              ? t("confirmedByOperator")
+              : t("confirmedByYou")}
+            {attestation.date && (
+              <span className="text-muted-foreground">
+                · {attestation.date}
+              </span>
+            )}
+          </p>
+        )}
+      </div>
+
+      {!attestation.confirmed && (
+        <Button className="gap-2" onClick={onConfirm} disabled={isPending}>
+          {isPending ? (
+            <LottieLoader width={20} height={20} />
+          ) : (
+            <BadgeCheck className="h-4 w-4" />
+          )}
+          {t(`action.${attestation.milestone}`)}
+        </Button>
+      )}
     </div>
   );
 }

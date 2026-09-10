@@ -177,6 +177,11 @@ const matchCandidateColumns = {
   userImage: user.image,
   averageRating: carriers.averageRating,
   totalRatings: carriers.totalRatings,
+  // Free text the carrier typed at KYC, and optional — most rows are null.
+  // It is the honest half of the Particuliers/Professionnels ask (§4.4): shown
+  // when declared, absent when not, never guessed. The DTO bounds its length,
+  // because nothing has ever validated what goes in here.
+  legalForm: carriers.legalForm,
   kind: carrierRoutes.kind,
   daysOfWeek: carrierRoutes.daysOfWeek,
   validFrom: carrierRoutes.validFrom,

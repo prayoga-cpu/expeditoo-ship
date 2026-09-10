@@ -65,6 +65,18 @@ export function InvoiceList() {
                 </CardTitle>
                 <p className="text-sm text-muted-foreground">{t("description")}</p>
 
+                {/* Says where the document actually goes, and where it does not.
+                    The client asked for delivery by email and by WhatsApp; email
+                    is built and automatic, WhatsApp needs a Meta-verified
+                    business account and approved templates that do not exist, so
+                    it sends nothing. Saying so is the difference between someone
+                    waiting for a message that is never coming and someone
+                    checking their inbox. Delete this line the day WhatsApp
+                    works — not before. */}
+                <p className="text-sm text-muted-foreground">
+                    {t("deliveryNotice")}
+                </p>
+
                 {/* The controls sit above the results rather than inside them:
                     an empty period is precisely when you need to change the
                     period, so they must survive the empty state. */}

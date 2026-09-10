@@ -13,6 +13,7 @@ import { paymentsService } from "@/server/services/payments.service";
 import { messagesService } from "@/server/services/messages.service";
 import { hasAnyRole } from "@/server/services/user.service";
 import { MAX_MATCHES, MAX_MATCH_CANDIDATES } from "@/lib/route-match";
+import { MAX_LEGAL_FORM_CHARS } from "@/server/dto/carrier-discovery.dto";
 
 // Covers docs/specs/carriers_on_route_spec.md §10, the
 // carrier-discovery.service.ts bullets.
@@ -142,6 +143,9 @@ const candidate = (
   userImage: null,
   averageRating: 4,
   totalRatings: 3,
+  // Most rows really are null: nothing has ever required a carrier to declare
+  // one, which is the whole reason the badge is conditional (§4.4).
+  legalForm: null,
   kind: "recurring",
   daysOfWeek: [TUESDAY],
   validFrom: null,
@@ -167,6 +171,23 @@ const farther = (routeId: string, carrierId: string) =>
     originLng: BORDEAUX.lng + DETOUR_SHIFT,
     destinationLng: PARIS.lng + DETOUR_SHIFT,
   });
+
+/**
+ * The same prefilter row, carrying columns `matchCandidateColumns` does not
+ * select today.
+ *
+ * The cast is the point: `toMatch` spreads the row whole and lets the schema
+ * strip it, so the assertion that a SIRET never reaches a card has to be made
+ * against a row that actually holds one. Asserted against `candidate()` alone
+ * it would pass on the fixture's silence and keep passing with the projection
+ * deleted (§4.3).
+ */
+const withPrivateColumns = (row: MatchCandidateRow): MatchCandidateRow =>
+  ({
+    ...row,
+    siret: "81234567800017",
+    vatNumber: "FR40812345678",
+  }) as MatchCandidateRow;
 
 const givenCandidates = (rows: MatchCandidateRow[]) =>
   vi.mocked(carrierRoutesDal.findMatchCandidates).mockResolvedValue(rows);
@@ -434,6 +455,9 @@ describe("listForListing — the match", () => {
       avatarUrl: "https://cdn.example.test/a.jpg",
       rating: 5,
       reviewCount: 1,
+      // Not stated: this candidate declared no legal form, and the projection
+      // says so rather than guessing « Particulier » (spec §4.5).
+      legalForm: null,
       originCity: "Bordeaux",
       destinationCity: "Paris",
       // The calendar day, not an instant: `toISOString()` on the local
@@ -443,6 +467,92 @@ describe("listForListing — the match", () => {
       detourKm: expect.any(Number),
     });
     expect(Number.isInteger(items[0].detourKm)).toBe(true);
+  });
+
+  it("carries the carrier's declared legal form onto the card", async () => {
+    givenCandidates([
+      candidate({
+        routeId: "route-1",
+        carrierId: "carrier-1",
+        legalForm: "SASU",
+      }),
+    ]);
+
+    const { items } = await carrierDiscoveryService.listForListing(
+      OWNER,
+      "listing-1"
+    );
+
+    expect(items[0].legalForm).toBe("SASU");
+  });
+
+  it("carries a spelled-out legal form whole", async () => {
+    // 45 characters, and a real one: the wire bound exists against an import or
+    // an admin edit, not against a carrier filling in the KYC form the product
+    // gives them — `carrier.dto.ts` accepts 100 (§4.4).
+    const declared = "société par actions simplifiée unipersonnelle";
+
+    givenCandidates([
+      candidate({
+        routeId: "route-1",
+        carrierId: "carrier-1",
+        legalForm: declared,
+      }),
+    ]);
+
+    const { items } = await carrierDiscoveryService.listForListing(
+      OWNER,
+      "listing-1"
+    );
+
+    expect(items[0].legalForm).toBe(declared);
+  });
+
+  it("bounds a legal form long enough to break a card", async () => {
+    givenCandidates([
+      candidate({
+        routeId: "route-1",
+        carrierId: "carrier-1",
+        legalForm: "société ".repeat(40),
+      }),
+    ]);
+
+    const { items } = await carrierDiscoveryService.listForListing(
+      OWNER,
+      "listing-1"
+    );
+
+    // Free text a human typed, on a surface a requester did not ask to see:
+    // the wire is bounded here and the card truncates on top of it.
+    expect(items[0].legalForm).toHaveLength(MAX_LEGAL_FORM_CHARS);
+    // And says so, rather than passing a cut off as a complete declaration.
+    expect(items[0].legalForm?.endsWith("…")).toBe(true);
+  });
+
+  it("keeps the rest of the carrier row off the card beside it", async () => {
+    givenCandidates([
+      withPrivateColumns(
+        candidate({
+          routeId: "route-1",
+          carrierId: "carrier-1",
+          legalForm: "EURL",
+        })
+      ),
+    ]);
+
+    const { items } = await carrierDiscoveryService.listForListing(
+      OWNER,
+      "listing-1"
+    );
+
+    // A legal form is the public identity of a business; a SIRET is the key to
+    // its registered address, which for an auto-entrepreneur is their home.
+    // Disclosing the first must not drag the second along (spec §4.4).
+    expect(items[0].legalForm).toBe("EURL");
+    expect(items[0]).not.toHaveProperty("siret");
+    expect(items[0]).not.toHaveProperty("vatNumber");
+    expect(items[0]).not.toHaveProperty("userId");
+    expect(JSON.stringify(items[0])).not.toContain("81234567800017");
   });
 
   it("shows at most three runs", async () => {

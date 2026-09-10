@@ -449,6 +449,7 @@
         "status": "Statut"
       },
       "description": "Consultez et téléchargez vos factures de paiement",
+      "deliveryNotice": "Chaque reçu vous est envoyé par e-mail dès le paiement, en pièce jointe. L'envoi par WhatsApp n'est pas encore disponible : consultez votre boîte mail, ou renvoyez le document ci-dessous.",
       "download": "Télécharger le PDF",
       "empty": "Aucune facture",
       "emptyDesc": "Vos factures apparaîtront ici après votre première commande.",
@@ -682,9 +683,28 @@
       "awaitingClient": "En attente de confirmation du client",
       "channel": {
         "expedion_app": "via l'application Expedion",
-        "link": "via le lien reçu"
+        "link": "via le lien reçu",
+        "app": "depuis l'application"
       },
-      "confirmedByOperator": "Confirmé par un opérateur pour le client"
+      "confirmedByOperator": "Confirmé par un opérateur pour le client",
+      "confirmedByYou": "Vous l'avez confirmé",
+      "selfTitle": "Confirmez ce qui s'est passé",
+      "selfLead": "Le transporteur enregistre chaque étape ; votre confirmation en est la seconde signature.",
+      "milestone": {
+        "PICKED_UP": "Le retrait",
+        "DELIVERED": "La réception"
+      },
+      "action": {
+        "PICKED_UP": "Oui, le retrait a bien eu lieu",
+        "DELIVERED": "Oui, j'ai bien reçu mon lot"
+      },
+      "disclaimer": "Confirmer n'engage aucun paiement et ne modifie pas votre transport.",
+      "thanks": "Merci, c'est enregistré",
+      "alreadyDone": "Cette étape était déjà confirmée",
+      "notReached": "Le transporteur n'a pas encore enregistré cette étape.",
+      "cancelledTransport": "Ce transport a été annulé, il n'y a rien à confirmer.",
+      "notYours": "Le transporteur enregistre cette étape ; seul le client la confirme.",
+      "failed": "La confirmation n'a pas pu être enregistrée. Réessayez dans un instant."
     }
   },
   "listing": {

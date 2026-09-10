@@ -14,7 +14,7 @@ The two are different facts and are stored separately:
 | Fact | Where it lives | Who writes it |
 |---|---|---|
 | The run reached a stage | `shipments.status` + `shipment_events` | carrier, driver, staff |
-| The client agrees it happened | `shipment_confirmations` | the client, through one of two channels |
+| The client agrees it happened | `shipment_confirmations` | the client, through one of three channels |
 
 **A client attestation moves nothing.** It cannot advance a status, capture a
 payment, close a listing, release a hold or create an event. It records that a
@@ -30,6 +30,8 @@ acceptable in §6.
   confirm reception when the lot arrives.
 - As an Expedion client who never opens the app, I tap the link in the SMS and
   confirm in one screen with no account.
+- As a requester signed in on Expeditoo, I confirm from the delivery I already
+  have open, instead of going to find the email we sent.
 - As an operator, I look at a run and see which milestones the client has
   acknowledged and which are still waiting.
 
@@ -95,6 +97,16 @@ confirmation exists to rule out.
 |---|---|
 | `expedion_app` | An authenticated Expedion caller confirmed in the Flutter app |
 | `link` | A one-tap signed link from the SMS or the email was used |
+| `app` | A signed-in party confirmed on Expeditoo's own delivery screen |
+
+`app` was added (migration `0023_confirmation_channel_app`) rather than folded
+into either of the other two, because `channel` exists to record precisely the
+difference they would have hidden: `expedion_app` names the sibling product's
+Flutter client, and `link` asserts an unauthenticated 30-day token was used —
+which is exactly the question an auditor asks of a disputed attestation. The
+timeline prints the value in words an operator reads, so reusing either would
+have put a false sentence on the record. Appending is safe here because nothing
+orders by this enum; it is read by equality and rendered by label.
 
 ### 5.2 `shipment_confirmations`
 
@@ -188,6 +200,40 @@ A failed mirror is not retried: the confirmation row is the record, and the
 Expedion timeline is a convenience on top of it. The `alreadyConfirmed` early
 return skips the mirror, so a mirror that failed once stays missing.
 
+**`attest` authorises nobody.** It trusts every field it is handed,
+`confirmedByUserId` and `confirmedByRole` included, and never asks who the
+caller is. That was invisible while its only callers had already settled the
+question — a verified token, an owned quote — but it means the method may never
+be reached straight from a route: over HTTP as it stands, any session could
+sign a stranger's delivery and name itself an operator while doing it. Every
+entry point above it authorises first and derives the two identity fields
+itself.
+
+### 7.1b `attestInApp(shipmentId, viewer, { milestone, note? })`
+
+The signed-in client's door, from the delivery screen they already have open.
+The only channel whose caller carries a session, so it is the only one that can
+be authorised by asking what the caller *is* to this shipment — `partyFor` in
+`shipment-access.ts`, the same resolution `shipment.service.ts` uses, so a run
+one screen refuses to show cannot be attested from another.
+
+| Party | Outcome |
+|---|---|
+| `shipper` | attests, `confirmed_by_role = 'client'` |
+| `staff` (operator or admin) | attests, `confirmed_by_role = 'operator'` |
+| `carrier`, `driver` | `TRANSPORTER_CANNOT_ATTEST` / 403 |
+| anyone else | `FORBIDDEN` / 403 |
+
+The transporter is refused because they *move* the status: a record where the
+same party also signs for it is worth nothing in the dispute the table exists
+to settle.
+
+Both identity fields come off the session — `confirmedByUserId` is the
+viewer's, `confirmedByRef` is null, because a session proves a `user` row and
+there is no external owner id to keep beside it. The body carries a milestone
+and a note and nothing else (§9.5), so there is no field a caller could set to
+attest as somebody else.
+
 ### 7.2 `attestFromToken(token, note?)`
 
 Verifies the token per §6, then delegates to `attest` with `channel: "link"`
@@ -243,6 +289,12 @@ input, filled by `onShipmentStatus` from the shipment id that
 Because `onShipmentStatus` refuses to re-report a status the quote already
 holds, and `IN_TRANSIT` maps onto `picked_up`, the pickup link is sent exactly
 once even though two shipment transitions map to it.
+
+**In the app.** A client who is signed in is asked nothing extra: the delivery
+screen carries the button (§10), so the answer is one tap away from where they
+already are. That is the point of the third channel — the SMS and the email
+were the *only* way to answer, so a client looking straight at their delivery
+had to go and find a message to say what had happened.
 
 **Email.** Sent to the quote's `email` on an escalated job, and to the
 shipper's account email **only when there is no quote at all** — that is, on a
@@ -304,6 +356,26 @@ Folded into the existing payload so no surface needs a second round trip. The
 driver projection keeps them — that the client confirmed is not a commercial
 fact — but drops `confirmedByUserId` and `confirmedByRef`.
 
+### 9.5 `POST /api/shipments/:id/confirm`
+
+**Authenticated**, with `resolveViewer` — the session, as everywhere else under
+`/api/shipments`. Numbered after §9.4 so the references that already point at
+that section stay true.
+
+| | |
+|---|---|
+| Body | `{ milestone: "PICKED_UP" \| "DELIVERED", note?: string }` |
+| 200 | `{ confirmation, alreadyConfirmed }`, the same projection as §7.5 |
+| 401 | `UNAUTHENTICATED` |
+| 403 | `TRANSPORTER_CANNOT_ATTEST`, `FORBIDDEN` — per §7.1b |
+| 404 | `SHIPMENT_NOT_FOUND` |
+| 409 | `MILESTONE_NOT_REACHED`, `SHIPMENT_CANCELLED` |
+
+The route resolves the session and hands it down; §7.1b decides whether this
+caller may answer and as whom. It is a third door onto one fact, not a new
+power: like the other two it writes a `shipment_confirmations` row and nothing
+else.
+
 ## 10. UI
 
 **`/confirm/[token]`** — public, in the `(marketing)` group. One card: what is
@@ -321,6 +393,25 @@ confirmed for the first time that they had already done it.
 **`/deliveries/[id]` timeline** — each attestable milestone shows its
 attestation state: *Confirmé par le client* with a date, or *En attente de
 confirmation du client*. Absent on milestones §4 excludes.
+
+**`/deliveries/[id]` confirmation card** — above the timeline, the requester's
+own button, one row per milestone the run has actually reached. It renders for
+`role === "shipper"` only: the transporter moves the status (§7.1b), and staff
+answer on the quote lane where the client they answer for is identified. A
+milestone already attested shows the answer and its date — *Vous l'avez
+confirmé*, or *Confirmé par un opérateur pour le client* — and **no button**,
+because the unique index makes a replay a no-op and a control that errors on a
+second press is worse than one that is not there. A run with no milestone
+reached, or a cancelled one, renders no card at all rather than a disabled one.
+The card repeats §10's disclaimer verbatim: confirming commits no payment and
+changes nothing.
+
+The button reaches §9.5 through `deliveriesApi.confirm` and
+`useShipmentAttestations`, which reads the detail query's own cache key rather
+than fetching a second copy and invalidates it on success, so the card and the
+timeline line move together. A success on an already-confirmed milestone is
+reported as done, not as a failure: the client may have tapped the SMS link
+first.
 
 **Driver run detail** — the same two lines, so a driver can see whether the
 client has signed off before chasing.
@@ -362,6 +453,18 @@ transition-map entry and a Flutter change — out of scope for a relabel.
 - **an attestation leaves `shipments.status` untouched** and writes no
   `shipment_events` row — the guarantee of §1, asserted directly
 - a quote-less listing mirrors nothing and does not throw
+
+**`attestInApp`**
+- a signed-in stranger is refused `FORBIDDEN` and nothing is inserted
+- the carrier and the driver are refused `TRANSPORTER_CANNOT_ATTEST`
+- the requester is recorded as `client`, `channel: "app"`, with the user id
+  taken from the session and `confirmedByRef` null
+- staff are recorded as `operator`
+- a milestone the run has not reached is still refused
+- a second tap answers the first row with `alreadyConfirmed`, and the audit
+  columns still do not cross the wire
+- **it moves nothing** — no status write, no `shipment_events` row, and no
+  payment: the module imports no payments code at all, asserted on the source
 
 **Routes**
 - the Expedion route refuses a caller who owns a different quote

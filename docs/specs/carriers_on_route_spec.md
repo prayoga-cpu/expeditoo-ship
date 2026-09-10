@@ -190,7 +190,8 @@ Neither existing flag is overloaded, and both were considered:
 
 ### 4.3 What a requester sees
 
-The projection is exactly these nine fields, and adding a tenth is a spec change:
+The projection is exactly these ten fields, and adding an eleventh is a spec
+change:
 
 | Field | Source |
 |---|---|
@@ -199,6 +200,7 @@ The projection is exactly these nine fields, and adding a tenth is a spec change
 | `avatarUrl` | `user.image` |
 | `rating` | `carriers.average_rating` |
 | `reviewCount` | `carriers.total_ratings` |
+| `legalForm` | `carriers.legal_form`, trimmed and bounded, or `null` when never declared (§4.4) |
 | `originCity` | `carrier_routes.origin_city` |
 | `destinationCity` | `carrier_routes.destination_city` |
 | `nextRuns` | up to `MAX_RUNS_SHOWN` calendar days, `YYYY-MM-DD`, already clipped to the job's window |
@@ -206,9 +208,9 @@ The projection is exactly these nine fields, and adding a tenth is a spec change
 
 **Never crosses the wire:** `origin_address`, `destination_address`, postal
 codes, any latitude or longitude, `radius_km`, `capacity_kg`, `vehicle_id`, the
-vehicle row (including `plate_number`), `carriers.id`, `carriers.siret`, and —
-above all — **`user.id`**. A requester never receives a user id from this
-surface; contact is by `matchId` (§6.2).
+vehicle row (including `plate_number`), `carriers.id`, `carriers.siret`,
+`carriers.vat_number`, and — above all — **`user.id`**. A requester never
+receives a user id from this surface; contact is by `matchId` (§6.2).
 
 Cities rather than addresses follows the precedent
 `transport_status_confirmation_spec.md` already set for the public confirmation
@@ -217,6 +219,100 @@ be checked by the person reading it and "font le trajet prochainement" is an
 unverifiable claim. The carrier's switch hint says so in as many words. A
 stricter mode — carrier identity only, no cities, no dates — is a two-field
 deletion from the projection if the client prefers it.
+
+### 4.4 The tenth field: `legal_form`
+
+`legal_form` was added to the projection after §4.3 had been written and after
+`carrier-discovery.dto.test.ts` had been written to fail on a tenth field. That
+test is a privacy guarantee, not a formality — it exists so that widening this
+projection has to be argued rather than typed — so the argument is recorded
+here.
+
+**Why it is disclosable where an address or a user id is not.** A legal form is
+the *public identity of a business*: `SASU`, `EURL`, `auto-entrepreneur`. It is
+printed on that business's own invoices, it is what `INVOICE_ISSUER_LEGAL_FORM`
+prints on ours, and this platform already tells requesters in `fr.json` that
+every carrier bidding here is « un professionnel indépendant validé ». It
+locates nobody and addresses nobody. The three things §4.3 protects are
+**where a person is** (addresses, postal codes, coordinates), **what they
+drive** (vehicle, plate) and **how to reach them off-platform** (`user.id`);
+a legal form is none of them.
+
+`siret` and `vat_number` stay off the wire all the same, and the distinction is
+the point rather than an inconsistency: a SIRET is the *key* that pulls a
+registered address out of the répertoire SIRENE, and for an auto-entrepreneur
+that registered address is their home. Disclosing what a business *is* does not
+license disclosing the file that says where it lives.
+
+**`null` means "not stated", never "individual".** The column is optional
+uncontrolled free text (`carrier.dto.ts` accepts it at up to 100 characters and
+never asks for it). An empty one is an absence of information. Rendering
+« Particulier » in its place would be inventing a fact — the same mistake §4.5
+declines at a larger scale — so an undeclared legal form renders **no badge at
+all**. Whitespace normalises to the same absence.
+
+**It is untrusted display data, and is bounded twice.**
+
+| Bound | Where | Against |
+|---|---|---|
+| trim, empty → `null`, and past `MAX_LEGAL_FORM_CHARS` (100) a cut marked with `…` | `carrier-discovery.dto.ts` | a `text` column reached by a seed, an import or an admin edit, none of which pass through `carrier.dto.ts` |
+| `max-w-36 truncate`, one line, with the full value on `title` | `CarrierMatchCard.tsx` | a value that fits the wire bound and still pushes *Contacter* off the row |
+
+The wire bound is **100, matching what `carrier.dto.ts` accepts**, so anything a
+carrier typed into the KYC form the product gives them arrives exactly as
+written. A cap sized for abbreviations would not: « société par actions
+simplifiée unipersonnelle » is 45 characters, « entreprise unipersonnelle à
+responsabilité limitée » is 49, and SIRENE's own category labels are longer
+still — clipping those mid-word would print a mangled declaration on a card
+whose entire argument is that it states only what it can support. Layout is the
+card's problem and is solved in CSS, not by shortening the data.
+
+The parse **truncates rather than rejects**, and **marks the cut**. A `.max()`
+that throws would let one carrier's typing refuse the whole parse and take every
+other card down with it, on the only surface that reaches the supply pool; an
+*unmarked* cut would read as a complete declaration, which is the §4.5 mistake
+in miniature. For the same reason the field is `nullish`, not `nullable`: a read
+that does not select the column costs a badge, not a 500.
+
+### 4.5 The Particuliers / Professionnels filter, declined
+
+The competitor screenshot the client sent shows two checkboxes — **Particuliers**
+and **Professionnels** — above the carrier list. They are not built, and this is
+the record of why so it is not re-litigated.
+
+**The data cannot partition the set.** Every carrier reachable from this surface
+has passed KYC, and `carriers.siret` is `NOT NULL` — a sole trader carrying
+goods for hire in France has one, which is exactly why KBIS is not required
+(CLAUDE.md, *Data Model*). So "Particuliers" is an **empty bucket**: ticking it
+would return nothing, and ticking "Professionnels" would return the unfiltered
+list. The only company signal on the row, `legal_form`, is optional free text —
+`SASU`, `sasu`, `S.A.S.U`, `auto-entrepreneur` and `NULL` are all reachable
+today — so it cannot be read as a type either. Deriving the distinction from
+`legal_form` or from `vat_number` presence is rejected outright: it would put a
+guess behind a control that looks like a fact.
+
+**A control that cannot filter is worse than no control.** Two checkboxes that
+return the same list either way do not fail visibly; they teach the requester
+that the feature is broken and that the rest of the page may be too. The
+distinction is therefore surfaced where it *is* genuinely known — the §4.4 badge,
+present only when a carrier declared a legal form — and left absent where it is
+not.
+
+**What would have to be collected first**, in order:
+
+1. A declared carrier type at KYC — a `carrier_kind` enum (`individual` |
+   `company`) on `carriers`, `NOT NULL`, with a required control on the
+   application form, so the answer is *given* rather than inferred.
+2. A backfill for the carriers already approved, which cannot be computed from
+   `legal_form` and so has to be asked for — a one-off prompt on the carrier's
+   own screen, not an operator's guess.
+3. Only then, the two checkboxes, as a `kind` filter threaded DTO → DAL the way
+   `origin` already is on the board.
+
+The registration held under the *licence de transport intérieur* (LTI/LC) would
+answer the same question with more authority, and is the better target if the
+product ever needs the distinction to be load-bearing rather than decorative. It
+is not collected anywhere today either.
 
 ---
 
@@ -281,9 +377,10 @@ Session required. → `carrierDiscoveryService.listForListing(userId, listingId)
 ```jsonc
 { "success": true, "data": {
     "items": [ { "matchId": "…", "displayName": "Faissal B.", "avatarUrl": null,
-                 "rating": 5, "reviewCount": 1, "originCity": "Vannes",
-                 "destinationCity": "Montrouge",
-                 "nextRuns": ["2026-09-08T00:00:00.000Z"], "detourKm": 3 } ],
+                 "rating": 5, "reviewCount": 1, "legalForm": "SASU",
+                 "originCity": "Vannes", "destinationCity": "Montrouge",
+                 // Calendar days, not instants — §4.3 and §8.
+                 "nextRuns": ["2026-09-08"], "detourKm": 3 } ],
     "total": 14 } }
 ```
 
@@ -374,17 +471,12 @@ the Vercel build is a plain `next build` — so run *Actions → Migrate databas
 
 ## 8. Non-goals, stated so they are not re-litigated
 
-- **No Particuliers / Professionnels filter.** The competitor screenshot has
-  two checkboxes; this data cannot honestly fill them. Every carrier here passes
-  KYC with a `NOT NULL` SIRET, and `fr.json` already tells users « Chaque
-  transporteur qui enchérit sur ce réseau est un professionnel indépendant
-  validé » — so "Particuliers" is an empty bucket. The only company signal,
-  `legal_form`, is optional uncontrolled free text (`SASU`, `sasu`, `S.A.S.U`,
-  `auto-entrepreneur` and `NULL` are all reachable), so the two boxes would not
-  partition the set. If the distinction is wanted it needs a real
-  `carrier_kind` enum, a control on the KYC form and a backfill — a separate
-  change. Deriving it from `legal_form` or from `vat_number` presence is
-  rejected outright.
+- **No Particuliers / Professionnels filter.** The full argument, and what would
+  have to be collected before it could exist, is **§4.5** — kept there rather
+  than here because it is the reason the §4.4 badge is shaped the way it is.
+  In one line: every carrier here passes KYC with a `NOT NULL` SIRET, so
+  "Particuliers" is an empty bucket, and `legal_form` is uncontrolled free text
+  that cannot stand in for a type.
 - **No Messages tab.** The screenshot's third tab needs a per-listing thread
   list that does not exist — no endpoint, no DAL method, no unread count. A tab
   wired to nothing is worse than no tab.
@@ -433,6 +525,14 @@ the Vercel build is a plain `next build` — so run *Actions → Migrate databas
    else in this repo; production runs `TZ=UTC`.
 5. **The pool starts empty** because of the §4.2 backfill, and fills only as
    drivers opt in. This is a product fact to communicate, not a bug.
+6. **Almost every badge will be blank for a while.** `legal_form` has never been
+   required, asked for prominently, or backfilled — the KYC form offers it as an
+   optional box with a `SASU, SARL…` placeholder — so most approved carriers
+   have `null` and most cards will carry no badge at all. That is the honest
+   reading and not a defect, but it means the §4.4 badge answers feedback #16
+   thinly until carriers are prompted to fill it in. Prompting them is the same
+   collection step §4.5 step 1 describes, and the two should be done together
+   rather than twice.
 
 ---
 
@@ -471,10 +571,39 @@ Lyon / Angoulême / Orléans / Toulouse fixtures from `route-corridor.test.ts`:
 
 **`src/server/dto/__tests__/carrier-discovery.dto.test.ts`:**
 
-- parsing a row rich in private columns yields exactly the nine fields of §4.3,
+- parsing a row rich in private columns yields exactly the ten fields of §4.3,
   and `userId`, `originAddress`, `destinationAddress`, postal codes, lat/lng,
-  `radiusKm`, `capacityKg`, `vehicleId` and `plateNumber` are all absent.
-  This is the test that keeps §4.3 true a year from now.
+  `radiusKm`, `capacityKg`, `vehicleId`, `plateNumber`, `siret` and `vatNumber`
+  are all absent. This is the test that keeps §4.3 true a year from now, and the
+  one that forced §4.4 to be written;
+- `legalForm` survives as typed, trims, and reads empty or whitespace as `null`
+  — *not stated*, never « Particulier » (§4.5);
+- `legalForm` is `null`, and its key still present, on a row whose read did not
+  select the column;
+- a spelled-out legal form of 45 and of 49 characters survives **whole** — the
+  bound is not sized for abbreviations;
+- a legal form longer than `MAX_LEGAL_FORM_CHARS` is **truncated, not
+  rejected**, and ends in `…`: one carrier's typing may not refuse the parse for
+  everybody else, and a cut may not read as a complete declaration;
+- a card carrying a legal form still carries no `siret` and no `vatNumber`.
+
+**`src/server/services/__tests__/carrier-discovery.service.test.ts`** also
+asserts that the whole-row spread in `toMatch` carries `legalForm` through, that
+the wire bound applies at the service boundary, and that disclosing it drags no
+other carrier column along. That last one is run against a row **carrying** a
+`siret` and a `vat_number` that `matchCandidateColumns` does not select:
+asserted against the ordinary fixture it would pass on the fixture's own silence
+and keep passing with the projection deleted.
+
+**`src/features/app/listing/ui/__tests__/CarrierMatchCard.test.tsx`:**
+
+- a declared legal form renders, as the carrier wrote it;
+- an undeclared one renders **no badge** — not « Particulier », not an empty
+  chip. The absence is asserted by badge count, so a badge rendered
+  unconditionally with an empty value fails it (§4.5);
+- a 45-character declaration stays inside the card: `max-w-36 truncate`, with
+  the full value on `title`;
+- no user id reaches the markup beside it (§6.2).
 
 **`src/i18n/__tests__/locale-parity.test.ts`** — unchanged, must stay green.
 **`src/db/__tests__/migrations-journal.test.ts`** — unchanged, picks up entry 18.

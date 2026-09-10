@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   shipmentConfirmationsService,
@@ -497,5 +499,143 @@ describe("requestConfirmation", () => {
     );
 
     expect(emailService.sendConfirmationRequestEmail).not.toHaveBeenCalled();
+  });
+});
+
+describe("attestInApp — who may answer", () => {
+  const shipper = { userId: "shipper-1" };
+
+  beforeEach(() => {
+    vi.mocked(shipmentsDal.getOwnership).mockResolvedValue(
+      ownership("DELIVERED") as never
+    );
+  });
+
+  it("refuses a signed-in stranger", async () => {
+    // `attest` itself authorises nobody - it trusts the identity it is handed.
+    // Exposed over HTTP without this check, any session could sign somebody
+    // else's delivery.
+    await expect(
+      shipmentConfirmationsService.attestInApp(
+        "ship-1",
+        { userId: "someone-else" },
+        { milestone: "DELIVERED" }
+      )
+    ).rejects.toMatchObject({ code: "FORBIDDEN", status: 403 });
+
+    expect(shipmentsDal.createConfirmation).not.toHaveBeenCalled();
+  });
+
+  it("refuses the carrier and the driver, who move the status instead", async () => {
+    for (const userId of ["carrier-1", "driver-1"]) {
+      await expect(
+        shipmentConfirmationsService.attestInApp(
+          "ship-1",
+          { userId },
+          { milestone: "DELIVERED" }
+        )
+      ).rejects.toMatchObject({
+        code: "TRANSPORTER_CANNOT_ATTEST",
+        status: 403,
+      });
+    }
+
+    expect(shipmentsDal.createConfirmation).not.toHaveBeenCalled();
+  });
+
+  it("404s a shipment that does not exist, before deciding anything else", async () => {
+    vi.mocked(shipmentsDal.getOwnership).mockResolvedValue(undefined as never);
+
+    await expect(
+      shipmentConfirmationsService.attestInApp("nope", shipper, {
+        milestone: "DELIVERED",
+      })
+    ).rejects.toMatchObject({ code: "SHIPMENT_NOT_FOUND", status: 404 });
+  });
+
+  it("records the requester as the client, from the session and not the body", async () => {
+    await shipmentConfirmationsService.attestInApp("ship-1", shipper, {
+      milestone: "DELIVERED",
+      note: "reçu en bon état",
+    });
+
+    expect(shipmentsDal.createConfirmation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        shipmentId: "ship-1",
+        milestone: "DELIVERED",
+        // Neither of the other two values is true here: `expedion_app` names
+        // the Flutter client and `link` claims an unauthenticated token.
+        channel: "app",
+        confirmedByRole: "client",
+        confirmedByUserId: "shipper-1",
+        // A session proves a `user` row, so there is no external owner id.
+        confirmedByRef: null,
+      })
+    );
+  });
+
+  it("names an operator when staff answered from the app", async () => {
+    await shipmentConfirmationsService.attestInApp(
+      "ship-1",
+      { userId: "ops-1", isOperator: true },
+      { milestone: "DELIVERED" }
+    );
+
+    expect(shipmentsDal.createConfirmation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        confirmedByRole: "operator",
+        confirmedByUserId: "ops-1",
+      })
+    );
+  });
+
+  it("still refuses a milestone the run has not reached", async () => {
+    vi.mocked(shipmentsDal.getOwnership).mockResolvedValue(
+      ownership("ASSIGNED") as never
+    );
+
+    await expect(
+      shipmentConfirmationsService.attestInApp("ship-1", shipper, {
+        milestone: "PICKED_UP",
+      })
+    ).rejects.toMatchObject({ code: "MILESTONE_NOT_REACHED", status: 409 });
+  });
+
+  it("answers the first row on a second tap rather than failing", async () => {
+    // The client may already have confirmed from the link we texted them.
+    vi.mocked(shipmentsDal.createConfirmation).mockResolvedValue(null as never);
+    vi.mocked(shipmentsDal.getConfirmation).mockResolvedValue(CREATED as never);
+
+    const result = await shipmentConfirmationsService.attestInApp(
+      "ship-1",
+      shipper,
+      { milestone: "DELIVERED" }
+    );
+
+    expect(result).toMatchObject({
+      alreadyConfirmed: true,
+      confirmation: { id: "conf-1" },
+    });
+    // The audit columns never cross the wire, on this route either.
+    expect(Object.keys(result.confirmation)).not.toContain("confirmedByRef");
+  });
+
+  it("moves nothing: no status, no event, no payment", async () => {
+    await shipmentConfirmationsService.attestInApp("ship-1", shipper, {
+      milestone: "DELIVERED",
+    });
+
+    // §1, asserted on the new door as well as the two old ones. The moment any
+    // of these fires, an attestation has become a power and the public one-tap
+    // link that shares this code path must stop being mailed.
+    expect(shipmentsDal.updateStatus).not.toHaveBeenCalled();
+    expect(shipmentsDal.createEvent).not.toHaveBeenCalled();
+    // Nothing money-shaped is even reachable from here: the module imports no
+    // payments service, so a charge, a capture or a refund has no way in.
+    const source = readFileSync(
+      join(__dirname, "..", "shipment-confirmations.service.ts"),
+      "utf8"
+    );
+    expect(source).not.toMatch(/payments\.service|paymentsService|stripe/i);
   });
 });

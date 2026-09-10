@@ -51,7 +51,8 @@ export interface ShipmentOffer {
 export interface ShipmentConfirmationSummary {
   id: string;
   milestone: "PICKED_UP" | "DELIVERED";
-  channel: "expedion_app" | "link";
+  /** `app` is this screen's own button; the other two arrive from elsewhere. */
+  channel: "expedion_app" | "link" | "app";
   /** `operator` when staff answered on the client's behalf. */
   confirmedByRole: "client" | "operator";
   createdAt: string;
@@ -112,6 +113,22 @@ export interface ShipmentsPage {
   limit: number;
 }
 
+/** The two moments the client is asked to sign for. */
+export type ConfirmableMilestone = "PICKED_UP" | "DELIVERED";
+
+/**
+ * What a confirmation write answers with — the service's projection, never the
+ * row: the audit columns stay server-side.
+ *
+ * `alreadyConfirmed` is not an error. The unique index absorbs a second tap
+ * and hands back the first answer, so a client who confirmed from the SMS and
+ * then again here is told it is done rather than shown a failure.
+ */
+export interface ConfirmMilestoneResult {
+  confirmation: ShipmentConfirmationSummary;
+  alreadyConfirmed: boolean;
+}
+
 export interface ListShipmentsParams {
   /** Comma-separated status list, e.g. "PENDING,ASSIGNED". */
   status?: string;
@@ -129,4 +146,11 @@ export const deliveriesApi = {
     id: string,
     body: { category: CancellationCategory; reason?: string }
   ) => api.post<Shipment>(`/api/shipments/${id}/cancel`, body),
+
+  /**
+   * The client's attestation, from the app rather than from the link they were
+   * texted. Records that a milestone happened and nothing else.
+   */
+  confirm: (id: string, body: { milestone: ConfirmableMilestone; note?: string }) =>
+    api.post<ConfirmMilestoneResult>(`/api/shipments/${id}/confirm`, body),
 };

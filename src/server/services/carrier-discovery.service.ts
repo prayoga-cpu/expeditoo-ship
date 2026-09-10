@@ -181,6 +181,13 @@ const toDayString = (run: Date) =>
  * The row spread in whole on purpose: `carrierMatchSchema` is what strips it,
  * so a private column added to the prefilter later cannot reach the wire by
  * being forgotten here (carriers_on_route_spec.md §4.3).
+ *
+ * `legalForm` rides that same spread and is named nowhere below for exactly
+ * that reason — the projection is the schema's list, not this function's. It
+ * arrives because `matchCandidateColumns` in `carrier-routes.dal.ts` selects
+ * `carriers.legal_form`; should that read ever narrow, the schema reads the
+ * absent column as "not stated" rather than throwing, so the tab loses a badge
+ * instead of 500ing (§4.4).
  */
 function toMatch(entry: RankedMatch): CarrierMatch {
   return carrierMatchSchema.parse({

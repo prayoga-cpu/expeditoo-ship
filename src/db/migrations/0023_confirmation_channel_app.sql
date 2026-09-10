@@ -1,0 +1,22 @@
+-- The client attests from the delivery screen, not only from an SMS link.
+--
+-- Hand-written for the same reason 0002-0022 were: 0002 left no meta snapshot,
+-- so `drizzle-kit generate` diffs against 0001 and re-emits the whole transport
+-- realignment — CREATE TABLE for tables that exist, and DROP COLUMN for columns
+-- a live deployment still needs.
+--
+-- A third channel, because neither existing value is true of a signed-in
+-- client pressing the button on /deliveries/[id]: `expedion_app` names the
+-- sibling product's Flutter client, and `link` says an unauthenticated one-tap
+-- token was used. `channel` exists to record exactly that difference, and the
+-- timeline prints it in words an operator reads, so reusing either would put a
+-- false statement on the record (transport_status_confirmation_spec.md §5.1).
+--
+-- Appended rather than declared in place: 0022 avoids ALTER TYPE ADD VALUE
+-- because Postgres orders an enum by declaration order, but nothing sorts by
+-- `shipment_confirmation_channel` — it is read by equality and rendered by
+-- label. ADD VALUE is allowed inside a transaction from PostgreSQL 12 on, as
+-- long as the new value is not used in the same transaction; nothing here uses
+-- it, so drizzle's per-migration transaction is fine.
+
+ALTER TYPE "public"."shipment_confirmation_channel" ADD VALUE IF NOT EXISTS 'app';

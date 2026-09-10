@@ -34,7 +34,7 @@ export type TimelineStepStatus = "completed" | "active" | "pending";
  */
 export interface TimelineConfirmation {
   state: "confirmed" | "awaiting";
-  channel: "expedion_app" | "link" | null;
+  channel: "expedion_app" | "link" | "app" | null;
   /** Who answered — an operator's answer must not read as the client's. */
   role: "client" | "operator";
   date: string | null;

@@ -21,12 +21,40 @@ interface CarrierMatchCardProps {
 }
 
 /**
+ * What the carrier declared themselves to be at KYC, when they declared it.
+ *
+ * `null` renders **nothing**, and nothing is not a badge reading
+ * « Particulier »: an empty `legal_form` means *not stated*, so a default would
+ * be a claim about someone's legal status that nobody made. That is also why
+ * the two Particuliers / Professionnels checkboxes the competitor screenshot
+ * shows are not built — spec §4.4 and §4.5.
+ *
+ * Rendered as the carrier typed it, because it is their own declaration rather
+ * than UI copy, and so belongs in neither message catalogue. The DTO bounds the
+ * value; `max-w-36 truncate` bounds the layout and `title` keeps a clipped one
+ * readable.
+ */
+function LegalFormBadge({ legalForm }: { legalForm: string | null }) {
+  if (legalForm === null) return null;
+
+  return (
+    <Badge
+      variant="outline"
+      title={legalForm}
+      className="max-w-36 shrink truncate font-normal"
+    >
+      {legalForm}
+    </Badge>
+  );
+}
+
+/**
  * One carrier who drives this job's trajet.
  *
  * A trajet is a declaration, never a commitment: nothing here says the carrier
- * is available for this job, only that they make the trip (spec §8). Cities and
- * run days are the whole disclosure — no address, no coordinates, no vehicle
- * (spec §4.3).
+ * is available for this job, only that they make the trip (spec §8). Cities,
+ * run days and a declared legal form are the whole disclosure — no address, no
+ * coordinates, no vehicle (spec §4.3).
  */
 export function CarrierMatchCard({
   match,
@@ -57,7 +85,11 @@ export function CarrierMatchCard({
           </Avatar>
 
           <div className="min-w-0 space-y-1">
-            <p className="truncate font-semibold">{match.displayName}</p>
+            <div className="flex min-w-0 items-center gap-2">
+              <p className="truncate font-semibold">{match.displayName}</p>
+
+              <LegalFormBadge legalForm={match.legalForm} />
+            </div>
 
             <div className="flex items-center gap-1 text-sm text-muted-foreground">
               <Star className="h-3.5 w-3.5 fill-warning text-warning" />

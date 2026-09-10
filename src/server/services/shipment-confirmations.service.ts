@@ -7,6 +7,7 @@ import {
   type ExpedionCallerIdentity,
 } from "@/server/services/expedion.service";
 import type { ExpedionCaller } from "@/lib/expedion-auth";
+import { partyFor, type Viewer } from "@/server/services/shipment-access";
 import {
   confirmationUrl,
   verifyConfirmationToken,
@@ -113,6 +114,21 @@ export interface AttestInput {
 }
 
 export const shipmentConfirmationsService = {
+  /**
+   * Record the attestation. **This method authorises nobody.**
+   *
+   * Read on before calling it from anywhere new: it trusts every field it is
+   * handed, `confirmedByUserId` and `confirmedByRole` included, and it never
+   * asks who the caller is. That was invisible while its only two callers had
+   * already decided the question - `attestForQuote` through
+   * `expedionService.getQuote`, `attestFromToken` through the signed token -
+   * but exposing it over HTTP as it stands would let any signed-in user attest
+   * to a stranger's delivery, and name themselves an operator while doing it.
+   *
+   * So every entry point above it authorises first and derives the two
+   * identity fields itself; `attestInApp` is the third of them. Nothing may
+   * reach this method straight from a route.
+   */
   async attest(input: AttestInput) {
     const ownership = await shipmentsDal.getOwnership(input.shipmentId);
     if (!ownership) throw err("SHIPMENT_NOT_FOUND", 404);
@@ -166,6 +182,63 @@ export const shipmentConfirmationsService = {
     });
 
     return { confirmation: toView(created), alreadyConfirmed: false };
+  },
+
+  /**
+   * The signed-in client's entry point, from the delivery screen they are
+   * already looking at.
+   *
+   * The third channel, and the only one whose caller carries a session, so it
+   * is the only one that can be authorised by asking what the caller *is* to
+   * this shipment. `partyFor` is the same resolution `shipment.service.ts`
+   * uses, so a run one screen refuses to show cannot be attested from another.
+   *
+   * Who may answer:
+   * - `shipper` - the requester, the person the attestation is asked of.
+   * - `staff` - an operator answering for a client who cannot, recorded as
+   *   `operator` so no surface reads it as the client's own answer.
+   * - `carrier` / `driver` - refused. The transporter moves the status; a
+   *   record where they also sign for it is worth nothing in a dispute.
+   * - anyone else - refused, as `getShipmentDetail` already refuses them.
+   *
+   * Both identity fields come off the session, never off the body: the DTO
+   * accepts a milestone and a note and nothing else, so there is no field a
+   * caller could set to attest as somebody else.
+   */
+  async attestInApp(
+    shipmentId: string,
+    viewer: Viewer,
+    input: { milestone: ConfirmableMilestone; note?: string }
+  ) {
+    const ownership = await shipmentsDal.getOwnership(shipmentId);
+    if (!ownership) throw err("SHIPMENT_NOT_FOUND", 404);
+
+    const party = partyFor(ownership, viewer);
+
+    if (party === "none") {
+      throw err("FORBIDDEN", 403, "This transport is not yours to confirm");
+    }
+
+    if (party === "carrier" || party === "driver") {
+      throw err(
+        "TRANSPORTER_CANNOT_ATTEST",
+        403,
+        "The transporter moves the status; the client attests it"
+      );
+    }
+
+    return await this.attest({
+      shipmentId,
+      milestone: input.milestone,
+      channel: "app",
+      confirmedByRole: party === "staff" ? "operator" : "client",
+      // A session proves a `user` row, so the foreign key is the record and
+      // there is no external owner id to keep beside it — unlike the Expedion
+      // lanes, where the client usually has no account at all.
+      confirmedByUserId: viewer.userId,
+      confirmedByRef: null,
+      note: input.note,
+    });
   },
 
   /**

@@ -14,6 +14,14 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.40.0] - 2026-09-10 · feat
+
+- **You can confirm a pickup or a delivery from the app itself.** Until now the only way to say "yes, this happened" was the link in the text message or the email — so if you had deleted it, you were stuck, even while looking at the delivery on screen. There is now a button on the delivery page. It shows only the moments the transport has actually reached, and once you have confirmed one it says so, with the date, instead of offering the button again.
+- **Confirming still changes nothing by itself.** It records that you agree it happened. The transporter is the one who moves the transport along, and nothing you press can advance it, take a payment or close a job — which is exactly why the link we text you is safe to send to someone with no account.
+- **The transporter cannot confirm on your behalf.** They move the status; you attest it. An operator confirming for a client who cannot is recorded as the operator, never as the client.
+- **You can see what kind of business a transporter is, where they have said so.** Their legal form — auto-entrepreneur, SASU, and so on — now shows on the card when they have declared one, on the *Transporteurs disponibles* tab. Where nobody declared anything, nothing is shown: an empty answer means "not stated", not "an individual", and guessing at someone's legal status would be inventing it.
+- **Your receipts say where they are sent.** The invoice page now tells you each receipt is emailed to you the moment payment is taken, and that WhatsApp is not available yet — so nobody waits for a message that is not coming. Sending the document to yourself again was already possible and stays one press.
+
 ## [2.39.0] - 2026-09-10 · ux
 
 - **The payout setup button works, and tells you when it cannot.** Pressing *Continuer la configuration* on your profile did nothing whatsoever — no message, no spinner, no error. It now shows that it is working, and when Stripe turns the request down it says so instead of leaving you pressing a button that appears broken. Stripe has currently suspended new payout accounts on our side, so that is what most people will see until we clear it with them; before today you had no way of knowing that.

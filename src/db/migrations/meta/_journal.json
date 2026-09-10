@@ -155,6 +155,13 @@
       "when": 1788109200000,
       "tag": "0022_feedback",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1788112800000,
+      "tag": "0023_confirmation_channel_app",
+      "breakpoints": true
     }
   ]
 }

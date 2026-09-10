@@ -1,6 +1,6 @@
 # STATUS.md
 
-## Current state: user-testing mode — driver-side revamp complete (2.39.0)
+## Current state: user-testing mode — driver-side revamp complete (2.40.0)
 
 _AI agents: add an entry here every time you finish a task. See AGENTS.md §8._
 
@@ -62,13 +62,37 @@ than leaving it in a chat message.
       `vercel logs`). Log in to the Stripe Dashboard and confirm the account
       creations were intended. **No driver can start payout onboarding until
       this is cleared**; the button now says so instead of doing nothing.
-- [ ] **Confirm whether the production Stripe keys are live or test.** They are
-      marked Sensitive in Vercel, so `vercel env pull` returns `[SENSITIVE]` and
-      a laptop cannot tell. `MOCK_PAYMENTS` is **not set in Vercel at all**, so
-      production already runs the real Stripe path — which mode it runs in can
-      only be read off the Stripe Dashboard.
-- [ ] **Run `Actions → Migrate database` before any deploy** that ships a new
-      migration. The Vercel build is a plain `next build` and never migrates.
+- [ ] **URGENT — roll the live Stripe secret key.** An `sk_live_…` key was pasted
+      into a chat transcript on 2026-09-10 and must be treated as compromised: it
+      can charge cards, refund, move money to connected accounts and read the
+      customer list. Stripe Dashboard → Developers → API keys → roll it, review
+      Events for anything unrecognised, then write the **new** key straight into
+      Vercel. Never through a chat, an issue, or a commit.
+- [ ] **Production is already NOT mocking payments.** `MOCK_PAYMENTS` is unset in
+      Vercel and the gate is `=== "true"`, so the real Stripe path has been
+      running there all along. There is nothing to switch off. The only open
+      question is whether the keys in Vercel are live or test, and **nothing on a
+      laptop can answer it**: the variables are Sensitive so `vercel env pull`
+      returns `[SENSITIVE]`, Vercel cannot reveal a Sensitive value after it is
+      written, and the publishable key ships only on authenticated routes so it
+      cannot be read out of the public bundle. Re-setting the key is the only way
+      to know what it is — which the roll above requires anyway.
+- [ ] **Do not use one Stripe key everywhere.** A live key in `.env.local` means
+      local development charges real cards, creates real customers and issues
+      real refunds against the production account, with nothing distinguishing a
+      developer's booking from a client's. Live in production, `sk_test_` locally.
+- [ ] **Check for `pi_mock_` rows before trusting the ledger.** Each is a captured
+      payment with no money behind it. Production's database was rebuilt empty on
+      2026-09-10 so there may be none, but this is **unverified** — no laptop can
+      reach that database.
+- [ ] **Run `Actions → Migrate database` BEFORE the next deploy — `0023` is
+      pending.** `0023_confirmation_channel_app` adds `'app'` to the
+      `shipment_confirmation_channel` enum, and the in-app confirm button writes
+      that value. Deploy without migrating and every client confirmation from the
+      delivery screen fails on an invalid enum value. The Vercel build is a plain
+      `next build` and never migrates; this workflow is the only thing that can,
+      because every production variable is Sensitive and no laptop can reach the
+      database.
 - [ ] **Set `EXPEDION_APP_ORIGINS` in `.env.local`** — it exists in Vercel
       Production only, so `user.origin` reads `expedion` on the deployment and
       never locally. It back-fills nothing, deliberately.
@@ -92,6 +116,115 @@ than leaving it in a chat message.
       in `.env.example`.
 
 ---
+
+## ✅ 2026-09-10 — The Two Open Questions, And An Endpoint That Authorised Nobody (2.40.0)
+
+_« the open questions pick your suggestion »_ → _« we don't registered the TWILLIO yet, so hold, or use the resend to email instead for now »_.
+
+Two workstreams, each adversarially reviewed. **`verify:in-app-confirm` was
+blocked by a transient safety classifier and never ran**, so that change was
+reviewed by hand instead — the route, the DTO, the authorisation and the
+invariant tests are read line by line below. Say so rather than let a missing
+review pass as a clean one.
+
+### #9 — in-app confirmation, and the hole it exposed
+
+- [x] **`shipmentConfirmationsService.attest` authorised nobody.** It loads
+      ownership only to check the milestone and the cancelled state, then trusts
+      every field it is handed — `confirmedByUserId` and `confirmedByRole`
+      included — and never asks who the caller is. Invisible while its only two
+      callers had already decided the question (`attestForQuote` through
+      `expedionService.getQuote`, `attestFromToken` through the signed token).
+      Exposed over HTTP as it stood, **any session could have attested to a
+      stranger's delivery and named itself an operator doing it.**
+- [x] **`attestInApp` is the authorising entry point.** `partyFor`
+      (`shipment-access.ts`) — the same resolution `shipment.service.ts` uses, so
+      a run one screen refuses to show cannot be attested from another.
+      `shipper` → `client`; `staff` → `operator`; `carrier`/`driver` →
+      `TRANSPORTER_CANNOT_ATTEST` 403, because a record the transporter also
+      signs is worth nothing in a dispute; anyone else → 403. `attest` keeps a
+      comment saying nothing may reach it straight from a route.
+- [x] **Identity comes off the session, never the body.**
+      `confirmMilestoneBodySchema` takes a milestone and a note and nothing else,
+      so there is no field to forge.
+- [x] **The invariant holds and is asserted**, not assumed: a test proves
+      `updateStatus` and `addEvent` were never called and greps the module's own
+      source for any `payments.service` / `stripe` import.
+- [x] **A third channel, `app`** — migration `0023`. Neither existing value is
+      true: `expedion_app` names the sibling Flutter client and `link` asserts an
+      unauthenticated 30-day token was used, which is precisely what `channel`
+      exists to record and what an operator reads off the timeline. Reusing
+      either would have put a false sentence on the audit record permanently.
+
+### #16 — the filter, declined
+
+- [x] **The two checkboxes are not built, and that is the answer.** Every carrier
+      passes KYC with a `NOT NULL` SIRET and `legal_form` is optional free text,
+      so they cannot partition the set; a control that returns the same list
+      either way teaches the requester the feature is broken.
+      `carriers_on_route_spec.md` §4.5 records what would have to be collected
+      first.
+- [x] **`legal_form` shows as a badge where declared, and nothing where not.** An
+      empty value means "not stated", not "individual".
+- [x] **The reviewer caught that the feature was never rendered.** The
+      implementer changed the DTO and service and left both UI files
+      byte-for-byte unchanged while reporting it built, and left `tsc` red in a
+      test fixture it had touched. Also fixed: a privacy assertion that asserted
+      nothing (`not.toHaveProperty('siret')` against a fixture with no `siret`),
+      and a 40-character bound that silently truncated « société par actions
+      simplifiée unipersonnelle » — now 100, matching the only cap the product
+      declares, with an ellipsis when it does bite.
+- [x] **The projection is ten fields, not nine**, and the DTO test that fails on
+      an eleventh was updated deliberately, with the reason written into the
+      spec. Still no address, no coordinate, no vehicle, no user id. I finished
+      the two files the agent correctly refused to shim around:
+      `matchCandidateColumns` never selected the column, so the badge would have
+      been null forever.
+
+### WhatsApp, held
+
+- [x] **Twilio is not registered, so nothing is texted and no WhatsApp variable
+      was added.** A sender number alone sends nothing — it needs a Twilio
+      WhatsApp sender, a Meta-verified business account and Meta-approved
+      templates. Adding `TWILIO_WHATSAPP_FROM` early would have advertised a
+      channel that fails silently, so it was written and then removed.
+      `.env.example` documents the real `TWILIO_*` SMS variables, which live code
+      reads and which were undocumented.
+- [x] **Email is the channel that works, and the invoice page now says so** —
+      and says WhatsApp does not, so nobody waits for a message that is not
+      coming. The re-send path needed nothing: `POST /api/user/invoices/[id]/email`
+      already existed, rate-limited to five an hour per document, refusing to take
+      a recipient so it cannot be used as an open relay on this domain, masking
+      the address it reached. 43 tests across it.
+
+### Also landed
+
+- [x] **A test for the mobile bar** (`BottomNav`), which 2.39.0 changed without
+      one. Six tests pinning the requirement — a plain account gets `/create` and
+      not `/expedion` — rather than the implementation.
+
+### Verification
+
+- `npx tsc --noEmit` **0 errors** · `pnpm test` **1 579 passed across 119 files,
+  0 failed** · `pnpm changelog:check` ok · migration journal gate passes.
+- FR/EN checked by key diff, not by eye: **2 344 keys each, symmetric difference
+  empty.**
+
+### Known limits
+
+- **`verify:in-app-confirm` never ran** (classifier error). Hand-reviewed; that
+  is not the same as a second model attacking it.
+- **Migration `0023` must be applied before this deploys.** Every in-app
+  confirmation fails on an invalid enum value otherwise. Filed above.
+- **Most cards will show no badge.** `carriers.legal_form` was never required and
+  never backfilled, so #16 is answered structurally but will look empty until
+  carriers fill it in.
+- **The card was never seen in a browser.** No dev server this session; it uses
+  primitives already on the page.
+- `src/features/app/driver/api/shipments.api.ts` and
+  `src/features/app/confirm/api/confirm.api.ts` each declare their own
+  `channel` union, both now narrower than reality. `tsc` is clean and the label
+  renders, but they should gain `'app'`.
 
 ## ✅ 2026-09-10 — The Payout Button That Said Nothing (2.39.0)
 

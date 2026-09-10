@@ -28,7 +28,15 @@ export type ShipmentStatusType = (typeof ShipmentStatus)[number];
  */
 export const confirmMilestoneSchema = z.enum(CONFIRMABLE_MILESTONES);
 
-/** The Expedion app's route: the caller is already authenticated. */
+/**
+ * The body of both authenticated confirmation routes — the Expedion app's
+ * `POST /api/expedion/quotes/:id/confirm` and the in-app
+ * `POST /api/shipments/:id/confirm`.
+ *
+ * A milestone and a note, and deliberately nothing else. Who answered and how
+ * are derived from the credential by the service; accepting either from the
+ * body would let a caller sign somebody else's name to an attestation.
+ */
 export const confirmMilestoneBodySchema = z.object({
   milestone: confirmMilestoneSchema,
   note: z.string().max(500).optional(),
