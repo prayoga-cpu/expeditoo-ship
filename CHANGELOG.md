@@ -14,6 +14,16 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.37.1] - 2026-09-10 · fix
+
+- **Signing in works again.** For several days nobody could get in — not with Google, not with an email and password — and every page that needs an account failed. The database the platform runs on had been removed by the service hosting it. The platform has been moved to a new one and is back.
+- **Accounts have to be created again.** The old ones could not be recovered. Sign up with the same address and you are back where you were.
+
+## [2.37.0] - 2026-09-10 · ux
+
+- **Every screen now tells you which version you are running.** The release number sits at the left of the top bar — in the app, in the driver panel and in the admin panel — and beside the copyright line at the foot of the website.
+- **Tapping it opens the release notes.** "What changed since last week?" is now one tap from wherever you already are, rather than a page you had to know existed.
+
 ## [2.36.0] - 2026-09-05 · feat
 
 - **A transporter backing out no longer destroys the client's delivery.** Calling a job off and handing a job back were the same button, and they are opposite things: the client no longer needs the transport, or the driver cannot run it. A driver who dropped a job used to kill a paid client's delivery outright, silently, with no way back. Handing a job back now returns it to the board, restores the bids that lost to it, and the client keeps their transport.

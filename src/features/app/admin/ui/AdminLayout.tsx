@@ -1,6 +1,7 @@
 "use client";
 
 import { NotificationBell } from "@/components/NotificationBell";
+import { AppVersionLink } from "@/components/ui/app-version";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -205,9 +206,12 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         {/* Header - Always visible like MainLayout */}
         <header className="border-b border-border bg-card shrink-0 z-40">
           <div className="flex items-center justify-between px-4 md:px-6 py-2 h-12">
-            <h1 className="text-lg font-bold text-foreground">
-              {t("panelTitle")}
-            </h1>
+            <div className="flex min-w-0 items-center gap-3">
+              <h1 className="text-lg font-bold text-foreground">
+                {t("panelTitle")}
+              </h1>
+              <AppVersionLink className="hidden md:inline-flex" />
+            </div>
             <div className="flex items-center gap-2">
               {/* Only below xl. From xl up the sidebar carries "Back to App"
                   at its foot, and two identical exits sat on screen at once;

@@ -13,14 +13,21 @@
  */
 
 /**
- * Supabase project refs that are production.
+ * Database identifiers that are production.
  *
  * Hardcoded on purpose. Reading this from the environment would mean a missing
  * variable silently disables the guard, which is the one failure mode that
- * matters. The ref is not a secret — it is already public in
- * `NEXT_PUBLIC_SUPABASE_URL`.
+ * matters. An endpoint id is not a secret — it is the public half of the
+ * hostname, and the password is what protects the database.
+ *
+ * This held a Supabase project ref until 2026-09-10, when that project was
+ * deleted out from under the deployment and production moved to Neon. The
+ * value is a Neon **endpoint id**, which is the one part of the hostname that
+ * is the same on the pooled host (`<endpoint>-pooler.<region>.aws.neon.tech`)
+ * and the direct one (`<endpoint>.<region>.aws.neon.tech`) — so the guard
+ * recognises production whichever of the two a caller was handed.
  */
-export const PRODUCTION_DB_REFS: readonly string[] = ["nobjujwfmqlserxuryvf"];
+export const PRODUCTION_DB_REFS: readonly string[] = ["ep-sweet-bonus-awtyfuyz"];
 
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "0.0.0.0"]);
 
@@ -28,7 +35,7 @@ export interface DbTarget {
   host: string;
   port: string;
   database: string;
-  /** Supabase project ref, when the URL points at Supabase. */
+  /** Neon endpoint id, when the URL points at Neon. */
   projectRef: string | null;
   isLocal: boolean;
   isProduction: boolean;
@@ -39,20 +46,19 @@ export interface DbTarget {
 }
 
 /**
- * Pull the Supabase project ref out of either URL shape Supabase hands out:
- * the session/direct URL `db.<ref>.supabase.co`, and the pooler URL where the
- * ref rides in the username as `postgres.<ref>`.
+ * Pull the Neon endpoint id out of either host shape Neon hands out.
+ *
+ * Pooled and direct differ by one suffix — `ep-foo-bar-pooler.<region>…` and
+ * `ep-foo-bar.<region>…` — and the two are the *same database*. Stripping the
+ * suffix is what stops the pooled URL and the direct URL of production looking
+ * like two unrelated hosts to the guard, which would let the direct one
+ * through as "some unrecognised remote".
  */
-function extractProjectRef(host: string, username: string): string | null {
-  const directMatch = /^db\.([a-z0-9]+)\.supabase\.(co|com)$/i.exec(host);
-  if (directMatch) return directMatch[1];
+function extractProjectRef(host: string): string | null {
+  if (!/\.neon\.tech$/i.test(host)) return null;
 
-  if (host.endsWith("pooler.supabase.com")) {
-    const [, ref] = username.split(".");
-    if (ref) return ref;
-  }
-
-  return null;
+  const endpoint = host.split(".")[0].replace(/-pooler$/i, "");
+  return endpoint || null;
 }
 
 function devRefsFromEnv(env: NodeJS.ProcessEnv): string[] {
@@ -78,13 +84,13 @@ export function describeDatabase(
   const host = parsed.hostname;
   const port = parsed.port || "5432";
   const database = parsed.pathname.replace(/^\//, "") || "postgres";
-  const projectRef = extractProjectRef(host, decodeURIComponent(parsed.username));
+  const projectRef = extractProjectRef(host);
 
   /*
    * Two independent checks, because the structured one only understands the
-   * URL shapes Supabase uses today. The raw sweep catches a production ref
-   * arriving in any other form — a direct IP with the ref in the database
-   * name, a proxied host, a shape Supabase adds later.
+   * URL shapes Neon uses today. The raw substring sweep catches a production
+   * identifier arriving in any other form — a direct IP with the endpoint in
+   * the database name, a proxied host, a shape Neon adds later.
    */
   const isProduction = PRODUCTION_DB_REFS.some(
     (ref) => ref === projectRef || connectionString.includes(ref)
@@ -158,9 +164,9 @@ export function assertDevelopmentDatabase(
       [
         `Refusing to ${action}: "${target.label}" is not a recognised development database.`,
         "",
-        "Allowed targets are localhost, or a Supabase project ref listed in DEV_DB_REFS.",
+        "Allowed targets are localhost, or a Neon endpoint id listed in DEV_DB_REFS.",
         "If this really is a development database, add its ref:",
-        `  DEV_DB_REFS=${target.projectRef ?? "<project-ref>"}`,
+        `  DEV_DB_REFS=${target.projectRef ?? "<endpoint-id>"}`,
         "",
         "See docs/specs/environments_spec.md.",
       ].join("\n")

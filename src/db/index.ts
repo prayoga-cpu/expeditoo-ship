@@ -36,7 +36,8 @@ if (!isProductionEnv) {
  *
  * This has to exceed the widest fan-out any single request makes. Once the
  * pool is exhausted postgres.js pipelines further queries onto a connection
- * that is already busy, and Supabase's transaction pooler (port 6543) does not
+ * that is already busy, and a transaction-mode pooler (PgBouncer, which is what
+ * Neon puts in front of Postgres) does not
  * support pipelining — it stops answering rather than erroring, so the request
  * hangs instead of failing. Measured against this database: 18 concurrent
  * queries on the library default of 10 never returned (>25s), while the same
@@ -74,7 +75,7 @@ const globalForDb = globalThis as unknown as {
 const client =
   globalForDb.__expeditooPgClient ??
   postgres(connectionString, {
-    prepare: false, // Required for Supabase connection pooler
+    prepare: false, // Required for a transaction-mode pooler (Neon, PgBouncer)
     max: POOL_MAX,
     idle_timeout: IDLE_TIMEOUT,
   });

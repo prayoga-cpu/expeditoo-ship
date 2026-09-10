@@ -12,7 +12,7 @@ import * as reportDal from "@/server/dal/expedion-report.dal";
  * The eight sections are loaded by three concurrent queries — the scalars, the
  * row sets, and the four platform figures — rather than the eighteen this used
  * to issue. That is not tidiness: postgres.js pipelines onto a busy connection
- * once its pool is exhausted, Supabase's transaction pooler does not answer
+ * once its pool is exhausted, a transaction-mode pooler does not answer
  * pipelined work, and eighteen in flight against a pool of ten hung the page
  * indefinitely rather than failing.
  *

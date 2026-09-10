@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { DriverBottomNav } from "./DriverBottomNav";
 import { AppSidebarHeader } from "@/components/layouts/AppSidebarHeader";
+import { AppVersionLink } from "@/components/ui/app-version";
 import { useTranslations } from "next-intl";
 
 interface DriverLayoutProps {
@@ -106,7 +107,10 @@ export function DriverLayout({ children }: DriverLayoutProps) {
         {/* Header - Always visible like MainLayout */}
         <header className="border-b border-border bg-card sticky top-0 z-40">
           <div className="flex items-center justify-between px-4 md:px-6 py-2 h-12">
-            <h1 className="text-lg font-bold text-foreground">{t("panelTitle")}</h1>
+            <div className="flex min-w-0 items-center gap-3">
+              <h1 className="text-lg font-bold text-foreground">{t("panelTitle")}</h1>
+              <AppVersionLink className="hidden md:inline-flex" />
+            </div>
             <div className="flex items-center gap-2">
               <Link href="/profile">
                 <Button variant="ghost" size="sm" className="gap-2">

@@ -126,6 +126,9 @@
     },
     "cityField": {
       "clear": "Clear city"
+    },
+    "version": {
+      "label": "Version {version} — see what changed"
     }
   },
   "auth": {

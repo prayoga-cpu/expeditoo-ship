@@ -1,6 +1,6 @@
 # STATUS.md
 
-## Current state: user-testing mode — driver-side revamp complete (2.36.0)
+## Current state: user-testing mode — driver-side revamp complete (2.37.1)
 
 _AI agents: add an entry here every time you finish a task. See AGENTS.md §8._
 
@@ -27,6 +27,32 @@ adversarial verification pass — treat their detail as slightly less certain.
 Work that needs a human hand outside the codebase. Add to this list rather
 than leaving it in a chat message.
 
+- [x] ~~Restore the production database~~ — **done 2026-09-10**, see the entry
+      below. Production now runs on Neon (`ep-sweet-bonus-awtyfuyz`, us-east-1,
+      Vercel Marketplace resource `neon-crimson-car`, free plan). What is left
+      from it:
+- [ ] **Decide on data residency.** The new database sits in **us-east-1**,
+      co-located with the Vercel functions, which run in `iad1` — so it is
+      *faster* than the old Frankfurt Supabase, which every query crossed the
+      Atlantic to reach. But French users' personal data now rests in the US.
+      Moving it to the EU properly means moving **both** the database and the
+      function region (`regions` in `vercel.json`, currently unset and therefore
+      `iad1`); moving only one re-introduces the Atlantic hop. Cheapest to do
+      while the database is nearly empty.
+- [ ] **Restore the 4,593 `expedion_quotes`** from the laptop mirror into the
+      new database, so `/admin/expedion-clients` is not an empty screen. The
+      column sets are identical (73 on both), so it is one `\copy` out and one
+      `\copy` in. Not done here: the bulk copy into production needed a
+      permission this session did not have.
+- [ ] **Delete the orphaned Neon resource `expeditoo-prod-db`** (fra1). It was
+      provisioned first, failed to connect because the old Supabase
+      `POSTGRES_USER` still held the name, and a second `integration add`
+      created `neon-crimson-car` instead. It holds no data and should not sit
+      there accruing anything.
+- [ ] **Turn off Neon Auth on the resource, or leave it knowingly.** The connect
+      step provisioned it (`NEON_AUTH_BASE_URL`, `VITE_NEON_AUTH_URL`). Nothing
+      reads those — this app authenticates with Better Auth — so they are inert,
+      but they are misleading to the next person reading the variable list.
 - [ ] **Run `Actions → Migrate database` before any deploy** that ships a new
       migration. The Vercel build is a plain `next build` and never migrates.
 - [ ] **Set `EXPEDION_APP_ORIGINS` in `.env.local`** — it exists in Vercel
@@ -47,6 +73,62 @@ than leaving it in a chat message.
       in `.env.example`.
 
 ---
+
+## ✅ 2026-09-10 — Production Moved Off A Database That No Longer Existed (2.37.1)
+
+_« check again the login with google on the prod still doesn't work »_ → _« on prod pls audit »_ → _« I think we no longer need supabase, if yes, then remove entirely everywhere also in prod vercel env »_ → _« go ahead handle for me »_.
+
+- [x] **The fault was never Google.** `POST /api/auth/sign-in/social` answered 500 with an empty body — but so did `POST /api/auth/sign-in/email`, and so did the public `GET /api/listings`. The Vercel runtime log named it: `ERROR [Better Auth]: Failed query: insert into "verification" (...)`. Better Auth writes the OAuth state row **before** it returns the `accounts.google.com` URL, so the flow died one step short of Google and the browser saw a 500 from our own origin. Two earlier sessions spent on OAuth allowlists were chasing a database outage. `GET /api/health` stayed 200 throughout because `src/app/api/health/route.ts` returns a literal and never opens a connection — it is not a health check, and it is why this looked auth-shaped from outside.
+- [x] **The Supabase project was deleted, not paused.** `db.nobjujwfmqlserxuryvf.supabase.co` answered NXDOMAIN and the pooler answered `FATAL: (ENOTFOUND) tenant/user postgres.<ref> not found`; a paused project keeps its DNS and answers. `vercel env ls` showed `POSTGRES_URL` untouched for 27 days — nobody re-pointed it, the thing it pointed at went away. `vercel integration list` reported **no Marketplace resources**, confirming it was an external project Vercel held no copy of.
+- [x] **Production now runs on Neon** — endpoint `ep-sweet-bonus-awtyfuyz`, us-east-1, free plan, provisioned through the Vercel Marketplace and connected to Production and Preview. **Region is deliberate, not accidental:** the functions run in `iad1` (`x-vercel-id: …::iad1::`, and `vercel.json` sets no `regions`), so the database is co-located with the compute. The old Frankfurt database meant every query crossed the Atlantic. The residency trade-off this creates is filed above as an operator decision, because fixing it properly means moving the functions too.
+- [x] **13 Supabase/legacy `POSTGRES_*` variables deleted** from Vercel Production and Preview. They were not merely dead: `POSTGRES_USER` held the name Neon needed and made the first connect attempt fail outright.
+- [x] **`src/lib/db-target.ts` rewritten for Neon, and this was the load-bearing change.** It is the fail-closed guard that stops `migrate.ts`, `clean.ts` and the seed scripts touching production, and it identified production **by Supabase project ref** — against a Neon URL it would have reported "not production, not a known dev database". `extractProjectRef` now takes the Neon endpoint id and **strips a `-pooler` suffix**, because the pooled and direct hosts are the same database and migrations run against the *direct* one: a guard that knew only the pooled host would have waved through precisely the connection that runs DDL. The raw substring sweep is kept for shapes the parser does not know.
+- [x] **That guard had no tests at all.** 15 added (`src/lib/__tests__/db-target.test.ts`), including the pooled/direct pair, that `DEV_DB_REFS` can never promote production to a dev target, and that an unrecognised remote is refused rather than assumed safe.
+- [x] **Migrations applied to the empty database** with the unpooled connection — Neon's pooler is PgBouncer in transaction mode and is not reliable for DDL. 38 tables, all four Better Auth tables present. The `NOTICE`s about missing constraints are `IF EXISTS` drops on a fresh database, not failures.
+- [x] **The Expedion system account was re-created.** `EXPEDION_SYSTEM_USER_ID` owns every escalated listing, and on an empty database that row did not exist — escalation would have failed on a foreign key with nothing in the UI explaining why. It is a `user` row with **no `account` row**, so it has no way to authenticate: an ownership anchor, not a login.
+- [x] **Supabase removed from the codebase**, not just from the variables. `.env.example` now describes Neon endpoints and branches; the two pooler comments in `src/db/index.ts` and `expedion-report.service.ts` named Supabase for behaviour that is really PgBouncer-transaction-mode — **`prepare: false` stays**, Neon needs it just as much. The only surviving mention is the dated note in `db-target.ts` explaining what the value used to be.
+
+**Verification**
+- `npx tsc --noEmit` 0 errors · `pnpm lint` 0 errors, 85 pre-existing warnings · `pnpm test` **1432 passed across 109 files**, 0 failed (15 new).
+- Production probed by `curl` before and after; the Vercel runtime log read with `vercel logs`; the dead Supabase host confirmed by `nslookup` and by the pooler's own refusal.
+- Local was the same fault from a different cause — `postgresql@17` was stopped. Started it, and local `sign-in/social` immediately returned **200** with a real `accounts.google.com` URL carrying the right `client_id`, `redirect_uri` and PKCE challenge, which is the proof the OAuth configuration was never at fault.
+
+**Known limits**
+- **The 22 real user accounts are gone and cannot be recovered.** The laptop mirror scrubs identities by design (`dev.invalid`, `dev.local`, one address kept via `MIRROR_KEEP_EMAILS`), so only Supabase could have returned them. Everyone signs up again, including the operator — and the first admin must be granted after that first sign-in, because `user_roles` starts empty.
+- The 4,593 `expedion_quotes` were **not** restored in this session (see the operator to-do). Production carries schema and one system row.
+- `MIRROR_SOURCE_URL` in `.env.local` still points at the deleted Supabase host, so `pnpm db:mirror` cannot run until it is re-pointed at Neon.
+
+## ✅ 2026-09-10 — The Running Version, Everywhere (2.37.0)
+
+Two requests, one session. First: _« check again the login with google on the prod still doesn't work »_, then _« even on the local, check the error »_. Second: _« add the number of version and redirect to changelog page at the topbar dashboard and footer website »_. Only the second changed code; the first is written down here because the answer is not in the codebase and the next person will otherwise look for it there.
+
+### Google sign-in is not broken. Production has no database.
+
+- [x] **The symptom is not Google-specific, which is the whole finding.** `POST /api/auth/sign-in/social` on `expeditoo-ship-five.vercel.app` answers **500 with an empty body** — but so does `POST /api/auth/sign-in/email`, and so does `GET /api/listings?limit=1`, which is public and unauthenticated. Anything that reads the database 500s. Two sessions were spent on OAuth allowlists (`scripts/auth-preflight.mjs`, the Firebase authorized-domains list, Google's JavaScript origins) for a fault that is not in any of them.
+- [x] **`GET /api/health` answers 200 and proves nothing.** `src/app/api/health/route.ts` returns a literal `{"status":"ok"}` and never opens a connection, so it stays green through a total database outage. It is the reason this looked like an auth-only problem from the outside.
+- [x] **The Vercel runtime log names it exactly**: `ERROR [Better Auth]: Failed query: insert into "verification" (...)`. Better Auth writes the OAuth state row *before* it hands back the `accounts.google.com` URL, so the flow dies one step before Google is ever involved. That is why the browser sees a 500 from our origin rather than an error on a Google-branded page — the failure mode the preflight script was built to catch.
+- [x] **The database is gone, not paused.** `PRODUCTION_DB_REFS` in `src/lib/db-target.ts` names Supabase project `nobjujwfmqlserxuryvf`. Its pooler now answers `FATAL: (ENOTFOUND) tenant/user postgres.nobjujwfmqlserxuryvf not found`, `db.nobjujwfmqlserxuryvf.supabase.co` answers **NXDOMAIN**, and the project's REST host does not resolve either. A paused Supabase project keeps its DNS and answers from the gateway; NXDOMAIN on both hosts is a project that no longer exists. `vercel env ls production` shows `POSTGRES_URL` still set, last changed 27 days ago — nobody re-pointed it, the thing it points at went away. Filed as the first **Operator to-do** above.
+- [x] **Local was the same fault with a different cause, and is fixed.** `pg_isready` reported `localhost:5432 - no response`: the `postgresql@17` brew service was stopped (see the standing note that it normally is). Started it, and `POST localhost:3000/api/auth/sign-in/social` immediately returned **200** with a real `https://accounts.google.com/o/oauth2/auth?...` URL carrying the right `client_id`, `redirect_uri` and PKCE challenge. **That is the proof the OAuth configuration is correct** — client id, secret, callback registration and `trustedOrigins` all work; only the database was missing. The service was left running, because the operator is developing against it.
+
+### The running version, on every surface
+
+- [x] `src/components/ui/app-version.tsx` (new) — `AppVersionLink`, a `Link` to `/changelog` printing `v{APP_VERSION}` in Geist Mono, the face the design system gives numerals.
+- [x] **`APP_VERSION` had existed for a month and was rendered by nothing.** It was held equal to `package.json` and `CHANGELOG.md` by `src/lib/__tests__/changelog.test.ts` (AGENTS.md §8) and then shown to no one, so "which build am I looking at?" was answerable only from a terminal. `/changelog` had the mirror-image problem: a real page, reachable from one footer column, that nothing tied to the build in front of the reader.
+- [x] Wired into **all three app shells** — `MainLayout`, `DriverLayout`, `AdminLayout` — and into `LandingFooter`. All three shells rather than only the one asked about, on the same argument `SidebarRoleBadge` already makes: "which thing am I looking at" is one question and must not get three answers.
+- [x] **The palette comes from the caller.** The landing chrome is written against the `--lp-*` tokens, which resolve only inside a `.lp` root, so a component hardcoding `text-muted-foreground` renders invisible in the footer. `cn` lets the caller's colour win; a test asserts the app default is actually dropped when a caller passes one. Same split `LangToggle` documents.
+- [x] **`common.version.label`** added to both locales — `Version {version} — see what changed` / `— voir ce qui a changé`. The accessible name, because `v2.37.0` alone is a run of digits that says nothing about where the link goes. FR/EN parity held; the two files gained three lines each and nothing else.
+- [x] Placement: flush left in the top bar, which from `xl` is the half of the bar the sidebar emptied. Hidden below `md` — at 390px the logo, the driver quick actions and the utility trio already fill the row, and of those the version is the first thing that can go.
+
+**Verification**
+- `npx tsc --noEmit` — 0 errors. `pnpm lint` — 0 errors, 85 warnings, all pre-existing and none in the files touched.
+- `pnpm test` — **1417 passed across 108 files**, 0 failed. 5 of those are new (`src/components/ui/__tests__/app-version.test.tsx`): the href, the text, agreement with `package.json` read off disk, the accessible name in both locales, and the palette override.
+- **Chromium, against the dev server** — not jsdom. Top bar at 1440 and footer at 1280, in light and dark, in FR and EN: exactly one version link per page, `href="/changelog"`, accessible name `Version 2.37.0 — see what changed` / `Version 2.37.0 — voir ce qui a changé`, text `v2.37.0`.
+- Production endpoints probed by `curl` and the Vercel runtime log read with `vercel logs`; local sign-in reproduced broken and then observed working after starting Postgres.
+
+**Known limits**
+- The version is hidden below `md`. On a phone the release number is not on screen anywhere; the footer link on the website still is.
+- Following it from inside the app leaves the app shell for the marketing route. Deliberate — there is one changelog and it is public — but there is no in-app way back other than the browser's.
+- Nothing here touches the production outage. The code is fine; the database is missing, and that is an operator action.
 
 ## ✅ 2026-09-05 — Cancellations From Both Sides (2.36.0)
 

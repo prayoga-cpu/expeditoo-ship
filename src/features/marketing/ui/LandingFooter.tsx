@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { BrandWordmark } from "@/components/ui/brand-mark";
+import { AppVersionLink } from "@/components/ui/app-version";
 import { EXPEDION_URL } from "./styles";
 
 const LINK = "text-sm text-[var(--lp-muted)]";
@@ -97,9 +98,18 @@ export function LandingFooter() {
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-6 border-t border-[var(--lp-line)] pt-7">
-          <span className="text-[13px] text-[var(--lp-faint)]">
-            {t("copyright")}
-          </span>
+          {/* The copyright and the running version, together: one says who
+              owns the site, the other says which build of it you are reading,
+              and the second is the one a visitor can act on. The column above
+              already links to /changelog by name — this is the same page
+              reached from the number itself, which is how somebody arrives
+              wanting to know what changed. */}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span className="text-[13px] text-[var(--lp-faint)]">
+              {t("copyright")}
+            </span>
+            <AppVersionLink className="text-[var(--lp-faint)] hover:text-[var(--lp-text)]" />
+          </div>
           <div className="flex items-center gap-2.5">
             <span className="text-[13px] text-[var(--lp-faint)]">
               {t("sameGroup")}

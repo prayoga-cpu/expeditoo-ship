@@ -126,6 +126,9 @@
     },
     "cityField": {
       "clear": "Effacer la ville"
+    },
+    "version": {
+      "label": "Version {version} — voir ce qui a changé"
     }
   },
   "auth": {

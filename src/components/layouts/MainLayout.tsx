@@ -5,6 +5,7 @@ import { BottomNav } from "../BottomNav";
 import { NotificationBell } from "../NotificationBell";
 import { ThemeToggle } from "../ui/theme-toggle";
 import { LangToggle } from "../ui/lang-toggle";
+import { AppVersionLink } from "../ui/app-version";
 import { AppSidebarHeader } from "./AppSidebarHeader";
 import { HeaderQuickActions } from "./HeaderQuickActions";
 import { BrandWordmark } from "@/components/ui/brand-mark";
@@ -187,11 +188,20 @@ function Header() {
       <div className="flex items-center justify-between px-4 md:px-6 py-2 h-12">
         {/* Mobile logo. Uses the shared lockup so the mark is present here too
             — this used to be a bare heading, which is why mobile showed the
-            wordmark with no mark beside it. */}
-        <div className="flex items-center gap-2 shrink-0 xl:hidden">
-          <Link href="/home">
-            <BrandWordmark size={24} />
-          </Link>
+            wordmark with no mark beside it.
+
+            The release rides beside it. From `xl` the logo moves to the
+            sidebar and the version is the only thing on this side, which is
+            the point: that half of the bar was empty. Below `md` it is hidden
+            — at 390px the logo, the driver actions and the utility trio
+            already fill the row, and a version is the first thing that can go. */}
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="xl:hidden">
+            <Link href="/home">
+              <BrandWordmark size={24} />
+            </Link>
+          </div>
+          <AppVersionLink className="hidden md:inline-flex" />
         </div>
 
         {/* Right Actions */}
