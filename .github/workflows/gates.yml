@@ -32,9 +32,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # No `version:` here on purpose. The action errors out when it is given
+      # two answers, and `packageManager` in package.json is now the single
+      # one — which is also what corepack reads locally, so CI and a laptop
+      # can no longer drift onto different majors. `migrate.yml` failed for
+      # exactly the opposite reason: it asked here and package.json was silent.
       - uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - uses: actions/setup-node@v4
         with:

@@ -14,6 +14,11 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.40.1] - 2026-09-13 · infra
+
+- **Nothing you can see changes.** The job that applies database changes to the live site could not start: it asked which version of its build tool to use and the project never said, so it stopped before reaching the database. It is fixed, and the answer now lives in one place that both the live checks and the database job read, so the two can no longer drift apart.
+- This mattered because the release before it shipped a change the database had not been told about yet. Confirming a pickup or a delivery from inside the app would have failed until the job ran.
+
 ## [2.40.0] - 2026-09-10 · feat
 
 - **You can confirm a pickup or a delivery from the app itself.** Until now the only way to say "yes, this happened" was the link in the text message or the email — so if you had deleted it, you were stuck, even while looking at the delivery on screen. There is now a button on the delivery page. It shows only the moments the transport has actually reached, and once you have confirmed one it says so, with the date, instead of offering the button again.

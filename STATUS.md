@@ -1,6 +1,6 @@
 # STATUS.md
 
-## Current state: user-testing mode — driver-side revamp complete (2.40.0)
+## Current state: user-testing mode — driver-side revamp complete (2.40.1)
 
 _AI agents: add an entry here every time you finish a task. See AGENTS.md §8._
 
@@ -116,6 +116,77 @@ than leaving it in a chat message.
       in `.env.example`.
 
 ---
+
+## ✅ 2026-09-13 — The Migration Job That Could Not Start (2.40.1)
+
+_« migrate db is failed »_ — with the Actions log: `pnpm/action-setup@v4` →
+*"No pnpm version is specified. Please specify it by one of the following ways:
+in the GitHub Action config with the key `version`, in the package.json with the
+key `packageManager`."*
+
+- [x] **Neither place answered.** `migrate.yml:67` used a bare
+      `pnpm/action-setup@v4`, and `package.json` had no `packageManager` field —
+      so the job died at step 4 of 10, before `pnpm install`, before the journal
+      check, and before it ever opened a connection. **Migration `0023` has
+      therefore never been applied**, while 2.40.0 — which writes the `'app'`
+      channel value it adds — has been live in production since 10 Sep.
+- [x] **Fixed at the root, not at the call site.** `package.json` now declares
+      `"packageManager": "pnpm@10.10.0"`, which both workflows resolve from. The
+      alternative — pasting `version:` into `migrate.yml` — would have left the
+      real fault in place: `gates.yml` pinned **9** while every laptop here runs
+      **10.10.0**, so CI and development were on different majors and nothing
+      said so.
+- [x] **`version: 9` removed from `gates.yml`, and this is not optional.**
+      `pnpm/action-setup` **errors** when given two answers ("Multiple versions
+      of pnpm specified"), so adding `packageManager` while leaving the input in
+      place would have traded a broken migration job for a broken gates job —
+      the one that guards every push.
+- [x] **Checked before changing it**: `pnpm-lock.yaml` is `lockfileVersion: '9.0'`,
+      which pnpm 10 reads and writes natively, and
+      `pnpm install --frozen-lockfile` under 10.10.0 completes clean. Moving CI
+      from 9 to 10 is not a leap of faith.
+
+### Verification
+
+- `pnpm install --frozen-lockfile` under pnpm 10.10.0 — exit 0.
+- All three workflow files parse as YAML; `pnpm/action-setup` now appears twice,
+  bare, in `gates.yml` and `migrate.yml`, with no `version:` anywhere.
+- Production probed live before this change: `POST /api/stripe/webhook` answers
+  **400 Missing signature** (route up, rejecting unsigned posts),
+  `GET /api/listings` **200**, `/signin` **200**, `/api/public/changelog`
+  reports **2.40.0**.
+
+### Also done this session
+
+- [x] **The Stripe webhook destination now exists.** There was none for this app
+      — both destinations pointed at n8n (`agsexp.app.n8n.cloud`), which is the
+      Expedion side. `expeditoo-vercel` → `/api/stripe/webhook`, 2 events.
+- [x] **`STRIPE_WEBHOOK_SECRET` replaced in Vercel Production** (Sensitive) and
+      written to `.env.local`, which was confirmed gitignored and untracked
+      first. The previous value was 17 days old and belonged to no endpoint
+      here, so **no Stripe event has ever verified against this app**.
+      `--force` left `createdAt` untouched and the listing still read "17d ago";
+      removing and re-adding was the only way to see it confirm at "1s ago".
+      Production was redeployed, because an env change does not reach a running
+      deployment.
+
+### Known limits
+
+- **Migration `0023` is still unapplied.** This change only makes the job able
+  to run; someone has to run it. Until then, in-app confirmation fails in
+  production on an invalid enum value.
+- **The webhook has still never delivered an event.** The destination shows
+  0 deliveries. Sending a test event from the destination page is the proof.
+- **The local `STRIPE_WEBHOOK_SECRET` is inert.** It belongs to the production
+  endpoint, and Stripe cannot reach a laptop; local work needs
+  `stripe listen`, which mints its own secret.
+- **`INVOICE_ISSUER_*` remains unset.** The Stripe account supplies the legal
+  name (ATOUT GLOBAL SERVICES) and address (1bis rue Pierre et Marie Curie,
+  92140 Clamart), but SIREN and VAT are masked in the dashboard and the legal
+  form, share capital and RCS are not held there at all. **These were not
+  invented**: an invoice carrying a fabricated registration number is a worse
+  outcome than a receipt that admits what it is, and the public register has no
+  entry under this name.
 
 ## ✅ 2026-09-10 — The Two Open Questions, And An Endpoint That Authorised Nobody (2.40.0)
 

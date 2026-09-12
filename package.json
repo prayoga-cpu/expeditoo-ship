@@ -1,6 +1,7 @@
 {
   "name": "expeditoo-ship",
-  "version": "2.40.0",
+  "version": "2.40.1",
+  "packageManager": "pnpm@10.10.0",
   "private": true,
   "scripts": {
     "build": "next build",
