@@ -68,16 +68,45 @@ function devRefsFromEnv(env: NodeJS.ProcessEnv): string[] {
     .filter(Boolean);
 }
 
+/**
+ * What a connection string looks like after the ways people actually paste it.
+ *
+ * A CI secret is typed into a web form by hand, and the three things that
+ * survive that trip are a wrapping pair of quotes, the `psql ` the Neon and
+ * Supabase dashboards put in front of their copy button, and stray whitespace.
+ * None of them is a different database — they are the same URL wearing
+ * something — and `new URL()` rejects all three with the same unhelpful
+ * sentence, which is how the production migration failed on its third attempt
+ * with no way to see why.
+ *
+ * Exported because `migrate.ts` must hand the *same* cleaned string to
+ * `postgres()`: recognising a target we then fail to connect to would be a
+ * worse bug than the one this fixes.
+ */
+export function normaliseConnectionString(raw: string): string {
+  return raw
+    .trim()
+    .replace(/^psql\s+/i, "")
+    .replace(/^(['"])([\s\S]*)\1$/, "$2")
+    .trim();
+}
+
 export function describeDatabase(
   connectionString: string,
   env: NodeJS.ProcessEnv = process.env
 ): DbTarget {
+  const cleaned = normaliseConnectionString(connectionString);
+
   let parsed: URL;
   try {
-    parsed = new URL(connectionString);
+    parsed = new URL(cleaned);
   } catch {
+    // Name what arrived, or the next person is guessing too. The scheme and
+    // the first few characters are enough to tell a quoted URL from a `psql `
+    // prefix from an empty secret, and stop well short of the credentials.
+    const hint = cleaned ? `received ${JSON.stringify(cleaned.slice(0, 12))}…` : "received an empty value";
     throw new Error(
-      "Could not parse the database connection string. Expected a postgres:// URL."
+      `Could not parse the database connection string. Expected a postgres:// URL — ${hint}`
     );
   }
 
@@ -93,7 +122,7 @@ export function describeDatabase(
    * the database name, a proxied host, a shape Neon adds later.
    */
   const isProduction = PRODUCTION_DB_REFS.some(
-    (ref) => ref === projectRef || connectionString.includes(ref)
+    (ref) => ref === projectRef || cleaned.includes(ref)
   );
 
   const isLocal = LOCAL_HOSTS.has(host);

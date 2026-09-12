@@ -2,7 +2,11 @@ import "../lib/load-env";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
-import { assertDevelopmentDatabase, describeDatabase } from "../lib/db-target";
+import {
+  assertDevelopmentDatabase,
+  describeDatabase,
+  normaliseConnectionString,
+} from "../lib/db-target";
 
 /**
  * Migrating production is a deploy step, not something a laptop does by
@@ -21,11 +25,17 @@ function resolveTarget(connectionString: string) {
 }
 
 async function runMigration() {
-  const connectionString = process.env.POSTGRES_URL;
+  const raw = process.env.POSTGRES_URL;
 
-  if (!connectionString) {
+  if (!raw) {
     throw new Error("POSTGRES_URL environment variable is required");
   }
+
+  // Cleaned once, here, and used for both the guard and the connection. A CI
+  // secret arrives via a web form, so it turns up quoted or with the
+  // dashboards' `psql ` prefix; recognising the target and then handing
+  // `postgres()` the raw string would connect to nothing.
+  const connectionString = normaliseConnectionString(raw);
 
   const target = resolveTarget(connectionString);
 

@@ -1,6 +1,6 @@
 # STATUS.md
 
-## Current state: user-testing mode — driver-side revamp complete (2.40.1)
+## Current state: user-testing mode — driver-side revamp complete (2.40.2)
 
 _AI agents: add an entry here every time you finish a task. See AGENTS.md §8._
 
@@ -62,6 +62,22 @@ than leaving it in a chat message.
       `vercel logs`). Log in to the Stripe Dashboard and confirm the account
       creations were intended. **No driver can start payout onboarding until
       this is cleared**; the button now says so instead of doing nothing.
+- [ ] **The production database credentials are Non-sensitive in Vercel.** The
+      Neon integration created all 13 Postgres variables that way on
+      2026-09-10, so `POSTGRES_PASSWORD` and the full connection URLs pull in
+      clear to any laptop with project access. `migrate.yml`'s header still
+      claims the opposite ("every production variable is marked Sensitive…
+      deliberately"). Either re-mark them Sensitive and correct the comment, or
+      accept it knowingly — but the two must agree.
+- [ ] **Apply migration `0023`.** Still unapplied while 2.40.x is live, so
+      in-app confirmation fails in production. If the Actions run keeps
+      refusing the secret, re-paste it with no quotes and no `psql ` prefix —
+      2.40.2 tolerates both, but only once that release is on main.
+- [ ] **Set `INVOICE_VAT_RATE`** — `20` if VAT is charged, `0` for the franchise
+      en base. It is the last field; every other `INVOICE_ISSUER_*` is set. Until
+      then documents stay *Reçu de paiement*. Also outstanding, optional:
+      `INVOICE_ISSUER_CAPITAL` (share capital, from the Kbis) — legally expected
+      on a SAS invoice, though the code does not gate on it.
 - [ ] **URGENT — roll the live Stripe secret key.** An `sk_live_…` key was pasted
       into a chat transcript on 2026-09-10 and must be treated as compromised: it
       can charge cards, refund, move money to connected accounts and read the
@@ -116,6 +132,83 @@ than leaving it in a chat message.
       in `.env.example`.
 
 ---
+
+## ✅ 2026-09-13 — The Connection String The Migrator Would Not Read (2.40.2)
+
+_« still failed »_ → _« check again migrate failed, or handle the migrate by your side »_.
+
+Third failure of the same job, each one further in. Run #1 died at
+`pnpm/action-setup` (fixed in 2.40.1). Run #2 died on a missing
+`POSTGRES_URL_PRODUCTION`. Run #3 reached **Apply migrations** and threw from our
+own code:
+
+```
+Error: Could not parse the database connection string. Expected a postgres:// URL.
+  at describeDatabase (src/lib/db-target.ts:79:11)
+```
+
+- [x] **The message was wrong about the cause and useless about the fix.**
+      `describeDatabase` called `new URL()` and reported scheme trouble for
+      *every* parse failure. A CI secret is typed into a web form, so the three
+      things that actually reach it are a wrapping pair of quotes, the `psql `
+      that the Neon and Supabase copy buttons prepend, and stray whitespace.
+      None is a different database; all three produced that one sentence.
+- [x] **`normaliseConnectionString` strips all three**, and is **exported on
+      purpose**: `migrate.ts` now cleans once and hands the *same* string to
+      both the guard and `postgres()`. Recognising a target and then connecting
+      with the raw value would be a worse bug than the one being fixed.
+- [x] **The substring sweep reads the cleaned value too.** It is the fail-open
+      half of the guard — a wrapped production URL that parsed but failed the
+      `includes()` check would have been waved through as "some unrecognised
+      remote". A test pins `psql "<prod url>"` as production.
+- [x] **The failure now names what arrived** — scheme plus twelve characters,
+      which distinguishes a quoted URL from a `psql ` prefix from an empty
+      secret, and stops well short of the credentials. Empty says "received an
+      empty value" rather than blaming the scheme.
+
+### What this does not do
+
+**It does not apply migration `0023`.** Running it from here was refused by this
+environment's production-deploy guard, and that refusal was not worked around.
+`0023` remains unapplied while 2.40.x — which writes the `'app'` channel value
+it adds — is live, so in-app confirmation still fails in production.
+
+### Verification
+
+- `pnpm test src/lib/__tests__/db-target.test.ts` — **24 passed** (was 15; 9 new).
+- `npx tsc --noEmit` 0 errors · full suite **1 588 passed across 119 files**.
+
+### Found on the way, and it matters more than the bug
+
+- **The production database credentials are no longer Sensitive.** `migrate.yml`'s
+  header states that *"every production variable is marked Sensitive, so
+  `vercel env pull` returns `[SENSITIVE]` and a laptop therefore has no way to
+  reach the production database — deliberately."* When the Neon integration
+  provisioned the database on 2026-09-10 it created all **13** Postgres
+  variables — `POSTGRES_PASSWORD` and the full connection URLs included — as
+  **Non-sensitive**. They pull in clear. The documented barrier does not exist,
+  and the comment asserting it is now false. Filed under Operator to-do.
+
+### Also this session
+
+- [x] **`INVOICE_ISSUER_*` filled from the public register**, not invented. The
+      official `recherche-entreprises.api.gouv.fr` returns one exact match whose
+      SIREN ends **3413**, which is what the Stripe tax panel shows masked:
+      SIREN `941643413`, SIRET `94164341300011`, `nature_juridique` **5710**
+      (SAS), seat *1 B rue Pierre et Marie Curie, 92140 Clamart*, created
+      2025-03-05, president *NICOLAS Rémy* — matching the Stripe representative.
+      VAT `FR27941643413` is **computed**, not guessed: the French key is
+      `(12 + 3 × (SIREN mod 97)) mod 97` = 27, and the last four digits match
+      the masked Stripe value. VIES could not confirm it — the French node
+      answered `MS_MAX_CONCURRENT_REQ` on three attempts — so it is stated as
+      computed and wants one look at the dashboard.
+- [x] **`INVOICE_VAT_RATE` deliberately left unset.** It is the single switch
+      that promotes every document from *Reçu de paiement* to **Facture**, and
+      it encodes a tax position — 20 % versus the franchise en base — that
+      nothing in the register or in Stripe states. Verified by running the
+      app's own `invoiceIssuer()` against the six values now in Vercel:
+      unset → `Reçu de paiement`; `20` → **FACTURE**, "TVA au taux de 20 %";
+      `0` → **FACTURE**, "TVA non applicable, article 293 B du CGI".
 
 ## ✅ 2026-09-13 — The Migration Job That Could Not Start (2.40.1)
 

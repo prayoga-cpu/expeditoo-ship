@@ -5,6 +5,7 @@ import {
   assertDevelopmentDatabase,
   assertNotProductionDatabase,
   describeDatabase,
+  normaliseConnectionString,
 } from "../db-target";
 
 /**
@@ -113,5 +114,39 @@ describe("assertDevelopmentDatabase", () => {
 
   it("allows localhost", () => {
     expect(assertDevelopmentDatabase(localUrl, "wipe", env()).isKnownDev).toBe(true);
+  });
+});
+
+describe("normaliseConnectionString", () => {
+  const PROD = "postgresql://u:p@ep-sweet-bonus-awtyfuyz.c-12.us-east-1.aws.neon.tech/neondb";
+
+  // Each of these is how the production migration secret actually arrived at
+  // some point: typed into a web form, copied off a dashboard's button.
+  it.each([
+    ["double quotes", `"${PROD}"`],
+    ["single quotes", `'${PROD}'`],
+    ["a psql prefix", `psql ${PROD}`],
+    ["a quoted psql prefix", `psql '${PROD}'`],
+    ["surrounding whitespace", `  ${PROD}\n`],
+  ])("recovers a URL wrapped in %s", (_label, raw) => {
+    expect(normaliseConnectionString(raw)).toBe(PROD);
+  });
+
+  it("leaves a clean URL untouched", () => {
+    expect(normaliseConnectionString(PROD)).toBe(PROD);
+  });
+
+  it("still recognises production through the wrapper", () => {
+    // The guard must not be fooled into reading a wrapped production URL as
+    // "some unrecognised remote" — that is the fail-open direction.
+    expect(describeDatabase(`psql "${PROD}"`).isProduction).toBe(true);
+  });
+
+  it("names what it got when the value is not a URL at all", () => {
+    expect(() => describeDatabase("not-a-url-at-all")).toThrow(/received "not-a-url-at/);
+  });
+
+  it("says so when the secret is empty rather than blaming the scheme", () => {
+    expect(() => describeDatabase("   ")).toThrow(/received an empty value/);
   });
 });

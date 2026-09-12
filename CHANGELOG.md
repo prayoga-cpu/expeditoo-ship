@@ -14,6 +14,11 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.40.2] - 2026-09-13 · infra
+
+- **Nothing you can see changes.** The job that applies database changes to the live site refused the connection details it was given, and said only that it wanted a different kind of address — which was not true and gave nobody anything to act on.
+- Connection details are typed into a web form by hand, so they arrive wrapped in quotes or carrying the `psql` that a database dashboard's copy button puts in front. Those are the same address wearing something, and the job now sees through all three. When it genuinely cannot read a value it now says what it received, so the next person is not guessing.
+
 ## [2.40.1] - 2026-09-13 · infra
 
 - **Nothing you can see changes.** The job that applies database changes to the live site could not start: it asked which version of its build tool to use and the project never said, so it stopped before reaching the database. It is fixed, and the answer now lives in one place that both the live checks and the database job read, so the two can no longer drift apart.
