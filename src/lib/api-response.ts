@@ -18,6 +18,7 @@ import { ExpedionClientError } from "@/server/services/expedion-clients.service"
 import { ThreadOfferError } from "@/server/services/thread-offers.service";
 import { StripeConnectError } from "@/server/services/stripe.service";
 import { FeedbackError } from "@/server/services/feedback.service";
+import { StorageError } from "@/server/services/storage/storage-error";
 
 /**
  * Shared response shape for the REST layer.
@@ -66,7 +67,8 @@ export function handleError(error: unknown, context: string) {
     // over: untranslated, the payout onboarding call answered 500 and the
     // button had nothing to say.
     error instanceof StripeConnectError ||
-    error instanceof FeedbackError
+    error instanceof FeedbackError ||
+    error instanceof StorageError
   ) {
     return fail(error.code, error.message, error.status);
   }

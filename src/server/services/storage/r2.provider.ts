@@ -1,10 +1,24 @@
 import {
   S3Client,
   PutObjectCommand,
+  GetObjectCommand,
   DeleteObjectCommand,
   ListObjectsV2Command,
 } from "@aws-sdk/client-s3";
-import { StorageProvider } from "@/server/interfaces/storage.interface";
+import type {
+  StorageProvider,
+  StoredObject,
+} from "@/server/interfaces/storage.interface";
+
+/** R2 answers a missing key the way S3 does, under either of two names. */
+function isMissingObject(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  const { name, $metadata } = error as {
+    name?: unknown;
+    $metadata?: { httpStatusCode?: number };
+  };
+  return name === "NoSuchKey" || name === "NotFound" || $metadata?.httpStatusCode === 404;
+}
 
 export class R2StorageProvider implements StorageProvider {
   private client: S3Client | null = null;
@@ -60,6 +74,30 @@ export class R2StorageProvider implements StorageProvider {
     await this.client!.send(command);
 
     return `${this.publicUrl}/${fileName}`;
+  }
+
+  /**
+   * Streams the object instead of buffering it, so a large photo costs the
+   * function its bytes in transit rather than its size in memory.
+   */
+  async read(key: string): Promise<StoredObject | null> {
+    this.ensureInitialized();
+
+    try {
+      const response = await this.client!.send(
+        new GetObjectCommand({ Bucket: this.bucket!, Key: key })
+      );
+      if (!response.Body) return null;
+
+      return {
+        body: response.Body.transformToWebStream() as ReadableStream<Uint8Array>,
+        contentType: response.ContentType ?? null,
+        contentLength: response.ContentLength ?? null,
+      };
+    } catch (error) {
+      if (isMissingObject(error)) return null;
+      throw error;
+    }
   }
 
   async delete(fileUrl: string): Promise<void> {

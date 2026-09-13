@@ -1,6 +1,6 @@
 {
   "name": "expeditoo-ship",
-  "version": "2.40.4",
+  "version": "2.40.5",
   "packageManager": "pnpm@10.10.0",
   "private": true,
   "scripts": {

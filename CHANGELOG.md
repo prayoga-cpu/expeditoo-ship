@@ -14,6 +14,11 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.40.5] - 2026-09-13 · fix
+
+- **Images you upload now show up.** Screenshots attached to feedback, photos on a transport request, incident photos and profile pictures all uploaded without error, but every one of them appeared as a broken image. The address each upload was given pointed at a server that does not exist. Images now load from the platform itself.
+- **The one screenshot sent before this fix** keeps its old, dead address until a one-line correction is applied to it; everything uploaded from now on works straight away.
+
 ## [2.40.4] - 2026-09-13 · infra
 
 - **Nothing you can see changes.** When the job that updates the live database fails, the run's summary page now shows the database's own explanation, instead of only "Process completed with exit code 1".

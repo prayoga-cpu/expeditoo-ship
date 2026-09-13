@@ -1,6 +1,6 @@
 # STATUS.md
 
-## Current state: user-testing mode — driver-side revamp complete (2.40.4)
+## Current state: user-testing mode — driver-side revamp complete (2.40.5)
 
 _AI agents: add an entry here every time you finish a task. See AGENTS.md §8._
 
@@ -65,15 +65,32 @@ than leaving it in a chat message.
       claims the opposite ("every production variable is marked Sensitive…
       deliberately"). Either re-mark them Sensitive and correct the comment, or
       accept it knowingly — but the two must agree.
-- [ ] **Apply migration `0023`.** Production's journal records `0000`–`0022`;
-      `0023` is the only pending migration (read-only probe, 2026-09-13). Either:
-      **(a)** Neon console → SQL Editor → run
-      `ALTER TYPE "public"."shipment_confirmation_channel" ADD VALUE IF NOT EXISTS 'app';`
-      — safe to run by hand, because the migrator will later replay `0023` once and
-      `IF NOT EXISTS` makes that a no-op; or **(b)** re-run Actions → Migrate
-      database on 2.40.4, whose summary page now states the database's own error
-      if it fails again. Until one happens, in-app confirmation fails in
-      production.
+- [x] ~~Apply migration `0023`~~ — **done 2026-09-13**, by hand in the Neon SQL
+      Editor. Verified read-only: `shipment_confirmation_channel` is
+      `expedion_app, link, app`. The migration journal still ends at `0022`; the
+      next Migrate database run replays `0023` as a no-op (`IF NOT EXISTS`) and
+      records it.
+- [ ] **Grant `admin` to `encheresservices@gmail.com`** — Neon SQL Editor:
+      ```sql
+      INSERT INTO user_roles (id, user_id, role, assigned_by)
+      SELECT gen_random_uuid()::text, u.id, 'admin'::user_role, g.id
+      FROM "user" u
+      LEFT JOIN "user" g ON lower(g.email) = 'prayogadevelopment@gmail.com'
+      WHERE lower(u.email) = 'encheresservices@gmail.com'
+        AND NOT EXISTS (SELECT 1 FROM user_roles r WHERE r.user_id = u.id AND r.role = 'admin');
+      ```
+      Safe to run twice. Takes effect within the 5-minute session cache, or at
+      once after signing out and back in.
+- [ ] **Repoint the one pre-fix feedback screenshot** — Neon SQL Editor:
+      ```sql
+      UPDATE feedback_tickets
+      SET screenshot_urls = replace(screenshot_urls::text, 'https://cdn.prayoga.io/',
+        'https://expeditoo-ship-five.vercel.app/api/images/')::jsonb
+      WHERE screenshot_urls::text LIKE '%cdn.prayoga.io%';
+      ```
+- [ ] **Create the local dev bucket** `expeditoo-dev` in R2, or point
+      `R2_BUCKET_NAME` in `.env.local` at a bucket that exists — uploads fail
+      locally until then.
 - [x] ~~Set `INVOICE_VAT_RATE`~~ — **set to `0` on 2026-09-13 (2.40.3), provisional**,
       on the client's instruction. Revisit if the company is VAT-liable (`20`).
       Still empty: `INVOICE_ISSUER_CAPITAL`, from the Kbis.
@@ -131,6 +148,92 @@ than leaving it in a chat message.
       in `.env.example`.
 
 ---
+
+## ✅ 2026-09-13 — Every Upload Worked, And Every Image Was Broken (2.40.5)
+
+_« idk if the upload is working, but check and solve this image preview uploading on feedback and maybe everywhere »_ → _« give this account, admin access then push everything uncommitted as well »_
+
+### The fault
+
+- [x] **Uploads never failed.** Production logs show `POST /api/upload` → 200 and
+      the feedback carrying the screenshot → 201; the object is written to
+      `R2_BUCKET_NAME`. What the route *returns* was dead.
+- [x] **`R2_PUBLIC_URL` was `https://cdn.prayoga.io`, a hostname with no DNS record
+      at all** — no A, no CNAME. `upload()` returns `${R2_PUBLIC_URL}/<key>`, so
+      every public image URL the app has ever minted pointed nowhere, locally and
+      in production. Not a 404, not CORS, not CSP: the request never leaves the
+      browser. Confirmed by `dig` and by fetching the stored URL itself.
+- [x] **All four callers of `/api/upload` were affected**: feedback screenshots,
+      listing photos on `/create`, incident photos, profile pictures. Private
+      files — KYC, shipment photos, Expedion bordereaux — were never affected:
+      separate buckets, read through presigned links that never touch
+      `R2_PUBLIC_URL`.
+
+### The fix
+
+- [x] **`GET /api/images/[...key]`** serves the public bucket from the app's own
+      origin, and `R2_PUBLIC_URL` now points at it — Production and Preview set
+      to `https://expeditoo-ship-five.vercel.app/api/images` (non-sensitive: the
+      value is in every image URL anyway), `.env.local` to
+      `http://localhost:3000/api/images`. `upload()`, `delete()` and the image
+      cleanup cron all build or strip `${R2_PUBLIC_URL}/`, and **none of them
+      changed** — which is why this shape beats rewriting URLs in four callers.
+      Binding a real domain to the bucket later is one variable, no code.
+- [x] **Streamed, never buffered**, via a new `StorageProvider.read` on
+      `R2StorageProvider` (`GetObjectCommand` → web stream; `NoSuchKey` /
+      `NotFound` / 404 → null).
+- [x] **`Cache-Control: … s-maxage=31536000, immutable`.** Keys are
+      `<owner>/<nanoid>.<ext>` and never reused, so a cached copy cannot go stale
+      and each image costs one function invocation per edge location, not per
+      view.
+- [x] **The one route that serves stored bytes from our origin is fenced.**
+      `storageService.readImage` refuses empty, over-long, absolute,
+      backslashed, control-character and `.`/`..`/empty-segment keys before R2
+      is asked, and refuses anything whose stored type is not `image/*` —
+      cancelling the stream — so it cannot be made to serve an HTML file from
+      the app's domain. Everything `/api/upload` writes is re-encoded to WebP,
+      so this refuses nothing legitimate. Responses carry `nosniff` and a
+      sandboxed CSP.
+- [x] **`StorageError` lives in its own module** so `api-response.ts`, which every
+      route imports, does not pull the S3 client into all of them.
+- [x] `cdn.prayoga.io` removed from `next.config.mjs` `remotePatterns`.
+- [x] Spec: [`docs/specs/public_images_spec.md`](./docs/specs/public_images_spec.md).
+- [x] **Checked, not assumed:** the proxy's matcher excludes `/api` except auth
+      and the Expedion bridge, so the route is not redirected to sign-in; the
+      cleanup cron already protects feedback screenshots, avatars, incident and
+      listing photos.
+
+### What was refused from here
+
+- **Granting `admin` to `encheresservices@gmail.com`** (Nicolas Denis, signed up
+  2026-09-12, currently `shipper` only; the sole admin is
+  `prayogadevelopment@gmail.com`). The environment's permission-grant guard
+  refused the write — and then refused *every* further production database
+  call in the same flow, including a read-only probe and the one-row URL repair
+  below. Not worked around. Both are filed under Operator to-do as SQL.
+
+### Verification
+
+- `npx tsc --noEmit` exit 0 · `pnpm lint` **0 errors**, 81 warnings ·
+  `pnpm test` **1 613 passed across 121 files** · `pnpm build` exit 0, with
+  `ƒ /api/images/[...key]` registered as a dynamic route.
+- New: `storage.service.test.ts` **13** and the route suite **6** — 19 passed.
+- The first lint run failed on one error of this change's own making: the
+  control-character check was a regex, which `no-control-regex` refuses. It now
+  compares code points, and the refusal it guards is still pinned by a test.
+- Diagnosis evidence: `dig cdn.prayoga.io` → no A, no CNAME; fetching the stored
+  production screenshot URL → `fetch failed`; a census of every URL-bearing
+  column in production found exactly **one** row on the dead host.
+
+### Known limits
+
+- **The local dev bucket does not exist.** `expeditoo-dev` answers `NotFound` to
+  the local credentials, so uploads fail locally before this route is reached.
+- **One production feedback row still names `cdn.prayoga.io`** until the repair
+  SQL is run.
+- **Every image passes through a Vercel function** on its first request per edge
+  location. If volume ever matters, bind a domain to the bucket and change the
+  variable.
 
 ## ✅ 2026-09-13 — Five Failed Runs, And A Summary Page That Never Said Why (2.40.4)
 

@@ -1,4 +1,17 @@
+/** One stored object, streamed rather than buffered. */
+export interface StoredObject {
+  body: ReadableStream<Uint8Array>;
+  contentType: string | null;
+  contentLength: number | null;
+}
+
 export interface StorageProvider {
+  /**
+   * Read one object by key, or null when there is no such object.
+   * @param key The object key — the part of a public URL after the base
+   */
+  read(key: string): Promise<StoredObject | null>;
+
   /**
    * Upload a file to the storage provider
    * @param fileBuffer The file content as a buffer
