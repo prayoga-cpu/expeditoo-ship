@@ -14,6 +14,10 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.41.0] - 2026-09-13 · ux
+
+- **Quantity now sits beside what you are shipping.** On the transport request form, "how many" is asked on the same line as "What are you moving?", instead of on its own further down the page after the weight and size. This one came in through the feedback button.
+
 ## [2.40.5] - 2026-09-13 · fix
 
 - **Images you upload now show up.** Screenshots attached to feedback, photos on a transport request, incident photos and profile pictures all uploaded without error, but every one of them appeared as a broken image. The address each upload was given pointed at a server that does not exist. Images now load from the platform itself.

@@ -20,6 +20,7 @@ import { LocationPickerField } from "@/components/ui/location-picker-field";
 import { PhotoDropzone } from "./PhotoDropzone";
 import { FieldError } from "./FieldError";
 import { SizeField } from "./SizeField";
+import { ItemField } from "./ItemField";
 import { WeightBracketField } from "./WeightBracketField";
 import { LOCATION_TYPES, type LocationType } from "../schemas";
 import type { JobFormApi } from "../hooks/useJobForm";
@@ -139,15 +140,7 @@ function WhatStep({
 
   return (
     <div className="space-y-5">
-      <div>
-        <Label htmlFor="title">{t("titleLabel")}</Label>
-        <Input
-          id="title"
-          placeholder={t("titlePlaceholder")}
-          {...register("title")}
-        />
-        <FieldError message={errors.title?.message} />
-      </div>
+      <ItemField form={form} />
 
       <div>
         <Label htmlFor="description">{t("descriptionLabel")}</Label>
@@ -163,12 +156,6 @@ function WhatStep({
       <WeightBracketField form={form} />
 
       <SizeField form={form} />
-
-      <div className="w-32">
-        <Label htmlFor="quantity">{t("quantity")}</Label>
-        <Input id="quantity" type="number" min={1} {...register("quantity")} />
-        <FieldError message={errors.quantity?.message} />
-      </div>
 
       <div className="space-y-3">
         <ToggleRow

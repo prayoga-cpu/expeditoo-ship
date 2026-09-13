@@ -9,6 +9,7 @@ import fr from "../../../../../messages/fr.json";
 import { SIZE_PRESET_IDS, WEIGHT_BRACKET_IDS } from "../cargo";
 import { jobFormSchema, type JobFormValues } from "../schemas";
 import { SizeField } from "../ui/SizeField";
+import { ItemField } from "../ui/ItemField";
 import { WeightBracketField } from "../ui/WeightBracketField";
 
 /**
@@ -37,6 +38,7 @@ function Harness({
 
   return (
     <NextIntlClientProvider locale={locale} messages={messages} onError={onError}>
+      <ItemField form={form} />
       <WeightBracketField form={form} />
       <SizeField form={form} />
     </NextIntlClientProvider>
@@ -103,6 +105,31 @@ describe("weight", () => {
     choose("weight-upTo5");
 
     expect(screen.queryByLabelText(/Poids exact/)).not.toBeInTheDocument();
+  });
+});
+
+describe("what and how many", () => {
+  it.each([
+    ["fr", fr, "Que transportez-vous ?", "Quantité"],
+    ["en", en, "What are you moving?", "Quantity"],
+  ])("asks for the item and its count together in %s", (locale, messages, item, count) => {
+    renderFields(locale, messages as typeof en);
+
+    const title = screen.getByLabelText(item);
+    const quantity = screen.getByLabelText(count);
+
+    // One row owns both, so the count cannot drift back down the step away
+    // from the thing it counts. That they sit on the same visual line is a
+    // layout fact jsdom cannot measure; it is checked in Chromium instead.
+    expect(title.parentElement?.parentElement).toBe(
+      quantity.parentElement?.parentElement
+    );
+  });
+
+  it("will not offer a quantity below one", () => {
+    renderFields();
+
+    expect(screen.getByLabelText("Quantité")).toHaveAttribute("min", "1");
   });
 });
 

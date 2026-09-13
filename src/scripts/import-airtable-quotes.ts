@@ -13,15 +13,16 @@
  *   AIRTABLE_PAT       Personal access token with read on the base
  *   AIRTABLE_BASE_ID   defaults to the production base
  *   AIRTABLE_TABLE     defaults to CONTACTS
- *   DATABASE_URL       standard Drizzle connection string
+ *   POSTGRES_URL       the target database, read through @/db like the app
  *
  * Design notes:
  *
  *   - Dry run is the default. You have to ask for `--commit` to write, because
  *     the failure mode of accidentally half-importing a production base is
  *     much worse than the failure mode of running it twice.
- *   - Idempotent: `airtable_record_id` is unique and every row is upserted on
- *     it, so a re-run after a partial failure resumes instead of duplicating.
+ *   - Idempotent and insert-only: `airtable_record_id` is unique and a record
+ *     already in Postgres is skipped, never updated, so a re-run after a
+ *     partial failure resumes instead of duplicating — and never overwrites.
  *   - Non-lossy: every Airtable column that does not map onto a typed column
  *     is preserved verbatim in `airtable_fields`.
  *   - Verifies counts at the end and exits non-zero on a mismatch, so it can
@@ -239,6 +240,20 @@ function mapRecord(record: {
       STATUS_FIELDS.has(key);
     if (!mapped) leftovers[key] = value;
   }
+
+  // Non-lossy also means a MAPPED value survives when coercion could not keep
+  // it: a money figure past int4, "environ 30kg" in a number column, a date
+  // nobody can parse. Mapped columns are excluded from `airtable_fields` just
+  // above, so until this existed those values were silently dropped — while
+  // the comment on `cents()` promised they were preserved.
+  for (const fields of [NUMERIC_FIELDS, MONEY_FIELDS, DATE_FIELDS]) {
+    for (const [src, dest] of Object.entries(fields)) {
+      if (text(f[src]) !== null && (row[dest] === null || row[dest] === undefined)) {
+        leftovers[src] = f[src];
+      }
+    }
+  }
+
   if (Object.keys(leftovers).length > 0) row.airtableFields = leftovers;
 
   return row as InsertExpedionQuote;
@@ -331,6 +346,13 @@ async function main() {
   }
 
   console.log(`Mapped ${mapped.length}, failed to map ${failures.length}.`);
+  // Counted in `cents()` and, until now, never printed.
+  if (outOfRangeMoney > 0) {
+    console.warn(
+      `  ${outOfRangeMoney} money value(s) did not fit the column and were left ` +
+        `empty; each raw value is kept in airtable_fields.`
+    );
+  }
   for (const f of failures) console.error(`  ! ${f.id}: ${f.error}`);
 
   const withoutUid = mapped.filter((m) =>
@@ -348,41 +370,38 @@ async function main() {
     console.log("\nDry run — nothing written. Sample of the first record:");
     console.dir(mapped[0], { depth: 3 });
     console.log(
-      `\nWould upsert ${mapped.length} rows. Re-run with --commit to apply.`
+      `\nWould insert up to ${mapped.length} rows (records already present are skipped). Re-run with --commit to apply.`
     );
     process.exit(0);
   }
 
   console.log("\nWriting…");
-  let written = 0;
+  let processed = 0;
+  let inserted = 0;
   // Chunked so one oversized statement cannot blow the parameter limit.
   const CHUNK = 200;
   for (let i = 0; i < mapped.length; i += CHUNK) {
     const chunk = mapped.slice(i, i + CHUNK);
-    await db
+    // Insert-only. Once a quote is in Postgres, Postgres is its source of
+    // truth: an operator may have escalated or assigned it, and a client's
+    // sign-in may have re-homed `firebase_uid` onto their account. The upsert
+    // this replaced copied Airtable's status, prices and owner back over all of
+    // that on every re-run — silently handing a claimed quote back to
+    // `airtable:<recordId>`, where nobody can see it. A record already here is
+    // left exactly as it is.
+    const rows = await db
       .insert(expedionQuotes)
       .values(chunk)
-      .onConflictDoUpdate({
-        target: expedionQuotes.airtableRecordId,
-        // `id` and `createdAt` are deliberately not overwritten: a re-run must
-        // not renumber rows that other tables already reference.
-        set: {
-          firebaseUid: sql`excluded.firebase_uid`,
-          quoteNumber: sql`excluded.quote_number`,
-          bordereauNumber: sql`excluded.bordereau_number`,
-          status: sql`excluded.status`,
-          paymentStatus: sql`excluded.payment_status`,
-          quoteStandardCents: sql`excluded.quote_standard_cents`,
-          quoteInsuredCents: sql`excluded.quote_insured_cents`,
-          acceptedPriceCents: sql`excluded.accepted_price_cents`,
-          airtableFields: sql`excluded.airtable_fields`,
-          updatedAt: new Date(),
-        },
-      });
-    written += chunk.length;
-    process.stdout.write(`\r  upserted ${written}/${mapped.length}…`);
+      .onConflictDoNothing({ target: expedionQuotes.airtableRecordId })
+      .returning({ id: expedionQuotes.id });
+    processed += chunk.length;
+    inserted += rows.length;
+    process.stdout.write(`\r  processed ${processed}/${mapped.length}…`);
   }
   process.stdout.write("\n");
+  console.log(
+    `  inserted ${inserted}, already present and left untouched ${processed - inserted}`
+  );
 
   // ---- Verification ----
   const after = await db

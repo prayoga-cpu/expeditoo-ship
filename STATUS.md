@@ -1,6 +1,6 @@
 # STATUS.md
 
-## Current state: user-testing mode — driver-side revamp complete (2.40.5)
+## Current state: user-testing mode — driver-side revamp complete (2.41.0)
 
 _AI agents: add an entry here every time you finish a task. See AGENTS.md §8._
 
@@ -27,6 +27,18 @@ adversarial verification pass — treat their detail as slightly less certain.
 Work that needs a human hand outside the codebase. Add to this list rather
 than leaving it in a chat message.
 
+- [ ] **Bring the Expedion quote history back from Airtable** — production has
+      0 quotes. Airtable is the only source that still holds them with real
+      identities (see the 2.41.0 entry for why the laptop mirror is not). Needs
+      `AIRTABLE_PAT` (read access to base `appu3jamyzCJRuOjr`), which is set
+      nowhere this session could reach: not `.env.local`, not Vercel, not the
+      `expedion_encheres` repo. Then, in this order, reading each dry run first:
+      1. `AIRTABLE_PAT=… POSTGRES_URL=<neon unpooled> APP_ENV=production pnpm tsx src/scripts/import-airtable-quotes.ts`
+      2. the same with `--commit` — insert-only, so it adds and never overwrites
+      3. `… pnpm tsx src/scripts/backfill-expedion-owners.ts` (dry run), then `--execute`
+         — re-homes quotes only onto accounts with a **verified** matching address.
+      `APP_ENV=production` is the deliberate opt-in `src/db/index.ts` requires to
+      open production from a laptop; there is no other switch.
 - [x] ~~Restore the production database~~ — **done 2026-09-10**, see the entry
       below. Production now runs on Neon (`ep-sweet-bonus-awtyfuyz`, us-east-1,
       Vercel Marketplace resource `neon-crimson-car`, free plan). What is left
@@ -148,6 +160,44 @@ than leaving it in a chat message.
       in `.env.example`.
 
 ---
+
+## ✅ 2026-09-13 — Quantity Beside The Item, And An Import That Cannot Overwrite Or Drop (2.41.0)
+
+A feedback ticket filed from `/create` on 2.40.4: _« CHANGE QUANTITY BUTTON AT THE SAME LEVEL OF THE BUTTON ITEM TO SHIP »_. Then the operator: _« I checked on producton I think you haven't finished the migration from old data, everything is empty and new here please merge between old data from airtable and anything and now data, don't delete anything. and finished this current session to be pushed. i don't know if these agents folder is still used or not please check, if no need plese delete »_.
+
+### Quantity beside the item
+
+- [x] **The reading.** The ticket carries no screenshot and no note. "The button item to ship" was read as the *Que transportez-vous ?* field — literally the item being shipped — and quantity now shares its row. The other reading, the weight and size option cards, would have meant a number input inside a card grid.
+- [x] `src/features/app/create/ui/ItemField.tsx` (new) holds title and quantity together, the same extraction as `SizeField` and `WeightBracketField` beside it — which also keeps the test away from `JobForm.tsx`, whose module-level imports pull in Stripe and MapLibre. Quantity was a lone `w-32` row after the weight and size cards; it now takes a narrow fixed grid column (`5.5rem`, `7rem` from `sm`) because it is a few digits at most.
+- [x] 2 tests in `WhatStep.test.tsx`: both fields render under one row in both locales, and quantity refuses below 1. That they share a *visual* line is a layout fact jsdom cannot see, so it was measured in Chromium instead.
+
+### The quote history: what exists, and what does not
+
+- [x] **Production had 0 quotes, listings, carriers and messages** — 4 users and 4 feedback tickets, all created since the 2.37.1 move to Neon.
+- [x] **The laptop mirror is not a second source, and must not be restored.** A read-only census: 4,593 quotes, of which **4,592 were created between 16 and 18 August** — that is the Airtable import itself, with its `airtable_record_id` and `airtable_fields` markers scrubbed. 4,590 of their emails are scrubbed too. So Airtable holds every real quote, and the mirror holds the same quotes with the identities destroyed. The 2.37.2 audit's ruling stands.
+- [x] **Permanently lost:** anything old production gained after the mirror was taken (~20 August) and before the Supabase project was deleted, and the 22 real accounts. Only Supabase could have returned those.
+- [x] **The merge itself is blocked on `AIRTABLE_PAT`**, filed as the first operator to-do with the exact order. It was not guessed at.
+
+### The importer, made safe to run before it is ever run
+
+- [x] **It was an upsert, which breaks "don't delete anything" on its second run.** On a conflict it copied Airtable's `firebase_uid`, status, payment status and prices back over the existing row. After a client's sign-in re-homes a quote onto their account (`claimExpedionQuotesForUser`), or an operator escalates or assigns it, a re-run would silently hand that quote back to `airtable:<recordId>`, where nobody can see it, and regress its status. It is now **insert-only** — `onConflictDoNothing` on `airtable_record_id` — and reports inserted versus already-present. A re-run still resumes a partial import. What it gives up is propagating Airtable-side corrections to rows already here, which is correct: once a quote is in Postgres, Postgres is its source of truth.
+- [x] **It silently dropped values it could not coerce, while its comment said it kept them.** `cents()` promised an out-of-range figure "is still preserved verbatim in `airtable_fields`", but `mapRecord` excluded every mapped column from `airtable_fields`. So a money value past int4, a number column holding "environ 30kg", or an unparseable date was simply gone. Every mapped numeric, money and date value that coerces to empty is now kept raw in `airtable_fields`. The out-of-range counter was incremented and never printed; it is now reported. Found through a lint warning.
+- [x] The header named `DATABASE_URL`; the script reads `POSTGRES_URL` through `@/db`, like the app.
+
+### The agent folders
+
+- [x] **`.agents/skills` kept — it is live.** `.claude/skills/neon` and `neon-postgres` are symlinks into it, which is how the Neon skill loads, and it was committed on purpose in 2.40.x.
+- [x] **`.agent/workflows` deleted.** One file: a Google Antigravity prompt wrapping `npx playwright test testing/scripts/smoke.spec.ts`. Its paths were still accurate, but nothing the project runs uses it — no code, CI, npm script or Claude Code skill — it had not changed since the January baseline, and the E2E suite it wraps is known stale. Restore with `git checkout 48d0bee -- .agent`. `.gemini/` and `GEMINI.md` were not in scope and are untouched.
+
+**Verification**
+- `npx tsc --noEmit` 0 errors · lint 0 errors on every touched file · `pnpm test` **1616 passed across 121 files** before the release files were written, re-run on the final tree before commit.
+- **Chromium, against the dev server:** `#title` and `#quantity` share a line — same `y` and height — with quantity to the right and 0px horizontal overflow, at 390px dark/FR (title 192px, quantity 88px) and 1440px light/EN (450px, 112px). At 390px the French placeholder truncates to *Un canapé deux place*, which is acceptable for placeholder copy.
+- The mirror census and production counts were read-only queries.
+
+**Known limits**
+- The import has not run; nothing changed in production data this session.
+- `import-airtable-quotes.ts` has no tests — it runs `main()` on import and exits. Its first real check is the dry run's printed sample once the PAT exists; read it before `--commit`.
+- The feedback ticket stays *Open* until this deploys; the reporter sees its status in "My feedback".
 
 ## ✅ 2026-09-13 — Every Upload Worked, And Every Image Was Broken (2.40.5)
 
