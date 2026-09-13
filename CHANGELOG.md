@@ -14,6 +14,12 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.40.3] - 2026-09-13 · fix
+
+- **Your payment documents are now proper invoices.** Each one issued from today carries the company's full legal identity — ATOUT GLOBAL SERVICES, SAS, SIRET, RCS and VAT number — and is titled *Facture* rather than *Reçu de paiement*. VAT is stated as not applicable (article 293 B du CGI) for now, pending confirmation of the company's VAT position. Documents already issued stay as they were: a receipt cannot become an invoice after the fact.
+- **The job that updates the live database can connect again.** The connection address our database host provides carries a setting that its own tools understand and our driver passed straight to the database, which refused it. Once that job has been run, confirming a pickup or a delivery from inside the app works.
+- Nothing else you can see changes: code and packages that nothing used have been cleared out.
+
 ## [2.40.2] - 2026-09-13 · infra
 
 - **Nothing you can see changes.** The job that applies database changes to the live site refused the connection details it was given, and said only that it wanted a different kind of address — which was not true and gave nobody anything to act on.

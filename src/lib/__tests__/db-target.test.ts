@@ -150,3 +150,32 @@ describe("normaliseConnectionString", () => {
     expect(() => describeDatabase("   ")).toThrow(/received an empty value/);
   });
 });
+
+describe("normaliseConnectionString — channel_binding", () => {
+  const HOST = "postgresql://u:p@ep-sweet-bonus-awtyfuyz.c-12.us-east-1.aws.neon.tech/neondb";
+
+  // postgres.js forwards unknown URL parameters to the server as startup
+  // parameters, and Postgres answers `unrecognized configuration parameter
+  // "channel_binding"` — reproduced against a real local server before this
+  // was written. This is the URL shape Neon and the Vercel integration hand out.
+  it.each([
+    ["after sslmode", `${HOST}?sslmode=require&channel_binding=require`, `${HOST}?sslmode=require`],
+    ["before sslmode", `${HOST}?channel_binding=require&sslmode=require`, `${HOST}?sslmode=require`],
+    ["as the only parameter", `${HOST}?channel_binding=require`, HOST],
+    ["inside a quoted psql copy", `psql '${HOST}?sslmode=require&channel_binding=require'`, `${HOST}?sslmode=require`],
+  ])("removes it when it sits %s", (_label, raw, expected) => {
+    expect(normaliseConnectionString(raw)).toBe(expected);
+  });
+
+  it("keeps sslmode, so the connection is still TLS", () => {
+    expect(
+      normaliseConnectionString(`${HOST}?sslmode=require&channel_binding=require`)
+    ).toContain("sslmode=require");
+  });
+
+  it("still recognises production once it is removed", () => {
+    expect(
+      describeDatabase(`${HOST}?sslmode=require&channel_binding=require`).isProduction
+    ).toBe(true);
+  });
+});

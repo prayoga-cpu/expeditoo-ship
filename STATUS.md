@@ -1,6 +1,6 @@
 # STATUS.md
 
-## Current state: user-testing mode — driver-side revamp complete (2.40.2)
+## Current state: user-testing mode — driver-side revamp complete (2.40.3)
 
 _AI agents: add an entry here every time you finish a task. See AGENTS.md §8._
 
@@ -56,12 +56,8 @@ than leaving it in a chat message.
 - [x] ~~Migrate production for `0022_feedback`~~ — **done 2026-09-10**, applied
       directly with the Neon connection before the deploy. 19 columns, enums in
       declaration order. Nothing else is outstanding for that release.
-- [ ] **Clear the Stripe Connect restriction.** `accounts.create` is refused
-      with *"We've temporarily restricted your ability to create this type of
-      connected account due to suspicious activity"* (HTTP 400, seen in
-      `vercel logs`). Log in to the Stripe Dashboard and confirm the account
-      creations were intended. **No driver can start payout onboarding until
-      this is cleared**; the button now says so instead of doing nothing.
+- [x] ~~Clear the Stripe Connect restriction~~ — **lifted by 2026-09-13**: Continue
+      Setup reaches Stripe Express sign-in.
 - [ ] **The production database credentials are Non-sensitive in Vercel.** The
       Neon integration created all 13 Postgres variables that way on
       2026-09-10, so `POSTGRES_PASSWORD` and the full connection URLs pull in
@@ -69,15 +65,14 @@ than leaving it in a chat message.
       claims the opposite ("every production variable is marked Sensitive…
       deliberately"). Either re-mark them Sensitive and correct the comment, or
       accept it knowingly — but the two must agree.
-- [ ] **Apply migration `0023`.** Still unapplied while 2.40.x is live, so
-      in-app confirmation fails in production. If the Actions run keeps
-      refusing the secret, re-paste it with no quotes and no `psql ` prefix —
-      2.40.2 tolerates both, but only once that release is on main.
-- [ ] **Set `INVOICE_VAT_RATE`** — `20` if VAT is charged, `0` for the franchise
-      en base. It is the last field; every other `INVOICE_ISSUER_*` is set. Until
-      then documents stay *Reçu de paiement*. Also outstanding, optional:
-      `INVOICE_ISSUER_CAPITAL` (share capital, from the Kbis) — legally expected
-      on a SAS invoice, though the code does not gate on it.
+- [ ] **Apply migration `0023` — re-run Actions → Migrate database.** The
+      secret can stay exactly as pasted. 2.40.2 strips quotes and a `psql `
+      prefix; 2.40.3 strips the `channel_binding` parameter Postgres rejected on
+      run #4, and was proven end to end against a local server. Until it runs,
+      in-app confirmation fails in production.
+- [x] ~~Set `INVOICE_VAT_RATE`~~ — **set to `0` on 2026-09-13 (2.40.3), provisional**,
+      on the client's instruction. Revisit if the company is VAT-liable (`20`).
+      Still empty: `INVOICE_ISSUER_CAPITAL`, from the Kbis.
 - [ ] **URGENT — roll the live Stripe secret key.** An `sk_live_…` key was pasted
       into a chat transcript on 2026-09-10 and must be treated as compromised: it
       can charge cards, refund, move money to connected accounts and read the
@@ -132,6 +127,106 @@ than leaving it in a chat message.
       in `.env.example`.
 
 ---
+
+## ✅ 2026-09-13 — The Parameter Postgres Would Not Accept, And What Nothing Used (2.40.3)
+
+_« I attached screenshot after continue setup button for 8 »_ · _« the migrate on github actions still failed, please try to push everything uncommitted to main & remove all of unnecessary caches/unused code & files »_ · _« try to use 0 for now for 14, I'll update later if incorrect »_
+
+### The fourth migration failure
+
+Run #4 on `36df772` passed every step up to **Apply migrations** and failed there.
+The job log needs repo admin rights over the API, so the cause was found by
+reading the code path instead and then **reproduced against a real server
+before anything changed**:
+
+- [x] **`channel_binding=require` is a libpq option, and every URL Neon and the
+      Vercel integration hand out ends in it.** postgres.js does not recognise
+      it, so it forwards it to the server as a startup parameter. Against the
+      local `postgresql@17`, the same `select 1` returns
+      `unrecognized configuration parameter "channel_binding"` with the
+      parameter and succeeds without it.
+- [x] **Why the running app never noticed:** it connects through Neon's pooler,
+      which ignores unknown startup parameters. The migrator uses the *direct*
+      endpoint — deliberately, for DDL — where real Postgres answers.
+- [x] **Fixed in `normaliseConnectionString`**, which the migrator already routes
+      through (2.40.2). It removes only that query parameter, in any position,
+      and keeps `sslmode=require`, so the connection is still TLS. A test pins
+      that the production guard still recognises the host afterwards.
+- [x] **Proven end to end, not only in a unit test:** `pnpm db:migrate` against
+      the local dev database with `channel_binding=require` appended —
+      *"Migrations completed successfully"*, and
+      `enum_range(null::shipment_confirmation_channel)` now reads
+      `expedion_app, link, app`, i.e. `0023` applied.
+- [x] **Running it against production from here was not attempted again.** The
+      previous attempt was refused by the environment's production-deploy guard.
+      The Actions run is the sanctioned path, and it can now connect.
+
+### Cleanup
+
+knip's report, checked case by case rather than taken whole.
+
+- [x] **85 files removed that nothing imports**: 26 unused shadcn components,
+      32 barrel `index.ts` files no code goes through, dead hooks and DTOs
+      (`auth.dto`, `driver.dto`, `usePayments`, `usePreferences`,
+      `useThemeToggle`, `query-client`, `protected-route`, `auth-helpers`,
+      `search-analytics.dal`…), one-off scripts (`debug_encoding.js`, `fix-db`,
+      `verify-chat`, `seed.ts`, `verify-migration`, `migrate-conversation-type`,
+      two under `scripts/`), a second `src/styles/globals.css` the app never
+      loads (`layout.tsx` imports `src/app/globals.css`), and a top-level
+      `migrations/add_conversation_type.sql` that was a Markdown README under a
+      `.sql` name, outside the folder drizzle reads.
+- [x] **25 dependencies removed** that only those files used — including
+      `@chakra-ui/react`, `bcrypt`, `lottie-react` (the loader uses
+      `@lottiefiles/dotlottie-react`), `autoprefixer` (PostCSS runs
+      `@tailwindcss/postcss`), nine Radix packages, and `eslint-config-next`,
+      `@eslint/eslintrc`, `typescript-eslint`, none of which `eslint.config.mjs`
+      imports.
+- [x] **A second knip pass found nothing newly orphaned** by the deletions.
+- [x] **Kept on purpose, though flagged**: `@capacitor/*` (the Android build uses
+      them outside TypeScript), `baseline-browser-mapping` and `caniuse-lite`
+      (browserslist data pins), Prettier, `useAblyChannel` (named by the
+      realtime specs as the unwired client half), and the three Expedion data
+      scripts, while restoring the quote history is still open.
+- [x] **`.DS_Store` untracked** (5 files) and ignored. Untracked copies on disk
+      were left alone — deleting them outright was refused as irreversible, and
+      ignoring them achieves the same for the repo.
+- [x] **Neon agent skills committed** (`.agents/`, `skills-lock.json`), beside the
+      `.agent/` and `.gemini/` config this repo already tracks.
+- [x] **Local caches cleared** with the repo's own `pnpm clean:cache`.
+
+### Configuration, outside the diff
+
+- [x] **`INVOICE_VAT_RATE=0`** set in Vercel Production, provisionally, on the
+      client's instruction. With the six `INVOICE_ISSUER_*` values already set,
+      `invoiceIssuer()` now reports complete, so documents issued from the next
+      deployment are titled **Facture** with *"TVA non applicable, article 293 B
+      du CGI."*
+
+### #8 confirmed
+
+- [x] **Continue Setup now reaches Stripe Express sign-in** for ATOUT GLOBAL
+      SERVICES (client screenshot). The "suspicious activity" restriction that
+      refused `accounts.create` on 2026-09-10 has lifted, and the button's error
+      path from 2.39.0 is no longer what users see.
+
+### Verification
+
+- `pnpm install --frozen-lockfile` clean · `npx tsc --noEmit` exit 0 ·
+  `pnpm lint` **0 errors**, 81 warnings (was 85) · `pnpm test` **1 594 passed
+  across 119 files** · `pnpm build` exit 0.
+- `db-target` suite **30 passed** (6 new for `channel_binding`).
+- Migrator end to end against local Postgres with the Neon-style parameter —
+  success, `0023` present.
+
+### Known limits
+
+- **`0023` is still unapplied in production** until someone runs the Actions
+  job. It can connect now; nobody has watched it succeed there.
+- **VAT at 0 % is provisional.** If the company is VAT-liable, set
+  `INVOICE_VAT_RATE=20` — every document issued after that change carries VAT;
+  earlier ones are not rewritten.
+- **`INVOICE_ISSUER_CAPITAL` is still empty.** The code does not gate on it, but a
+  SAS invoice is expected to state its share capital. It is on the Kbis.
 
 ## ✅ 2026-09-13 — The Connection String The Migrator Would Not Read (2.40.2)
 

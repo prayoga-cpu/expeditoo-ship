@@ -84,11 +84,32 @@ function devRefsFromEnv(env: NodeJS.ProcessEnv): string[] {
  * worse bug than the one this fixes.
  */
 export function normaliseConnectionString(raw: string): string {
-  return raw
+  let cleaned = raw
     .trim()
     .replace(/^psql\s+/i, "")
     .replace(/^(['"])([\s\S]*)\1$/, "$2")
     .trim();
+
+  // `channel_binding` is a libpq option, and the Neon dashboard and the Vercel
+  // integration both put `&channel_binding=require` on every URL they hand out.
+  // postgres.js does not know it, so it forwards it to the server as a startup
+  // parameter, and Postgres refuses the connection outright:
+  //
+  //   unrecognized configuration parameter "channel_binding"
+  //
+  // Neon's pooler ignores unknown startup parameters, which is why the running
+  // app never noticed. The migrator connects to the direct endpoint, where real
+  // Postgres answers — and that is how the production migration failed on its
+  // fourth attempt. Removed here, as a query parameter only: `sslmode=require`
+  // stays, so the connection is still TLS.
+  const bindingParam = /([?&])channel_binding=[^&#]*(&|$)/i;
+  while (bindingParam.test(cleaned)) {
+    cleaned = cleaned.replace(bindingParam, (_match, lead: string, trail: string) =>
+      trail ? lead : ""
+    );
+  }
+
+  return cleaned;
 }
 
 export function describeDatabase(
