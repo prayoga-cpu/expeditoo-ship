@@ -88,4 +88,19 @@ jobs:
             echo "::error::secrets.POSTGRES_URL_PRODUCTION is not set — see the header of this workflow."
             exit 1
           fi
-          pnpm db:migrate
+          set -o pipefail
+          pnpm db:migrate 2>&1 | tee migrate.log
+
+      # The run summary shows annotations, and the step log needs repo admin
+      # rights — so four failed runs in a row said only "Process completed with
+      # exit code 1", and the cause had to be reconstructed from outside. This
+      # puts the database's own words on the summary page. Connection strings
+      # are redacted before anything is printed.
+      - name: Say why the migration failed
+        if: failure()
+        run: |
+          [ -f migrate.log ] || exit 0
+          sed -E 's#postgres(ql)?://[^[:space:]"]+#<redacted-url>#g' migrate.log \
+            | grep -E "Error|error:|message:|detail:|hint:|code:|FATAL|refus|insecure" \
+            | head -8 \
+            | while IFS= read -r line; do echo "::error title=Migration failed::$line"; done

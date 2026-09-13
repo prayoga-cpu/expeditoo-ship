@@ -1,6 +1,6 @@
 # STATUS.md
 
-## Current state: user-testing mode — driver-side revamp complete (2.40.3)
+## Current state: user-testing mode — driver-side revamp complete (2.40.4)
 
 _AI agents: add an entry here every time you finish a task. See AGENTS.md §8._
 
@@ -65,11 +65,15 @@ than leaving it in a chat message.
       claims the opposite ("every production variable is marked Sensitive…
       deliberately"). Either re-mark them Sensitive and correct the comment, or
       accept it knowingly — but the two must agree.
-- [ ] **Apply migration `0023` — re-run Actions → Migrate database.** The
-      secret can stay exactly as pasted. 2.40.2 strips quotes and a `psql `
-      prefix; 2.40.3 strips the `channel_binding` parameter Postgres rejected on
-      run #4, and was proven end to end against a local server. Until it runs,
-      in-app confirmation fails in production.
+- [ ] **Apply migration `0023`.** Production's journal records `0000`–`0022`;
+      `0023` is the only pending migration (read-only probe, 2026-09-13). Either:
+      **(a)** Neon console → SQL Editor → run
+      `ALTER TYPE "public"."shipment_confirmation_channel" ADD VALUE IF NOT EXISTS 'app';`
+      — safe to run by hand, because the migrator will later replay `0023` once and
+      `IF NOT EXISTS` makes that a no-op; or **(b)** re-run Actions → Migrate
+      database on 2.40.4, whose summary page now states the database's own error
+      if it fails again. Until one happens, in-app confirmation fails in
+      production.
 - [x] ~~Set `INVOICE_VAT_RATE`~~ — **set to `0` on 2026-09-13 (2.40.3), provisional**,
       on the client's instruction. Revisit if the company is VAT-liable (`20`).
       Still empty: `INVOICE_ISSUER_CAPITAL`, from the Kbis.
@@ -127,6 +131,59 @@ than leaving it in a chat message.
       in `.env.example`.
 
 ---
+
+## ✅ 2026-09-13 — Five Failed Runs, And A Summary Page That Never Said Why (2.40.4)
+
+_« still stucked here »_ — run #5, on `b259af7`, failed at **Apply migrations** after 23 s with the same single annotation as the four before it: *"Process completed with exit code 1."*
+
+### What is now known, and how
+
+- [x] **The step log is unreachable from outside.** The REST endpoint answers
+      `403 Must have admin rights`, and both web log routes answer `404` to an
+      unauthenticated client, although the repository is public. Every diagnosis
+      so far has been reconstructed from screenshots and from the code path.
+- [x] **Production's journal is sound, and only `0023` is pending.** Read-only
+      probe, inside `BEGIN READ ONLY`, built through the app's own
+      `normaliseConnectionString`: `drizzle.__drizzle_migrations` holds **22
+      rows**, every tag from `0000_old_slayback` to `0022_feedback` recorded,
+      newest `created_at` `1788109200000` — exactly `0022`'s journal `when`.
+      `feedback_tickets` exists; `shipment_confirmation_channel` is
+      `expedion_app, link` with no `app`. The suspicion that `0022` had been
+      applied by hand without a journal row, making drizzle replay it, was wrong
+      — and would have been harmless anyway: `0022` is written entirely with
+      `IF NOT EXISTS` and `duplicate_object` guards.
+- [x] **The connection path is sound from here.** The same probe connected to
+      the direct production endpoint over TLS, with `channel_binding` removed and
+      `sslmode=require` kept. So whatever run #5 hit is specific to that run — most
+      plausibly the pasted secret itself (a pooled `-pooler` host copied from the
+      Neon console, a variable name left in front of the URL, or a value that is
+      not the production one) — and it cannot be named without the log.
+- [x] **One false start, recorded so nobody repeats it:** an ad-hoc `sed` used for
+      the first probe stripped `?channel_binding=…` including its `?`, taking
+      `sslmode` with it, and Neon refused the connection as insecure. That was
+      the diagnostic command, not the app — `normaliseConnectionString` restores
+      the separator, and a test pins the parameter in both positions.
+
+### The change
+
+- [x] **`migrate.yml` puts the database's words on the summary page.**
+      `pnpm db:migrate` is teed to `migrate.log` under `pipefail`, and a
+      `Say why the migration failed` step runs on `failure()`, redacts any
+      connection string, and emits up to eight `::error::` annotations from the
+      lines that carry the cause. Annotations are the one part of a run a
+      non-admin can see, which is exactly who has been reading these.
+
+### Verification
+
+- Workflow YAML parses; 8 steps, the new one gated on `failure()`.
+- The production probe above — read-only, and it wrote nothing.
+
+### Known limits
+
+- **`0023` is still unapplied**, so in-app confirmation still fails in
+  production. Running it from here was refused earlier by the environment's
+  production-deploy guard, and that has not been worked around.
+- **The cause of run #5 is still unnamed.** The next run will name it.
 
 ## ✅ 2026-09-13 — The Parameter Postgres Would Not Accept, And What Nothing Used (2.40.3)
 

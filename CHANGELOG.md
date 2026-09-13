@@ -14,6 +14,10 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.40.4] - 2026-09-13 · infra
+
+- **Nothing you can see changes.** When the job that updates the live database fails, the run's summary page now shows the database's own explanation, instead of only "Process completed with exit code 1".
+
 ## [2.40.3] - 2026-09-13 · fix
 
 - **Your payment documents are now proper invoices.** Each one issued from today carries the company's full legal identity — ATOUT GLOBAL SERVICES, SAS, SIRET, RCS and VAT number — and is titled *Facture* rather than *Reçu de paiement*. VAT is stated as not applicable (article 293 B du CGI) for now, pending confirmation of the company's VAT position. Documents already issued stay as they were: a receipt cannot become an invoice after the fact.
