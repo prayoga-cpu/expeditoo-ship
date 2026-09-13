@@ -18,7 +18,11 @@ LOG_DIR="$HOME/Library/Logs/expeditoo-db-mirror"
 mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/$(date +%Y-%m-%d_%H-%M-%S).log"
 
-{
+# A subshell, not a `{ }` group. `exit` inside a brace group ends the whole
+# script, so the symlink and the log cleanup below it never ran — not once.
+# In a subshell `exit` ends only the logged block, and `$?` carries its status
+# out to the lines that were always meant to run after it.
+(
   echo "=== db:mirror (daily) — $(date) ==="
   bash scripts/db-start.sh
   STATUS=$?
@@ -31,7 +35,7 @@ LOG_FILE="$LOG_DIR/$(date +%Y-%m-%d_%H-%M-%S).log"
   STATUS=$?
   echo "=== finished — exit $STATUS — $(date) ==="
   exit $STATUS
-} >> "$LOG_FILE" 2>&1
+) >> "$LOG_FILE" 2>&1
 
 STATUS=$?
 ln -sf "$LOG_FILE" "$LOG_DIR/latest.log"

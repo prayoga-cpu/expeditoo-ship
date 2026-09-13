@@ -1,6 +1,6 @@
 # STATUS.md
 
-## Current state: user-testing mode — driver-side revamp complete (2.41.0)
+## Current state: user-testing mode — driver-side revamp complete (2.41.1)
 
 _AI agents: add an entry here every time you finish a task. See AGENTS.md §8._
 
@@ -27,18 +27,17 @@ adversarial verification pass — treat their detail as slightly less certain.
 Work that needs a human hand outside the codebase. Add to this list rather
 than leaving it in a chat message.
 
-- [ ] **Bring the Expedion quote history back from Airtable** — production has
-      0 quotes. Airtable is the only source that still holds them with real
-      identities (see the 2.41.0 entry for why the laptop mirror is not). Needs
-      `AIRTABLE_PAT` (read access to base `appu3jamyzCJRuOjr`), which is set
-      nowhere this session could reach: not `.env.local`, not Vercel, not the
-      `expedion_encheres` repo. Then, in this order, reading each dry run first:
-      1. `AIRTABLE_PAT=… POSTGRES_URL=<neon unpooled> APP_ENV=production pnpm tsx src/scripts/import-airtable-quotes.ts`
-      2. the same with `--commit` — insert-only, so it adds and never overwrites
-      3. `… pnpm tsx src/scripts/backfill-expedion-owners.ts` (dry run), then `--execute`
-         — re-homes quotes only onto accounts with a **verified** matching address.
-      `APP_ENV=production` is the deliberate opt-in `src/db/index.ts` requires to
-      open production from a laptop; there is no other switch.
+- [x] ~~Bring the Expedion quote history back from Airtable~~ — **done
+      2026-09-13**: 4,656 quotes imported into production. See 2.41.1.
+- [ ] **Rotate the Airtable token.** It was pasted into a chat on 2026-09-13.
+      Make the replacement `data.records:read` on base `appu3jamyzCJRuOjr`
+      only — that is all the importer needs, and Airtable's `whoami` does not
+      show a personal token's scopes, so the current one's reach is unknown.
+      Then `vercel env add AIRTABLE_PAT production --sensitive --force` and the
+      same key in `.env.local`.
+- [ ] **Look at the 41 paid quotes under "Needs a driver".** Airtable had them
+      paid but never ticked as picked up or delivered, so most are probably old
+      jobs rather than live work. Assigning or cancelling one texts a real client.
 - [x] ~~Restore the production database~~ — **done 2026-09-10**, see the entry
       below. Production now runs on Neon (`ep-sweet-bonus-awtyfuyz`, us-east-1,
       Vercel Marketplace resource `neon-crimson-car`, free plan). What is left
@@ -160,6 +159,47 @@ than leaving it in a chat message.
       in `.env.example`.
 
 ---
+
+## ✅ 2026-09-13 — The Quote History Back From Airtable, And A Mirror That Cannot Write (2.41.1)
+
+_« this is the new airtable token, please manage and save properly in local and vercel prod using CLI, test if it's working »_ (the token itself is deliberately not reproduced here) → _« yes import everything »_ → _« give again clarification if import is to the production, and the local env/db will mirror the production daily (so all of development changed couldn't impact the production) »_.
+
+### The Airtable token
+
+- [x] Saved to `.env.local` as `AIRTABLE_PAT`, `AIRTABLE_BASE_ID`, `AIRTABLE_TABLE` (gitignored by `.env*`), and to Vercel Production — the token as **Sensitive**, base and table readable. Nothing deployed reads `AIRTABLE_*`, so no redeploy was needed.
+- [x] **Tested as stored, not as pasted:** Airtable answered 200, and the importer's dry run ran with `AIRTABLE_PAT` removed from its environment, so it could only have read the token from `.env.local`. It fetched all 4,656 records.
+- [x] It was pasted into a chat, so rotating it is the first new operator to-do.
+
+### The import — checked before it ran, then run
+
+- [x] **Nothing automatic acts on inserted quotes.** Production has no triggers on `expedion_quotes`. The escalation cron (`findDueForEscalation`) requires `escalate_after <= now()`; the importer never sets that column and its default is NULL, so the sweep cannot select an imported row — no listings created, no SMS. The SMS service is only reached from actions a person takes. Size was checked against the free plan first: production was 11 MB.
+- [x] **Proven to be production:** the URL came from `vercel env pull --environment=production`, and the repo's own `describeDatabase()` reports `isProduction: true` for `ep-sweet-bonus-awtyfuyz`.
+- [x] **Result:** 4,656 inserted, 0 → 4,656, 0 mapping failures, verification OK. Three money values too large for `integer` were left empty with their raw values kept in `airtable_fields` — the preservation 2.41.0 added, working on its first real run. Airtable now holds 65 more records than the August import brought across.
+- [x] **What landed:** delivered 2,586 · picked up 1,389 · accepted 635 · paid 41 · pending 5. "Needs a driver" 41, escalation due 0, listings still 0.
+- [x] **Owner backfill:** 1 quote re-homed onto its verified account. 4,655 stay unmatched — 278 carry no email, 4,377 match no account. 4,515 are keyed `airtable:<recordId>` and 141 carry legacy Firebase UIDs.
+
+### The daily mirror had not run since the Supabase project was deleted
+
+- [x] **Every run since failed.** The 11–13 September logs show `pg_dump` refused by the deleted Supabase host. Repointing it would not have been enough: local `pg_dump` was 17.11, Neon runs **18.6**, and pg_dump refuses a server newer than itself — while `find_pg_bin` in `scripts/db-mirror.sh` only knew `postgresql@17`. `postgresql@18` is now installed (client tools; its service is not started, the local 17 server still runs) and listed first in the finder. The script's setup help, which still told you to paste a Supabase owner URL, now describes Neon and the read-only role.
+- [x] **The mirror now reads production through a role that cannot write it.** `mirror_readonly` holds Postgres' predefined `pg_read_all_data` and has `default_transaction_read_only = on`. Tested both layers: it reads 4,656 quotes; an `UPDATE` is refused as a read-only transaction; the same `UPDATE` with a read-write transaction forced is refused with `permission denied`; `CREATE TABLE` is refused, and nothing was created. `MIRROR_SOURCE_URL` in `.env.local` now uses it, replacing the dead Supabase line. Rotate with `ALTER ROLE mirror_readonly PASSWORD …`; revoke with `DROP ROLE mirror_readonly`.
+- [x] **`scripts/db-mirror-daily.sh` never created `latest.log` and never pruned old logs.** It ran the mirror inside a `{ }` group ending in `exit $STATUS`, and `exit` in a brace group ends the whole script — so the symlink and the 30-day cleanup after it had never run once. It is a subshell now.
+- [x] **First run:** 11 MB dumped, restored into local 17.11 (an 18 dump loads into 17 today), "Anonymisation verified: no production personal data remains", 6 dev accounts seeded and 1 kept account unlocked. Local holds 4,656 quotes; exactly one kept its real email and fields — the kept account's own quote, which the scrub exempts by design — and no real phone number or session came across.
+- [x] **Second run, with the fixed wrapper:** exit 0, and `latest.log` now exists and points at that run (`2026-09-13_22-54-03.log`) — the first time it has ever been created. Local still holds 4,656 quotes, and anonymisation verified again.
+
+### What keeps development away from production
+
+- [x] **In the database:** the local app's `POSTGRES_URL` is localhost; `src/db/index.ts` refuses to open production from any non-production process, at import time; the mirror's credential cannot write, by role and by transaction default; `guard-db.ts` refuses production as a mirror target; migrations need `MIGRATE_TARGET=production`.
+- [x] **The doors that remain are deliberate ones:** exporting `APP_ENV=production` on a laptop, as this import did; and an owner URL pulled with `vercel env pull`, because the Neon Marketplace variables are Non-sensitive, so anyone with access to the Vercel project can pull a credential that writes production. The one pulled for this session was deleted from the scratchpad once the import was done.
+- [x] **In the code:** a change reaches production only by being pushed to `main`, which deploys automatically.
+
+**Verification**
+- Import verification block OK; every production and local count above came from read-only queries.
+- Mirror log `2026-09-13_22-50-29.log`, exit 0. `bash -n` passes on both mirror scripts.
+- `npx tsc --noEmit` 0 errors · `pnpm test` **1,616 passed across 121 files**, 0 failed · `pnpm changelog:check` ok — on the final tree, before commit. Nothing under `src/` changed in this release.
+
+**Known limits**
+- 4,655 quotes are visible to staff but to no client until that client signs in with a verified matching address — and 4,377 of them match no account at all.
+- The local server is 17 and production is 18. An 18 dump restores into 17 today; a dump that one day uses something 17 cannot load will fail the restore, and the answer then is running the local server on 18, which is already installed.
 
 ## ✅ 2026-09-13 — Quantity Beside The Item, And An Import That Cannot Overwrite Or Drop (2.41.0)
 

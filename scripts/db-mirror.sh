@@ -10,7 +10,8 @@
 # reports success.
 #
 # Configuration (all in .env.local):
-#   MIRROR_SOURCE_URL    the production DIRECT (5432) url. A different
+#   MIRROR_SOURCE_URL    the production DIRECT (unpooled) url, signed in as
+#                        the read-only `mirror_readonly` role. A different
 #                        variable name than POSTGRES_URL on purpose, so it
 #                        can't become the app's own connection string by typo.
 #   POSTGRES_URL         the target, unless MIRROR_TARGET_URL is exported.
@@ -32,12 +33,15 @@ for arg in "$@"; do
   esac
 done
 
-# --- Postgres 17 client tools -----------------------------------------------
-# Production runs 17.x and pg_dump refuses a server newer than itself, so the
-# 14.x psql on PATH is not enough. Pick the newest pg_dump available.
+# --- Postgres client tools ---------------------------------------------------
+# pg_dump refuses a server newer than itself. Production is Neon on 18.x (it
+# was 17.x on Supabase), so neither the 14.x psql on PATH nor a 17.x install is
+# enough. Pick the newest pg_dump available.
 find_pg_bin() {
   local best="" best_major=0
   for dir in \
+    /opt/homebrew/opt/postgresql@18/bin \
+    /usr/local/opt/postgresql@18/bin \
     /opt/homebrew/opt/postgresql@17/bin \
     /opt/homebrew/opt/libpq/bin \
     /usr/local/opt/postgresql@17/bin \
@@ -49,7 +53,7 @@ find_pg_bin() {
     major="$("$dir/pg_dump" --version | sed -E 's/[^0-9]*([0-9]+).*/\1/')"
     if [ "$major" -gt "$best_major" ]; then best_major=$major; best="$dir"; fi
   done
-  [ -n "$best" ] || { echo "❌ No pg_dump found. brew install postgresql@17" >&2; exit 1; }
+  [ -n "$best" ] || { echo "❌ No pg_dump found. brew install postgresql@18" >&2; exit 1; }
   echo "$best"
 }
 
@@ -75,12 +79,14 @@ if [ -z "${SOURCE_URL:-}" ]; then
   cat >&2 <<'MSG'
 ❌ MIRROR_SOURCE_URL is not set.
 
-Add to .env.local (gitignored) the production DIRECT url:
+Add to .env.local (gitignored) the production DIRECT (unpooled) url, signed in
+as the read-only mirror role — never as neondb_owner:
 
-  MIRROR_SOURCE_URL=postgresql://postgres.<ref>:<password>@aws-1-eu-central-1.pooler.supabase.com:5432/postgres
+  MIRROR_SOURCE_URL=postgresql://mirror_readonly:<password>@<endpoint>.<region>.aws.neon.tech/neondb?sslmode=require
   MIRROR_KEEP_EMAILS=you@example.com
 
-Get it from Supabase → Project Settings → Database → Connection string (Session).
+That role holds pg_read_all_data and starts every transaction read-only, so
+this credential cannot change production even by mistake. See STATUS.md.
 MSG
   exit 1
 fi
@@ -127,8 +133,9 @@ echo "🧨 Dropping the target schema…"
   -c 'DROP SCHEMA IF EXISTS public CASCADE;'
 
 echo "📥 Restoring…"
-# pg_restore reports benign noise (extension comments Supabase owns and we do
-# not) so its exit status is inspected rather than trusted to be zero.
+# pg_restore reports benign noise (extension comments the hosting provider
+# owns and we do not) so its exit status is inspected rather than trusted to be
+# zero.
 set +e
 "$PG_RESTORE" --dbname="$TARGET_URL" --no-owner --no-privileges --exit-on-error "$DUMP_FILE"
 RESTORE_STATUS=$?

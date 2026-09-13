@@ -14,6 +14,10 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.41.1] - 2026-09-13 · fix
+
+- **The Expedion quote history is back.** Every quote requested through Expedion — 4,656 of them, including 65 that had never been brought across before — is visible to the team again, after the move to a new database left the admin panel empty. Nothing that already existed was replaced.
+
 ## [2.41.0] - 2026-09-13 · ux
 
 - **Quantity now sits beside what you are shipping.** On the transport request form, "how many" is asked on the same line as "What are you moving?", instead of on its own further down the page after the weight and size. This one came in through the feedback button.
