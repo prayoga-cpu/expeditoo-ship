@@ -14,6 +14,12 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.42.0] - 2026-09-18 · ux
+
+- **Feedback cards now wear the color of their status** — the same open, in-progress, needs-review, resolved and archived colors already used on the status tiles and icons — so an admin scanning the triage queue no longer has to read every card's dropdown to know where it stands.
+- **The feedback queue can be sorted**, not just filtered: triage order (the default), newest first, oldest first, by reporter name, or by priority.
+- **A feedback screenshot now opens in place.** Clicking a thumbnail in the triage queue used to leave the console for a new browser tab; it now opens a dialog beside the ticket, so an admin never loses their spot in the queue to look at a screenshot.
+
 ## [2.41.1] - 2026-09-13 · fix
 
 - **The Expedion quote history is back.** Every quote requested through Expedion — 4,656 of them, including 65 that had never been brought across before — is visible to the team again, after the move to a new database left the admin panel empty. Nothing that already existed was replaced.

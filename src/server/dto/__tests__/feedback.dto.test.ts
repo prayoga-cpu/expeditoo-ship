@@ -9,6 +9,7 @@ import {
 import {
   feedbackPrioritySchema,
   feedbackQuerySchema,
+  feedbackSortSchema,
   feedbackStatusSchema,
   feedbackTypeSchema,
   submitFeedbackSchema,
@@ -216,5 +217,19 @@ describe("feedbackQuerySchema", () => {
 
   it("refuses a limit past the ceiling rather than silently clamping", () => {
     expect(feedbackQuerySchema.safeParse({ limit: "500" }).success).toBe(false);
+  });
+
+  it("defaults sort to triage order", () => {
+    expect(feedbackQuerySchema.parse({}).sort).toBe("triage");
+  });
+
+  it.each(feedbackSortSchema.options)("accepts %s as a sort value", (sort) => {
+    expect(feedbackQuerySchema.safeParse({ sort }).success).toBe(true);
+  });
+
+  it("refuses an unknown sort value", () => {
+    expect(feedbackQuerySchema.safeParse({ sort: "alphabetical" }).success).toBe(
+      false
+    );
   });
 });

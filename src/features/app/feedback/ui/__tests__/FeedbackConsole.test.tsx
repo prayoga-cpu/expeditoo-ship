@@ -151,6 +151,11 @@ describe("FeedbackConsole", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("defaults the sort control to triage order", () => {
+    renderConsole();
+    expect(screen.getByText("Triage order")).toBeInTheDocument();
+  });
+
   it("marks a ticket from a deleted account as one", () => {
     queue.current = {
       ...queue.current,
@@ -168,5 +173,29 @@ describe("FeedbackConsole", () => {
     renderConsole();
 
     expect(screen.getByText(/deleted account/)).toBeInTheDocument();
+  });
+
+  it("opens a screenshot in a dialog instead of a new tab", () => {
+    queue.current = {
+      ...queue.current,
+      items: [
+        ticket({ screenshotUrls: ["https://cdn.example.com/shot.png"] }),
+      ],
+    };
+    renderConsole();
+
+    const thumbnail = screen.getByRole("button", { name: "View screenshot" });
+    expect(thumbnail.querySelector("img")).toBeInTheDocument();
+
+    fireEvent.click(thumbnail);
+
+    const dialog = screen.getByRole("dialog");
+    expect(
+      within(dialog).getByRole("heading", { name: "View screenshot" })
+    ).toBeInTheDocument();
+    expect(dialog.querySelector("img")).toHaveAttribute(
+      "src",
+      "https://cdn.example.com/shot.png"
+    );
   });
 });

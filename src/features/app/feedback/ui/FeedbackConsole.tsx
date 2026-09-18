@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -38,7 +39,11 @@ import {
   type FeedbackStatusValue,
   type FeedbackTypeValue,
 } from "@/db/schema/feedback";
-import type { AdminFeedbackView } from "@/server/dto/feedback.dto";
+import {
+  feedbackSortSchema,
+  type AdminFeedbackView,
+  type FeedbackSort,
+} from "@/server/dto/feedback.dto";
 import { useFeedbackQueue, useTriageFeedback } from "../hooks/useFeedback";
 
 const PAGE_SIZE = 25;
@@ -51,17 +56,36 @@ const DESCRIPTION_CLAMP = 200;
  */
 const STATUS_STYLE: Record<
   FeedbackStatusValue,
-  { icon: typeof Inbox; tone: string }
+  { icon: typeof Inbox; tone: string; card: string }
 > = {
-  OPEN: { icon: Inbox, tone: "text-primary" },
-  IN_PROGRESS: { icon: Clock, tone: "text-amber-600 dark:text-amber-400" },
-  NEEDS_REVIEW: { icon: Eye, tone: "text-violet-600 dark:text-violet-400" },
+  OPEN: {
+    icon: Inbox,
+    tone: "text-primary",
+    card: "border-l-4 border-l-primary bg-primary/[0.03]",
+  },
+  IN_PROGRESS: {
+    icon: Clock,
+    tone: "text-amber-600 dark:text-amber-400",
+    card: "border-l-4 border-l-amber-500 bg-amber-500/[0.04] dark:border-l-amber-400 dark:bg-amber-400/[0.06]",
+  },
+  NEEDS_REVIEW: {
+    icon: Eye,
+    tone: "text-violet-600 dark:text-violet-400",
+    card: "border-l-4 border-l-violet-500 bg-violet-500/[0.04] dark:border-l-violet-400 dark:bg-violet-400/[0.06]",
+  },
   RESOLVED: {
     icon: CheckCircle2,
     tone: "text-emerald-600 dark:text-emerald-400",
+    card: "border-l-4 border-l-emerald-500 bg-emerald-500/[0.04] dark:border-l-emerald-400 dark:bg-emerald-400/[0.06]",
   },
-  ARCHIVED: { icon: Archive, tone: "text-muted-foreground" },
+  ARCHIVED: {
+    icon: Archive,
+    tone: "text-muted-foreground",
+    card: "border-l-4 border-l-muted-foreground/40",
+  },
 };
+
+const SORT_OPTIONS = feedbackSortSchema.options;
 
 const TYPE_TONE: Record<
   FeedbackTypeValue,
@@ -88,6 +112,7 @@ export function FeedbackConsole() {
   const [type, setType] = useState<FeedbackTypeValue | undefined>();
   const [priority, setPriority] = useState<FeedbackPriorityValue | undefined>();
   const [search, setSearch] = useState("");
+  const [sort, setSort] = useState<FeedbackSort>("triage");
   const [offset, setOffset] = useState(0);
 
   const { items, meta, isLoading, isError } = useFeedbackQueue({
@@ -95,6 +120,7 @@ export function FeedbackConsole() {
     type,
     priority,
     search: search.trim() || undefined,
+    sort,
     limit: PAGE_SIZE,
     offset,
   });
@@ -209,6 +235,25 @@ export function FeedbackConsole() {
             {t("console.clearFilters")}
           </Button>
         )}
+
+        <Select
+          value={sort}
+          onValueChange={(v) => {
+            setSort(v as FeedbackSort);
+            setOffset(0);
+          }}
+        >
+          <SelectTrigger className="w-[180px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {SORT_OPTIONS.map((v) => (
+              <SelectItem key={v} value={v}>
+                {t(`console.sort.${v}`)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {isLoading ? (
@@ -283,7 +328,7 @@ function FeedbackRow({ item }: { item: AdminFeedbackView }) {
   const isLong = item.description.length > DESCRIPTION_CLAMP;
 
   return (
-    <Card className="space-y-3 p-4">
+    <Card className={cn("space-y-3 p-4", STATUS_STYLE[item.status].card)}>
       <div className="flex flex-wrap items-center gap-2">
         <Badge variant={TYPE_TONE[item.type]}>{t(`types.${item.type}`)}</Badge>
         <span className={cn("text-xs font-medium", PRIORITY_TONE[item.priority])}>
@@ -321,23 +366,10 @@ function FeedbackRow({ item }: { item: AdminFeedbackView }) {
       )}
 
       {item.screenshotUrls.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {item.screenshotUrls.map((url) => (
-            <a
-              key={url}
-              href={url}
-              target="_blank"
-              rel="noreferrer"
-              title={t("console.viewScreenshot")}
-            >
-              <img
-                src={url}
-                alt=""
-                className="h-16 w-16 rounded-md border object-cover"
-              />
-            </a>
-          ))}
-        </div>
+        <ScreenshotThumbnails
+          urls={item.screenshotUrls}
+          label={t("console.viewScreenshot")}
+        />
       )}
 
       <p className="text-xs text-muted-foreground">
@@ -455,5 +487,50 @@ function FeedbackRow({ item }: { item: AdminFeedbackView }) {
         </button>
       )}
     </Card>
+  );
+}
+
+/** State stays local to the row: every ticket's screenshots open independently. */
+function ScreenshotThumbnails({
+  urls,
+  label,
+}: {
+  urls: string[];
+  label: string;
+}) {
+  const [opened, setOpened] = useState<string | null>(null);
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {urls.map((url) => (
+        <button
+          key={url}
+          type="button"
+          onClick={() => setOpened(url)}
+          title={label}
+          aria-label={label}
+          className="hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+        >
+          <img
+            src={url}
+            alt=""
+            className="h-16 w-16 rounded-md border object-cover"
+          />
+        </button>
+      ))}
+
+      <Dialog open={!!opened} onOpenChange={(open) => !open && setOpened(null)}>
+        <DialogContent>
+          <DialogTitle>{label}</DialogTitle>
+          {opened && (
+            <img
+              src={opened}
+              alt=""
+              className="max-h-[80vh] w-full rounded-lg object-contain"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

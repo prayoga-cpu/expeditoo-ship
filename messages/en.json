@@ -3471,6 +3471,13 @@
       "allTypes": "All types",
       "allPriorities": "All priorities",
       "clearFilters": "Clear filters",
+      "sort": {
+        "triage": "Triage order",
+        "newest": "Newest first",
+        "oldest": "Oldest first",
+        "reporter": "Reporter name",
+        "priority": "Priority"
+      },
       "showMore": "Show more",
       "showLess": "Show less",
       "copyReference": "Copy reference",

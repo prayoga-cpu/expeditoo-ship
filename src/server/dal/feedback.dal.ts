@@ -104,12 +104,37 @@ function whereFor(filters: FeedbackQuery, withStatus: boolean) {
 }
 
 /**
+ * The queue's ordering, picked by `filters.sort`. `triage` — the default — is
+ * the two enums' declaration order, which is triage order on its own, so no
+ * `CASE` expression is needed. Every other option adds a `created_at DESC`
+ * tiebreaker so ties still read newest-first rather than in insertion order.
+ */
+function orderByFor(sort: FeedbackQuery["sort"]) {
+  switch (sort) {
+    case "newest":
+      return [desc(feedbackTickets.createdAt)];
+    case "oldest":
+      return [asc(feedbackTickets.createdAt)];
+    case "reporter":
+      return [asc(feedbackTickets.userName), desc(feedbackTickets.createdAt)];
+    case "priority":
+      return [asc(feedbackTickets.priority), desc(feedbackTickets.createdAt)];
+    case "triage":
+    default:
+      return [
+        asc(feedbackTickets.status),
+        asc(feedbackTickets.priority),
+        desc(feedbackTickets.createdAt),
+      ];
+  }
+}
+
+/**
  * One page of the console.
  *
- * Ordered by the two enums' declaration order, which is triage order — so no
- * `CASE` expression and no sorting in the browser. The sibling product fetches
- * a hard `take: 500` with no paging and filters client-side, which means the
- * 501st ticket simply never appears and nothing says so.
+ * The sibling product fetches a hard `take: 500` with no paging and filters
+ * client-side, which means the 501st ticket simply never appears and nothing
+ * says so — filtering, ordering, counting and paging all happen in SQL here.
  */
 export async function listQueue(
   filters: FeedbackQuery,
@@ -127,11 +152,7 @@ export async function listQueue(
     .from(feedbackTickets)
     .leftJoin(user, eq(user.id, feedbackTickets.userId))
     .where(where)
-    .orderBy(
-      asc(feedbackTickets.status),
-      asc(feedbackTickets.priority),
-      desc(feedbackTickets.createdAt)
-    )
+    .orderBy(...orderByFor(filters.sort))
     .limit(filters.limit)
     .offset(filters.offset);
 

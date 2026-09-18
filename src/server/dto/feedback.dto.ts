@@ -101,12 +101,28 @@ export const triageFeedbackSchema = z
   );
 export type TriageFeedbackInput = z.infer<typeof triageFeedbackSchema>;
 
+/**
+ * How the console orders the page. `triage` is the original default —
+ * `status, priority, created_at DESC` — and stays the default here; the rest
+ * are additional vantage points on the same filtered set, not a replacement
+ * for it.
+ */
+export const feedbackSortSchema = z.enum([
+  "triage",
+  "newest",
+  "oldest",
+  "reporter",
+  "priority",
+]);
+export type FeedbackSort = z.infer<typeof feedbackSortSchema>;
+
 /** The console's filter, applied in SQL rather than in the browser. */
 export const feedbackQuerySchema = z.object({
   status: feedbackStatusSchema.optional(),
   type: feedbackTypeSchema.optional(),
   priority: feedbackPrioritySchema.optional(),
   search: z.string().trim().min(1).max(200).optional(),
+  sort: feedbackSortSchema.default("triage"),
   limit: z.coerce.number().int().min(1).max(100).default(25),
   offset: z.coerce.number().int().min(0).default(0),
 });

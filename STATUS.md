@@ -1,6 +1,6 @@
 # STATUS.md
 
-## Current state: user-testing mode — driver-side revamp complete (2.41.1)
+## Current state: user-testing mode — driver-side revamp complete (2.42.0)
 
 _AI agents: add an entry here every time you finish a task. See AGENTS.md §8._
 
@@ -159,6 +159,31 @@ than leaving it in a chat message.
       in `.env.example`.
 
 ---
+
+## ✅ 2026-09-18 — Color The Feedback Queue By Status, And Let It Be Sorted (2.42.0)
+
+_« color the card by the status just as like the icon on badges, so easy to organize. and add the sort by options by date, by user filter, etc »_ — a screenshot of `/admin/feedback` attached, ten open tickets, no colour distinguishing one card from the next.
+
+This reopens a call `docs/specs/feedback_spec.md` §5–6 made on purpose: "No sort control is needed" and the Feed view (a date-sorted list) was explicitly refused as one of ~800 lines of the sibling product's console the rebuild would not carry over, because the fixed `status, priority, created_at DESC` ordering already reproduced it for free. That reasoning holds for the *default* view; it does not cover an admin wanting the queue in a different order on demand, which is what was actually asked for. The spec's other constraints — filter/sort/count/page in SQL, never in the browser — are kept, not relaxed.
+
+### Card colour
+
+- [x] `STATUS_STYLE` (`src/features/app/feedback/ui/FeedbackConsole.tsx`) gained a `card` class per status, reusing the same five hues the status tiles and icons already use (primary/amber/violet/emerald/muted), each an explicit light/dark pair per the file's own comment about the sibling product's washed-out single-tone classes. Rendered as a 4px left border plus a faint tint, not a full-card wash, so body text stays at full contrast in both themes.
+
+### Sort
+
+- [x] `feedbackSortSchema` added to `feedback.dto.ts` — `triage` (default, unchanged), `newest`, `oldest`, `reporter`, `priority` — and `sort` added to `feedbackQuerySchema`. The DAL's inline `.orderBy(asc(status), asc(priority), desc(createdAt))` became `orderByFor(sort)`, one switch statement, so ordering is still decided entirely in SQL; no client-side sort was introduced. A `Select` next to the existing type/priority filters drives it. Sort is treated as a display preference, not a filter — it is left out of `hasFilters`/`clearFilters`, so clearing filters does not silently reorder the list underneath an admin mid-triage.
+
+### Screenshot preview
+
+- [x] A thumbnail click used to `<a target="_blank">` the raw image URL, taking an admin out of the console to look at one screenshot. `FeedbackRow` now renders `ScreenshotThumbnails`, a sibling component mirroring the existing `ShipmentPhotoGallery` lightbox shape (`src/features/app/common/ui/ShipmentPhotoGallery.tsx`): a `<button>` thumbnail, `useState<string | null>` for "the opened url", and a `Dialog`/`DialogContent` showing it larger. State is per-row on purpose — nothing lifted to `FeedbackConsole` — so two tickets' screenshots never fight over one "opened" flag. No new translation key: the dialog's `DialogTitle` reuses `console.viewScreenshot`, already FR/EN-parallel, rather than adding a key the parity test would need touching both locale files for.
+
+**Verification**
+- `npx tsc --noEmit` 0 errors · `pnpm lint` 0 errors · `pnpm build` succeeds · `npx vitest run` **1,625 passed**, 0 failed (added: 4 DTO tests for the new `sort` enum/default, 1 console test for the default sort label, 1 console test for the screenshot dialog; `locale-parity` and `migrations-journal` untouched and still pass).
+- No migration: `sort` is a query parameter, not a column, and the screenshot dialog touches no server code.
+
+**Known limits**
+- `reporter` sorts on the frozen `user_name` snapshot on the ticket, the same column `search` already matches against — consistent with the rest of this feature, but it will not follow someone's current display name if they changed it since filing.
 
 ## ✅ 2026-09-13 — The Quote History Back From Airtable, And A Mirror That Cannot Write (2.41.1)
 

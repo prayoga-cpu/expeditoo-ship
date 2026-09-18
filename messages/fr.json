@@ -3471,6 +3471,13 @@
       "allTypes": "Tous les types",
       "allPriorities": "Toutes les priorités",
       "clearFilters": "Effacer les filtres",
+      "sort": {
+        "triage": "Ordre de triage",
+        "newest": "Plus récents",
+        "oldest": "Plus anciens",
+        "reporter": "Nom du déclarant",
+        "priority": "Priorité"
+      },
       "showMore": "Voir plus",
       "showLess": "Voir moins",
       "copyReference": "Copier la référence",
