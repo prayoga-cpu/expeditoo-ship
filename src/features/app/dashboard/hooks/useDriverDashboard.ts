@@ -5,10 +5,16 @@ import { listingsApi } from "@/features/app/listing/api/listings.api";
 import { offersApi } from "@/features/app/offers/api/offers.api";
 import { deliveriesApi } from "@/features/app/deliveries/api/deliveries.api";
 import { useCarrierApplication } from "@/features/app/carrier/hooks/useCarrier";
+import { useMyRequests } from "@/features/app/listing/hooks/useMyRequests";
+import { useSavedCards } from "@/features/app/profile/hooks/useSavedCards";
+import type { ListingStatus } from "@/features/app/listing/types";
 import { orderRunsByProgress } from "../orderRuns";
 
 /** Shipment states that mean "currently on the road, or about to be". */
 const ACTIVE_SHIPMENT_STATUSES = "PENDING,ASSIGNED,PICKED_UP,IN_TRANSIT";
+
+/** A requester still owes a card once one of these is open with none on file. */
+const NEEDS_CARD_STATUSES: ListingStatus[] = ["open", "awarded"];
 
 /**
  * Everything the driver home screen shows, as four independent queries.
@@ -51,6 +57,20 @@ export function useDriverDashboard() {
   // I doing right now". Reorder so the card leads with the job underway.
   const sortedRuns = orderRunsByProgress(runs);
 
+  // Whether the requester still needs to connect a card. Same query
+  // `/listings/me` and `useMyRequestStatus` use (same cache key), so this adds
+  // no extra fetch beyond the one `MyRequestStatusCard` already causes.
+  const myRequests = useMyRequests();
+  const savedCards = useSavedCards();
+
+  const isCardNudgeLoading = myRequests.isLoading || savedCards.isLoading;
+  const needsCardNudge =
+    !isCardNudgeLoading &&
+    (savedCards.data?.length ?? 0) === 0 &&
+    (myRequests.data ?? []).some(
+      (job) => job.origin === "direct" && NEEDS_CARD_STATUSES.includes(job.status)
+    );
+
   return {
     application: application.data,
     isApplicationLoading: application.isLoading,
@@ -66,5 +86,7 @@ export function useDriverDashboard() {
     // The one to lead with: whatever the driver is physically doing now.
     currentRun: sortedRuns[0] ?? null,
     isRunsLoading: activeRuns.isLoading,
+
+    needsCardNudge,
   };
 }

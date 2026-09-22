@@ -60,7 +60,7 @@ export function DriverLayout({ children }: DriverLayoutProps) {
       <AppSidebarHeader href="/driver/dashboard" />
       {/* p-4, not px-4: same as the admin sidebar — its subtitle used to supply
           the gap under the logo. Matches the app sidebar. */}
-      <nav className="flex-1 p-4 space-y-2">
+      <nav className="flex-1 min-h-0 overflow-y-auto p-4 space-y-2">
         {sidebarItems.map((item) => (
           <Link
             key={item.href}
@@ -99,7 +99,7 @@ export function DriverLayout({ children }: DriverLayoutProps) {
       } as React.CSSProperties}
     >
       {/* Desktop Sidebar - Static like MainLayout */}
-      <aside className="hidden xl:flex w-64 border-r bg-card flex-col">
+      <aside className="hidden xl:flex w-64 shrink-0 overflow-hidden border-r bg-card flex-col">
         <SidebarContent />
       </aside>
 

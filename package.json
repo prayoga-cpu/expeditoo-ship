@@ -1,6 +1,6 @@
 {
   "name": "expeditoo-ship",
-  "version": "2.42.0",
+  "version": "2.46.0",
   "packageManager": "pnpm@10.10.0",
   "private": true,
   "scripts": {
@@ -76,6 +76,7 @@
     "drizzle-orm": "^0.44.7",
     "framer-motion": "^12.23.24",
     "jose": "^6.2.9",
+    "libphonenumber-js": "^1.13.13",
     "lucide-react": "^0.454.0",
     "maplibre-gl": "^5.14.0",
     "nanoid": "^5.1.6",

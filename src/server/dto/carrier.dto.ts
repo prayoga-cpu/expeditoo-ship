@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   isValidSiret,
+  normalizeSiret,
   isValidIban,
   isValidBic,
   isValidPlate,
@@ -35,7 +36,7 @@ export {
 
 export const upsertCarrierSchema = z.object({
   companyName: z.string().min(2).max(200),
-  siret: z.string().refine(isValidSiret, "INVALID_SIRET"),
+  siret: z.string().transform(normalizeSiret).refine(isValidSiret, "INVALID_SIRET"),
   vatNumber: z.string().regex(VAT_PATTERN, "INVALID_VAT").optional(),
   legalForm: z.string().max(100).optional(),
   contactPhone: z.string().refine(isValidFrenchPhone, "INVALID_PHONE"),

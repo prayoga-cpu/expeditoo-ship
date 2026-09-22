@@ -1,8 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { useTheme } from "next-themes";
-import { DotLottieReact } from "@lottiefiles/dotlottie-react";
+
+// The loader shows up on nearly every page and dialog in the app, so its own
+// weight matters: `@lottiefiles/dotlottie-react` ships a WASM-based player
+// that has no business being in the bundle of a page that never shows a
+// spinner. One dynamic import here, instead of one at each of its 15+ call
+// sites, gets every caller the same split for free. `mounted` below already
+// keeps this off the server, so `ssr: false` costs nothing.
+const DotLottieReact = dynamic(
+    () => import("@lottiefiles/dotlottie-react").then((m) => m.DotLottieReact),
+    { ssr: false }
+);
 
 /** Light and dark cuts of the same animation. */
 const LIGHT_SRC = "/animations/loader.lottie";

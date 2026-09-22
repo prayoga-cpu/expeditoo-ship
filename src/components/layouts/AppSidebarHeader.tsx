@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { BrandWordmark } from "@/components/ui/brand-mark";
-import { SidebarRoleBadge } from "./SidebarRoleBadge";
+import { AccessSwitcher } from "./AccessSwitcher";
 
 interface AppSidebarHeaderProps {
   /**
@@ -39,16 +39,16 @@ export function AppSidebarHeader({
           to be pulled back up with -mt-4, which sat it on top of the wordmark's
           TRANSPORT line.
 
-          The role badge sits on the same shelf. It belongs here rather than in
-          each layout because all three sidebars — app, driver, admin — render
-          this header, and "which access am I browsing with" is the same
-          question in all three. Wrapped so a layout that also passes a
+          The access switcher sits on the same shelf. It belongs here rather
+          than in each layout because all three sidebars — app, driver, admin
+          — render this header, and "which access am I browsing with" is the
+          same question in all three. Wrapped so a layout that also passes a
           subtitle gets both, side by side, instead of two stacked rows.
 
-          The row keeps its height whether or not the badge has resolved, so
-          the nav below does not jump down the moment the session arrives. */}
+          The row keeps its height whether or not it has resolved, so the nav
+          below does not jump down the moment the session arrives. */}
       <div className="flex min-h-[26px] flex-wrap items-center gap-2 px-6 pb-5">
-        <SidebarRoleBadge />
+        <AccessSwitcher />
         {subtitle && (
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             {subtitle}

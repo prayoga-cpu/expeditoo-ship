@@ -3,8 +3,10 @@ import { listingsDal, type BrowseFilters } from "@/server/dal/listings.dal";
 import { shipmentsDal } from "@/server/dal/shipments.dal";
 import { offersService } from "@/server/services/offers.service";
 import { notificationsService } from "@/server/services/notifications.service";
-import { paymentsService } from "@/server/services/payments.service";
-import { isMockPaymentsEnabled } from "@/lib/stripe/mock-payments";
+import { emailService } from "@/server/services/email.service";
+import { isSystemAccount } from "@/server/services/account-policy";
+import { getUserById } from "@/server/dal/users.dal";
+import { formatCurrency } from "@/lib/currency";
 import { expiresAtFor } from "@/lib/listing-window";
 import {
   MATERIAL_FIELDS,
@@ -29,28 +31,6 @@ export class ListingError extends Error {
 }
 
 const err = (code: string, status: number) => new ListingError(code, status);
-
-/**
- * A direct job may not reach the board until its poster has a card on file.
- *
- * The client pays the moment a carrier is chosen
- * (docs/specs/payment_at_booking_spec.md §4), so a job posted without a card is
- * a job that cannot be awarded — and every carrier who bids on it spends
- * effort on work that was never payable. The check belongs here rather than at
- * the award, where the only people it could disappoint are the driver who won
- * and the operator who picked them.
- *
- * A draft is exempt: it is not on the board, nobody can bid on it, and asking
- * for a card to save one would be a toll on a form that has committed to
- * nothing.
- */
-async function assertPayable(shipperId: string) {
-  // TODO(EXPEDITOO-TESTING): MOCK_PAYMENTS — the charge this guards is mocked, so demanding a real card would only block the testing journey (see docs/TESTING_MOCKS.md).
-  if (isMockPaymentsEnabled()) return;
-  if (await paymentsService.hasSavedCard(shipperId)) return;
-
-  throw err("PAYMENT_METHOD_REQUIRED", 402);
-}
 
 /**
  * A job posted well ahead closes to bids 6 h before pickup. One posted at
@@ -84,7 +64,7 @@ function toInsert(
     // operator queue. Escalation stamps `expedion` on its own listings the
     // same way, from the server side.
     origin: "direct",
-    status: data.publish ? "open" : "draft",
+    status: !data.publish ? "draft" : data.scheduledPublishAt ? "scheduled" : "open",
     title: data.title,
     description: data.description,
     weightKg: data.weightKg,
@@ -103,6 +83,9 @@ function toInsert(
     pickupLocationType: data.pickup.locationType,
     pickupFloor: data.pickup.floor,
     pickupHasLift: data.pickup.hasLift,
+    pickupNote: data.pickup.note,
+    pickupContactName: data.pickup.contactName,
+    pickupContactPhone: data.pickup.contactPhone,
 
     dropoffLat: data.dropoff.lat,
     dropoffLng: data.dropoff.lng,
@@ -112,6 +95,9 @@ function toInsert(
     dropoffLocationType: data.dropoff.locationType,
     dropoffFloor: data.dropoff.floor,
     dropoffHasLift: data.dropoff.hasLift,
+    dropoffNote: data.dropoff.note,
+    dropoffContactName: data.dropoff.contactName,
+    dropoffContactPhone: data.dropoff.contactPhone,
 
     pickupFrom: data.pickupFrom,
     pickupUntil: data.pickupUntil,
@@ -121,6 +107,7 @@ function toInsert(
 
     budgetCents: data.budgetCents,
     expiresAt,
+    scheduledPublishAt: data.scheduledPublishAt ?? null,
   };
 }
 
@@ -131,28 +118,30 @@ function assertOwner(listing: Listing | undefined, userId: string): Listing {
 }
 
 export const listingsService = {
-  /**
-   * @param opts.prepaid the job's client has already paid somewhere else, so
-   *   no card is required here. Passed explicitly by `expedionEscalationService`
-   *   and by nothing else: an escalated listing is owned by a system account
-   *   that no card belongs to, and its client paid in Expedion when they
-   *   accepted the quote. Inferring this from `shipperId` would make the one
-   *   caller allowed to skip the check indistinguishable from a mistake.
-   */
-  async createListing(
-    shipperId: string,
-    data: CreateListingInput,
-    opts: { prepaid?: boolean } = {}
-  ) {
+  async createListing(shipperId: string, data: CreateListingInput) {
+    const now = new Date();
+
     // A draft may sit unposted, so the pickup window is only enforced when the
     // job actually goes live.
-    if (data.publish && data.pickupFrom <= new Date()) {
+    if (data.publish && data.pickupFrom <= now) {
       throw err("PICKUP_IN_PAST", 400);
     }
 
-    if (data.publish && !opts.prepaid) await assertPayable(shipperId);
+    // A schedule is a promise to go live later; the promise itself has to be
+    // in the future, or "later" is a lie.
+    if (data.scheduledPublishAt && data.scheduledPublishAt <= now) {
+      throw err("SCHEDULED_PUBLISH_IN_PAST", 400);
+    }
 
-    const expiresAt = resolveExpiresAt(data.pickupFrom);
+    // The bidding window is measured from whichever moment the job actually
+    // reaches the board: the scheduled instant for a scheduled job, `now` for
+    // everything else (open or draft alike). A schedule whose own instant
+    // leaves no usable window (e.g. at or after `pickupFrom`) fails here with
+    // the same `PICKUP_TOO_SOON` a normal too-soon pickup already gets.
+    const expiresAt = resolveExpiresAt(
+      data.pickupFrom,
+      data.scheduledPublishAt ?? now
+    );
     // A requester describes an object, not a taxonomy node, so the category is
     // resolved here when the caller did not name one.
     const categoryId =
@@ -172,6 +161,16 @@ export const listingsService = {
       );
     }
 
+    // The system account owns every escalated listing and nobody signs into
+    // it to read an email or a bell notification — `expedionEscalationService`
+    // reaches this same method with that account's id
+    // (listing_posted_feedback_spec.md §1). A scheduled job isn't live yet
+    // either, so there is nothing to announce until the cron actually
+    // publishes it.
+    if (data.publish && !data.scheduledPublishAt && !isSystemAccount(shipperId)) {
+      await announceListingPosted(listing, shipperId);
+    }
+
     return listing;
   },
 
@@ -179,9 +178,6 @@ export const listingsService = {
     const listing = assertOwner(await listingsDal.getById(listingId), shipperId);
     if (listing.status !== "draft") throw err("LISTING_NOT_DRAFT", 409);
     if (listing.pickupFrom <= new Date()) throw err("PICKUP_IN_PAST", 400);
-    // No exemption here: `assertOwner` has already established that a person is
-    // publishing their own draft, and the system account owns no drafts.
-    await assertPayable(shipperId);
 
     return await listingsDal.update(listingId, {
       status: "open",
@@ -271,8 +267,13 @@ export const listingsService = {
     const listing = await listingsDal.getById(listingId);
     if (!listing) throw err("LISTING_NOT_FOUND", 404);
 
-    // A draft belongs to nobody but its author.
-    if (listing.status === "draft" && listing.shipperId !== viewerId) {
+    // Not yet on the board belongs to nobody but its author: `draft` because
+    // nothing has been committed to yet, `scheduled` because it has, but
+    // carriers cannot act on it until `publishScheduled` flips it live.
+    if (
+      (listing.status === "draft" || listing.status === "scheduled") &&
+      listing.shipperId !== viewerId
+    ) {
       throw err("LISTING_NOT_FOUND", 404);
     }
 
@@ -337,6 +338,64 @@ export const listingsService = {
 
     return due.length;
   },
+
+  /**
+   * Scheduled-publish cron: a job whose chosen "go live" instant has arrived.
+   *
+   * `expiresAt` was already anchored on `scheduledPublishAt` at creation time,
+   * so the common case is a plain status flip. This still re-derives it
+   * against the actual firing time rather than trusting the stored value
+   * blindly — the cron that calls this can run late — so a job whose pickup
+   * window closed in the meantime is expired instead of opened dead.
+   */
+  async publishScheduled(now = new Date()) {
+    const due = await listingsDal.findDueScheduled(now);
+    let published = 0;
+
+    for (const listing of due) {
+      let expiresAt: Date;
+      try {
+        expiresAt = resolveExpiresAt(listing.pickupFrom, now);
+      } catch {
+        // Never opened, so it never took an offer — nothing for
+        // `expirePendingOffers` to do here, unlike `expireDueListings`.
+        await listingsDal.update(listing.id, {
+          status: "expired",
+          scheduledPublishAt: null,
+        });
+        await notificationsService
+          .createNotification({
+            userId: listing.shipperId,
+            type: "listing_expired",
+            title: "Scheduled post missed its window",
+            message: `"${listing.title}" could not go live before its pickup window closed. Edit the pickup date and try again.`,
+            linkUrl: `/listing/${listing.id}`,
+            data: { listingId: listing.id },
+          })
+          .catch((e) => console.error("listing_schedule_failed notification failed", e));
+        continue;
+      }
+
+      await listingsDal.update(listing.id, {
+        status: "open",
+        expiresAt,
+        scheduledPublishAt: null,
+      });
+      await notificationsService
+        .createNotification({
+          userId: listing.shipperId,
+          type: "listing",
+          title: "Your scheduled job is live",
+          message: `"${listing.title}" is now on the board — carriers can start bidding.`,
+          linkUrl: `/listing/${listing.id}`,
+          data: { listingId: listing.id },
+        })
+        .catch((e) => console.error("listing_scheduled_published notification failed", e));
+      published++;
+    }
+
+    return published;
+  },
 };
 
 type DeliveredRow = Awaited<
@@ -392,6 +451,9 @@ function flattenUpdate(data: UpdateListingInput): Record<string, unknown> {
       pickupLocationType: pickup.locationType,
       pickupFloor: pickup.floor,
       pickupHasLift: pickup.hasLift,
+      pickupNote: pickup.note,
+      pickupContactName: pickup.contactName,
+      pickupContactPhone: pickup.contactPhone,
     });
   }
   if (dropoff) {
@@ -404,9 +466,49 @@ function flattenUpdate(data: UpdateListingInput): Record<string, unknown> {
       dropoffLocationType: dropoff.locationType,
       dropoffFloor: dropoff.floor,
       dropoffHasLift: dropoff.hasLift,
+      dropoffNote: dropoff.note,
+      dropoffContactName: dropoff.contactName,
+      dropoffContactPhone: dropoff.contactPhone,
     });
   }
   return out;
+}
+
+/**
+ * Confirmation that a direct request went live: bell notification and email,
+ * each independent and each swallowing its own failure so neither can turn a
+ * successful `createListing` into a failed response
+ * (listing_posted_feedback_spec.md §2).
+ */
+async function announceListingPosted(listing: Listing, shipperId: string) {
+  await notificationsService
+    .createNotification({
+      userId: shipperId,
+      type: "listing_posted",
+      title: "Votre demande est en ligne",
+      message: `"${listing.title}" est visible par les transporteurs.`,
+      linkUrl: `/listing/${listing.id}`,
+      data: { listingId: listing.id },
+    })
+    .catch((e) => console.error("listing_posted notification failed", e));
+
+  await sendListingPostedEmail(listing, shipperId).catch((e) =>
+    console.error("listing_posted email failed", e)
+  );
+}
+
+async function sendListingPostedEmail(listing: Listing, shipperId: string) {
+  const user = await getUserById(shipperId);
+  if (!user?.email) return;
+
+  await emailService.sendListingPostedEmail(user.email, {
+    recipientName: user.name,
+    listingTitle: listing.title,
+    pickupCity: listing.pickupCity,
+    dropoffCity: listing.dropoffCity,
+    budgetLabel: formatCurrency(listing.budgetCents),
+    listingUrl: `${process.env.NEXT_PUBLIC_APP_URL ?? "https://expeditoo.com"}/listing/${listing.id}`,
+  });
 }
 
 async function notifyOffersInvalidated(

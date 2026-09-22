@@ -6,6 +6,7 @@ import { ShipmentAssignedEmail } from "@/server/emails/ShipmentAssignedEmail";
 import { OrderConfirmationEmail } from "@/server/emails/OrderConfirmationEmail";
 import { ShipmentUpdateEmail } from "@/server/emails/ShipmentUpdateEmail";
 import { ConfirmationRequestEmail } from "@/server/emails/ConfirmationRequestEmail";
+import { TransportRequestReceivedEmail } from "@/server/emails/TransportRequestReceivedEmail";
 import { render } from "@react-email/components";
 
 export const emailService = {
@@ -213,6 +214,34 @@ export const emailService = {
     return this.sendEmail({
       to,
       subject: `🚚 ${statusTitles[status]} - ${itemTitle}`,
+      html: emailHtml,
+    });
+  },
+
+  /**
+   * Confirm a direct transport request went live on the board.
+   *
+   * Not a payment receipt — nothing is charged until a carrier is chosen
+   * (docs/specs/payment_at_booking_spec.md §4). Called from
+   * `listingsService.createListing` the moment a job publishes
+   * (docs/specs/listing_posted_feedback_spec.md §2.2).
+   */
+  async sendListingPostedEmail(
+    to: string,
+    params: {
+      recipientName?: string | null;
+      listingTitle: string;
+      pickupCity: string;
+      dropoffCity: string;
+      budgetLabel: string;
+      listingUrl: string;
+    }
+  ) {
+    const emailHtml = await render(TransportRequestReceivedEmail(params));
+
+    return this.sendEmail({
+      to,
+      subject: "Votre demande de transport est en ligne",
       html: emailHtml,
     });
   },

@@ -9,7 +9,8 @@ export type ListingStatus =
   | "in_progress"
   | "completed"
   | "cancelled"
-  | "expired";
+  | "expired"
+  | "scheduled";
 
 export type OfferStatus =
   | "pending"

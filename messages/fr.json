@@ -112,7 +112,18 @@
       "genericError": "Impossible de résoudre cet emplacement",
       "address": "Adresse",
       "postalCode": "Code postal",
-      "city": "Ville"
+      "city": "Ville",
+      "cantFindLocation": "Vous ne trouvez pas ? Collez un lien de carte",
+      "linkLabel": "Lien vers l'emplacement",
+      "linkPlaceholder": "Collez un lien Google Maps, Apple Maps ou OpenStreetMap",
+      "useLink": "Utiliser le lien",
+      "cancel": "Annuler",
+      "linkUnsupported": "Ce lien n'est pas reconnu. Essayez Google Maps, Apple Maps, Bing Maps, Waze ou OpenStreetMap.",
+      "linkNotFound": "Impossible de trouver un emplacement dans ce lien. Essayez de coller le lien complet de la carte."
+    },
+    "phoneInput": {
+      "searchPlaceholder": "Rechercher un pays ou un indicatif…",
+      "noResults": "Aucun pays trouvé"
     },
     "roles": {
       "admin": "Admin",
@@ -130,6 +141,10 @@
     },
     "version": {
       "label": "Version {version} — voir ce qui a changé"
+    },
+    "accessSwitcher": {
+      "srLabel": "Changer d'accès",
+      "addCarrierAccess": "Ajouter l'accès transporteur"
     }
   },
   "auth": {
@@ -211,6 +226,16 @@
       "bidWithRef": "Vous étiez sur le point d'enchérir sur {ref}.",
       "jobs": "Vous alliez voir le tableau complet des courses.",
       "carrier": "Vous rejoigniez le réseau de transporteurs."
+    },
+    "welcome": {
+      "title": "Qu'est-ce qui vous amène sur EXPEDITOO ?",
+      "subtitle": "Choisissez ce dont vous avez besoin en premier — vous pourrez faire l'autre plus tard.",
+      "shipTitle": "J'ai besoin d'envoyer quelque chose",
+      "shipDescription": "Publiez ce que vous devez transporter et recevez des offres de chauffeurs.",
+      "shipCta": "Demander un transport",
+      "driveTitle": "Je veux conduire et gagner de l'argent",
+      "driveDescription": "Postulez comme chauffeur, répondez à des missions et soyez payé pour vos livraisons.",
+      "driveCta": "Commencer ma candidature"
     }
   },
   "profile": {
@@ -829,26 +854,65 @@
       "what": "Quoi",
       "where": "Où",
       "when": "Quand",
-      "budget": "Budget",
-      "payment": "Paiement"
+      "budget": "Budget"
     },
     "buttons": {
       "back": "Retour",
       "saveDraft": "Enregistrer le brouillon",
       "post": "Publier la demande",
       "posting": "Publication…",
-      "next": "Suivant"
+      "next": "Suivant",
+      "schedule": "Planifier la demande"
     },
     "toast": {
       "posted": "Demande publiée — les transporteurs peuvent enchérir",
+      "scheduled": "Demande planifiée — elle sera publiée à l'heure choisie",
       "draftSaved": "Brouillon enregistré",
       "pickupTooSoon": "Le retrait est trop proche pour laisser le temps d'enchérir. Reportez-le.",
-      "failed": "Impossible de publier votre demande. Veuillez réessayer.",
-      "cardRequired": "Ajoutez une carte avant de publier — votre demande est débitée au moment où vous choisissez un transporteur."
+      "schedulePast": "Cette heure de publication est trop proche ou déjà passée. Choisissez-en une plus tard.",
+      "failed": "Impossible de publier votre demande. Veuillez réessayer."
     },
     "what": {
       "titleLabel": "Que transportez-vous ?",
-      "titlePlaceholder": "Un canapé deux places et une table basse",
+      "titlePlaceholder": "Un canapé deux places",
+      "addItem": "Ajouter un autre objet",
+      "itemLabel": "Objet {n}",
+      "removeItem": "Supprimer cet objet",
+      "itemSuggestionsLabel": "Suggestions",
+      "itemSuggestions": {
+        "watch": "Montre",
+        "parcel": "Colis",
+        "suitcase": "Valise",
+        "movingBox": "Carton de déménagement",
+        "booksBox": "Carton de livres",
+        "computer": "Ordinateur",
+        "printer": "Imprimante",
+        "artwork": "Tableau",
+        "washingMachine": "Lave-linge",
+        "dryer": "Sèche-linge",
+        "dishwasher": "Lave-vaisselle",
+        "armchair": "Fauteuil",
+        "chair": "Chaise",
+        "mirror": "Miroir",
+        "tv": "Télévision",
+        "bike": "Vélo",
+        "scooter": "Trottinette",
+        "lawnMower": "Tondeuse à gazon",
+        "sofa": "Canapé",
+        "mattress": "Matelas",
+        "fridge": "Réfrigérateur",
+        "diningTable": "Table à manger",
+        "desk": "Bureau",
+        "bookshelf": "Bibliothèque",
+        "gardenFurniture": "Mobilier de jardin",
+        "treadmill": "Tapis de course",
+        "motorbike": "Moto",
+        "furniture": "Meuble",
+        "doubleBed": "Lit double",
+        "wardrobe": "Armoire",
+        "piano": "Piano",
+        "pallet": "Palette"
+      },
       "descriptionLabel": "Détails",
       "descriptionPlaceholder": "Décrivez le chargement, l'accès, et tout ce qu'un transporteur doit savoir avant d'enchérir.",
       "weight": "Poids",
@@ -858,6 +922,8 @@
       "height": "Hauteur (cm)",
       "fragile": "Fragile",
       "fragileHint": "Nécessite une manipulation soignée",
+      "fragileNoteLabel": "Note pour le transporteur (facultatif)",
+      "fragileNotePlaceholder": "ex. plateau en verre, à garder à l'endroit",
       "help": "Aide au chargement",
       "helpHint": "Le transporteur doit aider à charger et décharger",
       "photos": "Photos (facultatif)",
@@ -886,6 +952,10 @@
         "over1000": {
           "label": "Plus d'1 t",
           "example": "Indiquez le poids"
+        },
+        "notSure": {
+          "label": "Je ne sais pas",
+          "example": "Nous choisirons un véhicule adapté à la plupart des objets"
         }
       },
       "size": "Taille (facultatif)",
@@ -926,7 +996,13 @@
       "select": "Sélectionner",
       "floor": "Étage",
       "lift": "Ascenseur disponible",
-      "liftHint": "Y a-t-il un ascenseur jusqu'à cet étage ?"
+      "liftHint": "Y a-t-il un ascenseur jusqu'à cet étage ?",
+      "noteLabel": "Note pour le transporteur (facultatif)",
+      "notePlaceholder": "Ex : 2ème étage, après la porte rouge",
+      "contactName": "Nom du contact (facultatif)",
+      "contactNamePlaceholder": "La personne que le transporteur doit demander",
+      "contactPhone": "Téléphone du contact",
+      "contactPhonePlaceholder": "06 12 34 56 78"
     },
     "locationTypes": {
       "house": "Maison",
@@ -944,28 +1020,39 @@
       "other": "Autre"
     },
     "when": {
-      "pickupFrom": "Retrait à partir du",
-      "pickupUntil": "Retrait jusqu'au",
-      "dropoffFrom": "Livraison à partir du",
-      "dropoffUntil": "Livraison jusqu'au",
-      "flexible": "Les dates sont flexibles",
-      "flexibleHint": "Laissez les transporteurs proposer des horaires hors de vos créneaux"
+      "modeLabel": "Vos dates sont-elles fixes ?",
+      "mode": {
+        "exact": "Date précise",
+        "exactHint": "Choisissez une heure précise d'enlèvement et de livraison.",
+        "flexible": "Flexible",
+        "flexibleHint": "Donnez une plage de dates — les transporteurs peuvent aussi proposer en dehors."
+      },
+      "pickupTitle": "Enlèvement",
+      "dropoffTitle": "Livraison",
+      "dateLabel": "Date",
+      "fromDateLabel": "Du",
+      "untilDateLabel": "Au",
+      "slotLabel": "Moment de la journée",
+      "hourLabel": "Heure précise",
+      "slotPreferenceLabel": "Moment de la journée préféré",
+      "slotPreferenceHint": "Facultatif — resserre votre créneau, les transporteurs peuvent tout de même proposer en dehors.",
+      "slot": {
+        "any": "N'importe quand",
+        "morning": "Matin",
+        "afternoon": "Après-midi",
+        "evening": "Soir"
+      }
     },
     "budget": {
-      "label": "Combien pensez-vous payer ? (€)",
-      "hint": "C'est une estimation, pas une limite. Les transporteurs peuvent enchérir au-dessus ou en dessous, et vous choisissez l'offre que vous acceptez."
-    },
-    "payment": {
-      "title": "Votre moyen de paiement",
-      "description": "Ajoutez une carte maintenant. Rien n'est débité pour l'instant : aucun transporteur n'a encore enchéri, il n'y a donc pas de montant.",
-      "savedDescription": "C'est la carte qui sera débitée pour cette demande.",
-      "chargedLater": "Débitée au moment où vous choisissez un transporteur, du montant de son enchère.",
-      "cardFallback": "Carte",
-      "unavailable": "Le paiement par carte est indisponible pour le moment. Enregistrez un brouillon et publiez-le dès son rétablissement.",
-      "saveCard": "Enregistrer la carte",
-      "saving": "Enregistrement…",
-      "saved": "Carte enregistrée",
-      "saveFailed": "Impossible d'enregistrer cette carte. Veuillez réessayer."
+      "label": "Combien pensez-vous payer ?",
+      "hint": "C'est une estimation, pas une limite. Les transporteurs peuvent enchérir au-dessus ou en dessous, et vous choisissez l'offre que vous acceptez.",
+      "publish": {
+        "label": "Quand cette demande doit-elle être publiée ?",
+        "now": "Maintenant",
+        "schedule": "Planifier",
+        "pickerLabel": "Publier le",
+        "hint": "Votre demande reste invisible pour les transporteurs jusqu'à ce moment."
+      }
     },
     "dropzone": {
       "title": "Ajouter des photos",
@@ -979,8 +1066,9 @@
       "tooMany": "Seules {count} photos ont été ajoutées — la limite est de {max}."
     },
     "validation": {
-      "titleShort": "Au moins 5 caractères",
-      "descriptionShort": "Au moins 20 caractères",
+      "titleShort": "Au moins 2 caractères",
+      "descriptionShort": "Au moins 5 caractères",
+      "fragileNoteMax": "300 caractères maximum",
       "aboveZero": "Doit être supérieur à 0",
       "weightMax": "Cela dépasse les 44 t que nous pouvons transporter",
       "dimensionsPartial": "Indiquez les trois dimensions, ou aucune",
@@ -998,7 +1086,13 @@
       "deliveryWindow": "Le créneau de livraison doit se terminer après son début",
       "budgetRequired": "Indiquez le montant que vous prévoyez",
       "weightRequired": "Choisissez une tranche de poids",
-      "weightAboveBracket": "Indiquez un poids supérieur à 1 000 kg"
+      "weightAboveBracket": "Indiquez un poids supérieur à 1 000 kg",
+      "noteMax": "300 caractères maximum",
+      "contactNameMax": "120 caractères maximum",
+      "invalidPhone": "Indiquez un numéro de téléphone valide",
+      "scheduledPublishRequired": "Choisissez une date et une heure de publication",
+      "scheduledPublishPast": "Choisissez un moment dans le futur",
+      "scheduledPublishAfterPickup": "Publiez avant le début du créneau de retrait"
     }
   },
   "myJobs": {
@@ -1030,6 +1124,7 @@
     },
     "status": {
       "draft": "Brouillon",
+      "scheduled": "Planifiée",
       "open": "Ouverte",
       "awarded": "Attribuée",
       "in_progress": "En cours",
@@ -1239,6 +1334,7 @@
       "review": "Avis",
       "payment": "Paiement",
       "listing": "Annonce",
+      "listing_posted": "Demande publiée",
       "shipment_assigned": "Livraison assignée",
       "shipment_cancelled": "Transport annulé",
       "shipment_withdrawn": "Transporteur désisté",
@@ -1948,7 +2044,8 @@
       "withdrawals": "Retraits",
       "expedionClients": "Clients Expedion",
       "incidents": "Incidents",
-      "feedback": "Retours"
+      "feedback": "Retours",
+      "settings": "Paramètres"
     },
     "table": {
       "rowsSelected": "{count} sur {total} ligne(s) sélectionnée(s)",
@@ -1999,7 +2096,8 @@
         "never": "Jamais",
         "joinDate": "Inscription",
         "role": "Rôle",
-        "actions": "Actions"
+        "actions": "Actions",
+        "removeRole": "Retirer {role}"
       },
       "status": {
         "active": "actif",
@@ -2823,7 +2921,8 @@
         }
       },
       "checklist": {
-        "title": "Avant de pouvoir soumettre",
+        "title": "À compléter avant de pouvoir enchérir",
+        "description": "Non requis pour soumettre — à compléter maintenant ou une fois votre dossier approuvé.",
         "documents": "Tous les documents requis téléversés",
         "banking": "Coordonnées bancaires enregistrées",
         "vehicle": "Au moins un véhicule dans votre flotte",
@@ -2893,8 +2992,6 @@
       "siretTaken": "Ce SIRET est déjà rattaché à un autre compte transporteur",
       "submitted": "Candidature envoyée pour examen",
       "submitFailed": "Envoi impossible",
-      "incomplete": "Votre candidature est incomplète",
-      "incompleteDescription": "Vérifiez les éléments signalés ci-dessous.",
       "withdrawn": "Candidature retirée — elle est de nouveau modifiable",
       "withdrawFailed": "Retrait impossible",
       "bankingSaved": "Coordonnées bancaires enregistrées",
@@ -3061,6 +3158,15 @@
       "untitled": "Mission de transport",
       "action": "Ouvrir la course"
     },
+    "myRequest": {
+      "title": "Votre demande",
+      "action": "Voir ma demande"
+    },
+    "cardNudge": {
+      "title": "Ajoutez une carte pour accepter des offres",
+      "description": "Une de vos demandes est ouverte aux offres, mais vous n'avez pas encore de carte enregistrée. Les transporteurs peuvent toujours enchérir, mais vous ne pourrez pas accepter une offre tant que vous n'en avez pas ajouté une.",
+      "action": "Ajouter une carte"
+    },
     "stats": {
       "openJobs": "Missions ouvertes aux offres",
       "activeRuns": "Courses en cours",
@@ -3224,6 +3330,17 @@
       "blocked": "Ouvrir mon dossier",
       "none": "Devenir transporteur"
     }
+  },
+  "platformSettings": {
+    "title": "Paramètres",
+    "subtitle": "Économie de la plateforme.",
+    "feeLabel": "Frais de plateforme",
+    "feeHint": "Ajoutés au budget au moment de l'attribution — distincts de la commission du transporteur.",
+    "save": "Enregistrer",
+    "saving": "Enregistrement…",
+    "saved": "Paramètres enregistrés",
+    "saveFailed": "Impossible d'enregistrer. Veuillez réessayer.",
+    "lastChanged": "Dernière modification {date}"
   },
   "confirm": {
     "title": {

@@ -23,7 +23,13 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  /** The strongest role held — still used for sorting and the KYC dialog's
+   * "current role" line. Display now reads `roles` instead: an account
+   * commonly holds more than one, and collapsing to this one is what used to
+   * make a support or finance account read "Shipper" in this table. */
   role: string;
+  /** Every role the account holds, in `user_roles` order. */
+  roles: string[];
   /** `pending` is an account that has never verified its email address. */
   status: "active" | "suspended" | "pending";
   joinDate: string;

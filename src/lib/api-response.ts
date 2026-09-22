@@ -19,6 +19,8 @@ import { ThreadOfferError } from "@/server/services/thread-offers.service";
 import { StripeConnectError } from "@/server/services/stripe.service";
 import { FeedbackError } from "@/server/services/feedback.service";
 import { StorageError } from "@/server/services/storage/storage-error";
+import { MapLinkError } from "@/server/services/map-link.service";
+import { PlatformSettingsError } from "@/server/services/platform-settings.service";
 
 /**
  * Shared response shape for the REST layer.
@@ -68,7 +70,9 @@ export function handleError(error: unknown, context: string) {
     // button had nothing to say.
     error instanceof StripeConnectError ||
     error instanceof FeedbackError ||
-    error instanceof StorageError
+    error instanceof StorageError ||
+    error instanceof MapLinkError ||
+    error instanceof PlatformSettingsError
   ) {
     return fail(error.code, error.message, error.status);
   }

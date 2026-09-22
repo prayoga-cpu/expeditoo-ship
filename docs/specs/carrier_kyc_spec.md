@@ -98,24 +98,47 @@ draft ──submit──► submitted ──admin opens──► under_review
 
 ## 3. Submission requirements
 
-`POST /api/carrier/application/submit` validates that **all** of the following hold,
-returning `400 INCOMPLETE_APPLICATION` with a `missing: string[]` listing every gap
-at once — never one error at a time:
+**Applying is deliberately thin.** `POST /api/carrier/application/submit` gates on
+nothing beyond having a carrier row — no document, no banking detail, no vehicle.
+The only requirements are the profile fields `POST /api/carrier/application`
+(create/update the `draft`) already enforces before a row can exist at all, so
+there is nothing left for `/submit` itself to check:
 
 | Requirement | Rule |
 |---|---|
 | `companyName` | 2–200 chars |
-| `siret` | Exactly 14 digits, **Luhn-valid** → else `400 INVALID_SIRET` |
+| `siret` | Exactly 14 digits → else `400 INVALID_SIRET` (format only, no checksum — a real registry lookup is the admin reviewer's job at approval, and a Luhn check rejected well-formed numbers along with genuine typos) |
 | `vatNumber` | If present, `/^FR[0-9A-Z]{2}\d{9}$/` |
 | `contactPhone` | Valid French number (`+33` or `0` + 9 digits) |
+| `addressLine`, `city` | Non-empty |
 | `postalCode` | `/^\d{5}$/` |
-| Documents | `cni_recto`, `cni_verso`, `driving_licence`, `kbis`, `insurance_certificate`, `rib` all uploaded |
+
+Documents, banking and vehicles are **optional at submission**. Vehicles
+(`/carrier/fleet`) have no status gate at all and can be added any time. Profile
+fields and documents/banking follow the state machine in §2: open while `draft`,
+locked while `submitted`/`under_review`, open again once review ends —
+`approved` or `rejected` — since §6 approval does not require them either. Each
+item stays validated on its own endpoint when supplied:
+
+| Item | Rule, enforced when the item is uploaded/saved |
+|---|---|
+| Documents | `cni_recto`, `cni_verso`, `driving_licence`, `insurance_certificate`, `rib` are the kinds `REQUIRED_DOCUMENT_KINDS` (`carrier-constants.ts`) calls "required" — a label the review UI and the document-expiry cron (§7) use, not a submission gate |
 | IBAN | Valid French IBAN, **mod-97 checksum** → else `400 INVALID_IBAN` |
 | BIC | `/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/` |
-| Vehicles | ≥ 1 vehicle with `maxWeightKg > 0` and a plate matching `/^[A-Z]{2}-\d{3}-[A-Z]{2}$/` |
+| Vehicles | `maxWeightKg > 0` and a plate matching `/^[A-Z]{2}-\d{3}-[A-Z]{2}$/` |
 
-`transport_licence` is required only when any vehicle is `truck_7_5t` or heavier
-(French regulation) → else `400 TRANSPORT_LICENCE_REQUIRED`.
+`transport_licence` is the document French regulation requires once any vehicle
+is `truck_7_5t` or heavier, but nothing in the system enforces it — adding a
+heavy vehicle does not check for one, and neither does submission or approval
+now that both skip the completeness gate entirely. It is a reviewer judgment
+call at approval, same as the SIRET registry lookup above. A carrier with no
+vehicle at all cannot bid regardless — an offer names the vehicle that will do
+the job (`offers_engine_spec.md` §3) — so an empty fleet gates bidding on its
+own without any application-status check.
+
+The product intent: a driver should be able to apply in minutes with just their
+company and contact details, get approved by an admin on that alone, and fill in
+documents, banking and their vehicle afterward at their own pace.
 
 ---
 
@@ -144,12 +167,12 @@ KYC documents are identity documents. They are **not** public assets.
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
 | `POST` | `/api/carrier/application` | authenticated | Create or update the `draft` |
-| `POST` | `/api/carrier/application/submit` | owner | `draft` → `submitted`, §3 gate |
+| `POST` | `/api/carrier/application/submit` | owner | `draft`/`rejected` → `submitted` (§3) |
 | `POST` | `/api/carrier/application/withdraw` | owner | `submitted` → `draft` |
 | `GET` | `/api/carrier/application` | owner | Own application + document status |
 | `POST` | `/api/carrier/documents` | owner | Upload one document |
 | `GET` | `/api/carrier/documents/:id` | owner or admin | Presigned 5-min URL |
-| `GET`/`POST`/`PATCH`/`DELETE` | `/api/carrier/vehicles[/:id]` | approved carrier | Fleet management |
+| `GET`/`POST`/`PATCH`/`DELETE` | `/api/carrier/vehicles[/:id]` | owner, any status | Fleet management — no approval gate; a carrier can register a vehicle while still `draft` (§3) |
 | `GET` | `/api/admin/carrier-applications` | admin | Review queue, filter by status |
 | `POST` | `/api/admin/carrier-applications/:id/approve` | admin | §6 |
 | `POST` | `/api/admin/carrier-applications/:id/reject` | admin | Requires `reason` |
@@ -174,6 +197,12 @@ Transactional:
 Rejection sets `rejected` + `rejectionReason`, grants no role, and emails the reason.
 Approving an already-`approved` carrier is a no-op returning `200` — idempotent.
 
+**Approval does not require a complete file.** It has no gate on documents,
+banking or a vehicle — an admin can approve a `submitted` application on the
+company and contact details alone and let the carrier add the rest afterward
+(§3, edge case 8). Step 3 above marks whatever documents exist as `accepted`;
+zero documents is not an error.
+
 ---
 
 ## 7. Document expiry
@@ -196,10 +225,11 @@ A daily cron (`docs/specs/cron_spec.md`):
 | 1 | SIRET already registered to another carrier | `409 SIRET_ALREADY_REGISTERED` |
 | 2 | Carrier edits company details after approval | `companyName`/address editable; `siret` and IBAN require re-review → status back to `under_review`, bidding paused |
 | 3 | Vehicle deleted while referenced by a live offer | Blocked — `ON DELETE RESTRICT` (`offers_engine_spec.md` edge case 5). Deactivate (`isActive = false`) instead |
-| 4 | Application submitted with an expired document | `400 DOCUMENT_ALREADY_EXPIRED` |
+| 4 | Document uploaded with an expiry date already in the past | `400 DOCUMENT_ALREADY_EXPIRED`, at upload time — `/submit` no longer inspects documents at all (§3) |
 | 5 | User already holds the `carrier` role but has no `carriers` row | Treated as not approved; `CARRIER_NOT_APPROVED` |
 | 6 | Two admins approve concurrently | Idempotent (§6); the second is a no-op |
 | 7 | Carrier suspended with money in flight | Existing shipments complete and pay out normally |
+| 8 | Admin approves an application with no documents, banking or vehicle | Allowed — `approve` (§6) does not gate on completeness. The carrier is approved and adds the rest afterward, but cannot actually bid until a vehicle exists (§3) |
 
 ---
 
@@ -207,10 +237,12 @@ A daily cron (`docs/specs/cron_spec.md`):
 
 `src/server/services/__tests__/carrier.service.test.ts`:
 
-- SIRET Luhn validation and IBAN mod-97, both valid and invalid vectors.
-- `INCOMPLETE_APPLICATION` reports **all** gaps at once, not the first.
+- SIRET's 14-digit format check and IBAN mod-97, both valid and invalid vectors.
+- `submitApplication` succeeds with no documents, banking or vehicle on file
+  (§3) — and still refuses a second submission or a suspended carrier.
 - The full §2 state machine, including every illegal transition.
-- Approval grants the role and is idempotent (edge case 6).
+- Approval grants the role and is idempotent (edge case 6), and succeeds on an
+  incomplete file (edge case 8).
 - Documents are never returned as a public URL (§4.2) — assert the presigned path.
 - The full IBAN never appears in any DB row or API response (§4.3).
 - Auto-suspension on required-document expiry (§7).

@@ -26,20 +26,23 @@ interface NavItem {
 
 import { useUnreadMessages } from "@/features/app/messages/hooks";
 import { useAuth } from "@/lib/auth-context";
+import { useActiveAccessMode } from "@/lib/use-active-access-mode";
 
 export function BottomNav() {
   const pathname = usePathname();
   const { unreadCount } = useUnreadMessages();
   const t = useTranslations("common.navigation");
   const { user } = useAuth();
+  const { mode } = useActiveAccessMode();
 
-  // Roles come from the session (customSession plugin in src/lib/auth.ts).
-  // Carrier outranks driver: the company account manages fleet and KYC, while
-  // a driver only executes shipments; a shipper who is neither sees the
-  // default posting bar.
+  // Which bar renders is the same "access mode" MainLayout's desktop
+  // sidebar reads (use-active-access-mode.ts) — the two used to disagree,
+  // this one deciding from raw role flags on its own. Carrier outranks
+  // driver within that mode: the company account manages fleet and KYC,
+  // while a driver only executes shipments.
   const roles = user?.roles ?? [];
-  const isCarrier = roles.includes("carrier");
-  const isDriver = roles.includes("driver");
+  const isCarrier = mode === "carrier" && roles.includes("carrier");
+  const isDriver = mode === "carrier" && roles.includes("driver");
 
   const messages: NavItem = {
     href: "/messages",

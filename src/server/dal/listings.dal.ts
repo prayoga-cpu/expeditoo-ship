@@ -424,6 +424,16 @@ export const listingsDal = {
     });
   },
 
+  /** Scheduled jobs whose go-live instant has arrived, for the publish cron. */
+  async findDueScheduled(now: Date, tx: Executor = db) {
+    return await tx.query.listings.findMany({
+      where: and(
+        eq(listings.status, "scheduled"),
+        lte(listings.scheduledPublishAt, now)
+      ),
+    });
+  },
+
   async incrementViews(id: string, tx: Executor = db) {
     await tx
       .update(listings)

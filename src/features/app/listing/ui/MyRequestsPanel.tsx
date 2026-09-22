@@ -18,10 +18,12 @@ import { CenteredEmptyState } from "@/components/ui/centered-empty-state";
 import { PageLoader } from "@/components/ui/page-loader";
 import { formatCurrency } from "@/lib/currency";
 import { useMyRequests } from "../hooks/useMyRequests";
+import { STATUS_TONE } from "../statusTone";
 import type { Job, ListingStatus } from "../types";
 
 const STATUSES: ListingStatus[] = [
   "draft",
+  "scheduled",
   "open",
   "awarded",
   "in_progress",
@@ -29,17 +31,6 @@ const STATUSES: ListingStatus[] = [
   "cancelled",
   "expired",
 ];
-
-/** Theme-token tones so the badge reads correctly in light and dark. */
-const STATUS_TONE: Record<ListingStatus, string> = {
-  draft: "bg-muted text-muted-foreground border-border",
-  open: "bg-success/15 text-success border-success/30",
-  awarded: "bg-primary/15 text-primary border-primary/30",
-  in_progress: "bg-primary/15 text-primary border-primary/30",
-  completed: "bg-muted text-muted-foreground border-border",
-  cancelled: "bg-destructive/15 text-destructive border-destructive/30",
-  expired: "bg-warning/15 text-warning border-warning/30",
-};
 
 /** Every request the caller has posted, in any state. */
 export function MyRequestsPanel() {

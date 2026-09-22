@@ -16,6 +16,7 @@ import {
   KeyRound,
   LogOut,
   Copy,
+  X,
 } from "lucide-react";
 import { LottieLoader } from "@/components/ui/lottie-loader";
 import {
@@ -64,11 +65,82 @@ interface UsersTableProps {
   onRemoveDriver?: (user: User) => void;
   onUserUpdated?: (user: User) => void;
   onViewProfile?: (user: User) => void;
+  /** Additive assignment goes through `onManageRole`'s dialog; this is the
+   * inverse, one role at a time, from a chip's own dismiss control. Omitted
+   * entirely keeps the chips read-only rather than showing a control that
+   * would just 403. */
+  onRemoveRole?: (
+    user: User,
+    role: string
+  ) => Promise<{ success: boolean; message: string }>;
   viewMode?: "users" | "drivers";
   className?: string;
   tableMinHeight?: string;
   /** Seeds the search box — see `DataTable.initialSearch`. */
   initialSearch?: string;
+}
+
+/**
+ * Every role the account holds, not the single collapsed one — the primary
+ * role a support or finance account read "Shipper" in this table is exactly
+ * how that bug hid (map-api-user.ts). Each chip can remove itself once there
+ * is more than one; the server refuses to take the last role either way
+ * (user.service.ts `removeRole`), this just avoids offering a control that
+ * would only ever answer with that refusal.
+ */
+function RoleBadges({
+  user,
+  onRemoveRole,
+}: {
+  user: User;
+  onRemoveRole?: UsersTableProps["onRemoveRole"];
+}) {
+  const t = useTranslations("admin.roles");
+  const tTable = useTranslations("admin.users.table");
+  const { toast } = useToast();
+  const [removing, setRemoving] = useState<string | null>(null);
+
+  const handleRemove = async (role: string) => {
+    if (!onRemoveRole) return;
+    setRemoving(role);
+    try {
+      const result = await onRemoveRole(user, role);
+      if (!result.success) {
+        toast({ description: result.message, variant: "destructive" });
+      }
+    } catch (error) {
+      toast({
+        description: error instanceof Error ? error.message : String(error),
+        variant: "destructive",
+      });
+    } finally {
+      setRemoving(null);
+    }
+  };
+
+  return (
+    <div className="flex flex-wrap gap-1">
+      {user.roles.map((role) => {
+        const label = t.has(role) ? t(role) : role;
+        return (
+          <Badge key={role} variant="secondary" className="gap-1 text-xs capitalize">
+            {label}
+            {onRemoveRole && user.roles.length > 1 && (
+              <button
+                type="button"
+                disabled={removing === role}
+                onClick={() => handleRemove(role)}
+                className="rounded-full hover:bg-muted-foreground/20 disabled:opacity-50"
+                aria-label={tTable("removeRole", { role: label })}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
+          </Badge>
+        );
+      })}
+    </div>
+  );
 }
 
 function StatusBadge({ status }: { status: User["status"] }) {
@@ -302,6 +374,7 @@ export function UsersTable({
   onRemoveDriver,
   onUserUpdated,
   onViewProfile,
+  onRemoveRole,
   viewMode = "users",
   className,
   tableMinHeight,
@@ -498,9 +571,7 @@ export function UsersTable({
           <DataTableColumnHeader column={column} title={tTable("role")} />
         ),
         cell: ({ row }) => (
-          <Badge variant="secondary" className="text-xs capitalize">
-            {row.original.role}
-          </Badge>
+          <RoleBadges user={row.original} onRemoveRole={onRemoveRole} />
         ),
       },
       {

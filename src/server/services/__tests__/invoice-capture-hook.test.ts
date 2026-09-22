@@ -108,6 +108,11 @@ vi.mock("@/server/services/invoices.service", () => ({
     createCreditNoteForPayment: vi.fn().mockResolvedValue({ id: "cn-1" }),
   },
 }));
+vi.mock("@/server/services/platform-settings.service", () => ({
+  platformSettingsService: { getFeeBasisPoints: vi.fn().mockResolvedValue(0) },
+  platformFeeFor: (amountCents: number, feeBasisPoints: number) =>
+    Math.round((amountCents * feeBasisPoints) / 10_000),
+}));
 
 import { paymentsService } from "../payments.service";
 import { invoicesService } from "@/server/services/invoices.service";

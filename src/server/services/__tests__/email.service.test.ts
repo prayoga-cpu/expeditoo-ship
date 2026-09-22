@@ -35,6 +35,7 @@ vi.mock('@/server/emails/PaymentReceiptEmail', () => ({ PaymentReceiptEmail: vi.
 vi.mock('@/server/emails/ItemPaidSellerEmail', () => ({ ItemPaidSellerEmail: vi.fn() }));
 vi.mock('@/server/emails/ShipmentAssignedEmail', () => ({ ShipmentAssignedEmail: vi.fn() }));
 vi.mock('@/server/emails/ShipmentUpdateEmail', () => ({ ShipmentUpdateEmail: vi.fn() }));
+vi.mock('@/server/emails/TransportRequestReceivedEmail', () => ({ TransportRequestReceivedEmail: vi.fn() }));
 
 describe('emailService', () => {
     beforeEach(() => {
@@ -74,6 +75,25 @@ describe('emailService', () => {
             expect(mocks.send).toHaveBeenCalledWith(expect.objectContaining({
                 to: 'user@test.com',
                 subject: 'Welcome to Expeditoo!'
+            }));
+        });
+    });
+
+    describe('sendListingPostedEmail', () => {
+        it('should render template and send email to the poster', async () => {
+            await emailService.sendListingPostedEmail('user@test.com', {
+                recipientName: 'Jane',
+                listingTitle: 'Sofa to Marseille',
+                pickupCity: 'Lyon',
+                dropoffCity: 'Marseille',
+                budgetLabel: '250,00 €',
+                listingUrl: 'https://expeditoo.com/listing/job-1',
+            });
+
+            expect(mocks.render).toHaveBeenCalled();
+            expect(mocks.send).toHaveBeenCalledWith(expect.objectContaining({
+                to: 'user@test.com',
+                subject: 'Votre demande de transport est en ligne'
             }));
         });
     });

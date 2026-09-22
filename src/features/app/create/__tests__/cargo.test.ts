@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   HEAVY_BRACKET_ID,
+  ITEM_SUGGESTIONS,
   SIZE_PRESET_DIMENSIONS,
   SIZE_PRESET_IDS,
+  UNSURE_BRACKET_ID,
   WEIGHT_BRACKET_IDS,
   WEIGHT_BRACKET_MAX_KG,
   resolveDimensions,
@@ -34,8 +36,15 @@ describe("weight brackets", () => {
     expect(resolveWeightKg("upTo1000", undefined)).toBe(1000);
   });
 
+  it("resolves 'I'm not sure' to the upTo500 ceiling", () => {
+    expect(resolveWeightKg(UNSURE_BRACKET_ID, undefined)).toBe(500);
+  });
+
   it("climbs, never falls: each ceiling is above the one before it", () => {
-    const ceilings: (number | null)[] = WEIGHT_BRACKET_IDS.map(
+    // `notSure` is not a rung on the ladder — it is a separate escape hatch
+    // parked at the end, so it is excluded from the monotonic check.
+    const ladder = WEIGHT_BRACKET_IDS.filter((id) => id !== UNSURE_BRACKET_ID);
+    const ceilings: (number | null)[] = ladder.map(
       (id) => WEIGHT_BRACKET_MAX_KG[id]
     );
     const stated = ceilings.filter((kg) => kg !== null);
@@ -117,5 +126,34 @@ describe("size presets", () => {
         heightCm: 70,
       })
     ).toEqual(SIZE_PRESET_DIMENSIONS.s);
+  });
+});
+
+describe("item suggestions", () => {
+  it("points every suggestion at a real weight bracket", () => {
+    for (const suggestion of ITEM_SUGGESTIONS) {
+      expect(WEIGHT_BRACKET_IDS).toContain(suggestion.weightBracket);
+    }
+  });
+
+  it("points every suggestion with a size at a real preset", () => {
+    for (const suggestion of ITEM_SUGGESTIONS) {
+      if (!("sizePreset" in suggestion)) continue;
+      expect(SIZE_PRESET_IDS).toContain(suggestion.sizePreset);
+    }
+  });
+
+  it("never suggests the freight or unsure brackets", () => {
+    // Both ask a follow-up question rather than describing a typical item;
+    // neither belongs behind a typed-item shortcut.
+    for (const suggestion of ITEM_SUGGESTIONS) {
+      expect(suggestion.weightBracket).not.toBe(HEAVY_BRACKET_ID);
+      expect(suggestion.weightBracket).not.toBe(UNSURE_BRACKET_ID);
+    }
+  });
+
+  it("has no duplicate ids", () => {
+    const ids = ITEM_SUGGESTIONS.map((s) => s.id);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 });

@@ -73,9 +73,15 @@ export interface DriverShipment {
   pickupLat: number;
   pickupLng: number;
   pickupAddress: string;
+  pickupNote: string | null;
+  pickupContactName: string | null;
+  pickupContactPhone: string | null;
   dropoffLat: number;
   dropoffLng: number;
   dropoffAddress: string;
+  dropoffNote: string | null;
+  dropoffContactName: string | null;
+  dropoffContactPhone: string | null;
   scheduledPickup: string | null;
   scheduledDelivery: string | null;
   pickedUpAt: string | null;

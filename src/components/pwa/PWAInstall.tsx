@@ -11,8 +11,20 @@ export function PWAInstall() {
   const pwaInstallRef = useRef<PWAInstallElement | null>(null);
 
   useEffect(() => {
-    // Dynamic import to ensure it only runs on client and after mount
-    import("@khmyznikov/pwa-install");
+    // Already code-split via the dynamic import, but this mounts in the root
+    // layout, so every page — including a signup form or a Stripe payment
+    // step — was firing it the instant hydration finished, competing with
+    // whatever that page actually needed. The install prompt has nothing to
+    // offer for several seconds regardless, so idle time is soon enough.
+    const load = () => {
+      import("@khmyznikov/pwa-install");
+    };
+    if (typeof requestIdleCallback === "function") {
+      const id = requestIdleCallback(load, { timeout: 3000 });
+      return () => cancelIdleCallback(id);
+    }
+    const id = setTimeout(load, 1500);
+    return () => clearTimeout(id);
   }, []);
 
   return (

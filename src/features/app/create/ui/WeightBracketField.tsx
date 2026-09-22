@@ -28,7 +28,9 @@ export function WeightBracketField({ form }: { form: JobFormApi["form"] }) {
 
   return (
     <fieldset className="space-y-3">
-      <legend className="text-sm font-medium">{t("weight")}</legend>
+      <legend className="text-sm font-medium">
+        {t("weight")} <span aria-hidden="true" className="text-destructive">*</span>
+      </legend>
 
       <RadioGroup
         value={bracket ?? ""}
@@ -54,7 +56,9 @@ export function WeightBracketField({ form }: { form: JobFormApi["form"] }) {
 
       {bracket === HEAVY_BRACKET_ID && (
         <div>
-          <Label htmlFor="exactWeightKg">{t("weightExact")}</Label>
+          <Label htmlFor="exactWeightKg" required>
+            {t("weightExact")}
+          </Label>
           <Input
             id="exactWeightKg"
             type="number"

@@ -8,11 +8,16 @@ vi.mock("@/server/services/offers.service", () => ({
 vi.mock("@/server/services/notifications.service", () => ({
   notificationsService: { createNotification: vi.fn().mockResolvedValue({}) },
 }));
-// A job only reaches the board once its poster can be charged
-// (docs/specs/payment_at_booking_spec.md §4). Defaulted to "has a card" so the
-// cases below stay about publishing; the ones that care override it.
-vi.mock("@/server/services/payments.service", () => ({
-  paymentsService: { hasSavedCard: vi.fn() },
+vi.mock("@/server/services/email.service", () => ({
+  emailService: { sendListingPostedEmail: vi.fn().mockResolvedValue(true) },
+}));
+vi.mock("@/server/dal/users.dal", () => ({
+  getUserById: vi
+    .fn()
+    .mockResolvedValue({ id: "user-1", name: "Jane", email: "jane@example.com" }),
+}));
+vi.mock("@/server/services/account-policy", () => ({
+  isSystemAccount: (id: string) => id === "system-account",
 }));
 
 import {
@@ -23,7 +28,9 @@ import {
 import { listingsDal } from "@/server/dal/listings.dal";
 import { shipmentsDal } from "@/server/dal/shipments.dal";
 import { offersService } from "@/server/services/offers.service";
-import { paymentsService } from "@/server/services/payments.service";
+import { notificationsService } from "@/server/services/notifications.service";
+import { emailService } from "@/server/services/email.service";
+import { getUserById } from "@/server/dal/users.dal";
 
 const HOUR = 60 * 60 * 1000;
 const MINUTE = 60 * 1000;
@@ -57,7 +64,6 @@ beforeEach(() => {
     listDeliveredForListings: vi.fn().mockResolvedValue([]),
   });
   vi.mocked(offersService.expirePendingOffers).mockResolvedValue([]);
-  vi.mocked(paymentsService.hasSavedCard).mockResolvedValue(true);
 });
 
 async function codeFrom(fn: () => Promise<unknown>): Promise<string> {
@@ -468,6 +474,64 @@ describe("createListing", () => {
 
     expect(code).toBe("PICKUP_TOO_SOON");
   });
+
+  // listing_posted_feedback_spec.md §1-2
+  describe("submission feedback", () => {
+    it("notifies and emails the poster once a request publishes", async () => {
+      await listingsService.createListing("user-1", createInput());
+
+      expect(notificationsService.createNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: "user-1",
+          type: "listing_posted",
+        })
+      );
+      expect(getUserById).toHaveBeenCalledWith("user-1");
+      expect(emailService.sendListingPostedEmail).toHaveBeenCalledWith(
+        "jane@example.com",
+        expect.objectContaining({ recipientName: "Jane" })
+      );
+    });
+
+    it("stays silent for a draft", async () => {
+      await listingsService.createListing(
+        "user-1",
+        createInput({ publish: false })
+      );
+
+      expect(notificationsService.createNotification).not.toHaveBeenCalled();
+      expect(emailService.sendListingPostedEmail).not.toHaveBeenCalled();
+    });
+
+    // Escalation reaches `createListing` with the system account's id, and
+    // nobody signs into that account to read either (listing_posted_feedback_spec.md §1).
+    it("stays silent for the Expedion system account, even when publishing", async () => {
+      await listingsService.createListing("system-account", createInput());
+
+      expect(notificationsService.createNotification).not.toHaveBeenCalled();
+      expect(emailService.sendListingPostedEmail).not.toHaveBeenCalled();
+    });
+
+    it("does not let a notification failure fail the listing creation", async () => {
+      vi.mocked(notificationsService.createNotification).mockRejectedValueOnce(
+        new Error("ably down")
+      );
+
+      await expect(
+        listingsService.createListing("user-1", createInput())
+      ).resolves.toMatchObject({ title: "Two-seater sofa to Marseille" });
+    });
+
+    it("does not let an email failure fail the listing creation", async () => {
+      vi.mocked(emailService.sendListingPostedEmail).mockRejectedValueOnce(
+        new Error("resend down")
+      );
+
+      await expect(
+        listingsService.createListing("user-1", createInput())
+      ).resolves.toMatchObject({ title: "Two-seater sofa to Marseille" });
+    });
+  });
 });
 
 // ========================================
@@ -608,82 +672,5 @@ describe("getMyListings", () => {
       "shipper-1",
       "completed"
     );
-  });
-});
-
-// ========================================
-// A job may not reach the board unless it can be paid for
-// ========================================
-//
-// docs/specs/payment_at_booking_spec.md §4. The client is charged the moment a
-// carrier is chosen, so a job posted without a card is a job that cannot be
-// awarded — and every carrier who bids on it has spent effort on work that was
-// never payable.
-
-describe("the card a posted job will be charged to", () => {
-  beforeEach(() => {
-    delete process.env.MOCK_PAYMENTS;
-    Object.assign(listingsDal, {
-      getById: vi.fn().mockResolvedValue(job({ status: "draft" })),
-    });
-  });
-
-  it("stops a draft going live without one", async () => {
-    vi.mocked(paymentsService.hasSavedCard).mockResolvedValue(false);
-
-    expect(
-      await codeFrom(() => listingsService.publishListing("shipper-1", "job-1"))
-    ).toBe("PAYMENT_METHOD_REQUIRED");
-    expect(listingsDal.update).not.toHaveBeenCalled();
-  });
-
-  it("stops a job being posted straight to the board without one", async () => {
-    vi.mocked(paymentsService.hasSavedCard).mockResolvedValue(false);
-
-    expect(
-      await codeFrom(() =>
-        listingsService.createListing("user-1", createInput({ publish: true }))
-      )
-    ).toBe("PAYMENT_METHOD_REQUIRED");
-    expect(listingsDal.create).not.toHaveBeenCalled();
-  });
-
-  it("lets a draft be saved without one", async () => {
-    // A draft is not on the board and nobody can bid on it, so asking for a
-    // card to save one would be a toll on a form that committed to nothing.
-    vi.mocked(paymentsService.hasSavedCard).mockResolvedValue(false);
-
-    await listingsService.createListing(
-      "user-1",
-      createInput({ publish: false })
-    );
-
-    expect(listingsDal.create).toHaveBeenCalled();
-  });
-
-  it("waives the check for a job that was paid somewhere else", async () => {
-    // An escalated Expedion listing is owned by a system account no card
-    // belongs to, and its client paid in Expedion when they accepted the quote.
-    vi.mocked(paymentsService.hasSavedCard).mockResolvedValue(false);
-
-    await listingsService.createListing(
-      "expedion-system",
-      createInput({ publish: true }),
-      { prepaid: true }
-    );
-
-    expect(listingsDal.create).toHaveBeenCalled();
-    expect(paymentsService.hasSavedCard).not.toHaveBeenCalled();
-  });
-
-  it("skips the check entirely while payments are mocked", async () => {
-    // TODO(EXPEDITOO-TESTING): MOCK_PAYMENTS — the charge this guards is mocked too.
-    process.env.MOCK_PAYMENTS = "true";
-    vi.mocked(paymentsService.hasSavedCard).mockResolvedValue(false);
-
-    const result = await listingsService.publishListing("shipper-1", "job-1");
-
-    expect(result.status).toBe("open");
-    expect(paymentsService.hasSavedCard).not.toHaveBeenCalled();
   });
 });

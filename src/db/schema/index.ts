@@ -16,3 +16,4 @@ export * from "./carrier-routes";
 export * from "./withdrawals";
 export * from "./thread-offers";
 export * from "./feedback";
+export * from "./platform-settings";

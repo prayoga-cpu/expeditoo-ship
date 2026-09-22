@@ -15,60 +15,58 @@ import {
   type JobFormOutput,
 } from "../schemas";
 import { jobsApi } from "../api/jobs.api";
+import {
+  defaultTimingState,
+  resolveTimingWindows,
+  type TimingState,
+} from "../timing";
 
 /** Step order. Labels are looked up from `create.steps.*`, never shown raw. */
-export const JOB_STEPS = [
-  "what",
-  "where",
-  "when",
-  "budget",
-  // The client pays when a carrier is chosen, so the card is collected before
-  // the job reaches the board rather than at the award
-  // (docs/specs/payment_at_booking_spec.md §7).
-  "payment",
-] as const;
-
-/**
- * `datetime-local` speaks "YYYY-MM-DDTHH:mm" in the viewer's own time zone, and
- * renders nothing at all for a `Date`. Seeding the form with Date objects left
- * all four windows visibly blank while the schema believed they were filled.
- */
-function forInput(at: number): string {
-  const d = new Date(at);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return (
-    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +
-    `T${pad(d.getHours())}:${pad(d.getMinutes())}`
-  );
-}
-
-/** Sensible defaults: a pickup window tomorrow, delivery the day after. */
-function defaultWindows() {
-  const hour = 60 * 60 * 1000;
-  const day = 24 * hour;
-  const now = Date.now();
-  return {
-    pickupFrom: forInput(now + day),
-    pickupUntil: forInput(now + day + 8 * hour),
-    dropoffFrom: forInput(now + 2 * day),
-    dropoffUntil: forInput(now + 2 * day + 8 * hour),
-  };
-}
+export const JOB_STEPS = ["what", "where", "when", "budget"] as const;
 
 const emptyEndpoint = {
   address: "",
   city: "",
   postalCode: "",
   locationType: "house" as const,
+  note: "",
+  contactName: "",
+  contactPhone: "",
 };
+
+/**
+ * `handleNext` only validates the current step, so RHF's own
+ * `shouldFocusError` (which runs inside `handleSubmit`) never fires for it —
+ * a failed "Next" left the reader wherever they already were, with no sign of
+ * which field stopped them. Several controls on this form (the weight and
+ * size cards, the location picker) are `setValue`-driven rather than
+ * `register`-ed, so `form.setFocus` cannot reach them either; every field's
+ * error, however it is displayed, always goes through `<FieldError>`, so that
+ * is what this looks for instead.
+ */
+function scrollToFirstError() {
+  const firstError = document.querySelector<HTMLElement>("[data-field-error]");
+  if (!firstError) return;
+
+  const group = firstError.parentElement ?? firstError;
+  group.scrollIntoView({ behavior: "smooth", block: "center" });
+
+  const focusable = group.querySelector<HTMLElement>(
+    "input, textarea, select, button, [role='radio'], [tabindex]"
+  );
+  focusable?.focus({ preventScroll: true });
+}
 
 export function useJobForm() {
   const router = useRouter();
   const t = useTranslations("create");
   const [currentStep, setCurrentStep] = useState(0);
   const [photos, setPhotos] = useState<string[]>([]);
-  // Reported by the payment step. A draft needs no card; a posted job does.
-  const [hasCard, setHasCard] = useState(false);
+  // The "When" step's own shape — see `../timing.ts`. Lives here rather than
+  // inside `WhenStep` because that component unmounts on every step change,
+  // which would otherwise throw away a request's exact date/time the moment
+  // someone clicked "Next" and came back.
+  const [timing, setTiming] = useState<TimingState>(() => defaultTimingState());
 
   const form = useForm<JobFormValues>({
     resolver: zodResolver(jobFormSchema),
@@ -82,13 +80,28 @@ export function useJobForm() {
       quantity: 1,
       isFragile: false,
       needsHelp: false,
-      isFlexible: false,
       photos: [],
+      publishMode: "now",
       pickup: { ...emptyEndpoint },
       dropoff: { ...emptyEndpoint },
-      ...defaultWindows(),
+      ...resolveTimingWindows(timing),
     },
   });
+
+  const handleTimingChange = useCallback(
+    (next: TimingState) => {
+      setTiming(next);
+      const windows = resolveTimingWindows(next);
+      form.setValue("pickupFrom", windows.pickupFrom, { shouldValidate: true });
+      form.setValue("pickupUntil", windows.pickupUntil, { shouldValidate: true });
+      form.setValue("dropoffFrom", windows.dropoffFrom, { shouldValidate: true });
+      form.setValue("dropoffUntil", windows.dropoffUntil, {
+        shouldValidate: true,
+      });
+      form.setValue("isFlexible", windows.isFlexible);
+    },
+    [form]
+  );
 
   const createJob = useMutation({
     mutationFn: ({
@@ -98,11 +111,21 @@ export function useJobForm() {
       values: JobFormOutput;
       publish: boolean;
     }) => jobsApi.create(values, publish),
-    onSuccess: (job, variables) => {
+    onSuccess: (_job, variables) => {
+      const scheduled = variables.values.publishMode === "schedule";
       toast.success(
-        variables.publish ? t("toast.posted") : t("toast.draftSaved")
+        !variables.publish
+          ? t("toast.draftSaved")
+          : scheduled
+            ? t("toast.scheduled")
+            : t("toast.posted")
       );
-      router.push(variables.publish ? `/listing/${job.id}` : "/listings/me");
+      // A scheduled job is not live yet, so there is nothing to highlight on
+      // /home — it stays on /listings/me, the same as a draft, until the
+      // cron actually publishes it.
+      router.push(
+        variables.publish && !scheduled ? "/home" : "/listings/me"
+      );
     },
     onError: (error) => {
       // The one server rejection a person can actually act on, so it gets its
@@ -111,13 +134,8 @@ export function useJobForm() {
         toast.error(t("toast.pickupTooSoon"));
         return;
       }
-      // The card was detached between the step and the post, or Stripe lost
-      // it. Either way the person can act on it, so it gets its own sentence.
-      if (
-        error instanceof ApiError &&
-        error.code === "PAYMENT_METHOD_REQUIRED"
-      ) {
-        toast.error(t("toast.cardRequired"));
+      if (error instanceof ApiError && error.code === "SCHEDULED_PUBLISH_IN_PAST") {
+        toast.error(t("toast.schedulePast"));
         return;
       }
       toast.error(t("toast.failed"));
@@ -136,7 +154,13 @@ export function useJobForm() {
   const handleNext = useCallback(async () => {
     const fields = STEP_FIELDS[currentStep];
     const valid = await form.trigger(fields as never);
-    if (!valid) return;
+    if (!valid) {
+      // `trigger` resolves once `formState.errors` is updated, but React has
+      // not necessarily painted the new `FieldError` text yet — wait a frame
+      // so the element we're about to scroll to actually exists.
+      requestAnimationFrame(scrollToFirstError);
+      return;
+    }
 
     setCurrentStep((step) => Math.min(step + 1, JOB_STEPS.length - 1));
   }, [currentStep, form]);
@@ -165,8 +189,8 @@ export function useJobForm() {
     isFirstStep: currentStep === 0,
     isLastStep: currentStep === JOB_STEPS.length - 1,
     isSubmitting: createJob.isPending,
-    hasCard,
-    setHasCard,
+    timing,
+    handleTimingChange,
     handlePhotosChange,
     handleNext,
     handlePrev,

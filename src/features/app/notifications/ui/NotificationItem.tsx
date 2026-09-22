@@ -35,6 +35,7 @@ const typeColors: Record<NotificationType, string> = {
   offer_rejected: "bg-muted text-muted-foreground",
   offer_invalidated: "bg-warning/15 text-warning",
   listing_expired: "bg-warning/15 text-warning",
+  listing_posted: "bg-success/15 text-success",
   listing: "bg-primary/10 text-primary",
   delivery: "bg-success/15 text-success",
   shipment_update: "bg-success/15 text-success",

@@ -69,12 +69,20 @@ export const payments = pgTable(
     stripeCheckoutSessionId: text("stripe_checkout_session_id").unique(),
 
     amountCents: integer("amount_cents").notNull(),
-    // The platform's cut, held at source. The rate lives in one place —
-    // `COMMISSION_RATE` in payments.service.ts — and is 100% during the testing
-    // phase, so this column currently equals `amount_cents` and the payout is 0.
-    // No rate is recorded per row, so an old 10% row and a new 100% row are
-    // told apart only by date (ROADMAP.md §10).
+    // The platform's cut, held at source — subtracted from what the carrier
+    // is paid (see `payouts.amountCents`). The rate lives in one place,
+    // `COMMISSION_RATE` in payments.service.ts. No rate is recorded per row,
+    // so a row from before the rate last changed is told apart only by date
+    // (ROADMAP.md §10).
     commissionCents: integer("commission_cents").notNull(),
+    // An additive surcharge on top of `amountCents`, charged to the *client*
+    // — unrelated to `commissionCents`, which comes out of the *carrier's*
+    // side. Admin-configurable (`platform_settings.fee_basis_points`,
+    // `platformSettingsService.getFeeBasisPoints`); zero unless set. Only
+    // ever non-zero for `source: "stripe"` — an `expedion` charge happened in
+    // Expedion's own Stripe account before this system knew about the job,
+    // so fabricating a fee on it would corrupt what that row records.
+    platformFeeCents: integer("platform_fee_cents").default(0).notNull(),
     currency: text("currency").default("eur").notNull(),
     status: paymentStatusEnum("status").default("pending").notNull(),
     source: paymentSourceEnum("source").default("stripe").notNull(),

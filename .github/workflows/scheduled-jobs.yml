@@ -19,6 +19,7 @@ on:
   schedule:
     - cron: "*/15 * * * *" # expire-listings
     - cron: "*/10 * * * *" # expedion-escalate
+    - cron: "*/5 * * * *" # publish-scheduled-listings
     - cron: "0 6 * * *" # carrier-documents
     - cron: "0 3 * * 0" # cleanup-images
   workflow_dispatch:
@@ -30,6 +31,7 @@ on:
         options:
           - expire-listings
           - expedion-escalate
+          - publish-scheduled-listings
           - carrier-documents
           - cleanup-images
 
@@ -53,6 +55,7 @@ jobs:
           case "${MANUAL:-$SCHEDULE}" in
             "expire-listings"    | "*/15 * * * *") path="/api/cron/expire-listings" ;;
             "expedion-escalate"  | "*/10 * * * *") path="/api/cron/expedion-escalate" ;;
+            "publish-scheduled-listings" | "*/5 * * * *") path="/api/cron/publish-scheduled-listings" ;;
             "carrier-documents"  | "0 6 * * *")    path="/api/cron/carrier-documents" ;;
             "cleanup-images"     | "0 3 * * 0")    path="/api/cron/cleanup-images?dryRun=false" ;;
             *) echo "::error::No endpoint mapped to trigger '${MANUAL:-$SCHEDULE}'"; exit 1 ;;

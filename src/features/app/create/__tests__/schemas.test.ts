@@ -26,6 +26,7 @@ const endpoint = (over: Record<string, unknown> = {}) => ({
   ...LYON,
   postalCode: "69003",
   locationType: "house",
+  contactPhone: "0612345678",
   ...over,
 });
 
@@ -192,5 +193,104 @@ describe("jobFormSchema", () => {
 
     expect(parsed.success).toBe(true);
     if (parsed.success) expect(parsed.data.pickupFrom).toBeInstanceOf(Date);
+  });
+
+  it("accepts a short description, five characters or more", () => {
+    expect(
+      jobFormSchema.safeParse(form({ description: "A box" })).success
+    ).toBe(true);
+  });
+
+  it("still rejects a description under five characters", () => {
+    expect(messages(form({ description: "Hi" }))).toContain(
+      "create.validation.descriptionShort"
+    );
+  });
+
+  it("accepts the 'I'm not sure' weight bracket", () => {
+    expect(
+      jobFormSchema.safeParse(form({ weightBracket: "notSure" })).success
+    ).toBe(true);
+  });
+
+  it("accepts a fragile note", () => {
+    const parsed = jobFormSchema.safeParse(
+      form({ isFragile: true, fragileNote: "Glass top, keep upright" })
+    );
+
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data.fragileNote).toBe(
+      "Glass top, keep upright"
+    );
+  });
+
+  it("rejects a fragile note over 300 characters", () => {
+    expect(
+      messages(form({ isFragile: true, fragileNote: "x".repeat(301) }))
+    ).toContain("create.validation.fragileNoteMax");
+  });
+
+  it("requires a contact phone at pickup and dropoff", () => {
+    expect(
+      messages(form({ pickup: endpoint({ contactPhone: "" }) }))
+    ).toContain("create.validation.invalidPhone");
+  });
+
+  it("rejects a contact phone that is not a real French number", () => {
+    expect(
+      messages(form({ pickup: endpoint({ contactPhone: "not-a-phone" }) }))
+    ).toContain("create.validation.invalidPhone");
+  });
+
+  it("accepts a contact phone with spacing, and one in +33 form", () => {
+    expect(
+      jobFormSchema.safeParse(
+        form({ pickup: endpoint({ contactPhone: "06 12 34 56 78" }) })
+      ).success
+    ).toBe(true);
+    expect(
+      jobFormSchema.safeParse(
+        form({
+          dropoff: endpoint({
+            ...MARSEILLE,
+            postalCode: "13001",
+            contactPhone: "+33612345678",
+          }),
+        })
+      ).success
+    ).toBe(true);
+  });
+
+  it("leaves the carrier note and contact name optional", () => {
+    expect(jobFormSchema.safeParse(form()).success).toBe(true);
+  });
+
+  it("accepts a carrier note with access instructions", () => {
+    const parsed = jobFormSchema.safeParse(
+      form({
+        pickup: endpoint({
+          note: "Second floor, past the red door",
+          contactName: "Marie",
+        }),
+      })
+    );
+
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.pickup.note).toBe("Second floor, past the red door");
+      expect(parsed.data.pickup.contactName).toBe("Marie");
+    }
+  });
+
+  it("rejects a carrier note over 300 characters", () => {
+    expect(
+      messages(form({ pickup: endpoint({ note: "x".repeat(301) }) }))
+    ).toContain("create.validation.noteMax");
+  });
+
+  it("rejects a contact name over 120 characters", () => {
+    expect(
+      messages(form({ pickup: endpoint({ contactName: "x".repeat(121) }) }))
+    ).toContain("create.validation.contactNameMax");
   });
 });

@@ -92,7 +92,11 @@ export const invoicesService = {
         const invoice = await invoicesDal.create({
             paymentId: payment.id,
             userId: payment.userId,
-            amount: payment.amountCents,
+            // The TOTAL actually charged, so this ties to the bank statement —
+            // `payment.amountCents` alone would be the offer price without the
+            // platform fee, if one applied.
+            amount: payment.amountCents + payment.platformFeeCents,
+            platformFeeCents: payment.platformFeeCents,
             currency: payment.currency,
             // The money is already taken, so the document is settled the moment
             // it exists. `issued` would describe a receivable that is not one.
@@ -133,6 +137,7 @@ export const invoicesService = {
             // not depend on a join that could later resolve differently.
             relatedInvoiceNumber: invoice.invoiceNumber,
             amount: -Math.abs(invoice.amount),
+            platformFeeCents: invoice.platformFeeCents,
             currency: invoice.currency,
             status: "paid",
             paidAt: new Date(),

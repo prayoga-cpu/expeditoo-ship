@@ -63,6 +63,16 @@ const endpointSchema = z.object({
   locationType: z.enum(LOCATION_TYPES),
   floor: z.number().int().min(0).optional(),
   hasLift: z.boolean().optional(),
+  // Access instructions for the carrier ("second floor, past the red door")
+  // and who they actually call there. Left lenient here — no phone format
+  // enforced, both optional — because `expedionEscalationService` populates
+  // these from `expedion_quotes.pickup_phone` / `delivery_phone`, which is
+  // free-typed, nullable Airtable-imported data. `create.schemas.ts` is where
+  // a person posting a direct job is held to a real, internationally valid
+  // number; the server only refuses to store more than a page of text.
+  note: z.string().max(300).optional(),
+  contactName: z.string().max(120).optional(),
+  contactPhone: z.string().max(30).optional(),
 });
 
 /**
@@ -92,8 +102,8 @@ const requireApartmentDetail = (
 };
 
 const baseListingSchema = z.object({
-  title: z.string().min(5).max(120),
-  description: z.string().min(20).max(5000),
+  title: z.string().min(2).max(120),
+  description: z.string().min(5).max(5000),
   /**
    * Optional because a person requesting transport is not asked to file their
    * own belongings into a taxonomy — they describe an object and two addresses.
@@ -123,6 +133,13 @@ const baseListingSchema = z.object({
   budgetCents: z.number().int().min(MIN_BUDGET_CENTS).max(MAX_BUDGET_CENTS),
   photos: z.array(z.string().url()).max(10).default([]),
   publish: z.boolean().default(false),
+  /**
+   * A future instant to go live at instead of `publish: true`'s usual "now".
+   * Shape-only here (a Date, optionally absent); "not in the past" and "not
+   * after its own pickup" are wall-clock checks and belong in the service,
+   * the same way `pickupFrom <= now` already does (see `createListing`).
+   */
+  scheduledPublishAt: z.coerce.date().optional(),
 });
 
 export const createListingSchema = baseListingSchema.superRefine((data, ctx) => {
@@ -192,7 +209,7 @@ export const createListingSchema = baseListingSchema.superRefine((data, ctx) => 
 export type CreateListingInput = z.infer<typeof createListingSchema>;
 
 export const updateListingSchema = baseListingSchema
-  .omit({ publish: true })
+  .omit({ publish: true, scheduledPublishAt: true })
   .partial();
 
 export type UpdateListingInput = z.infer<typeof updateListingSchema>;

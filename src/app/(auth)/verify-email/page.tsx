@@ -45,8 +45,10 @@ function VerifyEmailContent() {
       // Refresh router to get updated session
       router.refresh();
 
-      // Redirect to dashboard (user should be auto-signed in by Better Auth)
-      router.push("/home?verified=true");
+      // A brand-new account: send it to onboarding rather than straight to
+      // the dashboard, so it can pick what it's here for. Better Auth should
+      // have already auto-signed it in.
+      router.push("/welcome");
     } else {
       setState("error");
       setErrorMessage(result.error || "Email verification failed");
@@ -149,7 +151,7 @@ function VerifyEmailContent() {
               </div>
 
               <Button
-                onClick={() => router.push("/home?verified=true")}
+                onClick={() => router.push("/welcome")}
                 className="w-full rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground py-6 font-semibold transition-colors"
               >
                 Go to Dashboard

@@ -1,7 +1,19 @@
-import { describe, it, expect } from "vitest";
-import { applicationGaps } from "../carrier.service";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+vi.mock("@/db", () => ({
+  db: { transaction: async (fn: (tx: unknown) => unknown) => await fn({}) },
+}));
+vi.mock("@/server/dal/carriers.dal", () => ({ carriersDal: {} }));
+vi.mock("@/server/dal/users.dal", () => ({ assignRoleIfMissing: vi.fn() }));
+vi.mock("@/server/services/notifications.service", () => ({
+  notificationsService: { createNotification: vi.fn().mockResolvedValue({}) },
+}));
+
+import { carrierService } from "../carrier.service";
+import { carriersDal } from "@/server/dal/carriers.dal";
 import {
   isValidSiret,
+  normalizeSiret,
   isValidIban,
   isValidBic,
   isValidPlate,
@@ -14,20 +26,32 @@ import {
 // ========================================
 
 describe("isValidSiret", () => {
-  // Real-format SIRETs that satisfy the Luhn check.
-  it.each(["73282932000074", "40483304800022"])("accepts %s", (siret) => {
-    expect(isValidSiret(siret)).toBe(true);
-  });
-
-  it("rejects a number whose check digit is wrong", () => {
-    expect(isValidSiret("73282932000075")).toBe(false);
-  });
+  // Format only, no checksum — carrier_kyc_spec.md §3: a real registry lookup
+  // is the admin reviewer's job, and a Luhn check rejected well-formed SIRETs
+  // typed for testing along with genuine typos.
+  it.each(["73282932000074", "40483304800022", "12345678901234"])(
+    "accepts %s",
+    (siret) => {
+      expect(isValidSiret(siret)).toBe(true);
+    },
+  );
 
   it("rejects anything that is not exactly 14 digits", () => {
     expect(isValidSiret("7328293200007")).toBe(false);
     expect(isValidSiret("732829320000745")).toBe(false);
     expect(isValidSiret("7328293200007A")).toBe(false);
     expect(isValidSiret("")).toBe(false);
+  });
+
+  it("accepts the grouping spaces a SIRET is conventionally printed with", () => {
+    expect(isValidSiret("732 829 320 00074")).toBe(true);
+    expect(isValidSiret(" 73282932000074 ")).toBe(true);
+  });
+});
+
+describe("normalizeSiret", () => {
+  it("strips grouping spaces", () => {
+    expect(normalizeSiret("732 829 320 00074")).toBe("73282932000074");
   });
 });
 
@@ -97,120 +121,100 @@ describe("last4", () => {
 });
 
 // ========================================
-// Submission gate — carrier_kyc_spec.md §3
+// submitApplication — carrier_kyc_spec.md §3
+//
+// Documents, banking and a vehicle are no longer a submission gate: an
+// applicant with only the profile fields on file (already required by
+// `upsertCarrierSchema`) can submit, and an admin decides whether that thin
+// file is good enough to approve. See docs/specs/carrier_kyc_spec.md §3/§6.
 // ========================================
 
-const doc = (kind: string, expiresAt: Date | null = null) => ({ kind, expiresAt });
-
-const completeCarrier = (over: Record<string, unknown> = {}) =>
-  ({
-    ibanLast4: "2606",
-    bicLast4: "PPXX",
-    documents: [
-      doc("cni_recto"),
-      doc("cni_verso"),
-      doc("driving_licence"),
-      doc("insurance_certificate"),
-      doc("rib"),
-    ],
-    vehicles: [{ type: "van", maxWeightKg: 1200 }],
+describe("submitApplication", () => {
+  const draftCarrier = (over: Record<string, unknown> = {}) => ({
+    id: "carrier-1",
+    userId: "user-1",
+    status: "draft" as const,
+    ibanLast4: null,
+    bicLast4: null,
     ...over,
-  }) as Parameters<typeof applicationGaps>[0];
-
-describe("applicationGaps", () => {
-  it("finds nothing wrong with a complete application", () => {
-    expect(applicationGaps(completeCarrier())).toEqual([]);
   });
 
-  // The spec is explicit that an applicant sees the whole list at once rather
-  // than discovering one gap per submission.
-  it("reports every gap in one pass", () => {
-    const gaps = applicationGaps(
-      completeCarrier({
-        ibanLast4: null,
-        bicLast4: null,
-        documents: [doc("cni_recto")],
-        vehicles: [],
-      })
-    );
-
-    expect(gaps).toEqual(
-      expect.arrayContaining([
-        "document:cni_verso",
-        "document:driving_licence",
-        "document:insurance_certificate",
-        "document:rib",
-        "banking:iban",
-        "banking:bic",
-        "vehicle:at_least_one",
-      ])
-    );
-    expect(gaps.length).toBeGreaterThan(5);
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
 
-  it("requires a transport licence once a vehicle is 7.5t or heavier", () => {
-    const gaps = applicationGaps(
-      completeCarrier({ vehicles: [{ type: "truck_19t", maxWeightKg: 19_000 }] })
-    );
+  it("submits with no documents, banking or vehicle on file", async () => {
+    Object.assign(carriersDal, {
+      getByUserId: vi.fn().mockResolvedValue(draftCarrier()),
+      update: vi.fn(async (_id: string, data: Record<string, unknown>) => ({
+        ...draftCarrier(),
+        ...data,
+      })),
+    });
 
-    expect(gaps).toContain("document:transport_licence");
+    const result = await carrierService.submitApplication("user-1");
+
+    expect(result.status).toBe("submitted");
+    expect(carriersDal.update).toHaveBeenCalledWith("carrier-1", {
+      status: "submitted",
+    });
   });
 
-  it("does not demand a transport licence for a van", () => {
-    expect(applicationGaps(completeCarrier())).not.toContain(
-      "document:transport_licence"
-    );
+  it("refuses a second submission", async () => {
+    Object.assign(carriersDal, {
+      getByUserId: vi.fn().mockResolvedValue(draftCarrier({ status: "submitted" })),
+      update: vi.fn(),
+    });
+
+    await expect(
+      carrierService.submitApplication("user-1")
+    ).rejects.toMatchObject({ code: "ALREADY_SUBMITTED" });
   });
 
-  it("accepts a heavy fleet once the licence is supplied", () => {
-    const gaps = applicationGaps(
-      completeCarrier({
-        vehicles: [{ type: "semi_trailer", maxWeightKg: 40_000 }],
-        documents: [
-          doc("cni_recto"),
-          doc("cni_verso"),
-          doc("driving_licence"),
-          doc("insurance_certificate"),
-          doc("rib"),
-          doc("transport_licence"),
-        ],
-      })
-    );
+  it("refuses a suspended carrier", async () => {
+    Object.assign(carriersDal, {
+      getByUserId: vi.fn().mockResolvedValue(draftCarrier({ status: "suspended" })),
+      update: vi.fn(),
+    });
 
-    expect(gaps).toEqual([]);
+    await expect(
+      carrierService.submitApplication("user-1")
+    ).rejects.toMatchObject({ code: "CARRIER_SUSPENDED" });
+  });
+});
+
+// ========================================
+// approve — carrier_kyc_spec.md §6, edge case 8
+// ========================================
+
+describe("approve", () => {
+  const submittedCarrier = (over: Record<string, unknown> = {}) => ({
+    id: "carrier-1",
+    userId: "user-1",
+    status: "submitted" as const,
+    ...over,
   });
 
-  it("flags a document that has already expired", () => {
-    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const gaps = applicationGaps(
-      completeCarrier({
-        documents: [
-          doc("cni_recto"),
-          doc("cni_verso"),
-          doc("driving_licence", yesterday),
-          doc("insurance_certificate"),
-          doc("rib"),
-        ],
-      })
-    );
-
-    expect(gaps).toContain("expired:driving_licence");
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Object.assign(carriersDal, {
+      setAllDocumentsAccepted: vi.fn().mockResolvedValue(undefined),
+      upsertDriverLink: vi.fn().mockResolvedValue(undefined),
+    });
   });
 
-  it("accepts a document that expires in the future", () => {
-    const nextYear = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
-    const gaps = applicationGaps(
-      completeCarrier({
-        documents: [
-          doc("cni_recto"),
-          doc("cni_verso"),
-          doc("driving_licence", nextYear),
-          doc("insurance_certificate"),
-          doc("rib"),
-        ],
-      })
-    );
+  it("approves an application with no documents, banking or vehicle", async () => {
+    Object.assign(carriersDal, {
+      getById: vi.fn().mockResolvedValue(submittedCarrier()),
+      update: vi.fn(async (_id: string, data: Record<string, unknown>) => ({
+        ...submittedCarrier(),
+        ...data,
+      })),
+    });
 
-    expect(gaps).toEqual([]);
+    const result = await carrierService.approve("admin-1", "carrier-1");
+
+    expect(result.status).toBe("approved");
+    expect(carriersDal.setAllDocumentsAccepted).toHaveBeenCalled();
   });
 });

@@ -28,11 +28,24 @@ import {
   Route,
   Wallet,
   Shield,
+  Gavel,
+  Truck,
+  type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { useActiveAccessMode } from "@/lib/use-active-access-mode";
 
 interface MainLayoutProps {
   children: React.ReactNode;
+}
+
+interface NavItem {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  badge?: number;
+  /** Marks the one entry that leaves the app for the back office. */
+  accent?: boolean;
 }
 
 export function MainLayout({ children }: MainLayoutProps) {
@@ -41,59 +54,59 @@ export function MainLayout({ children }: MainLayoutProps) {
   const t = useTranslations("common.navigation");
   const { user } = useAuth();
   const isAdmin = (user?.roles ?? []).includes("admin");
+  const { mode } = useActiveAccessMode();
 
+  const home = { href: "/home", label: t("home"), icon: Home };
+  const jobs = { href: "/expedion", label: t("jobs"), icon: PlusCircle };
+  const messages = {
+    href: "/messages",
+    label: t("messages"),
+    icon: MessageSquare,
+    badge: unreadCount > 0 ? unreadCount : undefined,
+  };
+  const profile = { href: "/profile", label: t("profile"), icon: User };
+
+  /** Someone who has not (yet) moved past posting and applying. */
+  const userNavItems: NavItem[] = [
+    home,
+    { href: "/deliveries", label: t("shipmentTracking"), icon: Package },
+    jobs,
+    { href: "/listings/me", label: t("myRequests"), icon: Boxes },
+    { href: "/create", label: t("requestTransport"), icon: PackagePlus },
+    { href: "/carrier/application", label: t("myApplication"), icon: ClipboardList },
+    messages,
+    profile,
+  ];
+
+  /** An approved carrier: bidding and earnings, not the posting tools it has
+   * moved past — same split BottomNav.tsx already makes on mobile. */
+  const carrierNavItems: NavItem[] = [
+    home,
+    jobs,
+    { href: "/carrier/offers", label: t("myOffers"), icon: Gavel },
+    { href: "/carrier/trips", label: t("myTrips"), icon: Route },
+    { href: "/carrier/withdrawals", label: t("myEarnings"), icon: Wallet },
+    messages,
+    profile,
+  ];
+
+  /** A driver never bids or sees prices (roles_spec.md) — its second slot is
+   * the run it is actually executing, on the driver surface. */
+  const driverNavItems: NavItem[] = [
+    home,
+    jobs,
+    { href: "/driver/shipments", label: t("deliveries"), icon: Truck },
+    messages,
+    profile,
+  ];
+
+  const roles = user?.roles ?? [];
   const navItems = [
-    {
-      href: "/home",
-      label: t("home"),
-      icon: Home,
-    },
-    {
-      href: "/deliveries",
-      label: t("shipmentTracking"),
-      icon: Package,
-    },
-    {
-      href: "/expedion",
-      label: t("jobs"),
-      icon: PlusCircle,
-    },
-    {
-      href: "/messages",
-      label: t("messages"),
-      icon: MessageSquare,
-      badge: unreadCount > 0 ? unreadCount : undefined, // Add badge
-    },
-    {
-      href: "/create",
-      label: t("requestTransport"),
-      icon: PackagePlus,
-    },
-    {
-      href: "/listings/me",
-      label: t("myRequests"),
-      icon: Boxes,
-    },
-    {
-      href: "/carrier/trips",
-      label: t("myTrips"),
-      icon: Route,
-    },
-    {
-      href: "/carrier/withdrawals",
-      label: t("myEarnings"),
-      icon: Wallet,
-    },
-    {
-      href: "/carrier/application",
-      label: t("myApplication"),
-      icon: ClipboardList,
-    },
-    {
-      href: "/profile",
-      label: t("profile"),
-      icon: User,
-    },
+    ...(mode === "carrier"
+      ? roles.includes("carrier")
+        ? carrierNavItems
+        : driverNavItems
+      : userNavItems),
     // The way back in. The admin sidebar has "Back to App" at its foot, but
     // nothing pointed the other way, so an admin who left the panel had to
     // type the URL to return. Roles come from the session (customSession in
@@ -124,10 +137,10 @@ export function MainLayout({ children }: MainLayoutProps) {
         '--loader-offset-desktop': '7rem',
       } as React.CSSProperties}
     >
-      <aside className="hidden xl:flex w-64 border-r bg-card flex-col">
+      <aside className="hidden xl:flex w-64 shrink-0 overflow-hidden border-r bg-card flex-col">
         <AppSidebarHeader href="/home" />
 
-        <nav className="flex-1 p-4 space-y-2">
+        <nav className="flex-1 min-h-0 overflow-y-auto p-4 space-y-2">
           {navItems.map((item) => {
             const isActive =
               pathname === item.href ||

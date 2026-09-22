@@ -2,23 +2,20 @@
  * Validators for the French business and banking identifiers collected during
  * carrier onboarding (docs/specs/carrier_kyc_spec.md §3).
  *
- * These are checksum validators, not registry lookups: they reject typos and
- * invented numbers, but a well-formed SIRET belonging to nobody still passes.
- * Confirming the company actually exists is the admin reviewer's job.
+ * None of these are registry lookups: a well-formed identifier belonging to
+ * nobody still passes. Confirming the company actually exists is the admin
+ * reviewer's job. IBAN and BIC also carry a real checksum; SIRET is a format
+ * check only (exactly 14 digits) — see carrier_kyc_spec.md §3 for why the
+ * Luhn check was dropped.
  */
 
-/** A SIRET is 14 digits carrying a Luhn check digit. */
-export function isValidSiret(siret: string): boolean {
-  if (!/^\d{14}$/.test(siret)) return false;
-
-  let sum = 0;
-  for (let i = 0; i < 14; i++) {
-    // Digits in even positions (1-indexed from the left) are doubled.
-    const doubled = i % 2 === 0 ? Number(siret[i]) * 2 : Number(siret[i]);
-    sum += doubled > 9 ? doubled - 9 : doubled;
-  }
-  return sum % 10 === 0;
+/** A SIRET is 14 digits. */
+export function isValidSiret(raw: string): boolean {
+  return /^\d{14}$/.test(raw.replace(/\s+/g, ""));
 }
+
+/** Strips the grouping spaces a SIRET is conventionally printed with. */
+export const normalizeSiret = (raw: string) => raw.replace(/\s+/g, "");
 
 /**
  * IBAN mod-97 check (ISO 13616). A French IBAN is 27 characters, but the

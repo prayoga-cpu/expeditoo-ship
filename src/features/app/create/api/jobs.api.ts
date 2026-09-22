@@ -13,12 +13,19 @@ import type { JobFormOutput } from "../schemas";
  *
  * This is also where a weight bracket and a size preset become the numbers the
  * API has always wanted, which is what lets `createListingSchema` stay exactly
- * as it was (docs/specs/cargo_input_spec.md §2).
+ * as it was (docs/specs/cargo_input_spec.md §2). `fragileNote` joins them the
+ * same way: it has no column of its own, so it is folded into `description`
+ * rather than teaching the DTO a new field.
  */
+function withFragileNote(values: JobFormOutput): string {
+  const note = values.isFragile ? values.fragileNote?.trim() : undefined;
+  return note ? `${values.description}\n\nFragile: ${note}` : values.description;
+}
+
 export function toCreatePayload(values: JobFormOutput, publish: boolean) {
   return {
     title: values.title,
-    description: values.description,
+    description: withFragileNote(values),
     weightKg: resolveWeightKg(values.weightBracket, values.exactWeightKg),
     ...resolveDimensions(values.sizeMode, values.sizePreset, values),
     quantity: values.quantity,
@@ -35,6 +42,9 @@ export function toCreatePayload(values: JobFormOutput, publish: boolean) {
     budgetCents: Math.round(values.budgetEuros * 100),
     photos: values.photos,
     publish,
+    ...(values.publishMode === "schedule" && values.scheduledPublishAt
+      ? { scheduledPublishAt: values.scheduledPublishAt.toISOString() }
+      : {}),
   };
 }
 

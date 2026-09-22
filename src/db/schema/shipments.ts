@@ -100,9 +100,18 @@ export const shipments = pgTable(
     pickupLat: doublePrecision("pickup_lat").notNull(),
     pickupLng: doublePrecision("pickup_lng").notNull(),
     pickupAddress: text("pickup_address").notNull(),
+    // Copied the same way: the driver executing the run is exactly who needs
+    // to know which door and who to call, and the listing they came from can
+    // be edited or expire out from under them.
+    pickupNote: text("pickup_note"),
+    pickupContactName: text("pickup_contact_name"),
+    pickupContactPhone: text("pickup_contact_phone"),
     dropoffLat: doublePrecision("dropoff_lat").notNull(),
     dropoffLng: doublePrecision("dropoff_lng").notNull(),
     dropoffAddress: text("dropoff_address").notNull(),
+    dropoffNote: text("dropoff_note"),
+    dropoffContactName: text("dropoff_contact_name"),
+    dropoffContactPhone: text("dropoff_contact_phone"),
 
     // Agreed terms, from the accepted offer.
     priceCents: integer("price_cents").notNull(),

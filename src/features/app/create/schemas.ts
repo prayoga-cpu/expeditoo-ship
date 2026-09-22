@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isValidPhoneNumber } from "libphonenumber-js/min";
 
 import {
   HEAVY_BRACKET_ID,
@@ -22,10 +23,11 @@ import {
  * `create.validation.*`. A Zod schema cannot call `useTranslations`, so the
  * alternative is a form that validates in one language.
  *
- * Two fields deliberately have no counterpart over there. `weightBracket` and
- * `sizePreset` are how a person answers "how heavy" and "how big"; the numbers
- * the API wants are resolved from them in `api/jobs.api.ts`, which is the only
- * seam that had to move. See docs/specs/cargo_input_spec.md §2.
+ * Three fields deliberately have no counterpart over there. `weightBracket` and
+ * `sizePreset` are how a person answers "how heavy" and "how big"; `fragileNote`
+ * is the optional detail a person adds once `isFragile` is on. All three are
+ * resolved into fields the API already has in `api/jobs.api.ts`, which is the
+ * only seam that had to move. See docs/specs/cargo_input_spec.md §2.
  */
 
 export const LOCATION_TYPES = [
@@ -89,6 +91,15 @@ const datetimeLocal = z
   .min(1, "create.validation.dateRequired")
   .pipe(z.coerce.date());
 
+export const PUBLISH_MODES = ["now", "schedule"] as const;
+export type PublishMode = (typeof PUBLISH_MODES)[number];
+
+/** Empty when unscheduled; the same wire shape as `datetimeLocal` once chosen. */
+const optionalDatetimeLocal = z.preprocess(
+  blankToUndefined,
+  z.string().pipe(z.coerce.date()).optional()
+);
+
 const optionalPositive = z.preprocess(
   blankToUndefined,
   z.coerce.number().positive("create.validation.aboveZero").optional()
@@ -107,6 +118,24 @@ export const endpointSchema = z
       z.coerce.number().int().min(0).optional()
     ),
     hasLift: z.boolean().optional(),
+    // What the carrier cannot see from the street, and who they call once
+    // they get there. The requester posting the job is not always the person
+    // present at either end.
+    note: z.string().max(300, "create.validation.noteMax").optional(),
+    contactName: z
+      .string()
+      .max(120, "create.validation.contactNameMax")
+      .optional(),
+    // `PhoneInput` emits E.164 (`+33612345678`), which carries its own
+    // country and needs no fallback. A bare national number can still reach
+    // here from an old saved draft, so "FR" is only a default for that case —
+    // it is ignored the moment the string already starts with a `+`.
+    contactPhone: z
+      .string()
+      .refine(
+        (v) => isValidPhoneNumber(v, "FR"),
+        "create.validation.invalidPhone"
+      ),
   })
   .superRefine((endpoint, ctx) => {
     // Floor and lift change the work materially, so an apartment must state both.
@@ -138,10 +167,10 @@ export const endpointSchema = z
 
 export const jobFormSchema = z
   .object({
-    title: z.string().min(5, "create.validation.titleShort").max(120),
+    title: z.string().min(2, "create.validation.titleShort").max(120),
     description: z
       .string()
-      .min(20, "create.validation.descriptionShort")
+      .min(5, "create.validation.descriptionShort")
       .max(5000),
 
     /**
@@ -169,6 +198,12 @@ export const jobFormSchema = z
     heightCm: optionalPositive,
     quantity: z.coerce.number().int().min(1).default(1),
     isFragile: z.boolean().default(false),
+    // Only meaningful while `isFragile` is on; `toCreatePayload` folds it into
+    // `description` rather than the DTO learning a field of its own.
+    fragileNote: z
+      .string()
+      .max(300, "create.validation.fragileNoteMax")
+      .optional(),
     needsHelp: z.boolean().default(false),
 
     pickup: endpointSchema,
@@ -188,6 +223,9 @@ export const jobFormSchema = z
       .number()
       .positive("create.validation.budgetRequired"),
     photos: z.array(z.string().url()).max(10).default([]),
+
+    publishMode: z.enum(PUBLISH_MODES).default("now"),
+    scheduledPublishAt: optionalDatetimeLocal,
   })
   .superRefine((data, ctx) => {
     if (data.weightBracket === HEAVY_BRACKET_ID) {
@@ -256,6 +294,28 @@ export const jobFormSchema = z
         path: ["dropoffUntil"],
       });
     }
+
+    if (data.publishMode === "schedule") {
+      if (!data.scheduledPublishAt) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "create.validation.scheduledPublishRequired",
+          path: ["scheduledPublishAt"],
+        });
+      } else if (data.scheduledPublishAt <= new Date()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "create.validation.scheduledPublishPast",
+          path: ["scheduledPublishAt"],
+        });
+      } else if (data.scheduledPublishAt >= data.pickupFrom) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "create.validation.scheduledPublishAfterPickup",
+          path: ["scheduledPublishAt"],
+        });
+      }
+    }
   });
 
 export type JobFormValues = z.input<typeof jobFormSchema>;
@@ -270,11 +330,9 @@ export const STEP_FIELDS = [
     "exactWeightKg",
     "quantity",
     "lengthCm",
+    "fragileNote",
   ],
   ["pickup", "dropoff"],
   ["pickupFrom", "pickupUntil", "dropoffFrom", "dropoffUntil"],
-  ["budgetEuros"],
-  // The payment step owns no form field: the card lives at Stripe, not in the
-  // job. `handleNext` validates an empty list and passes straight through.
-  [],
+  ["budgetEuros", "publishMode", "scheduledPublishAt"],
 ] as const;

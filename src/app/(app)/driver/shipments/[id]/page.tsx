@@ -18,6 +18,8 @@ import {
   ArrowLeft,
   BadgeCheck,
   Hourglass,
+  Phone,
+  Info,
 } from "lucide-react";
 import { useDriverShipmentDetail } from "@/features/app/driver/hooks/useDriverShipments";
 import type {
@@ -138,6 +140,9 @@ function RouteCard({ shipment }: { shipment: DriverShipmentDetail }) {
             colorClass="bg-blue-500"
             label={t("pickup")}
             address={shipment.pickupAddress}
+            note={shipment.pickupNote}
+            contactName={shipment.pickupContactName}
+            contactPhone={shipment.pickupContactPhone}
             scheduledAt={shipment.scheduledPickup}
             scheduledLabel={t("scheduledPickup")}
           />
@@ -145,6 +150,9 @@ function RouteCard({ shipment }: { shipment: DriverShipmentDetail }) {
             colorClass="bg-green-500"
             label={t("dropoff")}
             address={shipment.dropoffAddress}
+            note={shipment.dropoffNote}
+            contactName={shipment.dropoffContactName}
+            contactPhone={shipment.dropoffContactPhone}
             scheduledAt={shipment.scheduledDelivery}
             scheduledLabel={t("scheduledDelivery")}
           />
@@ -158,12 +166,18 @@ function RouteStop({
   colorClass,
   label,
   address,
+  note,
+  contactName,
+  contactPhone,
   scheduledAt,
   scheduledLabel,
 }: {
   colorClass: string;
   label: string;
   address: string;
+  note: string | null;
+  contactName: string | null;
+  contactPhone: string | null;
   scheduledAt: string | null;
   scheduledLabel: string;
 }) {
@@ -182,6 +196,21 @@ function RouteStop({
           {scheduledLabel}:{" "}
           {scheduledAt ? new Date(scheduledAt).toLocaleString() : t("flexible")}
         </p>
+        {note ? (
+          <p className="flex items-start gap-1 text-xs text-muted-foreground mt-1">
+            <Info className="w-3 h-3 mt-0.5 shrink-0" />
+            <span>{note}</span>
+          </p>
+        ) : null}
+        {contactPhone ? (
+          <a
+            href={`tel:${contactPhone}`}
+            className="flex items-center gap-1 text-xs text-primary mt-1 font-medium"
+          >
+            <Phone className="w-3 h-3" />
+            {contactName ? `${contactName} — ${contactPhone}` : contactPhone}
+          </a>
+        ) : null}
       </div>
     </div>
   );

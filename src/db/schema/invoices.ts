@@ -61,8 +61,13 @@ export const invoices = pgTable(
         // Invoice number for display (e.g., INV-2024-0001)
         invoiceNumber: text("invoice_number").notNull().unique(),
 
-        // Amount in cents
+        // Amount in cents — the TOTAL actually charged, so this ties to the
+        // bank statement / Stripe capture.
         amount: integer("amount").notNull(),
+        // The platform-fee portion of `amount`, broken out for display; zero
+        // unless the admin-configured rate was non-zero at charge time. See
+        // `payments.platformFeeCents`, which this is copied from.
+        platformFeeCents: integer("platform_fee_cents").default(0).notNull(),
         currency: text("currency").default("EUR").notNull(),
 
         // Status

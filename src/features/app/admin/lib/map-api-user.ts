@@ -39,11 +39,12 @@ export function mapApiUser(user: ApiUser): User {
     id: user.id,
     name: user.name || "Unknown",
     email: user.email,
-    // Shared with the sidebar badge rather than ranked again here. The
+    // Shared with the sidebar switcher rather than ranked again here. The
     // local copy fell through to `roles[0]` for anything it did not name, and
     // that array's order is whatever the join returned — which is how a
     // support or finance account came to read "Shipper" in this table.
     role: primaryRole(user.roles ?? []),
+    roles: user.roles ?? [],
     status: status(user),
     joinDate: user.createdAt
       ? new Date(user.createdAt).toISOString().split("T")[0]

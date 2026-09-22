@@ -67,7 +67,7 @@ function ApplicationFunnel({ application }: { application: CarrierApplication })
 
       <DocumentChecklist documents={application.documents} canUpload={!locked} />
 
-      {editable && <BankingSection application={application} />}
+      {!locked && <BankingSection application={application} />}
 
       {editable && <SubmitSection application={application} />}
       {status === "submitted" && <WithdrawSection />}
@@ -103,7 +103,12 @@ function ApplicationSummary({ application }: { application: CarrierApplication }
   );
 }
 
-/** Mirrors the server's submission gate so gaps show before the round-trip. */
+/**
+ * Documents, banking and a vehicle are no longer required to submit — the
+ * company details form above is the whole gate. This just shows what is
+ * still open, as a nudge to add later, and never blocks the button
+ * (carrier_kyc_spec.md §3).
+ */
 function SubmitSection({ application }: { application: CarrierApplication }) {
   const t = useTranslations("carrier.application.checklist");
   const submit = useSubmitApplication();
@@ -123,7 +128,10 @@ function SubmitSection({ application }: { application: CarrierApplication }) {
 
   return (
     <Card className="space-y-4 p-4 sm:p-6">
-      <h2 className="font-semibold">{t("title")}</h2>
+      <div>
+        <h2 className="font-semibold">{t("title")}</h2>
+        <p className="mt-1 text-sm text-muted-foreground">{t("description")}</p>
+      </div>
       <ul className="space-y-2">
         {items.map((item) => (
           <li key={item.label} className="flex items-center gap-2 text-sm">
@@ -145,10 +153,7 @@ function SubmitSection({ application }: { application: CarrierApplication }) {
             {t("goToFleet")}
           </Link>
         </Button>
-        <Button
-          disabled={submit.isPending || items.some((item) => !item.done)}
-          onClick={() => submit.mutate()}
-        >
+        <Button disabled={submit.isPending} onClick={() => submit.mutate()}>
           <Send className="mr-1.5 h-4 w-4" />
           {submit.isPending ? t("submitting") : t("submit")}
         </Button>

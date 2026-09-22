@@ -20,6 +20,7 @@ import {
   Gavel,
   ClipboardCheck,
   Wallet,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -153,6 +154,11 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       href: "/admin/profile",
       icon: UserCircle,
     },
+    {
+      title: t("navigation.settings"),
+      href: "/admin/settings",
+      icon: Settings,
+    },
   ];
 
   const SidebarContent = () => (
@@ -162,7 +168,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       <AppSidebarHeader href="/admin/expedion" />
       {/* p-4, not px-4: the removed subtitle's bottom padding had been standing
           in for the gap under the logo. Matches the app sidebar. */}
-      <nav className="flex-1 p-4 space-y-2">
+      <nav className="flex-1 min-h-0 overflow-y-auto p-4 space-y-2">
         {sidebarItems.map((item) => (
           <Link
             key={item.href}
@@ -206,7 +212,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       }
     >
       {/* Desktop Sidebar - Static like MainLayout */}
-      <aside className="hidden xl:flex w-64 border-r bg-card flex-col">
+      <aside className="hidden xl:flex w-64 shrink-0 overflow-hidden border-r bg-card flex-col">
         <SidebarContent />
       </aside>
 

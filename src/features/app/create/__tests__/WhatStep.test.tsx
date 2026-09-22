@@ -115,7 +115,7 @@ describe("what and how many", () => {
   ])("asks for the item and its count together in %s", (locale, messages, item, count) => {
     renderFields(locale, messages as typeof en);
 
-    const title = screen.getByLabelText(item);
+    const title = screen.getByLabelText(item, { exact: false });
     const quantity = screen.getByLabelText(count);
 
     // One row owns both, so the count cannot drift back down the step away

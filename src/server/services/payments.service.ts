@@ -16,6 +16,10 @@ import {
   isMockPaymentsEnabled,
 } from "@/lib/stripe/mock-payments";
 import { invoicesService } from "@/server/services/invoices.service";
+import {
+  platformSettingsService,
+  platformFeeFor,
+} from "@/server/services/platform-settings.service";
 
 // ========================================
 // Errors
@@ -83,13 +87,22 @@ async function firstSavedCard(customerId: string): Promise<string | null> {
   return methods.data[0]?.id ?? null;
 }
 
-/** The row every branch below starts from: the attempt, before its outcome. */
-function baseRow(params: ChargeParams) {
+/**
+ * The row every branch below starts from: the attempt, before its outcome.
+ *
+ * `platformFeeCents` defaults to 0 — an additive surcharge on the *client's*
+ * side, unrelated to `commissionCents` (a cut from the *carrier's* side).
+ * `amountCents` keeps meaning "offer price" either way, so payout math
+ * (`payouts.amountCents = payment.amountCents - payment.commissionCents`)
+ * never sees the fee and stays correct without change.
+ */
+function baseRow(params: ChargeParams, platformFeeCents = 0) {
   return {
     id: nanoid(),
     userId: params.shipperId,
     amountCents: params.amountCents,
     commissionCents: commissionFor(params.amountCents),
+    platformFeeCents,
     currency: "eur" as const,
     transferGroup: `shipment_${params.shipmentId}`,
     listingId: params.listingId,
@@ -166,11 +179,14 @@ async function recordExternalCharge(params: ChargeParams) {
  * intent id in place of a real one. The row is the shape the real path
  * produces, so everything downstream of `captured` is exercised for real.
  */
-async function mockChargeForShipment(params: ChargeParams) {
+async function mockChargeForShipment(
+  params: ChargeParams,
+  platformFeeCents = 0
+) {
   const [row] = await db
     .insert(payments)
     .values({
-      ...baseRow(params),
+      ...baseRow(params, platformFeeCents),
       stripePaymentIntentId: `${MOCK_INTENT_PREFIX}${params.shipmentId}`,
       status: "captured",
       source: "stripe",
@@ -358,18 +374,27 @@ export const paymentsService = {
       return await afterCapture(await recordExternalCharge(params));
     }
 
+    // Read once per charge attempt. A hot path, but one row, one indexed
+    // lookup — and an admin-configured rate must apply to every real charge,
+    // not just the ones taken while someone happens to be watching.
+    const feeBasisPoints = await platformSettingsService.getFeeBasisPoints();
+    const platformFeeCents = platformFeeFor(params.amountCents, feeBasisPoints);
+
     // TODO(EXPEDITOO-TESTING): MOCK_PAYMENTS — replace with a real off-session charge against the card saved at posting (see docs/TESTING_MOCKS.md).
     // Before the customer check on purpose: a test shipper has no saved card.
     if (isMockPaymentsEnabled()) {
-      return await afterCapture(await mockChargeForShipment(params));
+      return await afterCapture(
+        await mockChargeForShipment(params, platformFeeCents)
+      );
     }
 
     if (!params.stripeCustomerId) {
       throw err("PAYMENT_METHOD_REQUIRED", 402, "Add a payment method first");
     }
 
-    // The card was collected before the job went on the board, so its absence
-    // here means it was detached between posting and award.
+    // Posting no longer requires a card (docs/specs/payment_at_booking_spec.md)
+    // — its absence here just as often means the requester never added one as
+    // that it was detached after the fact.
     const card = await firstSavedCard(params.stripeCustomerId);
     if (!card) {
       throw err("PAYMENT_METHOD_REQUIRED", 402, "Add a payment method first");
@@ -377,12 +402,18 @@ export const paymentsService = {
 
     const [row] = await db
       .insert(payments)
-      .values({ ...baseRow(params), status: "pending", source: "stripe" })
+      .values({
+        ...baseRow(params, platformFeeCents),
+        status: "pending",
+        source: "stripe",
+      })
       .returning();
 
     try {
       const intent = await stripe.paymentIntents.create({
-        amount: params.amountCents,
+        // The only line the fee changes: what is actually captured.
+        // `payments.amountCents` stays the offer price — see `baseRow`.
+        amount: params.amountCents + platformFeeCents,
         currency: "eur",
         customer: params.stripeCustomerId,
         payment_method: card,
@@ -397,6 +428,7 @@ export const paymentsService = {
         metadata: {
           shipmentId: params.shipmentId,
           listingId: params.listingId,
+          platformFeeCents: String(platformFeeCents),
         },
       });
 

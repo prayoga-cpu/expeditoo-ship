@@ -45,6 +45,24 @@ export function fetchUsers(params: { role?: string; search?: string } = {}) {
   return request<UserListResponse>(`/api/admin/users?${query}`);
 }
 
+/** Additive — a user can hold several roles, and this never replaces the rest. */
+export function assignRole(userId: string, role: string) {
+  return request<{ success: boolean; message: string }>("/api/user/roles", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId, role }),
+  });
+}
+
+/** The server refuses to take a user's last role — see roleManagement note. */
+export function removeRole(userId: string, role: string) {
+  return request<{ success: boolean; message: string }>("/api/user/roles", {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId, role }),
+  });
+}
+
 export function updateUserStatus(userId: string, banned: boolean) {
   return request<{ id: string; banned: boolean }>(
     `/api/admin/users/${userId}/status`,

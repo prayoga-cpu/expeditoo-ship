@@ -25,6 +25,8 @@ export const listingStatusEnum = pgEnum("listing_status", [
   "completed",
   "cancelled",
   "expired",
+  // Appended, not inserted in place — see 0025_scheduled_publish.sql.
+  "scheduled",
 ]);
 
 // The 13 location types (ROADMAP.md §8 Phase A).
@@ -100,6 +102,13 @@ export const listings = pgTable(
     pickupLocationType: locationTypeEnum("pickup_location_type").notNull(),
     pickupFloor: integer("pickup_floor"),
     pickupHasLift: boolean("pickup_has_lift"),
+    // Free-text access instructions ("second floor, past the red door") and
+    // who the carrier actually calls on arrival — not necessarily the
+    // requester. Nullable: an existing row predates the field, and an
+    // Expedion-escalated job may carry only whichever of the two the quote had.
+    pickupNote: text("pickup_note"),
+    pickupContactName: text("pickup_contact_name"),
+    pickupContactPhone: text("pickup_contact_phone"),
 
     // ---- Where: dropoff ----
     dropoffLat: doublePrecision("dropoff_lat").notNull(),
@@ -110,6 +119,9 @@ export const listings = pgTable(
     dropoffLocationType: locationTypeEnum("dropoff_location_type").notNull(),
     dropoffFloor: integer("dropoff_floor"),
     dropoffHasLift: boolean("dropoff_has_lift"),
+    dropoffNote: text("dropoff_note"),
+    dropoffContactName: text("dropoff_contact_name"),
+    dropoffContactPhone: text("dropoff_contact_phone"),
 
     // ---- When ----
     pickupFrom: timestamp("pickup_from").notNull(),
@@ -138,6 +150,11 @@ export const listings = pgTable(
     // forward, so it is not the job that was posted — and a carrier bidding on
     // it is entitled to know that (cancellations_spec.md §3.4).
     reopenedAt: timestamp("reopened_at"),
+    // Set when the requester chose "Schedule for later" at /create. Only
+    // meaningful while status is `scheduled`; `publishScheduled()` clears it
+    // back to null the moment the cron flips the listing to `open` (or
+    // expires it, if its own pickup window closed first).
+    scheduledPublishAt: timestamp("scheduled_publish_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()

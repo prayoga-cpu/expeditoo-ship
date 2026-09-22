@@ -1,6 +1,6 @@
 # STATUS.md
 
-## Current state: user-testing mode — driver-side revamp complete (2.42.0)
+## Current state: user-testing mode — driver-side revamp complete (2.45.0)
 
 _AI agents: add an entry here every time you finish a task. See AGENTS.md §8._
 
@@ -136,6 +136,16 @@ than leaving it in a chat message.
       `next build` and never migrates; this workflow is the only thing that can,
       because every production variable is Sensitive and no laptop can reach the
       database.
+- [ ] **Three more migrations ship in this same push — `0024` through `0026` —
+      and all need the same workflow run.** `0024_endpoint_note_contact` (pickup/
+      dropoff note and contact columns), `0025_scheduled_publish` (the `scheduled`
+      listing status and `scheduled_publish_at`), `0026_platform_fee` (the new
+      `platform_settings` table and `platform_fee_cents` on `payments`/
+      `invoices`). Deploy without migrating and: a direct posting with a contact
+      phone 500s on insert, "Schedule for later" 500s the same way, and the
+      platform-fee read in `chargeForShipment` throws on every real award — award
+      is on the critical path, so an unmigrated `0026` blocks every driver payout,
+      not just the new fee.
 - [ ] **Set `EXPEDION_APP_ORIGINS` in `.env.local`** — it exists in Vercel
       Production only, so `user.origin` reads `expedion` on the deployment and
       never locally. It back-fills nothing, deliberately.
@@ -159,6 +169,607 @@ than leaving it in a chat message.
       in `.env.example`.
 
 ---
+
+## ✅ 2026-09-23 — Card-Free Posting, Scheduled Publish, Platform Fee (2.46.0)
+
+Three requests over one conversation, expanding from a UI redesign of the
+"When" step's date pickers into: dropping the card requirement at posting
+time, letting a request be scheduled for a later publish, and a real,
+admin-configurable platform fee added to the client's charge at award. The
+last of these touches live money capture, so it was designed — four
+independent design passes (one per phase) plus a synthesis pass that cross-
+checked them against each other and against the actual repository state —
+before any code was written, and implemented in the order the synthesis
+settled on: card-free posting first (smallest, no dependencies), platform fee
+last (highest risk, depends on nothing but the state after the first phase).
+
+**Card-free posting.** `assertPayable()` — the publish-time guard in
+`listings.service.ts` that required a saved card before a direct job could go
+on the board — is deleted, along with its two call sites and the now-dead
+`opts.prepaid` parameter on `createListing` (and the matching third argument
+at its one caller, `expedion-escalation.service.ts`). The award-time guard in
+`chargeForShipment` is untouched and is now the only place a missing card
+blocks anything — exactly the guard `PAYMENT_METHOD_REQUIRED` /
+`compensateFailedAward` already exercised end to end. `PaymentStep.tsx` (the
+`/create` wizard's old card-collection step) is deleted outright rather than
+migrated: `/profile/payment-methods/create` already runs the identical Stripe
+SetupIntent flow, so nothing was left to move. A new `CardConnectBanner` on
+`/home` (`dashboard/ui/`) nudges a requester toward that page — shown only
+when they have an open or awarded direct-origin listing and no saved card,
+reusing the existing `GET /api/stripe/payment-methods` route (a new
+`useSavedCards` hook wraps it, matching that route's actual bare-array
+response shape rather than the `{success,data}` envelope every other route
+uses).
+
+**Scheduled publish.** A new `scheduled` listing status
+(`0025_scheduled_publish.sql`, appended to `listing_status` the same way
+`0023`'s `'app'` was) plus a nullable `listings.scheduled_publish_at`. `/create`'s
+last step (Budget, now that Payment is gone) gained a "Publish now / Schedule"
+control (`PublishTimingField.tsx`) — a plain native `datetime-local` input, not
+built on the "When" step's own `TimingField.tsx`/`timing.ts`, because that
+machinery exists to turn a day-plus-time-of-day preference into an arrival
+*window* and a schedule is one precise instant with no such shape. A new cron,
+`publish-scheduled-listings` (`*/5 * * * *` — tighter than any existing sweep,
+because this is the one job whose lateness a requester would actually notice),
+flips a due listing to `open`, re-deriving `expiresAt` against the *actual*
+firing time rather than trusting the value stored at creation — a listing
+whose pickup window closed while the cron was late is expired instead of
+opened dead. `resolveExpiresAt` is now anchored on `scheduledPublishAt` at
+creation time for the same reason forward: a job scheduled 10 days out with a
+pickup 10 days and 20 minutes out must not get a bidding deadline that reads
+as already closed the moment it actually goes live.
+
+**Platform fee.** A new singleton table, `platform_settings`
+(`0026_platform_fee.sql`), one admin-editable `fee_basis_points` column rather
+than a key-value table — the read side is `chargeForShipment`, a hot,
+money-moving path, and a typed column with `DEFAULT 0 NOT NULL` cannot be
+missing or unparseable the way a KV row's text value could be. A new
+`/admin/settings` page (admin/finance only, mirroring `withdrawals.service.ts`'s
+permission pattern) edits it. The fee is **additive on the client's side**,
+computed once per charge and added only to the amount actually sent to
+`stripe.paymentIntents.create` — `payments.amountCents` keeps meaning "offer
+price" and is never touched, so `payouts.amountCents = payment.amountCents -
+payment.commissionCents` (the *carrier's* side, an unrelated cut) is provably
+unaffected; traced, not asserted, against `payouts.ts` and `earnings.dal.ts`'s
+`grossCents`/`netCents` sums. New `payments.platform_fee_cents` and
+`invoices.platform_fee_cents` columns, both `DEFAULT 0 NOT NULL`. The fee
+applies only to `source: "stripe"` charges, live and mocked alike — never to
+`source: "expedion"`, whose money already moved in Expedion's own Stripe
+account before this system knew about the job. `invoices.amount` becomes the
+TOTAL actually charged (so it ties to the bank statement); the fee shows as
+its own HT line on the PDF (`invoice-pdf-props.ts`), prorated off the existing
+`net`/`vat` split so the two lines still sum to the document's own subtotal —
+not the raw cents difference, which would have been a TTC figure sitting next
+to an HT one. Credit notes keep one unsplit line. **Refunds needed no code
+change at all**: both refund call sites (`payments.service.ts`,
+`refund.service.ts`) call `stripe.refunds.create` with no explicit `amount`,
+confirmed by reading both — Stripe refunds the full captured amount by
+default, which already includes the fee once it is captured correctly.
+
+**Judgment calls**
+- `createListing`'s dead `opts.prepaid` parameter was dropped entirely rather
+  than left inert, because the scheduled-publish work needed to add its own
+  guard at the exact spot the card check used to sit, and writing that against
+  two different possible signatures would have been ambiguous.
+- The "Publish now / Schedule" control lives inside `BudgetStep`, not as a
+  sixth wizard step — `JOB_STEPS` drops back to four entries
+  (`what`/`where`/`when`/`budget`), and `isLastStep` already falls out of
+  `steps.length` with no JSX change needed at the call site.
+- A scheduled listing is owner-only-visible the same way a draft is
+  (`getListing`'s check extended from `status === "draft"` to include
+  `"scheduled"`) — it isn't on the board yet, so nobody but its author should
+  be able to open it by id.
+- The redirect after publishing changed from `/listing/${id}` to `/home`,
+  **except** for a scheduled publish, which still goes to `/listings/me` —
+  there is nothing to highlight on `/home` for a job that isn't live yet.
+
+**Bugs fixed on the way past**
+- `payments.ts`'s comment on `commissionCents` said the rate was "100% during
+  the testing phase" — stale since `COMMISSION_RATE` reverted to 0.1 on
+  2026-08-26 (2.??.0, before this backfill window). Corrected while adding the
+  new `platformFeeCents` column right next to it.
+- `chargeForShipment`'s comment on a missing card ("detached between posting
+  and award") was written for a world where a card was mandatory at posting;
+  now that it isn't, absence just as often means the requester never added
+  one. Reworded.
+
+**Concurrent session note**: another session was live-editing
+`listings.service.ts` throughout the early part of this one — the
+`pickup`/`dropoff` `note`/`contactName`/`contactPhone` columns
+(`0024_endpoint_note_contact.sql`) and, later, `announceListingPosted` (the
+2.45.0 entry above this one). Neither is this session's work. The interaction
+point is `createListing`'s publish-announcement gate, extended from
+`data.publish && !isSystemAccount(shipperId)` to also exclude
+`data.scheduledPublishAt` — a scheduled job isn't live yet, so there is
+nothing to email or bell-notify about until the cron actually publishes it.
+
+- [x] **Card-free posting**: `create/ui/PaymentStep.tsx` +
+      `create/__tests__/PaymentStep.test.tsx` (deleted), `create/hooks/useJobForm.tsx`,
+      `create/ui/JobForm.tsx`, `create/ui/index.ts`, `create/schemas.ts`
+      (`STEP_FIELDS` trimmed to four entries), `server/services/listings.service.ts`
+      (`assertPayable` and both call sites deleted), `server/services/expedion-escalation.service.ts`,
+      `server/services/__tests__/listings.service.test.ts` (the card-gating
+      `describe` block removed), `messages/en.json` / `messages/fr.json`
+      (`create.payment`, `create.steps.payment`, `create.toast.cardRequired`
+      removed from both). New: `profile/api/payment-methods.api.ts`,
+      `profile/hooks/useSavedCards.ts`, `dashboard/ui/CardConnectBanner.tsx`,
+      `dashboard/hooks/useDriverDashboard.ts` (extended).
+- [x] **Scheduled publish**: `db/migrations/0025_scheduled_publish.sql` +
+      `meta/_journal.json` (idx 24), `db/schema/listings.ts`
+      (`scheduled` status, `scheduledPublishAt` column), `server/dto/listings.dto.ts`,
+      `server/services/listings.service.ts` (`publishScheduled`, `getListing`),
+      `server/dal/listings.dal.ts` (`findDueScheduled`). New:
+      `app/api/cron/publish-scheduled-listings/route.ts`. `.github/workflows/scheduled-jobs.yml`
+      (new `*/5 * * * *` entry). `create/schemas.ts` (`publishMode`,
+      `scheduledPublishAt`), new `create/ui/PublishTimingField.tsx`,
+      `create/ui/JobForm.tsx`, `create/api/jobs.api.ts`, `create/hooks/useJobForm.tsx`
+      (the consolidated `onSuccess`/`onError`). Fallout of the new enum value:
+      `listing/types.ts`, `listing/statusTone.ts`, `listing/ui/MyRequestsPanel.tsx`.
+- [x] **Platform fee**: new `db/schema/platform-settings.ts`,
+      `db/migrations/0026_platform_fee.sql` + `meta/_journal.json` (idx 25),
+      `db/schema/payments.ts` / `invoices.ts` (`platformFeeCents` columns), new
+      `server/dal/platform-settings.dal.ts`, `server/services/platform-settings.service.ts`,
+      `server/services/payments.service.ts` (`baseRow`, `chargeForShipment`,
+      `mockChargeForShipment`), `server/services/invoices.service.ts`
+      (`createFromPayment`, `createCreditNoteForPayment`), `lib/invoice-pdf-props.ts`,
+      `lib/api-response.ts` (`PlatformSettingsError` registered). New:
+      `app/(app)/admin/settings/page.tsx`, `app/api/admin/settings/route.ts`,
+      `features/app/platform-settings/*`. `features/app/admin/ui/AdminLayout.tsx`
+      (sidebar entry — deliberately not added to `AdminBottomNav.tsx`, matching
+      that `withdrawals` itself isn't there either).
+- [x] `messages/en.json` / `messages/fr.json`: `dashboard.cardNudge.*`,
+      `dashboard.myListing.*`, `create.budget.publish.*`, `create.toast.{scheduled,
+      schedulePast}`, `create.buttons.schedule`, `create.validation.scheduledPublish*`,
+      `myJobs.status.scheduled`, `admin.navigation.settings`, `platformSettings.*` —
+      added to both, symmetrically.
+
+**Verification**
+- `npx tsc --noEmit`: 0 errors, whole repo, run after every phase.
+- `pnpm lint`: 0 errors (81 pre-existing warnings, none in a file this session
+  touched).
+- `pnpm vitest run` (whole repo): **1684/1684 passing.** Two test-harness gaps
+  found and fixed in the process — `payments.service.test.ts` and
+  `invoice-capture-hook.test.ts` each hand-roll an in-memory `db` stand-in that
+  didn't know about the new `platform_settings` table; both now mock
+  `platform-settings.service` directly (fee defaulted to 0, so every existing
+  assertion in either file is unchanged).
+- `src/db/__tests__/migrations-journal.test.ts`: passing for both new
+  migrations.
+- **Not checked live in a browser this session** — no dev server / seeded
+  account was available in this pass. The card-free posting flow, the
+  schedule-publish picker and cron, and the admin settings page are unverified
+  end to end beyond the unit tests above.
+
+**Known limits**
+- No `docs/plans/`/`docs/specs/` file was written for this session's three
+  features — the upfront design instead went through a multi-agent design-and-
+  synthesis pass outside the repo (see the conversation this session came
+  from). §9's process was followed in spirit, not in its literal artifact; a
+  spec is worth writing retroactively for the platform-fee behaviour
+  specifically, given it is the one piece touching live money capture.
+- The scheduled-publish cron has never fired against a real deployment; its
+  late-firing/window-closed branch (`publishScheduled`'s catch path) is
+  covered by reasoning and by the fact the whole file typechecks, not by a
+  dedicated test run against a live cron trigger.
+- Operator to-do above: three new migrations need `Actions → Migrate database`
+  before this deploy reaches production, and the platform-fee one is on the
+  award critical path if skipped.
+
+## ✅ 2026-09-22 — Posting A Request Now Confirms It Three Ways (2.45.0)
+
+_"once the user submitted the request transport, automatically send the
+receipt/email to the user's inbox using resend, also don't forget to give the
+toast, notifcation on the bell, and status on the homepage."_
+
+The toast already existed (`useJobForm.tsx`'s `createJob.onSuccess`); the
+other three did not. Added, all gated on `data.publish === true` in
+`listingsService.createListing` — a draft save fires none of this:
+
+- **Email** — `emailService.sendListingPostedEmail`, a new method, renders a
+  new template (`TransportRequestReceivedEmail.tsx`, French, styled like
+  `ConfirmationRequestEmail.tsx`) and sends via the existing Resend wiring.
+  This is a **submission confirmation, not a payment receipt** — no money
+  moves at this point (`payment_at_booking_spec.md` §4: the charge happens
+  when a carrier is chosen, at award, not at posting). Several `send*Email`
+  methods already in `email.service.ts` (`sendOrderConfirmationEmail`,
+  `sendPaymentReceiptEmail`, `sendShipmentAssignedEmail`,
+  `sendShipmentUpdateEmail`) are dead code from the deleted goods-auction era
+  — called from nowhere but their own tests, `buyer`/`item`/`shipping`
+  vocabulary — and were left alone rather than reused or removed; that cleanup
+  is a separate, reviewable change.
+- **Bell notification** — a new type, `listing_posted`, through the existing
+  `notificationsService.createNotification` / Ably stack. Wired into
+  `notifications/types.ts`, `NotificationItem.tsx` (color) and
+  `useNotifications.ts` (icon, link fallback).
+- **Homepage status** — `/home` (`DriverDashboard.tsx`) gained a card for the
+  caller's own most relevant posted request (`open`/`awarded`/`in_progress`,
+  most recent wins), reusing `GET /api/listings/me` and sharing
+  `useMyRequests`'s cache key so `/home` and `/listings/me` don't double-fetch.
+  Selection is a pure, tested function (`featuredRequest`,
+  `dashboard/myRequestStatus.ts`) rather than logic buried in the hook,
+  matching how `orderRunsByProgress` is tested. The status badge's color map
+  (`STATUS_TONE`) was duplicated in `MyRequestsPanel.tsx`; extracted once into
+  `listing/statusTone.ts` so both screens share it.
+
+**Judgment call**: `listingsService.createListing` is also the path
+`expedionEscalationService.escalate` uses, with the Expedion system account's
+id and `publish: true`. Emailing or bell-notifying that account would be
+silent waste — nobody signs into it — so the new behaviour is additionally
+gated on `!isSystemAccount(shipperId)` (`account-policy.ts`, already used
+elsewhere for the same account). No preference toggle was added to mute the
+new email; nothing analogous is wired to a settings UI today except invoices,
+and `orderConfirmation` in `preferences.dto.ts` is a same-era leftover not
+reused here, per `docs/specs/listing_posted_feedback_spec.md`.
+
+**Concurrent session note**: another session was live-editing
+`listings.service.ts` itself throughout this one — most visibly, removing
+`assertPayable`/`opts.prepaid`/the `paymentsService`-backed card check from
+`createListing` (and the matching third argument at its one call site in
+`expedion-escalation.service.ts`). That is not this session's change, is not
+described further here, and this session's own addition does not depend on
+it either way — `announceListingPosted` only reads `data.publish` and
+`shipperId`. Per the same caveat 2.42.1/2.43.1 already recorded, a whole-repo
+`tsc`/`test` pass would have mixed that session's in-flight state into this
+one's gate, so verification below is scoped to the files this session
+touched.
+
+- [x] `docs/plans/plan_listing_posted_feedback.md` +
+      `docs/specs/listing_posted_feedback_spec.md` written first, per
+      `AGENTS.md` §9.
+- [x] `src/server/emails/TransportRequestReceivedEmail.tsx` (new template)
+- [x] `email.service.ts`, `listings.service.ts`, `account-policy.ts` (read
+      only, `isSystemAccount` reused as-is)
+- [x] `notifications/types.ts`, `NotificationItem.tsx`, `useNotifications.ts`
+- [x] `messages/en.json` / `messages/fr.json`: `notifications.types.listing_posted`,
+      `dashboard.myRequest.*` — added to both, symmetrically
+- [x] `listing/statusTone.ts` (new, extracted), `MyRequestsPanel.tsx` (now
+      imports it instead of redefining it)
+- [x] `dashboard/myRequestStatus.ts`, `dashboard/hooks/useMyRequestStatus.ts`,
+      `dashboard/ui/DriverDashboard.tsx`
+
+**Verification**
+- File-scoped `vitest run` on every file touched (`listings.service.test.ts`,
+  `email.service.test.ts`, `myRequestStatus.test.ts`, plus
+  `locale-parity.test.ts` for the message-catalogue keys): 75/75 passing.
+- File-scoped `eslint` on every file touched (new and edited): clean.
+- `npx tsc --noEmit` was run mid-session and was clean at that point; given
+  the concurrent-session note above, it is not re-claimed as a whole-repo gate
+  at the moment this entry was written.
+- Not checked live in a browser this session — no dev server / seeded account
+  was available in this pass; the new card, toast (pre-existing), bell entry
+  and email are unverified end to end beyond the unit tests above.
+
+## ✅ 2026-09-22 — Applying To Drive No Longer Waits On Documents, Banking Or A Vehicle (2.44.0)
+
+_A screenshot of "My application" (Company details card) with the instruction:
+"for the admin access, only necessary company and the carrier details to be
+field and able to submit, the rest details just to follow up later, cause we
+need the driver is apply easily for now by submittin then admin grant the
+access. even tho the details are not complete if the admin approved is good to
+go."_
+
+`carrierService.submitApplication` (`src/server/services/carrier.service.ts`)
+gated `draft → submitted` behind `applicationGaps`: every required document
+(`cni_recto`, `cni_verso`, `driving_licence`, `insurance_certificate`, `rib`),
+a saved IBAN/BIC, and at least one vehicle, all returned at once as
+`400 INCOMPLETE_APPLICATION`. `approve` (§6) never actually checked any of
+that — it already worked from any status — so the real blocker to "apply
+easily, let an admin decide" was entirely on the submit side.
+
+- [x] `applicationGaps` deleted outright, not bypassed — `submitApplication`
+      now only refuses an already-`submitted`/`under_review` file
+      (`ALREADY_SUBMITTED`) or a `suspended` one (`CARRIER_SUSPENDED`), both
+      state-machine checks unrelated to completeness. The only requirements
+      left are the profile fields `upsertCarrierSchema` already enforces
+      before a carrier row can exist at all — company name, SIRET, contact
+      phone, address, city, postal code.
+- [x] `BankingSection` in `CarrierApplicationScreen.tsx` was gated to
+      `draft`/`rejected` only, so a carrier who submitted first (the whole
+      point of this change) could never reach it again until an admin
+      rejected them. It now shows whenever the file isn't locked for active
+      review (`!locked`, i.e. `draft`, `approved`, `rejected`, `suspended`) —
+      the same rule `DocumentChecklist` already used, so a newly-approved
+      carrier can add their IBAN/BIC immediately.
+- [x] `SubmitSection`'s checklist (documents/banking/vehicle) is now
+      informational only — it no longer disables the Submit button. Copy
+      changed from "Before you can submit" to make clear these are optional
+      and can be completed after approval.
+- [x] `useSubmitApplication`'s special-cased `INCOMPLETE_APPLICATION` toast
+      branch removed as dead code, along with the now-unused
+      `carrier.toasts.incomplete`/`incompleteDescription` keys in both
+      `messages/en.json` and `messages/fr.json`.
+- **Judgment call:** the transport-licence-for-heavy-vehicles check
+  (`document:transport_licence` when any vehicle is ≥ 7.5t) lived only inside
+  `applicationGaps`, so it is gone too, not preserved as a separate gate.
+  Consistent with the rest of the change — and with the SIRET Luhn removal
+  above it — this becomes the admin reviewer's judgment call rather than a
+  system block, since everything else this session loosens the same way.
+- **Found on the way:** `docs/specs/carrier_kyc_spec.md` §5 still listed
+  `/api/carrier/vehicles[/:id]` as requiring an "approved carrier" — it never
+  did; `addVehicle` only calls `requireOwnCarrier` (any status), and
+  `/carrier/fleet` has no status gate either. Corrected while touching the
+  adjacent §3 rewrite, since the spec is what the next session debugs against
+  (`CLAUDE.md` "specs are the contract").
+- **Not changed:** `approve` itself (§6) — it already granted the role,
+  marked whatever documents exist `accepted`, and enrolled the owner as their
+  own driver regardless of completeness, before this session started. Added
+  test coverage for it (edge case 8) since the spec now documents it as
+  load-bearing behavior, but no code there moved.
+- `docs/specs/carrier_kyc_spec.md` rewritten at §3 (requirements table split
+  into "required to submit" vs. "validated on its own endpoint when
+  supplied"), §5 (vehicle auth), §6 (added the no-completeness-gate
+  paragraph), §8 (edge case 4 reworded, edge case 8 added), §9 (test list).
+
+**Verification**
+- `npx vitest run src/server/services/__tests__/carrier.service.test.ts` —
+  25/25 (3 new: `submitApplication` with nothing but the profile on file,
+  refuses a second submission, refuses a suspended carrier; 1 new: `approve`
+  on an application with no documents/banking/vehicle).
+- `npx vitest run src/i18n/__tests__/locale-parity.test.ts` — clean, so the
+  two removed toast keys stayed in lockstep across `en.json`/`fr.json`.
+- Whole-repo `npx tsc --noEmit` — clean — and `npx eslint .` — 0 errors, 80
+  pre-existing warnings across files this session did not touch (verified
+  against `git show HEAD:…` for the one warning-bearing file this session
+  did touch, `CarrierApplicationScreen.tsx` — all 6 predate this change).
+- **Not run:** a whole-repo `pnpm test`/`pnpm build`. A second session was
+  live-editing an unrelated feature throughout (new files under
+  `docs/plans/`, `docs/specs/` and `src/server/emails/` appeared mid-session)
+  — same caveat as 2.43.1's verification note, for the same reason.
+- Not checked in a browser this session — the change is a validation/gating
+  removal with no new UI surface, verified by the service-level tests above
+  and by reading `CarrierApplicationScreen.tsx`'s render conditions directly.
+
+**Known limits**
+- Documents and banking are still locked while `submitted`/`under_review`
+  (unchanged, existing `!locked` behavior) — a carrier who submits with only
+  the profile filled in cannot add anything else until an admin acts, one way
+  or the other. Given the point of this change is a fast admin decision, that
+  was left as-is rather than also unlocking mid-review edits, which is a
+  separate design question this session did not touch.
+- A carrier approved with zero vehicles cannot bid — `offers` need a
+  `vehicleId` FK — which was already true and is unaffected by this change,
+  but is worth restating since "approved" no longer implies "can work."
+
+---
+
+## ✅ 2026-09-22 — SIRET Validation Drops Its Checksum, Kept To A Format Check (2.43.1)
+
+_Same user, continuing the SIRET thread from 2.42.1 in this same session: two
+screenshots of the now-live-grouped field still refusing `090 293 019 30120`
+and `123 131 231 23123`, both well-formed 14-digit strings, with the
+instruction "don't be too strict, only the characters validation needed."_
+
+`isValidSiret` (`src/lib/french-identifiers.ts`) checked two independent
+things: the string was 14 digits, *and* those 14 digits satisfied a Luhn
+check digit — the same algorithm a real INSEE-issued SIRET is constructed to
+satisfy. That second check is exactly why both reported numbers failed: they
+are well-formed 14-digit strings a person testing the form typed by hand,
+not numbers built to pass a specific checksum, so neither happened to land on
+a multiple of 10. This was a deliberate, documented design when it was
+written (`docs/specs/carrier_kyc_spec.md` §3/§9 both called for "Luhn-valid"),
+on the reasoning that a checksum "rejects typos and invented numbers" while a
+real registry lookup stays the admin reviewer's job at approval — but in
+practice it was rejecting exactly the well-formed, non-malicious input a
+reviewer would wave through, which is what the user's two screenshots and
+direct instruction ("only the characters validation needed") point at.
+
+- [x] `isValidSiret` is now a single check: `/^\d{14}$/` after stripping
+      whitespace. The Luhn loop is gone entirely, not disabled or bypassed.
+- [x] The file-level comment above it (already touched in 2.42.1) is updated
+      to say SIRET is a format check while IBAN/BIC remain real checksums, so
+      the next reader doesn't assume all three still work the same way.
+- [x] `docs/specs/carrier_kyc_spec.md` updated at both places that named
+      "Luhn-valid" (§3's requirements table, §9's test-coverage list) — a
+      spec that still says Luhn would be the wrong contract to debug against
+      per `CLAUDE.md`'s "specs are the contract" rule.
+- [x] `carrier.service.test.ts`: the "rejects a number whose check digit is
+      wrong" test is gone (that number is now valid on purpose), and
+      `12345678901234` — a 14-digit string with no special checksum
+      property — was added to the accepted-values table specifically because
+      it's the shape of thing a Luhn check would have rejected.
+- Not touched: `isValidIban`'s mod-97 check and `isValidBic`'s pattern both
+  stay as real checksums — this ask was specific to SIRET, and nothing here
+  suggested relaxing bank-detail validation too.
+
+**Verification**
+- File-scoped `eslint` and `vitest run carrier.service.test.ts` (28/28) both
+  clean — a second session was still live-editing `create/cargo.ts` and
+  friends throughout, so a whole-repo `tsc`/`test`/`build` pass here would
+  have mixed that session's in-progress state into this one's gate, same
+  caveat as 2.42.1's verification note.
+- Checked live in Chromium against the local dev DB with a throwaway
+  account: the exact string from the user's first screenshot,
+  `090 293 019 30120`, now saves successfully end to end (client validation,
+  the `POST /api/carrier/application` route, and the DTO all accept it) —
+  confirmed via a "Saved" toast, not just a green form field.
+
+## ✅ 2026-09-22 — A Note And A Real Contact At Pickup And Delivery, Plus A Map-Link Fallback (2.43.0)
+
+_Three follow-up asks against the "What are you moving?" screenshot from the previous session: (1) richer item templates and a 2-character minimum instead of 5 — done first, see below; (2) "give an optional note for the carrier ... and the contacts fields with active phone number on the each pickup & delivery"; (3), sent mid-turn, "on the address also give option for the user (can't find the location? add the gmaps/any link provider here)"._
+
+### Item templates and the title minimum
+
+`jobFormSchema.title` (`create/schemas.ts`) and the mirrored `baseListingSchema.title`
+(`listings.dto.ts`) both moved from `.min(5)` to `.min(2)` — a 4-character item
+name like "Sofa" was being rejected. `ITEM_SUGGESTIONS` (`create/cargo.ts`) grew
+from 13 to 30 entries (mattress, wardrobe, dining table, chair, bookshelf, TV,
+desk, computer, printer, mirror, piano, garden furniture, lawn mower, treadmill,
+dryer, dishwasher, scooter, artwork, box of books), each pointed at a weight
+bracket and, where one fits, a size preset — the same mechanism as before, just
+more coverage. FR/EN labels added for all of it.
+
+### Note and contact per pickup/dropoff
+
+The requester posting a job is not always who the carrier finds at either end,
+so `pickup`/`dropoff` each gained three fields: `note` (free-text access
+instructions, optional, ≤300 chars), `contactName` (optional, ≤120 chars) and
+`contactPhone` (required on the direct-posting form, validated as a real French
+number via the existing `isValidFrenchPhone`).
+
+- [x] **Schema, both sides.** `listings.ts` and `shipments.ts` (Drizzle) each
+      gained six nullable text columns — `pickup_note`, `pickup_contact_name`,
+      `pickup_contact_phone` and the `dropoff_*` mirror.
+      `0024_endpoint_note_contact.sql`, hand-written per the standing rule
+      (`pnpm db:generate` is unusable in this repo), registered in
+      `meta/_journal.json` at idx 23. Nullable throughout: an existing row
+      predates the field, and required-ness for a *new* direct posting is
+      enforced by the form and the create DTO, the same arrangement
+      `pickup_floor`/`pickup_has_lift` already use.
+- [x] **The server DTO stays lenient on purpose.** `endpointSchema` in
+      `listings.dto.ts` caps `note`/`contactName`/`contactPhone` at 300/120/30
+      characters but does not run the French-phone regex — because
+      `expedionEscalationService` populates these from
+      `expedion_quotes.pickup_phone`/`delivery_phone` and `auction_house_name`/
+      `recipient_name`, which are nullable, free-typed, Airtable-imported data.
+      Running the strict regex there would have made an existing, previously
+      valid quote fail escalation. The client `schemas.ts` mirror is the strict
+      one — `contactPhone` is `.refine(isValidFrenchPhone, ...)` — which is the
+      safe direction: the client refuses more than the server does, never less.
+- [x] **Copied onto `shipments` at award**, in `offersService.commitAward`,
+      the same way `pickupAddress`/`dropoffAddress` already are — "the route,
+      copied from the listing so the record stays truthful even if the listing
+      is later edited." The driver's shipment detail page
+      (`driver/shipments/[id]/page.tsx`) now renders the note under the
+      address and a tappable `tel:` link for the contact, only when present.
+      `redactForDriver` needed no change: it allow-lists only the *sub-objects*
+      (listing/shipper/carrier/driver/confirmations) it strips for a driver
+      viewer, and top-level shipment columns already pass through unredacted.
+- [x] `docs/specs/transport_listing_spec.md` §2 "Where" updated with the three
+      new fields and the lenient-server/strict-client split.
+- [x] Tests: `schemas.test.ts` gained cases for the required/validated phone
+      (plain, spaced and `+33` forms), the optional note/name and their max
+      lengths. Existing DAL/service test mocks needed no changes — none does
+      exact-shape equality on the pickup/dropoff object.
+
+### "Can't find it? Paste a map link."
+
+`LocationPickerField` (`components/ui/location-picker-field.tsx`) gained a
+second way in, beside the Nominatim search box and the draggable pin: paste a
+link from Google Maps, Apple Maps, Bing Maps, Waze or OpenStreetMap.
+
+- [x] `src/lib/map-link.ts` — pure, isomorphic coordinate parser. Named regex
+      capture groups (`(?<lat>...)`/`(?<lng>...)`) throughout, deliberately:
+      an earlier draft used positional groups and a hard-coded "which pattern
+      index has lng first" constant to handle OSM's `mlon`-before-`mlat`
+      ordering, which I miscounted by one during writing and caught before it
+      shipped by hand-tracing the test cases — named groups remove that whole
+      class of bug rather than relying on getting the index right.
+- [x] **The short-link problem.** A phone's "share my location" almost always
+      produces a short link (`maps.app.goo.gl/...`) with no coordinates in the
+      URL itself — they only exist after a redirect, which a browser cannot
+      follow cross-origin. `POST /api/geo/resolve-map-link`
+      (`map-link.service.ts`) follows the redirect server-side and parses the
+      destination URL with the same function. A full link pasted by hand still
+      resolves instantly client-side with no round trip.
+- [x] **Allowlisted by hostname before any fetch happens**
+      (`isAllowedMapLinkHost`) — this endpoint makes the server request
+      whatever URL a signed-in user pastes, which is an SSRF surface without
+      one. Non-`http(s)` schemes are refused the same way (`file://` tested
+      explicitly). Also gated behind `resolveViewer()` and a 20/minute
+      per-user `rateLimit`, matching `POST /api/feedback`'s pattern.
+- [x] `MapLinkError` registered in `api-response.ts`, next to the other
+      per-service error classes.
+- [x] Tests: `map-link.test.ts` covers every provider pattern plus the
+      mlat/mlon ordering and the host allowlist (including a
+      `google.com.evil.com` lookalike, to prove the check is a suffix match on
+      a real subdomain boundary, not a substring test). `map-link.service.test.ts`
+      mocks `global.fetch` to cover the short-link redirect, the
+      no-coordinates-at-destination case, network failure, and confirms
+      `fetch` is never called for a link that already carries coordinates or
+      one refused by the allowlist.
+
+**Verification**
+- `npx tsc --noEmit` 0 errors · targeted `eslint` on every touched file, 0
+  issues · `pnpm test` **1,670 passed** (whole-repo run; a second session was
+  live-editing the "When" step — `create/timing.ts`, `TimingField.tsx` — on
+  this same repo throughout, disjoint from everything touched here, and the
+  full suite passing includes its in-progress work too).
+- Not checked in a browser this session — no `pnpm dev` / Playwright pass
+  against the new note/contact fields or the paste-a-link flow. Flagging this
+  explicitly per the standing rule to say so rather than claim UI success from
+  types and unit tests alone.
+
+## ✅ 2026-09-22 — A Pasted SIRET Now Works, And The Carrier Phone Field Is Marked As French (2.42.1)
+
+_User report, with a screenshot: a SIRET typed as 14 characters still failed with "Enter a valid 14-digit SIRET," followed by a second screenshot of the same form's phone field asking for the input to show a country code, an example, a flag and its validation regex._
+
+### The SIRET bug
+
+`isValidSiret` (`src/lib/french-identifiers.ts`) ran `^\d{14}$` directly
+against the raw string with no whitespace stripping — unlike its two
+siblings a few lines below in the same file, `isValidIban` and
+`isValidFrenchPhone`, which both strip separators before validating. A SIRET
+copied straight from an INSEE/Kbis extract is conventionally grouped
+(`732 829 320 00074`), and a stray space from mobile autocorrect is common
+too; either made the anchored digit-only regex fail even though every
+character a person would count as "the number" was a valid digit. The
+form's `<Input maxLength={14}>` compounded it with no digit-only mask: a
+pasted 17-character grouped SIRET silently truncated to the first 14 raw
+characters, which could chop off a real digit rather than a space depending
+on where the spacing fell.
+
+- [x] `isValidSiret` now strips whitespace before testing, matching its
+      siblings. A new `normalizeSiret` export does the stripping and is
+      `.transform()`ed onto the Zod schema ahead of `.refine(isValidSiret)`
+      at both boundaries — the client form (`CarrierProfileForm.tsx`) and the
+      server DTO (`carrier.dto.ts`) — so the value that reaches the DAL is
+      always clean digits, regardless of how it was typed or pasted.
+- [x] Two tests added to `carrier.service.test.ts`: a grouped and a
+      leading/trailing-space SIRET both now pass `isValidSiret`, and
+      `normalizeSiret` strips spaces as expected.
+- [x] **Follow-up ask, same session**: auto-group the digits into that
+      3-3-3-5 pattern live, rather than requiring the user to type or paste
+      the spaces themselves. The plain `TextField` became a dedicated
+      `SiretField`: `formatSiret` strips non-digits, caps at 14, and rejoins
+      them as `XXX XXX XXX XXXXX` on every keystroke, which is also what
+      retired the `maxLength` attribute entirely — the digit cap now lives in
+      `formatSiret` itself, so a pasted 17-character grouped SIRET can no
+      longer be truncated by the DOM before it's reformatted. Re-formatting
+      a controlled input on every keystroke normally throws the caret to the
+      end mid-edit; `digitsBefore`/`caretAfterDigit` count digits rather than
+      characters on either side of the caret and restore its position (via
+      `requestAnimationFrame`, after the re-render) so inserting a digit in
+      the middle of an existing number does not relocate the cursor. An
+      existing application's stored (spaceless) SIRET is also run through
+      `formatSiret` on render, so it displays grouped immediately rather than
+      only after the first edit. Verified in Chromium with
+      `pressSequentially` (real keystroke-by-keystroke typing, not `.fill()`)
+      for both appending and a mid-string insertion, confirming the grouped
+      value and the caret position after each.
+- Not a bug, confirmed by hand: an invented 14-digit number (the one in the
+  user's screenshot, `12123432456432`) still correctly fails — `isValidSiret`
+  is a real Luhn checksum, not just a length check, so a well-formed but
+  fake SIRET is supposed to be rejected. The reported symptom was real but a
+  different well-formed input (spaced/pasted) was silently failing for the
+  wrong reason.
+
+### The phone field
+
+`contactPhone` is French-only on purpose — a carrier needs a French SIRET
+to apply at all, and `ROADMAP.md` §9 lists "multi-country expansion beyond
+France" as explicitly out of scope, so a country-code dropdown was not the
+right shape for this ask. Asked the user directly, who confirmed: keep it
+locked to France, just make the format legible. `PhoneField` in
+`CarrierProfileForm.tsx` now shows a fixed, non-editable 🇫🇷 +33 badge and
+takes only the national significant number (stripping a leading `0` if
+someone types the domestic habit out of muscle memory); the composed value
+is written back in the same `+33 …` shape `isValidFrenchPhone` already
+accepted, so neither the regex nor the stored format changed.
+
+**Verification**
+- `npx tsc --noEmit` 0 errors · `pnpm lint` 0 errors, 80 pre-existing
+  warnings unrelated to this change · `pnpm test` **1,627 passed** (2 new) ·
+  `pnpm build` succeeds. Run against this session's changes only — a second
+  session was live-editing `create/cargo.ts`/`schemas.ts` on the same repo
+  throughout, so the live-formatting follow-up above was re-verified with
+  file-scoped `eslint`/`vitest` rather than a second whole-repo pass, to
+  avoid attributing that other session's in-progress state to this change.
+- Checked live in Chromium against the local dev DB, light and dark: a fake
+  14-digit SIRET still correctly fails, a real SIRET passes with or without
+  the printed grouping spaces, the phone field's flag/prefix render
+  correctly in both themes, and typing a SIRET keystroke-by-keystroke
+  (`pressSequentially`, not `.fill()`) groups it live into `XXX XXX XXX
+  XXXXX` while keeping the caret where the user left it.
 
 ## ✅ 2026-09-18 — Color The Feedback Queue By Status, And Let It Be Sorted (2.42.0)
 

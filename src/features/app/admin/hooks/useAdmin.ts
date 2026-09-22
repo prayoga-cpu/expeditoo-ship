@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { User } from "../types";
 import { mapApiUser } from "../lib/map-api-user";
-import { fetchUsers } from "../api/users.api";
+import { assignRole, fetchUsers, removeRole } from "../api/users.api";
 
 /**
  * The admin users table.
@@ -39,28 +39,17 @@ export function useAdmin() {
     );
   }, [users, searchQuery]);
 
+  /** Additive — a role picked here joins whatever the account already holds
+   * (assignRole.ts, non-replace branch). Assigning was silently replacing
+   * every existing role until this changed, one `replace: true` away from
+   * the copy right beside it in the dialog promising the opposite. */
   const handleUpdateRole = useCallback(
     async (role: string) => {
       if (!selectedUser) return;
 
       setIsUpdatingRole(true);
       try {
-        const response = await fetch("/api/user/roles", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            userId: selectedUser.id,
-            role,
-            replace: true,
-          }),
-        });
-
-        const data = await response.json();
-
-        if (!response.ok || !data.success) {
-          throw new Error(data.error?.message || "Failed to update role");
-        }
-
+        await assignRole(selectedUser.id, role);
         await refetch();
         setRoleDialogOpen(false);
       } catch (error) {
@@ -70,6 +59,18 @@ export function useAdmin() {
       }
     },
     [selectedUser, refetch]
+  );
+
+  /** The server refuses to take an account's last role, and answers with a
+   * message rather than an HTTP error for that case — surfaced by the
+   * caller, not swallowed here. */
+  const handleRemoveRole = useCallback(
+    async (userId: string, role: string) => {
+      const result = await removeRole(userId, role);
+      await refetch();
+      return result;
+    },
+    [refetch]
   );
 
   return {
@@ -84,6 +85,7 @@ export function useAdmin() {
     isUpdatingRole,
     users: filteredUsers,
     handleUpdateRole,
+    handleRemoveRole,
     isLoading,
     refetchUsers: refetch,
   };

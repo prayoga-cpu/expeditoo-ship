@@ -14,6 +14,8 @@ import type { InvoicePDFProps } from "@/server/pdf/InvoicePDF";
 export interface InvoiceForPdf {
   invoiceNumber: string;
   amount: number;
+  /** The platform-fee portion of `amount`, broken out as its own line. */
+  platformFeeCents?: number | null;
   currency: string;
   status: string;
   kind?: string | null;
@@ -137,6 +139,17 @@ export function invoicePdfProps(
       ? total
       : Math.sign(total) * Math.round(Math.abs(total) / (1 + vatRate / 100));
 
+  // The fee's own HT share, so the two lines still sum to `net` exactly
+  // rather than to `net` plus or minus a rounding centime. Credit notes keep
+  // one unsplit line — they correct the whole document at once, the same way
+  // `correctsLabel` only applies to an ordinary invoice's counterpart fields.
+  const platformFeeCents = invoice.platformFeeCents ?? 0;
+  const feeNet =
+    platformFeeCents === 0 || vatRate === undefined || vatRate === 0
+      ? platformFeeCents
+      : Math.round(platformFeeCents / (1 + vatRate / 100));
+  const baseNet = net - feeNet;
+
   return {
     documentTitle: isCreditNote
       ? issuer.isComplete
@@ -165,8 +178,11 @@ export function invoicePdfProps(
       {
         description: description(invoice, fallbackDescription),
         quantity: 1,
-        unitPrice: net,
+        unitPrice: isCreditNote ? net : baseNet,
       },
+      ...(!isCreditNote && platformFeeCents !== 0
+        ? [{ description: "Frais de service", quantity: 1, unitPrice: feeNet }]
+        : []),
     ],
     subtotal: net,
     vat: total - net,

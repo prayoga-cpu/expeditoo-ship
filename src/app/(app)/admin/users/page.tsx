@@ -27,6 +27,7 @@ function UsersPageContent() {
     selectedUser,
     setSelectedUser,
     handleUpdateRole,
+    handleRemoveRole,
     isUpdatingRole,
     isLoading,
     refetchUsers,
@@ -73,6 +74,7 @@ function UsersPageContent() {
         }}
         onViewProfile={(user) => setProfileUserId(user.id)}
         onUserUpdated={() => refetchUsers()}
+        onRemoveRole={(user, role) => handleRemoveRole(user.id, role)}
         initialSearch={initialSearch}
       />
 

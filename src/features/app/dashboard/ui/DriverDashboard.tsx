@@ -2,12 +2,17 @@
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { ArrowRight, FileText, Gavel, Package, Truck } from "lucide-react";
+import { ArrowRight, FileText, Gavel, Package, Send, Truck } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageLoader } from "@/components/ui/page-loader";
 import { ApplicationStatusBanner } from "@/features/app/carrier/ui";
+import { STATUS_TONE } from "@/features/app/listing/statusTone";
+import type { Job } from "@/features/app/listing/types";
 import { useDriverDashboard } from "../hooks/useDriverDashboard";
+import { useMyRequestStatus } from "../hooks/useMyRequestStatus";
+import { CardConnectBanner } from "./CardConnectBanner";
 import type { Shipment } from "@/features/app/deliveries/api/deliveries.api";
 
 /**
@@ -72,6 +77,42 @@ function CurrentRunCard({ run }: { run: Shipment }) {
 }
 
 /**
+ * The caller's own most relevant posted request, if they have one.
+ *
+ * The dashboard is otherwise entirely about standing as a driver; a person
+ * who just used `/create` needs to see what happened to it without leaving
+ * their home base (listing_posted_feedback_spec.md §2.4).
+ */
+function MyRequestStatusCard({ job }: { job: Job }) {
+  const t = useTranslations("dashboard");
+  const tStatus = useTranslations("myJobs");
+
+  return (
+    <Card className="p-5">
+      <div className="flex items-center gap-2">
+        <Send className="h-5 w-5 text-primary" aria-hidden />
+        <h2 className="font-semibold">{t("myRequest.title")}</h2>
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <Badge className={STATUS_TONE[job.status]}>
+          {tStatus(`status.${job.status}`)}
+        </Badge>
+        <span className="text-sm text-muted-foreground">
+          {tStatus("offers", { count: job.offersCount })}
+        </span>
+      </div>
+
+      <p className="mt-2 font-medium">{job.title}</p>
+
+      <Button asChild variant="outline" className="mt-4 w-full sm:w-auto">
+        <Link href={`/listing/${job.id}`}>{t("myRequest.action")}</Link>
+      </Button>
+    </Card>
+  );
+}
+
+/**
  * The driver's home screen.
  *
  * Replaces the job board that used to sit here. The board moved to /expedion
@@ -92,7 +133,9 @@ export function DriverDashboard() {
     activeRuns,
     currentRun,
     isRunsLoading,
+    needsCardNudge,
   } = useDriverDashboard();
+  const { featured: featuredRequest } = useMyRequestStatus();
 
   if (isApplicationLoading) return <PageLoader />;
 
@@ -102,6 +145,8 @@ export function DriverDashboard() {
         <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
         <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
       </header>
+
+      {needsCardNudge && <CardConnectBanner />}
 
       {application && <ApplicationStatusBanner application={application} />}
 
@@ -120,6 +165,8 @@ export function DriverDashboard() {
           </Button>
         </Card>
       )}
+
+      {featuredRequest && <MyRequestStatusCard job={featuredRequest} />}
 
       {currentRun && <CurrentRunCard run={currentRun} />}
 

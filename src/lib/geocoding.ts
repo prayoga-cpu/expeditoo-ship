@@ -3,6 +3,9 @@
  * https://nominatim.org/release-docs/latest/api/Search/
  */
 
+import { api } from "@/lib/fetcher";
+import { parseCoordinatesFromMapLink } from "@/lib/map-link";
+
 const NOMINATIM_URL = "https://nominatim.openstreetmap.org";
 
 // User-Agent header is required by Nominatim usage policy
@@ -141,4 +144,27 @@ export async function reverseGeocode(
     console.error("Reverse geocoding error:", error);
     return null;
   }
+}
+
+/**
+ * For "can't find it? paste a map link". A link that already carries its
+ * coordinates (Google/Apple/OSM/Bing "share" or "copy address" links, or a
+ * bare "lat,lng") resolves instantly with no request. A *short* link
+ * (`maps.app.goo.gl/...`) carries none until it redirects, which a browser
+ * cannot follow cross-origin — that case goes to the server
+ * (`POST /api/geo/resolve-map-link`), which follows the redirect itself
+ * against an allowlist of map providers. Throws `ApiError` (see
+ * `@/lib/fetcher`) when the server call fails, so a caller can read `.code`
+ * (`UNSUPPORTED_LINK_PROVIDER`, `LOCATION_NOT_FOUND_IN_LINK`, ...) to pick a
+ * message.
+ */
+export async function resolveMapLink(
+  link: string
+): Promise<{ lat: number; lng: number }> {
+  const direct = parseCoordinatesFromMapLink(link);
+  if (direct) return direct;
+
+  return api.post<{ lat: number; lng: number }>("/api/geo/resolve-map-link", {
+    url: link,
+  });
 }

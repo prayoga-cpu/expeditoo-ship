@@ -11,5 +11,9 @@ export function FieldError({ message }: { message?: string }) {
   const t = useTranslations();
   if (!message) return null;
   const text = message.startsWith("create.validation.") ? t(message) : message;
-  return <p className="mt-1 text-sm text-destructive">{text}</p>;
+  return (
+    <p data-field-error className="mt-1 text-sm text-destructive">
+      {text}
+    </p>
+  );
 }

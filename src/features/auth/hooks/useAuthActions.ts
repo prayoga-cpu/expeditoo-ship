@@ -95,6 +95,10 @@ export function useAuthActions() {
       await authClient.signIn.social({
         provider: "google",
         callbackURL: "/home",
+        // A brand-new account (this provider's first sign-in) lands on
+        // onboarding instead — see /welcome. An existing account signing in
+        // again always takes callbackURL above.
+        newUserCallbackURL: "/welcome",
       });
 
       return { success: true };

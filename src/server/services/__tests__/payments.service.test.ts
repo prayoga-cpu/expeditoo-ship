@@ -125,6 +125,14 @@ vi.mock("@/lib/stripe", () => ({
     transfers: { create: vi.fn() },
   },
 }));
+// The platform fee rate, read once per charge. Defaulted to 0 so every
+// existing case here — none of which is about the fee — keeps charging
+// exactly `amountCents`; the cases that are about it override this.
+vi.mock("@/server/services/platform-settings.service", () => ({
+  platformSettingsService: { getFeeBasisPoints: vi.fn().mockResolvedValue(0) },
+  platformFeeFor: (amountCents: number, feeBasisPoints: number) =>
+    Math.round((amountCents * feeBasisPoints) / 10_000),
+}));
 
 import {
   paymentsService,
@@ -133,6 +141,7 @@ import {
   COMMISSION_RATE,
 } from "../payments.service";
 import { stripe } from "@/lib/stripe";
+import { platformSettingsService } from "@/server/services/platform-settings.service";
 
 // ========================================
 // Fixtures

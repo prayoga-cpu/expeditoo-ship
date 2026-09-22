@@ -17,6 +17,7 @@ const endpoint = {
   city: "Lyon",
   postalCode: "69003",
   locationType: "house" as const,
+  contactPhone: "0612345678",
 };
 
 const values = (over: Partial<JobFormOutput> = {}): JobFormOutput =>
@@ -85,6 +86,43 @@ describe("toCreatePayload", () => {
       widthCm: 80,
       heightCm: 70,
     });
+  });
+
+  it("sends the notSure bracket's ceiling as the weight", () => {
+    expect(
+      toCreatePayload(values({ weightBracket: "notSure" }), true).weightKg
+    ).toBe(500);
+  });
+
+  it("folds a fragile note into the description", () => {
+    const payload = toCreatePayload(
+      values({ isFragile: true, fragileNote: "Glass top, keep upright" }),
+      true
+    );
+
+    expect(payload.description).toBe(
+      "A sofa and a coffee table, ground floor at both ends.\n\n" +
+        "Fragile: Glass top, keep upright"
+    );
+  });
+
+  it("ignores a fragile note left over from a toggle switched back off", () => {
+    const payload = toCreatePayload(
+      values({ isFragile: false, fragileNote: "Glass top" }),
+      true
+    );
+
+    expect(payload.description).toBe(
+      "A sofa and a coffee table, ground floor at both ends."
+    );
+  });
+
+  it("leaves the description alone when fragile but no note was typed", () => {
+    const payload = toCreatePayload(values({ isFragile: true }), true);
+
+    expect(payload.description).toBe(
+      "A sofa and a coffee table, ground floor at both ends."
+    );
   });
 
   it("leaves the rest of the contract exactly as it was", () => {

@@ -7,6 +7,7 @@ import {
   Star,
   CreditCard,
   AlertCircle,
+  Send,
 } from "lucide-react";
 import type { Notification, NotificationTab, NotificationType } from "../types";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -191,6 +192,8 @@ function getIcon(type: string) {
       return TrendingUp;
     case "listing":
       return AlertCircle;
+    case "listing_posted":
+      return Send;
     case "message":
       return MessageCircle;
     case "delivery":
@@ -215,6 +218,9 @@ function getLink(type: string, resourceId?: string | null) {
     case "bid":
     case "listing":
       return `/auction/${resourceId}`;
+    // The resource is the job the caller just posted.
+    case "listing_posted":
+      return `/listing/${resourceId}`;
     case "message":
       return `/messages/${resourceId}`;
     case "delivery":

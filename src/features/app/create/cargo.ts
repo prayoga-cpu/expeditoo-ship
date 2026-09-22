@@ -22,6 +22,7 @@ export const WEIGHT_BRACKET_IDS = [
   "upTo500",
   "upTo1000",
   "over1000",
+  "notSure",
 ] as const;
 
 export type WeightBracketId = (typeof WEIGHT_BRACKET_IDS)[number];
@@ -32,6 +33,15 @@ export const HEAVY_BRACKET_MIN_KG = 1000;
 /** The one bracket that asks for a figure instead of supplying one. */
 export const HEAVY_BRACKET_ID = "over1000" satisfies WeightBracketId;
 
+/**
+ * `notSure` resolves to the same ceiling as `upTo500`: generous enough to
+ * cover nearly every household item without reaching into freight-scale
+ * vehicles a small job does not need. Same safe-overstatement direction every
+ * other bracket already resolves toward, just for someone who genuinely
+ * cannot say which of the first five fits.
+ */
+export const UNSURE_BRACKET_ID = "notSure" satisfies WeightBracketId;
+
 /** Ceiling in kilograms; `null` means the person states the weight. */
 export const WEIGHT_BRACKET_MAX_KG = {
   upTo5: 5,
@@ -40,6 +50,7 @@ export const WEIGHT_BRACKET_MAX_KG = {
   upTo500: 500,
   upTo1000: HEAVY_BRACKET_MIN_KG,
   over1000: null,
+  notSure: 500,
 } as const satisfies Record<WeightBracketId, number | null>;
 
 /**
@@ -96,3 +107,92 @@ export function resolveDimensions(
   }
   return preset ? { ...SIZE_PRESET_DIMENSIONS[preset] } : {};
 }
+
+/**
+ * Common items someone types in "What are you moving?", each pointing at the
+ * weight bracket and (where one clearly fits) the size preset a person would
+ * otherwise have to pick by hand. Purely a typing shortcut — choosing a
+ * suggestion only calls `setValue` on the same two client-only fields the
+ * cards already write to, so it costs the API nothing and can be overridden
+ * by hand afterward like any other bracket or preset choice.
+ *
+ * Labels live at `create.what.itemSuggestions.<id>`, one language at a time —
+ * matching happens against whichever locale is on screen.
+ */
+export const ITEM_SUGGESTION_IDS = [
+  "watch",
+  "parcel",
+  "suitcase",
+  "movingBox",
+  "booksBox",
+  "computer",
+  "printer",
+  "artwork",
+  "washingMachine",
+  "dryer",
+  "dishwasher",
+  "armchair",
+  "chair",
+  "mirror",
+  "tv",
+  "bike",
+  "scooter",
+  "lawnMower",
+  "sofa",
+  "mattress",
+  "fridge",
+  "diningTable",
+  "desk",
+  "bookshelf",
+  "gardenFurniture",
+  "treadmill",
+  "motorbike",
+  "furniture",
+  "doubleBed",
+  "wardrobe",
+  "piano",
+  "pallet",
+] as const;
+
+export type ItemSuggestionId = (typeof ITEM_SUGGESTION_IDS)[number];
+
+export interface ItemSuggestion {
+  id: ItemSuggestionId;
+  weightBracket: WeightBracketId;
+  sizePreset?: SizePresetId;
+}
+
+export const ITEM_SUGGESTIONS = [
+  { id: "watch", weightBracket: "upTo5", sizePreset: "s" },
+  { id: "parcel", weightBracket: "upTo5", sizePreset: "s" },
+  { id: "suitcase", weightBracket: "upTo30", sizePreset: "m" },
+  { id: "movingBox", weightBracket: "upTo30", sizePreset: "m" },
+  { id: "booksBox", weightBracket: "upTo30", sizePreset: "s" },
+  { id: "computer", weightBracket: "upTo5", sizePreset: "s" },
+  { id: "printer", weightBracket: "upTo5", sizePreset: "s" },
+  { id: "artwork", weightBracket: "upTo5", sizePreset: "m" },
+  { id: "washingMachine", weightBracket: "upTo100", sizePreset: "l" },
+  { id: "dryer", weightBracket: "upTo100", sizePreset: "l" },
+  { id: "dishwasher", weightBracket: "upTo100", sizePreset: "l" },
+  { id: "armchair", weightBracket: "upTo100" },
+  { id: "chair", weightBracket: "upTo30", sizePreset: "m" },
+  { id: "mirror", weightBracket: "upTo30", sizePreset: "m" },
+  { id: "tv", weightBracket: "upTo30", sizePreset: "m" },
+  { id: "bike", weightBracket: "upTo30", sizePreset: "l" },
+  { id: "scooter", weightBracket: "upTo30", sizePreset: "m" },
+  { id: "lawnMower", weightBracket: "upTo30", sizePreset: "m" },
+  { id: "sofa", weightBracket: "upTo100", sizePreset: "xl" },
+  { id: "mattress", weightBracket: "upTo100", sizePreset: "xl" },
+  { id: "fridge", weightBracket: "upTo100", sizePreset: "xl" },
+  { id: "diningTable", weightBracket: "upTo100", sizePreset: "l" },
+  { id: "desk", weightBracket: "upTo100", sizePreset: "l" },
+  { id: "bookshelf", weightBracket: "upTo100", sizePreset: "l" },
+  { id: "gardenFurniture", weightBracket: "upTo100", sizePreset: "l" },
+  { id: "treadmill", weightBracket: "upTo100", sizePreset: "l" },
+  { id: "motorbike", weightBracket: "upTo500" },
+  { id: "furniture", weightBracket: "upTo500" },
+  { id: "doubleBed", weightBracket: "upTo100", sizePreset: "xxl" },
+  { id: "wardrobe", weightBracket: "upTo500", sizePreset: "xxl" },
+  { id: "piano", weightBracket: "upTo500", sizePreset: "xxl" },
+  { id: "pallet", weightBracket: "upTo1000", sizePreset: "xxl" },
+] as const satisfies readonly ItemSuggestion[];

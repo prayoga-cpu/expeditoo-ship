@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { MapPin, Search } from "lucide-react";
+import { Link2, MapPin, Search } from "lucide-react";
 import Map, {
   Marker,
   MapRef,
@@ -13,11 +13,13 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { useTheme } from "next-themes";
 
 import { cn } from "@/lib/utils";
+import { ApiError } from "@/lib/fetcher";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LottieLoader } from "@/components/ui/lottie-loader";
 import { getMapStyle } from "@/lib/map-styles";
-import { reverseGeocode, searchAddress } from "@/lib/geocoding";
+import { reverseGeocode, resolveMapLink, searchAddress } from "@/lib/geocoding";
 
 /**
  * One postal address plus the coordinates a route needs — a search box and a
@@ -79,6 +81,12 @@ export function LocationPickerField({
   const [isSearching, setIsSearching] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // The escape hatch for a place the search box and the pin cannot find.
+  const [showLinkInput, setShowLinkInput] = useState(false);
+  const [linkValue, setLinkValue] = useState("");
+  const [isResolvingLink, setIsResolvingLink] = useState(false);
+  const [linkError, setLinkError] = useState<string | null>(null);
 
   const handleSearchChange = useCallback((query: string) => {
     setSearchQuery(query);
@@ -146,6 +154,26 @@ export function LocationPickerField({
     setSearchResults([]);
     setShowSuggestions(false);
     void setPin(lng, lat);
+  };
+
+  const handleUseLink = async () => {
+    if (!linkValue.trim()) return;
+    setIsResolvingLink(true);
+    setLinkError(null);
+    try {
+      const { lat, lng } = await resolveMapLink(linkValue.trim());
+      setShowLinkInput(false);
+      setLinkValue("");
+      await setPin(lng, lat);
+    } catch (error) {
+      setLinkError(
+        error instanceof ApiError && error.code === "UNSUPPORTED_LINK_PROVIDER"
+          ? t("linkUnsupported")
+          : t("linkNotFound")
+      );
+    } finally {
+      setIsResolvingLink(false);
+    }
   };
 
   return (
@@ -230,6 +258,72 @@ export function LocationPickerField({
           </div>
         ) : null}
       </div>
+
+      {showLinkInput ? (
+        <div className="space-y-1.5 rounded-md border border-dashed p-2">
+          <Label htmlFor={`${id}-link`} className="text-xs">
+            {t("linkLabel")}
+          </Label>
+          <div className="flex gap-1.5">
+            <Input
+              id={`${id}-link`}
+              value={linkValue}
+              placeholder={t("linkPlaceholder")}
+              className="h-8 flex-1 text-xs"
+              onChange={(e) => {
+                setLinkValue(e.target.value);
+                setLinkError(null);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  void handleUseLink();
+                }
+              }}
+            />
+            <Button
+              type="button"
+              size="sm"
+              className="h-8 shrink-0 text-xs"
+              disabled={isResolvingLink || !linkValue.trim()}
+              onClick={() => void handleUseLink()}
+            >
+              {isResolvingLink ? (
+                <LottieLoader width={14} height={14} />
+              ) : (
+                t("useLink")
+              )}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 shrink-0 text-xs"
+              onClick={() => {
+                setShowLinkInput(false);
+                setLinkValue("");
+                setLinkError(null);
+              }}
+            >
+              {t("cancel")}
+            </Button>
+          </div>
+          {linkError ? (
+            <p className="text-destructive text-[11px]">{linkError}</p>
+          ) : null}
+        </div>
+      ) : (
+        <Button
+          type="button"
+          variant="link"
+          size="sm"
+          className="h-auto gap-1 p-0 has-[>svg]:px-0 text-xs"
+          onClick={() => setShowLinkInput(true)}
+        >
+          <Link2 className="h-3 w-3" />
+          {t("cantFindLocation")}
+        </Button>
+      )}
 
       <div className="grid grid-cols-3 gap-2">
         <div className="col-span-3 space-y-1">

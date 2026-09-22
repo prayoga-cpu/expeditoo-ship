@@ -47,12 +47,26 @@ Only `open` listings accept offers (`docs/specs/offers_engine_spec.md` §3).
 ### Where
 
 `pickup*` and `dropoff*` each carry `Lat`, `Lng`, `Address`, `City`, `PostalCode`,
-`LocationType`.
+`LocationType`, `Note`, `ContactName`, `ContactPhone`.
 
 - Coordinates required; France only in v2.0 (`ROADMAP.md` §9) — reject coordinates
   outside metropolitan France + Corsica → `400 LOCATION_OUT_OF_COUNTRY`.
 - `PostalCode` must match `/^\d{5}$/` → else `400 INVALID_POSTAL_CODE`.
 - Pickup and dropoff must differ by ≥ 500 m → else `400 PICKUP_DROPOFF_TOO_CLOSE`.
+- `Note` is free-text access instructions for the carrier ("second floor, past
+  the red door"), optional, ≤ 300 characters at the DTO. `ContactName` is who
+  the carrier should ask for there, optional, ≤ 120 characters — the requester
+  posting the job is not always the person present at either end.
+  `ContactPhone` is who the carrier actually calls: required and validated as a
+  French number (`isValidFrenchPhone`) on the direct-posting form
+  (`create/schemas.ts`), but only ≤ 30 characters at the DTO — an
+  Expedion-escalated listing is populated from `expedion_quotes.pickup_phone` /
+  `delivery_phone`, free-typed and nullable Airtable-imported data the server
+  cannot hold to the same standard without breaking escalation. All three are
+  columns on `listings` (nullable, since an existing row predates them) and are
+  copied onto `shipments` at award, same as `pickupAddress`/`dropoffAddress`,
+  so the driver executing the run keeps them even if the listing is later
+  edited.
 
 **The 13 location types** (`location_type` enum):
 

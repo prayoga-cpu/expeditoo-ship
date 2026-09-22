@@ -112,7 +112,18 @@
       "genericError": "Could not resolve this location",
       "address": "Address",
       "postalCode": "Postal code",
-      "city": "City"
+      "city": "City",
+      "cantFindLocation": "Can't find it? Paste a map link",
+      "linkLabel": "Link to the location",
+      "linkPlaceholder": "Paste a Google Maps, Apple Maps or OpenStreetMap link",
+      "useLink": "Use link",
+      "cancel": "Cancel",
+      "linkUnsupported": "We don't recognise that link. Try Google Maps, Apple Maps, Bing Maps, Waze or OpenStreetMap.",
+      "linkNotFound": "Couldn't find a location in that link. Try pasting the full map link instead."
+    },
+    "phoneInput": {
+      "searchPlaceholder": "Search country or code…",
+      "noResults": "No country found"
     },
     "roles": {
       "admin": "Admin",
@@ -130,6 +141,10 @@
     },
     "version": {
       "label": "Version {version} — see what changed"
+    },
+    "accessSwitcher": {
+      "srLabel": "Switch access",
+      "addCarrierAccess": "Add carrier access"
     }
   },
   "auth": {
@@ -211,6 +226,16 @@
       "bidWithRef": "You were about to bid on {ref}.",
       "jobs": "You were heading for the full job board.",
       "carrier": "You were joining the carrier network."
+    },
+    "welcome": {
+      "title": "What brings you to EXPEDITOO?",
+      "subtitle": "Pick what you need first — you can always do the other later.",
+      "shipTitle": "I need to ship something",
+      "shipDescription": "Post what you need moved and get offers from drivers.",
+      "shipCta": "Request transport",
+      "driveTitle": "I want to drive and earn",
+      "driveDescription": "Apply as a driver, bid on jobs and get paid for deliveries.",
+      "driveCta": "Start my application"
     }
   },
   "profile": {
@@ -829,26 +854,65 @@
       "what": "What",
       "where": "Where",
       "when": "When",
-      "budget": "Budget",
-      "payment": "Payment"
+      "budget": "Budget"
     },
     "buttons": {
       "back": "Back",
       "saveDraft": "Save draft",
       "post": "Post request",
       "posting": "Posting…",
-      "next": "Next"
+      "next": "Next",
+      "schedule": "Schedule request"
     },
     "toast": {
       "posted": "Request posted — carriers can now bid",
+      "scheduled": "Request scheduled — it will go live at the time you chose",
       "draftSaved": "Draft saved",
       "pickupTooSoon": "Pickup is too soon for carriers to bid. Push it later.",
-      "failed": "Could not post your request. Please try again.",
-      "cardRequired": "Add a card before posting — your job is charged when you choose a carrier."
+      "schedulePast": "That publish time is too close or already past. Pick a later one.",
+      "failed": "Could not post your request. Please try again."
     },
     "what": {
       "titleLabel": "What are you moving?",
-      "titlePlaceholder": "Two-seater sofa and a coffee table",
+      "titlePlaceholder": "Two-seater sofa",
+      "addItem": "Add another item",
+      "itemLabel": "Item {n}",
+      "removeItem": "Remove this item",
+      "itemSuggestionsLabel": "Suggestions",
+      "itemSuggestions": {
+        "watch": "Watch",
+        "parcel": "Parcel",
+        "suitcase": "Suitcase",
+        "movingBox": "Moving box",
+        "booksBox": "Box of books",
+        "computer": "Computer",
+        "printer": "Printer",
+        "artwork": "Artwork",
+        "washingMachine": "Washing machine",
+        "dryer": "Tumble dryer",
+        "dishwasher": "Dishwasher",
+        "armchair": "Armchair",
+        "chair": "Chair",
+        "mirror": "Mirror",
+        "tv": "TV",
+        "bike": "Bike",
+        "scooter": "Scooter",
+        "lawnMower": "Lawn mower",
+        "sofa": "Sofa",
+        "mattress": "Mattress",
+        "fridge": "Fridge",
+        "diningTable": "Dining table",
+        "desk": "Desk",
+        "bookshelf": "Bookshelf",
+        "gardenFurniture": "Garden furniture",
+        "treadmill": "Treadmill",
+        "motorbike": "Motorbike",
+        "furniture": "Furniture piece",
+        "doubleBed": "Double bed",
+        "wardrobe": "Wardrobe",
+        "piano": "Piano",
+        "pallet": "Pallet"
+      },
       "descriptionLabel": "Details",
       "descriptionPlaceholder": "Describe the load, the access, and anything a carrier should know before bidding.",
       "weight": "Weight",
@@ -858,6 +922,8 @@
       "height": "Height (cm)",
       "fragile": "Fragile",
       "fragileHint": "Needs careful handling",
+      "fragileNoteLabel": "Note for the carrier (optional)",
+      "fragileNotePlaceholder": "e.g. glass top, keep upright",
       "help": "Help loading",
       "helpHint": "The carrier must help load and unload",
       "photos": "Photos (optional)",
@@ -886,6 +952,10 @@
         "over1000": {
           "label": "Over 1 t",
           "example": "Tell us the weight"
+        },
+        "notSure": {
+          "label": "I'm not sure",
+          "example": "We'll match a vehicle that fits most items"
         }
       },
       "size": "Size (optional)",
@@ -926,7 +996,13 @@
       "select": "Select",
       "floor": "Floor",
       "lift": "Lift available",
-      "liftHint": "Is there a lift to this floor?"
+      "liftHint": "Is there a lift to this floor?",
+      "noteLabel": "Note for the carrier (optional)",
+      "notePlaceholder": "e.g. Second floor, past the red door",
+      "contactName": "Contact name (optional)",
+      "contactNamePlaceholder": "Who the carrier should ask for",
+      "contactPhone": "Contact phone",
+      "contactPhonePlaceholder": "06 12 34 56 78"
     },
     "locationTypes": {
       "house": "House",
@@ -944,28 +1020,39 @@
       "other": "Other"
     },
     "when": {
-      "pickupFrom": "Pickup from",
-      "pickupUntil": "Pickup until",
-      "dropoffFrom": "Delivery from",
-      "dropoffUntil": "Delivery until",
-      "flexible": "Dates are flexible",
-      "flexibleHint": "Let carriers propose times outside your windows"
+      "modeLabel": "How firm are your dates?",
+      "mode": {
+        "exact": "Exact",
+        "exactHint": "Pick a precise pickup and delivery time.",
+        "flexible": "Flexible",
+        "flexibleHint": "Give a date range — carriers can propose times outside it too."
+      },
+      "pickupTitle": "Pickup",
+      "dropoffTitle": "Delivery",
+      "dateLabel": "Date",
+      "fromDateLabel": "From",
+      "untilDateLabel": "Until",
+      "slotLabel": "Time of day",
+      "hourLabel": "Exact time",
+      "slotPreferenceLabel": "Preferred time of day",
+      "slotPreferenceHint": "Optional — narrows your window, but carriers can still propose outside it.",
+      "slot": {
+        "any": "Any time",
+        "morning": "Morning",
+        "afternoon": "Afternoon",
+        "evening": "Evening"
+      }
     },
     "budget": {
-      "label": "What do you expect to pay? (€)",
-      "hint": "This is an expectation, not a limit. Carriers may bid above or below it, and you choose which offer to accept."
-    },
-    "payment": {
-      "title": "How you'll pay",
-      "description": "Add a card now. Nothing is charged yet — carriers haven't bid, so there is no amount.",
-      "savedDescription": "This is the card your job will be charged to.",
-      "chargedLater": "Charged when you choose a carrier, for the amount they bid.",
-      "cardFallback": "Card",
-      "unavailable": "Card payment is unavailable right now. Save this as a draft and post it once it's back.",
-      "saveCard": "Save card",
-      "saving": "Saving…",
-      "saved": "Card saved",
-      "saveFailed": "Could not save that card. Please try again."
+      "label": "What do you expect to pay?",
+      "hint": "This is an expectation, not a limit. Carriers may bid above or below it, and you choose which offer to accept.",
+      "publish": {
+        "label": "When should this go live?",
+        "now": "Now",
+        "schedule": "Schedule",
+        "pickerLabel": "Publish at",
+        "hint": "Your request stays hidden from carriers until this moment."
+      }
     },
     "dropzone": {
       "title": "Add photos",
@@ -979,8 +1066,9 @@
       "tooMany": "Only {count} photos were added — the limit is {max}."
     },
     "validation": {
-      "titleShort": "At least 5 characters",
-      "descriptionShort": "At least 20 characters",
+      "titleShort": "At least 2 characters",
+      "descriptionShort": "At least 5 characters",
+      "fragileNoteMax": "300 characters or fewer",
       "aboveZero": "Must be above 0",
       "weightMax": "That is above the 44 t we can carry",
       "dimensionsPartial": "Give all three dimensions, or none",
@@ -998,7 +1086,13 @@
       "deliveryWindow": "The delivery window must end after it starts",
       "budgetRequired": "Enter what you expect to pay",
       "weightRequired": "Choose a weight range",
-      "weightAboveBracket": "Enter a weight above 1,000 kg"
+      "weightAboveBracket": "Enter a weight above 1,000 kg",
+      "noteMax": "300 characters or fewer",
+      "contactNameMax": "120 characters or fewer",
+      "invalidPhone": "Enter a valid phone number",
+      "scheduledPublishRequired": "Pick a date and time to publish",
+      "scheduledPublishPast": "Pick a moment in the future",
+      "scheduledPublishAfterPickup": "Publish before the pickup window starts"
     }
   },
   "myJobs": {
@@ -1030,6 +1124,7 @@
     },
     "status": {
       "draft": "Draft",
+      "scheduled": "Scheduled",
       "open": "Open",
       "awarded": "Awarded",
       "in_progress": "In progress",
@@ -1925,6 +2020,7 @@
       "review": "Review",
       "payment": "Payment",
       "listing": "Listing",
+      "listing_posted": "Request posted",
       "shipment_assigned": "Shipment Assigned",
       "shipment_cancelled": "Transport cancelled",
       "shipment_withdrawn": "Carrier withdrew",
@@ -1948,7 +2044,8 @@
       "withdrawals": "Withdrawals",
       "expedionClients": "Expedion clients",
       "incidents": "Incidents",
-      "feedback": "Feedback"
+      "feedback": "Feedback",
+      "settings": "Settings"
     },
     "table": {
       "total": "total",
@@ -1999,7 +2096,8 @@
         "never": "Never",
         "joinDate": "Join Date",
         "role": "Role",
-        "actions": "Actions"
+        "actions": "Actions",
+        "removeRole": "Remove {role}"
       },
       "status": {
         "active": "active",
@@ -2823,7 +2921,8 @@
         }
       },
       "checklist": {
-        "title": "Before you can submit",
+        "title": "Good to add before you start bidding",
+        "description": "Not required to submit — add these now or after your application is approved.",
         "documents": "All required documents uploaded",
         "banking": "Banking details on file",
         "vehicle": "At least one vehicle in your fleet",
@@ -2893,8 +2992,6 @@
       "siretTaken": "That SIRET already belongs to another carrier account",
       "submitted": "Application submitted for review",
       "submitFailed": "Could not submit",
-      "incomplete": "Your application is incomplete",
-      "incompleteDescription": "Check the highlighted items below.",
       "withdrawn": "Application withdrawn — it is editable again",
       "withdrawFailed": "Could not withdraw",
       "bankingSaved": "Banking details saved",
@@ -3061,6 +3158,15 @@
       "untitled": "Transport job",
       "action": "Open this run"
     },
+    "myRequest": {
+      "title": "Your request",
+      "action": "View my request"
+    },
+    "cardNudge": {
+      "title": "Add a card to accept offers",
+      "description": "One of your requests is open for bids, but you have no card on file yet. Carriers can still bid, but you won't be able to accept an offer until you add one.",
+      "action": "Add a card"
+    },
     "stats": {
       "openJobs": "Jobs open for bids",
       "activeRuns": "Active runs",
@@ -3224,6 +3330,17 @@
       "blocked": "Open my application",
       "none": "Become a driver"
     }
+  },
+  "platformSettings": {
+    "title": "Settings",
+    "subtitle": "Platform-wide economics.",
+    "feeLabel": "Platform fee",
+    "feeHint": "Added on top of the budget at award time — this is separate from the driver's commission.",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Settings saved",
+    "saveFailed": "Could not save. Please try again.",
+    "lastChanged": "Last changed {date}"
   },
   "confirm": {
     "title": {

@@ -14,6 +14,44 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.46.0] - 2026-09-23 · feat
+
+- **Posting a request no longer requires a card up front.** Your request can go
+  on the board right away — add a card from your profile whenever you're
+  ready, and you'll only be asked again if you try to accept an offer with
+  none on file. If a request of yours is open for bids with no card yet,
+  you'll see a reminder on your home screen.
+- **Choose when your request goes live.** "When" now has two options — publish
+  it right away, or pick an exact date and time to publish it later. A
+  scheduled request stays hidden from carriers until that moment arrives.
+- **Admins can now set a platform fee**, added on top of what a client pays
+  once a carrier is chosen, from a new Settings page — separate from the
+  driver's own commission, and shown as its own line on the receipt.
+
+## [2.45.0] - 2026-09-22 · feat
+
+- **Posting a transport request now confirms it three ways.** Submit "Request transport" and you'll get a confirmation email in your inbox, an alert in your notification bell, and your request's status — open, awarded, or on its way — right on your home screen, so you always know it went through and where it stands.
+
+## [2.44.0] - 2026-09-22 · feat
+
+- **Applying to drive now takes minutes, not a finished file.** You can submit your application with just your company and contact details — your ID, licence, insurance, bank details and vehicle can all be added later, at your own pace. If your file looks good on that alone, an admin can approve you and you can complete the rest afterward.
+- **Payout details can be added any time after you're approved**, not only before you submit, so getting your first documents in order doesn't have to happen before you're allowed to start.
+
+## [2.43.1] - 2026-09-22 · fix
+
+- **The SIRET field is less picky.** It used to check the 14 digits against an internal checksum on top of their count, which could reject a real SIRET over a single mistyped digit. It now only checks that there are 14 digits — confirming the company itself already happens when the application is reviewed.
+
+## [2.43.0] - 2026-09-22 · feat
+
+- **A note for the carrier, and a real phone number, at pickup and at delivery.** "What are you moving?" now lets you say where exactly and who to call: an optional note for access instructions ("second floor, past the red door") and a required contact phone — because the person posting the job isn't always the one who opens the door. The carrier sees both once they're awarded the job, including on the delivery run itself.
+- **Can't find your address on the map? Paste a link instead.** The pickup and delivery picker now accepts a Google Maps, Apple Maps, Bing Maps, Waze or OpenStreetMap link — including a short share link from your phone — and drops the pin for you.
+- **The "What are you moving?" field now accepts a 2-character answer** instead of demanding 5, and offers many more common items to pick from — mattresses, wardrobes, a dining table, a TV, a piano and more, alongside the originals.
+
+## [2.42.1] - 2026-09-22 · fix
+
+- **A SIRET pasted the way it's printed on an official document now works.** French registry paperwork groups a SIRET into blocks — `732 829 320 00074` — and typing or pasting it exactly that way, or with a stray trailing space from a keyboard's autocorrect, was rejected as invalid even though every digit was correct. It is now accepted with or without the spacing, and the field groups the digits into that same pattern for you as you type it.
+- **The carrier phone field is now marked as a French number**, with a 🇫🇷 +33 shown next to it and an example filled in, instead of a plain box with no hint of the expected format.
+
 ## [2.42.0] - 2026-09-18 · ux
 
 - **Feedback cards now wear the color of their status** — the same open, in-progress, needs-review, resolved and archived colors already used on the status tiles and icons — so an admin scanning the triage queue no longer has to read every card's dropdown to know where it stands.

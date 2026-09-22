@@ -13,7 +13,7 @@ import {
   type UpdateVehicleInput,
   type UploadDocumentInput,
 } from "@/server/dto/carrier.dto";
-import { HEAVY_VEHICLE_TYPES, type Carrier } from "@/db/schema/carriers";
+import type { Carrier } from "@/db/schema/carriers";
 
 // ========================================
 // Errors
@@ -62,58 +62,6 @@ async function enrolAsOwnDriver(
     },
     tx
   );
-}
-
-// ========================================
-// Submission gate
-// ========================================
-
-type CarrierWithRelations = Carrier & {
-  documents: { kind: string; expiresAt: Date | null }[];
-  vehicles: { type: string; maxWeightKg: number }[];
-};
-
-/**
- * Collects every gap in one pass. Reporting one missing item at a time turns
- * onboarding into a guessing game, so the spec requires the full list
- * (carrier_kyc_spec.md §3).
- */
-export function applicationGaps(carrier: CarrierWithRelations): string[] {
-  const missing: string[] = [];
-
-  const present = new Set(
-    carrier.documents.filter((d) => d.kind).map((d) => d.kind)
-  );
-  for (const kind of REQUIRED_DOCUMENT_KINDS) {
-    if (!present.has(kind)) missing.push(`document:${kind}`);
-  }
-
-  if (!carrier.ibanLast4) missing.push("banking:iban");
-  if (!carrier.bicLast4) missing.push("banking:bic");
-
-  // One vehicle, not a fleet: an offer names the vehicle that will do the job,
-  // so a driver with none cannot bid. Individual applicants register the van
-  // they drive; the requirement is the same, the framing is not.
-  if (carrier.vehicles.length === 0) {
-    missing.push("vehicle:at_least_one");
-  }
-
-  // Anything at or above 7.5 t needs a transport licence under French rules.
-  const hasHeavy = carrier.vehicles.some((v) =>
-    (HEAVY_VEHICLE_TYPES as readonly string[]).includes(v.type)
-  );
-  if (hasHeavy && !present.has("transport_licence")) {
-    missing.push("document:transport_licence");
-  }
-
-  const now = new Date();
-  for (const doc of carrier.documents) {
-    if (doc.expiresAt && doc.expiresAt <= now) {
-      missing.push(`expired:${doc.kind}`);
-    }
-  }
-
-  return missing;
 }
 
 // ========================================
@@ -187,6 +135,12 @@ export const carrierService = {
     });
   },
 
+  /**
+   * The profile fields (`UpsertCarrierInput`) are the only requirement —
+   * documents, banking and a vehicle can be completed later, including after
+   * approval (carrier_kyc_spec.md §3). An admin decides whether a thin file is
+   * good enough to approve; this endpoint does not gate on it.
+   */
   async submitApplication(userId: string) {
     const carrier = await this.requireOwnCarrier(userId);
 
@@ -194,16 +148,6 @@ export const carrierService = {
       throw err("ALREADY_SUBMITTED", 409);
     }
     if (carrier.status === "suspended") throw err("CARRIER_SUSPENDED", 409);
-
-    const missing = applicationGaps(carrier as CarrierWithRelations);
-    if (missing.length > 0) {
-      throw new CarrierError(
-        "INCOMPLETE_APPLICATION",
-        400,
-        "Application is incomplete",
-        missing
-      );
-    }
 
     return await carriersDal.update(carrier.id, { status: "submitted" });
   },

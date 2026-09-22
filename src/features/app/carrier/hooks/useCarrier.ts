@@ -69,10 +69,6 @@ export function useSaveCarrierProfile() {
   });
 }
 
-/**
- * Submission is the one call that can fail with a list rather than a message:
- * the server returns every gap at once so the applicant sees the whole set.
- */
 export function useSubmitApplication() {
   const queryClient = useQueryClient();
   const t = useTranslations("carrier.toasts");
@@ -84,12 +80,6 @@ export function useSubmitApplication() {
       queryClient.invalidateQueries({ queryKey: carrierKeys.application });
     },
     onError: (error) => {
-      if (error instanceof ApiError && error.code === "INCOMPLETE_APPLICATION") {
-        toast.error(t("incomplete"), {
-          description: t("incompleteDescription"),
-        });
-        return;
-      }
       toast.error(describe(error, t, "submitFailed"));
     },
   });

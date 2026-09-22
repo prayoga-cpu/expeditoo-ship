@@ -6,6 +6,16 @@ Plan: `docs/plans/plan_payment_at_booking.md`.
 booking — and the money is *taken*, not held. Delivery no longer touches the
 client's card; it settles only what the driver is owed.
 
+**§4 and §7 are retired.** `/create` no longer has a Payment step and posting
+a job no longer requires a card (`assertPayable()` in `listings.service.ts` is
+deleted). The rule above still holds — a carrier's acceptance is still the
+only moment a card is charged (`chargeForShipment`, unchanged) — but a job can
+now reach the board with no card on file. A requester adds one from
+`/profile/payment-methods`, nudged by a banner on `/home` if they have an open
+listing and none; if a carrier is accepted with still no card, the existing
+`PAYMENT_METHOD_REQUIRED` failure and `compensateFailedAward` unwind
+(untouched) are what a person actually hits.
+
 ---
 
 ## 1. `payments.source`

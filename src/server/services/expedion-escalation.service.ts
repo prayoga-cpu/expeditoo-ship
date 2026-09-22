@@ -264,10 +264,6 @@ export const expedionEscalationService = {
     let createdListing = false;
 
     try {
-      // `prepaid` waives the card check that guards a direct posting. This
-      // quote was paid in Expedion when the client accepted it, and the check
-      // could not pass anyway: an escalated listing is owned by a system
-      // account no card belongs to (docs/specs/payment_at_booking_spec.md §4).
       const listing =
         adopted ??
         (await listingsService.createListing(systemShipperId(), {
@@ -293,6 +289,8 @@ export const expedionEscalationService = {
             city: quote.pickupCity!,
             postalCode: normalisePostalCode(quote.pickupPostalCode)!,
             locationType: AUCTION_LOCATION_TYPE,
+            contactName: quote.auctionHouseName ?? undefined,
+            contactPhone: quote.pickupPhone ?? undefined,
           },
           dropoff: {
             lat: quote.deliveryLat!,
@@ -301,6 +299,8 @@ export const expedionEscalationService = {
             city: quote.deliveryCity!,
             postalCode: normalisePostalCode(quote.deliveryPostalCode)!,
             locationType: AUCTION_LOCATION_TYPE,
+            contactName: quote.recipientName ?? undefined,
+            contactPhone: quote.deliveryPhone ?? undefined,
           },
           pickupFrom: new Date(now + PICKUP_LEAD_DAYS * DAY_MS),
           pickupUntil: new Date(now + PICKUP_WINDOW_DAYS * DAY_MS),
@@ -310,7 +310,7 @@ export const expedionEscalationService = {
           budgetCents: quote.acceptedPriceCents!,
           photos: (quote.photoUrls ?? []).slice(0, 10),
           publish: true,
-        }, { prepaid: true }));
+        }));
 
       if (!adopted) {
         createdListing = true;

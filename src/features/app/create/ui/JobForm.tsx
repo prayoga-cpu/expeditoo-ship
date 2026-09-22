@@ -1,9 +1,11 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -15,15 +17,28 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Stepper } from "@/components/Stepper";
-import { PaymentStep } from "./PaymentStep";
-import { LocationPickerField } from "@/components/ui/location-picker-field";
+import { InlineLoader } from "@/components/ui/page-loader";
 import { PhotoDropzone } from "./PhotoDropzone";
 import { FieldError } from "./FieldError";
 import { SizeField } from "./SizeField";
 import { ItemField } from "./ItemField";
 import { WeightBracketField } from "./WeightBracketField";
+import { TimingField } from "./TimingField";
+import { PublishTimingField } from "./PublishTimingField";
 import { LOCATION_TYPES, type LocationType } from "../schemas";
 import type { JobFormApi } from "../hooks/useJobForm";
+
+// `maplibre-gl` + `react-map-gl` are only needed once someone reaches the
+// "Where" step, but a static import puts them in the same chunk as "What" —
+// every /create visit paid for the map before picking a single address.
+// Split the same way `LazyAblyProvider` already splits Ably.
+const LocationPickerField = dynamic(
+  () =>
+    import("@/components/ui/location-picker-field").then(
+      (mod) => mod.LocationPickerField
+    ),
+  { ssr: false, loading: () => <InlineLoader size="md" className="h-64" /> }
+);
 
 /**
  * Requesting transport: what moves, from where to where, when, and what the
@@ -38,13 +53,13 @@ export function JobForm(props: JobFormApi) {
   const {
     form,
     photos,
+    timing,
+    handleTimingChange,
     currentStep,
     steps,
     isFirstStep,
     isLastStep,
     isSubmitting,
-    hasCard,
-    setHasCard,
     handlePhotosChange,
     handleNext,
     handlePrev,
@@ -53,7 +68,7 @@ export function JobForm(props: JobFormApi) {
   } = props;
 
   return (
-    <div className="mx-auto w-full max-w-2xl space-y-6 p-4 sm:p-6">
+    <div className="mx-auto w-full max-w-2xl space-y-6 p-4 sm:p-6 xl:max-w-3xl 2xl:max-w-4xl">
       <header className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
         <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
@@ -73,9 +88,14 @@ export function JobForm(props: JobFormApi) {
           />
         )}
         {currentStep === 1 && <WhereStep form={form} />}
-        {currentStep === 2 && <WhenStep form={form} />}
+        {currentStep === 2 && (
+          <WhenStep
+            form={form}
+            timing={timing}
+            onTimingChange={handleTimingChange}
+          />
+        )}
         {currentStep === 3 && <BudgetStep form={form} />}
-        {currentStep === 4 && <PaymentStep onCardChange={setHasCard} />}
       </Card>
 
       <div className="flex items-center justify-between gap-3">
@@ -98,15 +118,12 @@ export function JobForm(props: JobFormApi) {
             {t("buttons.saveDraft")}
           </Button>
           {isLastStep ? (
-            // A job with no card cannot be awarded, so it does not go on the
-            // board. "Save draft" stays open beside this — a draft costs
-            // nobody anything (docs/specs/payment_at_booking_spec.md §4).
-            <Button
-              type="button"
-              onClick={publish}
-              disabled={isSubmitting || !hasCard}
-            >
-              {isSubmitting ? t("buttons.posting") : t("buttons.post")}
+            <Button type="button" onClick={publish} disabled={isSubmitting}>
+              {isSubmitting
+                ? t("buttons.posting")
+                : form.watch("publishMode") === "schedule"
+                  ? t("buttons.schedule")
+                  : t("buttons.post")}
             </Button>
           ) : (
             <Button type="button" onClick={handleNext} disabled={isSubmitting}>
@@ -143,7 +160,9 @@ function WhatStep({
       <ItemField form={form} />
 
       <div>
-        <Label htmlFor="description">{t("descriptionLabel")}</Label>
+        <Label htmlFor="description" required>
+          {t("descriptionLabel")}
+        </Label>
         <Textarea
           id="description"
           rows={4}
@@ -165,6 +184,17 @@ function WhatStep({
           checked={Boolean(watch("isFragile"))}
           onChange={(v) => setValue("isFragile", v)}
         />
+        {watch("isFragile") && (
+          <div className="pl-3">
+            <Label htmlFor="fragileNote">{t("fragileNoteLabel")}</Label>
+            <Input
+              id="fragileNote"
+              placeholder={t("fragileNotePlaceholder")}
+              {...register("fragileNote")}
+            />
+            <FieldError message={errors.fragileNote?.message} />
+          </div>
+        )}
         <ToggleRow
           id="needsHelp"
           label={t("help")}
@@ -237,7 +267,46 @@ function EndpointFields({
       <FieldError message={error?.lat?.message} />
 
       <div>
-        <Label>{t("locationType")}</Label>
+        <Label htmlFor={`${side}-note`}>{t("noteLabel")}</Label>
+        <Textarea
+          id={`${side}-note`}
+          rows={2}
+          placeholder={t("notePlaceholder")}
+          value={endpoint?.note ?? ""}
+          onChange={(e) => setValue(`${side}.note`, e.target.value)}
+        />
+        <FieldError message={error?.note?.message} />
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <Label htmlFor={`${side}-contact-name`}>{t("contactName")}</Label>
+          <Input
+            id={`${side}-contact-name`}
+            placeholder={t("contactNamePlaceholder")}
+            value={endpoint?.contactName ?? ""}
+            onChange={(e) => setValue(`${side}.contactName`, e.target.value)}
+          />
+          <FieldError message={error?.contactName?.message} />
+        </div>
+        <div>
+          <Label htmlFor={`${side}-contact-phone`} required>
+            {t("contactPhone")}
+          </Label>
+          <PhoneInput
+            id={`${side}-contact-phone`}
+            placeholder={t("contactPhonePlaceholder")}
+            value={endpoint?.contactPhone ?? ""}
+            onChange={(next) =>
+              setValue(`${side}.contactPhone`, next, { shouldValidate: true })
+            }
+          />
+          <FieldError message={error?.contactPhone?.message} />
+        </div>
+      </div>
+
+      <div>
+        <Label required>{t("locationType")}</Label>
         <Select
           value={locationType}
           onValueChange={(v) =>
@@ -262,7 +331,9 @@ function EndpointFields({
       {locationType === "apartment" && (
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
-            <Label htmlFor={`${side}-floor`}>{t("floor")}</Label>
+            <Label htmlFor={`${side}-floor`} required>
+              {t("floor")}
+            </Label>
             <Input
               id={`${side}-floor`}
               type="number"
@@ -293,44 +364,23 @@ function EndpointFields({
   );
 }
 
-function WhenStep({ form }: StepProps) {
-  const t = useTranslations("create.when");
-  const { register, setValue, watch, formState } = form;
-  const errors = formState.errors;
+function WhenStep({
+  form,
+  timing,
+  onTimingChange,
+}: StepProps & {
+  timing: JobFormApi["timing"];
+  onTimingChange: JobFormApi["handleTimingChange"];
+}) {
+  const errors = form.formState.errors;
 
   return (
-    <div className="space-y-5">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <DateTimeField
-          label={t("pickupFrom")}
-          error={errors.pickupFrom?.message}
-          {...register("pickupFrom")}
-        />
-        <DateTimeField
-          label={t("pickupUntil")}
-          error={errors.pickupUntil?.message}
-          {...register("pickupUntil")}
-        />
-        <DateTimeField
-          label={t("dropoffFrom")}
-          error={errors.dropoffFrom?.message}
-          {...register("dropoffFrom")}
-        />
-        <DateTimeField
-          label={t("dropoffUntil")}
-          error={errors.dropoffUntil?.message}
-          {...register("dropoffUntil")}
-        />
-      </div>
-
-      <ToggleRow
-        id="isFlexible"
-        label={t("flexible")}
-        description={t("flexibleHint")}
-        checked={Boolean(watch("isFlexible"))}
-        onChange={(v) => setValue("isFlexible", v)}
-      />
-    </div>
+    <TimingField
+      timing={timing}
+      onChange={onTimingChange}
+      pickupError={errors.pickupFrom?.message ?? errors.pickupUntil?.message}
+      dropoffError={errors.dropoffFrom?.message ?? errors.dropoffUntil?.message}
+    />
   );
 }
 
@@ -341,32 +391,30 @@ function BudgetStep({ form }: StepProps) {
   return (
     <div className="space-y-5">
       <div>
-        <Label htmlFor="budgetEuros">{t("label")}</Label>
-        <Input
-          id="budgetEuros"
-          type="number"
-          step="1"
-          min={1}
-          {...register("budgetEuros")}
-        />
+        <Label htmlFor="budgetEuros" required>
+          {t("label")}
+        </Label>
+        <div className="relative mt-1">
+          <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-xl font-semibold text-muted-foreground">
+            €
+          </span>
+          <Input
+            id="budgetEuros"
+            type="number"
+            step="1"
+            min={1}
+            className="h-14 pl-10 text-2xl font-semibold"
+            {...register("budgetEuros")}
+          />
+        </div>
         <FieldError message={formState.errors.budgetEuros?.message} />
         <p className="mt-2 text-sm text-muted-foreground">{t("hint")}</p>
       </div>
+
+      <PublishTimingField form={form} />
     </div>
   );
 }
-
-const DateTimeField = ({
-  label,
-  error,
-  ...inputProps
-}: React.ComponentProps<typeof Input> & { label: string; error?: string }) => (
-  <div>
-    <Label htmlFor={inputProps.name}>{label}</Label>
-    <Input id={inputProps.name} type="datetime-local" {...inputProps} />
-    <FieldError message={error} />
-  </div>
-);
 
 function ToggleRow({
   id,
