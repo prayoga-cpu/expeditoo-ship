@@ -22,6 +22,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -61,6 +62,9 @@ function buildSchema(t: Translate) {
     maxLengthCm: optionalNumeric(t("errors.dimension")),
     maxWidthCm: optionalNumeric(t("errors.dimension")),
     maxHeightCm: optionalNumeric(t("errors.dimension")),
+    // A single checkbox today; `features` on the wire is already an array,
+    // so a second option later is a UI change, not a schema one.
+    tailgate: z.boolean().optional(),
   });
 }
 
@@ -87,6 +91,7 @@ export function VehicleForm({ onDone }: VehicleFormProps) {
       maxLengthCm: "",
       maxWidthCm: "",
       maxHeightCm: "",
+      tailgate: false,
     },
   });
 
@@ -102,6 +107,7 @@ export function VehicleForm({ onDone }: VehicleFormProps) {
         maxLengthCm: values.maxLengthCm ? Number(values.maxLengthCm) : undefined,
         maxWidthCm: values.maxWidthCm ? Number(values.maxWidthCm) : undefined,
         maxHeightCm: values.maxHeightCm ? Number(values.maxHeightCm) : undefined,
+        features: values.tailgate ? ["tailgate"] : [],
       },
       {
         onSuccess: () => {
@@ -131,6 +137,7 @@ export function VehicleForm({ onDone }: VehicleFormProps) {
               <TextField control={form.control} name="maxWidthCm" label={t("maxWidthCm")} placeholder="170" inputMode="numeric" />
               <TextField control={form.control} name="maxHeightCm" label={t("maxHeightCm")} placeholder="180" inputMode="numeric" />
             </div>
+            <TailgateField control={form.control} t={t} />
             <div className="flex justify-end gap-2">
               <Button type="button" variant="ghost" onClick={onDone}>
                 {t("cancel")}
@@ -181,9 +188,41 @@ function TypeField({ control, t, tTypes }: TypeFieldProps) {
   );
 }
 
+function TailgateField({
+  control,
+  t,
+}: {
+  control: Control<VehicleFormValues>;
+  t: Translate;
+}) {
+  return (
+    <FormField
+      control={control}
+      name="tailgate"
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel>{t("features")}</FormLabel>
+          <div className="flex items-center gap-2">
+            <FormControl>
+              <Checkbox
+                id="tailgate"
+                checked={field.value ?? false}
+                onCheckedChange={field.onChange}
+              />
+            </FormControl>
+            <FormLabel htmlFor="tailgate" className="font-normal">
+              {t("featureOptions.tailgate")}
+            </FormLabel>
+          </div>
+        </FormItem>
+      )}
+    />
+  );
+}
+
 interface TextFieldProps {
   control: Control<VehicleFormValues>;
-  name: Exclude<keyof VehicleFormValues, "type">;
+  name: Exclude<keyof VehicleFormValues, "type" | "tailgate">;
   label: string;
   placeholder?: string;
   inputMode?: "numeric";

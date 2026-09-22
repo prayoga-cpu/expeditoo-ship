@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -202,6 +203,39 @@ function WhatStep({
           checked={Boolean(watch("needsHelp"))}
           onChange={(v) => setValue("needsHelp", v)}
         />
+
+        <div className="space-y-2">
+          <Label>{t("packaging")}</Label>
+          <ToggleGroup
+            type="single"
+            variant="outline"
+            value={watch("packagingLevel") ?? ""}
+            onValueChange={(value) =>
+              setValue(
+                "packagingLevel",
+                (value || undefined) as "protected" | "boxed" | undefined
+              )
+            }
+            className="w-full"
+          >
+            <ToggleGroupItem value="protected" className="flex-1 flex-col gap-0.5 py-2 whitespace-normal">
+              <span className="text-sm font-medium">
+                {t("packagingOptions.protected.label")}
+              </span>
+              <span className="text-xs font-normal text-muted-foreground">
+                {t("packagingOptions.protected.description")}
+              </span>
+            </ToggleGroupItem>
+            <ToggleGroupItem value="boxed" className="flex-1 flex-col gap-0.5 py-2 whitespace-normal">
+              <span className="text-sm font-medium">
+                {t("packagingOptions.boxed.label")}
+              </span>
+              <span className="text-xs font-normal text-muted-foreground">
+                {t("packagingOptions.boxed.description")}
+              </span>
+            </ToggleGroupItem>
+          </ToggleGroup>
+        </div>
       </div>
 
       <div>

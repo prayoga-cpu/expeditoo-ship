@@ -131,10 +131,16 @@ export function LocationPickerField({
           setLocationError(t("outsideFrance"));
           return;
         }
+        // A field already holding text is trusted over the guess: reverse
+        // geocoding only fills in what is still blank, so a pin nudged to
+        // correct the coordinates can never overwrite an address someone
+        // already typed (feedback tickets l5mUHEzi6Ey5tuXL1cWbm,
+        // 7HtRRTGWKRfzuRZValkCr).
         onChange({
-          address: result.street || value.address,
-          city: result.city || value.city,
-          postalCode: result.postalCode || value.postalCode,
+          address: value.address.trim() || result.street || value.address,
+          city: value.city.trim() || result.city || value.city,
+          postalCode:
+            value.postalCode.trim() || result.postalCode || value.postalCode,
           lat,
           lng,
         });

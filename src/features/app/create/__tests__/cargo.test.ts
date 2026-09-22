@@ -56,9 +56,18 @@ describe("weight brackets", () => {
     expect(resolveWeightKg(HEAVY_BRACKET_ID, 12_000)).toBe(12_000);
   });
 
-  it("ignores a figure left behind by a change of mind", () => {
-    // Typed under "over 1 t", then a lighter bracket picked. The ceiling wins.
-    expect(resolveWeightKg("upTo30", 12_000)).toBe(30);
+  it("prefers a typed figure over any bracket's ceiling", () => {
+    // The real weight is always more accurate than the coarse category it
+    // sits inside — feedback ticket v7cR2AShfVmzLDki8GDKH.
+    expect(resolveWeightKg("upTo30", 12)).toBe(12);
+  });
+
+  it("falls back to the ceiling once the figure is gone", () => {
+    // Staleness is prevented one layer up: `WeightBracketField` clears
+    // `exactWeightKg` on every bracket change, so the resolver never actually
+    // sees a figure left behind by a change of mind. It still needs a
+    // sensible answer for `undefined`, which is what this covers.
+    expect(resolveWeightKg("upTo30", undefined)).toBe(30);
   });
 
   it("has nothing to resolve when the freight figure is missing", () => {

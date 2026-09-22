@@ -162,6 +162,48 @@ describe("jobFormSchema", () => {
     ).toContain("create.validation.weightMax");
   });
 
+  it("accepts an optional real weight that fits inside a lighter bracket", () => {
+    expect(
+      jobFormSchema.safeParse(
+        form({ weightBracket: "upTo30", exactWeightKg: "12" })
+      ).success
+    ).toBe(true);
+  });
+
+  it("rejects an optional real weight that overshoots the bracket it sits in", () => {
+    // The figure refines the bracket rather than replacing it — going over
+    // the ceiling means the bracket itself was too low.
+    expect(
+      messages(form({ weightBracket: "upTo30", exactWeightKg: "45" }))
+    ).toContain("create.validation.weightExceedsBracket");
+  });
+
+  it("never asks the 'not sure' bracket to reconcile a figure with itself", () => {
+    // notSure resolves to a ceiling like any other bracket, so nothing stops
+    // a stray exactWeightKg reaching validation — it just must not be
+    // compared against a bracket that was never a real commitment.
+    expect(
+      jobFormSchema.safeParse(
+        form({ weightBracket: "notSure", exactWeightKg: "12000" })
+      ).success
+    ).toBe(true);
+  });
+
+  it("accepts an item with a stated packaging level", () => {
+    expect(
+      jobFormSchema.safeParse(form({ packagingLevel: "protected" })).success
+    ).toBe(true);
+    expect(
+      jobFormSchema.safeParse(form({ packagingLevel: "boxed" })).success
+    ).toBe(true);
+  });
+
+  it("leaves packaging level unstated by default", () => {
+    const parsed = jobFormSchema.safeParse(form());
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data.packagingLevel).toBeUndefined();
+  });
+
   it("makes an apartment declare its floor and lift", () => {
     const flat = endpoint({ locationType: "apartment" });
     const raised = messages(form({ pickup: flat }));

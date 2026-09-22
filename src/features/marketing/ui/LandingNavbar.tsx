@@ -24,7 +24,7 @@ export function LandingNavbar() {
           cluster no longer fits one line, so the bar wraps to two rows. */}
       <div className="mx-auto flex w-full max-w-[1180px] flex-wrap items-center gap-x-[22px] gap-y-2 px-5 py-3 sm:px-8 md:h-[66px] md:flex-nowrap md:py-0">
         <Link href="/#top" className="flex flex-none items-center">
-          <BrandWordmark size={32} />
+          <BrandWordmark size={32} tagline />
         </Link>
 
         <nav className="hidden min-w-0 flex-auto items-center gap-4 md:flex">

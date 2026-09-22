@@ -74,7 +74,15 @@ export function BrandMark({
  * filled square that reads heavy per pixel, Expedion's a thin ring that reads
  * light. Change one side, change the other the same way.
  */
-export function BrandWordmark({ size = 32 }: { size?: number }) {
+export function BrandWordmark({
+  size = 32,
+  tagline = false,
+}: {
+  size?: number;
+  /** The "TRANSPORT" sub-line. Off by default (feedback ticket
+   * gQND7ETKONmwr0V3RusMY) — the marketing pages opt back in explicitly. */
+  tagline?: boolean;
+}) {
   const capSize = size * 0.5524;
   const subSize = capSize * 0.5;
   const lineGap = Math.max(1, Math.round(capSize * 0.0625));
@@ -90,12 +98,14 @@ export function BrandWordmark({ size = 32 }: { size?: number }) {
         >
           EXPEDITOO
         </span>
-        <span
-          className="font-mono leading-none tracking-[0.2em] text-[var(--lp-bluelink,var(--primary))]"
-          style={{ fontSize: subSize }}
-        >
-          TRANSPORT
-        </span>
+        {tagline && (
+          <span
+            className="font-mono leading-none tracking-[0.2em] text-[var(--lp-bluelink,var(--primary))]"
+            style={{ fontSize: subSize }}
+          >
+            TRANSPORT
+          </span>
+        )}
       </span>
     </span>
   );

@@ -84,7 +84,7 @@ export function LandingFooter() {
       <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-11">
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
           <div className="flex flex-col gap-4">
-            <BrandWordmark size={30} />
+            <BrandWordmark size={30} tagline />
             <span className="max-w-[280px] text-sm leading-[1.6] text-[var(--lp-muted)]">
               {t("tagline")}
             </span>

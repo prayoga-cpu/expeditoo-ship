@@ -7,6 +7,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
 import {
   HEAVY_BRACKET_ID,
+  UNSURE_BRACKET_ID,
   WEIGHT_BRACKET_IDS,
   type WeightBracketId,
 } from "../cargo";
@@ -34,11 +35,14 @@ export function WeightBracketField({ form }: { form: JobFormApi["form"] }) {
 
       <RadioGroup
         value={bracket ?? ""}
-        onValueChange={(value) =>
+        onValueChange={(value) => {
           setValue("weightBracket", value as WeightBracketId, {
             shouldValidate: true,
-          })
-        }
+          });
+          // A figure typed for the bracket just left behind must not survive
+          // onto the new one — see the comment on `resolveWeightKg`.
+          setValue("exactWeightKg", undefined);
+        }}
         className="grid grid-cols-2 gap-2 sm:grid-cols-3"
       >
         {WEIGHT_BRACKET_IDS.map((id) => (
@@ -64,6 +68,24 @@ export function WeightBracketField({ form }: { form: JobFormApi["form"] }) {
             type="number"
             step="1"
             min={1000}
+            {...register("exactWeightKg")}
+          />
+          <FieldError message={formState.errors.exactWeightKg?.message} />
+        </div>
+      )}
+
+      {/* A bracket is a category; this is the real figure inside it, for
+          whoever has it to hand. `notSure` is the one bracket that says the
+          opposite, so it gets no field to contradict itself with, and
+          `over1000` already has its own required one above. */}
+      {bracket && bracket !== HEAVY_BRACKET_ID && bracket !== UNSURE_BRACKET_ID && (
+        <div>
+          <Label htmlFor="exactWeightKg">{t("weightExactOptional")}</Label>
+          <Input
+            id="exactWeightKg"
+            type="number"
+            step="1"
+            min={1}
             {...register("exactWeightKg")}
           />
           <FieldError message={formState.errors.exactWeightKg?.message} />
@@ -102,7 +124,7 @@ export function OptionCard({
         "focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
         selected
           ? "border-primary bg-primary/5"
-          : "border-border hover:border-primary/50 hover:bg-muted/40"
+          : "border-muted-foreground/30 hover:border-primary/50 hover:bg-muted/40"
       )}
     >
       <RadioGroupItem id={id} value={value} className="sr-only" />

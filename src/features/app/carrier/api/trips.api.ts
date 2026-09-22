@@ -35,11 +35,13 @@ export interface CarrierRoute {
   originAddress: string;
   originCity: string;
   originPostalCode: string;
+  originCountry: string;
   originLat: number;
   originLng: number;
   destinationAddress: string;
   destinationCity: string;
   destinationPostalCode: string;
+  destinationCountry: string;
   destinationLat: number;
   destinationLng: number;
   radiusKm: number;
@@ -61,7 +63,9 @@ export interface CarrierRouteInput {
   label?: string;
   kind: CarrierRouteKind;
   origin: CarrierRouteEndpointInput;
+  originCountry: string;
   destination: CarrierRouteEndpointInput;
+  destinationCountry: string;
   radiusKm: number;
   daysOfWeek?: number[];
   /** ISO strings; the server coerces them to dates. */

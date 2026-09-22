@@ -276,7 +276,7 @@
       "driverDashboard": "Tableau de bord chauffeur",
       "becomeDriver": "Devenir chauffeur",
       "myInvoices": "Mes factures",
-      "sendFeedback": "Envoyer un retour"
+      "sendFeedback": "J'ai une demande"
     },
     "myAuctions": {
       "title": "Mes enchères",
@@ -345,6 +345,14 @@
       "addAddress": "Ajouter une adresse",
       "editAddress": "Modifier l'adresse",
       "form": {
+        "labelPresetLabel": "Type d'adresse",
+        "labelPresets": {
+          "home": "Domicile",
+          "work": "Travail",
+          "storage": "Stockage",
+          "neighbour": "Voisin",
+          "other": "Autre"
+        },
         "label": "Libellé",
         "labelPlaceholder": "ex: Domicile, Bureau",
         "street": "Adresse",
@@ -362,7 +370,7 @@
         "save": "Enregistrer l'adresse",
         "update": "Mettre à jour",
         "saving": "Enregistrement...",
-        "pinLocation": "Veuillez épingler un lieu sur la carte pour continuer"
+        "pinLocation": "Épinglez un lieu sur la carte pour préciser la position, ou renseignez l'adresse ci-contre."
       },
       "map": {
         "searchPlaceholder": "Rechercher un lieu en France...",
@@ -524,8 +532,8 @@
       "title": "Notifications par email",
       "description": "Choisissez les emails que vous souhaitez recevoir d'EXPEDITOO.",
       "auctionResults": {
-        "title": "Résultats d'enchères",
-        "description": "Notifications de gain/perte et mises à jour de fin d'enchère"
+        "title": "Messages d'annonces",
+        "description": "Recevez les informations liées aux annonces, trajets, retraits et livraisons."
       },
       "accountSecurity": {
         "title": "Compte & Sécurité",
@@ -533,7 +541,7 @@
       }
     },
     "dangerZone": {
-      "title": "Zone dangereuse",
+      "title": "Suppression de compte",
       "deleteAccount": "Supprimer mon compte",
       "deleteDialog": {
         "title": "Supprimer le compte",
@@ -849,7 +857,7 @@
   },
   "create": {
     "title": "Demander un transport",
-    "subtitle": "Les transporteurs enchérissent sur votre demande. Vous choisissez qui l'effectue.",
+    "subtitle": "Les transporteurs répondent à votre demande, qui doit être la plus précise possible. Vérifiez vos dimensions d'objets et d'accès, ainsi que la disponibilité des personnes au retrait et à la livraison.",
     "steps": {
       "what": "Quoi",
       "where": "Où",
@@ -926,8 +934,20 @@
       "fragileNotePlaceholder": "ex. plateau en verre, à garder à l'endroit",
       "help": "Aide au chargement",
       "helpHint": "Le transporteur doit aider à charger et décharger",
+      "packaging": "Protection de l'objet",
+      "packagingOptions": {
+        "protected": {
+          "label": "Protégé",
+          "description": "Film bulle, couverture, polystyrène…"
+        },
+        "boxed": {
+          "label": "Emballé",
+          "description": "Protégé, puis mis en carton"
+        }
+      },
       "photos": "Photos (facultatif)",
       "weightExact": "Poids exact (kg)",
+      "weightExactOptional": "Poids exact (kg), si vous le connaissez",
       "weightBrackets": {
         "upTo5": {
           "label": "Jusqu'à 5 kg",
@@ -958,16 +978,20 @@
           "example": "Nous choisirons un véhicule adapté à la plupart des objets"
         }
       },
-      "size": "Taille (facultatif)",
-      "sizeHint": "La taille aide le transporteur à choisir son véhicule. Passez cette étape si vous ne savez pas.",
+      "size": "Taille",
+      "sizeHint": "Aide le transporteur à choisir son véhicule.",
       "sizeModes": {
         "preset": "Taille standard",
         "exact": "Dimensions exactes"
       },
       "sizePresets": {
+        "xs": {
+          "label": "XS",
+          "example": "Une montre, un téléphone portable"
+        },
         "s": {
           "label": "S",
-          "example": "Une montre, un petit colis"
+          "example": "Une paire de chaussures"
         },
         "m": {
           "label": "M",
@@ -1087,6 +1111,7 @@
       "budgetRequired": "Indiquez le montant que vous prévoyez",
       "weightRequired": "Choisissez une tranche de poids",
       "weightAboveBracket": "Indiquez un poids supérieur à 1 000 kg",
+      "weightExceedsBracket": "Ce poids dépasse la tranche choisie. Sélectionnez une tranche plus élevée.",
       "noteMax": "300 caractères maximum",
       "contactNameMax": "120 caractères maximum",
       "invalidPhone": "Indiquez un numéro de téléphone valide",
@@ -1137,6 +1162,10 @@
       "viaExpedion": "via Expedion",
       "fragile": "Fragile",
       "needsHelp": "Aide au chargement",
+      "packaging": {
+        "protected": "Protégé",
+        "boxed": "Emballé"
+      },
       "budget": "Budget {amount}",
       "load": "Marchandise",
       "weight": "Poids",
@@ -2963,6 +2992,10 @@
         "maxLengthCm": "Longueur max (cm, optionnelle)",
         "maxWidthCm": "Largeur max (cm, optionnelle)",
         "maxHeightCm": "Hauteur max (cm, optionnelle)",
+        "features": "Équipements (optionnel)",
+        "featureOptions": {
+          "tailgate": "Hayon élévateur"
+        },
         "cancel": "Annuler",
         "submit": "Ajouter le véhicule",
         "saving": "Ajout…",
@@ -3082,6 +3115,8 @@
         },
         "origin": "Départ",
         "destination": "Arrivée",
+        "country": "Pays",
+        "countryPlaceholder": "France",
         "days": "Jours de la semaine",
         "dates": "Dates",
         "addDate": "Ajouter",
@@ -3174,7 +3209,7 @@
     }
   },
   "jobBoard": {
-    "title": "Missions ouvertes",
+    "title": "Voir les demandes",
     "loading": "Chargement…",
     "count": "{count} missions ouvertes aux offres",
     "countOne": "{count} mission ouverte aux offres",

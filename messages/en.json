@@ -276,7 +276,7 @@
       "driverDashboard": "Driver Dashboard",
       "becomeDriver": "Become a Driver",
       "myInvoices": "My invoices",
-      "sendFeedback": "Send feedback"
+      "sendFeedback": "I have a request"
     },
     "myAuctions": {
       "title": "My Auctions",
@@ -345,6 +345,14 @@
       "addAddress": "Add Address",
       "editAddress": "Edit Address",
       "form": {
+        "labelPresetLabel": "Address type",
+        "labelPresets": {
+          "home": "Home",
+          "work": "Work",
+          "storage": "Storage",
+          "neighbour": "Neighbour",
+          "other": "Other"
+        },
         "label": "Label",
         "labelPlaceholder": "e.g. Home, Office",
         "street": "Street Address",
@@ -362,7 +370,7 @@
         "save": "Save Address",
         "update": "Update Address",
         "saving": "Saving...",
-        "pinLocation": "Please pin a location on the map to continue"
+        "pinLocation": "Pin a location on the map to refine it, or fill in the address instead."
       },
       "map": {
         "searchPlaceholder": "Search location in France...",
@@ -524,8 +532,8 @@
       "title": "Email Notifications",
       "description": "Choose which emails you'd like to receive from EXPEDITOO.",
       "auctionResults": {
-        "title": "Auction Results",
-        "description": "Win/lose notifications and auction end updates"
+        "title": "Listing messages",
+        "description": "Updates about listings, trips, pickups and deliveries."
       },
       "accountSecurity": {
         "title": "Account & Security",
@@ -533,7 +541,7 @@
       }
     },
     "dangerZone": {
-      "title": "Danger Zone",
+      "title": "Delete Account",
       "deleteAccount": "Delete my account",
       "deleteDialog": {
         "title": "Delete account",
@@ -849,7 +857,7 @@
   },
   "create": {
     "title": "Request transport",
-    "subtitle": "Carriers bid on your request. You choose who moves it.",
+    "subtitle": "Carriers respond to your request, so make it as precise as possible. Check your item dimensions and access, and who's available at pickup and delivery.",
     "steps": {
       "what": "What",
       "where": "Where",
@@ -926,8 +934,20 @@
       "fragileNotePlaceholder": "e.g. glass top, keep upright",
       "help": "Help loading",
       "helpHint": "The carrier must help load and unload",
+      "packaging": "Item protection",
+      "packagingOptions": {
+        "protected": {
+          "label": "Protected",
+          "description": "Bubble wrap, blanket, polystyrene…"
+        },
+        "boxed": {
+          "label": "Boxed",
+          "description": "Protected, then put in a box"
+        }
+      },
       "photos": "Photos (optional)",
       "weightExact": "Exact weight (kg)",
+      "weightExactOptional": "Exact weight (kg), if you know it",
       "weightBrackets": {
         "upTo5": {
           "label": "Up to 5 kg",
@@ -958,16 +978,20 @@
           "example": "We'll match a vehicle that fits most items"
         }
       },
-      "size": "Size (optional)",
-      "sizeHint": "Size helps the carrier pick a vehicle. Skip it if you don't know.",
+      "size": "Size",
+      "sizeHint": "Helps the carrier pick a vehicle.",
       "sizeModes": {
         "preset": "Standard size",
         "exact": "Exact dimensions"
       },
       "sizePresets": {
+        "xs": {
+          "label": "XS",
+          "example": "A watch, a mobile phone"
+        },
         "s": {
           "label": "S",
-          "example": "A watch, a small parcel"
+          "example": "A pair of shoes"
         },
         "m": {
           "label": "M",
@@ -1087,6 +1111,7 @@
       "budgetRequired": "Enter what you expect to pay",
       "weightRequired": "Choose a weight range",
       "weightAboveBracket": "Enter a weight above 1,000 kg",
+"weightExceedsBracket": "That weight exceeds the selected bracket. Choose a higher bracket instead.",
       "noteMax": "300 characters or fewer",
       "contactNameMax": "120 characters or fewer",
       "invalidPhone": "Enter a valid phone number",
@@ -1137,6 +1162,10 @@
       "viaExpedion": "via Expedion",
       "fragile": "Fragile",
       "needsHelp": "Loading help",
+      "packaging": {
+        "protected": "Protected",
+        "boxed": "Boxed"
+      },
       "budget": "Budget {amount}",
       "load": "Load",
       "weight": "Weight",
@@ -2963,6 +2992,10 @@
         "maxLengthCm": "Max length (cm, optional)",
         "maxWidthCm": "Max width (cm, optional)",
         "maxHeightCm": "Max height (cm, optional)",
+        "features": "Equipment (optional)",
+        "featureOptions": {
+          "tailgate": "Tail lift"
+        },
         "cancel": "Cancel",
         "submit": "Add vehicle",
         "saving": "Adding…",
@@ -3082,6 +3115,8 @@
         },
         "origin": "Departure",
         "destination": "Arrival",
+        "country": "Country",
+        "countryPlaceholder": "France",
         "days": "Days of the week",
         "dates": "Dates",
         "addDate": "Add",

@@ -6,7 +6,9 @@ import {
   HEAVY_BRACKET_MIN_KG,
   SIZE_MODES,
   SIZE_PRESET_IDS,
+  UNSURE_BRACKET_ID,
   WEIGHT_BRACKET_IDS,
+  WEIGHT_BRACKET_MAX_KG,
 } from "./cargo";
 
 /**
@@ -205,6 +207,7 @@ export const jobFormSchema = z
       .max(300, "create.validation.fragileNoteMax")
       .optional(),
     needsHelp: z.boolean().default(false),
+    packagingLevel: z.enum(["protected", "boxed"]).optional(),
 
     pickup: endpointSchema,
     dropoff: endpointSchema,
@@ -239,6 +242,21 @@ export const jobFormSchema = z
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: "create.validation.weightAboveBracket",
+          path: ["exactWeightKg"],
+        });
+      }
+    } else if (
+      data.weightBracket &&
+      data.weightBracket !== UNSURE_BRACKET_ID &&
+      data.exactWeightKg !== undefined
+    ) {
+      // The optional figure refines the chosen bracket rather than replacing
+      // it — going over the ceiling means the bracket itself was too low.
+      const ceiling = WEIGHT_BRACKET_MAX_KG[data.weightBracket];
+      if (ceiling !== null && data.exactWeightKg > ceiling) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "create.validation.weightExceedsBracket",
           path: ["exactWeightKg"],
         });
       }

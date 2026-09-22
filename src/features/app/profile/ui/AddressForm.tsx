@@ -5,6 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ArrowLeft, MapPin, Search } from "lucide-react";
 import { LottieLoader } from "@/components/ui/lottie-loader";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -26,6 +33,14 @@ import { useTranslations } from "next-intl";
 interface AddressFormProps {
   addressId?: string; // If provided, we're editing
 }
+
+const LABEL_PRESET_IDS = [
+  "home",
+  "work",
+  "storage",
+  "neighbour",
+  "other",
+] as const;
 
 
 
@@ -62,7 +77,7 @@ export function AddressForm({ addressId }: AddressFormProps) {
   );
 
   const [formData, setFormData] = useState({
-    label: "Home",
+    label: "",
     street: "",
     city: "",
     zip: "",
@@ -70,6 +85,20 @@ export function AddressForm({ addressId }: AddressFormProps) {
     details: "",
     isDefault: false,
   });
+
+  // "Custom" reveals the free-text `label` above; every other value resolves
+  // to its translated preset at save time rather than being written into
+  // `formData.label` as the user picks, so switching locale mid-edit can't
+  // leave a stale English/French string sitting in a preset's place.
+  const [labelPreset, setLabelPreset] = useState<
+    "home" | "work" | "storage" | "neighbour" | "other"
+  >("home");
+
+  // Once the requester edits the address text by hand, the map becomes a
+  // pure coordinate picker: reverse-geocoding still moves the pin's lat/lng,
+  // but it stops overwriting fields the person has taken over (feedback
+  // tickets l5mUHEzi6Ey5tuXL1cWbm, 7HtRRTGWKRfzuRZValkCr).
+  const [addressTouchedByUser, setAddressTouchedByUser] = useState(false);
 
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -100,6 +129,16 @@ export function AddressForm({ addressId }: AddressFormProps) {
         isDefault: existingAddress.isDefault,
       });
 
+      const matchedPreset = LABEL_PRESET_IDS.filter((id) => id !== "other").find(
+        (id) =>
+          existingAddress.label.trim().toLowerCase() ===
+          t(`labelPresets.${id}`).toLowerCase()
+      );
+      setLabelPreset(matchedPreset ?? "other");
+      // Saved data is already a real address; a pin drop from here on refines
+      // it rather than filling it in from scratch.
+      setAddressTouchedByUser(Boolean(existingAddress.street));
+
       if (existingAddress.lng && existingAddress.lat) {
         setMarker({ lng: existingAddress.lng, lat: existingAddress.lat });
         setViewState({
@@ -109,7 +148,7 @@ export function AddressForm({ addressId }: AddressFormProps) {
         });
       }
     }
-  }, [existingAddress]);
+  }, [existingAddress, t]);
 
   const handleSearchLocation = useCallback(async (query: string) => {
     if (query.length < 3) {
@@ -166,13 +205,21 @@ export function AddressForm({ addressId }: AddressFormProps) {
             return false;
           }
 
-          setFormData((prev) => ({
-            ...prev,
-            street: result.street || prev.street,
-            city: result.city || prev.city,
-            zip: result.postalCode || prev.zip,
-            country: result.country || prev.country,
-          }));
+          // Once the person has taken the text fields over by hand, a pin
+          // drag still moves lat/lng but stops rewriting what they typed —
+          // reverse-geocoding is a best guess, and the source document is
+          // sometimes the more trustworthy string.
+          setFormData((prev) =>
+            addressTouchedByUser
+              ? prev
+              : {
+                  ...prev,
+                  street: result.street || prev.street,
+                  city: result.city || prev.city,
+                  zip: result.postalCode || prev.zip,
+                  country: result.country || prev.country,
+                }
+          );
 
           return true;
         } else {
@@ -187,7 +234,7 @@ export function AddressForm({ addressId }: AddressFormProps) {
         setIsGeocoding(false);
       }
     },
-    [t]
+    [t, addressTouchedByUser]
   );
 
   const handleSelectResult = useCallback(
@@ -217,26 +264,33 @@ export function AddressForm({ addressId }: AddressFormProps) {
     [handleReverseGeocode]
   );
 
+  const hasTypedAddress = Boolean(
+    formData.street.trim() && formData.city.trim() && formData.zip.trim()
+  );
+  const canSave = Boolean(marker) || hasTypedAddress;
+
   const handleSave = async () => {
-    if (!marker) return;
+    if (!canSave) return;
+
+    const label =
+      labelPreset === "other" ? formData.label : t(`labelPresets.${labelPreset}`);
+    const payload = {
+      ...formData,
+      label,
+      // Every address here is in France; the map (when used) already
+      // confirms it, so a skipped map still gets an honest default rather
+      // than failing on a field nothing in the UI called out as required.
+      country: formData.country.trim() || t("form.countryPlaceholder"),
+      ...(marker ? { lat: marker.lat, lng: marker.lng } : {}),
+    };
 
     setIsLoading(true);
     try {
       if (isEditMode) {
-        await updateAddress(addressId, {
-          ...formData,
-          lat: marker.lat,
-          lng: marker.lng,
-        });
+        await updateAddress(addressId, payload);
       } else {
-        await createAddress({
-          ...formData,
-          lat: marker.lat,
-          lng: marker.lng,
-        });
+        await createAddress(payload);
       }
-
-
 
       // Invalidate queries
       queryClient.invalidateQueries({ queryKey: ["user-addresses"] });
@@ -365,16 +419,39 @@ export function AddressForm({ addressId }: AddressFormProps) {
         <div className="space-y-6 p-1">
           <div className="space-y-4">
             <div className="grid gap-2">
-              <Label htmlFor="label">{t("form.label")}</Label>
-              <Input
-                id="label"
-                placeholder={t("form.labelPlaceholder")}
-                value={formData.label}
-                onChange={(e) =>
-                  setFormData({ ...formData, label: e.target.value })
+              <Label htmlFor="labelPreset">{t("form.labelPresetLabel")}</Label>
+              <Select
+                value={labelPreset}
+                onValueChange={(value) =>
+                  setLabelPreset(value as typeof labelPreset)
                 }
-              />
+              >
+                <SelectTrigger id="labelPreset">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {LABEL_PRESET_IDS.map((id) => (
+                    <SelectItem key={id} value={id}>
+                      {t(`form.labelPresets.${id}`)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
+
+            {labelPreset === "other" && (
+              <div className="grid gap-2">
+                <Label htmlFor="label">{t("form.label")}</Label>
+                <Input
+                  id="label"
+                  placeholder={t("form.labelPlaceholder")}
+                  value={formData.label}
+                  onChange={(e) =>
+                    setFormData({ ...formData, label: e.target.value })
+                  }
+                />
+              </div>
+            )}
 
             <div className="grid gap-2">
               <Label htmlFor="street">{t("form.street")}</Label>
@@ -382,9 +459,10 @@ export function AddressForm({ addressId }: AddressFormProps) {
                 id="street"
                 placeholder={t("form.streetPlaceholder")}
                 value={formData.street}
-                onChange={(e) =>
-                  setFormData({ ...formData, street: e.target.value })
-                }
+                onChange={(e) => {
+                  setAddressTouchedByUser(true);
+                  setFormData({ ...formData, street: e.target.value });
+                }}
               />
             </div>
 
@@ -395,9 +473,10 @@ export function AddressForm({ addressId }: AddressFormProps) {
                   id="city"
                   placeholder={t("form.cityPlaceholder")}
                   value={formData.city}
-                  onChange={(e) =>
-                    setFormData({ ...formData, city: e.target.value })
-                  }
+                  onChange={(e) => {
+                    setAddressTouchedByUser(true);
+                    setFormData({ ...formData, city: e.target.value });
+                  }}
                 />
               </div>
               <div className="grid gap-2">
@@ -406,9 +485,10 @@ export function AddressForm({ addressId }: AddressFormProps) {
                   id="zip"
                   placeholder={t("form.zipPlaceholder")}
                   value={formData.zip}
-                  onChange={(e) =>
-                    setFormData({ ...formData, zip: e.target.value })
-                  }
+                  onChange={(e) => {
+                    setAddressTouchedByUser(true);
+                    setFormData({ ...formData, zip: e.target.value });
+                  }}
                 />
               </div>
             </div>
@@ -419,9 +499,10 @@ export function AddressForm({ addressId }: AddressFormProps) {
                 id="country"
                 placeholder={t("form.countryPlaceholder")}
                 value={formData.country}
-                onChange={(e) =>
-                  setFormData({ ...formData, country: e.target.value })
-                }
+                onChange={(e) => {
+                  setAddressTouchedByUser(true);
+                  setFormData({ ...formData, country: e.target.value });
+                }}
               />
             </div>
 
@@ -457,7 +538,7 @@ export function AddressForm({ addressId }: AddressFormProps) {
             <Button
               onClick={handleSave}
               className="w-full h-12 text-lg font-semibold"
-              disabled={!marker || isLoading}
+              disabled={!canSave || isLoading}
             >
               {isLoading ? (
                 <>

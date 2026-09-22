@@ -74,6 +74,7 @@ function toInsert(
     quantity: data.quantity,
     isFragile: data.isFragile,
     needsHelp: data.needsHelp,
+    packagingLevel: data.packagingLevel,
 
     pickupLat: data.pickup.lat,
     pickupLng: data.pickup.lng,

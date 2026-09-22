@@ -18,8 +18,10 @@ export interface CreateAddressInput {
     zip: string;
     country: string;
     details?: string;
-    lat: number;
-    lng: number;
+    // Optional to match the server DTO: a map pin is a convenience, not a
+    // requirement — the typed address is what the DAL persists either way.
+    lat?: number;
+    lng?: number;
     isDefault?: boolean;
 }
 

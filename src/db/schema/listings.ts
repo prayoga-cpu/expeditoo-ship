@@ -29,6 +29,15 @@ export const listingStatusEnum = pgEnum("listing_status", [
   "scheduled",
 ]);
 
+// How the object is cushioned, stated by the requester so a carrier prices
+// handling risk accordingly. Absent means "not stated" — never inferred as
+// "unprotected" — matching the `legal_form` convention elsewhere in this
+// schema (see docs/specs/carrier_kyc_spec.md).
+export const packagingLevelEnum = pgEnum("packaging_level", [
+  "protected",
+  "boxed",
+]);
+
 // The 13 location types (ROADMAP.md §8 Phase A).
 export const locationTypeEnum = pgEnum("location_type", [
   "house",
@@ -92,6 +101,7 @@ export const listings = pgTable(
     quantity: integer("quantity").default(1).notNull(),
     isFragile: boolean("is_fragile").default(false).notNull(),
     needsHelp: boolean("needs_help").default(false).notNull(),
+    packagingLevel: packagingLevelEnum("packaging_level"),
 
     // ---- Where: pickup ----
     pickupLat: doublePrecision("pickup_lat").notNull(),

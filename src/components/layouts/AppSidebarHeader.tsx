@@ -27,9 +27,11 @@ export function AppSidebarHeader({
   return (
     <div className={cn("flex flex-col", className)}>
       <div className="flex items-center justify-start px-6 h-[57px] shrink-0">
-        {/* The shared EXPEDITOO / TRANSPORT lockup rather than a hand-written
-            heading, so the sidebar, the marketing chrome and the splash all
-            render one component and cannot drift apart again. */}
+        {/* The shared `BrandWordmark` rather than a hand-written heading, so
+            the sidebar, the marketing chrome and the splash all render one
+            component and cannot drift apart again. No `tagline`: the app
+            shell drops the "TRANSPORT" sub-line (feedback ticket
+            gQND7ETKONmwr0V3RusMY); marketing opts back into it. */}
         <Link href={href} className="flex items-center">
           <BrandWordmark size={28} />
         </Link>

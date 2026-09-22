@@ -183,6 +183,20 @@
       "when": 1788123600000,
       "tag": "0026_platform_fee",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1788127200000,
+      "tag": "0027_packaging_level",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1788130800000,
+      "tag": "0028_carrier_route_country",
+      "breakpoints": true
     }
   ]
 }

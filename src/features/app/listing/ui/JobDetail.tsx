@@ -13,6 +13,7 @@ import {
   AlertTriangle,
   HandHelping,
   RotateCcw,
+  ShieldCheck,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -226,6 +227,12 @@ function JobHeader({ job }: { job: Job }) {
           <Badge variant="outline">
             <HandHelping className="mr-1 h-3 w-3" />
             {t("needsHelp")}
+          </Badge>
+        )}
+        {job.packagingLevel && (
+          <Badge variant="outline">
+            <ShieldCheck className="mr-1 h-3 w-3" />
+            {t(`packaging.${job.packagingLevel}`)}
           </Badge>
         )}
       </div>

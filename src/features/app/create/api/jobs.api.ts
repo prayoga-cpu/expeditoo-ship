@@ -31,6 +31,7 @@ export function toCreatePayload(values: JobFormOutput, publish: boolean) {
     quantity: values.quantity,
     isFragile: values.isFragile,
     needsHelp: values.needsHelp,
+    packagingLevel: values.packagingLevel,
     pickup: values.pickup,
     dropoff: values.dropoff,
     pickupFrom: values.pickupFrom.toISOString(),

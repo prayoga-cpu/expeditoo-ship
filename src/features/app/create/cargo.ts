@@ -54,18 +54,20 @@ export const WEIGHT_BRACKET_MAX_KG = {
 } as const satisfies Record<WeightBracketId, number | null>;
 
 /**
- * The bracket's ceiling, or — for the only bracket without one — whatever was
- * typed. A figure left behind by a change of mind is ignored rather than
- * cleared, because the ceiling is read first.
+ * A typed figure beats the bracket's ceiling whenever one is given: it is
+ * always more accurate than a coarse category, and every bracket but
+ * `over1000` is otherwise read as its ceiling. `WeightBracketField` clears
+ * `exactWeightKg` on every bracket change, so a figure typed for a bracket
+ * the person has since abandoned can never leak into this resolution.
  */
 export function resolveWeightKg(
   bracket: WeightBracketId,
   exactWeightKg: number | undefined
 ): number | undefined {
-  return WEIGHT_BRACKET_MAX_KG[bracket] ?? exactWeightKg;
+  return exactWeightKg ?? WEIGHT_BRACKET_MAX_KG[bracket] ?? undefined;
 }
 
-export const SIZE_PRESET_IDS = ["s", "m", "l", "xl", "xxl"] as const;
+export const SIZE_PRESET_IDS = ["xs", "s", "m", "l", "xl", "xxl"] as const;
 
 export type SizePresetId = (typeof SIZE_PRESET_IDS)[number];
 
@@ -77,6 +79,7 @@ export interface Dimensions {
 
 /** Each preset is the largest thing that still counts as that size. */
 export const SIZE_PRESET_DIMENSIONS = {
+  xs: { lengthCm: 20, widthCm: 20, heightCm: 20 },
   s: { lengthCm: 40, widthCm: 30, heightCm: 25 },
   m: { lengthCm: 80, widthCm: 60, heightCm: 50 },
   l: { lengthCm: 180, widthCm: 80, heightCm: 120 },
@@ -163,7 +166,7 @@ export interface ItemSuggestion {
 }
 
 export const ITEM_SUGGESTIONS = [
-  { id: "watch", weightBracket: "upTo5", sizePreset: "s" },
+  { id: "watch", weightBracket: "upTo5", sizePreset: "xs" },
   { id: "parcel", weightBracket: "upTo5", sizePreset: "s" },
   { id: "suitcase", weightBracket: "upTo30", sizePreset: "m" },
   { id: "movingBox", weightBracket: "upTo30", sizePreset: "m" },

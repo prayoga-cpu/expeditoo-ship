@@ -82,10 +82,21 @@ describe.each([
 });
 
 describe("weight", () => {
-  it("asks nothing extra for a bracket that has a ceiling", () => {
+  it("offers the real figure as optional for a bracket that already has a ceiling", () => {
     renderFields();
 
     choose("weight-upTo30");
+
+    // The required, freight-only field is not this one...
+    expect(screen.queryByLabelText(/^Poids exact \(kg\)(?!,)/)).not.toBeInTheDocument();
+    // ...but an optional figure that would refine the bracket is offered.
+    expect(screen.getByLabelText(/si vous le connaissez/)).toBeInTheDocument();
+  });
+
+  it("offers no figure at all for 'I'm not sure'", () => {
+    renderFields();
+
+    fireEvent.click(screen.getByRole("radio", { name: /ne sais pas/i }));
 
     expect(screen.queryByLabelText(/Poids exact/)).not.toBeInTheDocument();
   });
@@ -95,7 +106,7 @@ describe("weight", () => {
 
     fireEvent.click(screen.getByRole("radio", { name: /Plus d'1 t/ }));
 
-    expect(screen.getByLabelText(/Poids exact/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Poids exact \(kg\)(?!,)/)).toBeInTheDocument();
   });
 
   it("takes the figure away again when a lighter bracket is chosen", () => {
@@ -104,7 +115,14 @@ describe("weight", () => {
     choose("weight-over1000");
     choose("weight-upTo5");
 
-    expect(screen.queryByLabelText(/Poids exact/)).not.toBeInTheDocument();
+    // The required freight field is gone...
+    expect(screen.queryByLabelText(/^Poids exact \(kg\)(?!,)/)).not.toBeInTheDocument();
+    // ...and the optional one for the new bracket starts empty rather than
+    // carrying over whatever was typed for the abandoned freight bracket.
+    const optional = screen.getByLabelText(
+      /si vous le connaissez/
+    ) as HTMLInputElement;
+    expect(optional.value).toBe("");
   });
 });
 

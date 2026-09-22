@@ -14,6 +14,41 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.47.0] - 2026-09-23 · feat
+
+Fourteen items from the feedback queue, all filed through the in-app button.
+
+- **A new XS size**, for a watch or a phone, and "S" now shows a pair of shoes
+  as its example instead — sized right for what people were actually trying
+  to fit it to.
+- **You can now give us the exact weight**, not just a bracket, on any weight
+  category except "not sure" — useful when you know it and want a more
+  accurate match than "5 – 30 kg" gives.
+- **Two new buttons for how an item is protected** — "Protégé" (bubble wrap,
+  blanket, polystyrene…) or "Emballé" (protected, then boxed) — next to
+  Fragile and Help loading, so a carrier knows what they're picking up before
+  they arrive.
+- **The weight and size cards are easier to see** before you've picked one —
+  the frame around each was barely visible against the page.
+- **Saved addresses can now say what they're for** — Home, Work, Storage,
+  Neighbour or a custom label — picked from a list instead of typed by hand
+  every time.
+- **Adding an address no longer requires the map.** Type the street, city and
+  postal code and you're done; the map is there to help pin the exact spot,
+  not to block you if you'd rather skip it. It also no longer overwrites an
+  address you've already typed when you move the pin.
+- **A driver's declared trip can now say which country** each end is in, and
+  a new vehicle can be marked as having a tail lift.
+- **Several screens now say what they mean.** "Résultats d'enchères" in your
+  notification settings is now "Messages d'annonces"; the "Zone dangereuse"
+  in Settings is now "Suppression de compte"; the request form's intro text
+  no longer talks about carriers "bidding"; the size step dropped its
+  "optional, skip it if you don't know" hint; the open-jobs board no longer
+  reads "Missions"; and the word "TRANSPORT" under the EXPEDITOO logo is
+  gone from the app (it stays on the marketing site).
+- **"Add another item" on the request form** is confirmed working — it
+  shipped quietly in an earlier release and had gone unannounced.
+
 ## [2.46.0] - 2026-09-23 · feat
 
 - **Posting a request no longer requires a card up front.** Your request can go

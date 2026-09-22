@@ -41,6 +41,7 @@ const JOB: BoardJob = {
   quantity: 1,
   isFragile: true,
   needsHelp: false,
+  packagingLevel: null,
 
   pickupAddress: "1 rue de la Gare",
   pickupCity: "Voisins-le-Bretonneux",

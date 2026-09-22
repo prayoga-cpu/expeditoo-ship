@@ -43,6 +43,7 @@ export interface Job {
   quantity: number;
   isFragile: boolean;
   needsHelp: boolean;
+  packagingLevel: "protected" | "boxed" | null;
 
   pickupAddress: string;
   pickupCity: string;

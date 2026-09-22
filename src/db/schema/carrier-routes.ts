@@ -50,6 +50,11 @@ export const carrierRoutes = pgTable(
     originAddress: text("origin_address").notNull(),
     originCity: text("origin_city").notNull(),
     originPostalCode: text("origin_postal_code").notNull(),
+    // Free text, like `addresses.country` — independent of the map, which
+    // still only drops a pin inside France (ROADMAP.md §9). Defaulted rather
+    // than nullable: every trip declared before this column existed was, in
+    // fact, a French trip.
+    originCountry: text("origin_country").default("France").notNull(),
     // Not nullable: geography is the whole point, and a trip without
     // coordinates could never be matched against the board.
     originLat: doublePrecision("origin_lat").notNull(),
@@ -59,6 +64,7 @@ export const carrierRoutes = pgTable(
     destinationAddress: text("destination_address").notNull(),
     destinationCity: text("destination_city").notNull(),
     destinationPostalCode: text("destination_postal_code").notNull(),
+    destinationCountry: text("destination_country").default("France").notNull(),
     destinationLat: doublePrecision("destination_lat").notNull(),
     destinationLng: doublePrecision("destination_lng").notNull(),
 

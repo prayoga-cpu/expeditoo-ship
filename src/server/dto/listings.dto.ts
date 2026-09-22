@@ -120,6 +120,9 @@ const baseListingSchema = z.object({
   quantity: z.number().int().min(1).default(1),
   isFragile: z.boolean().default(false),
   needsHelp: z.boolean().default(false),
+  // Absent means "not stated", not "unprotected" — the same convention
+  // `legal_form` uses (admin_user_management_spec.md), never guessed at.
+  packagingLevel: z.enum(["protected", "boxed"]).optional(),
 
   pickup: endpointSchema,
   dropoff: endpointSchema,
@@ -227,6 +230,7 @@ export const MATERIAL_FIELDS = [
   "quantity",
   "needsHelp",
   "isFragile",
+  "packagingLevel",
   "pickup",
   "dropoff",
   "pickupFrom",

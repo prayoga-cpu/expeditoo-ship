@@ -33,7 +33,11 @@ const baseRouteSchema = z.object({
   label: z.string().max(120).optional(),
   kind: carrierRouteKindSchema,
   origin: endpointSchema,
+  // Free text, like `addresses.country` — independent of the map, which
+  // still only drops a pin inside France (ROADMAP.md §9).
+  originCountry: z.string().min(1).max(100).default("France"),
   destination: endpointSchema,
+  destinationCountry: z.string().min(1).max(100).default("France"),
   radiusKm: z.number().int().min(1).max(500).default(50),
   /** ISO weekdays; recurring trips only. */
   daysOfWeek: z.array(dayOfWeekSchema).max(7).optional(),

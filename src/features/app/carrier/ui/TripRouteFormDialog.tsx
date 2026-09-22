@@ -52,7 +52,9 @@ interface FormState {
   label: string;
   kind: CarrierRouteKind;
   origin: LocationPickerValue;
+  originCountry: string;
   destination: LocationPickerValue;
+  destinationCountry: string;
   radiusKm: number;
   daysOfWeek: number[];
   /** `yyyy-mm-dd`, the value a native date input produces. */
@@ -68,7 +70,9 @@ const blankForm = (): FormState => ({
   label: "",
   kind: "recurring",
   origin: EMPTY_POINT,
+  originCountry: "France",
   destination: EMPTY_POINT,
+  destinationCountry: "France",
   radiusKm: 50,
   daysOfWeek: [],
   dates: [],
@@ -90,6 +94,7 @@ function formFromRoute(route: CarrierRoute): FormState {
       lat: route.originLat,
       lng: route.originLng,
     },
+    originCountry: route.originCountry,
     destination: {
       address: route.destinationAddress,
       city: route.destinationCity,
@@ -97,6 +102,7 @@ function formFromRoute(route: CarrierRoute): FormState {
       lat: route.destinationLat,
       lng: route.destinationLng,
     },
+    destinationCountry: route.destinationCountry,
     radiusKm: route.radiusKm,
     daysOfWeek: route.daysOfWeek,
     dates: route.dates.map((d) => d.date.slice(0, 10)),
@@ -133,7 +139,9 @@ function toInput(form: FormState): CarrierRouteInput {
     label: form.label.trim() || undefined,
     kind: form.kind,
     origin: point(form.origin),
+    originCountry: form.originCountry.trim() || "France",
     destination: point(form.destination),
+    destinationCountry: form.destinationCountry.trim() || "France",
     radiusKm: form.radiusKm,
     // Only the field the kind allows travels; the server rejects the other.
     daysOfWeek: form.kind === "recurring" ? form.daysOfWeek : undefined,
@@ -239,6 +247,12 @@ export function TripRouteFormDialog({
                 value={form.origin}
                 onChange={(origin) => patch({ origin })}
               />
+              <Input
+                aria-label={t("country")}
+                value={form.originCountry}
+                onChange={(e) => patch({ originCountry: e.target.value })}
+                placeholder={t("countryPlaceholder")}
+              />
             </div>
             <div className="space-y-2">
               <Label>{t("destination")}</Label>
@@ -246,6 +260,12 @@ export function TripRouteFormDialog({
                 id="trip-destination"
                 value={form.destination}
                 onChange={(destination) => patch({ destination })}
+              />
+              <Input
+                aria-label={t("country")}
+                value={form.destinationCountry}
+                onChange={(e) => patch({ destinationCountry: e.target.value })}
+                placeholder={t("countryPlaceholder")}
               />
             </div>
           </div>

@@ -27,6 +27,23 @@ adversarial verification pass — treat their detail as slightly less certain.
 Work that needs a human hand outside the codebase. Add to this list rather
 than leaving it in a chat message.
 
+- [ ] **Run `Actions → Migrate database` for `0027_packaging_level` and
+      `0028_carrier_route_country` before — or immediately after — this
+      deploy reaches production.** `listings.service.ts` and
+      `carrier-routes.service.ts` now unconditionally write
+      `packaging_level` / `origin_country` / `destination_country` on every
+      insert; on a database that hasn't run these two migrations, that turns
+      into "column does not exist" and **every new transport request and
+      every new declared trip fails**, not just the new fields. See 2.47.0.
+- [ ] **Close out the 18 feedback tickets this session addresses**, once the
+      above migration has run and the fixes are confirmed live: 3 were
+      already done (quantity-beside-item, SIRET validation, "add another
+      item"), 14 are fixed and verified in Chromium against a local
+      database in this session (not against production), and the toggle bug
+      (`EMBPlsL_afUsi81NPc7sW`) did not reproduce — see 2.47.0's
+      Verification section. This session has no production write access, so
+      none of the 18 rows in `feedback_tickets` were flipped to `RESOLVED`;
+      do that from `/admin/feedback` after confirming each on the live site.
 - [x] ~~Bring the Expedion quote history back from Airtable~~ — **done
       2026-09-13**: 4,656 quotes imported into production. See 2.41.1.
 - [ ] **Rotate the Airtable token.** It was pasted into a chat on 2026-09-13.
@@ -169,6 +186,220 @@ than leaving it in a chat message.
       in `.env.example`.
 
 ---
+
+## ✅ 2026-09-23 — Fourteen Feedback Tickets Closed Out (2.47.0)
+
+Follow-on to the same-day audit conversation: every ticket in the admin
+feedback queue with `status = 'OPEN'` was read from production (read-only,
+`MIRROR_SOURCE_URL`), checked one by one against the code on `main`, and
+reported back with file:line evidence before any of this was written. Three
+were already fixed by earlier releases (quantity-beside-item, SIRET
+validation, "add another item" — the last had shipped with no changelog
+line, now given one). One (`EMBPlsL_afUsi81NPc7sW`, "FRAGILE and AIDE AU
+CHARGEMENT unselectable") did not reproduce — see Verification. The
+remaining fourteen are fixed here.
+
+**Cargo (`cargo.ts`, `WeightBracketField.tsx`, `SizeField.tsx`).** A new
+`"xs"` size preset (20×20×20cm) takes the watch/phone example off `"s"`,
+which now reads "a pair of shoes" — both tickets filed by the same reporter
+in the same session, fixed together. `resolveWeightKg`'s precedence
+flipped: a typed figure now wins over the bracket's ceiling for *every*
+bracket, not just `over1000` (`exactWeightKg ?? WEIGHT_BRACKET_MAX_KG[bracket]
+?? undefined`) — a real weight is always more accurate than the category it
+sits inside. The staleness guard the old precedence existed for moved up a
+layer instead of disappearing: `WeightBracketField`'s `onValueChange` now
+calls `setValue("exactWeightKg", undefined)` on every bracket change, so a
+figure typed for an abandoned bracket can never reach the resolver. A new
+`superRefine` in both `schemas.ts` (client) and left for a follow-up in
+`listings.dto.ts` (server — see Known limits) rejects a figure that
+*exceeds* the bracket it's declared under (`weightExceedsBracket`): the
+field refines the bracket, it doesn't let someone route around it.
+`OptionCard`'s unselected border moved from `border-border` (`oklch(0.95
+0.01 250)`, nearly indistinguishable from the `oklch(0.99 0 250)` page
+background) to `border-muted-foreground/30`.
+
+**Packaging (`packaging_level`, new).** `isFragile`/`needsHelp` had no
+sibling for *how* something is protected. New nullable pgEnum column on
+`listings` (`0027_packaging_level.sql`) — absent means "not stated," the
+same convention `legal_form` uses, never inferred as "unprotected." Threaded
+through `create/schemas.ts` → `jobs.api.ts` → `listings.dto.ts`
+(`MATERIAL_FIELDS` too — protection level changes what a carrier is
+pricing) → `listings.service.ts`, surfaced as a two-option `ToggleGroup` in
+`JobForm.tsx` next to Fragile/Aide, and rendered back as a badge on
+`JobDetail.tsx` (new `ShieldCheck` badge, `myJobs.detail.packaging.*`).
+
+**Addresses (`AddressForm.tsx`).** Two fixes, one root cause each. (1) A
+free-text `label` input became a `Select` of five presets (Domicile,
+Travail, Stockage, Voisin, Autre) — "Autre" reveals the old text input.
+Existing addresses are matched back to a preset by comparing the stored
+label against the current locale's preset strings; no match falls back to
+"Autre" with the original text intact, so nothing is silently renamed. (2)
+The map stopped being mandatory: `handleSave`'s guard changed from
+`!marker` to `!marker && !hasTypedAddress`, and `lat`/`lng` are omitted
+from the payload entirely when there's no pin — both were already optional
+end to end (`addresses.lat/lng` have no `NOT NULL`, `createAddressSchema`
+already had `.optional()`) so this needed no migration, only a frontend
+gate that had never matched what the schema already allowed. A new
+`addressTouchedByUser` flag (set the moment any of street/city/zip/country
+is typed by hand) stops `handleReverseGeocode` from overwriting those
+fields on a later pin drag — it still fills them the *first* time, so the
+normal "click the map, watch it fill in" flow is unchanged.
+
+**The same overwrite fix landed in the shared `LocationPickerField`**
+(`location-picker-field.tsx`, used by trips, `/create`'s pickup/dropoff,
+and the admin Expedion quote dialog) — same bug, same shape, one field-
+level check (`value.address.trim() || result.street || value.address`)
+rather than a second boolean, since this component's fields start empty
+rather than pre-filled from a saved row.
+
+**Trips (`TripRouteFormDialog.tsx`).** A plain-text country per endpoint —
+`origin_country`/`destination_country` on `carrier_routes`
+(`0028_carrier_route_country.sql`, `DEFAULT 'France' NOT NULL`, so every
+row declared before this column existed is correctly backfilled rather than
+guessed at), independent of the map the way `addresses.country` already is.
+**Deliberately not done**: lifting the map's France-only clamp
+(`maxBounds`, the `countryCode !== 'fr'` reverse-geocode check) so a trip
+could actually run to Belgium. `listings.dto.ts` enforces the identical
+bound server-side with its own comment — `v2.0 is France-only
+(ROADMAP.md §9)` — for the real job-posting flow, and KYC/SIRET/insurance
+are all France-framed throughout this codebase; whether a *trip
+declaration* (pure discovery metadata, no payment or KYC gate of its own)
+should be exempted from that is a product-scope call, not a bug fix, and
+is listed below rather than made unilaterally.
+
+**Vehicle equipment.** `vehicles.features` (`jsonb`, default `[]`) has
+existed on the column, the DTO (`carrier.dto.ts`) and the client type
+(`VehicleInput.features?`) since the fleet feature shipped — `VehicleForm.tsx`
+was the only place in the chain that never surfaced it. Added one checkbox
+("Hayon élévateur" / "Tail lift"), written as `features: values.tailgate ?
+["tailgate"] : []`; the wire shape already supports more than one, so a
+second option later is a UI change, not a schema one.
+
+**Copy-only** (`messages/fr.json` + `messages/en.json`, symmetric):
+`settings.dangerZone.title` ("Zone dangereuse" → "Suppression de compte";
+English "Danger Zone" → "Delete Account" for consistency, not because the
+English was wrong), `settings.notifications.auctionResults` (title +
+description — stale goods-auction wording in **both** languages, not just
+French: English said "Auction Results" / "Win/lose notifications" too),
+`create.subtitle` (dropped "carriers bid on your request" for copy about
+being precise on dimensions/access/availability), `create.what.size` /
+`sizeHint` (dropped "(optional)" and "skip it if you don't know"),
+`jobBoard.title` ("Missions ouvertes" → "Voir les demandes" — French only;
+the English "Open jobs" had no equivalent problem), and
+`profile.quickLinks.sendFeedback` renamed to "J'ai une demande" / "I have a
+request" — **not** `contactHelp`, which the ticket's "last button" wording
+pointed at but which turns out to sit *second-to-last*; the actual last
+button already opens `FeedbackDialog`, a real contact form, so this needed
+no behaviour change, only a truthful label.
+
+**`BrandWordmark`'s "TRANSPORT" sub-line** is now opt-in (`tagline` prop,
+default `false`) rather than baked in. The two marketing call sites
+(`LandingNavbar`, `LandingFooter`) pass `tagline` explicitly; the two app-
+shell call sites (`AppSidebarHeader`, `MainLayout`'s mobile header) do not,
+so the sidebar/mobile-header chrome loses the line everywhere it appears —
+the ticket was filed from `/home`, but this is shared chrome, not one screen.
+
+**Judgment calls**
+- The France-only clamp on trip endpoints stays (see Trips above) — flagged
+  to the operator rather than lifted.
+- The alert-types half of `Mt-mRHuT6yVL3XM6O0vcf` ("different types of
+  alert for new ads next to the carrier and also on the carrier route") is
+  **not built**. `carrier_routes.notify_on_match` already exists and is
+  already surfaced in `TripRouteFormDialog.tsx` — but its own schema
+  comment says "stored now, consumed by a later cron
+  (carrier_trips_spec.md §9)," meaning it has never fired a real
+  notification. Wiring a new-listing-matches-a-declared-route pipeline is a
+  real feature (touches listing publish, `notificationsService`, and needs
+  its own tests) that this batch only had room to *not* build badly. Only
+  the copy rename shipped.
+- `sendFeedback` vs `contactHelp` (see Copy-only above) — read the ticket
+  against the actual DOM order rather than the more literal-sounding key
+  name.
+
+**Bugs found on the way past**
+- `CreateAddressInput.lat`/`lng` were typed as required `number` in
+  `addresses.api.ts` while the DTO they feed has always accepted them as
+  optional — the client type was simply wrong, not a deliberate stricter
+  contract. Now `lat?`/`lng?`, matching `createAddressSchema`.
+
+**Verification**
+- `npx tsc --noEmit`: 0 errors, whole repo.
+- `pnpm lint`: 0 errors (81 pre-existing warnings, none in a file this
+  session touched).
+- `pnpm vitest run`: **1691/1691 passing** (5 new: bracket-consistency and
+  packaging-level cases in `schemas.test.ts`; 2 existing weight tests in
+  `WhatStep.test.tsx` and 1 in `cargo.test.ts` rewritten to assert the new,
+  intended precedence instead of the old one).
+- `pnpm build`: succeeds.
+- `src/db/__tests__/migrations-journal.test.ts`: passing for both new
+  migrations.
+- **Checked live in Chromium**, against a local Postgres with both new
+  migrations applied (not production) and a throwaway signed-up-and-
+  deleted account: FRAGILE and AIDE AU CHARGEMENT toggle correctly on
+  click — did not reproduce the reported bug, in either theme's default or
+  via a direct id-click or a click on the visible card; the weight-bracket
+  border is visibly darker at rest; picking a non-`over1000` bracket
+  reveals the optional exact-weight field, which clears on switching
+  brackets; the XS card renders with the montre/téléphone example and 20×20×20
+  detail; the Protégé/Emballé toggle group renders next to Fragile/Aide;
+  the address form's Type d'adresse select renders and Save enables from
+  typed street/city/zip alone with no pin. One tooling note: driving the
+  weight-bracket `RadioGroupItem` by clicking its `id` directly times out
+  in Playwright — the input is `sr-only` and has no clickable area of its
+  own, so a real click has to land on the wrapping `<label>` the way a
+  mouse actually would. `WhatStep.test.tsx`'s existing `choose()` helper
+  uses jsdom's `fireEvent.click(getElementById(...))`, which bypasses hit-
+  testing and so never hit this; a real click on the label works correctly
+  and was confirmed separately. Not a product bug, but worth knowing before
+  trusting a future Playwright script's id-based clicks in this component.
+
+**Known limits**
+- **`weightExceedsBracket` only exists in `create/schemas.ts`, by design, not
+  as a gap.** Checked before writing it: `listings.dto.ts` never receives a
+  bracket at all — `toCreatePayload` resolves bracket + optional exact
+  figure to one `weightKg` number before the request leaves the browser, the
+  same way it always has for `over1000`. There is nothing server-side to
+  compare the figure against once it arrives, so this was never a two-schema
+  question the way the France-bounds or minimum-route checks are.
+- **This session has no production database write access** (`MIRROR_SOURCE_URL`
+  is `mirror_readonly`). None of the 18 feedback rows were updated —
+  see Operator to-do.
+- **The two new migrations have not been run anywhere but a local database.**
+  See Operator to-do — this is the same failure mode the `0009`/`0010`
+  incident describes, and the fix is the same: run the Action before the
+  code that depends on the columns reaches anyone.
+- **Cross-border trips remain out of scope**, deliberately — see Judgment
+  calls.
+- **The route-alert-types feature remains unbuilt**, deliberately — see
+  Judgment calls.
+
+- [x] **Cargo**: `create/cargo.ts` (`resolveWeightKg`, `SIZE_PRESET_IDS`,
+      `SIZE_PRESET_DIMENSIONS`, `ITEM_SUGGESTIONS.watch`),
+      `create/ui/WeightBracketField.tsx`, `create/ui/SizeField.tsx` (via the
+      shared `OptionCard`), `create/schemas.ts` (`weightExceedsBracket`),
+      `create/__tests__/{cargo,WhatStep,schemas}.test.ts`.
+- [x] **Packaging**: new `db/migrations/0027_packaging_level.sql` +
+      `meta/_journal.json` (idx 26), `db/schema/listings.ts`
+      (`packagingLevelEnum`, column), `server/dto/listings.dto.ts`
+      (`baseListingSchema`, `MATERIAL_FIELDS`), `server/services/listings.service.ts`,
+      `create/schemas.ts`, `create/api/jobs.api.ts`, `create/ui/JobForm.tsx`,
+      `listing/types.ts`, `listing/ui/JobDetail.tsx`.
+- [x] **Addresses**: `profile/ui/AddressForm.tsx`, `profile/api/addresses.api.ts`
+      (`CreateAddressInput.lat/lng` now optional), `components/ui/location-picker-field.tsx`.
+- [x] **Trips**: new `db/migrations/0028_carrier_route_country.sql` +
+      `meta/_journal.json` (idx 27), `db/schema/carrier-routes.ts`,
+      `server/dto/carrier-routes.dto.ts`, `server/services/carrier-routes.service.ts`,
+      `features/app/carrier/api/trips.api.ts`, `features/app/carrier/ui/TripRouteFormDialog.tsx`,
+      `features/app/carrier/ui/VehicleForm.tsx` (tailgate feature).
+- [x] **Chrome**: `components/ui/brand-mark.tsx` (`tagline` prop),
+      `components/layouts/AppSidebarHeader.tsx`,
+      `features/marketing/ui/{LandingNavbar,LandingFooter}.tsx`.
+- [x] `messages/en.json` / `messages/fr.json`: every key listed in the
+      Copy-only section above, plus `sizePresets.xs`, `packagingOptions.*`,
+      `weightExactOptional`, `weightExceedsBracket`, `form.labelPreset*`,
+      `carrier.trips.form.country*`, `carrier.fleet.form.features` /
+      `featureOptions.tailgate`, `myJobs.detail.packaging.*` — added to both,
+      symmetrically (key-parity checked by script, not by eye).
 
 ## ✅ 2026-09-23 — Card-Free Posting, Scheduled Publish, Platform Fee (2.46.0)
 
