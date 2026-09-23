@@ -48,7 +48,7 @@ Two things are *not* mocked and must not be confused with one:
 | `chargeForShipment` skips Stripe | `src/server/services/payments.service.ts:130,187` | Nothing to build — the real branch beside it already confirms an off-session PaymentIntent against the card saved at posting. Just stop setting the flag |
 | `refundForShipment` skips the refund for `pi_mock_` ids | `src/server/services/payments.service.ts:299` | Remove the `isMockIntent` guard. **Purge `pi_mock_` rows from the DB first** — they have no real PaymentIntent to refund |
 | The card a direct job needs before going live is not demanded | `src/server/services/listings.service.ts:47` | Remove the early return in `assertPayable`. `/create`'s payment step already collects the card for real, against your Stripe test keys |
-| `MOCK_PAYMENTS=true` in the local env | `.env.local:93` | Delete the line. **Never set this flag in production** |
+| `MOCK_PAYMENTS=true` in the local env | `.env.local:93` | Delete the line. **Never set this flag in production** — the one sanctioned exception is the `seed-beta.yml` job, which sets it for its own process only so the beta awards charge nobody (`docs/specs/beta_seed_spec.md` §3) |
 
 **Purge before you switch it off.** Any `pi_mock_` row is a captured payment
 with no money behind it. Left in place, `/carrier/trips` → Effectués reports

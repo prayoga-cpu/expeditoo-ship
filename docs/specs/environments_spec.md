@@ -73,6 +73,10 @@ refused, not assumed safe):
   `isKnownDev`. Stricter; used by anything destructive: `pnpm db:migrate`,
   `pnpm db:clean`, `pnpm db:push` / `db:studio` (via `scripts/guard-db.ts`),
   `pnpm db:mirror`'s restore leg, and `pnpm db:seed:dev-users`.
+  `pnpm db:seed:beta` uses it too, with the same explicit production opt-in
+  as `migrate.ts` (`SEED_TARGET=production`, plus `APP_ENV=production` for the
+  connection itself) — run from `.github/workflows/seed-beta.yml`, never a
+  laptop. See `docs/specs/beta_seed_spec.md` §3.
 
 `src/lib/env-assertions.ts` (run once from `src/instrumentation.ts` at server
 boot) checks the direction the two guards above cannot: that the **production**

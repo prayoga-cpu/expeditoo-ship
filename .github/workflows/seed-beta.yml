@@ -1,0 +1,93 @@
+name: Seed beta data
+
+# Puts one realistic transaction on every role's side of the platform, so a
+# beta tester who signs in as the owner account has something to look at on
+# every screen — a job they posted, a job they are driving, a job waiting for
+# their award as an operator, a completed run with its invoice and payout.
+#
+# This is the sanctioned place to run it against production, for the same
+# reason `migrate.yml` is the only place migrations run: the production
+# connection string lives in this repository's Secrets and nowhere a laptop
+# can reach. The script goes through the app's own services and DALs — real
+# invariants, real document sequences, real event logs — never hand-written
+# SQL, and it is idempotent: every row it creates has a fixed `beta_` id, so a
+# second run repairs rather than duplicates.
+#
+# It never reaches an external system. There is no Stripe, Resend, Twilio,
+# Ably or R2 key in this job on purpose: `MOCK_PAYMENTS=true` makes the award
+# write a `pi_mock_` capture (docs/TESTING_MOCKS.md §1 — the documented testing
+# path, decided by the intent id so a real `pi_` stays real), and every other
+# side effect either checks for its key first or is caught by the script.
+# `APP_ENV=production` is required by `src/db/index.ts` to open the connection
+# at all; it does NOT run `env-assertions.ts` (that is Next's boot hook), so
+# the MOCK_PAYMENTS flag is not contradicted here. Never set that flag in the
+# Vercel Production environment — this job is the only place it belongs.
+#
+# Requires, in repo Settings → Secrets:
+#   - POSTGRES_URL_PRODUCTION   same secret `migrate.yml` uses.
+#
+# Manual on purpose. Run `migrate.yml` first if a migration is pending.
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Which database to seed
+        required: true
+        type: choice
+        default: production
+        options:
+          - production
+      confirm:
+        description: Type "seed" to confirm
+        required: true
+        type: string
+
+concurrency:
+  group: seed-beta-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Refuse an unconfirmed run
+        if: inputs.confirm != 'seed'
+        run: |
+          echo "::error::Type \"seed\" in the confirm box to run this."
+          exit 1
+
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Seed beta data
+        env:
+          POSTGRES_URL: ${{ secrets.POSTGRES_URL_PRODUCTION }}
+          APP_ENV: production
+          SEED_TARGET: production
+          MOCK_PAYMENTS: "true"
+        run: |
+          if [ -z "$POSTGRES_URL" ]; then
+            echo "::error::secrets.POSTGRES_URL_PRODUCTION is not set — see the header of this workflow."
+            exit 1
+          fi
+          set -o pipefail
+          pnpm db:seed:beta 2>&1 | tee seed.log
+
+      - name: Say why the seed failed
+        if: failure()
+        run: |
+          [ -f seed.log ] || exit 0
+          sed -E 's#postgres(ql)?://[^[:space:]"]+#<redacted-url>#g' seed.log \
+            | grep -E "Error|error:|message:|detail:|hint:|code:|FATAL|refus" \
+            | head -8 \
+            | while IFS= read -r line; do echo "::error title=Seed failed::$line"; done

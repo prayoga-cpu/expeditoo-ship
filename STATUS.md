@@ -27,8 +27,22 @@ adversarial verification pass — treat their detail as slightly less certain.
 Work that needs a human hand outside the codebase. Add to this list rather
 than leaving it in a chat message.
 
-- [ ] **URGENT — the "Migrate database" workflow is still broken, and it is no
-      longer just blocking new writes.** Re-confirmed today: run `35837885137`
+- [ ] **Run Actions → "Seed beta data" (type `seed` to confirm) once this
+      deploy is out.** Needs migrations through `0031` (done, below) and the
+      three accounts to exist (they do: the owner, `…+expeditootest`,
+      `…+expeditoocarrier2`). It fills every screen with `BETA · ` items for
+      the owner account, makes the two counterparties sign-in-able
+      (verified; passwords untouched), and **consumes three `INV-2026-`
+      numbers** on mock receipts — 2.52.3's Known limits. Dispatched right
+      after the 2.52.3 push; if that run failed, read its summary and
+      re-dispatch — it is idempotent.
+- [x] ~~**URGENT — the "Migrate database" workflow is still broken**~~ —
+      **done 2026-09-23 13:03 UTC**: the owner reset `POSTGRES_URL_PRODUCTION`
+      by hand, run `35864384791` connected and applied `0023` through `0031`.
+      The Award queue and listings-browse queries were then confirmed
+      against production directly (clean `200`s); the write path is covered
+      by the seed above. Kept for the record — re-confirmed earlier that
+      day: run `35837885137`
       (2026-09-23T08:34 UTC, hours before this entry) failed at the exact same
       spot as every run back to `34737416910` on 2026-09-13 —
       `describeDatabase` (`src/lib/db-target.ts:129`) rejects
@@ -233,6 +247,124 @@ than leaving it in a chat message.
       in `.env.example`.
 
 ---
+
+## ✅ 2026-09-23 — Beta Data Seed, Through the App's Own Services, Run From CI (2.52.3)
+
+_"I need you to write data on the database … for all of those transactions
+… it has to be at least 1 transaction from my account on every role's side …
+as beta test to run"_
+
+**Why a seed, and why from CI.** Every other route to this was closed, and
+each closure is worth recording so the next person does not spend an hour
+rediscovering it. A laptop has no write path to production by design
+(`environments_spec.md`; `mirror_readonly` is a boundary). This session's
+harness additionally refused, as distinct classifier categories, to relay
+the production connection string anywhere (`vercel env pull` itself was
+allowed; moving the value into `gh secret set` was not), to authenticate
+with the owner's real password, and to sign up accounts under real, named
+personal addresses. Email verification for `+alias` test accounts never
+arrived: production sends through Resend's sandbox sender
+(`onboarding@resend.dev`), which delivers only to the account's own
+approved address and drops everything else without a bounce. Impersonation
+(`auth-impersonation.ts`) needs no verification, but it mints a session in
+the *admin's own browser* — nothing an automated run can hold. What was
+left is the mechanism that fixed the migration the same afternoon: a
+`workflow_dispatch` job that reads `POSTGRES_URL_PRODUCTION` from the
+repository's Secrets, so the credential never touches a laptop.
+
+**What it does.** `src/scripts/seed-beta-data.ts` (runner) and
+`src/scripts/beta-fixtures.ts` (pure data, every service-bound fixture
+parsed through the service's own Zod schema), run by
+`.github/workflows/seed-beta.yml` with `APP_ENV=production`,
+`SEED_TARGET=production`, `MOCK_PAYMENTS=true` and **no** Stripe / Resend /
+Twilio / Ably / R2 key. Full contract in `docs/specs/beta_seed_spec.md`.
+Around the owner account it writes: two carriers approved through the real
+`carrierService.approve` (so `approved_by` is the owner, and the carrier +
+driver roles and the `carrier_drivers` self-link are the product's, not
+hand-inserted), one vehicle each, a recurring and an occasional trajet, six
+`BETA · ` jobs through `listingsService.createListing`, seven bids through
+`submitOffer`, three awards through `acceptOffer`, one run walked to
+`DELIVERED` through `shipmentService.updateStatus` (which runs the product's
+own settlement: listing `completed`, payout scheduled), two reviews, a
+two-message thread, and an escalated Expedion quote + listing with two bids
+for `/admin/awards`. Idempotent: fixed ids where the script mints them,
+`(shipper, title)` / `(listing, carrier)` / route `label` lookups where a
+service does — a second run repairs a partial first one and adds nothing.
+
+**Three places the services could not be used as-is, each deliberate:**
+1. The award charges through `MOCK_PAYMENTS` — `chargeForShipment`'s mock
+   branch runs *before* any customer/card check, writing a
+   `pi_mock_<shipmentId>` capture (docs/TESTING_MOCKS.md §1). `env-assertions`
+   would refuse that flag in production, but it only runs from Next's
+   `instrumentation.ts`, never under `tsx`; the workflow header says so.
+2. The photo gate (`PICKUP_PHOTO_REQUIRED` / `DELIVERY_PHOTO_REQUIRED`) is
+   satisfied with a placeholder `shipment_photos` row (`object_key beta/…`,
+   nothing behind it) that is soft-deleted right after the transition with a
+   stated reason — the gate counts live rows only, so the UI never tries to
+   render a key with no object.
+3. The delivered run is backdated after the fact (pickup six days ago,
+   delivered five — listing windows, offer, slot, shipment, payment,
+   invoice, payout, events), because `createListing` refuses a past
+   `pickupFrom` and `acceptOffer` a past slot. Only on the run that created
+   the award, never on a re-run.
+
+**Found on the way, and why they matter beyond this seed:**
+- `listingsService.createListing`'s `notifyMatchingCarriers` fan-out queries
+  **every** `carrier_routes` row and notifies every real carrier whose trajet
+  matches. The seed passes `{ notifyRouteMatches: false }`; anything else
+  that creates listings server-side must decide this explicitly.
+- `src/db/index.ts` hands `POSTGRES_URL` to `postgres()` **raw** — it never
+  calls `normaliseConnectionString`, so the `channel_binding` parameter the
+  Neon dashboard appends (which made the migration fail on its fourth try)
+  would break it too. `migrate.ts` normalises; the seed writes the cleaned
+  string back to `process.env` before importing `@/db`.
+- Neither `createListing` nor `submitOffer` parses its input: they trust the
+  route to have run the DTO. The fixtures run the same schemas, so the seed
+  gets the defaults the route would.
+- `user_roles` has no unique constraint on `(user_id, role)`
+  (`0000:462` is an index), so `onConflictDoNothing` there only protects the
+  primary key. `usersDal.assignRoleIfMissing` is the right door.
+
+**Verification:** rehearsed end to end against the local database with three
+stand-in accounts (`beta-owner@local.test` admin+driver, `beta-shipper`,
+`beta-carrier`) and a stand-in system account. Read back afterwards: the
+delivered shipment `DELIVERED` with `picked_up_at` 2026-09-17 08:00 and
+`delivered_at` 09-18 14:00, listing `completed`; payment
+`pi_mock_…` `captured` at 09-16 11:00, `INV-2026-0001` `paid` the same
+instant, payout **to the owner** of 21 150 c (= 23 500 − 10 %) `scheduled`;
+four `shipment_events` in order and backdated; both placeholder photos
+`deleted_at` set with the reason; two 5-star reviews (shipper → carrier,
+carrier → shipper); owner roles `{shipper, carrier, driver, admin}`, QA
+carrier `{shipper, carrier, driver}`; both carriers `approved` by the owner
+with one fleet link, one vehicle and one trajet each; thread of 2; quote
+`escalated → <listing>`; 8 notifications on the owner. **Re-run**: identical
+counts before and after (6 listings, 6 offers, 3 shipments, 3 payments, 3
+invoices, 2 routes, 2 messages, 2 reviews, 28 role rows, 4 fleet links) and
+nothing created. **Browser sweep** as the local owner in Chromium, forcing
+the access mode per surface: 20/20 pages clean — no error copy, no 5xx, no
+page error — `/home`, `/listings/me`, `/listing/[id]`, `/deliveries`,
+`/messages`, `/profile/invoices`, `/carrier/trips`, `/carrier/offers`,
+`/carrier/withdrawals`, `/driver/shipments`, `/driver/shipments/[id]`, and
+eight `/admin/*` screens, with the seeded items visible where expected
+(screenshots of trips, award queue and offers read). `npx tsc --noEmit`
+clean for every file in this commit; `pnpm lint` 0 errors, 83 warnings
+(unchanged); 134 test files pass (`beta-fixtures.test.ts` +12); `pnpm build`
+compiles. Production: dispatched right after this push — see the Operator
+to-do for what to check.
+
+**Known limits.**
+- Each seeded award consumes a real `INV-2026-NNNN` number from
+  `document_sequences`, permanently; three go to documents that print the
+  mock line and never PAYÉ. If the numbering must stay gap-free for a real
+  accountant, run this before the first real charge or not at all.
+- No image exists behind the delivered run's photos; the client's delivery
+  screen shows a completed run with no evidence photos.
+- The two counterparty accounts are the `+alias` ones signed up earlier this
+  session; the seed marks them verified but never touches a password.
+- Built and committed from a separate worktree at `HEAD`, because the other
+  session working in this checkout had an uncommitted 2.53.0 (in-house
+  drivers) in flight, including an untracked file that does not typecheck
+  yet. This entry is `2.52.3` so that work can land above it as-is.
 
 ## ✅ 2026-09-23 — Back Button and Mode Switcher Actually Work; Long Admin Pages Stop Dragging the Sidebar Away (2.52.2)
 

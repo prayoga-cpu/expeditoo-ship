@@ -14,6 +14,16 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.52.3] - 2026-09-23 · infra
+
+- **Nothing you can see changes yet.** This release adds the tool that fills
+  the platform with a first set of realistic transports for the beta: a
+  delivered run with its receipt and the driver's payout, a run waiting for
+  its driver to set off, a job with a bid waiting to be chosen, a draft, a
+  conversation with a driver, and an escalated Expedion job for an operator
+  to award. Once it has been run, the owner account has something real on
+  every screen, on every side — driver, requester and operator.
+
 ## [2.52.2] - 2026-09-23 · fix
 
 - **"Back" in the admin and driver panels now actually leaves them.** Clicking
