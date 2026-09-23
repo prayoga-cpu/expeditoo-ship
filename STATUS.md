@@ -27,6 +27,20 @@ adversarial verification pass — treat their detail as slightly less certain.
 Work that needs a human hand outside the codebase. Add to this list rather
 than leaving it in a chat message.
 
+- [ ] **Verify a sending domain in Resend and set `EMAIL_FROM` — 2.53.0's
+      in-house drivers cannot sign in until you do.** Production sends from
+      Resend's sandbox sender (`onboarding@resend.dev`, the fallback in
+      `src/lib/email.ts`), which delivers only to the Resend account's own
+      address, `prayogadevelopment@gmail.com`. Everything else is dropped
+      with no bounce, while Resend's API still answers `200`. Confirmed on
+      2026-09-23: two `+alias` signups got no verification mail in any
+      folder. So today, for anyone but the owner: signup verification never
+      arrives (`requireEmailVerification: true` then blocks sign-in), Admin →
+      Users "send reset link" never arrives, and **a driver added with "Add
+      in-house driver" never gets the set-password link** — their account
+      exists with a random password nobody knows. Until the domain is
+      verified, the only way into such an account is admin impersonation
+      ("Log in as"), which skips email entirely.
 - [ ] **Run Actions → "Seed beta data" (type `seed` to confirm) once this
       deploy is out.** Needs migrations through `0031` (done, below) and the
       three accounts to exist (they do: the owner, `…+expeditootest`,
@@ -246,6 +260,97 @@ than leaving it in a chat message.
       treatment, with no code change and nothing backdated
       (`docs/specs/invoice_at_payment_spec.md` §4.1). The variables are listed
       in `.env.example`.
+
+---
+
+## ✅ 2026-09-23 — Add In-House Driver on /admin/drivers (2.53.0)
+
+_"create a page/feature on the drive page admin to create a new in house
+shipper"_
+
+**This implements §6 of `docs/specs/in_house_drivers_spec.md`, and only §6.**
+"In-house shipper" is that spec's vocabulary, written earlier today (2.50.2):
+`shipper` is to become the marker for a driver Expeditoo employs. I missed
+the spec at first — the research pass grepped for "invite"/"onboard"/"create
+driver", not "in-house" — and built a thinner version (new account only, no
+vehicle, no explicit `shipper`). When I found it, I laid out the differences
+and the requester chose to align the create flow with §6 and leave the rest
+for later. The first build's worst gap was functional: `assignDirect` answers
+`CARRIER_HAS_NO_VEHICLE`, so a driver created without a vehicle could never
+receive the one kind of work an in-house driver is meant for.
+
+**What shipped.** `POST /api/admin/carriers` (the GET beside it is the
+assign-pool picker) → `carrierService.createInHouseDriver(viewer, data)`,
+with the admin-or-operator check **in the service**, per `docs/rules.md`, not
+in the route. `createDriverSchema` (`carrier.dto.ts`) is
+`upsertCarrierSchema` + name/email + a required vehicle picked from
+`createVehicleSchema` (type, max weight, plate). One `db.transaction` writes
+the approved `carriers` row (`approved_by` = the actor), the `vehicles` row
+(plate uppercased, as `addVehicle` does), and the roles — via the same
+`enrolAsOwnDriver` that `approve` uses (`carrier` + `driver` + the
+`carrier_drivers` self-link), plus `shipper`. `carrier` is granted because it
+still gates carrier-mode navigation (`BottomNav`, `MainLayout`,
+`JobBidSection`), and the spec's "driver" means that merged pair. The
+`shipper` grant is a no-op today, since every signup still defaults to it,
+but it becomes the in-house marker once spec §2 lands.
+
+**The account question the plan left open** (§7 step 1: pick an existing
+user, or create one inline). Both, keyed on the email. A new email gets an
+account through Better Auth's own `signUpEmail`, so the signup hooks run
+(`origin` stamps `expeditoo` because a server call has no Origin header). The
+password is random and never shown, the address is marked verified with the
+existing `usersDal.verifyUserEmail`, and once the transaction commits the
+driver is emailed a set-password link via `auth.api.requestPasswordReset` —
+the same call `sendPasswordResetForUser` makes, so the admin never handles a
+password. An existing email is converted instead, keeping its name and
+sign-in. The account is the one write outside the transaction because
+Better Auth owns it: if the transaction fails, an account **this call
+created** is deleted again so a retry doesn't collide on the email, and a
+pre-existing account is never deleted. Refusals, all checked before any
+account is created: `ALREADY_DRIVER`, `CARRIER_PROFILE_EXISTS` (a draft or
+rejected application exists and `carriers.user_id` is unique — review it
+instead), `SIRET_ALREADY_REGISTERED`. A failed set-password email is logged,
+not thrown — Admin → Users can resend one.
+
+**UI.** `CreateDriverDialog.tsx`, opened from an "Add in-house driver" button
+in the page header, shown only to admin/operator because support and finance
+also reach this page and the API would refuse them. The form is plain
+controlled inputs like `RoleManagementDialog`, not `react-hook-form`, with
+browser `required`/`pattern` checks for plate and postal code so a malformed
+submit never reaches the server. Server refusals are toasted verbatim — the
+same convention as `RoleManagementDialog`. The vehicle row's first column is
+wider (`1.5fr`) because "Choisir un type" and "Petite voiture" were clipped
+at equal thirds. Vehicle type labels reuse `admin.carriers.vehicleTypes`.
+
+**Verification.** `npx tsc --noEmit` clean. `pnpm lint`: 0 errors in any file
+this touches; the repo total shows 3 `no-undef` errors, all in
+`.scratch-beta-sweep.mjs`, the other session's scratch file. `pnpm test`:
+134 files, 1773 tests, all green; `carrier.service.test.ts` went from 25 to
+36 tests, covering the §6 table, one shared transaction handle across all
+writes, the operator path, conversion vs creation, deleting only an account
+this call created, and the email failure being survivable. In Chromium
+against the dev server and the local DB, with throwaway accounts minted and
+deleted afterwards: created, converted and `ALREADY_DRIVER` paths each
+produced the right toast and row. Rows read back from Postgres showed
+`{shipper,carrier,driver}`, `approved`, `approved_by` = the admin, the
+vehicle with `ab-123-cd` stored as `AB-123-CD`, one active fleet link, and
+`email_verified = t`. An empty submit never reached the server. Checked in
+dark/light, EN/FR, 1400 px and 390 px.
+
+**Known limits.**
+- **Nothing enforces "in-house" yet.** Spec §2–§5/§7 (no default role,
+  system account without `shipper`, the `IN_HOUSE_DIRECT_ASSIGN_ONLY` bidding
+  guard, `shipper` as its own chip) are unimplemented, so an in-house driver
+  can still bid like anyone else. They must ship **together** and after the
+  §2.1 cleanup of old `shipper` grants: the guard alone would block every
+  existing carrier, because they all hold `shipper` from the old default.
+- **A new driver gets two emails**: Better Auth's "verify your account"
+  (sent unconditionally by `signUpEmail` under `requireEmailVerification`,
+  with no per-call opt-out) and the set-password link. The first is inert,
+  since the address is already verified. The second is the reset template,
+  so it says "reset" to someone who never had a password.
+- The Drivers List tab labels and table headers were already hardcoded
+  English and still are.
 
 ---
 

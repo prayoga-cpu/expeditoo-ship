@@ -1,6 +1,7 @@
 # Plan — In-House Drivers
 
-**Status:** Proposed
+**Status:** §7 (the admin flow) shipped in 2.53.0; the rest is still proposed —
+see the spec's status line for why it ships as one release.
 **Roadmap ref:** none — this is net-new scope. A repo-wide audit (this
 session) found no prior grounding anywhere in ROADMAP.md, docs/specs/,
 docs/plans/, or git history for Expeditoo employing its own drivers; every
@@ -124,12 +125,9 @@ point off it. One guided action, not a multi-step wizard, mirroring how thin
 the public application already is (`carrier_kyc_spec.md` §3: documents,
 banking and vehicles are already optional at submission and approval):
 
-1. Admin picks an existing user account (search by email — the person signs
-   up normally first, landing with no role per §1.1) — or this plan's UI
-   allows entering a name/email to create the account inline, TBD at spec
-   time depending on whether an invite-by-email flow already exists
-   elsewhere (it does not, per this session's audit — out of scope to add
-   one here; assume the account already exists).
+1. Admin enters a name and email. **Resolved at implementation:** an email
+   with no account gets one inline (set-password link emailed); an email
+   that has one is converted. Spec §6 has the rules.
 2. Admin enters the minimum a `carriers` row requires today — `companyName`,
    `siret`, `contactPhone`, address — same fields `POST /api/carrier/application`
    already validates, just admin-entered instead of self-service.

@@ -1,11 +1,13 @@
 import { useState, useCallback, useEffect } from "react";
 import type { User } from "../types";
 import { mapApiUser } from "../lib/map-api-user";
+import { createDriver as createDriverRequest, type CreateDriverInput } from "../api/carriers.api";
 
 export function useAdminDrivers() {
   const [drivers, setDrivers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
 
   const fetchDrivers = useCallback(async () => {
     setIsLoading(true);
@@ -57,6 +59,20 @@ export function useAdminDrivers() {
     }
   }, [fetchDrivers]);
 
+  const createDriver = useCallback(
+    async (data: CreateDriverInput) => {
+      setIsCreating(true);
+      try {
+        const result = await createDriverRequest(data);
+        await fetchDrivers();
+        return result;
+      } finally {
+        setIsCreating(false);
+      }
+    },
+    [fetchDrivers]
+  );
+
   useEffect(() => {
     // Debounce search could be added here
 
@@ -67,12 +83,14 @@ export function useAdminDrivers() {
     return () => clearTimeout(timer);
   }, [fetchDrivers, searchQuery]);
 
-  return { 
-    drivers, 
-    isLoading, 
-    searchQuery, 
-    setSearchQuery, 
+  return {
+    drivers,
+    isLoading,
+    searchQuery,
+    setSearchQuery,
     refetchDrivers: fetchDrivers,
-    handleRemoveDriver
+    handleRemoveDriver,
+    createDriver,
+    isCreating,
   };
 }

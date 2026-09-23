@@ -12,8 +12,10 @@ import {
   type CreateVehicleInput,
   type UpdateVehicleInput,
   type UploadDocumentInput,
+  type CreateDriverInput,
 } from "@/server/dto/carrier.dto";
 import type { Carrier } from "@/db/schema/carriers";
+import type { Viewer } from "@/server/services/shipment.service";
 
 // ========================================
 // Errors
@@ -62,6 +64,97 @@ async function enrolAsOwnDriver(
     },
     tx
   );
+}
+
+/** The account an in-house onboarding may convert, or null to create one. */
+async function findConvertibleAccount(email: string) {
+  const existing = await usersDal.getUserByEmail(email);
+  if (!existing) return null;
+
+  if (existing.roles.some((r) => r.role === "driver")) {
+    throw err("ALREADY_DRIVER", 409, "This account is already a driver.");
+  }
+  if (await carriersDal.getByUserId(existing.id)) {
+    throw err(
+      "CARRIER_PROFILE_EXISTS",
+      409,
+      "This account already has a driver application on file. Review it under Applications instead."
+    );
+  }
+
+  return existing;
+}
+
+/**
+ * Better Auth's own signup rather than a raw insert, so the usual hooks fire
+ * (origin stamp, default role). The password is random and never shown: the
+ * driver sets their own from the email `sendSetPasswordEmail` sends.
+ */
+async function createDriverAccount(name: string, email: string) {
+  const { auth } = await import("@/lib/auth");
+
+  try {
+    const { user } = await auth.api.signUpEmail({
+      body: {
+        name,
+        email,
+        password: `${crypto.randomUUID()}${crypto.randomUUID()}`,
+      },
+    });
+    return user.id;
+  } catch (error) {
+    throw err(
+      "ACCOUNT_CREATION_FAILED",
+      502,
+      error instanceof Error ? error.message : "Failed to create the account"
+    );
+  }
+}
+
+/** Carrier row, vehicle and role grants: all four land, or none do. */
+async function writeInHouseDriver(
+  userId: string,
+  actorId: string,
+  fields: UpsertCarrierInput,
+  vehicle: CreateDriverInput["vehicle"]
+) {
+  return await db.transaction(async (tx) => {
+    const carrier = await carriersDal.create(
+      {
+        id: nanoid(),
+        userId,
+        ...fields,
+        status: "approved",
+        approvedAt: new Date(),
+        approvedBy: actorId,
+      },
+      tx
+    );
+    await carriersDal.createVehicle(
+      {
+        id: nanoid(),
+        carrierId: carrier.id,
+        ...vehicle,
+        plateNumber: vehicle.plateNumber.toUpperCase(),
+      },
+      tx
+    );
+    await enrolAsOwnDriver(carrier, actorId, tx);
+    // A no-op while every signup still defaults to `shipper`; once that
+    // default goes (spec §2), this grant is what marks the driver in-house.
+    await usersDal.assignRoleIfMissing(userId, "shipper", actorId, tx);
+
+    return carrier.id;
+  });
+}
+
+/** Never fails the onboarding: Admin → Users can resend a reset link. */
+async function sendSetPasswordEmail(email: string) {
+  const { auth } = await import("@/lib/auth");
+
+  await auth.api
+    .requestPasswordReset({ body: { email, redirectTo: "/reset-password" } })
+    .catch((e) => console.error("set-password email failed", e));
 }
 
 // ========================================
@@ -160,6 +253,63 @@ export const carrierService = {
 
   async getOwnApplication(userId: string) {
     return await carriersDal.getByUserId(userId);
+  },
+
+  // ---- Admin: in-house drivers (in_house_drivers_spec.md §6) ----
+
+  /**
+   * An admin or operator onboarding a driver who works for Expeditoo itself.
+   * An email with no account gets one created here; an existing account is
+   * converted, unless it already drives (`ALREADY_DRIVER`) or already has an
+   * application on file (`CARRIER_PROFILE_EXISTS` -- review it instead).
+   *
+   * The account is the only write outside the transaction, because Better
+   * Auth owns it: if the rest fails, an account created by this call is
+   * deleted again so a retry does not collide on the email. A pre-existing
+   * account is never deleted.
+   */
+  async createInHouseDriver(viewer: Viewer, data: CreateDriverInput) {
+    if (!viewer.isAdmin && !viewer.isOperator) {
+      throw err("FORBIDDEN_ROLE", 403, "Admin or operator access required");
+    }
+
+    const { name, email, vehicle, ...carrierFields } = data;
+    const existing = await findConvertibleAccount(email);
+
+    if (await carriersDal.getBySiret(carrierFields.siret)) {
+      throw err(
+        "SIRET_ALREADY_REGISTERED",
+        409,
+        "That SIRET already belongs to another carrier account."
+      );
+    }
+
+    const userId = existing?.id ?? (await createDriverAccount(name, email));
+
+    let carrierId: string;
+    try {
+      // The admin entering the address in person is the identity check.
+      if (!existing) await usersDal.verifyUserEmail(userId);
+      carrierId = await writeInHouseDriver(
+        userId,
+        viewer.userId,
+        carrierFields,
+        vehicle
+      );
+    } catch (error) {
+      if (!existing) await usersDal.deleteUser(userId).catch(() => {});
+      throw error;
+    }
+
+    if (!existing) await sendSetPasswordEmail(email);
+
+    return {
+      carrierId,
+      userId,
+      name: existing?.name ?? name,
+      email,
+      accountCreated: !existing,
+    };
   },
 
   // ---- Vehicles ----

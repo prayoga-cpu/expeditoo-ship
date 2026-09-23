@@ -6,6 +6,8 @@
  * (listByStatus returns the carrier row with documents, vehicles and user).
  */
 
+import type { VehicleType } from "@/lib/carrier-constants";
+
 export const CARRIER_APPLICATION_STATUSES = [
     "draft",
     "submitted",
@@ -89,6 +91,35 @@ export interface CarrierApplication {
     vehicles: CarrierApplicationVehicle[];
 }
 
+/** Mirrors `createDriverSchema` (src/server/dto/carrier.dto.ts). */
+export interface CreateDriverInput {
+    name: string;
+    email: string;
+    companyName: string;
+    siret: string;
+    vatNumber?: string;
+    legalForm?: string;
+    contactPhone: string;
+    addressLine: string;
+    city: string;
+    postalCode: string;
+    bio?: string;
+    vehicle: {
+        type: VehicleType;
+        maxWeightKg: number;
+        plateNumber: string;
+    };
+}
+
+export interface CreateDriverResult {
+    carrierId: string;
+    userId: string;
+    name: string;
+    email: string;
+    /** False when an existing account was converted rather than created. */
+    accountCreated: boolean;
+}
+
 export interface ApiResponse<T> {
     success: boolean;
     data?: T;
@@ -157,6 +188,24 @@ export async function suspendCarrier(
     if (!data.success) {
         throw new Error(data.error?.message || "Failed to suspend carrier");
     }
+}
+
+export async function createDriver(
+    data: CreateDriverInput,
+): Promise<CreateDriverResult> {
+    const res = await fetch("/api/admin/carriers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+    });
+
+    const body: ApiResponse<CreateDriverResult> = await res.json();
+
+    if (!body.success || !body.data) {
+        throw new Error(body.error?.message || "Failed to create driver");
+    }
+
+    return body.data;
 }
 
 /**

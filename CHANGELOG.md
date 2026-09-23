@@ -14,6 +14,18 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.53.0] - 2026-09-23 · feat
+
+- **Admins and operators can now add a driver who works for Expeditoo
+  directly.** "Add in-house driver" on the Drivers page takes the driver's
+  details and one vehicle, and the driver is approved the moment you save —
+  there is no application to review. Someone new gets an email with a link
+  to set their own password; if the email already has an account, that
+  account is converted instead and keeps its sign-in.
+- **A driver added this way can be booked straight away.** Their vehicle is
+  on file from the start, so they show up in "assign from the pool" on a
+  paid Expedion job with nothing left to fill in first.
+
 ## [2.52.3] - 2026-09-23 · infra
 
 - **Nothing you can see changes yet.** This release adds the tool that fills

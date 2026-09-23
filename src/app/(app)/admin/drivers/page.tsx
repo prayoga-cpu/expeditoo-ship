@@ -2,23 +2,30 @@
 
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, FileText, Truck } from "lucide-react";
+import { Users, FileText, Truck, Plus } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { UsersTable } from "@/features/app/admin/ui/UsersTable";
 import { CarrierApplicationsList } from "@/features/app/admin/ui/CarrierApplicationsList";
+import { CreateDriverDialog } from "@/features/app/admin/ui/CreateDriverDialog";
 import { useAdminDrivers } from "@/features/app/admin/hooks/useAdminDrivers";
 import { PageLoader } from "@/components/ui/page-loader";
 import { useTranslations } from "next-intl";
+import { useAuth } from "@/lib/auth-context";
 import { PublicProfile } from "@/features/app/profile/ui/PublicProfile";
 
 export default function DriversPage() {
-  const { drivers, isLoading, handleRemoveDriver, refetchDrivers } =
+  const { drivers, isLoading, handleRemoveDriver, refetchDrivers, createDriver, isCreating } =
     useAdminDrivers();
 
   const [activeTab, setActiveTab] = useState("list");
   const [isMounted, setIsMounted] = useState(false);
   const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const t = useTranslations("admin.drivers");
+  // Support and finance reach this page too; the API would refuse them.
+  const roles = useAuth().user?.roles ?? [];
+  const canCreate = roles.includes("admin") || roles.includes("operator");
 
   // Fix hydration error by mounting only on client
   useEffect(() => {
@@ -52,7 +59,22 @@ export default function DriversPage() {
           </h1>
           <p className="text-muted-foreground">{t("subtitle")}</p>
         </div>
+        {canCreate && (
+          <Button onClick={() => setIsCreateOpen(true)}>
+            <Plus className="w-4 h-4" />
+            {t("createDialog.trigger")}
+          </Button>
+        )}
       </div>
+
+      {canCreate && (
+        <CreateDriverDialog
+          open={isCreateOpen}
+          onOpenChange={setIsCreateOpen}
+          onCreate={createDriver}
+          isCreating={isCreating}
+        />
+      )}
 
       <Tabs
         defaultValue="list"

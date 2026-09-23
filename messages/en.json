@@ -2272,7 +2272,35 @@
     },
     "drivers": {
       "title": "Drivers",
-      "subtitle": "Manage drivers and applications"
+      "subtitle": "Manage drivers and applications",
+      "createDialog": {
+        "trigger": "Add in-house driver",
+        "title": "Add an in-house driver",
+        "description": "A driver employed by Expeditoo, approved as soon as you save — no application to review. A new email gets an account and a link to set a password; an email that already has an account is converted instead.",
+        "fields": {
+          "name": "Full name",
+          "email": "Email",
+          "companyName": "Company name",
+          "siret": "SIRET",
+          "contactPhone": "Contact phone",
+          "legalForm": "Legal form",
+          "addressLine": "Address",
+          "city": "City",
+          "postalCode": "Postal code",
+          "bio": "Bio",
+          "vehicle": "Vehicle",
+          "vehicleType": "Type",
+          "vehicleTypePlaceholder": "Choose a type",
+          "maxWeightKg": "Max load (kg)",
+          "plateNumber": "Plate number"
+        },
+        "cancel": "Cancel",
+        "submit": "Add driver",
+        "toasts": {
+          "created": "Driver added. They'll receive an email to set their password.",
+          "converted": "{email} is now an in-house driver."
+        }
+      }
     },
     "support": {
       "title": "Support Chats",

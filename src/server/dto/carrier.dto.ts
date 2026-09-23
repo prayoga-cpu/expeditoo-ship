@@ -75,6 +75,25 @@ export const createVehicleSchema = z.object({
 
 export type CreateVehicleInput = z.infer<typeof createVehicleSchema>;
 
+/**
+ * in_house_drivers_spec.md §6. Unlike the public flow the vehicle is required:
+ * an in-house driver only ever gets work through direct assignment, and
+ * `assignDirect` refuses a carrier with no vehicle on file.
+ */
+export const createDriverSchema = z
+  .object({
+    name: z.string().min(2).max(200),
+    email: z.string().email(),
+    vehicle: createVehicleSchema.pick({
+      type: true,
+      maxWeightKg: true,
+      plateNumber: true,
+    }),
+  })
+  .merge(upsertCarrierSchema);
+
+export type CreateDriverInput = z.infer<typeof createDriverSchema>;
+
 export const updateVehicleSchema = createVehicleSchema.partial().extend({
   isActive: z.boolean().optional(),
 });

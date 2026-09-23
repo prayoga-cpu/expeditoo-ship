@@ -1,4 +1,5 @@
 import { carrierService } from "@/server/services/carrier.service";
+import { createDriverSchema } from "@/server/dto/carrier.dto";
 import { resolveViewer } from "@/server/services/viewer.service";
 import { ok, unauthorised, handleError, fail } from "@/lib/api-response";
 
@@ -33,5 +34,22 @@ export async function GET() {
     );
   } catch (error) {
     return handleError(error, "List assignable carriers");
+  }
+}
+
+/**
+ * POST /api/admin/carriers — onboard an in-house driver
+ * (in_house_drivers_spec.md §6). Admin or operator; the service enforces it.
+ */
+export async function POST(req: Request) {
+  try {
+    const viewer = await resolveViewer();
+    if (!viewer) return unauthorised();
+
+    const data = createDriverSchema.parse(await req.json());
+
+    return ok(await carrierService.createInHouseDriver(viewer, data));
+  } catch (error) {
+    return handleError(error, "Create in-house driver");
   }
 }

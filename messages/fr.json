@@ -2272,7 +2272,35 @@
     },
     "drivers": {
       "title": "Chauffeurs",
-      "subtitle": "Gérer les chauffeurs et les candidatures"
+      "subtitle": "Gérer les chauffeurs et les candidatures",
+      "createDialog": {
+        "trigger": "Ajouter un chauffeur interne",
+        "title": "Ajouter un chauffeur interne",
+        "description": "Un chauffeur employé par Expeditoo, approuvé dès l'enregistrement — aucune candidature à examiner. Un nouvel e-mail reçoit un compte et un lien pour définir son mot de passe ; un e-mail qui a déjà un compte est converti.",
+        "fields": {
+          "name": "Nom complet",
+          "email": "E-mail",
+          "companyName": "Nom de l'entreprise",
+          "siret": "SIRET",
+          "contactPhone": "Téléphone de contact",
+          "legalForm": "Forme juridique",
+          "addressLine": "Adresse",
+          "city": "Ville",
+          "postalCode": "Code postal",
+          "bio": "Bio",
+          "vehicle": "Véhicule",
+          "vehicleType": "Type",
+          "vehicleTypePlaceholder": "Choisir un type",
+          "maxWeightKg": "Charge max. (kg)",
+          "plateNumber": "Immatriculation"
+        },
+        "cancel": "Annuler",
+        "submit": "Ajouter le chauffeur",
+        "toasts": {
+          "created": "Chauffeur ajouté. Il recevra un e-mail pour définir son mot de passe.",
+          "converted": "{email} est désormais chauffeur interne."
+        }
+      }
     },
     "support": {
       "title": "Chats de support",

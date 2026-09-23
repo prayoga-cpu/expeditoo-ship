@@ -1,10 +1,13 @@
 # Spec — In-House Drivers
 
 **Plan:** `docs/plans/plan_in_house_drivers.md`
-**Status:** Proposed — not implemented. Written before any code changes, per
-`CLAUDE.md`'s spec-driven-development rule; see the plan for why this order
-matters here specifically (`shipper` is a live enum value in three tables and
-the identity of a system account, not a blank slate).
+**Status:** §6 implemented (2.53.0). §2–§5 and §7 are still proposed and
+unimplemented — they ship together, after the operator cleanup in §2.1, never
+piecemeal: §4's guard alone would block every existing carrier, because every
+account still holds `shipper` from the old default. Written before any code
+changes, per `CLAUDE.md`'s spec-driven-development rule; see the plan for why
+this order matters here specifically (`shipper` is a live enum value in three
+tables and the identity of a system account, not a blank slate).
 
 ---
 
@@ -135,11 +138,32 @@ does not narrow.
 
 ## 6. Admin-created carrier record
 
-New endpoint, admin/operator only: creates a `carriers` row and one
-`vehicles` row for an existing user account, sets `carriers.status =
-"approved"` directly, and grants `shipper` + `driver` in one transaction —
-partial failure must not leave the account with only some of the four writes
-(carrier row, vehicle row, `shipper` grant, `driver` grant).
+`POST /api/admin/carriers` → `carrierService.createInHouseDriver`, admin or
+operator (enforced in the service). UI: **Add in-house driver** on
+`/admin/drivers`. Creates a `carriers` row and one `vehicles` row, sets
+`carriers.status = "approved"` directly (`approved_by` = the actor), and
+grants `shipper` + `driver` in one transaction — partial failure must not
+leave the account with only some of the four writes (carrier row, vehicle
+row, `shipper` grant, `driver` grant). "`driver`" here is the merged pair
+every approved driver holds — `carrier` and `driver` plus the
+`carrier_drivers` self-link, via the same `enrolAsOwnDriver` that `approve`
+uses — because `carrier` still gates carrier-mode navigation (`BottomNav`,
+`MainLayout`, `JobBidSection`).
+
+**The account (resolved at implementation — the plan left it open).** The
+request carries a name and an email:
+
+- **No account for that email** → one is created through Better Auth's own
+  `signUpEmail` (so the signup hooks run), with a random password nobody
+  sees, marked verified (the admin entering it is the identity check), and
+  the driver is emailed a set-password link once the transaction commits.
+  If the transaction fails, that account is deleted again so a retry does
+  not collide on the email. A failed set-password email does not fail the
+  request — Admin → Users can resend a reset link.
+- **An account exists** → it is converted; its name is kept, nothing is
+  emailed, and it is never deleted on failure.
+
+Result: `{ carrierId, userId, name, email, accountCreated }`.
 
 | Field | Rule | Source |
 |---|---|---|
@@ -160,7 +184,10 @@ path.
 |---|---|---|
 | No session / not admin or operator | 401 / 403 | `UNAUTHENTICATED` / `FORBIDDEN_ROLE` |
 | Target user already holds `driver` | 409 | `ALREADY_DRIVER` — use the existing role-management UI to add just `shipper` instead (§7) |
-| Any field fails its rule above | 400 | same codes the public application endpoints already use (`INVALID_SIRET`, etc.) — no new validation vocabulary |
+| Target user already has a `carriers` row (a draft or rejected application) | 409 | `CARRIER_PROFILE_EXISTS` — review it under Applications instead; `carriers.user_id` is unique |
+| SIRET already on another carrier | 409 | `SIRET_ALREADY_REGISTERED` — checked before any account is created |
+| Better Auth refuses the signup | 502 | `ACCOUNT_CREATION_FAILED` |
+| Any field fails its rule above | 400 | `VALIDATION_ERROR` — the same Zod rules the public application endpoints use, no new validation vocabulary |
 
 ---
 
