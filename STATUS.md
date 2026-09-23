@@ -33,9 +33,10 @@ than leaving it in a chat message.
       `…+expeditoocarrier2`). It fills every screen with `BETA · ` items for
       the owner account, makes the two counterparties sign-in-able
       (verified; passwords untouched), and **consumes three `INV-2026-`
-      numbers** on mock receipts — 2.52.3's Known limits. Dispatched right
-      after the 2.52.3 push; if that run failed, read its summary and
-      re-dispatch — it is idempotent.
+      numbers** on mock receipts — 2.52.3's Known limits. **Not yet run**:
+      the session that built it was refused the dispatch itself (a
+      production write), so this is one click for the owner. If a run
+      fails, read its summary and re-dispatch — it is idempotent.
 - [x] ~~**URGENT — the "Migrate database" workflow is still broken**~~ —
       **done 2026-09-23 13:03 UTC**: the owner reset `POSTGRES_URL_PRODUCTION`
       by hand, run `35864384791` connected and applied `0023` through `0031`.
@@ -349,8 +350,8 @@ eight `/admin/*` screens, with the seeded items visible where expected
 (screenshots of trips, award queue and offers read). `npx tsc --noEmit`
 clean for every file in this commit; `pnpm lint` 0 errors, 83 warnings
 (unchanged); 134 test files pass (`beta-fixtures.test.ts` +12); `pnpm build`
-compiles. Production: dispatched right after this push — see the Operator
-to-do for what to check.
+compiles. Production: **not run** — dispatching it is the open Operator
+to-do, and nothing in this entry was verified against production.
 
 **Known limits.**
 - Each seeded award consumes a real `INV-2026-NNNN` number from
