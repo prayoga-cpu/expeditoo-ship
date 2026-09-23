@@ -27,6 +27,38 @@ adversarial verification pass — treat their detail as slightly less certain.
 Work that needs a human hand outside the codebase. Add to this list rather
 than leaving it in a chat message.
 
+- [ ] **URGENT — the "Migrate database" workflow is still broken, and it is no
+      longer just blocking new writes.** Re-confirmed today: run `35837885137`
+      (2026-09-23T08:34 UTC, hours before this entry) failed at the exact same
+      spot as every run back to `34737416910` on 2026-09-13 —
+      `describeDatabase` (`src/lib/db-target.ts:129`) rejects
+      `POSTGRES_URL_PRODUCTION` with *"Expected a postgres:// URL — received
+      'cat "/privat'…"* — the secret holds the literal text of a shell command,
+      not a connection string, as if it was set with `$(cat "/path")` and the
+      substitution never ran. **Newly confirmed this session:** this is why
+      `/admin/listings`, `/admin/shipments` and the Award queue
+      (`/admin/awards`) all render "Failed to load …" in production — not a
+      regression from anything just shipped. `listings.dal.ts`'s `browse()`
+      does a plain `.select().from(listings)`, and `GET /api/admin/shipments`
+      does `db.query.shipments.findMany` with no column restriction; both
+      therefore select every column the *current Drizzle schema* declares,
+      including `pickup_note`/`pickup_contact_name`/`pickup_contact_phone`/
+      `dropoff_note`/`dropoff_contact_name`/`dropoff_contact_phone`
+      (`0024_endpoint_note_contact`, on **both** tables), `scheduled_publish_at`
+      (`0025`) and `packaging_level` (`0027`) — none of which exist on
+      production, so every one of these reads 500s. Same mechanism the
+      `0027`/`0028` bullet below already named for the *write* path
+      (`POST /api/listings`); this is the read-path half of the same gap.
+      **The only fix**: reset the GitHub secret `POSTGRES_URL_PRODUCTION` to
+      the real value of `POSTGRES_URL` from Vercel → Production env vars
+      (prefer the non-pooling/direct URL), then re-run the workflow —
+      `gh workflow run migrate.yml -f environment=production -f
+      confirm=migrate`, or from the Actions tab. No laptop can read or write
+      that secret's value. Once it is reset, that single run also carries
+      `0031_vehicle_type_taxonomy` (this session) — nothing currently reads
+      `vehicles.type` from an admin list page, so it is not implicated in the
+      three failures above, but it is in the same unmigrated backlog and
+      should go out in the same run.
 - [ ] **Run `Actions → Migrate database` for `0027_packaging_level` and
       `0028_carrier_route_country` before — or immediately after — this
       deploy reaches production.** `listings.service.ts` and
@@ -201,6 +233,87 @@ than leaving it in a chat message.
       in `.env.example`.
 
 ---
+
+## ✅ 2026-09-23 — Back Button and Mode Switcher Actually Work; Long Admin Pages Stop Dragging the Sidebar Away (2.52.2)
+
+_"the back button supposed to go back to user app" / "on the admin dashboard
+switch to user & driver is doesn't work" / "make the left navbar fixed
+display/absolute, so this overscrolled screen wouldn't happen"_ — three
+reports in one sitting, all in the access-mode / layout system touched by
+2.52.1's sidebar fix.
+
+Delegated the investigation to a subagent (mapping `AccessSwitcher.tsx`,
+`AppSidebarHeader.tsx`, `access-mode-context.tsx`, and all three layouts)
+before touching anything, since the first two symptoms looked related but
+weren't obviously the same bug. They turned out to share one cause:
+
+**`AdminLayout.tsx`'s own "force mode back to admin" effect** (`useEffect(()
+=> { if (mode !== "admin") setMode("admin"); }, [mode, setMode])`, added in
+2.52.1 alongside the sidebar fix to correct a stale badge on landing here via
+a bookmark) **was re-running on every `mode` change, not just on mount** —
+including the change fired by `AccessSwitcher`'s own `handleSelect`
+(`setMode(next); router.push(...)`) while `AdminLayout` was still mounted
+mid-navigation. The effect won that race every time: it saw `mode !== "admin"`
+and set it straight back before `MainLayout` ever mounted on the new route,
+so the switcher's own state change was silently undone. Fixed by giving the
+effect an empty dependency array — it still corrects a stale mode once, on
+mount, but no longer fights an intentional switch made while unmounting.
+
+**The "Back" button's bug was adjacent, not the same mechanism**: it was a
+plain `<Link href="/profile">` with no `setMode` call at all, so `mode` just
+stayed `"admin"` — and `/profile` is a `MainLayout` route, whose own guard
+effect (`if (mode === "admin") router.replace("/admin/expedion")`, from
+2.52.1) sent it straight back. Fixed by giving the button a click handler
+that sets mode to the strongest non-admin mode the account qualifies for
+(`qualifiedModes.find(m => m !== "admin") ?? "user"`) before navigating —
+the same `setMode`-then-`push` shape `AccessSwitcher` already uses. Applied
+to `AdminLayout.tsx`'s header Back button and, for consistency, both of
+`DriverLayout.tsx`'s Back-to-`/profile` links (same latent bug for any
+account that also holds an admin/staff role, since `DriverLayout` has no
+mode guard of its own to trigger it in the common case).
+
+**The overscroll report was a third, unrelated bug, same family as 2.52.1's**:
+`min-h-0` had been added to every sidebar `<nav>` across all three layouts,
+but never to the matching `<main>` content area in any of them. Without it, a
+sufficiently tall page (the Expedion bridge Overview's stat cards, in the
+report) can't be shrunk to the flex space actually available, so instead of
+scrolling internally, `<main>` grows to its full content height and forces
+the *whole* `flex h-screen` row past the viewport — the document itself
+becomes scrollable, dragging the sidebar out of view with it. The user's own
+suggested fix (`position: fixed` on the sidebar) would have papered over the
+symptom without touching the cause, and would have needed a matching
+content margin and its own responsive/z-index handling; adding `min-h-0` to
+`MainLayout.tsx`, `AdminLayout.tsx` and `DriverLayout.tsx`'s three `<main>`
+elements is the same one-line fix already proven on the nav in 2.52.1, and
+needed no new positioning scheme.
+
+**Verification:** all three fixed with a throwaway admin+carrier account
+against the local dev server (created via `/api/auth/sign-up/email`, roles
+inserted directly, deleted after). Back button: confirmed `localStorage`'s
+stored mode flips from unset to `"carrier"` on click and the URL settles on
+`/profile` rather than bouncing to `/admin/expedion` (checked past a 2s
+settle window). Switcher: opened the "ADMIN" dropdown from inside
+`/admin/expedion`, clicked "Driver", confirmed the URL lands on `/home` and
+stays there. Overscroll: reproduced the exact page from the report
+(`/admin/expedion` at 1440×800, tall enough that `<main>`'s content exceeds
+the viewport), then drove a **real mouse-wheel scroll** (`page.mouse.wheel`,
+not a programmatic `scrollTop` set) past `<main>`'s own scroll limit —
+confirmed `<main>` reached its max scroll, the document's own `scrollTop`
+never moved, and the sidebar's bounding rect stayed pinned at `top: 0`
+throughout. `npx tsc --noEmit` and `pnpm lint` clean (0 errors, warnings
+actually dropped 84→83 — a dead `UserCircle` import in `AdminLayout.tsx`,
+orphaned since 2.52.1 removed the sidebar's own profile link, was removed on
+the way past). Full suite green, unchanged at 1750 tests (this fix touched no
+logic under test, only effect timing and className strings).
+
+**Also investigated this session, found unrelated:** the user's report of
+"Award queue" / "Listings" / "Shipments" all showing "Failed to load …" in
+**production**. Root-caused (see the Operator to-do item above, expanded with
+today's findings) to the same `POSTGRES_URL_PRODUCTION` secret corruption that
+has blocked the migrate workflow since 2026-09-13 — confirmed still broken by
+a workflow run at 08:34 UTC *today*, hours before this session's own push,
+so not a regression from anything shipped here. No code change is possible
+from this repo for that one; it needs the GitHub secret reset by a human.
 
 ## ✅ 2026-09-23 — Admin Sidebar Stops Clipping Its Own Bottom Links (2.52.1)
 

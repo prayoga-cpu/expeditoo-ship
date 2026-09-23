@@ -6,7 +6,7 @@ import { FeedbackLauncher } from "@/features/app/feedback/ui";
 import { AppVersionLink } from "@/components/ui/app-version";
 import { LangToggle } from "@/components/ui/lang-toggle";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Users,
@@ -16,7 +16,6 @@ import {
   Headset,
   MessageSquarePlus,
   AlertTriangle,
-  UserCircle,
   UsersRound,
   DollarSign,
   Gavel,
@@ -61,10 +60,11 @@ const BADGE_TONE: Record<keyof AdminNavCounts, "attention" | "info"> = {
 
 export function AdminLayout({ children }: AdminLayoutProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const t = useTranslations("admin");
   const tCommon = useTranslations("common");
   const counts = useAdminNavCounts();
-  const { mode, setMode } = useActiveAccessMode();
+  const { mode, qualifiedModes, setMode } = useActiveAccessMode();
 
   // Reaching this layout at all means the session is browsing the back
   // office. The switcher badge is only a client-side preference on top of
@@ -76,9 +76,23 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   // where they actually are, the same way MainLayout redirects away from
   // this layout's routes when the stored mode is stale in the other
   // direction.
+  //
+  // Deliberately empty deps: this corrects a *stale* mode once, on mount.
+  // Re-running it on every `mode` change would fight any *intentional* switch
+  // away from admin made while this layout is still mounted mid-navigation —
+  // the switcher's and the Back button's own `setMode` calls both need a
+  // render or two before the route actually changes, and this effect was
+  // winning that race, silently undoing the switch before `MainLayout` ever
+  // saw the new mode.
   useEffect(() => {
     if (mode !== "admin") setMode("admin");
-  }, [mode, setMode]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleBack = () => {
+    setMode(qualifiedModes.find((candidate) => candidate !== "admin") ?? "user");
+    router.push("/profile");
+  };
 
   const sidebarItems: {
     title: string;
@@ -234,13 +248,14 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             </div>
             <div className="flex items-center gap-2">
               {/* The sidebar no longer carries its own "Back to App" — this is
-                  the only way out now, at every width, not just below xl. */}
-              <Link href="/profile">
-                <Button variant="ghost" size="sm" className="gap-2">
-                  <ArrowLeft className="w-4 h-4" />
-                  {tCommon("buttons.back")}
-                </Button>
-              </Link>
+                  the only way out now, at every width, not just below xl.
+                  A plain `Link` used to leave `mode` at "admin", so
+                  `MainLayout`'s own guard sent `/profile` straight back here
+                  before the click ever registered as working. */}
+              <Button variant="ghost" size="sm" className="gap-2" onClick={handleBack}>
+                <ArrowLeft className="w-4 h-4" />
+                {tCommon("buttons.back")}
+              </Button>
               <LangToggle className="mr-1" />
               <FeedbackLauncher />
               <NotificationBell />
@@ -250,7 +265,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
         {/* Content Area - Wrapper provides consistent padding */}
         <main
-          className="flex-1 overflow-y-auto overflow-x-hidden pb-[88px] xl:pb-0 overscroll-contain"
+          className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden pb-[88px] xl:pb-0 overscroll-contain"
           style={{ scrollbarGutter: "stable" }}
         >
           <div className="p-4 md:p-6">{children}</div>

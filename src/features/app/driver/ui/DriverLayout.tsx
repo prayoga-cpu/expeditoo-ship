@@ -3,7 +3,7 @@
 import { NotificationBell } from "@/components/NotificationBell";
 import { FeedbackLauncher } from "@/features/app/feedback/ui";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Package,
@@ -17,6 +17,7 @@ import { DriverBottomNav } from "./DriverBottomNav";
 import { AppSidebarHeader } from "@/components/layouts/AppSidebarHeader";
 import { AppVersionLink } from "@/components/ui/app-version";
 import { useTranslations } from "next-intl";
+import { useActiveAccessMode } from "@/lib/use-active-access-mode";
 
 interface DriverLayoutProps {
   children: React.ReactNode;
@@ -26,9 +27,21 @@ interface DriverLayoutProps {
 
 export function DriverLayout({ children }: DriverLayoutProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const t = useTranslations("driver");
   const tCommon = useTranslations("common");
+  const { qualifiedModes, setMode } = useActiveAccessMode();
   const hideBottomNav = pathname?.startsWith("/driver/shipments/");
+
+  // Same fix as AdminLayout's Back button: an account that also holds admin
+  // (or another staff role) can land here with `mode` still "admin" from an
+  // earlier admin-panel visit — `/profile` is a MainLayout route, and
+  // MainLayout bounces straight back to `/admin/expedion` whenever `mode`
+  // is "admin", so a plain `Link` silently did nothing for that account.
+  const handleBack = () => {
+    setMode(qualifiedModes.find((candidate) => candidate !== "admin") ?? "user");
+    router.push("/profile");
+  };
 
   const sidebarItems = [
     {
@@ -80,12 +93,14 @@ export function DriverLayout({ children }: DriverLayoutProps) {
         ))}
       </nav>
       <div className="px-4 mt-auto">
-        <Link href="/profile">
-          <Button variant="outline" className="w-full justify-start gap-2">
-            <ArrowLeft className="w-4 h-4" />
-            {tCommon("navigation.backToApp")}
-          </Button>
-        </Link>
+        <Button
+          variant="outline"
+          className="w-full justify-start gap-2"
+          onClick={handleBack}
+        >
+          <ArrowLeft className="w-4 h-4" />
+          {tCommon("navigation.backToApp")}
+        </Button>
       </div>
     </div>
   );
@@ -113,12 +128,10 @@ export function DriverLayout({ children }: DriverLayoutProps) {
               <AppVersionLink className="hidden md:inline-flex" />
             </div>
             <div className="flex items-center gap-2">
-              <Link href="/profile">
-                <Button variant="ghost" size="sm" className="gap-2">
-                  <ArrowLeft className="w-4 h-4" />
-                  {tCommon("buttons.back")}
-                </Button>
-              </Link>
+              <Button variant="ghost" size="sm" className="gap-2" onClick={handleBack}>
+                <ArrowLeft className="w-4 h-4" />
+                {tCommon("buttons.back")}
+              </Button>
               <FeedbackLauncher />
               <NotificationBell />
             </div>
@@ -128,7 +141,7 @@ export function DriverLayout({ children }: DriverLayoutProps) {
         {/* Content Area - Wrapper provides consistent padding */}
         <main
           className={cn(
-            "flex-1 overflow-y-auto overflow-x-hidden xl:pb-0",
+            "flex-1 min-h-0 overflow-y-auto overflow-x-hidden xl:pb-0",
             !hideBottomNav && "pb-[88px]"
           )}
           style={{ scrollbarGutter: "stable" }}

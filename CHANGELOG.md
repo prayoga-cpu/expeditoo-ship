@@ -14,6 +14,18 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.52.2] - 2026-09-23 · fix
+
+- **"Back" in the admin and driver panels now actually leaves them.** Clicking
+  it used to bounce straight back to the panel you were trying to leave.
+- **Switching to "Driver" or "User" from inside the admin panel now works.**
+  It used to snap back to "Admin" on its own the moment you picked something
+  else.
+- **A long admin page no longer scrolls the whole screen out from under the
+  sidebar.** Scrolling down a page with a lot of content used to scroll the
+  sidebar away with it, leaving blank space; now only the page content
+  scrolls and the sidebar stays put.
+
 ## [2.52.1] - 2026-09-23 · fix
 
 - **The admin sidebar no longer swallows its own bottom links.** On a laptop
