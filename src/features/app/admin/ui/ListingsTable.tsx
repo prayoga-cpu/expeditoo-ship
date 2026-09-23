@@ -31,19 +31,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useTranslations } from "next-intl";
 import { DataTable, DataTableColumnHeader, dateRangeFilterFn } from "./data-table";
+import { formatCurrency } from "@/lib/currency";
+import { STATUS_TONE } from "@/features/app/listing/statusTone";
+import type { AdminListing } from "../hooks/useAdminListings";
 
-interface Listing {
-  id: string;
-  title: string;
-  user: {
-    name: string;
-    email: string;
-  };
-  price: number;
-  status: "active" | "sold" | "ended" | "cancelled";
-  createdAt: string;
-  views: number;
-}
+type Listing = AdminListing;
 
 interface ListingsTableProps {
   listings: Listing[];
@@ -52,27 +44,16 @@ interface ListingsTableProps {
   className?: string;
 }
 
-// Helper to format currency (handles cents)
-function formatPrice(priceInCents: number): string {
-  // Divide by 100 if price appears to be in cents (> 100)
-  const price = priceInCents > 1000 ? priceInCents / 100 : priceInCents;
-  return `€${price.toFixed(2)}`;
-}
-
-// Status badge component
-function ListingStatusBadge({
-  status,
-}: {
-  status: "active" | "sold" | "ended" | "cancelled";
-}) {
-  const styles = {
-    active: "bg-green-500 hover:bg-green-600 text-white",
-    sold: "bg-blue-500 hover:bg-blue-600 text-white",
-    ended: "bg-gray-500 hover:bg-gray-600 text-white",
-    cancelled: "bg-red-500 hover:bg-red-600 text-white",
-  };
-
-  return <Badge className={styles[status]}>{status}</Badge>;
+// Status badge component — same tones `/listings/me` and the home dashboard
+// use for this exact enum (`statusTone.ts`), so a status never wears a
+// different colour depending on which screen is looking at it.
+function ListingStatusBadge({ status }: { status: Listing["status"] }) {
+  const t = useTranslations("myJobs.status");
+  return (
+    <Badge variant="outline" className={STATUS_TONE[status]}>
+      {t(status)}
+    </Badge>
+  );
 }
 
 // Action menu component
@@ -150,40 +131,42 @@ export function ListingsTable({
         ),
         filterFn: (row, id, filterValue) => {
           const title = row.original.title.toLowerCase();
-          const sellerName = row.original.user.name.toLowerCase();
-          const sellerEmail = row.original.user.email.toLowerCase();
+          const shipperName = row.original.shipper.name.toLowerCase();
+          const shipperEmail = row.original.shipper.email.toLowerCase();
           const value = (filterValue as string).toLowerCase();
           return (
             title.includes(value) ||
-            sellerName.includes(value) ||
-            sellerEmail.includes(value)
+            shipperName.includes(value) ||
+            shipperEmail.includes(value)
           );
         },
       },
       {
-        accessorKey: "user",
+        accessorKey: "shipper",
         header: ({ column }) => (
           <DataTableColumnHeader column={column} title={t("seller")} />
         ),
         cell: ({ row }) => (
           <div className="flex flex-col">
             <span className="text-sm font-medium">
-              {row.original.user.name}
+              {row.original.shipper.name}
             </span>
             <span className="text-xs text-muted-foreground">
-              {row.original.user.email}
+              {row.original.shipper.email}
             </span>
           </div>
         ),
         enableSorting: false,
       },
       {
-        accessorKey: "price",
+        accessorKey: "budgetCents",
         header: ({ column }) => (
           <DataTableColumnHeader column={column} title={t("price")} />
         ),
         cell: ({ row }) => (
-          <span className="font-medium">{formatPrice(row.original.price)}</span>
+          <span className="font-medium">
+            {formatCurrency(row.original.budgetCents)}
+          </span>
         ),
       },
       {
@@ -234,7 +217,7 @@ export function ListingsTable({
 
   const sortFields = [
     { id: "title", label: t("title") },
-    { id: "price", label: t("price") },
+    { id: "budgetCents", label: t("price") },
     { id: "views", label: t("views") },
     { id: "createdAt", label: t("created") },
   ];

@@ -6,6 +6,7 @@ import en from "../../../../messages/en.json";
 import fr from "../../../../messages/fr.json";
 
 import { AccessSwitcher } from "../AccessSwitcher";
+import { AccessModeProvider } from "@/lib/access-mode-context";
 
 // Radix's menu opens on a pointer sequence jsdom cannot dispatch — clicking
 // the trigger never reaches the portal (see radix-dialogs-in-jsdom in
@@ -40,7 +41,9 @@ function renderWith(
   const onError = vi.fn<(error: Error) => void>();
   render(
     <NextIntlClientProvider locale={locale} messages={messages} onError={onError}>
-      <AccessSwitcher defaultOpen={defaultOpen} />
+      <AccessModeProvider>
+        <AccessSwitcher defaultOpen={defaultOpen} />
+      </AccessModeProvider>
     </NextIntlClientProvider>
   );
   return onError;
@@ -141,7 +144,9 @@ describe("AccessSwitcher", () => {
     auth.isLoading = true;
     const { container, rerender } = render(
       <NextIntlClientProvider locale="en" messages={en}>
-        <AccessSwitcher />
+        <AccessModeProvider>
+          <AccessSwitcher />
+        </AccessModeProvider>
       </NextIntlClientProvider>
     );
     expect(container).toBeEmptyDOMElement();
@@ -149,7 +154,9 @@ describe("AccessSwitcher", () => {
     auth.isLoading = false;
     rerender(
       <NextIntlClientProvider locale="en" messages={en}>
-        <AccessSwitcher />
+        <AccessModeProvider>
+          <AccessSwitcher />
+        </AccessModeProvider>
       </NextIntlClientProvider>
     );
     expect(container).toBeEmptyDOMElement();

@@ -178,42 +178,37 @@ export const emailService = {
   },
 
   /**
-   * Send Shipment Update Email to buyer
-   * Called when shipment status changes
+   * Tell the requester a shipment reached a stage — pickup, in transit or
+   * delivered. Gated by `preferences.notifications.email.shipmentUpdates`
+   * at the one call site, `shipment.service.ts`'s `updateStatus`.
    */
   async sendShipmentUpdateEmail(
     to: string,
-    recipientName: string,
-    itemTitle: string,
+    recipientName: string | null | undefined,
+    listingTitle: string,
     shipmentId: string,
-    status: "PICKED_UP" | "IN_TRANSIT" | "DELIVERED" | "DELAYED",
-    options?: {
-      statusMessage?: string;
-      driverName?: string;
-      estimatedDelivery?: string;
-      deliveryAddress?: string;
-    }
+    status: "PICKED_UP" | "IN_TRANSIT" | "DELIVERED",
+    deliveryAddress?: string
   ) {
     const emailHtml = await render(
       ShipmentUpdateEmail({
         recipientName,
-        itemTitle,
+        listingTitle,
         shipmentId,
         status,
-        ...options,
+        deliveryAddress,
       })
     );
 
-    const statusTitles = {
-      PICKED_UP: "Package Picked Up",
-      IN_TRANSIT: "In Transit",
-      DELIVERED: "Delivered",
-      DELAYED: "Delivery Delayed",
+    const subjectTitles = {
+      PICKED_UP: "Colis récupéré",
+      IN_TRANSIT: "En cours de livraison",
+      DELIVERED: "Livré",
     };
 
     return this.sendEmail({
       to,
-      subject: `🚚 ${statusTitles[status]} - ${itemTitle}`,
+      subject: `${subjectTitles[status]} — ${listingTitle}`,
       html: emailHtml,
     });
   },

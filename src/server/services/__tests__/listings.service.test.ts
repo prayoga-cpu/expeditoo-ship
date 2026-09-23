@@ -11,6 +11,11 @@ vi.mock("@/server/services/notifications.service", () => ({
 vi.mock("@/server/services/email.service", () => ({
   emailService: { sendListingPostedEmail: vi.fn().mockResolvedValue(true) },
 }));
+vi.mock("@/server/services/carrier-route-alerts.service", () => ({
+  carrierRouteAlertsService: {
+    notifyMatchingCarriers: vi.fn().mockResolvedValue(undefined),
+  },
+}));
 vi.mock("@/server/dal/users.dal", () => ({
   getUserById: vi
     .fn()
@@ -30,6 +35,7 @@ import { shipmentsDal } from "@/server/dal/shipments.dal";
 import { offersService } from "@/server/services/offers.service";
 import { notificationsService } from "@/server/services/notifications.service";
 import { emailService } from "@/server/services/email.service";
+import { carrierRouteAlertsService } from "@/server/services/carrier-route-alerts.service";
 import { getUserById } from "@/server/dal/users.dal";
 
 const HOUR = 60 * 60 * 1000;
@@ -59,6 +65,7 @@ beforeEach(() => {
     getByShipperId: vi.fn().mockResolvedValue([]),
     incrementViews: vi.fn(),
     ensureDefaultCategory: vi.fn().mockResolvedValue("transport-general"),
+    findDueScheduled: vi.fn().mockResolvedValue([]),
   });
   Object.assign(shipmentsDal, {
     listDeliveredForListings: vi.fn().mockResolvedValue([]),
@@ -531,6 +538,111 @@ describe("createListing", () => {
         listingsService.createListing("user-1", createInput())
       ).resolves.toMatchObject({ title: "Two-seater sofa to Marseille" });
     });
+  });
+
+  // carrier_route_alerts_spec.md §3
+  describe("carrier route alerts", () => {
+    it("fires on an immediate publish, system account included", async () => {
+      await listingsService.createListing("system-account", createInput());
+
+      expect(
+        carrierRouteAlertsService.notifyMatchingCarriers
+      ).toHaveBeenCalledTimes(1);
+    });
+
+    it("stays silent for a draft", async () => {
+      await listingsService.createListing(
+        "user-1",
+        createInput({ publish: false })
+      );
+
+      expect(
+        carrierRouteAlertsService.notifyMatchingCarriers
+      ).not.toHaveBeenCalled();
+    });
+
+    it("stays silent for a scheduled publish — publishScheduled fires it later", async () => {
+      await listingsService.createListing(
+        "user-1",
+        createInput({ scheduledPublishAt: at(24 * HOUR) })
+      );
+
+      expect(
+        carrierRouteAlertsService.notifyMatchingCarriers
+      ).not.toHaveBeenCalled();
+    });
+
+    it("is skipped when the caller opts out, for assignDirect", async () => {
+      await listingsService.createListing("system-account", createInput(), {
+        notifyRouteMatches: false,
+      });
+
+      expect(
+        carrierRouteAlertsService.notifyMatchingCarriers
+      ).not.toHaveBeenCalled();
+    });
+
+    it("does not let a notify failure fail the listing creation", async () => {
+      vi.mocked(
+        carrierRouteAlertsService.notifyMatchingCarriers
+      ).mockRejectedValueOnce(new Error("db down"));
+
+      await expect(
+        listingsService.createListing("user-1", createInput())
+      ).resolves.toMatchObject({ title: "Two-seater sofa to Marseille" });
+    });
+  });
+});
+
+// ========================================
+// Scheduled publish — scheduled_publish_spec.md, carrier_route_alerts_spec.md §3
+// ========================================
+
+describe("publishScheduled", () => {
+  const due = (over: Record<string, unknown> = {}) =>
+    job({
+      id: "job-scheduled",
+      status: "scheduled",
+      scheduledPublishAt: new Date(),
+      pickupFrom: at(48 * HOUR),
+      ...over,
+    });
+
+  it("flips a due listing open and notifies matching carriers", async () => {
+    vi.mocked(listingsDal.findDueScheduled).mockResolvedValue([due()] as never);
+
+    const published = await listingsService.publishScheduled();
+
+    expect(published).toBe(1);
+    expect(listingsDal.update).toHaveBeenCalledWith(
+      "job-scheduled",
+      expect.objectContaining({ status: "open", scheduledPublishAt: null })
+    );
+    expect(
+      carrierRouteAlertsService.notifyMatchingCarriers
+    ).toHaveBeenCalledWith(expect.objectContaining({ id: "job-scheduled" }));
+  });
+
+  it("does not notify a listing whose window closed before its scheduled instant fired", async () => {
+    vi.mocked(listingsDal.findDueScheduled).mockResolvedValue([
+      due({ pickupFrom: at(-HOUR) }),
+    ] as never);
+
+    const published = await listingsService.publishScheduled();
+
+    expect(published).toBe(0);
+    expect(
+      carrierRouteAlertsService.notifyMatchingCarriers
+    ).not.toHaveBeenCalled();
+  });
+
+  it("does not let a notify failure stop the publish loop", async () => {
+    vi.mocked(listingsDal.findDueScheduled).mockResolvedValue([due()] as never);
+    vi.mocked(
+      carrierRouteAlertsService.notifyMatchingCarriers
+    ).mockRejectedValueOnce(new Error("db down"));
+
+    await expect(listingsService.publishScheduled()).resolves.toBe(1);
   });
 });
 

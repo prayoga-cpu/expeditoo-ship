@@ -87,6 +87,39 @@ describe("jobFormSchema", () => {
     );
   });
 
+  it("accepts a manually-typed endpoint with no pin at all", () => {
+    const noPin = endpoint({ lat: undefined, lng: undefined });
+
+    expect(jobFormSchema.safeParse(form({ pickup: noPin })).success).toBe(
+      true
+    );
+  });
+
+  it("has nothing to bound-check against France when there is no pin", () => {
+    // A typed address is never verified against a gazetteer — that is the
+    // tradeoff manual entry accepts — so there is no coordinate to be
+    // outside France with.
+    const noPin = endpoint({ lat: undefined, lng: undefined });
+
+    expect(messages(form({ pickup: noPin }))).not.toContain(
+      "create.validation.outsideFrance"
+    );
+  });
+
+  it("skips the minimum-route check when either endpoint has no pin", () => {
+    // Same two street addresses as the "too close" case above would trip —
+    // but with no coordinates on one side, there is nothing to measure.
+    const noPin = endpoint({
+      lat: undefined,
+      lng: undefined,
+      postalCode: "69003",
+    });
+
+    expect(messages(form({ dropoff: noPin }))).not.toContain(
+      "create.validation.tooClose"
+    );
+  });
+
   it("wants all three dimensions or none, in exact mode", () => {
     expect(
       messages(form({ sizeMode: "exact", lengthCm: "120" }))

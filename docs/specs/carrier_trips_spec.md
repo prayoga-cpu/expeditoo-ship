@@ -247,7 +247,10 @@ move into `browseShipments`.
   discoverable buys a conversation, nothing more.
 - A trip is still not visible to operators as a trip; an operator reaches the
   same projection only through a job they may act on.
-- `notifyOnMatch` is persisted and read by nothing yet.
+- ~~`notifyOnMatch` is persisted and read by nothing yet.~~ **Reversed on
+  2026-09-23 by `carrier_route_alerts_spec.md`**: a listing reaching the board
+  now fans out an in-app notification to every matching, `notify_on_match`
+  trip's carrier.
 
 ## 10. Known limitations
 
@@ -259,7 +262,8 @@ move into `browseShipments`.
 3. Recurring occurrence maths runs in the server's timezone. The deadline
    columns elsewhere in this repo have the same property
    (`plan_expedion_post_payment_fork.md` §2.2); production runs `TZ=UTC`.
-4. Every trip that existed before `is_discoverable` was backfilled to `false`,
+4. ~~`notifyOnMatch` is persisted and read by nothing yet.~~ See §9 above.
+5. Every trip that existed before `is_discoverable` was backfilled to `false`,
    because it was declared under a dialog reading « Vous seul le voyez » and that
    promise outlives the change. New trips default to `true`, so the discoverable
    pool starts empty and fills only as drivers opt in — a product fact to

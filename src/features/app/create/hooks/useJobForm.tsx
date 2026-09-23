@@ -4,10 +4,12 @@ import { useState, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { ApiError } from "@/lib/fetcher";
+import { createAddress } from "@/features/app/profile/api/addresses.api";
+import { addressBookKeys } from "./useAddressBook";
 import {
   jobFormSchema,
   STEP_FIELDS,
@@ -24,6 +26,8 @@ import {
 /** Step order. Labels are looked up from `create.steps.*`, never shown raw. */
 export const JOB_STEPS = ["what", "where", "when", "budget"] as const;
 
+const WHERE_STEP = 1;
+
 const emptyEndpoint = {
   address: "",
   city: "",
@@ -32,6 +36,8 @@ const emptyEndpoint = {
   note: "",
   contactName: "",
   contactPhone: "",
+  saveAddress: false,
+  addressLabel: "",
 };
 
 /**
@@ -59,6 +65,7 @@ function scrollToFirstError() {
 
 export function useJobForm() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const t = useTranslations("create");
   const [currentStep, setCurrentStep] = useState(0);
   const [photos, setPhotos] = useState<string[]>([]);
@@ -150,6 +157,37 @@ export function useJobForm() {
     [form]
   );
 
+  /**
+   * A saved-address checkbox left checked on either endpoint, fired once
+   * when the Where step is left rather than reactively on every keystroke —
+   * one write per visit, not one per character typed. Failure toasts but
+   * does not block advancing: the job itself does not depend on this.
+   */
+  const saveRequestedAddresses = useCallback(async () => {
+    const values = form.getValues();
+    for (const side of ["pickup", "dropoff"] as const) {
+      const endpoint = values[side];
+      if (!endpoint?.saveAddress) continue;
+
+      try {
+        await createAddress({
+          label: endpoint.addressLabel?.trim() || t(`where.${side}`),
+          street: endpoint.address,
+          city: endpoint.city,
+          zip: endpoint.postalCode,
+          country: "France",
+          lat: endpoint.lat,
+          lng: endpoint.lng,
+        });
+        form.setValue(`${side}.saveAddress`, false);
+        form.setValue(`${side}.addressLabel`, "");
+        queryClient.invalidateQueries({ queryKey: addressBookKeys.all });
+      } catch {
+        toast.error(t("toast.addressSaveFailed"));
+      }
+    }
+  }, [form, queryClient, t]);
+
   /** Only validates the fields on the current step, not the whole form. */
   const handleNext = useCallback(async () => {
     const fields = STEP_FIELDS[currentStep];
@@ -162,8 +200,10 @@ export function useJobForm() {
       return;
     }
 
+    if (currentStep === WHERE_STEP) await saveRequestedAddresses();
+
     setCurrentStep((step) => Math.min(step + 1, JOB_STEPS.length - 1));
-  }, [currentStep, form]);
+  }, [currentStep, form, saveRequestedAddresses]);
 
   const handlePrev = useCallback(
     () => setCurrentStep((step) => Math.max(step - 1, 0)),

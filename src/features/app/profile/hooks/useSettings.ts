@@ -2,28 +2,14 @@ import { useCallback } from "react";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { UserPreferences } from "@/db/schema/users";
 
-// Types matching the API
-interface NotificationChannel {
-  email: boolean;
-  inApp: boolean;
-}
+type EmailPreferenceKey = keyof UserPreferences["notifications"]["email"];
 
-interface UserPreferences {
-  notifications: {
-    messages: NotificationChannel;
-    bids: NotificationChannel;
-    orders: NotificationChannel;
-    shipments: NotificationChannel;
-    marketing: NotificationChannel;
-  };
-}
-
-// Legacy type for Settings UI compatibility
-export interface NotificationSettings {
-  email: {
-    auctionResults: boolean;
-    marketing: boolean;
+interface UpdatePreferencesInput {
+  notifications?: {
+    email?: Partial<UserPreferences["notifications"]["email"]>;
+    inApp?: Partial<UserPreferences["notifications"]["inApp"]>;
   };
 }
 
@@ -51,7 +37,7 @@ async function fetchPreferences(): Promise<{ preferences: UserPreferences }> {
 }
 
 async function updatePreferences(
-  input: Partial<UserPreferences>
+  input: UpdatePreferencesInput
 ): Promise<{ preferences: UserPreferences }> {
   const response = await fetch("/api/user/preferences", {
     method: "PATCH",
@@ -71,19 +57,23 @@ async function updatePreferences(
 /**
  * Custom hook for settings management
  * Fetches and updates user preferences via API
+ *
+ * `notifications.email` is handed back exactly as `UserPreferences` stores
+ * it — no relabelling layer. The previous version mapped a UI key
+ * ("auctionResults") onto a made-up API category ("bids") that existed in
+ * neither the DTO nor the database column, so toggling it round-tripped
+ * through validation and updated nothing.
  */
 export function useSettings() {
   const { theme, setTheme } = useTheme();
   const queryClient = useQueryClient();
 
-  // Fetch preferences from API
-  const { data: preferencesData, isLoading } = useQuery({
+  const { data: preferencesData, isLoading, isError } = useQuery({
     queryKey: ["preferences"],
     queryFn: fetchPreferences,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  // Mutation for updating preferences
   const { mutate: updatePreferencesMutation } = useMutation({
     mutationFn: updatePreferences,
     onSuccess: (data) => {
@@ -95,51 +85,26 @@ export function useSettings() {
     },
   });
 
-  // Transform API preferences to Settings UI format
-  const notifications: NotificationSettings = {
-    email: {
-      auctionResults: preferencesData?.preferences?.notifications?.bids?.email ?? true,
-      marketing: preferencesData?.preferences?.notifications?.marketing?.email ?? false,
-    },
-  };
+  const email = preferencesData?.preferences?.notifications?.email;
 
   const handleThemeChange = useCallback((newTheme: string) => {
     setTheme(newTheme);
   }, [setTheme]);
 
   const handleNotificationChange = useCallback(
-    (key: "auctionResults" | "marketing", value: boolean) => {
-      // Map Settings UI key to API structure
-      const categoryMap: Record<string, keyof UserPreferences["notifications"]> = {
-        auctionResults: "bids",
-        marketing: "marketing",
-      };
-
-      const category = categoryMap[key];
-      const currentPrefs = preferencesData?.preferences?.notifications;
-
-      // Only update the specific category
+    (key: EmailPreferenceKey, value: boolean) => {
       updatePreferencesMutation({
-        notifications: {
-          messages: currentPrefs?.messages ?? { email: true, inApp: true },
-          bids: currentPrefs?.bids ?? { email: true, inApp: true },
-          orders: currentPrefs?.orders ?? { email: true, inApp: true },
-          shipments: currentPrefs?.shipments ?? { email: true, inApp: true },
-          marketing: currentPrefs?.marketing ?? { email: false, inApp: false },
-          [category]: {
-            ...currentPrefs?.[category],
-            email: value,
-          },
-        },
+        notifications: { email: { [key]: value } },
       });
     },
-    [preferencesData?.preferences?.notifications, updatePreferencesMutation]
+    [updatePreferencesMutation]
   );
 
   return {
     theme,
-    notifications,
+    email,
     isLoading,
+    isError,
     handleThemeChange,
     handleNotificationChange,
   };

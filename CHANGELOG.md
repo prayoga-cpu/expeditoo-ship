@@ -14,6 +14,54 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.50.0] - 2026-09-23 · feat
+
+- **Posting a transport request no longer forces you to place a map pin.**
+  Type the pickup or dropoff address by hand instead — the map is there to
+  help you get the exact spot, not to block you if you'd rather skip it.
+  Once the map has found an address for you, those fields lock (they're the
+  map's answer, not a second thing to type); "Can't find it?" switches to
+  typing it yourself instead, and hides the map while you do.
+- **The exact-weight field now takes kilograms or tonnes** — a dropdown next
+  to it, so a heavy load doesn't have to be typed out as a five-digit
+  kilogram figure.
+- **The weight and size cards are bigger and easier to read**, with a third
+  example item added to each one's hint text.
+- **Fixed a label overlapping its own field** on the exact-weight input.
+- **Clicking anywhere on a driver application row now opens it** — not just
+  the small eye icon on the right.
+
+## [2.49.0] - 2026-09-23 · feat
+
+- **Email notification settings are now specific, not one catch-all.**
+  "Listing messages" is replaced by three separate switches: *Listing
+  published* (a confirmation the moment your request goes live), *Driver &
+  payment* (your receipt, the moment a driver is confirmed and paid), and
+  *Trip & delivery updates* (one email at pickup, one in transit, one on
+  delivery). Each can be turned off on its own. The old single switch
+  silently did nothing when flipped; these three actually work.
+- **The admin panel now has a language switch.** FR/EN, next to the
+  notification bell, matching every other screen in the app.
+- **`/admin/listings` now shows every job, not just open ones.** The endpoint
+  reused the driver board's own query, which only ever returns `open` jobs
+  still inside their bidding window — an awarded, completed, cancelled or
+  expired job was invisible to staff, silently, with no error. The table
+  itself was still wired to the old goods-auction shape too (a `seller`, a
+  plain price, `sold`/`ended`/`active` statuses that don't exist on a
+  transport job), so a real row rendered as an unnamed seller at €0.00
+  instead of the shipper and their budget. Both are fixed: a dedicated
+  moderation query with no status filter, and a table that reads the actual
+  job fields.
+
+## [2.48.0] - 2026-09-23 · feat
+
+- **A trip you declare on `/carrier/trips` can now actually alert you.**
+  Switch on "M'alerter des courses correspondantes" and you'll get a
+  notification the moment a job appears that matches it — inside your
+  radius, travelling your direction, on a day you run it. The switch has
+  existed for a while; until now it only saved your preference and did
+  nothing with it.
+
 ## [2.47.0] - 2026-09-23 · feat
 
 Fourteen items from the feedback queue, all filed through the in-app button.

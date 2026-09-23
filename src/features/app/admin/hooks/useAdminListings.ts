@@ -1,25 +1,20 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import type { ListingStatus } from "@/features/app/listing/types";
 
 // ========================================
 // Types
 // ========================================
 
-interface ListingSeller {
-  id: string;
-  name: string;
-  email: string;
-}
-
-interface AdminListing {
+export interface AdminListing {
   id: string;
   title: string;
-  user: {
+  shipper: {
     name: string;
     email: string;
   };
-  price: number;
-  status: "active" | "sold" | "ended" | "cancelled";
+  budgetCents: number;
+  status: ListingStatus;
   createdAt: string;
   views: number;
 }
@@ -30,17 +25,13 @@ interface ListingsApiResponse {
     items: Array<{
       id: string;
       title: string;
-      seller?: ListingSeller;
-      sellerId: string;
-      currentPrice?: number | null;
-      buyNowPrice?: number | null;
-      startPrice?: number | null;
-      status: string;
+      shipper?: { name?: string | null; email?: string | null } | null;
+      budgetCents: number;
+      status: ListingStatus;
       createdAt: string;
       views: number;
     }>;
     total: number;
-    page: number;
   };
   error?: {
     code: string;
@@ -52,7 +43,7 @@ interface ListingsApiResponse {
 // Fetch Functions
 // ========================================
 
-async function fetchAdminListings(_search?: string): Promise<AdminListing[]> {
+async function fetchAdminListings(): Promise<AdminListing[]> {
   const response = await fetch("/api/admin/listings");
   const json: ListingsApiResponse = await response.json();
 
@@ -60,17 +51,15 @@ async function fetchAdminListings(_search?: string): Promise<AdminListing[]> {
     throw new Error(json.error?.message || "Failed to fetch listings");
   }
 
-  // Map API response to AdminListing format
   return (json.data?.items || []).map((item) => ({
     id: item.id,
     title: item.title,
-    user: {
-      name: item.seller?.name || "Unknown",
-      email: item.seller?.email || "",
+    shipper: {
+      name: item.shipper?.name || "Unknown",
+      email: item.shipper?.email || "",
     },
-    price:
-      (item.currentPrice || item.buyNowPrice || item.startPrice || 0) / 100,
-    status: item.status as "active" | "sold" | "ended" | "cancelled",
+    budgetCents: item.budgetCents,
+    status: item.status,
     createdAt: item.createdAt,
     views: item.views,
   }));
@@ -91,12 +80,12 @@ async function deleteListingApi(id: string): Promise<void> {
 // Hook
 // ========================================
 
-export function useAdminListings(search?: string) {
+export function useAdminListings() {
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ["admin", "listings", search],
-    queryFn: () => fetchAdminListings(search),
+    queryKey: ["admin", "listings"],
+    queryFn: fetchAdminListings,
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: false,
     refetchOnMount: false,

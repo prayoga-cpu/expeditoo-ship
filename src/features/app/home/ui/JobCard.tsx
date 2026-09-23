@@ -253,12 +253,14 @@ function Endpoint({
 }: {
   city: string;
   postalCode: string;
-  lat: number;
-  lng: number;
+  // Null when the requester typed the address by hand with no map pin.
+  lat: number | null;
+  lng: number | null;
   icon: React.ReactNode;
 }) {
   const t = useTranslations("jobBoard.card");
-  const bearing = nearestReferenceCity({ lat, lng }, city);
+  const bearing =
+    lat !== null && lng !== null ? nearestReferenceCity({ lat, lng }, city) : null;
 
   return (
     <div className="flex items-start gap-1.5 text-sm">

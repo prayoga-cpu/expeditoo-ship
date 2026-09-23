@@ -40,6 +40,7 @@
       "backToApp": "Back to App",
       "shipmentTracking": "Shipment Tracking",
       "jobs": "Jobs",
+      "browseJobs": "Jobs",
       "myOffers": "My offers",
       "deliveries": "Deliveries",
       "myApplication": "My application",
@@ -114,6 +115,8 @@
       "postalCode": "Postal code",
       "city": "City",
       "cantFindLocation": "Can't find it? Paste a map link",
+"enterManually": "Can't find it? Enter the address manually",
+"useMapInstead": "Use the map instead",
       "linkLabel": "Link to the location",
       "linkPlaceholder": "Paste a Google Maps, Apple Maps or OpenStreetMap link",
       "useLink": "Use link",
@@ -531,9 +534,18 @@
     "notifications": {
       "title": "Email Notifications",
       "description": "Choose which emails you'd like to receive from EXPEDITOO.",
-      "auctionResults": {
-        "title": "Listing messages",
-        "description": "Updates about listings, trips, pickups and deliveries."
+      "loadError": "Your notification preferences could not be loaded. Try reloading the page.",
+      "listingPublished": {
+        "title": "Listing published",
+        "description": "A confirmation email the moment your request goes live on the board."
+      },
+      "driverPayment": {
+        "title": "Driver & payment",
+        "description": "Your receipt, sent the moment a driver is confirmed and payment is taken."
+      },
+      "tripUpdates": {
+        "title": "Trip & delivery updates",
+        "description": "Pickup, in transit and delivered — one email per stage."
       },
       "accountSecurity": {
         "title": "Account & Security",
@@ -878,7 +890,8 @@
       "draftSaved": "Draft saved",
       "pickupTooSoon": "Pickup is too soon for carriers to bid. Push it later.",
       "schedulePast": "That publish time is too close or already past. Pick a later one.",
-      "failed": "Could not post your request. Please try again."
+      "failed": "Could not post your request. Please try again.",
+      "addressSaveFailed": "Could not save that address to your profile. Your request itself is unaffected."
     },
     "what": {
       "titleLabel": "What are you moving?",
@@ -946,24 +959,29 @@
         }
       },
       "photos": "Photos (optional)",
-      "weightExact": "Exact weight (kg)",
-      "weightExactOptional": "Exact weight (kg), if you know it",
+      "weightExact": "Exact weight",
+      "weightExactOptional": "Exact weight, if you know it",
+      "weightUnit": {
+        "label": "Unit",
+        "kg": "kg",
+        "t": "t"
+      },
       "weightBrackets": {
         "upTo5": {
           "label": "Up to 5 kg",
-          "example": "A parcel, a watch"
+          "example": "A parcel, a watch, a laptop"
         },
         "upTo30": {
           "label": "5 – 30 kg",
-          "example": "A suitcase, a box"
+          "example": "A suitcase, a box, a bike"
         },
         "upTo100": {
           "label": "30 – 100 kg",
-          "example": "A washing machine, an armchair"
+          "example": "A washing machine, an armchair, a table"
         },
         "upTo500": {
           "label": "100 – 500 kg",
-          "example": "A motorbike, several pieces of furniture"
+          "example": "A motorbike, a wardrobe, several pieces of furniture"
         },
         "upTo1000": {
           "label": "500 kg – 1 t",
@@ -1016,6 +1034,11 @@
     "where": {
       "pickup": "Pickup",
       "dropoff": "Delivery",
+      "defaultAddress": "Default",
+      "useNewAddress": "Enter a new address",
+      "saveAddress": "Save this address to my profile",
+      "addressLabelField": "Label (optional)",
+      "addressLabelPlaceholder": "e.g. Home, Work",
       "locationType": "Location type",
       "select": "Select",
       "floor": "Floor",
@@ -3129,7 +3152,7 @@
         "capacity": "Available capacity (kg)",
         "capacityPlaceholder": "e.g. 800",
         "notify": "Alert me about matching jobs",
-        "notifyHint": "Coming soon — the preference is saved now.",
+        "notifyHint": "You'll get a notification when a new job matches this trip.",
         "discoverableLabel": "Be findable on this trip",
         "discoverableHint": "People whose job runs along this trip, and the platform's operators, can see that you pass by and contact you. They never see your address: only the two cities and the upcoming dates.",
         "cancel": "Cancel",

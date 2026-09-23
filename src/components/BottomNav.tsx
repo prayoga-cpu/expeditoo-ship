@@ -22,11 +22,14 @@ interface NavItem {
   labelKey: string;
   icon: React.ReactNode;
   badge?: number;
+  /** Only "My application" uses this — flips access mode before navigating. */
+  onSelect?: () => void;
 }
 
 import { useUnreadMessages } from "@/features/app/messages/hooks";
 import { useAuth } from "@/lib/auth-context";
 import { useActiveAccessMode } from "@/lib/use-active-access-mode";
+import { useApplicationNav } from "@/lib/use-application-nav";
 
 export function BottomNav() {
   const pathname = usePathname();
@@ -34,6 +37,7 @@ export function BottomNav() {
   const t = useTranslations("common.navigation");
   const { user } = useAuth();
   const { mode } = useActiveAccessMode();
+  const applicationNav = useApplicationNav();
 
   // Which bar renders is the same "access mode" MainLayout's desktop
   // sidebar reads (use-active-access-mode.ts) — the two used to disagree,
@@ -95,6 +99,16 @@ export function BottomNav() {
   const driverItems: NavItem[] = [
     { href: "/home", labelKey: "home", icon: <Home className="w-5 h-5" /> },
     { href: "/expedion", labelKey: "jobs", icon: <Plus className="w-5 h-5" /> },
+    // Safe to carry over from carrierItems: `/carrier/trips`' earnings tab is
+    // gated on an owned `carriers` record (`requireOwnCarrier`), not the
+    // `carrier` role, so a driver-only account meets the same 403 a driver
+    // already gets from `/api/carrier/offers` rather than a price it must
+    // never see (see MainLayout.tsx's driverNavItems for the full note).
+    {
+      href: "/carrier/trips",
+      labelKey: "myTrips",
+      icon: <Route className="w-5 h-5" />,
+    },
     {
       href: "/driver/shipments",
       labelKey: "deliveries",
@@ -123,6 +137,7 @@ export function BottomNav() {
       href: "/carrier/application",
       labelKey: "myApplication",
       icon: <FileText className="w-5 h-5" />,
+      onSelect: applicationNav,
     },
     {
       href: "/deliveries",
@@ -148,6 +163,14 @@ export function BottomNav() {
             <Link
               key={item.href}
               href={item.href}
+              onClick={
+                item.onSelect
+                  ? (e) => {
+                      e.preventDefault();
+                      item.onSelect!();
+                    }
+                  : undefined
+              }
               className={cn(
                 "flex flex-col items-center justify-center gap-1 flex-1 min-w-0 py-3 px-1 min-h-16 transition-all duration-200 relative group",
                 isActive

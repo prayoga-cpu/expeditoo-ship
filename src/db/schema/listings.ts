@@ -104,8 +104,14 @@ export const listings = pgTable(
     packagingLevel: packagingLevelEnum("packaging_level"),
 
     // ---- Where: pickup ----
-    pickupLat: doublePrecision("pickup_lat").notNull(),
-    pickupLng: doublePrecision("pickup_lng").notNull(),
+    // Nullable: a requester who types the address by hand, with no map pin
+    // and no pasted link, can post with no coordinates at all
+    // (0030_nullable_pickup_dropoff.sql). `offers.service.ts` refuses to
+    // award such a listing rather than writing a null into
+    // `shipments.pickup_lat/lng`, which stay NOT NULL — a driver needs a
+    // real point to navigate to.
+    pickupLat: doublePrecision("pickup_lat"),
+    pickupLng: doublePrecision("pickup_lng"),
     pickupAddress: text("pickup_address").notNull(),
     pickupCity: text("pickup_city").notNull(),
     pickupPostalCode: text("pickup_postal_code").notNull(),
@@ -121,8 +127,8 @@ export const listings = pgTable(
     pickupContactPhone: text("pickup_contact_phone"),
 
     // ---- Where: dropoff ----
-    dropoffLat: doublePrecision("dropoff_lat").notNull(),
-    dropoffLng: doublePrecision("dropoff_lng").notNull(),
+    dropoffLat: doublePrecision("dropoff_lat"),
+    dropoffLng: doublePrecision("dropoff_lng"),
     dropoffAddress: text("dropoff_address").notNull(),
     dropoffCity: text("dropoff_city").notNull(),
     dropoffPostalCode: text("dropoff_postal_code").notNull(),

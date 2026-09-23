@@ -41,6 +41,17 @@ const PIN_OVERHANG_PX = 80;
 const FRANCE = { longitude: 2.3522, latitude: 46.6, zoom: 4.6 };
 
 /**
+ * A job posted with a manually-typed address and no map pin has no
+ * coordinates to plot — narrows the type so the compiler, not a runtime
+ * `?? 0`, is what keeps a pin-less job off the map.
+ */
+function hasPickupPin(
+  job: BoardJob
+): job is BoardJob & { pickupLat: number; pickupLng: number } {
+  return job.pickupLat !== null && job.pickupLng !== null;
+}
+
+/**
  * The board as a map: one price pin per job, at the point it is collected.
  *
  * The pin sits on the **pickup**, not the midpoint, because that is the place a
@@ -96,7 +107,11 @@ export function BoardMap({
     if (!map) return;
 
     const points: [number, number][] = [
-      ...jobs.map((job) => [job.pickupLng, job.pickupLat] as [number, number]),
+      // A job posted with a manually-typed address and no map pin contributes
+      // no point to the frame — there is nothing to fit it around.
+      ...jobs
+        .filter(hasPickupPin)
+        .map((job): [number, number] => [job.pickupLng, job.pickupLat]),
       ...(path ?? []),
     ];
     if (points.length === 0) return;
@@ -178,7 +193,7 @@ export function BoardMap({
           </Source>
         )}
 
-        {jobs.map((job) => (
+        {jobs.filter(hasPickupPin).map((job) => (
           <Marker
             key={job.id}
             longitude={job.pickupLng}

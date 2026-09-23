@@ -66,6 +66,10 @@ export const userOriginEnum = pgEnum("user_origin", ["expeditoo", "expedion"]);
 export interface UserPreferences {
   notifications: {
     email: {
+      // Fires from `listings.service.ts`'s `announceListingPosted` the
+      // moment a direct request goes live. The only one of these eight not
+      // already read by a schema older than the UI that shows them.
+      listingPublished: boolean;
       offerReceived: boolean;
       offerAccepted: boolean;
       offerRejected: boolean;
@@ -90,6 +94,7 @@ export interface UserPreferences {
 export const defaultPreferences: UserPreferences = {
   notifications: {
     email: {
+      listingPublished: true,
       offerReceived: true,
       offerAccepted: true,
       offerRejected: true,

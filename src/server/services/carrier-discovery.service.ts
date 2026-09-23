@@ -111,6 +111,19 @@ async function matchesFor(
   listing: ListingRow,
   viewerId: string
 ): Promise<RankedMatch[]> {
+  // A listing posted with a manually-typed address and no map pin has no
+  // geography to match a declared trajet against — the corridor arithmetic
+  // has no null handling of its own, and a naive `?? 0` would silently
+  // project the job to (0°, 0°) instead of skipping it here.
+  if (
+    listing.pickupLat === null ||
+    listing.pickupLng === null ||
+    listing.dropoffLat === null ||
+    listing.dropoffLng === null
+  ) {
+    return [];
+  }
+
   const now = new Date();
   const job: MatchTarget = {
     pickup: { lat: listing.pickupLat, lng: listing.pickupLng },

@@ -197,6 +197,20 @@
       "when": 1788130800000,
       "tag": "0028_carrier_route_country",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1788134400000,
+      "tag": "0029_carrier_route_notify_index",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1788138000000,
+      "tag": "0030_nullable_pickup_dropoff",
+      "breakpoints": true
     }
   ]
 }

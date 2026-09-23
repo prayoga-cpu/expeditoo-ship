@@ -419,6 +419,18 @@ describe("offersService.acceptOffer", () => {
     expect(shipment!.dropoffAddress).toBe("2 place Bellecour");
   });
 
+  it("refuses to award a listing with no map pin — a shipment needs a real point to navigate to", async () => {
+    Object.assign(listingsDal, {
+      getByIdForUpdate: vi
+        .fn()
+        .mockResolvedValue(listing({ pickupLat: null, pickupLng: null })),
+    });
+
+    expect(await codeFrom(() => offersService.acceptOffer("shipper-1", "offer-1")))
+      .toBe("COORDINATES_REQUIRED");
+    expect(listingsDal.createShipment).not.toHaveBeenCalled();
+  });
+
   it("only lets the job's own shipper accept", async () => {
     expect(await codeFrom(() => offersService.acceptOffer("someone-else", "offer-1")))
       .toBe("FORBIDDEN_NOT_SHIPPER");

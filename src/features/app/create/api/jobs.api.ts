@@ -22,6 +22,18 @@ function withFragileNote(values: JobFormOutput): string {
   return note ? `${values.description}\n\nFragile: ${note}` : values.description;
 }
 
+/**
+ * `saveAddress`/`addressLabel` are client-only, the same way `fragileNote` is
+ * — `useJobForm`'s `handleNext` already acts on them (saving to the address
+ * book) before this payload is ever built, so they have nothing left to say
+ * to the API.
+ */
+function stripAddressMeta(endpoint: JobFormOutput["pickup"]) {
+  const { saveAddress: _saveAddress, addressLabel: _addressLabel, ...rest } =
+    endpoint;
+  return rest;
+}
+
 export function toCreatePayload(values: JobFormOutput, publish: boolean) {
   return {
     title: values.title,
@@ -32,8 +44,8 @@ export function toCreatePayload(values: JobFormOutput, publish: boolean) {
     isFragile: values.isFragile,
     needsHelp: values.needsHelp,
     packagingLevel: values.packagingLevel,
-    pickup: values.pickup,
-    dropoff: values.dropoff,
+    pickup: stripAddressMeta(values.pickup),
+    dropoff: stripAddressMeta(values.dropoff),
     pickupFrom: values.pickupFrom.toISOString(),
     pickupUntil: values.pickupUntil.toISOString(),
     dropoffFrom: values.dropoffFrom.toISOString(),

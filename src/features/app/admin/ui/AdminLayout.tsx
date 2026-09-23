@@ -3,6 +3,7 @@
 import { NotificationBell } from "@/components/NotificationBell";
 import { FeedbackLauncher } from "@/features/app/feedback/ui";
 import { AppVersionLink } from "@/components/ui/app-version";
+import { LangToggle } from "@/components/ui/lang-toggle";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -238,6 +239,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                   {tCommon("buttons.back")}
                 </Button>
               </Link>
+              <LangToggle className="mr-1" />
               <FeedbackLauncher />
               <NotificationBell />
             </div>

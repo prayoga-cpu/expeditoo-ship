@@ -2,7 +2,9 @@ import { nanoid } from "nanoid";
 import { shipmentsDal } from "@/server/dal/shipments.dal";
 import { carriersDal } from "@/server/dal/carriers.dal";
 import { listingsDal } from "@/server/dal/listings.dal";
+import { getUserById } from "@/server/dal/users.dal";
 import { notificationsService } from "@/server/services/notifications.service";
+import { emailService } from "@/server/services/email.service";
 import {
   expedionBridgeService,
   notifyExpedion,
@@ -304,6 +306,7 @@ export const shipmentService = {
       `Delivery ${next.toLowerCase().replace("_", " ")}`,
       shipmentId
     );
+    await emailShipmentUpdate(shipmentId, ownership.shipperId, ownership.listingId, next);
     reportToExpedion(ownership.listingId, next, shipmentId);
     requestClientConfirmation(shipmentId, next);
 
@@ -357,6 +360,51 @@ async function notify(
       data: { shipmentId },
     })
     .catch((e) => console.error(`${type} notification failed`, e));
+}
+
+const EMAILABLE_STAGES = ["PICKED_UP", "IN_TRANSIT", "DELIVERED"] as const;
+type EmailableStage = (typeof EMAILABLE_STAGES)[number];
+
+/**
+ * The email half of the same status change `notify` above already sends as a
+ * bell notification, gated by `preferences.notifications.email.shipmentUpdates`
+ * (default true). `ASSIGNED` and `CANCELLED` never reach here: `updateStatus`
+ * throws on `CANCELLED` before this point, and `ASSIGNED` has no transition
+ * that leads to this call.
+ *
+ * Self-contained failure, like `notify` above: a lookup or send going wrong
+ * must not turn a delivery that genuinely happened into a failed status
+ * update, so nothing here is allowed to reject.
+ */
+async function emailShipmentUpdate(
+  shipmentId: string,
+  shipperId: string,
+  listingId: string,
+  status: ShipmentStatusType
+) {
+  if (!EMAILABLE_STAGES.includes(status as EmailableStage)) return;
+
+  try {
+    const user = await getUserById(shipperId);
+    if (!user?.email) return;
+    if (user.preferences?.notifications?.email?.shipmentUpdates === false) {
+      return;
+    }
+
+    const listing = await listingsDal.getById(listingId);
+    if (!listing) return;
+
+    await emailService.sendShipmentUpdateEmail(
+      user.email,
+      user.name,
+      listing.title,
+      shipmentId,
+      status as EmailableStage,
+      `${listing.dropoffAddress}, ${listing.dropoffCity}`
+    );
+  } catch (e) {
+    console.error("shipment_update email failed", e);
+  }
 }
 
 /**

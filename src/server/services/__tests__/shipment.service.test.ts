@@ -29,12 +29,18 @@ vi.mock("@/server/services/payments.service", () => ({
     refundForShipment: vi.fn().mockResolvedValue({}),
   },
 }));
+vi.mock("@/server/dal/users.dal", () => ({ getUserById: vi.fn() }));
+vi.mock("@/server/services/email.service", () => ({
+  emailService: { sendShipmentUpdateEmail: vi.fn().mockResolvedValue(true) },
+}));
 
 import { shipmentService, ShipmentError } from "../shipment.service";
 import { shipmentsDal } from "@/server/dal/shipments.dal";
 import { listingsDal } from "@/server/dal/listings.dal";
 import { shipmentConfirmationsService } from "@/server/services/shipment-confirmations.service";
 import { paymentsService } from "@/server/services/payments.service";
+import { getUserById } from "@/server/dal/users.dal";
+import { emailService } from "@/server/services/email.service";
 
 /** A full user row as the DAL loads it - permission-blind by design. */
 /**
@@ -291,6 +297,129 @@ describe("shipmentService.updateStatus — the confirmation request", () => {
     await move("PENDING", "ASSIGNED");
 
     expect(requestConfirmation).not.toHaveBeenCalled();
+  });
+});
+
+// ========================================
+// The email half of a status change
+// ========================================
+
+describe("shipmentService.updateStatus — the email half", () => {
+  const ownership = (status: string) => ({
+    id: "ship-1",
+    shipperId: "shipper-1",
+    carrierId: "carrier-1",
+    driverId: "driver-1",
+    status,
+    listingId: "job-1",
+  });
+
+  const shipper = (over: Record<string, unknown> = {}) => ({
+    id: "shipper-1",
+    name: "Sofia Shipper",
+    email: "sofia@example.com",
+    preferences: { notifications: { email: { shipmentUpdates: true } } },
+    ...over,
+  });
+
+  const listing = (over: Record<string, unknown> = {}) => ({
+    id: "job-1",
+    title: "Pallet to Marseille",
+    dropoffAddress: "3 quai du Port",
+    dropoffCity: "Marseille",
+    ...over,
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Object.assign(shipmentsDal, {
+      getOwnership: vi.fn(),
+      updateStatus: vi.fn().mockResolvedValue({ id: "ship-1" }),
+      createEvent: vi.fn().mockResolvedValue({}),
+    });
+    Object.assign(listingsDal, {
+      update: vi.fn().mockResolvedValue({}),
+      getById: vi.fn().mockResolvedValue(listing()),
+    });
+    vi.mocked(getUserById).mockResolvedValue(shipper() as never);
+  });
+
+  const move = (from: string, to: string) => {
+    vi.mocked(shipmentsDal.getOwnership).mockResolvedValue(
+      ownership(from) as never
+    );
+    return shipmentService.updateStatus("ship-1", to as never, {
+      userId: "carrier-1",
+    });
+  };
+
+  it("emails the shipper on pickup", async () => {
+    await move("ASSIGNED", "PICKED_UP");
+
+    expect(emailService.sendShipmentUpdateEmail).toHaveBeenCalledWith(
+      "sofia@example.com",
+      "Sofia Shipper",
+      "Pallet to Marseille",
+      "ship-1",
+      "PICKED_UP",
+      "3 quai du Port, Marseille"
+    );
+  });
+
+  it("emails the shipper on in-transit and on delivery too", async () => {
+    await move("PICKED_UP", "IN_TRANSIT");
+    await move("IN_TRANSIT", "DELIVERED");
+
+    const statuses = vi
+      .mocked(emailService.sendShipmentUpdateEmail)
+      .mock.calls.map((call) => call[4]);
+    expect(statuses).toEqual(["IN_TRANSIT", "DELIVERED"]);
+  });
+
+  it("asks for nothing on a stage the client never witnesses", async () => {
+    await move("PENDING", "ASSIGNED");
+
+    expect(emailService.sendShipmentUpdateEmail).not.toHaveBeenCalled();
+  });
+
+  it("stays silent when the shipper opted out", async () => {
+    vi.mocked(getUserById).mockResolvedValue(
+      shipper({
+        preferences: { notifications: { email: { shipmentUpdates: false } } },
+      }) as never
+    );
+
+    await move("ASSIGNED", "PICKED_UP");
+
+    expect(emailService.sendShipmentUpdateEmail).not.toHaveBeenCalled();
+  });
+
+  it("sends by default when no preference has ever been saved", async () => {
+    vi.mocked(getUserById).mockResolvedValue(
+      shipper({ preferences: null }) as never
+    );
+
+    await move("ASSIGNED", "PICKED_UP");
+
+    expect(emailService.sendShipmentUpdateEmail).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not let a failed send fail the status update", async () => {
+    vi.mocked(emailService.sendShipmentUpdateEmail).mockRejectedValueOnce(
+      new Error("resend down")
+    );
+
+    await expect(move("ASSIGNED", "PICKED_UP")).resolves.toMatchObject({
+      id: "ship-1",
+    });
+  });
+
+  it("does not let a lookup failure fail the status update", async () => {
+    vi.mocked(getUserById).mockRejectedValueOnce(new Error("db down"));
+
+    await expect(move("ASSIGNED", "PICKED_UP")).resolves.toMatchObject({
+      id: "ship-1",
+    });
   });
 });
 

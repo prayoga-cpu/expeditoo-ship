@@ -3,6 +3,7 @@ import { listingsDal, type BrowseFilters } from "@/server/dal/listings.dal";
 import { shipmentsDal } from "@/server/dal/shipments.dal";
 import { offersService } from "@/server/services/offers.service";
 import { notificationsService } from "@/server/services/notifications.service";
+import { carrierRouteAlertsService } from "@/server/services/carrier-route-alerts.service";
 import { emailService } from "@/server/services/email.service";
 import { isSystemAccount } from "@/server/services/account-policy";
 import { getUserById } from "@/server/dal/users.dal";
@@ -14,6 +15,7 @@ import {
   type UpdateListingInput,
 } from "@/server/dto/listings.dto";
 import type { InsertListing, Listing } from "@/db/schema/listings";
+import type { Viewer } from "@/server/services/shipment.service";
 
 // ========================================
 // Errors
@@ -76,8 +78,10 @@ function toInsert(
     needsHelp: data.needsHelp,
     packagingLevel: data.packagingLevel,
 
-    pickupLat: data.pickup.lat,
-    pickupLng: data.pickup.lng,
+    // Explicit null, not undefined: Drizzle treats an undefined insert field
+    // as "use the column default," and there is no default for these two.
+    pickupLat: data.pickup.lat ?? null,
+    pickupLng: data.pickup.lng ?? null,
     pickupAddress: data.pickup.address,
     pickupCity: data.pickup.city,
     pickupPostalCode: data.pickup.postalCode,
@@ -88,8 +92,8 @@ function toInsert(
     pickupContactName: data.pickup.contactName,
     pickupContactPhone: data.pickup.contactPhone,
 
-    dropoffLat: data.dropoff.lat,
-    dropoffLng: data.dropoff.lng,
+    dropoffLat: data.dropoff.lat ?? null,
+    dropoffLng: data.dropoff.lng ?? null,
     dropoffAddress: data.dropoff.address,
     dropoffCity: data.dropoff.city,
     dropoffPostalCode: data.dropoff.postalCode,
@@ -119,7 +123,18 @@ function assertOwner(listing: Listing | undefined, userId: string): Listing {
 }
 
 export const listingsService = {
-  async createListing(shipperId: string, data: CreateListingInput) {
+  /**
+   * `options.notifyRouteMatches` defaults true and is not part of the
+   * client-facing DTO — `escalate` is the one caller that passes `false`, for
+   * `assignDirect` (carrier_route_alerts_spec.md §3): that path awards a
+   * pre-chosen driver moments after this returns, with no gap another carrier
+   * could act in, so alerting the rest of the board would be spurious.
+   */
+  async createListing(
+    shipperId: string,
+    data: CreateListingInput,
+    options: { notifyRouteMatches?: boolean } = {}
+  ) {
     const now = new Date();
 
     // A draft may sit unposted, so the pickup window is only enforced when the
@@ -170,6 +185,18 @@ export const listingsService = {
     // publishes it.
     if (data.publish && !data.scheduledPublishAt && !isSystemAccount(shipperId)) {
       await announceListingPosted(listing, shipperId);
+    }
+
+    // A scheduled listing is not live yet: `publishScheduled` fires this same
+    // alert once its instant actually arrives.
+    if (
+      data.publish &&
+      !data.scheduledPublishAt &&
+      options.notifyRouteMatches !== false
+    ) {
+      await carrierRouteAlertsService
+        .notifyMatchingCarriers(listing)
+        .catch((e) => console.error("carrier_route_match notify failed", e));
     }
 
     return listing;
@@ -262,6 +289,17 @@ export const listingsService = {
 
   async browse(filters: BrowseFilters) {
     return await listingsDal.browse(filters);
+  },
+
+  /** `GET /api/admin/listings` — every status, admin/operator only. */
+  async adminList(
+    viewer: Viewer,
+    filters: { status?: Listing["status"]; page: number; limit: number }
+  ) {
+    if (!viewer.isAdmin && !viewer.isOperator) {
+      throw err("FORBIDDEN_ROLE", 403);
+    }
+    return await listingsDal.adminList(filters);
   },
 
   async getListing(listingId: string, viewerId: string | null) {
@@ -392,6 +430,9 @@ export const listingsService = {
           data: { listingId: listing.id },
         })
         .catch((e) => console.error("listing_scheduled_published notification failed", e));
+      await carrierRouteAlertsService
+        .notifyMatchingCarriers(listing)
+        .catch((e) => console.error("carrier_route_match notify failed", e));
       published++;
     }
 
@@ -444,8 +485,13 @@ function flattenUpdate(data: UpdateListingInput): Record<string, unknown> {
 
   if (pickup) {
     Object.assign(out, {
-      pickupLat: pickup.lat,
-      pickupLng: pickup.lng,
+      // Explicit null: `pickup` arrives whole or not at all (never a partial
+      // patch of just some of its fields), so an absent lat/lng here means
+      // the edit genuinely switched to a pin-less endpoint and must clear
+      // the stored value — leaving it `undefined` would drop it from the
+      // `SET` clause and silently keep the old coordinates.
+      pickupLat: pickup.lat ?? null,
+      pickupLng: pickup.lng ?? null,
       pickupAddress: pickup.address,
       pickupCity: pickup.city,
       pickupPostalCode: pickup.postalCode,
@@ -459,8 +505,8 @@ function flattenUpdate(data: UpdateListingInput): Record<string, unknown> {
   }
   if (dropoff) {
     Object.assign(out, {
-      dropoffLat: dropoff.lat,
-      dropoffLng: dropoff.lng,
+      dropoffLat: dropoff.lat ?? null,
+      dropoffLng: dropoff.lng ?? null,
       dropoffAddress: dropoff.address,
       dropoffCity: dropoff.city,
       dropoffPostalCode: dropoff.postalCode,
@@ -501,6 +547,7 @@ async function announceListingPosted(listing: Listing, shipperId: string) {
 async function sendListingPostedEmail(listing: Listing, shipperId: string) {
   const user = await getUserById(shipperId);
   if (!user?.email) return;
+  if (user.preferences?.notifications?.email?.listingPublished === false) return;
 
   await emailService.sendListingPostedEmail(user.email, {
     recipientName: user.name,

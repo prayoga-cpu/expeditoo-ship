@@ -419,6 +419,20 @@ describe("listForListing — the match", () => {
     );
   });
 
+  it("returns no matches for a listing with no map pin, without asking the prefilter", async () => {
+    givenListing(listing({ pickupLat: null, pickupLng: null }));
+    givenCandidates([candidate({ routeId: "route-1", carrierId: "carrier-1" })]);
+
+    const result = await carrierDiscoveryService.listForListing(
+      OWNER,
+      "listing-1"
+    );
+
+    expect(result.total).toBe(0);
+    expect(result.items).toEqual([]);
+    expect(carrierRoutesDal.findMatchCandidates).not.toHaveBeenCalled();
+  });
+
   it("starts the walk today when the window is already open", async () => {
     givenListing(listing({ pickupFrom: new Date(2026, 7, 20) }));
 

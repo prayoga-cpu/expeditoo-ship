@@ -20,8 +20,8 @@ export type OfferStatus =
   | "expired";
 
 export interface JobEndpoint {
-  lat: number;
-  lng: number;
+  lat: number | null;
+  lng: number | null;
   address: string;
   city: string;
   postalCode: string;
@@ -49,15 +49,17 @@ export interface Job {
   pickupCity: string;
   pickupPostalCode: string;
   pickupLocationType: string;
-  pickupLat: number;
-  pickupLng: number;
+  // Null when the requester typed the address by hand with no map pin and
+  // no pasted link — the job is still real, it just has no coordinates.
+  pickupLat: number | null;
+  pickupLng: number | null;
 
   dropoffAddress: string;
   dropoffCity: string;
   dropoffPostalCode: string;
   dropoffLocationType: string;
-  dropoffLat: number;
-  dropoffLng: number;
+  dropoffLat: number | null;
+  dropoffLng: number | null;
 
   pickupFrom: string;
   pickupUntil: string;

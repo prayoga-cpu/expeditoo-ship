@@ -4,6 +4,7 @@ import {
   TIME_SLOTS,
 } from "@/lib/availability-window";
 import { MAX_PATH_POINTS } from "@/lib/route-corridor";
+import { listingStatusEnum } from "@/db/schema/listings";
 
 // ========================================
 // Listings DTO — the transport job
@@ -55,8 +56,12 @@ const metresBetween = (
 };
 
 const endpointSchema = z.object({
-  lat: z.number().min(-90).max(90),
-  lng: z.number().min(-180).max(180),
+  // Optional: a requester who types the address by hand, with no map pin and
+  // no pasted link, can post with no coordinates at all. `address`/`city`/
+  // `postalCode` stay required either way — a job always needs a readable
+  // destination, coordinates are the map's convenience on top of that.
+  lat: z.number().min(-90).max(90).optional(),
+  lng: z.number().min(-180).max(180).optional(),
   address: z.string().min(1, "Address is required"),
   city: z.string().min(1, "City is required"),
   postalCode: z.string().regex(/^\d{5}$/, "INVALID_POSTAL_CODE"),
@@ -162,7 +167,14 @@ export const createListingSchema = baseListingSchema.superRefine((data, ctx) => 
     ["pickup", data.pickup],
     ["dropoff", data.dropoff],
   ] as const) {
-    if (!isInFrance(endpoint.lat, endpoint.lng)) {
+    // Nothing to bound-check for a pin-less, manually-typed endpoint — there
+    // is no coordinate to be out of France. The address itself is not
+    // verified against any gazetteer; that is the tradeoff this mode accepts.
+    if (
+      endpoint.lat !== undefined &&
+      endpoint.lng !== undefined &&
+      !isInFrance(endpoint.lat, endpoint.lng)
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "LOCATION_OUT_OF_COUNTRY",
@@ -172,13 +184,22 @@ export const createListingSchema = baseListingSchema.superRefine((data, ctx) => 
     requireApartmentDetail(endpoint, ctx, side);
   }
 
-  const separation = metresBetween(
-    data.pickup.lat,
-    data.pickup.lng,
-    data.dropoff.lat,
-    data.dropoff.lng
-  );
-  if (separation < MIN_ROUTE_METRES) {
+  // Only checkable when both ends have real coordinates — a manually-typed
+  // endpoint on either side means there is no distance to measure, so the
+  // guard is skipped rather than half-applied against whichever side has a pin.
+  const separation =
+    data.pickup.lat !== undefined &&
+    data.pickup.lng !== undefined &&
+    data.dropoff.lat !== undefined &&
+    data.dropoff.lng !== undefined
+      ? metresBetween(
+          data.pickup.lat,
+          data.pickup.lng,
+          data.dropoff.lat,
+          data.dropoff.lng
+        )
+      : null;
+  if (separation !== null && separation < MIN_ROUTE_METRES) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message: "PICKUP_DROPOFF_TOO_CLOSE",
@@ -341,5 +362,20 @@ export const browseListingsQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(50).default(20),
 });
+
+/**
+ * `GET /api/admin/listings` — a moderation view over every job, not just the
+ * open ones a driver can bid on. `browseListingsQuerySchema` above is the
+ * board's own filter set (corridor, radius, availability) and hardcodes
+ * `status = 'open'` in `listingsDal.browse`; reusing it here would make a
+ * draft, awarded, in-progress, completed or cancelled job invisible to staff.
+ */
+export const adminListingsQuerySchema = z.object({
+  status: z.enum(listingStatusEnum.enumValues).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+});
+
+export type AdminListingsQuery = z.infer<typeof adminListingsQuerySchema>;
 
 export type BrowseListingsQuery = z.infer<typeof browseListingsQuerySchema>;

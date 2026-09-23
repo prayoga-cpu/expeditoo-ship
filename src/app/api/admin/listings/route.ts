@@ -1,22 +1,19 @@
-import { listingsDal } from "@/server/dal/listings.dal";
+import { listingsService } from "@/server/services/listings.service";
 import { resolveViewer } from "@/server/services/viewer.service";
-import { browseListingsQuerySchema } from "@/server/dto/listings.dto";
-import { ok, unauthorised, handleError, fail } from "@/lib/api-response";
+import { adminListingsQuerySchema } from "@/server/dto/listings.dto";
+import { ok, unauthorised, handleError } from "@/lib/api-response";
 
-/** GET /api/admin/listings — moderation view over the marketplace. */
+/** GET /api/admin/listings — moderation view over every job, any status. */
 export async function GET(req: Request) {
   try {
     const viewer = await resolveViewer();
     if (!viewer) return unauthorised();
-    if (!viewer.isAdmin && !viewer.isOperator) {
-      return fail("FORBIDDEN_ROLE", "Admin access required", 403);
-    }
 
-    const query = browseListingsQuerySchema.parse(
+    const query = adminListingsQuerySchema.parse(
       Object.fromEntries(new URL(req.url).searchParams)
     );
 
-    return ok(await listingsDal.browse(query));
+    return ok(await listingsService.adminList(viewer, query));
   } catch (error) {
     return handleError(error, "Admin list listings");
   }

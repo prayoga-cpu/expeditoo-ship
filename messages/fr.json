@@ -40,6 +40,7 @@
       "backToApp": "Retour à l'app",
       "shipmentTracking": "Suivi d'expédition",
       "jobs": "Missions",
+      "browseJobs": "Voir les demandes",
       "myOffers": "Mes offres",
       "deliveries": "Livraisons",
       "myApplication": "Mon dossier",
@@ -114,6 +115,8 @@
       "postalCode": "Code postal",
       "city": "Ville",
       "cantFindLocation": "Vous ne trouvez pas ? Collez un lien de carte",
+"enterManually": "Vous ne trouvez pas ? Saisissez l'adresse manuellement",
+"useMapInstead": "Utiliser la carte à la place",
       "linkLabel": "Lien vers l'emplacement",
       "linkPlaceholder": "Collez un lien Google Maps, Apple Maps ou OpenStreetMap",
       "useLink": "Utiliser le lien",
@@ -531,9 +534,18 @@
     "notifications": {
       "title": "Notifications par email",
       "description": "Choisissez les emails que vous souhaitez recevoir d'EXPEDITOO.",
-      "auctionResults": {
-        "title": "Messages d'annonces",
-        "description": "Recevez les informations liées aux annonces, trajets, retraits et livraisons."
+      "loadError": "Impossible de charger vos préférences de notification. Essayez de recharger la page.",
+      "listingPublished": {
+        "title": "Annonce publiée",
+        "description": "Une confirmation par email dès que votre demande est en ligne sur le tableau."
+      },
+      "driverPayment": {
+        "title": "Transporteur & paiement",
+        "description": "Votre reçu, envoyé dès qu'un transporteur est confirmé et le paiement effectué."
+      },
+      "tripUpdates": {
+        "title": "Suivi du trajet",
+        "description": "Retrait, en cours de livraison et livré — un email par étape."
       },
       "accountSecurity": {
         "title": "Compte & Sécurité",
@@ -878,7 +890,8 @@
       "draftSaved": "Brouillon enregistré",
       "pickupTooSoon": "Le retrait est trop proche pour laisser le temps d'enchérir. Reportez-le.",
       "schedulePast": "Cette heure de publication est trop proche ou déjà passée. Choisissez-en une plus tard.",
-      "failed": "Impossible de publier votre demande. Veuillez réessayer."
+      "failed": "Impossible de publier votre demande. Veuillez réessayer.",
+      "addressSaveFailed": "Impossible d'enregistrer cette adresse dans votre profil. Votre demande n'est pas affectée."
     },
     "what": {
       "titleLabel": "Que transportez-vous ?",
@@ -946,24 +959,29 @@
         }
       },
       "photos": "Photos (facultatif)",
-      "weightExact": "Poids exact (kg)",
-      "weightExactOptional": "Poids exact (kg), si vous le connaissez",
+      "weightExact": "Poids exact",
+      "weightExactOptional": "Poids exact, si vous le connaissez",
+      "weightUnit": {
+        "label": "Unité",
+        "kg": "kg",
+        "t": "t"
+      },
       "weightBrackets": {
         "upTo5": {
           "label": "Jusqu'à 5 kg",
-          "example": "Un colis, une montre"
+          "example": "Un colis, une montre, un ordinateur portable"
         },
         "upTo30": {
           "label": "5 – 30 kg",
-          "example": "Une valise, un carton"
+          "example": "Une valise, un carton, un vélo"
         },
         "upTo100": {
           "label": "30 – 100 kg",
-          "example": "Un lave-linge, un fauteuil"
+          "example": "Un lave-linge, un fauteuil, une table"
         },
         "upTo500": {
           "label": "100 – 500 kg",
-          "example": "Une moto, plusieurs meubles"
+          "example": "Une moto, une armoire, plusieurs meubles"
         },
         "upTo1000": {
           "label": "500 kg – 1 t",
@@ -1016,6 +1034,11 @@
     "where": {
       "pickup": "Retrait",
       "dropoff": "Livraison",
+      "defaultAddress": "Par défaut",
+      "useNewAddress": "Saisir une nouvelle adresse",
+      "saveAddress": "Enregistrer cette adresse dans mon profil",
+      "addressLabelField": "Libellé (facultatif)",
+      "addressLabelPlaceholder": "Ex : Domicile, Travail",
       "locationType": "Type de lieu",
       "select": "Sélectionner",
       "floor": "Étage",
@@ -3129,7 +3152,7 @@
         "capacity": "Capacité disponible (kg)",
         "capacityPlaceholder": "ex. 800",
         "notify": "M'alerter des courses correspondantes",
-        "notifyHint": "Bientôt disponible — la préférence est déjà enregistrée.",
+        "notifyHint": "Vous recevrez une notification quand une nouvelle course correspond à ce trajet.",
         "discoverableLabel": "Être trouvable sur ce trajet",
         "discoverableHint": "Les personnes dont la course se fait le long de ce trajet, et les opérateurs de la plateforme, voient que vous passez par là et peuvent vous contacter. Ils ne voient jamais votre adresse : seulement les deux villes et les prochaines dates.",
         "cancel": "Annuler",

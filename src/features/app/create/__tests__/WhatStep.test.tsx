@@ -88,7 +88,7 @@ describe("weight", () => {
     choose("weight-upTo30");
 
     // The required, freight-only field is not this one...
-    expect(screen.queryByLabelText(/^Poids exact \(kg\)(?!,)/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Poids exact(?!,)/)).not.toBeInTheDocument();
     // ...but an optional figure that would refine the bracket is offered.
     expect(screen.getByLabelText(/si vous le connaissez/)).toBeInTheDocument();
   });
@@ -106,7 +106,7 @@ describe("weight", () => {
 
     fireEvent.click(screen.getByRole("radio", { name: /Plus d'1 t/ }));
 
-    expect(screen.getByLabelText(/^Poids exact \(kg\)(?!,)/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Poids exact(?!,)/)).toBeInTheDocument();
   });
 
   it("takes the figure away again when a lighter bracket is chosen", () => {
@@ -116,7 +116,7 @@ describe("weight", () => {
     choose("weight-upTo5");
 
     // The required freight field is gone...
-    expect(screen.queryByLabelText(/^Poids exact \(kg\)(?!,)/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Poids exact(?!,)/)).not.toBeInTheDocument();
     // ...and the optional one for the new bracket starts empty rather than
     // carrying over whatever was typed for the abandoned freight bracket.
     const optional = screen.getByLabelText(

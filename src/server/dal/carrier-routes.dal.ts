@@ -70,6 +70,12 @@ async function replaceDates(
 // flags, capacity and stored dates, with no trig per row and no sqrt. It may
 // narrow the candidate set and may never decide a match — `matchRoute` in
 // src/lib/route-match.ts is the predicate (carriers_on_route_spec.md §3.6).
+//
+// Two consumers, one shared shape: `findMatchCandidates` (discovery, gated on
+// `is_discoverable`) and `findNotifyCandidates` (alerts, gated on
+// `notify_on_match` — carrier_route_alerts_spec.md §5). The two flags are
+// independent by design, so each gets its own WHERE rather than one query
+// trying to serve both.
 
 /** The job, as the prefilter reads it. */
 export interface MatchCandidateQuery {
@@ -131,37 +137,59 @@ const withinPaddedBox = (point: LatLng): SQL => {
   )`;
 };
 
+/**
+ * Conditions every consumer needs regardless of which consent flag gates it:
+ * an approved, un-banned carrier; capacity; a run inside the job's window;
+ * both endpoints inside the padded box.
+ */
+const sharedCandidateConditions = (job: MatchCandidateQuery) => [
+  eq(carriers.status, "approved"),
+  eq(user.banned, false),
+  // A trajet that declares no capacity is not excluded (spec §3.4).
+  or(
+    isNull(carrierRoutes.capacityKg),
+    gte(carrierRoutes.capacityKg, job.weightKg)
+  ),
+  // A recurring trajet's runs are computed from `days_of_week`, which SQL
+  // cannot walk, so it is admitted and decided in TypeScript. An occasional
+  // one has to hold a stored date inside the window to be worth reading.
+  or(
+    eq(carrierRoutes.kind, "recurring"),
+    exists(
+      db
+        .select({ one: sql`1` })
+        .from(carrierRouteDates)
+        .where(
+          and(
+            eq(carrierRouteDates.routeId, carrierRoutes.id),
+            gte(carrierRouteDates.date, job.windowStart),
+            lte(carrierRouteDates.date, job.windowEnd)
+          )
+        )
+    )
+  ),
+  withinPaddedBox(job.pickup),
+  withinPaddedBox(job.dropoff),
+];
+
 const matchCandidateWhere = (job: MatchCandidateQuery) =>
   and(
     eq(carrierRoutes.isActive, true),
     eq(carrierRoutes.isDiscoverable, true),
-    eq(carriers.status, "approved"),
-    eq(user.banned, false),
-    // A trajet that declares no capacity is not excluded (spec §3.4).
-    or(
-      isNull(carrierRoutes.capacityKg),
-      gte(carrierRoutes.capacityKg, job.weightKg)
-    ),
-    // A recurring trajet's runs are computed from `days_of_week`, which SQL
-    // cannot walk, so it is admitted and decided in TypeScript. An occasional
-    // one has to hold a stored date inside the window to be worth reading.
-    or(
-      eq(carrierRoutes.kind, "recurring"),
-      exists(
-        db
-          .select({ one: sql`1` })
-          .from(carrierRouteDates)
-          .where(
-            and(
-              eq(carrierRouteDates.routeId, carrierRoutes.id),
-              gte(carrierRouteDates.date, job.windowStart),
-              lte(carrierRouteDates.date, job.windowEnd)
-            )
-          )
-      )
-    ),
-    withinPaddedBox(job.pickup),
-    withinPaddedBox(job.dropoff)
+    ...sharedCandidateConditions(job)
+  );
+
+/**
+ * Trajets whose carrier asked to be alerted rather than found — the
+ * notify-on-match fan-out (carrier_route_alerts_spec.md §5). `notify_on_match`
+ * and `is_discoverable` are independent consents (`carrier-routes.ts` lines
+ * 95–101): a trajet kept private from requesters can still want alerts.
+ */
+const notifyCandidateWhere = (job: MatchCandidateQuery) =>
+  and(
+    eq(carrierRoutes.isActive, true),
+    eq(carrierRoutes.notifyOnMatch, true),
+    ...sharedCandidateConditions(job)
   );
 
 /**
@@ -324,6 +352,23 @@ export const carrierRoutesDal = {
       .innerJoin(carriers, eq(carriers.id, carrierRoutes.carrierId))
       .innerJoin(user, eq(user.id, carriers.userId))
       .where(matchCandidateWhere(job))
+      .limit(limit);
+
+    return await attachDates(rows);
+  },
+
+  /**
+   * Trajets that might cover this job and whose carrier asked to be alerted —
+   * the same shape as `findMatchCandidates`, gated on `notify_on_match`
+   * instead of `is_discoverable` (carrier_route_alerts_spec.md §5).
+   */
+  async findNotifyCandidates(job: MatchCandidateQuery, limit: number) {
+    const rows = await db
+      .select(matchCandidateColumns)
+      .from(carrierRoutes)
+      .innerJoin(carriers, eq(carriers.id, carrierRoutes.carrierId))
+      .innerJoin(user, eq(user.id, carriers.userId))
+      .where(notifyCandidateWhere(job))
       .limit(limit);
 
     return await attachDates(rows);

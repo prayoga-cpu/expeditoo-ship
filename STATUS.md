@@ -35,6 +35,21 @@ than leaving it in a chat message.
       insert; on a database that hasn't run these two migrations, that turns
       into "column does not exist" and **every new transport request and
       every new declared trip fails**, not just the new fields. See 2.47.0.
+- [ ] **Run `Actions → Migrate database` for `0029_carrier_route_notify_index`
+      too**, alongside `0027`/`0028` above. Additive only (`CREATE INDEX IF
+      NOT EXISTS`), so a delayed run costs query speed on the new
+      carrier-route-alert fan-out, not a hard failure. See 2.48.0.
+- [ ] **Run `Actions → Migrate database` for `0030_nullable_pickup_dropoff`
+      too.** `listings.service.ts`'s `toInsert`/`flattenUpdate` now write an
+      explicit `null` for a manually-typed endpoint's `pickup_lat`/`pickup_lng`
+      / `dropoff_lat`/`dropoff_lng` — on a database still enforcing `NOT NULL`
+      on those four columns, that is a hard Postgres constraint violation on
+      the very first request posted without a map pin, not a graceful
+      failure. See 2.50.0.
+- [ ] **Close feedback ticket `Mt-mRHuT6yVL3XM6O0vcf`** (the alert-types half,
+      flagged unbuilt in 2.47.0) from `/admin/feedback` once the alert is
+      confirmed live — this session has no production database write access.
+      See 2.48.0.
 - [ ] **Close out the 18 feedback tickets this session addresses**, once the
       above migration has run and the fixes are confirmed live: 3 were
       already done (quantity-beside-item, SIRET validation, "add another
@@ -186,6 +201,459 @@ than leaving it in a chat message.
       in `.env.example`.
 
 ---
+
+## ✅ 2026-09-23 — Coordinate-Optional Posting, Weight Unit Toggle, Row-Click (2.50.0)
+
+Three follow-ups from the same conversation as 2.47.0's feedback-ticket
+closeout, on the live product rather than the queue: a screenshot showing
+"Place the pin on the map" still blocking a request whose address had
+already been typed by hand, a request for a kg/tonne toggle plus bigger
+cards on the weight step, and a request to make the whole carrier-application
+row clickable rather than only its eye icon.
+
+**Coordinate-optional posting.** The largest of the three. Asked first
+whether the resolution should be "auto-geocode the typed address" or "let
+the platform genuinely hold a listing with no coordinates" — chose the
+latter, which is a materially bigger change than it sounds, because
+`pickupLat`/`pickupLng`/`dropoffLat`/`dropoffLng` are load-bearing for the
+France-bounds check, the minimum-route-distance check, board proximity
+search, and the new (2.48.0) carrier-route-alert matching — none of which
+had ever seen a null there. A read-only discovery pass across every
+consumer (`carrier-discovery.service.ts`, `carrier-route-alerts.service.ts`,
+`offers.service.ts`, `listings.dal.ts`, `BoardMap.tsx`, `JobCard.tsx`,
+the Expedion bridge) came back with two genuine crash sites, three
+silent-wrong-behaviour sites, and confirmation that the board's own SQL
+proximity search needed no change at all — a NULL column already drops out
+of a `lte(...)` comparison under Postgres's three-valued logic, exactly the
+"skip this listing" behaviour every one of those searches wants.
+
+`0030_nullable_pickup_dropoff.sql` drops `NOT NULL` on all four `listings`
+coordinate columns. Both `endpointSchema` copies (`listings.dto.ts`,
+`create/schemas.ts`) made `lat`/`lng` `.optional()` and wrapped the
+France-bounds and minimum-route-distance checks in a guard that skips them
+outright when either side has no coordinates, rather than half-running them
+against a bracket that no longer exists — `address`/`city`/`postalCode`
+stay required either way, so a job never loses its readable destination,
+only the pin. `listings.service.ts`'s `toInsert`/`flattenUpdate` write an
+explicit `?? null` rather than leaving the field `undefined` — Drizzle reads
+`undefined` as "use the column default," and there is no default for either
+column, which on an `UPDATE` would have silently kept a stale pin instead of
+clearing it.
+
+**What still requires real coordinates, deliberately:** a shipment.
+`shipments.pickup_lat`/`dropoff_lat` stay `NOT NULL` — a driver needs a real
+point to navigate to — so `offers.service.ts`'s `commitAward` now refuses
+with a new `COORDINATES_REQUIRED` (422) the moment it locks a listing with a
+null coordinate, before the transaction that would otherwise hit that
+constraint even opens. Posting is coordinate-optional; awarding isn't. This
+is the one call site the discovery pass flagged as a genuine product
+decision rather than a type fix, and it was resolved by asking what a
+listing with no coordinates should be able to do, not by guessing.
+
+`carrier-discovery.service.ts`'s `matchesFor` and the new
+`carrier-route-alerts.service.ts`'s `jobFor` both return early (`[]` /
+`null`) for a listing with any null coordinate, instead of letting `null *
+scale` silently project the job to (0°, 0°) — off the West African coast —
+and have the corridor math fail every real match by accident rather than by
+a guard that says why. `BoardMap.tsx` filters pin-less jobs out of both the
+`fitBounds` point list and the marker render loop (a `hasPickupPin` type
+predicate, not a `?? 0` that would have pulled the map toward Null Island);
+`JobCard.tsx`'s `Endpoint` skips the "near <city>" bearing line the same
+way. `listing/types.ts`'s `Job.pickupLat`/`pickupLng`/`dropoffLat`/
+`dropoffLng` (and the currently-unused `JobEndpoint.lat`/`lng`) widened to
+`number | null` to make all of this the compiler's problem, not a runtime
+surprise.
+
+**The UI**, in `LocationPickerField.tsx` (shared by trips, the admin
+Expedion dialog, and `/create`'s pickup/dropoff): a new `allowManualOnly`
+prop, off by default, so a trip declaration or an Expedion quote — both of
+which still require a real point — render exactly as before. Where it's on,
+a new `mode: "assisted" | "manual"` local state governs three rules asked
+for directly: a successful pin (search, click, or a pasted link) locks the
+address/postal/city inputs, since the map just supplied them; "Can't find
+it?" switches to manual mode, which hides the interactive map/search
+entirely and unlocks the fields for typing; and a manually-filled endpoint
+needs no pin to submit, because the schema no longer asks for one. Switching
+either direction clears the fields the other mode owns, rather than leaving
+a half-populated endpoint. `JobForm.tsx`'s `onChange` handler for the
+picker used to silently drop a `null` lat/lng (`if (next.lat !== null)
+setValue(...)`) — harmless before, since nothing ever sent one — and had to
+be fixed to actually clear the form field, or a mode switch's own reset
+would never reach react-hook-form.
+
+**Weight unit toggle + card sizing.** `WeightBracketField`'s two
+exact-weight inputs (the required one for `over1000`, the new optional one
+from 2.47.0) were pulled into one `WeightExactInput` component, adding a
+kg/t `Select`. The kilogram figure is the only thing ever stored or
+validated — `t` is purely a display conversion at the input's edges, with
+its own step (`0.001`) and `min` so a tonne figure doesn't have to be typed
+as an unwieldy multiple of a kilogram one. Fixed on the way past: the new
+optional field's longer label (`weightExactOptional`) wrapped to two lines
+under `Label`'s `leading-none`, and with no gap between `Label` and `Input`
+in that div, the input's top border visually crossed the label's descender
+on the second line — invisible for the original field because its shorter
+label never wrapped. `OptionCard` (shared by weight and size) grew from
+`p-3`/`min-h` implicit to `p-4`/`min-h-[92px]`, and each weight bracket's
+example gained a third item, both cosmetic.
+
+**Row click.** `CarrierApplicationsList.tsx` passes `onRowClick` to
+`DataTable` — a prop the shared component has had since it was built, with
+nobody as its first consumer. The eye icon's own `onClick` gained
+`stopPropagation` so one click doesn't fire the same `handleViewDetail`
+twice.
+
+**Judgment calls**
+- Coordinate-optional vs. auto-geocode was asked, not guessed — the two
+  produce materially different data-integrity guarantees for the matching
+  engine, and this codebase's own comments (`FRANCE_BOUNDS`'s "v2.0 is
+  France-only (ROADMAP.md §9)") treat that class of decision as a product
+  call, not an implementation detail.
+- `notifyMatchingCarriers`'s own null-coordinate guard (this session) and
+  `matchesFor`'s (this session) are two separate, independent checks rather
+  than one shared helper — both are three-line early returns on the same
+  four fields, and a shared helper would need its own file for what is,
+  twice, "return the empty case."
+
+**Verification**
+- `npx tsc --noEmit`: 0 errors, whole repo, checked after every file.
+- `pnpm lint`: 0 errors (83 pre-existing warnings, none in a file this
+  session touched).
+- `pnpm vitest run`: **1726/1726 passing.** New: 3 cases in
+  `create/__tests__/schemas.test.ts` (manual endpoint accepted; France-bounds
+  and minimum-route checks both skip when a side has no pin), 1 in
+  `offers.service.test.ts` (`COORDINATES_REQUIRED`, and `createShipment`
+  never called), 1 in `carrier-discovery.service.test.ts` (empty match list,
+  prefilter never asked), 1 in `carrier-route-alerts.service.test.ts` (no
+  notification, prefilter never asked).
+- `pnpm build`: succeeds.
+- **Checked live in Chromium** against a local Postgres with `0030` applied
+  and a throwaway admin account: searching a real address locks the
+  address/postal/city fields; "Can't find it?" hides the interactive map and
+  unlocks them; "Use the map instead" switches back; a manually-filled
+  pickup carries no blocking pin error. Row click on `/admin/applications`
+  opens the same detail dialog the eye icon does, from anywhere on the row.
+  One tooling note, not a product bug: driving the weight-bracket
+  `RadioGroupItem` by its `id` directly times out in Playwright, because the
+  input is `sr-only` with no clickable area of its own — a real click has to
+  land on the wrapping `<label>`, which was confirmed separately to work.
+
+**Known limits**
+- Migration `0030` has not run anywhere but a local database — see Operator
+  to-do. This is the third such migration this session pushes to that list;
+  the deploy sequencing (`Actions → Migrate database` before the code that
+  needs it) is unchanged from 2.47.0's note.
+- This session again has no production database write access
+  (`MIRROR_SOURCE_URL` is `mirror_readonly`) — nothing here was verified
+  against production, only against a local database with the same migration
+  applied.
+- The full four-step `/create` wizard was not driven end to end to a
+  successful `POST /api/listings` in this session's Chromium pass — the
+  `Where` step's coordinate-optional behaviour was confirmed directly
+  (fields lock/unlock, pin error does not block), but the `When`/`Budget`
+  steps and the actual submit were not exercised together with a
+  manually-typed, pin-less endpoint. The schema and service-level tests
+  cover that combination; a live end-to-end pass does not yet.
+
+- [x] **Coordinate-optional posting**: new `db/migrations/0030_nullable_pickup_dropoff.sql`
+      + `meta/_journal.json` (idx 29), `db/schema/listings.ts` (four columns),
+      `server/dto/listings.dto.ts` (`endpointSchema`, both guards),
+      `create/schemas.ts` (same, client mirror), `server/services/listings.service.ts`
+      (`toInsert`, `flattenUpdate`), `server/services/offers.service.ts`
+      (`commitAward`'s `COORDINATES_REQUIRED` guard), `server/services/carrier-discovery.service.ts`
+      (`matchesFor`), `server/services/carrier-route-alerts.service.ts` (`jobFor`),
+      `features/app/listing/types.ts` (`Job`, `JobEndpoint`), `features/app/home/ui/BoardMap.tsx`
+      (`hasPickupPin`), `features/app/home/ui/JobCard.tsx` (`Endpoint`),
+      `features/app/profile/api/addresses.api.ts` (`CreateAddressInput.lat/lng`
+      already optional from 2.47.0, confirmed unaffected). New tests in
+      `create/__tests__/schemas.test.ts`, `server/services/__tests__/{offers,
+      carrier-discovery,carrier-route-alerts}.service.test.ts`.
+- [x] **LocationPickerField mode-switching**: `components/ui/location-picker-field.tsx`
+      (`allowManualOnly`, `mode`, `fieldsLocked`), `create/ui/JobForm.tsx`
+      (`EndpointFields`'s `onChange`, now propagating a cleared pin), new
+      `messages/en.json` / `messages/fr.json` keys `enterManually` /
+      `useMapInstead`, symmetric.
+- [x] **Weight unit + sizing**: `create/ui/WeightBracketField.tsx`
+      (`WeightExactInput`, `OptionCard` padding), `create/cargo.ts` unaffected
+      (kg stays the stored unit). `messages/en.json` / `messages/fr.json`:
+      `weightUnit.*`, `weightExact`/`weightExactOptional` trimmed of their
+      hardcoded "(kg)", three weight-bracket `example` strings enriched.
+- [x] **Row click**: `features/app/admin/ui/CarrierApplicationsList.tsx`
+      (`onRowClick`, the eye button's `stopPropagation`) — `DataTable`'s
+      `onRowClick` prop itself needed no change, it had simply never been used.
+
+---
+
+## ✅ 2026-09-23 — Differentiated Email Preferences, Admin Language Switch (2.49.0)
+
+_"replace the feedback button feature on the profile, to be dropdown kg/ton
+option"_ (clarified away — unrelated to the feature that followed) then
+_"differentiate between listing notification toggle to be published and
+receive the driver for payment, with the notification for each coordinate on
+trips/package delivery"_, plus, mid-session, _"add the fr/en toggle as well on
+the admin dashboard page."_
+
+**What changed — email preferences.** The Settings page's single "Listing
+messages" checkbox is now three: *Listing published*, *Driver & payment*, and
+*Trip & delivery updates*. Getting there required fixing what was underneath
+it first, not just adding rows to a table:
+
+- **The toggle was inert.** `Settings.tsx` → `useSettings.ts` → the PATCH
+  route's DTO (`preferences.dto.ts`) → the DB shape (`UserPreferences` in
+  `users.ts`) had drifted into four different vocabularies. The hook sent
+  `{ bids: {...} }`; the DTO's `emailNotificationPreferencesSchema` had never
+  heard of `bids` (or `messages`, `orders`, `shipments` — the hook's other
+  invented keys) and `z.object()` silently **strips** an unrecognised key
+  rather than rejecting it, so the PATCH validated fine and wrote nothing.
+  Flipping the checkbox has never done anything, on any account, since this
+  screen shipped. `preferences.dto.ts` now mirrors `UserPreferences` field for
+  field, and `useSettings.ts` reads/writes that real shape directly instead of
+  relabelling it.
+- **One new preference, two already real.** `listingPublished` is new (jsonb,
+  no migration — `preferences` is a single column) and now gates
+  `sendListingPostedEmail`, previously unconditional. `invoiceReady` needed no
+  backend change at all: `invoicesService.announce`'s `wantsEmail(preferences)`
+  gate already existed and was already correct — it simply had no checkbox
+  anywhere. `shipmentUpdates` gates a **new** call in
+  `shipment.service.ts`'s `updateStatus`, alongside the in-app notification
+  that was already there.
+- **Revived rather than left dead.** `emailService.sendShipmentUpdateEmail`
+  and its template existed, fully wired to nothing — zero call sites anywhere
+  in `src`. Its copy was v1 goods-marketplace English ("picked up from the
+  **seller**"), which CLAUDE.md's gotcha #1 says to remove, not extend; wiring
+  it into a live path without fixing that would have shipped exactly the bug
+  the gotcha warns about. `ShipmentUpdateEmail.tsx` is rewritten in French,
+  transport vocabulary, three stages only (`PICKED_UP`/`IN_TRANSIT`/
+  `DELIVERED` — `DELAYED` was never producible and is gone, not preserved for
+  a future that may not come).
+- **Self-contained failure.** `emailShipmentUpdate` wraps its own lookup and
+  send in a `try/catch`, matching `notify`'s existing convention right above
+  it — a Resend outage or an unreachable user row must not fail the status
+  transition a driver just recorded. Caught during testing, not in
+  production: three existing `shipmentConfirmationsService` tests broke the
+  moment `getUserById` (previously never called from this function) ran
+  against no test database, which is exactly the failure mode the try/catch
+  now prevents in production too.
+
+**What changed — admin language switch.** `AdminLayout.tsx`'s header had a
+title, a feedback launcher and the notification bell, but no `LangToggle` —
+the one component every other authenticated shell already uses
+(`MainLayout.tsx`). Same component, same placement convention, no new
+provider wiring needed: `AdminLayout` already sits under the app's single
+`LocaleProvider` (`src/app/layout.tsx`).
+
+**Judgment calls**
+- Only the **email** side of `UserPreferences` was touched. `inApp`
+  preferences exist in the same schema and are exposed nowhere in any UI;
+  in-app bell notifications already fire unconditionally everywhere in this
+  codebase, and building a second settings surface for them was not asked for.
+- `offerReceived`, `offerAccepted`, `offerRejected`, `paymentConfirmation` and
+  `marketing` remain in the schema, unread by any service and unshown in any
+  UI, exactly as found. Only the three categories asked for were wired; the
+  DTO fix that makes the *whole* preferences system finally functional was
+  necessary scope (see above), not licence to wire the rest speculatively.
+
+**Bugs found on the way past**
+- The Settings page's preference toggle has been non-functional since it
+  shipped — see "The toggle was inert" above. Not a regression from this
+  session; a pre-existing, silent no-op now fixed as a side effect of the
+  feature actually asked for.
+
+**Verification**
+- `npx tsc --noEmit`: 0 errors, whole repo.
+- `pnpm lint`: 0 errors in every file this session touched. (The full-repo
+  run separately shows 12 pre-existing errors in three untracked
+  `verify-*.mjs` scripts at the repo root — not created by this session, not
+  part of this change, and not committed; left alone rather than deleted
+  without knowing whose in-progress work they are.)
+- `pnpm vitest run`: **1724/1724 passing**, full suite, confirmed with a
+  second clean run. A first full-suite run mid-session showed 4 failures
+  (`AdminBottomNav`, `FeedbackConsole`, `FeedbackDialog`, the invoice PDF
+  route test) — none in a file this session touched; all four passed
+  immediately on an isolated re-run once the concurrent session's edits (see
+  Known limits) had settled, consistent with a transient collection race
+  rather than a real regression.
+- New coverage: 8 new cases in `shipment.service.test.ts`'s "the email half"
+  block (fires on each of the three stages, respects the opt-out, defaults to
+  on when unset, and two failure-isolation cases for a rejected send and a
+  rejected lookup).
+- **Not checked live in a browser this session.** Settings and
+  `/admin` are both plain UI reads/writes over already-tested service logic;
+  verified by the test suite and by reading the render path, not in Chromium.
+
+**Known limits**
+- **This repo had another Claude session editing it live throughout.**
+  `listings.service.ts`, the migrations journal (up to `0030_nullable_
+  pickup_dropoff`), and this session's own `carrier-route-alerts.service.ts` /
+  its test file were all modified on disk mid-session by that other session.
+  Every edit in this entry was re-verified to apply cleanly against the
+  current file after each such notice; nothing here reverts or fights that
+  other work. The three stray `verify-*.mjs` scripts and the in-progress
+  `create/` address-book files belong to it, not to this entry.
+- **In-app (`inApp`) preferences remain fully unread**, deliberately — see
+  Judgment calls.
+
+- [x] **Email preferences**: `db/schema/users.ts` (`listingPublished`),
+      `server/dto/preferences.dto.ts` (rewritten to match),
+      `features/app/profile/hooks/useSettings.ts` (rewritten),
+      `features/app/profile/ui/Settings.tsx` (three switches + an `isError`
+      branch), `server/services/listings.service.ts` (`sendListingPostedEmail`
+      gate), `server/services/shipment.service.ts` (`emailShipmentUpdate`,
+      new), `server/services/email.service.ts`
+      (`sendShipmentUpdateEmail` signature), `server/emails/
+      ShipmentUpdateEmail.tsx` (rewritten), `messages/en.json` /
+      `messages/fr.json` (`settings.notifications.*`). Tests:
+      `server/services/__tests__/shipment.service.test.ts` (new describe
+      block + two new top-level mocks).
+- [x] **Admin language switch**: `features/app/admin/ui/AdminLayout.tsx`
+      (`LangToggle` import + placement).
+
+**Appended — `/admin/listings` fix.** Reported as a screenshot: the page
+rendered its `AlertCircle` "Failed to load listings" branch. The live fetch
+against current `main` (with a throwaway admin account, both against an
+empty table and against a real inserted row) came back 200 every time, so the
+exact fetch failure did not reproduce here — most likely a transient
+Turbopack recompile of this route while the *other* concurrent session (see
+Known limits, above) was mid-edit on `listings.service.ts` and the
+`0030_nullable_pickup_dropoff` schema change, which this endpoint's imports
+sit downstream of. What did reproduce, and is fixed regardless of that
+transient: `GET /api/admin/listings` called `listingsDal.browse` directly —
+the driver board's own query, hardcoded to `status = 'open'` and
+unexpired — so an admin could never see a draft, awarded, in-progress,
+completed, cancelled or expired job; confirmed by inserting a row and
+watching it disappear from the response the moment its status left `open`.
+It also skipped the service layer entirely (docs/rules.md §8: routes never
+call the DAL). Separately, `useAdminListings.ts` and `ListingsTable.tsx` were
+still the v1 goods-auction shape (`seller`, `sellerId`, `currentPrice`,
+`buyNowPrice`, `startPrice`, status `active`/`sold`/`ended`) against a
+transport `listings` row that has none of those fields — every real
+job therefore rendered as seller "Unknown" at €0.00 with a raw, unstyled
+status string, silently, whether or not the fetch itself was healthy.
+- `server/dal/listings.dal.ts`: new `adminList` — every status, no expiry
+  filter, same relations (`photos`, `category`, `shipper`) as `browse`.
+- `server/services/listings.service.ts`: new `adminList(viewer, filters)`,
+  throwing `FORBIDDEN_ROLE` for a non-admin/operator viewer — the permission
+  check moved out of the route, matching `admin-nav.service.ts`.
+- `server/dto/listings.dto.ts`: new `adminListingsQuerySchema` (status,
+  page, limit) — `browseListingsQuerySchema`'s corridor/radius/availability
+  fields are the driver board's, not staff's.
+- `app/api/admin/listings/route.ts`: calls the service instead of the DAL.
+- `features/app/admin/hooks/useAdminListings.ts`,
+  `features/app/admin/ui/ListingsTable.tsx`: rewritten against the real
+  `shipper`/`budgetCents`/`ListingStatus` fields; the status badge now reuses
+  `features/app/listing/statusTone.ts` and the `myJobs.status` translations
+  rather than inventing a second copy of both.
+- Verification: `npx tsc --noEmit` 0 errors, `pnpm lint` 0 new warnings,
+  `listings.service.test.ts` 52/52 passing, and checked live in Chromium via
+  a throwaway admin account against the local dev DB — an `open` row and,
+  after flipping its status by hand, an `awarded` row, both rendering
+  correctly where the old query would have dropped the second silently.
+
+## ✅ 2026-09-23 — Carrier Route Match Alerts (2.48.0)
+
+_"add the feature notification, and also add the alert settings for the new
+ads next to the carrier and also on the carrier route"_ — the alert-types
+half of feedback ticket `Mt-mRHuT6yVL3XM6O0vcf`, flagged as unbuilt in the
+2.47.0 entry below ("stored now, consumed by a later cron... a real feature
+... this batch only had room to *not* build badly").
+
+**What changed.** `carrier_routes.notify_on_match` has existed since
+`0010_carrier_routes` and has been surfaced as a switch on
+`TripRouteFormDialog.tsx` since — saving a preference to a column nothing
+read. It now fires: when a listing reaches the board, new
+`carrier-route-alerts.service.ts` runs the exact same `matchRoute` predicate
+`carrier-discovery.service.ts` already runs for "Transporteurs disponibles"
+— same corridor test (`isOnPath`), same calendar test
+(`upcomingOccurrences`) — against every `notify_on_match` trip, and sends
+one in-app notification per matching carrier through the existing
+`notificationsService`. A listing either produces the discovery card, this
+alert, both, or neither, from one answer to one question.
+
+**Where it fires, and where it deliberately does not.** Two genuine "this
+listing is now open to anyone" moments: `listingsService.createListing` on
+an immediate publish, and `listingsService.publishScheduled` once a
+scheduled listing's instant arrives.
+`expedionEscalationService.escalate`'s normal sweep fires it too. Its
+`assignDirect` lane does **not**: `assignDirect` calls `escalate` and awards
+a pre-chosen driver in the same synchronous call with no gap another
+carrier could act in, and the code already suppresses the client SMS for
+exactly this reason (`if (!opts.directAssignment)`) — the new alert follows
+that same gate rather than inventing a second rule for the same fact.
+`createListing` gained a third, optional argument,
+`{ notifyRouteMatches }`, default `true`, so the one caller that needs
+`false` (`escalate`, passing `!opts.directAssignment`) can say so without
+touching the public `/api/listings` contract.
+
+**Two independent consents, not one repurposed.** `is_discoverable` ("let a
+requester find me") and `notify_on_match` ("alert me") were confirmed
+independent rather than merged — a trip kept private from requesters can
+still alert its own carrier. `carrier-routes.dal.ts`'s shared conditions
+(capacity, calendar, bounding box) were pulled out of `matchCandidateWhere`
+into `sharedCandidateConditions`; a new `findNotifyCandidates` gates on
+`notify_on_match` instead, reusing everything else. New index
+`carrier_route_notify_idx` (`0029_carrier_route_notify_index.sql`),
+mirroring the one `0020` added for `is_discoverable`.
+
+**Judgment calls** (confirmed with the operator before building, not
+assumed):
+- In-app notification only — no email channel, and no new toggle on the
+  Settings page's Email Notifications section. That section's own
+  preference plumbing (UI, hook, DTO and DB schema) already disagree with
+  each other on key names; reconciling that is separate work, out of scope
+  here.
+- "Near the carrier" is answered by the trip's own declared `radius_km`, not
+  a new standalone "near my current location" concept. No location field
+  was added to the carrier profile.
+
+**Bugs found on the way past:** none.
+
+**Verification**
+- `npx tsc --noEmit`: 0 errors, whole repo.
+- `pnpm lint`: 0 errors on every touched file.
+- `pnpm vitest run`: **1711/1711 passing**, whole suite (new:
+  `carrier-route-alerts.service.test.ts`,
+  `expedion-escalation.escalate.test.ts`, plus additions to
+  `listings.service.test.ts` for the `createListing`/`publishScheduled`
+  hook points).
+- `src/db/__tests__/migrations-journal.test.ts`: passing, `0029` registered
+  with a strictly increasing `when`.
+- `src/i18n/__tests__/locale-parity.test.ts`: passing —
+  `carrier.trips.form.notifyHint` updated symmetrically in both languages.
+- **Not checked live in a browser this session.** The only UI-visible change
+  is the `notifyHint` copy under an existing switch on `/carrier/trips`; the
+  feature itself is a server-side fan-out with no new screen, verified by
+  the test suite rather than in Chromium.
+
+**Known limits**
+- **Migration `0029` has not run anywhere but a local database.** See
+  Operator to-do. It is additive (`CREATE INDEX IF NOT EXISTS`) and does not
+  block the feature if delayed, unlike `0027`/`0028` above — a database
+  missing it just runs the fan-out query without the index, not a hard
+  failure.
+- **Feedback ticket `Mt-mRHuT6yVL3XM6O0vcf` was not flipped to `RESOLVED`** —
+  this session has no production database write access
+  (`MIRROR_SOURCE_URL` is `mirror_readonly`). See Operator to-do.
+- **No email channel and no Settings-page toggle**, deliberately — see
+  Judgment calls above.
+
+- [x] **Carrier route alerts**: new
+      `db/migrations/0029_carrier_route_notify_index.sql` +
+      `meta/_journal.json` (idx 28), `server/dal/carrier-routes.dal.ts`
+      (`sharedCandidateConditions`, `notifyCandidateWhere`,
+      `findNotifyCandidates`), new
+      `server/services/carrier-route-alerts.service.ts`,
+      `server/services/listings.service.ts` (`createListing`'s third
+      argument, `publishScheduled`),
+      `server/services/expedion-escalation.service.ts` (`escalate`'s
+      `createListing` call), `messages/en.json` / `messages/fr.json`
+      (`carrier.trips.form.notifyHint`),
+      `docs/plans/plan_carrier_route_alerts.md`, new
+      `docs/specs/carrier_route_alerts_spec.md`,
+      `docs/specs/carrier_trips_spec.md` §9/§10 and
+      `docs/specs/carriers_on_route_spec.md` §4/§8 (both updated to strike
+      their "unbuilt" callouts). Tests: new
+      `server/services/__tests__/carrier-route-alerts.service.test.ts`, new
+      `server/services/__tests__/expedion-escalation.escalate.test.ts`,
+      additions to `server/services/__tests__/listings.service.test.ts`.
 
 ## ✅ 2026-09-23 — Fourteen Feedback Tickets Closed Out (2.47.0)
 

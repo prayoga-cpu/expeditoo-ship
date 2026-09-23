@@ -23,7 +23,7 @@ import { locales, localeNames } from "@/i18n/config";
 import { FlagComponents } from "@/components/ui/flags";
 
 export function Settings() {
-  const { theme, notifications, handleThemeChange, handleNotificationChange } =
+  const { theme, email, isError, handleThemeChange, handleNotificationChange } =
     useSettings();
 
   const t = useTranslations("settings");
@@ -116,43 +116,91 @@ export function Settings() {
         <p className="text-sm text-muted-foreground mb-4">
           {t("notifications.description")}
         </p>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors">
-            <div className="flex-1">
-              <Label
-                htmlFor="notif-auction"
-                className="text-foreground font-medium cursor-pointer"
-              >
-                {t("notifications.auctionResults.title")}
-              </Label>
-              <p className="text-sm text-muted-foreground">
-                {t("notifications.auctionResults.description")}
-              </p>
+        {isError ? (
+          <p className="text-sm text-destructive">
+            {t("notifications.loadError")}
+          </p>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors">
+              <div className="flex-1">
+                <Label
+                  htmlFor="notif-listing-published"
+                  className="text-foreground font-medium cursor-pointer"
+                >
+                  {t("notifications.listingPublished.title")}
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  {t("notifications.listingPublished.description")}
+                </p>
+              </div>
+              <Checkbox
+                id="notif-listing-published"
+                checked={email?.listingPublished ?? true}
+                onCheckedChange={(checked) =>
+                  handleNotificationChange("listingPublished", checked as boolean)
+                }
+              />
             </div>
-            <Checkbox
-              id="notif-auction"
-              checked={notifications.email.auctionResults}
-              onCheckedChange={(checked) =>
-                handleNotificationChange("auctionResults", checked as boolean)
-              }
-            />
-          </div>
 
-          <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors">
-            <div className="flex-1">
-              <Label
-                htmlFor="notif-account"
-                className="text-foreground font-medium cursor-pointer"
-              >
-                {t("notifications.accountSecurity.title")}
-              </Label>
-              <p className="text-sm text-muted-foreground">
-                {t("notifications.accountSecurity.description")}
-              </p>
+            <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors">
+              <div className="flex-1">
+                <Label
+                  htmlFor="notif-driver-payment"
+                  className="text-foreground font-medium cursor-pointer"
+                >
+                  {t("notifications.driverPayment.title")}
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  {t("notifications.driverPayment.description")}
+                </p>
+              </div>
+              <Checkbox
+                id="notif-driver-payment"
+                checked={email?.invoiceReady ?? true}
+                onCheckedChange={(checked) =>
+                  handleNotificationChange("invoiceReady", checked as boolean)
+                }
+              />
             </div>
-            <Checkbox id="notif-account" defaultChecked disabled />
+
+            <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors">
+              <div className="flex-1">
+                <Label
+                  htmlFor="notif-trip-updates"
+                  className="text-foreground font-medium cursor-pointer"
+                >
+                  {t("notifications.tripUpdates.title")}
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  {t("notifications.tripUpdates.description")}
+                </p>
+              </div>
+              <Checkbox
+                id="notif-trip-updates"
+                checked={email?.shipmentUpdates ?? true}
+                onCheckedChange={(checked) =>
+                  handleNotificationChange("shipmentUpdates", checked as boolean)
+                }
+              />
+            </div>
+
+            <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors">
+              <div className="flex-1">
+                <Label
+                  htmlFor="notif-account"
+                  className="text-foreground font-medium cursor-pointer"
+                >
+                  {t("notifications.accountSecurity.title")}
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  {t("notifications.accountSecurity.description")}
+                </p>
+              </div>
+              <Checkbox id="notif-account" defaultChecked disabled />
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       <div className="bg-accent-red/8 border border-accent-red/20 rounded-xl p-5">

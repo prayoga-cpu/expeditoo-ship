@@ -109,8 +109,10 @@ const optionalPositive = z.preprocess(
 
 export const endpointSchema = z
   .object({
-    lat: z.number({ message: "create.validation.pinRequired" }),
-    lng: z.number({ message: "create.validation.pinRequired" }),
+    // Optional, matching `listings.dto.ts`: a manually-typed address with no
+    // map pin and no pasted link is postable with no coordinates at all.
+    lat: z.number().optional(),
+    lng: z.number().optional(),
     address: z.string().min(1, "create.validation.addressRequired"),
     city: z.string().min(1, "create.validation.cityRequired"),
     postalCode: z.string().regex(/^\d{5}$/, "create.validation.postalCode"),
@@ -138,6 +140,12 @@ export const endpointSchema = z
         (v) => isValidPhoneNumber(v, "FR"),
         "create.validation.invalidPhone"
       ),
+    // Client-only, like `fragileNote`: no counterpart in `listings.dto.ts`.
+    // `useJobForm`'s `handleNext` reads these off the Where step and calls
+    // the address book directly; `toCreatePayload` strips both before the
+    // job payload goes out.
+    saveAddress: z.boolean().default(false),
+    addressLabel: z.string().max(50).optional(),
   })
   .superRefine((endpoint, ctx) => {
     // Floor and lift change the work materially, so an apartment must state both.
@@ -158,7 +166,11 @@ export const endpointSchema = z
       }
     }
 
-    if (!isInFrance(endpoint.lat, endpoint.lng)) {
+    if (
+      endpoint.lat !== undefined &&
+      endpoint.lng !== undefined &&
+      !isInFrance(endpoint.lat, endpoint.lng)
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "create.validation.outsideFrance",
@@ -276,7 +288,14 @@ export const jobFormSchema = z
       }
     }
 
+    // Only checkable when both ends have a real pin — a manually-typed
+    // endpoint on either side leaves nothing to measure, so the guard is
+    // skipped rather than half-applied.
     if (
+      data.pickup.lat !== undefined &&
+      data.pickup.lng !== undefined &&
+      data.dropoff.lat !== undefined &&
+      data.dropoff.lng !== undefined &&
       metresBetween(
         data.pickup.lat,
         data.pickup.lng,

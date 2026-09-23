@@ -45,6 +45,16 @@ export interface LocationPickerFieldProps {
   value: LocationPickerValue;
   onChange: (value: LocationPickerValue) => void;
   className?: string;
+  /**
+   * Lets the map and the typed address stand in for each other instead of
+   * both being required at once: a successful pin (search, click, or a
+   * pasted link) locks the address/postal/city fields, since the map just
+   * supplied them; "Can't find it?" switches to typing the address by hand
+   * instead, with no pin required to submit. Off by default — a trip
+   * declaration or an Expedion quote still needs a real point, coordinates
+   * are the whole reason those exist.
+   */
+  allowManualOnly?: boolean;
 }
 
 // France bounding box (approximate) — matches AddressForm's picker.
@@ -59,6 +69,7 @@ export function LocationPickerField({
   value,
   onChange,
   className,
+  allowManualOnly = false,
 }: LocationPickerFieldProps) {
   const t = useTranslations("common.locationPicker");
   const mapRef = useRef<MapRef>(null);
@@ -66,6 +77,30 @@ export function LocationPickerField({
   const isDark = resolvedTheme === "dark";
 
   const hasPin = value.lat !== null && value.lng !== null;
+
+  // Only meaningful when `allowManualOnly` is on. A value already carrying
+  // typed text with no pin (a draft restored, or an existing listing being
+  // edited) opens back into manual mode rather than showing an "assisted"
+  // map the person already chose not to use.
+  const [mode, setMode] = useState<"assisted" | "manual">(() =>
+    !hasPin && value.address.trim() ? "manual" : "assisted"
+  );
+  const manualMode = allowManualOnly && mode === "manual";
+  // Once the map has supplied an address, the text fields are its output,
+  // not a second, independently-editable source of truth for it.
+  const fieldsLocked = allowManualOnly && !manualMode && hasPin;
+
+  const switchToManual = useCallback(() => {
+    setMode("manual");
+    onChange({ ...value, lat: null, lng: null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onChange]);
+
+  const switchToAssisted = useCallback(() => {
+    setMode("assisted");
+    onChange({ address: "", city: "", postalCode: "", lat: null, lng: null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onChange]);
   const [viewState, setViewState] = useState(
     hasPin
       ? { longitude: value.lng!, latitude: value.lat!, zoom: 13 }
@@ -184,6 +219,18 @@ export function LocationPickerField({
 
   return (
     <div className={cn("space-y-3", className)}>
+      {manualMode ? (
+        <Button
+          type="button"
+          variant="link"
+          size="sm"
+          className="h-auto gap-1 p-0 has-[>svg]:px-0 text-xs"
+          onClick={switchToAssisted}
+        >
+          <MapPin className="h-3 w-3" />
+          {t("useMapInstead")}
+        </Button>
+      ) : (
       <div className="relative h-56 w-full overflow-hidden rounded-lg border">
         <div className="absolute top-2 left-2 right-2 z-10">
           <div className="relative">
@@ -264,8 +311,9 @@ export function LocationPickerField({
           </div>
         ) : null}
       </div>
+      )}
 
-      {showLinkInput ? (
+      {manualMode ? null : showLinkInput ? (
         <div className="space-y-1.5 rounded-md border border-dashed p-2">
           <Label htmlFor={`${id}-link`} className="text-xs">
             {t("linkLabel")}
@@ -324,10 +372,10 @@ export function LocationPickerField({
           variant="link"
           size="sm"
           className="h-auto gap-1 p-0 has-[>svg]:px-0 text-xs"
-          onClick={() => setShowLinkInput(true)}
+          onClick={allowManualOnly ? switchToManual : () => setShowLinkInput(true)}
         >
           <Link2 className="h-3 w-3" />
-          {t("cantFindLocation")}
+          {allowManualOnly ? t("enterManually") : t("cantFindLocation")}
         </Button>
       )}
 
@@ -340,6 +388,7 @@ export function LocationPickerField({
             id={`${id}-address`}
             value={value.address}
             className="h-8 text-xs"
+            disabled={fieldsLocked}
             onChange={(e) => onChange({ ...value, address: e.target.value })}
           />
         </div>
@@ -351,6 +400,7 @@ export function LocationPickerField({
             id={`${id}-postal`}
             value={value.postalCode}
             className="h-8 text-xs"
+            disabled={fieldsLocked}
             onChange={(e) =>
               onChange({ ...value, postalCode: e.target.value })
             }
@@ -364,6 +414,7 @@ export function LocationPickerField({
             id={`${id}-city`}
             value={value.city}
             className="h-8 text-xs"
+            disabled={fieldsLocked}
             onChange={(e) => onChange({ ...value, city: e.target.value })}
           />
         </div>

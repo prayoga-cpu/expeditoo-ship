@@ -431,6 +431,19 @@ export const offersService = {
       if (!locked) throw err("LISTING_NOT_FOUND", 404);
       if (locked.status !== "open") throw err("LISTING_NOT_OPEN", 409);
       if (locked.acceptedOfferId) throw err("LISTING_ALREADY_AWARDED", 409);
+      // A listing can be posted and bid on with no map pin (a manually-typed
+      // address); a shipment cannot, because `shipments.pickupLat/pickupLng`
+      // stay NOT NULL — a driver needs a real point to navigate to. Refuse
+      // the award with a clear, typed error rather than let this insert hit
+      // a Postgres constraint violation inside the transaction.
+      if (
+        locked.pickupLat === null ||
+        locked.pickupLng === null ||
+        locked.dropoffLat === null ||
+        locked.dropoffLng === null
+      ) {
+        throw err("COORDINATES_REQUIRED", 422);
+      }
 
       const offer = await offersDal.getByIdForUpdate(offerId, tx);
       if (!offer || offer.status !== "pending") {

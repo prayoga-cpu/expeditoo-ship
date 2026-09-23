@@ -165,7 +165,12 @@ export function CarrierApplicationsList({
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => handleViewDetail(row.original)}
+              onClick={(e) => {
+                // The row itself opens the same detail on click; without this
+                // the button's own click would bubble up and fire it twice.
+                e.stopPropagation();
+                handleViewDetail(row.original);
+              }}
             >
               <Eye className="w-4 h-4" />
             </Button>
@@ -230,6 +235,7 @@ export function CarrierApplicationsList({
           tableMinHeight={tableMinHeight}
           dateFilterKey="createdAt"
           sortFields={sortFields}
+          onRowClick={handleViewDetail}
         />
       )}
 

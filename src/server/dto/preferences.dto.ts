@@ -3,11 +3,18 @@ import { z } from "zod";
 // ========================================
 // User Preferences DTO
 // ========================================
+// Mirrors `UserPreferences` in `src/db/schema/users.ts` field for field —
+// the two had drifted (this schema once validated `auctionResults`/`outbid`/
+// `orderConfirmation`, none of which the DB shape or any service has ever
+// read), so a PATCH from the Settings UI validated fine while silently
+// updating nothing: `z.object()` strips a key it doesn't know rather than
+// rejecting it, and every key the old UI sent was foreign to this schema.
 
 export const emailNotificationPreferencesSchema = z.object({
-    auctionResults: z.boolean(),
-    outbid: z.boolean(),
-    orderConfirmation: z.boolean(),
+    listingPublished: z.boolean(),
+    offerReceived: z.boolean(),
+    offerAccepted: z.boolean(),
+    offerRejected: z.boolean(),
     paymentConfirmation: z.boolean(),
     shipmentUpdates: z.boolean(),
     invoiceReady: z.boolean(),
@@ -16,9 +23,9 @@ export const emailNotificationPreferencesSchema = z.object({
 });
 
 export const inAppNotificationPreferencesSchema = z.object({
-    auctionResults: z.boolean(),
-    outbid: z.boolean(),
-    orderConfirmation: z.boolean(),
+    offerReceived: z.boolean(),
+    offerAccepted: z.boolean(),
+    offerRejected: z.boolean(),
     paymentConfirmation: z.boolean(),
     shipmentUpdates: z.boolean(),
     invoiceReady: z.boolean(),

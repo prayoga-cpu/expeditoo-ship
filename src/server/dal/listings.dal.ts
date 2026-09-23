@@ -417,6 +417,36 @@ export const listingsDal = {
     return { items, total: Number(totals?.total ?? 0) };
   },
 
+  /**
+   * Every job, any status, for staff moderation. Unlike `browse` above, a
+   * `draft`, `awarded`, `in_progress`, `completed`, `cancelled` or `expired`
+   * listing is exactly what this is for — the board's "only open" rule does
+   * not apply here.
+   */
+  async adminList(
+    filters: { status?: ListingStatus; page: number; limit: number },
+    tx: Executor = db
+  ) {
+    const where = filters.status
+      ? eq(listings.status, filters.status)
+      : undefined;
+
+    const items = await tx.query.listings.findMany({
+      where,
+      with: { photos: photosInOrder, category: true, shipper: true },
+      orderBy: [desc(listings.createdAt)],
+      limit: filters.limit,
+      offset: (filters.page - 1) * filters.limit,
+    });
+
+    const [totals] = await tx
+      .select({ total: count(listings.id) })
+      .from(listings)
+      .where(where);
+
+    return { items, total: Number(totals?.total ?? 0) };
+  },
+
   /** Open jobs past their window, for the expiry cron. */
   async findExpired(now: Date, tx: Executor = db) {
     return await tx.query.listings.findMany({

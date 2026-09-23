@@ -310,6 +310,11 @@ export const expedionEscalationService = {
           budgetCents: quote.acceptedPriceCents!,
           photos: (quote.photoUrls ?? []).slice(0, 10),
           publish: true,
+        }, {
+          // The listing is open for milliseconds before `assignDirect` awards
+          // it to a pre-chosen driver — the same reason the client SMS below
+          // is skipped for this case (carrier_route_alerts_spec.md §3).
+          notifyRouteMatches: !opts.directAssignment,
         }));
 
       if (!adopted) {

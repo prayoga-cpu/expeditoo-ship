@@ -1,9 +1,11 @@
 "use client";
 
+import { useCallback, useEffect, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,7 +28,9 @@ import { ItemField } from "./ItemField";
 import { WeightBracketField } from "./WeightBracketField";
 import { TimingField } from "./TimingField";
 import { PublishTimingField } from "./PublishTimingField";
+import { SavedAddressPicker } from "./SavedAddressPicker";
 import { LOCATION_TYPES, type LocationType } from "../schemas";
+import { useAddressBook, type Address } from "../hooks/useAddressBook";
 import type { JobFormApi } from "../hooks/useJobForm";
 
 // `maplibre-gl` + `react-map-gl` are only needed once someone reaches the
@@ -203,39 +207,44 @@ function WhatStep({
           checked={Boolean(watch("needsHelp"))}
           onChange={(v) => setValue("needsHelp", v)}
         />
+      </div>
 
-        <div className="space-y-2">
-          <Label>{t("packaging")}</Label>
-          <ToggleGroup
-            type="single"
-            variant="outline"
-            value={watch("packagingLevel") ?? ""}
-            onValueChange={(value) =>
-              setValue(
-                "packagingLevel",
-                (value || undefined) as "protected" | "boxed" | undefined
-              )
-            }
-            className="w-full"
-          >
-            <ToggleGroupItem value="protected" className="flex-1 flex-col gap-0.5 py-2 whitespace-normal">
-              <span className="text-sm font-medium">
-                {t("packagingOptions.protected.label")}
-              </span>
-              <span className="text-xs font-normal text-muted-foreground">
-                {t("packagingOptions.protected.description")}
-              </span>
-            </ToggleGroupItem>
-            <ToggleGroupItem value="boxed" className="flex-1 flex-col gap-0.5 py-2 whitespace-normal">
-              <span className="text-sm font-medium">
-                {t("packagingOptions.boxed.label")}
-              </span>
-              <span className="text-xs font-normal text-muted-foreground">
-                {t("packagingOptions.boxed.description")}
-              </span>
-            </ToggleGroupItem>
-          </ToggleGroup>
-        </div>
+      {/* A top-level field group like WeightBracketField/SizeField above it,
+          not folded into the toggle-row cluster — it has its own label and a
+          two-card choice, not a compact switch row, so it wants the step's
+          own space-y-5 rhythm on both sides rather than the tighter
+          space-y-3 the toggles use between each other. */}
+      <div className="space-y-2">
+        <Label>{t("packaging")}</Label>
+        <ToggleGroup
+          type="single"
+          variant="outline"
+          value={watch("packagingLevel") ?? ""}
+          onValueChange={(value) =>
+            setValue(
+              "packagingLevel",
+              (value || undefined) as "protected" | "boxed" | undefined
+            )
+          }
+          className="w-full"
+        >
+          <ToggleGroupItem value="protected" className="flex-1 flex-col gap-0.5 py-2 whitespace-normal">
+            <span className="text-sm font-medium">
+              {t("packagingOptions.protected.label")}
+            </span>
+            <span className="text-xs font-normal text-muted-foreground">
+              {t("packagingOptions.protected.description")}
+            </span>
+          </ToggleGroupItem>
+          <ToggleGroupItem value="boxed" className="flex-1 flex-col gap-0.5 py-2 whitespace-normal">
+            <span className="text-sm font-medium">
+              {t("packagingOptions.boxed.label")}
+            </span>
+            <span className="text-xs font-normal text-muted-foreground">
+              {t("packagingOptions.boxed.description")}
+            </span>
+          </ToggleGroupItem>
+        </ToggleGroup>
       </div>
 
       <div>
@@ -271,34 +280,143 @@ function EndpointFields({
   const error = formState.errors[side];
   const locationType = endpoint?.locationType;
 
+  const { data: savedAddresses = [] } = useAddressBook();
+  // A job needs a pin to route and price; the profile lets an address be
+  // saved without one, so only a geocoded saved address is selectable here.
+  const pinnedAddresses = useMemo(
+    () => savedAddresses.filter((a) => a.lat != null && a.lng != null),
+    [savedAddresses]
+  );
+
+  const applySavedAddress = useCallback(
+    (address: Address) => {
+      setValue(`${side}.address`, address.street, { shouldValidate: true });
+      setValue(`${side}.city`, address.city);
+      setValue(`${side}.postalCode`, address.zip);
+      setValue(`${side}.lat`, address.lat as number);
+      setValue(`${side}.lng`, address.lng as number);
+      setValue(`${side}.saveAddress`, false);
+      setValue(`${side}.addressLabel`, "");
+    },
+    [setValue, side]
+  );
+
+  const switchToNewAddress = useCallback(() => {
+    setValue(`${side}.address`, "");
+    setValue(`${side}.city`, "");
+    setValue(`${side}.postalCode`, "");
+    // Not `blankToUndefined`-backed like `floor` — `lat`/`lng` are required
+    // numbers in the schema, so clearing them for a fresh custom entry is a
+    // deliberate cast, the same way `packagingLevel`'s clear-to-empty above
+    // casts through the union rather than the schema's own optional type.
+    setValue(`${side}.lat`, undefined as unknown as number);
+    setValue(`${side}.lng`, undefined as unknown as number);
+  }, [setValue, side]);
+
+  // Pre-fill the default saved address the first time the list loads, on a
+  // fresh endpoint only — never overwrites an address already entered,
+  // whether that came from the map or from restoring a draft.
+  useEffect(() => {
+    if (pinnedAddresses.length === 0) return;
+    if (form.getValues(`${side}.address`)) return;
+    applySavedAddress(
+      pinnedAddresses.find((a) => a.isDefault) ?? pinnedAddresses[0]
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pinnedAddresses.length]);
+
+  const selectedAddressId =
+    pinnedAddresses.find(
+      (a) =>
+        a.street === endpoint?.address &&
+        a.zip === endpoint?.postalCode &&
+        a.lat === endpoint?.lat &&
+        a.lng === endpoint?.lng
+    )?.id ?? "custom";
+  const usingSavedAddress = selectedAddressId !== "custom";
+
   return (
     <section className="space-y-4">
       <h2 className="font-semibold">{title}</h2>
 
-      {/* The shared picker rather than a private map: it already searches
-          Nominatim, drags a pin, reverse-geocodes and refuses anywhere outside
-          France, in both languages and both themes. */}
-      <LocationPickerField
-        id={`${side}-location`}
-        value={{
-          address: endpoint?.address ?? "",
-          city: endpoint?.city ?? "",
-          postalCode: endpoint?.postalCode ?? "",
-          lat: endpoint?.lat ?? null,
-          lng: endpoint?.lng ?? null,
-        }}
-        onChange={(next) => {
-          setValue(`${side}.address`, next.address, { shouldValidate: true });
-          setValue(`${side}.city`, next.city);
-          setValue(`${side}.postalCode`, next.postalCode);
-          if (next.lat !== null) setValue(`${side}.lat`, next.lat);
-          if (next.lng !== null) setValue(`${side}.lng`, next.lng);
-        }}
-      />
-      <FieldError message={error?.address?.message} />
-      <FieldError message={error?.city?.message} />
-      <FieldError message={error?.postalCode?.message} />
-      <FieldError message={error?.lat?.message} />
+      {pinnedAddresses.length > 0 && (
+        <SavedAddressPicker
+          addresses={pinnedAddresses}
+          selectedId={selectedAddressId}
+          onSelect={(address) =>
+            address ? applySavedAddress(address) : switchToNewAddress()
+          }
+        />
+      )}
+
+      {!usingSavedAddress && (
+        <>
+          {/* The shared picker rather than a private map: it already searches
+              Nominatim, drags a pin, reverse-geocodes and refuses anywhere
+              outside France, in both languages and both themes. */}
+          <LocationPickerField
+            id={`${side}-location`}
+            allowManualOnly
+            value={{
+              address: endpoint?.address ?? "",
+              city: endpoint?.city ?? "",
+              postalCode: endpoint?.postalCode ?? "",
+              lat: endpoint?.lat ?? null,
+              lng: endpoint?.lng ?? null,
+            }}
+            onChange={(next) => {
+              setValue(`${side}.address`, next.address, {
+                shouldValidate: true,
+              });
+              setValue(`${side}.city`, next.city);
+              setValue(`${side}.postalCode`, next.postalCode);
+              // `null` is a real answer here — switching to manual mode (or
+              // back to the map for a fresh pin) clears whatever coordinates
+              // were there, and the schema now accepts an endpoint with none.
+              setValue(`${side}.lat`, next.lat ?? undefined, {
+                shouldValidate: true,
+              });
+              setValue(`${side}.lng`, next.lng ?? undefined, {
+                shouldValidate: true,
+              });
+            }}
+          />
+          <FieldError message={error?.address?.message} />
+          <FieldError message={error?.city?.message} />
+          <FieldError message={error?.postalCode?.message} />
+
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id={`${side}-save-address`}
+              checked={Boolean(endpoint?.saveAddress)}
+              onCheckedChange={(checked) =>
+                setValue(`${side}.saveAddress`, checked === true)
+              }
+            />
+            <Label
+              htmlFor={`${side}-save-address`}
+              className="cursor-pointer font-normal"
+            >
+              {t("saveAddress")}
+            </Label>
+          </div>
+          {endpoint?.saveAddress && (
+            <div>
+              <Label htmlFor={`${side}-address-label`}>
+                {t("addressLabelField")}
+              </Label>
+              <Input
+                id={`${side}-address-label`}
+                placeholder={t("addressLabelPlaceholder")}
+                value={endpoint?.addressLabel ?? ""}
+                onChange={(e) =>
+                  setValue(`${side}.addressLabel`, e.target.value)
+                }
+              />
+            </div>
+          )}
+        </>
+      )}
 
       <div>
         <Label htmlFor={`${side}-note`}>{t("noteLabel")}</Label>

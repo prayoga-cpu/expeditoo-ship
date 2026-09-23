@@ -1,9 +1,17 @@
 "use client";
 
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import {
   HEAVY_BRACKET_ID,
@@ -12,6 +20,8 @@ import {
   type WeightBracketId,
 } from "../cargo";
 import type { JobFormApi } from "../hooks/useJobForm";
+import type { FieldErrors } from "react-hook-form";
+import type { JobFormValues } from "../schemas";
 import { FieldError } from "./FieldError";
 
 /**
@@ -43,7 +53,7 @@ export function WeightBracketField({ form }: { form: JobFormApi["form"] }) {
           // onto the new one — see the comment on `resolveWeightKg`.
           setValue("exactWeightKg", undefined);
         }}
-        className="grid grid-cols-2 gap-2 sm:grid-cols-3"
+        className="grid grid-cols-2 gap-3 sm:grid-cols-3"
       >
         {WEIGHT_BRACKET_IDS.map((id) => (
           <OptionCard
@@ -59,19 +69,14 @@ export function WeightBracketField({ form }: { form: JobFormApi["form"] }) {
       <FieldError message={formState.errors.weightBracket?.message} />
 
       {bracket === HEAVY_BRACKET_ID && (
-        <div>
-          <Label htmlFor="exactWeightKg" required>
-            {t("weightExact")}
-          </Label>
-          <Input
-            id="exactWeightKg"
-            type="number"
-            step="1"
-            min={1000}
-            {...register("exactWeightKg")}
-          />
-          <FieldError message={formState.errors.exactWeightKg?.message} />
-        </div>
+        <WeightExactInput
+          label={t("weightExact")}
+          required
+          minKg={1000}
+          value={watch("exactWeightKg") as number | undefined}
+          onChange={(kg) => setValue("exactWeightKg", kg, { shouldValidate: true })}
+          errors={formState.errors}
+        />
       )}
 
       {/* A bracket is a category; this is the real figure inside it, for
@@ -79,19 +84,87 @@ export function WeightBracketField({ form }: { form: JobFormApi["form"] }) {
           opposite, so it gets no field to contradict itself with, and
           `over1000` already has its own required one above. */}
       {bracket && bracket !== HEAVY_BRACKET_ID && bracket !== UNSURE_BRACKET_ID && (
-        <div>
-          <Label htmlFor="exactWeightKg">{t("weightExactOptional")}</Label>
-          <Input
-            id="exactWeightKg"
-            type="number"
-            step="1"
-            min={1}
-            {...register("exactWeightKg")}
-          />
-          <FieldError message={formState.errors.exactWeightKg?.message} />
-        </div>
+        <WeightExactInput
+          label={t("weightExactOptional")}
+          minKg={1}
+          value={watch("exactWeightKg") as number | undefined}
+          onChange={(kg) => setValue("exactWeightKg", kg, { shouldValidate: true })}
+          errors={formState.errors}
+        />
       )}
     </fieldset>
+  );
+}
+
+const WEIGHT_UNITS = ["kg", "t"] as const;
+type WeightUnit = (typeof WEIGHT_UNITS)[number];
+
+/**
+ * The figure is always stored and validated in kilograms — `weightKg` is what
+ * the DTO has always wanted, and `exactWeightKg`'s `.max(44_000)` is written
+ * in kg — so the unit toggle only ever converts at the edges. `unit` is local
+ * display state, never sent anywhere: switching it re-renders the same kg
+ * value in the other scale rather than mutating what's stored.
+ */
+function WeightExactInput({
+  label,
+  required,
+  minKg,
+  value,
+  onChange,
+  errors,
+}: {
+  label: string;
+  required?: boolean;
+  minKg: number;
+  value: number | undefined;
+  onChange: (kg: number | undefined) => void;
+  errors: FieldErrors<JobFormValues>;
+}) {
+  const t = useTranslations("create.what");
+  const [unit, setUnit] = useState<WeightUnit>("kg");
+  const toDisplay = (kg: number | undefined) =>
+    kg === undefined ? "" : String(unit === "t" ? kg / 1000 : kg);
+
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor="exactWeightKg" required={required}>
+        {label}
+      </Label>
+      <div className="flex gap-2">
+        <Input
+          id="exactWeightKg"
+          type="number"
+          step={unit === "t" ? "0.001" : "1"}
+          min={unit === "t" ? minKg / 1000 : minKg}
+          value={toDisplay(value)}
+          onChange={(e) => {
+            const typed = e.target.value === "" ? undefined : Number(e.target.value);
+            onChange(
+              typed === undefined || Number.isNaN(typed)
+                ? undefined
+                : unit === "t"
+                  ? typed * 1000
+                  : typed
+            );
+          }}
+          className="flex-1"
+        />
+        <Select value={unit} onValueChange={(next) => setUnit(next as WeightUnit)}>
+          <SelectTrigger className="w-20" aria-label={t("weightUnit.label")}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {WEIGHT_UNITS.map((u) => (
+              <SelectItem key={u} value={u}>
+                {t(`weightUnit.${u}`)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <FieldError message={errors.exactWeightKg?.message} />
+    </div>
   );
 }
 
@@ -120,7 +193,7 @@ export function OptionCard({
     <Label
       htmlFor={id}
       className={cn(
-        "flex cursor-pointer flex-col items-start gap-0.5 rounded-lg border p-3 text-left transition-colors",
+        "flex min-h-[92px] cursor-pointer flex-col items-start justify-center gap-1 rounded-lg border p-4 text-left transition-colors",
         "focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
         selected
           ? "border-primary bg-primary/5"
@@ -128,10 +201,10 @@ export function OptionCard({
       )}
     >
       <RadioGroupItem id={id} value={value} className="sr-only" />
-      <span className="text-sm font-medium">{label}</span>
-      <span className="text-xs font-normal text-muted-foreground">{hint}</span>
+      <span className="text-base font-medium">{label}</span>
+      <span className="text-sm font-normal text-muted-foreground">{hint}</span>
       {detail && (
-        <span className="font-mono text-[11px] font-normal text-muted-foreground">
+        <span className="font-mono text-xs font-normal text-muted-foreground">
           {detail}
         </span>
       )}

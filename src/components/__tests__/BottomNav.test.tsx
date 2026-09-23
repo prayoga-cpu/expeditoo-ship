@@ -6,6 +6,7 @@ import en from "../../../messages/en.json";
 import fr from "../../../messages/fr.json";
 
 import { BottomNav } from "../BottomNav";
+import { AccessModeProvider } from "@/lib/access-mode-context";
 
 /**
  * The mobile bar's job here is one rule, and it is the same rule the header
@@ -22,7 +23,10 @@ const auth: { user: { roles: string[] } | null } = { user: null };
 let pathname = "/home";
 
 vi.mock("@/lib/auth-context", () => ({ useAuth: () => auth }));
-vi.mock("next/navigation", () => ({ usePathname: () => pathname }));
+vi.mock("next/navigation", () => ({
+  usePathname: () => pathname,
+  useRouter: () => ({ push: vi.fn() }),
+}));
 vi.mock("@/features/app/messages/hooks", () => ({
   useUnreadMessages: () => ({ unreadCount: 0 }),
 }));
@@ -37,7 +41,9 @@ function renderWith(locale: "en" | "fr" = "en") {
         messages={locale === "en" ? en : fr}
         onError={onError}
       >
-        <BottomNav />
+        <AccessModeProvider>
+          <BottomNav />
+        </AccessModeProvider>
       </NextIntlClientProvider>
     ),
   };

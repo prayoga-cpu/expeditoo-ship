@@ -185,7 +185,7 @@ Neither existing flag is overloaded, and both were considered:
 
 | Column | Means | Why not |
 |---|---|---|
-| `notify_on_match` | "alert **me** when a job appears" | An unshipped *notification* preference, labelled « Bientôt disponible » in the UI. Turning it into *publication* consent changes what a switch does behind the driver's back. |
+| `notify_on_match` | "alert **me** when a job appears" | A *notification* preference, now wired (`carrier_route_alerts_spec.md`). Turning it into *publication* consent would change what the switch does behind the driver's back. |
 | `is_active` | "pause this saved query" | A driver pausing their own board filter would silently vanish from the pool; a driver hiding from requesters would lose their filter. |
 
 ### 4.3 What a requester sees
@@ -498,8 +498,14 @@ the Vercel build is a plain `next build` — so run *Actions → Migrate databas
 - **No availability or price commitment.** A trajet is not an offer
   (`carrier_trips_spec.md` §9). Copy says *font le trajet prochainement*, never
   *disponible* in the sense of "will take this job".
-- **No notification to the carrier beyond the message itself.** No `notifications`
-  row, no email. `notify_on_match` and its cron stay unbuilt.
+- **No notification to the carrier from *this* service beyond the message
+  itself.** `carrier-discovery.service.ts` still writes no `notifications` row
+  and sends no email of its own. ~~`notify_on_match` and its cron stay
+  unbuilt.~~ **Reversed on 2026-09-23 by `carrier_route_alerts_spec.md`**: a
+  separate service, `carrier-route-alerts.service.ts`, now fires an in-app
+  notification when a listing matches a `notify_on_match` trip — reusing this
+  file's own `matchRoute` predicate, read from the alerting side rather than
+  the discovery side. Nothing here changed to make that true.
 - **No writes.** `carrier-discovery.service.ts` may not write `offers`,
   `listings`, `shipment_events`, a payment or a status. Its only write is the
   message, and a test asserts it.
