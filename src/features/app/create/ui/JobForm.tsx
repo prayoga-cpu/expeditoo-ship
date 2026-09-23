@@ -10,7 +10,6 @@ import { Input } from "@/components/ui/input";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -207,44 +206,25 @@ function WhatStep({
           checked={Boolean(watch("needsHelp"))}
           onChange={(v) => setValue("needsHelp", v)}
         />
-      </div>
-
-      {/* A top-level field group like WeightBracketField/SizeField above it,
-          not folded into the toggle-row cluster — it has its own label and a
-          two-card choice, not a compact switch row, so it wants the step's
-          own space-y-5 rhythm on both sides rather than the tighter
-          space-y-3 the toggles use between each other. */}
-      <div className="space-y-2">
-        <Label>{t("packaging")}</Label>
-        <ToggleGroup
-          type="single"
-          variant="outline"
-          value={watch("packagingLevel") ?? ""}
-          onValueChange={(value) =>
-            setValue(
-              "packagingLevel",
-              (value || undefined) as "protected" | "boxed" | undefined
-            )
-          }
-          className="w-full"
-        >
-          <ToggleGroupItem value="protected" className="flex-1 flex-col gap-0.5 py-2 whitespace-normal">
-            <span className="text-sm font-medium">
-              {t("packagingOptions.protected.label")}
-            </span>
-            <span className="text-xs font-normal text-muted-foreground">
-              {t("packagingOptions.protected.description")}
-            </span>
-          </ToggleGroupItem>
-          <ToggleGroupItem value="boxed" className="flex-1 flex-col gap-0.5 py-2 whitespace-normal">
-            <span className="text-sm font-medium">
-              {t("packagingOptions.boxed.label")}
-            </span>
-            <span className="text-xs font-normal text-muted-foreground">
-              {t("packagingOptions.boxed.description")}
-            </span>
-          </ToggleGroupItem>
-        </ToggleGroup>
+        {/* Still one `packagingLevel` field underneath — turning one row on
+            sets the value, which makes the other row's `checked` recompute
+            to false on its own, so the pair stays mutually exclusive without
+            extra logic. Switching from a segmented control to matching
+            toggle rows is presentation only. */}
+        <ToggleRow
+          id="packagingProtected"
+          label={t("packagingOptions.protected.label")}
+          description={t("packagingOptions.protected.description")}
+          checked={watch("packagingLevel") === "protected"}
+          onChange={(v) => setValue("packagingLevel", v ? "protected" : undefined)}
+        />
+        <ToggleRow
+          id="packagingBoxed"
+          label={t("packagingOptions.boxed.label")}
+          description={t("packagingOptions.boxed.description")}
+          checked={watch("packagingLevel") === "boxed"}
+          onChange={(v) => setValue("packagingLevel", v ? "boxed" : undefined)}
+        />
       </div>
 
       <div>

@@ -2,8 +2,9 @@
 
 import { useRef, useState, useEffect, type ChangeEvent } from "react";
 import { usePathname } from "next/navigation";
-import { MessageSquarePlus } from "lucide-react";
+import { Bug } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { PaymentMethods } from "./PaymentMethods";
 import { FeedbackDialog } from "@/features/app/feedback/ui";
 import { formatCurrency } from "@/lib/currency";
@@ -18,6 +19,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   MapPin,
   CreditCard,
@@ -243,6 +250,14 @@ export function Profile() {
                 {user.isVerified && <VerifiedBadge size={24} />}
               </h1>
               <p className="text-muted-foreground mb-2">{user.email}</p>
+              {userRoles?.includes("admin") && (
+                <Badge
+                  variant="outline"
+                  className="mb-2 gap-1 border-destructive/30 bg-destructive/15 text-destructive"
+                >
+                  {t("header.adminAccess")}
+                </Badge>
+              )}
               <div className="flex items-center gap-2 mb-4 justify-center md:justify-start">
                 <div className="flex items-center text-yellow-500">
                   <Star className="w-4 h-4 fill-current" />
@@ -566,18 +581,28 @@ function QuickLinks({ userRoles }: { userRoles?: string[] }) {
 }
 
 function SendFeedbackQuickLink({ label }: { label: string }) {
+  const t = useTranslations("feedback.trigger");
   const [open, setOpen] = useState(false);
 
   return (
     <>
-      <Button
-        variant="ghost"
-        className="w-full justify-start gap-3 h-12 group"
-        onClick={() => setOpen(true)}
-      >
-        <MessageSquarePlus className="w-5 h-5 text-primary group-hover:text-accent-foreground" />
-        <span>{label}</span>
-      </Button>
+      <TooltipProvider delayDuration={300}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-3 h-12 group"
+              onClick={() => setOpen(true)}
+            >
+              <Bug className="w-5 h-5 text-primary group-hover:text-accent-foreground" />
+              <span>{label}</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="top">
+            <p>{t("hint")}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
       <FeedbackDialog open={open} onOpenChange={setOpen} />
     </>
   );

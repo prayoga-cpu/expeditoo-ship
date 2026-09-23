@@ -22,10 +22,10 @@ beforeEach(() => {
   };
 });
 
-const SINGLE: User = {
+const SHIPPER_ONLY: User = {
   id: "u1",
-  name: "Single Role",
-  email: "single@example.com",
+  name: "Just Signed Up",
+  email: "shipper@example.com",
   role: "shipper",
   roles: ["shipper"],
   status: "active",
@@ -37,9 +37,20 @@ const SINGLE: User = {
   suspendBlocked: null,
 };
 
-const MULTI: User = {
-  ...SINGLE,
+const ONE_MANAGEABLE: User = {
+  ...SHIPPER_ONLY,
   id: "u2",
+  name: "Approved Carrier",
+  email: "carrier@example.com",
+  role: "carrier",
+  // KYC approval grants both together (carrier.service.ts) — this is the
+  // shape every approved account actually has.
+  roles: ["shipper", "carrier", "driver"],
+};
+
+const MULTI: User = {
+  ...SHIPPER_ONLY,
+  id: "u3",
   name: "Multi Role",
   email: "multi@example.com",
   role: "admin",
@@ -66,29 +77,44 @@ function renderTable(
 }
 
 describe("UsersTable role column", () => {
-  it("shows every role the account holds as its own chip", () => {
+  it("hides the shipper chip — every signup holds it and it manages nothing", () => {
     renderTable([MULTI]);
 
-    expect(screen.getByText("Shipper")).toBeInTheDocument();
-    expect(screen.getByText("Carrier")).toBeInTheDocument();
+    expect(screen.queryByText("Shipper")).not.toBeInTheDocument();
+  });
+
+  it("merges carrier and driver into a single Driver chip", () => {
+    renderTable([ONE_MANAGEABLE]);
+
+    expect(screen.getAllByText("Driver")).toHaveLength(1);
+    expect(screen.queryByText("Carrier")).not.toBeInTheDocument();
+  });
+
+  it("shows every manageable role the account holds", () => {
+    renderTable([MULTI]);
+
+    expect(screen.getByText("Driver")).toBeInTheDocument();
     expect(screen.getByText("Admin")).toBeInTheDocument();
   });
 
-  it("offers no remove control for an account with only one role", () => {
-    renderTable([SINGLE], vi.fn().mockResolvedValue({ success: true, message: "" }));
+  it("offers no remove control for an account with only one manageable role", () => {
+    renderTable(
+      [ONE_MANAGEABLE],
+      vi.fn().mockResolvedValue({ success: true, message: "" })
+    );
 
     expect(screen.queryByLabelText(/Remove/)).not.toBeInTheDocument();
   });
 
-  it("removing a chip calls back with that user and role", async () => {
+  it("removing the Driver chip calls back with the merged role", async () => {
     const onRemoveRole = vi
       .fn()
       .mockResolvedValue({ success: true, message: "" });
     renderTable([MULTI], onRemoveRole);
 
-    fireEvent.click(screen.getByLabelText("Remove Carrier"));
+    fireEvent.click(screen.getByLabelText("Remove Driver"));
 
-    expect(onRemoveRole).toHaveBeenCalledWith(MULTI, "carrier");
+    expect(onRemoveRole).toHaveBeenCalledWith(MULTI, "driver");
   });
 
   it("does not offer a remove control when no handler is passed", () => {

@@ -14,6 +14,61 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.52.1] - 2026-09-23 · fix
+
+- **The admin sidebar no longer swallows its own bottom links.** On a laptop
+  screen, "Withdrawals", "Incidents", "Feedback", "Support Chats" and
+  "Settings" could be cropped off the bottom of the panel with no way to
+  scroll down to them — the list simply stopped, cut off mid-page.
+
+## [2.52.0] - 2026-09-23 · feat
+
+- **Notification settings now show how you'll hear about something, not just
+  whether you will.** Each category on the Settings page is its own box, with
+  a checkbox for every way EXPEDITOO can reach you — trip pickup, in-transit
+  and delivery updates can now be turned off by email and by push
+  notification independently.
+- **A new "Route match alerts" section lets you turn off route-match push
+  notifications for your whole account in one place.** Declaring a trip on
+  "My trips" and asking to be alerted about matching jobs still works exactly
+  as before; this is the account-wide switch for that alert, so you no longer
+  have to turn it off on every declared trip one at a time.
+
+## [2.51.0] - 2026-09-23 · ux
+
+- **The feedback button now tells you what it's for before you click it.**
+  The icon-only button in the header, and "I have a request" on the profile
+  screen, both used a paper-plane-style icon with no explanation beyond its
+  label. Both now show a bug icon, and hovering over either reveals "Report a
+  bug or share an idea — we read every message."
+
+## [2.50.2] - 2026-09-23 · feat
+
+- **The vehicle picker on a driver's fleet screen now offers the categories
+  people actually think in** — little car, sedan, estate, van, 20 m³ truck,
+  truck, and a tailgate truck — instead of the old technical weight classes
+  (3.5 t / 7.5 t / 19 t). A tailgate/lift-gate checkbox already existed
+  separately for any vehicle; "tailgate truck" is a new option alongside it,
+  for when that's the vehicle's whole category rather than an add-on.
+
+## [2.50.1] - 2026-09-23 · ux
+
+- **Carrier and Driver are now one role, "Driver," in Admin → Users.** They
+  were never two different people on this platform — approving someone's
+  driver application already grants both together, and every other screen
+  that shows a role already displays them as the same thing — so letting an
+  admin grant or remove one without the other, which the role dialog
+  allowed, could only ever create an inconsistent account. Adding or
+  removing "Driver" now always moves both at once.
+- **"Shipper" no longer appears in the role list.** Every account gets it
+  automatically the moment they sign up, and it doesn't unlock anything on
+  its own — so it's no longer offered as something to add or remove, only
+  roles that actually change what an account can do are.
+- **"Manage User Role" now shows the roles an account already holds as
+  removable chips, with a dropdown underneath for adding another** — instead
+  of one dropdown and a "current role" line that only ever showed a single
+  role, even for accounts that hold several.
+
 ## [2.50.0] - 2026-09-23 · feat
 
 - **Posting a transport request no longer forces you to place a map pin.**

@@ -3,19 +3,10 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { listingsService } from "@/server/services/listings.service";
 import { ok, unauthorised, handleError } from "@/lib/api-response";
+import { listingStatusEnum } from "@/db/schema/listings";
 
 const querySchema = z.object({
-  status: z
-    .enum([
-      "draft",
-      "open",
-      "awarded",
-      "in_progress",
-      "completed",
-      "cancelled",
-      "expired",
-    ])
-    .optional(),
+  status: z.enum(listingStatusEnum.enumValues).optional(),
 });
 
 /** GET /api/listings/me — the caller's own jobs, any status. */

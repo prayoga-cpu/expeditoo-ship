@@ -8,15 +8,13 @@
  */
 
 export const VEHICLE_TYPES = [
-  "motorcycle",
-  "car",
+  "little_car",
+  "berline",
+  "break",
   "van",
-  "truck_3_5t",
-  "truck_7_5t",
-  "truck_19t",
-  "semi_trailer",
-  "flatbed",
-  "refrigerated",
+  "truck_20m3",
+  "truck",
+  "hayon_tailgate",
 ] as const;
 
 export type VehicleType = (typeof VEHICLE_TYPES)[number];

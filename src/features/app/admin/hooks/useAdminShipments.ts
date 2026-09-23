@@ -15,20 +15,18 @@ interface ShipmentsApiResponse {
   success: boolean;
   data?: Array<{
     id: string;
-    userId: string;
+    shipperId: string;
     listingId?: string | null;
     driverId?: string | null;
     status: string;
-    originAddress: string;
-    destinationAddress: string;
-    packageDescription?: string | null;
-    price?: number | null;
+    pickupAddress: string;
+    dropoffAddress: string;
+    priceCents: number;
     createdAt: string;
     driver?: ShipmentDriver | null;
     listing?: {
       title: string;
     } | null;
-    proposals?: Array<{ id: string }>;
   }>;
   error?: {
     code: string;
@@ -51,18 +49,17 @@ async function fetchAdminShipments(): Promise<PendingDelivery[]> {
   // Map API response to PendingDelivery format
   return (json.data || []).map((item) => ({
     id: item.id,
-    title: item.listing?.title || item.packageDescription || "Shipment",
-    origin: item.originAddress.split(",")[0] || item.originAddress,
-    destination:
-      item.destinationAddress.split(",")[0] || item.destinationAddress,
+    title: item.listing?.title || "Shipment",
+    origin: item.pickupAddress.split(",")[0] || item.pickupAddress,
+    destination: item.dropoffAddress.split(",")[0] || item.dropoffAddress,
     status: item.status.toLowerCase(),
-    price: item.price || 0,
+    price: item.priceCents || 0,
     createdDate: item.createdAt,
-    pickup: item.originAddress,
-    dropoff: item.destinationAddress,
+    pickup: item.pickupAddress,
+    dropoff: item.dropoffAddress,
     date: item.createdAt,
     assignedDriver: item.driverId || undefined,
-    proposalCount: item.proposals?.length || 0,
+    proposalCount: 0,
   }));
 }
 

@@ -99,15 +99,20 @@ export function MainLayout({ children }: MainLayoutProps) {
     { href: "/expedion", label: t("browseJobs"), icon: PlusCircle },
     { href: "/listings/me", label: t("myRequests"), icon: Boxes },
     { href: "/create", label: t("requestTransport"), icon: PackagePlus },
-    {
-      href: "/carrier/application",
-      label: t("myApplication"),
-      icon: ClipboardList,
-      onSelect: applicationNav,
-    },
     messages,
     profile,
   ];
+
+  /** Reaching this for someone not yet qualified for Driver mode happens
+   * through the Home dashboard's own "get started" card
+   * (DriverDashboard.tsx), not this nav — `useApplicationNav` flips to Driver
+   * mode first for anyone who already qualifies. */
+  const myApplication: NavItem = {
+    href: "/carrier/application",
+    label: t("myApplication"),
+    icon: ClipboardList,
+    onSelect: applicationNav,
+  };
 
   /** An approved carrier: bidding and earnings, not the posting tools it has
    * moved past — same split BottomNav.tsx already makes on mobile. */
@@ -117,6 +122,7 @@ export function MainLayout({ children }: MainLayoutProps) {
     { href: "/carrier/offers", label: t("myOffers"), icon: Gavel },
     { href: "/carrier/trips", label: t("myTrips"), icon: Route },
     { href: "/carrier/withdrawals", label: t("myEarnings"), icon: Wallet },
+    myApplication,
     messages,
     profile,
   ];
@@ -132,6 +138,7 @@ export function MainLayout({ children }: MainLayoutProps) {
     jobs,
     { href: "/carrier/trips", label: t("myTrips"), icon: Route },
     { href: "/driver/shipments", label: t("deliveries"), icon: Truck },
+    myApplication,
     messages,
     profile,
   ];

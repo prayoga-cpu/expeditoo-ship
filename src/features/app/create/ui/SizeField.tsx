@@ -33,6 +33,7 @@ export function SizeField({ form }: { form: JobFormApi["form"] }) {
   return (
     <fieldset className="space-y-3">
       <legend className="text-sm font-medium">{t("size")}</legend>
+      <p className="text-xs text-muted-foreground">{t("sizeSkipHint")}</p>
 
       <ToggleGroup
         type="single"

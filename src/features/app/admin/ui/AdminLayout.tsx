@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { NotificationBell } from "@/components/NotificationBell";
 import { FeedbackLauncher } from "@/features/app/feedback/ui";
 import { AppVersionLink } from "@/components/ui/app-version";
@@ -30,6 +31,7 @@ import { AppSidebarHeader } from "@/components/layouts/AppSidebarHeader";
 import { useAdminNavCounts } from "../hooks/useAdminNavCounts";
 import type { AdminNavCounts } from "@/server/services/admin-nav.service";
 import { useTranslations } from "next-intl";
+import { useActiveAccessMode } from "@/lib/use-active-access-mode";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -62,6 +64,21 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const t = useTranslations("admin");
   const tCommon = useTranslations("common");
   const counts = useAdminNavCounts();
+  const { mode, setMode } = useActiveAccessMode();
+
+  // Reaching this layout at all means the session is browsing the back
+  // office. The switcher badge is only a client-side preference on top of
+  // the session's real roles (active-access.ts) — nothing here grants
+  // access — but a stale "User" badge while the sidebar and every page on
+  // screen is the admin panel is confusing, and it happens whenever someone
+  // lands here without going through the switcher (a bookmark, the sign-in
+  // redirect, the sidebar's "Admin Panel" link). Force it to agree with
+  // where they actually are, the same way MainLayout redirects away from
+  // this layout's routes when the stored mode is stale in the other
+  // direction.
+  useEffect(() => {
+    if (mode !== "admin") setMode("admin");
+  }, [mode, setMode]);
 
   const sidebarItems: {
     title: string;
@@ -151,11 +168,6 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       badge: "support",
     },
     {
-      title: t("navigation.profile"),
-      href: "/admin/profile",
-      icon: UserCircle,
-    },
-    {
       title: t("navigation.settings"),
       href: "/admin/settings",
       icon: Settings,
@@ -191,14 +203,6 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           </Link>
         ))}
       </nav>
-      <div className="px-4 mt-auto">
-        <Link href="/profile">
-          <Button variant="outline" className="w-full justify-start gap-2">
-            <ArrowLeft className="w-4 h-4" />
-            {tCommon("navigation.backToApp")}
-          </Button>
-        </Link>
-      </div>
     </div>
   );
 
@@ -229,11 +233,9 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               <AppVersionLink className="hidden md:inline-flex" />
             </div>
             <div className="flex items-center gap-2">
-              {/* Only below xl. From xl up the sidebar carries "Back to App"
-                  at its foot, and two identical exits sat on screen at once;
-                  below xl there is no sidebar and the bottom nav never leaves
-                  /admin, so this is the only way out. */}
-              <Link href="/profile" className="xl:hidden">
+              {/* The sidebar no longer carries its own "Back to App" — this is
+                  the only way out now, at every width, not just below xl. */}
+              <Link href="/profile">
                 <Button variant="ghost" size="sm" className="gap-2">
                   <ArrowLeft className="w-4 h-4" />
                   {tCommon("buttons.back")}

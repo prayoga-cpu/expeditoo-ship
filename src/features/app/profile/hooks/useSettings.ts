@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { UserPreferences } from "@/db/schema/users";
 
-type EmailPreferenceKey = keyof UserPreferences["notifications"]["email"];
+type NotificationChannel = keyof UserPreferences["notifications"];
 
 interface UpdatePreferencesInput {
   notifications?: {
@@ -58,11 +58,11 @@ async function updatePreferences(
  * Custom hook for settings management
  * Fetches and updates user preferences via API
  *
- * `notifications.email` is handed back exactly as `UserPreferences` stores
- * it — no relabelling layer. The previous version mapped a UI key
- * ("auctionResults") onto a made-up API category ("bids") that existed in
- * neither the DTO nor the database column, so toggling it round-tripped
- * through validation and updated nothing.
+ * `notifications.email` and `notifications.inApp` are handed back exactly as
+ * `UserPreferences` stores them — no relabelling layer. The previous version
+ * mapped a UI key ("auctionResults") onto a made-up API category ("bids")
+ * that existed in neither the DTO nor the database column, so toggling it
+ * round-tripped through validation and updated nothing.
  */
 export function useSettings() {
   const { theme, setTheme } = useTheme();
@@ -86,16 +86,21 @@ export function useSettings() {
   });
 
   const email = preferencesData?.preferences?.notifications?.email;
+  const inApp = preferencesData?.preferences?.notifications?.inApp;
 
   const handleThemeChange = useCallback((newTheme: string) => {
     setTheme(newTheme);
   }, [setTheme]);
 
   const handleNotificationChange = useCallback(
-    (key: EmailPreferenceKey, value: boolean) => {
+    <C extends NotificationChannel>(
+      channel: C,
+      key: keyof UserPreferences["notifications"][C],
+      value: boolean
+    ) => {
       updatePreferencesMutation({
-        notifications: { email: { [key]: value } },
-      });
+        notifications: { [channel]: { [key]: value } },
+      } as UpdatePreferencesInput);
     },
     [updatePreferencesMutation]
   );
@@ -103,6 +108,7 @@ export function useSettings() {
   return {
     theme,
     email,
+    inApp,
     isLoading,
     isError,
     handleThemeChange,

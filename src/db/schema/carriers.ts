@@ -43,26 +43,18 @@ export const carrierDocumentStatusEnum = pgEnum("carrier_document_status", [
   "rejected",
 ]);
 
+// Body-style categories a driver actually picks from, not the fleet-manager
+// weight classes the enum used to hold (0031_vehicle_type_taxonomy.sql) —
+// "truck_20m3" and "hayon_tailgate" are the two the classic list left out.
 export const vehicleTypeEnum = pgEnum("vehicle_type", [
-  "motorcycle",
-  "car",
+  "little_car",
+  "berline",
+  "break",
   "van",
-  "truck_3_5t",
-  "truck_7_5t",
-  "truck_19t",
-  "semi_trailer",
-  "flatbed",
-  "refrigerated",
+  "truck_20m3",
+  "truck",
+  "hayon_tailgate",
 ]);
-
-// Vehicle types at or above 7.5t require a transport licence under French
-// regulation (carrier_kyc_spec.md §3).
-export const HEAVY_VEHICLE_TYPES = [
-  "truck_7_5t",
-  "truck_19t",
-  "semi_trailer",
-  "flatbed",
-] as const;
 
 // ========================================
 // Carriers Table

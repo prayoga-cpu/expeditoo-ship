@@ -202,6 +202,308 @@ than leaving it in a chat message.
 
 ---
 
+## ✅ 2026-09-23 — Admin Sidebar Stops Clipping Its Own Bottom Links (2.52.1)
+
+_"make the navigation is 100% fit to screen, sometime it's still cropped and
+scrolled into over the render it self, analyze this bug, it's happened lot of
+times, and I report many times still not solved"_
+
+Root-caused in `AdminLayout.tsx`: its sidebar `<nav>` had lost `min-h-0
+overflow-y-auto` — present on `MainLayout.tsx`'s own sidebar `<nav>`, and on
+this one until some point in this uncommitted working tree — apparently
+dropped while trimming the sidebar's old "Back to App" button in the same
+file. Without `min-h-0`, a flex child's automatic minimum size is its content
+size, so `flex-1` alone cannot shrink the nav below the height its 14 links
+actually need; the `<aside>` around it clips overflow (`overflow-hidden`)
+rather than showing a scrollbar, so anything past the fold was not merely
+hidden, it was unreachable — no scroll, no keyboard path, nothing.
+
+Confirmed with Playwright (`@playwright/test`'s `chromium`, since the bare
+`playwright` package doesn't resolve here — see
+`throwaway-admin-for-browser-checks` in the assistant's own memory) against
+the local dev server, signed in as a throwaway admin account (created via
+`/api/auth/sign-up/email`, `email_verified` and an `admin` row in
+`user_roles` set directly in `expeditoo_dev`, deleted afterward). At a
+1440×600 viewport: before the fix, `nav.scrollHeight === nav.clientHeight`
+(752px both) — the box had already grown to fit all 14 links and simply hung
+254px past the `<aside>`'s bottom edge, invisibly clipped. After restoring
+the two classes, `nav.clientHeight` shrinks to the space actually available
+(482px) and `nav.scrollHeight` (752px) exceeds it, so the browser gives it a
+real scrollbar and every link is reachable. `MainLayout.tsx`'s sidebar was
+re-verified in the same pass (forcing `expeditoo-active-access=user` in
+`localStorage` before navigating, since an admin-qualified account defaults
+into admin mode and would otherwise redirect straight past `/home`) and was
+never affected — it already had both classes.
+
+Also found and removed on the way past: two throwaway Playwright scripts
+(`wf-verify-create.mjs`, `wf-verify-create.spec.ts`) left uncommitted at the
+repo root from an earlier ad-hoc check — the exact `no-undef` lint errors
+2.52.0's own Verification note had already flagged as "unrelated to this
+change." They were scratch tooling, not source; deleting them took lint back
+to the project's real baseline (0 errors).
+
+**Verification:** `npx tsc --noEmit` clean. `pnpm lint` — 0 errors, 84
+warnings (pre-existing, unrelated to this change). Full suite green (1750
+tests, 133 files — unchanged, this fix touched no logic under test). Driven
+in Chromium against the local dev server as described above; screenshots and
+raw layout metrics (before/after `nav.scrollHeight` vs `nav.clientHeight`)
+captured to confirm the mechanism, not just the visual.
+
+## ✅ 2026-09-23 — Per-Channel Notification Settings; Route Match Alerts Get a Push Gate (2.52.0)
+
+_"this the reference of notification setup for setting, pls implement"_ — two
+reference screenshots: Cocolis's Notifications screen, where each category is
+its own box with a checkbox row per channel ("Par e-mail", "Par notification
+push"), and EXPEDITOO's own Settings page as it stood before this change
+(email-only, one checkbox per category).
+
+Settings' notifications section is restructured to match:
+`NotificationCategory` / `NotificationChannelRow` (new, local to
+`Settings.tsx`) render one bordered box per category, each with a channel row
+per preference key it actually has — no row for a channel that would do
+nothing when unchecked. Two categories that were already email-only (Listing
+published, Driver & payment) stay that way; Trip & delivery updates gains a
+push row; a new Route match alerts category is push-only.
+
+The push (in-app) half of Trip & delivery updates was pure UI debt: `inApp`
+preferences have existed in the DTO/schema since 2.49.0 but nothing ever read
+them. `shipment.service.ts`'s `updateStatus` fired the shipper's bell
+notification unconditionally on `PICKED_UP`/`IN_TRANSIT`/`DELIVERED` — a new
+`notifyShipmentUpdate` gates it by `preferences.notifications.inApp.
+shipmentUpdates`, failing open on a lookup error, mirroring
+`emailShipmentUpdate`'s existing convention for the email half right below it.
+The two channels gate independently (tested directly, including that a
+lookup failure still notifies).
+
+Route match alerts (`carrier_route_alerts_spec.md`, shipped 2.48.0) explicitly
+scoped out any Settings toggle — "no push/SMS/email channel for this alert."
+That's revised, not reversed: still no email channel, but `inApp.
+carrierRouteMatch` (new preference key, default true) is now a second,
+account-level consent alongside the per-trajet `notify_on_match` switch on
+`/carrier/trips` — the per-trajet switch decides whether a route produces
+alerts at all, this decides whether the account hears them once one fires.
+Wired at `carrier-routes.dal.ts`: `findNotifyCandidates` gained its own column
+projection (`notifyCandidateColumns`) carrying `user.preferences` — already an
+inner-joined table, so no extra query per candidate — and
+`carrier-route-alerts.service.ts` skips `createNotification` for a carrier
+whose checkbox is off, after dedup so a carrier with two matching trajets and
+the checkbox off is zero notifications, not two deduped-then-skipped. The
+discovery query (`findMatchCandidates`) is untouched and carries no extra
+payload.
+
+Deliberately not wired: `email`/`inApp` preference keys with no Settings
+category — `offerReceived`, `offerAccepted`, `offerRejected`,
+`paymentConfirmation`, `marketing`, `messages` — stay unread by any service,
+exactly as before. Gating a preference with no checkbox to control it would
+be unreachable code, not a feature.
+
+New spec: `docs/specs/notification_channel_settings_spec.md`.
+`carrier_route_alerts_spec.md` §6 and §8 updated to reflect the reversed
+non-goal.
+
+**Verification:** `npx tsc --noEmit` and `pnpm lint` clean on every touched
+file (the pre-existing `wf-verify-create.mjs` lint errors and one pre-existing
+unused-import warning elsewhere are unrelated to this change). Full suite
+green (1750 tests; `carrier-route-alerts.service.test.ts` +3,
+`shipment.service.test.ts` +5 new). `npx next build` succeeds.
+`src/i18n/__tests__/locale-parity.test.ts` green for the new `channels` /
+`routeAlerts` keys. Driven in Chromium against the local dev server with a
+throwaway account (deleted after): both themes, both locales, and the new
+push checkbox confirmed to persist its unchecked state across a reload.
+
+## ✅ 2026-09-23 — Feedback Trigger Gets a Bug Icon and a Hover Hint (2.51.0)
+
+_"edit the feedback copy and icon tobe: add the info hover with copy, and the
+icon of a bug like this image"_ — three reference screenshots: the profile
+quick-links row with "I have a request" highlighted, the icon-only header
+button collapsed, and a third-party app's disabled button showing a bug icon
+with a hover tooltip.
+
+Two places render this feature's entry point and both needed the same
+change: `FeedbackLauncher.tsx` (icon-only, mounted in the header of all three
+shells — `MainLayout`, `DriverLayout`, `AdminLayout`) and `Profile.tsx`'s
+`SendFeedbackQuickLink` (the "I have a request" row in the profile
+quick-links list). Both swapped their `MessageSquarePlus` icon (lucide-react)
+for `Bug`, and both gained a Radix tooltip using the same primitive
+`VerifiedBadge.tsx` already established (`Tooltip`/`TooltipTrigger`/
+`TooltipContent` from `@/components/ui/tooltip`, `TooltipProvider
+delayDuration={300}`) rather than introducing a second hover pattern. The
+header button's native `title` attribute — which only ever echoed its own
+`aria-label`, adding nothing a screen reader didn't already announce — is now
+a real Tooltip carrying new copy, `feedback.trigger.hint` (added to both
+`messages/en.json` and `messages/fr.json`): "Report a bug or share an idea —
+we read every message," reusing the wording already established in
+`feedback.dialog.description` rather than inventing a third phrasing for the
+same feature. `FeedbackDialog.tsx`'s own two `MessageSquarePlus` usages
+(the "My feedback" tab's empty-state icon) are a different concept — an empty
+list, not the button that opens the dialog — and were left untouched.
+**Verification:** `npx tsc --noEmit` clean on both touched files; `pnpm
+vitest run src/features/app/feedback` (22 tests) and
+`src/i18n/__tests__/locale-parity.test.ts` (3 tests) green, confirming FR/EN
+key parity for the new key. **Known limits:** no test asserts the tooltip
+text or icon directly — neither `FeedbackLauncher` nor `Profile`'s quick
+links have a test file — so this is verified by reading the component and by
+the adjacent suites not regressing, not by a new assertion.
+
+## ✅ 2026-09-23 — Vehicle Type Taxonomy Replaced; In-House Driver Plan + Spec Written (2.50.2)
+
+Two unrelated asks handled in the same session, kept as separate concerns
+below because only the first one shipped code.
+
+**Vehicle types.** Asked to check whether a "hayon-tailgate" option existed
+on the vehicle field, and to replace the type list with little car / berline
+/ break / van / 20m³ / camion. Investigation first: the tailgate/hayon
+capability already existed, but as a `vehicles.features` jsonb equipment
+checkbox (`VehicleForm.tsx`, French label "Hayon élévateur"), not a type —
+and the requested type list (little car/berline/break/20M3/CAMION) matched
+nothing anywhere in the repo under any spelling; the actual 9-value taxonomy
+was English technical weight classes (motorcycle/car/van/truck_3_5t/
+truck_7_5t/truck_19t/semi_trailer/flatbed/refrigerated). Confirmed by a
+parallel audit that this was safe to replace wholesale: every consumer of
+`vehicle.type` is generic (Zod enum validation, translated display, or the
+capacity-matching logic in `offers.service.ts` `assertVehicleFitsJob`, which
+reads only `maxWeightKg`/dimensions and never the type) — nothing branches on
+a specific value. `HEAVY_VEHICLE_TYPES` (carriers.ts) was already dead code
+(a "≥7.5t needs transport_licence" rule nothing enforced) so its removal
+needed no migration of its own. `vehicle_type` is a native Postgres enum with
+no `RENAME`/`DROP VALUE` precedent in this repo (0023/0025 only ever
+`ADD VALUE`) — `0031_vehicle_type_taxonomy.sql` rebuilds it under a temp
+name and re-points `vehicles.type` with a `USING` clause mapping every old
+value forward (motorcycle/car → `little_car`, every truck class → the new
+generic `truck`; `van` unchanged, which is also the only value
+`seed-approved-carrier.ts` hardcodes, so that script needed no change) rather
+than the DROP TYPE CASCADE + rebuild-dependent-tables pattern 0002 used,
+since `vehicles` may hold real rows today and this migration preserves them
+instead of assuming an empty table. New 7-value list: `little_car`,
+`berline`, `break`, `van`, `truck_20m3`, `truck`, `hayon_tailgate`. Both
+translation key sets that read this enum (`admin.carriers.vehicleTypes.*`
+and `carrier.fleet.types.*` — confirmed independent copies, both needed the
+same edit) updated in both locales; `docs/specs/carrier_kyc_spec.md` §1/§3
+updated to match, including softening the transport-licence paragraph that
+named the now-gone `truck_7_5t` specifically (`maxWeightKg` was always the
+only real signal — `vehicle_type` is a body-style choice, not a weight
+class, even before this change). The existing "tailgate" feature checkbox
+was left as-is, coexisting with the new `hayon_tailgate` *type* — a truck can
+still have the equipment flag regardless of which of the 7 types it's filed
+under; nothing asked for the checkbox to be removed. **Verification:**
+`tsc` clean, `eslint` clean, `pnpm vitest run` green on
+`migrations-journal.test.ts`, `locale-parity.test.ts`, and the full
+`carrier`/carrier-DAL suites (45 tests) — not run against a live database,
+so the migration SQL itself is unexecuted; add running it to the release
+checklist alongside 0027–0030, which are already queued.
+
+**In-house drivers — plan and spec only, nothing implemented.** Separately
+asked to make `shipper`, `driver` and (implicitly) the default signup role
+"one integrated" concept, with `shipper` specifically becoming "transport
+from Expeditoo — driver from our own company." A repo-wide audit (four
+parallel readers) found this has **zero grounding** anywhere in ROADMAP.md,
+docs/specs/, or git history — every document instead describes a market of
+independent, self-employed carriers — and that `shipper` is not inert
+vocabulary available for the taking: it is a live value in three separate
+Postgres enums (`user_role`, `review_role`, `actor_role` — only the first is
+in scope here) and is the literal role held by the synthetic Expedion system
+account (`expedion_system_shipper`) that owns every escalated listing. A
+near-identical ask — partition carriers into two kinds — was already
+proposed and explicitly declined in `carriers_on_route_spec.md` §4.5 for
+lack of a reliable data signal. Given that, and per `CLAUDE.md`'s mandatory
+spec-driven-development rule, this session stopped at writing
+`docs/plans/plan_in_house_drivers.md` and
+`docs/specs/in_house_drivers_spec.md` rather than touching `shipper`'s
+semantics live — the requester's own chosen option was explicit: design the
+concept "before touching shipper." Design, confirmed with the requester over
+two rounds of questions: default signup grants **no** role (replacing
+today's auto-`shipper`, which this audit confirmed gates nothing — zero
+`assertRole(session, "shipper")` calls exist, and the zero-role UI fallback
+`NO_ROLE_LABEL` already exists and renders cleanly); an in-house driver is
+admin-created directly (not the public KYC flow), holds `shipper` **and**
+`driver` together (not a replacement), and can only be assigned work
+directly — never bids — via a new `IN_HOUSE_DIRECT_ASSIGN_ONLY` guard on
+`submitOffer`, reusing the Expedion post-payment fork's existing "assign
+from the pool" lane rather than building a second one. The synthetic system
+account stops holding `shipper` once the word means something, since it
+isn't a driver. No schema change proposed — the role pair *is* the signal.
+Two things explicitly **not** resolved, flagged as open in the plan rather
+than guessed: where a real SIRET comes from for a salaried employee
+(`carriers.siret` stays `NOT NULL`), and that a directly-posted (`/create`)
+job has no assign-without-bidding mechanism today, so v1 in-house drivers can
+only do Expedion-escalated work. **Nothing in this half was implemented or
+tested** — the four files this touches (`offers.service.ts`,
+`seed-expedion-demo.ts`, `users.dal.ts`/`auth.service.ts`, `useAdminDrivers.ts`,
+`role-groups.ts`, plus a new admin creation flow) are listed in the plan's
+§8 table, not yet edited.
+
+## ✅ 2026-09-23 — Carrier/Driver Merged to One Role, Shipper Hidden From Role Management (2.50.1)
+
+Asked directly, from a screenshot of `/admin/users`: what's the difference
+between `carrier` and `driver`, and if there isn't one, merge them; then
+filter the role dialog to only roles that are actually necessary or usable,
+and rebuild it to show held roles as chips with a dropdown to add more,
+instead of one dropdown and a stale singular "current role" line.
+
+**The difference turned out to be none, and the codebase already half-knew
+it.** `carrier.service.ts`'s `approveApplication` grants `carrier` and
+`driver` in the same call, never one without the other — the only path that
+assigns either today. `src/lib/primary-role.ts` already collapses them to
+one sidebar badge, with a comment saying why: "the two are the same person
+here." The French copy for both, in two separate translation namespaces
+(`common.roles`, unrelated to this change, and the admin one this change
+touches), was already the identical word, "Chauffeur" — only the English
+admin dialog still called them different things. Two dashboard counts
+(`admin.dal.ts` `getActiveDriversCount`, `getMonthlyNewDriversCount`) already
+key off `carrier` alone as *the* "is this a driver" signal. What they were
+never merged in was the one place an admin could actually assign them:
+`RoleManagementDialog.tsx` and `UsersTable.tsx`'s role chips offered
+`carrier` and `driver` as two independent one-role-at-a-time toggles
+(`user.service.ts` `assignRole`/`removeRole`, no pairing logic at all), so
+an admin could grant one without the other — a state that never happens
+through KYC approval and that nothing downstream expects.
+
+**`shipper` is a different kind of leftover, not a duplicate.** It's granted
+to every signup automatically (`assignDefaultRole`) and gates nothing: a
+repo-wide search found zero `assertRole`/`assertAnyRole` calls for it
+anywhere in the service layer, and CLAUDE.md already documents that no
+shipper-facing surface exists. Unlike carrier/driver it isn't the same
+concept wearing two names — it's simply inert as a manageable role, so it's
+left out of the admin add/remove UI rather than folded into "Driver."
+
+**New:** `src/features/app/admin/lib/role-groups.ts` — `MANAGEABLE_ROLES`
+(`driver`, `operator`, `support`, `finance`, `admin`; `shipper` excluded
+deliberately), `dbRolesFor` (expands the "driver" chip to
+`["carrier", "driver"]`, passes everything else through), `chipsHeld`
+(collapses an account's raw `user_roles` values to the manageable chips it
+holds). `useAdmin.ts`'s `handleUpdateRole`/`handleRemoveRole` now loop over
+`dbRolesFor(role)`, sequentially (not `Promise.all`) so a real failure on
+the first call stops the second rather than leaving the pair half-granted.
+No DB schema or API change — `user_roles` still has seven values and
+`/api/user/roles` still takes one role per call; the merge is entirely in
+this client-side grouping, the same shape `carrier.service.ts` already uses
+server-side for the KYC path.
+
+**`RoleManagementDialog.tsx` rebuilt**, replacing the single "Select new
+role to assign" dropdown and the "Current role: admin" line (singular, and
+wrong for any multi-role account) with: held roles as removable chips
+(hidden entirely once only one manageable chip remains, so the control never
+offers a click that would just hit the server's "last role" refusal), and a
+dropdown scoped to `MANAGEABLE_ROLES` minus whatever's already held.
+`UsersTable.tsx`'s own inline chips got the same `chipsHeld` treatment for
+consistency — the table and the dialog now agree on what a role is, where
+before the table showed `shipper`/`carrier`/`driver`/`admin` as four chips
+and the dialog's dropdown still offered all seven raw values including
+`shipper`. Reused `t("driver")` as the merged label — the admin panel's
+own French copy already made this exact choice, `t("carrier")` now points
+at the same string rather than "Transporteur."
+
+**Verification:** `npx tsc --noEmit` clean, `eslint` clean on every touched
+file, `src/i18n/__tests__/locale-parity.test.ts` passes (no FR/EN key
+drift). 20 new/updated tests: `role-groups.test.ts` (9, the pure
+`dbRolesFor`/`chipsHeld` logic), `RoleManagementDialog.test.tsx` (5, new —
+none existed before), `UsersTable.test.tsx` (6, rewritten for the merged/
+filtered chips — the old assertions expected `carrier` as its own chip and
+would fail against this change on purpose). Full `src/features/app/admin`
+suite: 84 passed, 0 failed. Not run against a live browser session — no
+dev database was started for this change (see local-postgres-for-browser-
+checks, project memory); the component and unit tests are what's verified.
+
 ## ✅ 2026-09-23 — Coordinate-Optional Posting, Weight Unit Toggle, Row-Click (2.50.0)
 
 Three follow-ups from the same conversation as 2.47.0's feedback-ticket

@@ -2,7 +2,6 @@
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,9 +21,73 @@ import { useLocale } from "@/components/providers/LocaleProvider";
 import { locales, localeNames } from "@/i18n/config";
 import { FlagComponents } from "@/components/ui/flags";
 
+/**
+ * One checkbox row inside a notification category box — a channel that
+ * category actually has a preference key for. Reused across categories
+ * rather than one-off per channel, since a category can carry up to two of
+ * these (see notification_channel_settings_spec.md §2).
+ */
+function NotificationChannelRow({
+  id,
+  label,
+  checked,
+  disabled,
+  onCheckedChange,
+}: {
+  id: string;
+  label: string;
+  checked: boolean;
+  disabled?: boolean;
+  onCheckedChange?: (checked: boolean) => void;
+}) {
+  return (
+    <label
+      htmlFor={id}
+      className="flex items-center gap-3 py-2 first:pt-0 last:pb-0 cursor-pointer"
+    >
+      <Checkbox
+        id={id}
+        checked={checked}
+        disabled={disabled}
+        onCheckedChange={
+          onCheckedChange
+            ? (value) => onCheckedChange(value as boolean)
+            : undefined
+        }
+      />
+      <span className="text-sm text-foreground">{label}</span>
+    </label>
+  );
+}
+
+/** A category box: title, description, then its channel rows. */
+function NotificationCategory({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-lg border border-border p-4">
+      <p className="text-foreground font-medium">{title}</p>
+      <p className="text-sm text-muted-foreground mb-1">{description}</p>
+      <div className="divide-y divide-border">{children}</div>
+    </div>
+  );
+}
+
 export function Settings() {
-  const { theme, email, isError, handleThemeChange, handleNotificationChange } =
-    useSettings();
+  const {
+    theme,
+    email,
+    inApp,
+    isError,
+    handleThemeChange,
+    handleNotificationChange,
+  } = useSettings();
 
   const t = useTranslations("settings");
   const { locale, setLocale } = useLocale();
@@ -107,7 +170,7 @@ export function Settings() {
         </div>
       </div>
 
-      {/* Notification Settings - Email Only */}
+      {/* Notification Settings */}
       <div className="bg-card rounded-xl p-5 border border-border mb-5">
         <h2 className="font-semibold text-foreground mb-5 flex items-center gap-2">
           <Bell className="w-5 h-5 text-primary" />
@@ -121,84 +184,82 @@ export function Settings() {
             {t("notifications.loadError")}
           </p>
         ) : (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors">
-              <div className="flex-1">
-                <Label
-                  htmlFor="notif-listing-published"
-                  className="text-foreground font-medium cursor-pointer"
-                >
-                  {t("notifications.listingPublished.title")}
-                </Label>
-                <p className="text-sm text-muted-foreground">
-                  {t("notifications.listingPublished.description")}
-                </p>
-              </div>
-              <Checkbox
-                id="notif-listing-published"
+          <div className="space-y-3">
+            <NotificationCategory
+              title={t("notifications.listingPublished.title")}
+              description={t("notifications.listingPublished.description")}
+            >
+              <NotificationChannelRow
+                id="notif-listing-published-email"
+                label={t("notifications.channels.email")}
                 checked={email?.listingPublished ?? true}
                 onCheckedChange={(checked) =>
-                  handleNotificationChange("listingPublished", checked as boolean)
+                  handleNotificationChange("email", "listingPublished", checked)
                 }
               />
-            </div>
+            </NotificationCategory>
 
-            <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors">
-              <div className="flex-1">
-                <Label
-                  htmlFor="notif-driver-payment"
-                  className="text-foreground font-medium cursor-pointer"
-                >
-                  {t("notifications.driverPayment.title")}
-                </Label>
-                <p className="text-sm text-muted-foreground">
-                  {t("notifications.driverPayment.description")}
-                </p>
-              </div>
-              <Checkbox
-                id="notif-driver-payment"
+            <NotificationCategory
+              title={t("notifications.driverPayment.title")}
+              description={t("notifications.driverPayment.description")}
+            >
+              <NotificationChannelRow
+                id="notif-driver-payment-email"
+                label={t("notifications.channels.email")}
                 checked={email?.invoiceReady ?? true}
                 onCheckedChange={(checked) =>
-                  handleNotificationChange("invoiceReady", checked as boolean)
+                  handleNotificationChange("email", "invoiceReady", checked)
                 }
               />
-            </div>
+            </NotificationCategory>
 
-            <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors">
-              <div className="flex-1">
-                <Label
-                  htmlFor="notif-trip-updates"
-                  className="text-foreground font-medium cursor-pointer"
-                >
-                  {t("notifications.tripUpdates.title")}
-                </Label>
-                <p className="text-sm text-muted-foreground">
-                  {t("notifications.tripUpdates.description")}
-                </p>
-              </div>
-              <Checkbox
-                id="notif-trip-updates"
+            <NotificationCategory
+              title={t("notifications.tripUpdates.title")}
+              description={t("notifications.tripUpdates.description")}
+            >
+              <NotificationChannelRow
+                id="notif-trip-updates-email"
+                label={t("notifications.channels.email")}
                 checked={email?.shipmentUpdates ?? true}
                 onCheckedChange={(checked) =>
-                  handleNotificationChange("shipmentUpdates", checked as boolean)
+                  handleNotificationChange("email", "shipmentUpdates", checked)
                 }
               />
-            </div>
+              <NotificationChannelRow
+                id="notif-trip-updates-push"
+                label={t("notifications.channels.push")}
+                checked={inApp?.shipmentUpdates ?? true}
+                onCheckedChange={(checked) =>
+                  handleNotificationChange("inApp", "shipmentUpdates", checked)
+                }
+              />
+            </NotificationCategory>
 
-            <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors">
-              <div className="flex-1">
-                <Label
-                  htmlFor="notif-account"
-                  className="text-foreground font-medium cursor-pointer"
-                >
-                  {t("notifications.accountSecurity.title")}
-                </Label>
-                <p className="text-sm text-muted-foreground">
-                  {t("notifications.accountSecurity.description")}
-                </p>
-              </div>
-              <Checkbox id="notif-account" defaultChecked disabled />
-            </div>
+            <NotificationCategory
+              title={t("notifications.routeAlerts.title")}
+              description={t("notifications.routeAlerts.description")}
+            >
+              <NotificationChannelRow
+                id="notif-route-alerts-push"
+                label={t("notifications.channels.push")}
+                checked={inApp?.carrierRouteMatch ?? true}
+                onCheckedChange={(checked) =>
+                  handleNotificationChange("inApp", "carrierRouteMatch", checked)
+                }
+              />
+            </NotificationCategory>
+
+            <NotificationCategory
+              title={t("notifications.accountSecurity.title")}
+              description={t("notifications.accountSecurity.description")}
+            >
+              <NotificationChannelRow
+                id="notif-account-email"
+                label={t("notifications.channels.email")}
+                checked
+                disabled
+              />
+            </NotificationCategory>
           </div>
         )}
       </div>

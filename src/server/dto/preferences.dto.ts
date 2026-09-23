@@ -30,6 +30,7 @@ export const inAppNotificationPreferencesSchema = z.object({
     shipmentUpdates: z.boolean(),
     invoiceReady: z.boolean(),
     messages: z.boolean(),
+    carrierRouteMatch: z.boolean(),
 });
 
 export const userPreferencesSchema = z.object({

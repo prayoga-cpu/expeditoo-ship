@@ -105,7 +105,8 @@ and(
   `sendListingPostedEmail` and `notifyOffersInvalidated` already follow.
 - **In-app only.** No email channel. `notificationsService.createNotification`
   already fans out over Ably to the bell in real time; nothing further is
-  added.
+  added. Gated by the recipient's own `inApp.carrierRouteMatch` preference —
+  see `notification_channel_settings_spec.md` §5.
 
 ## 7. Notification shape
 
@@ -123,15 +124,18 @@ notification type in the codebase; no migration needed to add it.
 
 ## 8. Non-goals
 
-- No email preference, no toggle added to the Settings page's Email
-  Notifications section. The existing `/carrier/trips` switch is the one
-  surface; that section's own preference plumbing (UI, hook, DTO and DB
-  schema currently disagree on their key names) is out of scope here.
+- **Superseded in part by `notification_channel_settings_spec.md`**: a push
+  (in-app) toggle for this alert now exists on the Settings page, gating
+  `notifyMatchingCarriers` by `preferences.notifications.inApp.
+  carrierRouteMatch`. What is still true: no **email** channel for this
+  alert, and the per-trajet `/carrier/trips` switch (`notify_on_match`) is
+  unchanged and remains the thing that decides whether a route produces
+  alerts at all — the Settings checkbox only decides whether the account
+  receives them once one fires.
 - No standalone "alert me near my current location" concept independent of a
   declared trajet. "Near the carrier" is the trajet's own `radius_km`, applied
   by `isOnPath` exactly as it already is for discovery and for the board's own
   route search.
-- No push/SMS/email channel for this alert.
 - No change to `is_discoverable`, its backfill, or the discovery projection.
 
 ## 9. Test coverage required

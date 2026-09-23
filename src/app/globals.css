@@ -24,6 +24,13 @@
   --muted-foreground: oklch(0.52 0.02 250);
   --border: oklch(0.95 0.01 250);
   --input: oklch(0.98 0.01 250);
+  /* Distinct from `--input` (a near-white fill token) on purpose: a form
+     field's outline needs real contrast against `--card`/`--background` in
+     both themes, which `--input` was never built to provide — it reads as a
+     subtle backdrop, not a boundary, and the field ends up defined only by
+     `shadow-xs`, which barely shows at all against a light page and not at
+     all against a dark one. */
+  --field-border: oklch(0.82 0.015 250);
 
   /* System colors */
   --destructive: oklch(0.62 0.22 18);
@@ -58,6 +65,7 @@
   --muted-foreground: oklch(0.65 0.02 250);
   --border: oklch(0.28 0.02 250);
   --input: oklch(0.22 0.02 250);
+  --field-border: oklch(0.42 0.02 250);
   --sidebar: oklch(0.18 0.02 250);
   --sidebar-foreground: oklch(0.95 0.02 250);
   /* Lifted so the same utilities read on a near-black background. */
@@ -183,6 +191,7 @@
   --color-warning-foreground: var(--warning-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
+  --color-field-border: var(--field-border);
   --color-ring: var(--primary);
   --color-chart-1: var(--primary);
   --color-chart-2: var(--accent-green);

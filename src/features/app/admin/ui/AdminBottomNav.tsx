@@ -8,7 +8,7 @@ import {
   Users,
   FileText,
   Truck,
-  UserCircle,
+  Settings,
   DollarSign,
   Headset,
   Car,
@@ -104,9 +104,9 @@ export function AdminBottomNav() {
       badge: "support",
     },
     {
-      href: "/admin/profile",
-      label: t("profile"),
-      icon: <UserCircle className="w-5 h-5" />,
+      href: "/admin/settings",
+      label: t("settings"),
+      icon: <Settings className="w-5 h-5" />,
     },
   ];
 

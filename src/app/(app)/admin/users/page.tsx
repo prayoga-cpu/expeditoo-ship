@@ -83,6 +83,7 @@ function UsersPageContent() {
         onOpenChange={setRoleDialogOpen}
         user={selectedUser}
         onUpdateRole={handleUpdateRole}
+        onRemoveRole={(user, role) => handleRemoveRole(user.id, role)}
         isUpdating={isUpdatingRole}
       />
     </div>

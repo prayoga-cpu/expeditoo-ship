@@ -225,6 +225,17 @@ const matchCandidateColumns = {
 } as const;
 
 /**
+ * `findNotifyCandidates` only: the recipient's own preferences, so the
+ * alerting side can honour `inApp.carrierRouteMatch` without a second query
+ * per candidate (notification_channel_settings_spec.md §5). Kept off
+ * `matchCandidateColumns` — the discovery query has no use for it.
+ */
+const notifyCandidateColumns = {
+  ...matchCandidateColumns,
+  userPreferences: user.preferences,
+} as const;
+
+/**
  * The stored dates `matchRoute` reads off `dates`.
  *
  * Only occasional trajets are fetched: a recurring one stores none — the DTO
@@ -364,7 +375,7 @@ export const carrierRoutesDal = {
    */
   async findNotifyCandidates(job: MatchCandidateQuery, limit: number) {
     const rows = await db
-      .select(matchCandidateColumns)
+      .select(notifyCandidateColumns)
       .from(carrierRoutes)
       .innerJoin(carriers, eq(carriers.id, carrierRoutes.carrierId))
       .innerJoin(user, eq(user.id, carriers.userId))
@@ -382,4 +393,9 @@ export type CarrierRouteRow = NonNullable<
 /** One prefilter candidate, in the shape `matchRoute` reads. */
 export type MatchCandidateRow = Awaited<
   ReturnType<typeof carrierRoutesDal.findMatchCandidates>
+>[number];
+
+/** A notify-side candidate: `MatchCandidateRow` plus the recipient's preferences. */
+export type NotifyCandidateRow = Awaited<
+  ReturnType<typeof carrierRoutesDal.findNotifyCandidates>
 >[number];

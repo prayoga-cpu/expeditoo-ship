@@ -300,12 +300,7 @@ export const shipmentService = {
       await settleDelivery(shipmentId, ownership.carrierId);
     }
 
-    await notify(
-      ownership.shipperId,
-      "shipment_update",
-      `Delivery ${next.toLowerCase().replace("_", " ")}`,
-      shipmentId
-    );
+    await notifyShipmentUpdate(ownership.shipperId, shipmentId, next);
     await emailShipmentUpdate(shipmentId, ownership.shipperId, ownership.listingId, next);
     reportToExpedion(ownership.listingId, next, shipmentId);
     requestClientConfirmation(shipmentId, next);
@@ -362,19 +357,51 @@ async function notify(
     .catch((e) => console.error(`${type} notification failed`, e));
 }
 
+/**
+ * The push/in-app half of a shipment status change, gated by
+ * `preferences.notifications.inApp.shipmentUpdates` (default true) —
+ * the email half below has its own independent gate
+ * (notification_channel_settings_spec.md §4). A preference lookup failure
+ * fails open (still notifies), matching `emailShipmentUpdate`'s convention
+ * below: this is a courtesy notification, not something a broken read should
+ * silently swallow.
+ */
+async function notifyShipmentUpdate(
+  shipperId: string,
+  shipmentId: string,
+  next: ShipmentStatusType
+) {
+  try {
+    const user = await getUserById(shipperId);
+    if (user?.preferences?.notifications?.inApp?.shipmentUpdates === false) {
+      return;
+    }
+  } catch (e) {
+    console.error("shipment_update inApp preference lookup failed", e);
+  }
+
+  await notify(
+    shipperId,
+    "shipment_update",
+    `Delivery ${next.toLowerCase().replace("_", " ")}`,
+    shipmentId
+  );
+}
+
 const EMAILABLE_STAGES = ["PICKED_UP", "IN_TRANSIT", "DELIVERED"] as const;
 type EmailableStage = (typeof EMAILABLE_STAGES)[number];
 
 /**
- * The email half of the same status change `notify` above already sends as a
- * bell notification, gated by `preferences.notifications.email.shipmentUpdates`
- * (default true). `ASSIGNED` and `CANCELLED` never reach here: `updateStatus`
- * throws on `CANCELLED` before this point, and `ASSIGNED` has no transition
- * that leads to this call.
+ * The email half of the same status change `notifyShipmentUpdate` above
+ * already sends as a bell notification, gated independently by
+ * `preferences.notifications.email.shipmentUpdates` (default true).
+ * `ASSIGNED` and `CANCELLED` never reach here: `updateStatus` throws on
+ * `CANCELLED` before this point, and `ASSIGNED` has no transition that leads
+ * to this call.
  *
- * Self-contained failure, like `notify` above: a lookup or send going wrong
- * must not turn a delivery that genuinely happened into a failed status
- * update, so nothing here is allowed to reject.
+ * Self-contained failure, like `notifyShipmentUpdate` above: a lookup or send
+ * going wrong must not turn a delivery that genuinely happened into a failed
+ * status update, so nothing here is allowed to reject.
  */
 async function emailShipmentUpdate(
   shipmentId: string,

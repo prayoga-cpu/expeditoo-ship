@@ -50,6 +50,7 @@ import { format, formatDistanceToNow } from "date-fns";
 import { enUS, fr } from "date-fns/locale";
 import { DataTable, DataTableColumnHeader, dateRangeFilterFn } from "./data-table";
 import { DeleteUserDialog } from "./DeleteUserDialog";
+import { chipsHeld } from "../lib/role-groups";
 
 type ConfirmAction =
   | "suspend"
@@ -81,12 +82,17 @@ interface UsersTableProps {
 }
 
 /**
- * Every role the account holds, not the single collapsed one — the primary
- * role a support or finance account read "Shipper" in this table is exactly
- * how that bug hid (map-api-user.ts). Each chip can remove itself once there
- * is more than one; the server refuses to take the last role either way
- * (user.service.ts `removeRole`), this just avoids offering a control that
- * would only ever answer with that refusal.
+ * The manageable roles the account holds, not every raw `user_roles` row —
+ * `carrier` and `driver` collapse to one "Driver" chip (role-groups.ts: the
+ * two are granted only as a pair and mean one person in this product) and
+ * `shipper` is left out entirely, since it is granted to every signup
+ * automatically and gates nothing. Showing all seven raw values, as this
+ * used to, is what let a support or finance account read "Shipper" here in
+ * the first place (map-api-user.ts) — collapsing to the roles that actually
+ * mean something avoids reintroducing that noise. Each chip can remove
+ * itself once there is more than one; the server refuses to take the last
+ * role either way (user.service.ts `removeRole`), this just avoids offering
+ * a control that would only ever answer with that refusal.
  */
 function RoleBadges({
   user,
@@ -118,14 +124,16 @@ function RoleBadges({
     }
   };
 
+  const roles = chipsHeld(user.roles);
+
   return (
     <div className="flex flex-wrap gap-1">
-      {user.roles.map((role) => {
+      {roles.map((role) => {
         const label = t.has(role) ? t(role) : role;
         return (
           <Badge key={role} variant="secondary" className="gap-1 text-xs capitalize">
             {label}
-            {onRemoveRole && user.roles.length > 1 && (
+            {onRemoveRole && roles.length > 1 && (
               <button
                 type="button"
                 disabled={removing === role}

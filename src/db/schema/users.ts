@@ -87,6 +87,10 @@ export interface UserPreferences {
       shipmentUpdates: boolean;
       invoiceReady: boolean;
       messages: boolean;
+      // Gates `carrier-route-alerts.service.ts`'s fan-out — a second, account
+      // -level consent alongside the per-trajet `notify_on_match` switch on
+      // `/carrier/trips` (notification_channel_settings_spec.md §5).
+      carrierRouteMatch: boolean;
     };
   };
 }
@@ -112,6 +116,7 @@ export const defaultPreferences: UserPreferences = {
       shipmentUpdates: true,
       invoiceReady: true,
       messages: true,
+      carrierRouteMatch: true,
     },
   },
 };

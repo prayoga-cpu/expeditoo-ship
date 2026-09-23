@@ -68,8 +68,8 @@ vehicles {
   createdAt, updatedAt
 }
 
-vehicle_type = 'motorcycle' | 'car' | 'van' | 'truck_3_5t' | 'truck_7_5t'
-             | 'truck_19t' | 'semi_trailer' | 'flatbed' | 'refrigerated'
+vehicle_type = 'little_car' | 'berline' | 'break' | 'van' | 'truck_20m3'
+             | 'truck' | 'hayon_tailgate'
 ```
 
 This replaces `transporter_profiles`, whose JSONB `vehicle` column allowed only one
@@ -127,14 +127,17 @@ item stays validated on its own endpoint when supplied:
 | BIC | `/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/` |
 | Vehicles | `maxWeightKg > 0` and a plate matching `/^[A-Z]{2}-\d{3}-[A-Z]{2}$/` |
 
-`transport_licence` is the document French regulation requires once any vehicle
-is `truck_7_5t` or heavier, but nothing in the system enforces it — adding a
+`transport_licence` is the document French regulation requires once a vehicle's
+`maxWeightKg` crosses 7.5 t, but nothing in the system enforces it — adding a
 heavy vehicle does not check for one, and neither does submission or approval
-now that both skip the completeness gate entirely. It is a reviewer judgment
-call at approval, same as the SIRET registry lookup above. A carrier with no
-vehicle at all cannot bid regardless — an offer names the vehicle that will do
-the job (`offers_engine_spec.md` §3) — so an empty fleet gates bidding on its
-own without any application-status check.
+now that both skip the completeness gate entirely. (`vehicle_type` — see §1 —
+is a body-style choice, not a weight class, so it was never the right signal
+for this check even before `0031_vehicle_type_taxonomy.sql` collapsed the old
+weight-tiered truck values into one generic `truck`.) It is a reviewer
+judgment call at approval, same as the SIRET registry lookup above. A carrier
+with no vehicle at all cannot bid regardless — an offer names the vehicle
+that will do the job (`offers_engine_spec.md` §3) — so an empty fleet gates
+bidding on its own without any application-status check.
 
 The product intent: a driver should be able to apply in minutes with just their
 company and contact details, get approved by an admin on that alone, and fill in

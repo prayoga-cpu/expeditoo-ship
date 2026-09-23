@@ -261,7 +261,8 @@
     "header": {
       "reviews": "reviews",
       "settings": "Settings",
-      "logout": "Logout"
+      "logout": "Logout",
+      "adminAccess": "You have the admin access"
     },
     "quickLinks": {
       "title": "Quick Links",
@@ -532,9 +533,13 @@
       "title": "Language"
     },
     "notifications": {
-      "title": "Email Notifications",
-      "description": "Choose which emails you'd like to receive from EXPEDITOO.",
+      "title": "Notifications",
+      "description": "Choose how EXPEDITOO notifies you.",
       "loadError": "Your notification preferences could not be loaded. Try reloading the page.",
+      "channels": {
+        "email": "By email",
+        "push": "By push notification"
+      },
       "listingPublished": {
         "title": "Listing published",
         "description": "A confirmation email the moment your request goes live on the board."
@@ -545,7 +550,11 @@
       },
       "tripUpdates": {
         "title": "Trip & delivery updates",
-        "description": "Pickup, in transit and delivered — one email per stage."
+        "description": "Pickup, in transit and delivered — one update per stage."
+      },
+      "routeAlerts": {
+        "title": "Route match alerts",
+        "description": "The moment a job matches a trip you've declared and asked to be alerted about on My trips."
       },
       "accountSecurity": {
         "title": "Account & Security",
@@ -947,7 +956,6 @@
       "fragileNotePlaceholder": "e.g. glass top, keep upright",
       "help": "Help loading",
       "helpHint": "The carrier must help load and unload",
-      "packaging": "Item protection",
       "packagingOptions": {
         "protected": {
           "label": "Protected",
@@ -996,7 +1004,8 @@
           "example": "We'll match a vehicle that fits most items"
         }
       },
-      "size": "Size",
+      "size": "Size (optional)",
+      "sizeSkipHint": "Skip this step if you don't know.",
       "sizeHint": "Helps the carrier pick a vehicle.",
       "sizeModes": {
         "preset": "Standard size",
@@ -2293,6 +2302,9 @@
       "title": "Manage User Role",
       "description": "Assign a new role to",
       "currentRole": "Current role:",
+      "currentRoles": "Current roles",
+      "noRoles": "No roles yet",
+      "addRole": "Add a role",
       "selectPlaceholder": "Select new role to assign",
       "admin": "Admin",
       "note": "Note: This will add the selected role to the user. Users can have multiple roles.",
@@ -2300,7 +2312,7 @@
       "assigning": "Assigning...",
       "assignRole": "Assign Role",
       "shipper": "Shipper",
-      "carrier": "Carrier",
+      "carrier": "Driver",
       "driver": "Driver",
       "operator": "Operator",
       "support": "Support",
@@ -2415,15 +2427,13 @@
         "documentOpenFailed": "Could not open the document"
       },
       "vehicleTypes": {
-        "motorcycle": "Motorcycle",
-        "car": "Car",
+        "little_car": "Little car",
+        "berline": "Sedan",
+        "break": "Estate",
         "van": "Van",
-        "truck_3_5t": "Truck 3.5 t",
-        "truck_7_5t": "Truck 7.5 t",
-        "truck_19t": "Truck 19 t",
-        "semi_trailer": "Semi-trailer",
-        "flatbed": "Flatbed",
-        "refrigerated": "Refrigerated"
+        "truck_20m3": "20 m³ truck",
+        "truck": "Truck",
+        "hayon_tailgate": "Tailgate truck"
       },
       "documentKinds": {
         "cni_recto": "ID card (front)",
@@ -3031,15 +3041,13 @@
         }
       },
       "types": {
-        "motorcycle": "Motorcycle",
-        "car": "Car",
+        "little_car": "Little car",
+        "berline": "Sedan",
+        "break": "Estate",
         "van": "Van",
-        "truck_3_5t": "Truck 3.5 t",
-        "truck_7_5t": "Truck 7.5 t",
-        "truck_19t": "Truck 19 t",
-        "semi_trailer": "Semi-trailer",
-        "flatbed": "Flatbed",
-        "refrigerated": "Refrigerated"
+        "truck_20m3": "20 m³ truck",
+        "truck": "Truck",
+        "hayon_tailgate": "Tailgate truck"
       }
     },
     "toasts": {
@@ -3547,7 +3555,8 @@
   },
   "feedback": {
     "trigger": {
-      "label": "Send feedback"
+      "label": "Send feedback",
+      "hint": "Report a bug or share an idea — we read every message."
     },
     "dialog": {
       "title": "Your feedback",

@@ -2,9 +2,15 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { MessageSquarePlus } from "lucide-react";
+import { Bug } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { FeedbackDialog } from "./FeedbackDialog";
 
@@ -28,19 +34,27 @@ export function FeedbackLauncher({ className }: { className?: string }) {
 
   return (
     <>
-      <Button
-        variant="ghost"
-        size="icon"
-        aria-label={t("label")}
-        title={t("label")}
-        onClick={() => setOpen(true)}
-        className={cn(
-          "h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground",
-          className
-        )}
-      >
-        <MessageSquarePlus className="h-4 w-4" />
-      </Button>
+      <TooltipProvider delayDuration={300}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={t("label")}
+              onClick={() => setOpen(true)}
+              className={cn(
+                "h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground",
+                className
+              )}
+            >
+              <Bug className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            <p>{t("hint")}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
       <FeedbackDialog open={open} onOpenChange={setOpen} />
     </>
   );

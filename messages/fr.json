@@ -261,7 +261,8 @@
     "header": {
       "reviews": "avis",
       "settings": "Paramètres",
-      "logout": "Déconnexion"
+      "logout": "Déconnexion",
+      "adminAccess": "Vous disposez d'un accès administrateur"
     },
     "quickLinks": {
       "title": "Liens rapides",
@@ -532,9 +533,13 @@
       "title": "Langue"
     },
     "notifications": {
-      "title": "Notifications par email",
-      "description": "Choisissez les emails que vous souhaitez recevoir d'EXPEDITOO.",
+      "title": "Notifications",
+      "description": "Choisissez comment EXPEDITOO vous informe.",
       "loadError": "Impossible de charger vos préférences de notification. Essayez de recharger la page.",
+      "channels": {
+        "email": "Par e-mail",
+        "push": "Par notification push"
+      },
       "listingPublished": {
         "title": "Annonce publiée",
         "description": "Une confirmation par email dès que votre demande est en ligne sur le tableau."
@@ -545,7 +550,11 @@
       },
       "tripUpdates": {
         "title": "Suivi du trajet",
-        "description": "Retrait, en cours de livraison et livré — un email par étape."
+        "description": "Retrait, en cours de livraison et livré — une notification par étape."
+      },
+      "routeAlerts": {
+        "title": "Alertes de trajet",
+        "description": "Dès qu'une course correspond à un trajet que vous avez déclaré et pour lequel vous avez demandé à être alerté, dans Mes trajets."
       },
       "accountSecurity": {
         "title": "Compte & Sécurité",
@@ -869,7 +878,7 @@
   },
   "create": {
     "title": "Demander un transport",
-    "subtitle": "Les transporteurs répondent à votre demande, qui doit être la plus précise possible. Vérifiez vos dimensions d'objets et d'accès, ainsi que la disponibilité des personnes au retrait et à la livraison.",
+    "subtitle": "Les transporteurs répondent à votre demande qui doit être la plus précise possible. Vérifiez vos dimensions d'objets et d'accès ainsi que la disponibilité des personnes intervenant au retrait et à la livraison (jours de la semaine et tranches horaires).",
     "steps": {
       "what": "Quoi",
       "where": "Où",
@@ -947,7 +956,6 @@
       "fragileNotePlaceholder": "ex. plateau en verre, à garder à l'endroit",
       "help": "Aide au chargement",
       "helpHint": "Le transporteur doit aider à charger et décharger",
-      "packaging": "Protection de l'objet",
       "packagingOptions": {
         "protected": {
           "label": "Protégé",
@@ -996,7 +1004,8 @@
           "example": "Nous choisirons un véhicule adapté à la plupart des objets"
         }
       },
-      "size": "Taille",
+      "size": "Taille (facultatif)",
+      "sizeSkipHint": "Passez cette étape si vous ne savez pas.",
       "sizeHint": "Aide le transporteur à choisir son véhicule.",
       "sizeModes": {
         "preset": "Taille standard",
@@ -2293,6 +2302,9 @@
       "title": "Gérer le rôle de l'utilisateur",
       "description": "Attribuer un nouveau rôle à",
       "currentRole": "Rôle actuel :",
+      "currentRoles": "Rôles actuels",
+      "noRoles": "Aucun rôle pour l'instant",
+      "addRole": "Ajouter un rôle",
       "selectPlaceholder": "Sélectionner un nouveau rôle",
       "admin": "Admin",
       "note": "Note : Cela ajoutera le rôle sélectionné à l'utilisateur. Les utilisateurs peuvent avoir plusieurs rôles.",
@@ -2300,7 +2312,7 @@
       "assigning": "Attribution...",
       "assignRole": "Attribuer le rôle",
       "shipper": "Expéditeur",
-      "carrier": "Transporteur",
+      "carrier": "Chauffeur",
       "driver": "Chauffeur",
       "operator": "Opérateur",
       "support": "Support",
@@ -2415,15 +2427,13 @@
         "documentOpenFailed": "Impossible d'ouvrir le document"
       },
       "vehicleTypes": {
-        "motorcycle": "Moto",
-        "car": "Voiture",
+        "little_car": "Petite voiture",
+        "berline": "Berline",
+        "break": "Break",
         "van": "Fourgon",
-        "truck_3_5t": "Camion 3,5 t",
-        "truck_7_5t": "Camion 7,5 t",
-        "truck_19t": "Camion 19 t",
-        "semi_trailer": "Semi-remorque",
-        "flatbed": "Plateau",
-        "refrigerated": "Frigorifique"
+        "truck_20m3": "Camion 20 m³",
+        "truck": "Camion",
+        "hayon_tailgate": "Camion hayon"
       },
       "documentKinds": {
         "cni_recto": "CNI (recto)",
@@ -3031,15 +3041,13 @@
         }
       },
       "types": {
-        "motorcycle": "Moto",
-        "car": "Voiture",
+        "little_car": "Petite voiture",
+        "berline": "Berline",
+        "break": "Break",
         "van": "Fourgon",
-        "truck_3_5t": "Camion 3,5 t",
-        "truck_7_5t": "Camion 7,5 t",
-        "truck_19t": "Camion 19 t",
-        "semi_trailer": "Semi-remorque",
-        "flatbed": "Plateau",
-        "refrigerated": "Frigorifique"
+        "truck_20m3": "Camion 20 m³",
+        "truck": "Camion",
+        "hayon_tailgate": "Camion hayon"
       }
     },
     "toasts": {
@@ -3547,7 +3555,8 @@
   },
   "feedback": {
     "trigger": {
-      "label": "Envoyer un retour"
+      "label": "Envoyer un retour",
+      "hint": "Signalez un bug ou proposez une idée — nous lisons tout."
     },
     "dialog": {
       "title": "Votre retour",

@@ -1,7 +1,7 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { Profile } from "@/features/app/profile/ui/Profile";
-
+/** Folded into Settings — the sidebar no longer has a separate Profile entry,
+ * and this only catches an old bookmark or link. */
 export default function AdminProfilePage() {
-  return <Profile />;
+  redirect("/admin/settings");
 }

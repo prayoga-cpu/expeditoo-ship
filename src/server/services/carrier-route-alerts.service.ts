@@ -1,6 +1,6 @@
 import {
   carrierRoutesDal,
-  type MatchCandidateRow,
+  type NotifyCandidateRow,
 } from "@/server/dal/carrier-routes.dal";
 import { notificationsService } from "@/server/services/notifications.service";
 import {
@@ -50,8 +50,8 @@ function jobFor(listing: Listing): MatchTarget | null {
 }
 
 /** One notification per carrier, even when several of their trajets match. */
-function dedupeByCarrier(rows: MatchCandidateRow[]): MatchCandidateRow[] {
-  const seen = new Map<string, MatchCandidateRow>();
+function dedupeByCarrier(rows: NotifyCandidateRow[]): NotifyCandidateRow[] {
+  const seen = new Map<string, NotifyCandidateRow>();
   for (const row of rows) {
     if (!seen.has(row.userId)) seen.set(row.userId, row);
   }
@@ -97,6 +97,17 @@ export const carrierRouteAlertsService = {
     );
 
     for (const carrier of dedupeByCarrier(matched)) {
+      // A second, account-level consent alongside the per-trajet
+      // `notify_on_match` switch already filtered for above — the Settings
+      // checkbox decides whether the account hears about a match once one
+      // fires (notification_channel_settings_spec.md §5).
+      if (
+        carrier.userPreferences?.notifications?.inApp?.carrierRouteMatch ===
+        false
+      ) {
+        continue;
+      }
+
       await notificationsService
         .createNotification({
           userId: carrier.userId,

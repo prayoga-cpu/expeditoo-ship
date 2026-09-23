@@ -3,9 +3,10 @@ import { PgDialect } from "drizzle-orm/pg-core";
 import { sql, type SQL } from "drizzle-orm";
 import { carrierRouteAlertsService } from "../carrier-route-alerts.service";
 import { carrierRoutesDal } from "@/server/dal/carrier-routes.dal";
-import type { MatchCandidateRow } from "@/server/dal/carrier-routes.dal";
+import type { NotifyCandidateRow } from "@/server/dal/carrier-routes.dal";
 import { notificationsService } from "@/server/services/notifications.service";
 import { MAX_MATCH_CANDIDATES } from "@/lib/route-match";
+import { defaultPreferences } from "@/db/schema/users";
 
 // Covers docs/specs/carrier_route_alerts_spec.md §9.
 //
@@ -79,8 +80,8 @@ const listing = (over: Record<string, unknown> = {}) => ({
 
 /** A prefilter row: Bordeaux → Paris every Tuesday unless the test says otherwise. */
 const candidate = (
-  over: Partial<MatchCandidateRow> & { routeId: string; carrierId: string }
-): MatchCandidateRow => ({
+  over: Partial<NotifyCandidateRow> & { routeId: string; carrierId: string }
+): NotifyCandidateRow => ({
   userId: `${over.carrierId}-user`,
   userName: "Faissal B.",
   userImage: null,
@@ -100,10 +101,11 @@ const candidate = (
   radiusKm: 100,
   capacityKg: 800,
   dates: [],
+  userPreferences: defaultPreferences,
   ...over,
 });
 
-const givenCandidates = (rows: MatchCandidateRow[]) =>
+const givenCandidates = (rows: NotifyCandidateRow[]) =>
   vi.mocked(carrierRoutesDal.findNotifyCandidates).mockResolvedValue(rows);
 
 beforeEach(() => {
@@ -235,6 +237,68 @@ describe("notifyMatchingCarriers", () => {
       linkUrl: "/listing/listing-1",
       data: { listingId: "listing-1", routeId: "route-1" },
     });
+  });
+
+  // ========================================
+  // The account-level channel preference — notification_channel_settings_spec.md §5
+  // ========================================
+
+  it("sends nothing to a matched carrier whose push preference is off", async () => {
+    givenCandidates([
+      candidate({
+        routeId: "route-1",
+        carrierId: "carrier-1",
+        userPreferences: {
+          ...defaultPreferences,
+          notifications: {
+            ...defaultPreferences.notifications,
+            inApp: {
+              ...defaultPreferences.notifications.inApp,
+              carrierRouteMatch: false,
+            },
+          },
+        },
+      }),
+    ]);
+
+    await carrierRouteAlertsService.notifyMatchingCarriers(listing() as never);
+
+    expect(notificationsService.createNotification).not.toHaveBeenCalled();
+  });
+
+  it("still sends to a matched carrier with no stored preferences (default on)", async () => {
+    givenCandidates([
+      candidate({
+        routeId: "route-1",
+        carrierId: "carrier-1",
+        userPreferences: null as never,
+      }),
+    ]);
+
+    await carrierRouteAlertsService.notifyMatchingCarriers(listing() as never);
+
+    expect(notificationsService.createNotification).toHaveBeenCalledTimes(1);
+  });
+
+  it("counts a carrier with two matching trajets and the checkbox off as zero, not deduped-then-skipped-twice", async () => {
+    const optedOut = {
+      ...defaultPreferences,
+      notifications: {
+        ...defaultPreferences.notifications,
+        inApp: {
+          ...defaultPreferences.notifications.inApp,
+          carrierRouteMatch: false,
+        },
+      },
+    };
+    givenCandidates([
+      candidate({ routeId: "route-a", carrierId: "carrier-1", userPreferences: optedOut }),
+      candidate({ routeId: "route-b", carrierId: "carrier-1", userPreferences: optedOut }),
+    ]);
+
+    await carrierRouteAlertsService.notifyMatchingCarriers(listing() as never);
+
+    expect(notificationsService.createNotification).not.toHaveBeenCalled();
   });
 
   it("does not let one carrier's failed notification stop the next", async () => {
