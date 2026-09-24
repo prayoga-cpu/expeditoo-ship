@@ -26,11 +26,16 @@ function withFragileNote(values: JobFormOutput): string {
  * `saveAddress`/`addressLabel` are client-only, the same way `fragileNote` is
  * — `useJobForm`'s `handleNext` already acts on them (saving to the address
  * book) before this payload is ever built, so they have nothing left to say
- * to the API.
+ * to the API. `locationEntry` only decides what the form asks for; a place
+ * given as a link reaches the API as the coordinates it resolved to.
  */
 function stripAddressMeta(endpoint: JobFormOutput["pickup"]) {
-  const { saveAddress: _saveAddress, addressLabel: _addressLabel, ...rest } =
-    endpoint;
+  const {
+    saveAddress: _saveAddress,
+    addressLabel: _addressLabel,
+    locationEntry: _locationEntry,
+    ...rest
+  } = endpoint;
   return rest;
 }
 

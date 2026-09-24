@@ -125,6 +125,23 @@ describe("toCreatePayload", () => {
     );
   });
 
+  it("sends a place given as a link as its coordinates, not the mode", () => {
+    const payload = toCreatePayload(
+      values({
+        pickup: {
+          ...endpoint,
+          saveAddress: false,
+          locationEntry: "link",
+          note: "Gate",
+        },
+      }),
+      true
+    );
+
+    expect(payload.pickup).not.toHaveProperty("locationEntry");
+    expect(payload.pickup).toMatchObject({ lat: 45.75, lng: 4.85, note: "Gate" });
+  });
+
   it("leaves the rest of the contract exactly as it was", () => {
     const payload = toCreatePayload(values(), false);
 

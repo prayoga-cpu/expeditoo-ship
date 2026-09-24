@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Link2, MapPin, Search } from "lucide-react";
+import { CircleCheck, Keyboard, Link2, MapPin, Search } from "lucide-react";
 import Map, {
   Marker,
   MapRef,
@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LottieLoader } from "@/components/ui/lottie-loader";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { getMapStyle } from "@/lib/map-styles";
 import { reverseGeocode, resolveMapLink, searchAddress } from "@/lib/geocoding";
 
@@ -40,6 +41,13 @@ export interface LocationPickerValue {
   lng: number | null;
 }
 
+/**
+ * How the location is being given: on the map, or — once someone has left it
+ * — typed out as an address, or as a map link whose coordinates stand in for
+ * the pin they could not drop.
+ */
+export type LocationPickerMode = "assisted" | "address" | "link";
+
 export interface LocationPickerFieldProps {
   id: string;
   value: LocationPickerValue;
@@ -49,12 +57,20 @@ export interface LocationPickerFieldProps {
    * Lets the map and the typed address stand in for each other instead of
    * both being required at once: a successful pin (search, click, or a
    * pasted link) locks the address/postal/city fields, since the map just
-   * supplied them; "Can't find it?" switches to typing the address by hand
-   * instead, with no pin required to submit. Off by default — a trip
-   * declaration or an Expedion quote still needs a real point, coordinates
-   * are the whole reason those exist.
+   * supplied them; "Can't find it?" leaves the map for one of two ways in —
+   * typing the address by hand (no pin required to submit), or pasting a
+   * Google Maps link, which supplies the pin and pre-fills fields that stay
+   * editable. Off by default — a trip declaration or an Expedion quote still
+   * needs a real point, coordinates are the whole reason those exist.
    */
   allowManualOnly?: boolean;
+  /**
+   * Controls the mode, for a caller that must remember it across unmounts (a
+   * wizard step) or validate against it — `/create` requires a note beside a
+   * link. Omit to let the picker hold it itself.
+   */
+  mode?: LocationPickerMode;
+  onModeChange?: (mode: LocationPickerMode) => void;
 }
 
 // France bounding box (approximate) — matches AddressForm's picker.
@@ -70,6 +86,8 @@ export function LocationPickerField({
   onChange,
   className,
   allowManualOnly = false,
+  mode: controlledMode,
+  onModeChange,
 }: LocationPickerFieldProps) {
   const t = useTranslations("common.locationPicker");
   const mapRef = useRef<MapRef>(null);
@@ -80,27 +98,20 @@ export function LocationPickerField({
 
   // Only meaningful when `allowManualOnly` is on. A value already carrying
   // typed text with no pin (a draft restored, or an existing listing being
-  // edited) opens back into manual mode rather than showing an "assisted"
+  // edited) opens back into typing mode rather than showing an "assisted"
   // map the person already chose not to use.
-  const [mode, setMode] = useState<"assisted" | "manual">(() =>
-    !hasPin && value.address.trim() ? "manual" : "assisted"
+  const [ownMode, setOwnMode] = useState<LocationPickerMode>(() =>
+    !hasPin && value.address.trim() ? "address" : "assisted"
   );
-  const manualMode = allowManualOnly && mode === "manual";
+  const mode = controlledMode ?? ownMode;
+  const manualMode = allowManualOnly && mode !== "assisted";
+  const linkMode = manualMode && mode === "link";
   // Once the map has supplied an address, the text fields are its output,
-  // not a second, independently-editable source of truth for it.
+  // not a second, independently-editable source of truth for it. A link in
+  // manual mode is the exception: whoever pasted it left the map because
+  // its address was not good enough.
   const fieldsLocked = allowManualOnly && !manualMode && hasPin;
 
-  const switchToManual = useCallback(() => {
-    setMode("manual");
-    onChange({ ...value, lat: null, lng: null });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onChange]);
-
-  const switchToAssisted = useCallback(() => {
-    setMode("assisted");
-    onChange({ address: "", city: "", postalCode: "", lat: null, lng: null });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onChange]);
   const [viewState, setViewState] = useState(
     hasPin
       ? { longitude: value.lng!, latitude: value.lat!, zoom: 13 }
@@ -122,6 +133,31 @@ export function LocationPickerField({
   const [linkValue, setLinkValue] = useState("");
   const [isResolvingLink, setIsResolvingLink] = useState(false);
   const [linkError, setLinkError] = useState<string | null>(null);
+
+  const changeMode = (next: LocationPickerMode) => {
+    setOwnMode(next);
+    onModeChange?.(next);
+    setLinkValue("");
+    setLinkError(null);
+    setLocationError(null);
+  };
+
+  const empty = { address: "", city: "", postalCode: "", lat: null, lng: null };
+  // Typing keeps whatever text is already there as a starting point and drops
+  // only the pin; the map and the link both start clean, so the text they
+  // fill in is never a leftover from another mode.
+  const switchToManual = () => {
+    changeMode("address");
+    onChange({ ...value, lat: null, lng: null });
+  };
+  const switchToLink = () => {
+    changeMode("link");
+    onChange(empty);
+  };
+  const switchToAssisted = () => {
+    changeMode("assisted");
+    onChange(empty);
+  };
 
   const handleSearchChange = useCallback((query: string) => {
     setSearchQuery(query);
@@ -203,9 +239,9 @@ export function LocationPickerField({
     setLinkError(null);
     try {
       const { lat, lng } = await resolveMapLink(linkValue.trim());
+      await setPin(lng, lat);
       setShowLinkInput(false);
       setLinkValue("");
-      await setPin(lng, lat);
     } catch (error) {
       setLinkError(
         error instanceof ApiError && error.code === "UNSUPPORTED_LINK_PROVIDER"
@@ -220,16 +256,40 @@ export function LocationPickerField({
   return (
     <div className={cn("space-y-3", className)}>
       {manualMode ? (
-        <Button
-          type="button"
-          variant="link"
-          size="sm"
-          className="h-auto gap-1 p-0 has-[>svg]:px-0 text-xs"
-          onClick={switchToAssisted}
-        >
-          <MapPin className="h-3 w-3" />
-          {t("useMapInstead")}
-        </Button>
+        <>
+          <Button
+            type="button"
+            variant="link"
+            size="sm"
+            className="h-auto gap-1 p-0 has-[>svg]:px-0 text-xs"
+            onClick={switchToAssisted}
+          >
+            <MapPin className="h-3 w-3" />
+            {t("useMapInstead")}
+          </Button>
+          <ToggleGroup
+            type="single"
+            variant="outline"
+            size="sm"
+            value={mode}
+            // Radix answers "" when the pressed item is clicked again; a mode
+            // is always chosen, so that is not a change.
+            onValueChange={(next) => {
+              if (next === "address" && mode !== "address") switchToManual();
+              if (next === "link" && mode !== "link") switchToLink();
+            }}
+            className="w-full"
+          >
+            <ToggleGroupItem value="address" className="gap-1.5 text-xs">
+              <Keyboard className="h-3.5 w-3.5" />
+              {t("entryAddress")}
+            </ToggleGroupItem>
+            <ToggleGroupItem value="link" className="gap-1.5 text-xs">
+              <Link2 className="h-3.5 w-3.5" />
+              {t("entryLink")}
+            </ToggleGroupItem>
+          </ToggleGroup>
+        </>
       ) : (
       <div className="relative h-56 w-full overflow-hidden rounded-lg border">
         <div className="absolute top-2 left-2 right-2 z-10">
@@ -313,10 +373,46 @@ export function LocationPickerField({
       </div>
       )}
 
-      {manualMode ? null : showLinkInput ? (
+      {linkMode && hasPin ? (
+        <div className="space-y-1">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-dashed p-2 text-xs">
+            <span className="flex items-center gap-1.5 font-medium">
+              <CircleCheck className="text-primary h-3.5 w-3.5" />
+              {t("linkFound")}
+            </span>
+            {/* No map in this mode, so this is how the pasted point gets
+                checked before a carrier drives to it. */}
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${value.lat},${value.lng}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary underline-offset-4 hover:underline"
+            >
+              {t("checkOnMap")}
+            </a>
+            <Button
+              type="button"
+              variant="link"
+              size="sm"
+              className="ml-auto h-auto p-0 text-xs"
+              onClick={switchToLink}
+            >
+              {t("changeLink")}
+            </Button>
+          </div>
+          <p
+            className={cn(
+              "text-[11px]",
+              locationError ? "text-destructive" : "text-muted-foreground"
+            )}
+          >
+            {locationError ?? t("linkFilledHint")}
+          </p>
+        </div>
+      ) : linkMode || (!manualMode && showLinkInput) ? (
         <div className="space-y-1.5 rounded-md border border-dashed p-2">
           <Label htmlFor={`${id}-link`} className="text-xs">
-            {t("linkLabel")}
+            {linkMode ? t("entryLink") : t("linkLabel")}
           </Label>
           <div className="flex gap-1.5">
             <Input
@@ -327,6 +423,7 @@ export function LocationPickerField({
               onChange={(e) => {
                 setLinkValue(e.target.value);
                 setLinkError(null);
+                setLocationError(null);
               }}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
@@ -348,25 +445,35 @@ export function LocationPickerField({
                 t("useLink")
               )}
             </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-8 shrink-0 text-xs"
-              onClick={() => {
-                setShowLinkInput(false);
-                setLinkValue("");
-                setLinkError(null);
-              }}
-            >
-              {t("cancel")}
-            </Button>
+            {/* In manual mode the toggle above is the way out. */}
+            {linkMode ? null : (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 shrink-0 text-xs"
+                onClick={() => {
+                  setShowLinkInput(false);
+                  setLinkValue("");
+                  setLinkError(null);
+                }}
+              >
+                {t("cancel")}
+              </Button>
+            )}
           </div>
-          {linkError ? (
-            <p className="text-destructive text-[11px]">{linkError}</p>
+          {linkMode ? (
+            <p className="text-muted-foreground text-[11px]">
+              {t("linkHowTo")}
+            </p>
+          ) : null}
+          {linkError || (linkMode && locationError) ? (
+            <p className="text-destructive text-[11px]">
+              {linkError ?? locationError}
+            </p>
           ) : null}
         </div>
-      ) : (
+      ) : manualMode ? null : (
         <Button
           type="button"
           variant="link"
@@ -379,6 +486,8 @@ export function LocationPickerField({
         </Button>
       )}
 
+      {/* A link fills these in; until it has, there is nothing to show. */}
+      {linkMode && !hasPin ? null : (
       <div className="grid grid-cols-3 gap-2">
         <div className="col-span-3 space-y-1">
           <Label htmlFor={`${id}-address`} className="text-xs">
@@ -419,6 +528,7 @@ export function LocationPickerField({
           />
         </div>
       </div>
+      )}
     </div>
   );
 }

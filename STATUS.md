@@ -263,6 +263,126 @@ than leaving it in a chat message.
 
 ---
 
+## ✅ 2026-09-24 — Type the Address or Paste a Google Maps Link on /create (2.54.0)
+
+_"if user switch to input address manually instead of the map pin, give 2
+options 1. either full address type 2. or gmaps link, with note"_
+
+**What shipped.** Contract in `docs/specs/location_link_entry_spec.md` (plan:
+`docs/plans/plan_location_link_entry.md`). `LocationPickerField`'s local mode
+went from `assisted | manual` to `LocationPickerMode` = `assisted | address |
+link`. "Can't find it?" still opens typing (`address`); the manual view now
+has a `ToggleGroup` switch, *Type the address* / *Google Maps link*. Link mode
+reuses the picker's existing link machinery rather than adding any —
+`resolveMapLink` (client parse, then `POST /api/geo/resolve-map-link` for
+short links), then `setPin` (reverse geocode, France refusal, blank-only
+fill). The escape hatch was already there: under `allowManualOnly` the
+"Can't find it? Paste a map link" button had been *replaced* by "Enter
+manually" in 2.50.0, so `/create` had quietly lost the link path. This brings
+it back as the second manual option.
+
+**The API does not change.** A link-located endpoint reaches
+`POST /api/listings` as `lat`/`lng`/`address`/`city`/`postalCode`/`note`,
+indistinguishable from a pinned one. No DTO change, no migration, the link
+itself is not stored. The mode is held in a client-only
+`endpoint.locationEntry` (stripped in `stripAddressMeta`, like `saveAddress`)
+because the Where step unmounts on every step change. Left in the picker's
+own state, a resolved link would come back as an `assisted` map with locked
+fields while the form still required the link's note. The picker takes it as
+optional controlled `mode`/`onModeChange`, so the trip and Expedion dialogs,
+which pass neither and no `allowManualOnly`, are untouched.
+
+**Judgment calls**
+- **"with note" was read as a required description of the spot**, not as a
+  help hint. It reuses the existing `pickup.note`/`dropoff.note`, which
+  carriers already see in `RouteStop` on `/driver/shipments/[id]`. In link
+  mode that note is relabelled *Describe the exact spot*, marked required,
+  and enforced by `endpointSchema` (`linkNoteRequired` on `note`,
+  `mapLinkRequired` on `lat`). A one-line how-to under the link box covers
+  the other reading. If the note should be optional, delete the one
+  `superRefine` branch and the `required` prop in `JobForm.tsx`.
+- **Link-mode fields stay editable**, unlike a map pin under `allowManualOnly`
+  (2.50.0's lock rule). Whoever pasted a link left the map because its
+  address was not good enough. On the test point, a spot on the D43 by
+  Bergères-sous-Montmirail, Nominatim answered "Rue du Château".
+- **Switching follows 2.50.0's rule**: typing keeps the text and drops the
+  pin; the link and the map both start clean.
+- **A "Check it on Google Maps" link** (`/maps/search/?api=1&query=lat,lng`)
+  takes the place of a map preview, because this mode deliberately shows no
+  map and the person needs some way to check the point.
+- **Errors appear on "Next", not when a mode opens.** `lat`/`lng` are
+  re-validated only when a pin arrives (so switching to link mode does not
+  immediately shout "paste the link"), and `lat`/`note` errors are cleared on
+  every switch. While a link has not resolved, `JobForm` shows the `lat`
+  message *instead of* the address/city/postcode ones, because those describe
+  fields the mode has not shown yet.
+
+**Bug found on the way** (seen in Chromium, not in jsdom): the picker's
+`onChange` in `JobForm` re-validated `address` but never `city` or
+`postalCode`. After a failed "Next", a pin or a link filled both fields and
+the old *City is required* / *Must be 5 digits* stayed on screen under the
+filled inputs. That predates this change: the map path goes through the same
+handler. Both are now re-validated **only while they show an error**, which
+clears them without raising new ones. The note does the same.
+
+**Verification.** `npx tsc --noEmit` clean. `pnpm lint`: 0 errors, 82
+warnings, none in a file this touches. `pnpm test`: 135 files, 1783 tests,
+all green (10 new: 4 in `create/__tests__/schemas.test.ts`, 1 in
+`create/__tests__/jobs.api.test.ts`, 5 in the new
+`components/ui/__tests__/location-picker-field.test.tsx`, with maplibre,
+geocoding and the Lottie spinner mocked because jsdom has no WebGL or
+`IntersectionObserver`). `pnpm changelog:check` ok. FR/EN parity checked by
+key diff. **In Chromium** against the running dev server and local Postgres,
+with a throwaway account minted and deleted: step 1 filled, "Can't find it?"
+→ the switch; link mode shows only the link box and how-to; "Next" with
+nothing pasted shows *Paste the link…* and *Tell the carrier…* and no
+address errors; a pasted `google.com/maps/@48.8448,3.5881,17z` resolved,
+filled *Rue du Château / 51210 / Bergères-sous-Montmirail*, and left them
+editable, with the Google Maps check link carrying the same point. Checked in
+light/EN and dark/FR. The stale-error bug above was reproduced in the first
+pass and confirmed gone in the second.
+
+**Known limits**
+- **Driver navigation still goes to the text address, not the pin.**
+  `NavigateButton` in `ShipmentActions.tsx` builds
+  `google.com/maps/dir/?destination=<address>`. For the place this feature
+  exists for, "D 43, 51210 …", Google will pick *some* point on that road.
+  The route map on the same screen shows the exact pin, and the required note
+  says what to look for. But routing to `shipment.pickupLat/Lng`
+  (always non-null on a shipment) is the change that would finish the job.
+  It was left alone because it changes navigation for every shipment,
+  Expedion ones included, whose coordinates come from that side's
+  geocoding.
+- **Carriers read the note only after the award.** Listing and board surfaces
+  do not render `pickup_note` / `dropoff_note` (they never have), so a bidder
+  sees the city and the pin, not the description.
+- **A typed address still carries no coordinates** and still cannot be
+  awarded (`COORDINATES_REQUIRED`, 2.50.0). A link-located one can. That is
+  a reason to steer people toward the link, but nothing here does so.
+- **Switching to typing with empty fields still shows *Address is required*
+  at once.** That comes from `address` being re-validated on every picker
+  change, and it predates this entry (2.50.0's "Enter manually" did the
+  same). It was left as is, because the same validation is what surfaces an
+  out-of-France pin.
+- **A full `/create` submit with a link-located endpoint was not driven end
+  to end.** The Where step was, and the payload is unit-tested. The API
+  receives exactly what a pinned endpoint sends.
+
+- [x] **Picker**: `components/ui/location-picker-field.tsx`
+      (`LocationPickerMode`, `mode`/`onModeChange`, switch, link mode, found
+      row, fields hidden until resolved).
+- [x] **Form**: `create/schemas.ts` (`locationEntry`, two rules),
+      `create/api/jobs.api.ts` (`stripAddressMeta`), `create/ui/JobForm.tsx`
+      (mode plumbing, saved-address reset, error swap, note relabel,
+      error-only re-validation).
+- [x] **Strings**: `common.locationPicker.*` (7 new keys, `enterManually`
+      reworded), `create.where.linkNote*`,
+      `create.validation.{mapLinkRequired,linkNoteRequired}` in both files.
+- [x] **Docs**: new spec and plan; `transport_request_spec.md` §3 points at
+      the spec.
+
+---
+
 ## ✅ 2026-09-23 — Add In-House Driver on /admin/drivers (2.53.0)
 
 _"create a page/feature on the drive page admin to create a new in house

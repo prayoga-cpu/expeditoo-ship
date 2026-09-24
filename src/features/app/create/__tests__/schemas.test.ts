@@ -106,6 +106,51 @@ describe("jobFormSchema", () => {
     );
   });
 
+  it("wants the link resolved before a place given as a link can pass", () => {
+    const pasting = endpoint({
+      locationEntry: "link",
+      lat: undefined,
+      lng: undefined,
+      note: "Blue gate",
+    });
+
+    expect(messages(form({ pickup: pasting }))).toContain(
+      "create.validation.mapLinkRequired"
+    );
+  });
+
+  it("makes a place given as a link describe the spot", () => {
+    // The link gives the carrier a point, not what to look for there.
+    const linked = endpoint({ locationEntry: "link", note: "   " });
+
+    expect(messages(form({ pickup: linked }))).toContain(
+      "create.validation.linkNoteRequired"
+    );
+  });
+
+  it("accepts a resolved link that carries a note", () => {
+    const linked = endpoint({
+      locationEntry: "link",
+      note: "Blue gate on the left, 200 m after the church",
+    });
+
+    expect(jobFormSchema.safeParse(form({ pickup: linked })).success).toBe(
+      true
+    );
+  });
+
+  it("still leaves the note optional for a typed address", () => {
+    const typed = endpoint({
+      locationEntry: "address",
+      lat: undefined,
+      lng: undefined,
+    });
+
+    expect(messages(form({ pickup: typed }))).not.toContain(
+      "create.validation.linkNoteRequired"
+    );
+  });
+
   it("skips the minimum-route check when either endpoint has no pin", () => {
     // Same two street addresses as the "too close" case above would trip —
     // but with no coordinates on one side, there is nothing to measure.

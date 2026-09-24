@@ -53,6 +53,9 @@ a screen they have not reached. `STEP_FIELDS` in `schemas.ts` is the mapping.
 2. **Where** — pickup and delivery, each through the shared
    `LocationPickerField` (Nominatim search, draggable pin, reverse geocode),
    plus a location type. An **apartment** must also state floor and lift.
+   Someone who cannot find the place on the map either types the address or
+   pastes a Google Maps link with a required note
+   (`location_link_entry_spec.md`).
 3. **When** — pickup and delivery windows, and a flexibility toggle.
 4. **Budget** — what the requester expects to pay, in euros.
 

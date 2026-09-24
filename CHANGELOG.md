@@ -14,6 +14,24 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.54.0] - 2026-09-24 · feat
+
+- **Can't find your place on the map? You can now paste a Google Maps link
+  instead of typing the address.** After "Can't find it?", choose between
+  "Type the address" and "Google Maps link". Paste the link from Google Maps
+  (press and hold the spot, Share, Copy link) and the exact point is used,
+  with the address filled in for you — correct it if it's not quite right,
+  and use "Check it on Google Maps" to make sure the point is the right one.
+- **A place given as a link comes with a description of the spot.** A link
+  shows the carrier where to go, not what to look for when they get there, so
+  it asks you to describe the spot — "blue gate on the left, 200 m after the
+  church". The carrier reads it on their delivery screen, under the map of
+  the exact point.
+- **Fixed: filling in the address from the map could leave old errors on
+  screen.** After a failed "Next", picking a place on the map filled in the
+  city and postal code but kept saying "City is required" and "Must be 5
+  digits" until you pressed "Next" again.
+
 ## [2.53.0] - 2026-09-23 · feat
 
 - **Admins and operators can now add a driver who works for Expeditoo

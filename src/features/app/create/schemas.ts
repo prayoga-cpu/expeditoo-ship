@@ -146,8 +146,32 @@ export const endpointSchema = z
     // job payload goes out.
     saveAddress: z.boolean().default(false),
     addressLabel: z.string().max(50).optional(),
+    // Client-only too: which way `LocationPickerField` was given the place.
+    // Held here rather than in the picker so it survives the step unmounting,
+    // and so the rule below can read it.
+    locationEntry: z.enum(["assisted", "address", "link"]).optional(),
   })
   .superRefine((endpoint, ctx) => {
+    // A map link gives the carrier a point, not what to look for there — the
+    // gate, the barn, the loading bay. The note says that, so a place given
+    // as a link must carry one.
+    if (endpoint.locationEntry === "link") {
+      if (endpoint.lat === undefined || endpoint.lng === undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "create.validation.mapLinkRequired",
+          path: ["lat"],
+        });
+      }
+      if (!endpoint.note?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "create.validation.linkNoteRequired",
+          path: ["note"],
+        });
+      }
+    }
+
     // Floor and lift change the work materially, so an apartment must state both.
     if (endpoint.locationType === "apartment") {
       if (endpoint.floor === undefined) {

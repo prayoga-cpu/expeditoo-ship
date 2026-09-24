@@ -255,7 +255,7 @@ function EndpointFields({
 }: StepProps & { side: "pickup" | "dropoff"; title: string }) {
   const t = useTranslations("create.where");
   const tTypes = useTranslations("create.locationTypes");
-  const { setValue, watch, formState } = form;
+  const { setValue, watch, formState, clearErrors } = form;
   const endpoint = watch(side);
   const error = formState.errors[side];
   const locationType = endpoint?.locationType;
@@ -277,6 +277,7 @@ function EndpointFields({
       setValue(`${side}.lng`, address.lng as number);
       setValue(`${side}.saveAddress`, false);
       setValue(`${side}.addressLabel`, "");
+      setValue(`${side}.locationEntry`, undefined);
     },
     [setValue, side]
   );
@@ -291,6 +292,7 @@ function EndpointFields({
     // casts through the union rather than the schema's own optional type.
     setValue(`${side}.lat`, undefined as unknown as number);
     setValue(`${side}.lng`, undefined as unknown as number);
+    setValue(`${side}.locationEntry`, undefined);
   }, [setValue, side]);
 
   // Pre-fill the default saved address the first time the list loads, on a
@@ -314,6 +316,10 @@ function EndpointFields({
         a.lng === endpoint?.lng
     )?.id ?? "custom";
   const usingSavedAddress = selectedAddressId !== "custom";
+  const linkEntry = endpoint?.locationEntry === "link";
+  // Before a link resolves, "address/city/postal required" describe fields
+  // this mode has not shown yet; the one thing missing is the link itself.
+  const awaitingLink = linkEntry && endpoint?.lat === undefined;
 
   return (
     <section className="space-y-4">
@@ -337,6 +343,13 @@ function EndpointFields({
           <LocationPickerField
             id={`${side}-location`}
             allowManualOnly
+            mode={endpoint?.locationEntry}
+            onModeChange={(mode) => {
+              setValue(`${side}.locationEntry`, mode);
+              // Both rules belong to the link mode; the next "Next" asks
+              // again under whichever mode is chosen now.
+              clearErrors([`${side}.lat`, `${side}.note`]);
+            }}
             value={{
               address: endpoint?.address ?? "",
               city: endpoint?.city ?? "",
@@ -348,22 +361,39 @@ function EndpointFields({
               setValue(`${side}.address`, next.address, {
                 shouldValidate: true,
               });
-              setValue(`${side}.city`, next.city);
-              setValue(`${side}.postalCode`, next.postalCode);
+              // Re-checked only while an error is showing: a pin or a link
+              // that fills these in must clear what an earlier "Next" said
+              // about them, but opening a mode must not raise anything new.
+              setValue(`${side}.city`, next.city, {
+                shouldValidate: Boolean(error?.city),
+              });
+              setValue(`${side}.postalCode`, next.postalCode, {
+                shouldValidate: Boolean(error?.postalCode),
+              });
               // `null` is a real answer here — switching to manual mode (or
               // back to the map for a fresh pin) clears whatever coordinates
               // were there, and the schema now accepts an endpoint with none.
+              // Validated only when a pin arrives, so it clears the link
+              // mode's "paste the link" error without raising it the moment
+              // someone opens that mode.
+              const pinned = next.lat !== null;
               setValue(`${side}.lat`, next.lat ?? undefined, {
-                shouldValidate: true,
+                shouldValidate: pinned,
               });
               setValue(`${side}.lng`, next.lng ?? undefined, {
-                shouldValidate: true,
+                shouldValidate: pinned,
               });
             }}
           />
-          <FieldError message={error?.address?.message} />
-          <FieldError message={error?.city?.message} />
-          <FieldError message={error?.postalCode?.message} />
+          {awaitingLink ? (
+            <FieldError message={error?.lat?.message} />
+          ) : (
+            <>
+              <FieldError message={error?.address?.message} />
+              <FieldError message={error?.city?.message} />
+              <FieldError message={error?.postalCode?.message} />
+            </>
+          )}
 
           <div className="flex items-center gap-2">
             <Checkbox
@@ -399,13 +429,21 @@ function EndpointFields({
       )}
 
       <div>
-        <Label htmlFor={`${side}-note`}>{t("noteLabel")}</Label>
+        {/* Beside a link the note is the only description the carrier gets
+            of the spot, so it stops being optional (`endpointSchema`). */}
+        <Label htmlFor={`${side}-note`} required={linkEntry}>
+          {linkEntry ? t("linkNoteLabel") : t("noteLabel")}
+        </Label>
         <Textarea
           id={`${side}-note`}
           rows={2}
-          placeholder={t("notePlaceholder")}
+          placeholder={linkEntry ? t("linkNotePlaceholder") : t("notePlaceholder")}
           value={endpoint?.note ?? ""}
-          onChange={(e) => setValue(`${side}.note`, e.target.value)}
+          onChange={(e) =>
+            setValue(`${side}.note`, e.target.value, {
+              shouldValidate: Boolean(error?.note),
+            })
+          }
         />
         <FieldError message={error?.note?.message} />
       </div>
