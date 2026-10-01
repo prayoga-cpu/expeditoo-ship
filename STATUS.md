@@ -46,26 +46,19 @@ than leaving it in a chat message.
       (`captured`, a real `pi_…`), then cancel the job and check the refund
       lands. If the card form fails to load or to confirm, the live
       publishable key in Vercel does not pair with the live secret key.
-- [ ] **Run Actions → "Migrate database" for `0033_listing_reference`
-      before the 2.57.0 deploy reaches production.** Every listing read
-      selects `reference` (Drizzle selects every column the schema declares),
-      so without it the board, job pages, deliveries and threads all answer
-      500. It is safe to run ahead of the deploy, because the current code
-      ignores the column and the database fills it on insert. It numbers
-      existing jobs by age from 100001 and re-runs without renumbering.
-      Apply `0032` first; the migrator does, in journal order. The same run
-      applies `0034_escalated_description_source` (data only: it strips the
-      « Job escaladé depuis Expedion Enchères. » line from escalated jobs).
+- [x] ~~Run Actions → "Migrate database" for `0033_listing_reference` and
+      `0034_escalated_description_source`~~ — **done 2026-10-01**, run
+      `36838016128`, dispatched on the branch `release/2.58.0` (commit
+      `0c55684`) before `main` moved, so the new code never met an
+      un-migrated database. One read-only check is still worth doing after
+      the deploy: `select count(*) from listings where origin = 'expedion'
+      and description like '%Job escaladé depuis Expedion Enchères.%'` should
+      answer 0. A job escalated by an operator between the migration and the
+      deploy would keep the sentence, and `0034` does not run twice.
 
-- [ ] **Run Actions → "Migrate database" for
-      `0032_listing_packaging_services` before the 2.56.0 deploy reaches
-      production.** `createListing` writes `needs_protection` /
-      `needs_packaging` on every insert, and the board and admin reads select
-      every column the schema declares. Without the migration, every new
-      transport request fails and those reads answer 500, which is the `0027`
-      failure mode. It is additive (`ADD COLUMN IF NOT EXISTS`, defaulted to
-      `false`), so running it ahead of the deploy is safe; the current code
-      ignores the columns.
+- [x] ~~Run Actions → "Migrate database" for
+      `0032_listing_packaging_services`~~ — **done 2026-10-01**, by the same
+      run.
 
 - [ ] **Verify a sending domain in Resend and set `EMAIL_FROM` — 2.53.0's
       in-house drivers cannot sign in until you do.** Production sends from
