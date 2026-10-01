@@ -44,6 +44,8 @@ export interface Job {
   isFragile: boolean;
   needsHelp: boolean;
   packagingLevel: "protected" | "boxed" | null;
+  needsProtection: boolean;
+  needsPackaging: boolean;
 
   pickupAddress: string;
   pickupCity: string;

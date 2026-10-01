@@ -14,6 +14,27 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.56.0] - 2026-09-30 · feat
+
+- **Tell the carrier what to do with your item before it moves.** When you
+  request a transport there are two new switches: "Needs protection" (the
+  carrier wraps it — bubble wrap, blankets) and "Needs packaging" (the carrier
+  brings a box and packs it). You can ask for either or both. Carriers see
+  them on the job board, on the job page and on their delivery screen, so they
+  can price the work and bring what it takes.
+- **"Protected" and "Boxed" now read "Already protected" and "Already
+  packaged".** They always described how you've prepared the item yourself;
+  the new names say so, and they sit just above the two new services. Pick one
+  that contradicts another and the other switches off — an item that's already
+  packaged doesn't need packaging.
+- **Auction lots from Expedion say what they need.** A lot the client says is
+  unprotected now shows "Needs protection" instead of "Help loading", and a
+  protected one shows "Already protected".
+- **Fixed: a second scroll bar on the right of "Request transport".** Dragging
+  it slid the page onto a blank white area below the form, which looked like
+  the page was broken. There is one scroll bar again, and it scrolls the form.
+  The driver and admin areas get the same fix.
+
 ## [2.55.0] - 2026-09-30 · ux
 
 - **Your request now reads in full on your home page.** "Your request" shows

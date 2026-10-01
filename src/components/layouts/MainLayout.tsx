@@ -229,10 +229,15 @@ export function MainLayout({ children }: MainLayoutProps) {
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header />
 
-        {/* Content Area - Wrapper provides consistent padding */}
+        {/* Content Area - Wrapper provides consistent padding.
+            `relative` makes this the containing block for every absolutely
+            positioned descendant. Without it an `sr-only` input (position:
+            absolute) with no positioned ancestor escapes this scroller,
+            stretches the document to wherever it sits, and a second, page-level
+            scrollbar appears that slides the whole shell up over blank space. */}
         <main
           className={cn(
-            "flex-1 min-h-0 overflow-y-auto overflow-x-hidden xl:pb-0",
+            "relative flex-1 min-h-0 overflow-y-auto overflow-x-hidden xl:pb-0",
             !hideBottomNav && "pb-[88px]"
           )}
           style={{ scrollbarGutter: "stable" }}

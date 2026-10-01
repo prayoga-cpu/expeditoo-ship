@@ -9,7 +9,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -28,6 +27,8 @@ import { WeightBracketField } from "./WeightBracketField";
 import { TimingField } from "./TimingField";
 import { PublishTimingField } from "./PublishTimingField";
 import { SavedAddressPicker } from "./SavedAddressPicker";
+import { PackagingField } from "./PackagingField";
+import { ToggleRow } from "./ToggleRow";
 import { LOCATION_TYPES, type LocationType } from "../schemas";
 import { useAddressBook, type Address } from "../hooks/useAddressBook";
 import type { JobFormApi } from "../hooks/useJobForm";
@@ -206,26 +207,9 @@ function WhatStep({
           checked={Boolean(watch("needsHelp"))}
           onChange={(v) => setValue("needsHelp", v)}
         />
-        {/* Still one `packagingLevel` field underneath — turning one row on
-            sets the value, which makes the other row's `checked` recompute
-            to false on its own, so the pair stays mutually exclusive without
-            extra logic. Switching from a segmented control to matching
-            toggle rows is presentation only. */}
-        <ToggleRow
-          id="packagingProtected"
-          label={t("packagingOptions.protected.label")}
-          description={t("packagingOptions.protected.description")}
-          checked={watch("packagingLevel") === "protected"}
-          onChange={(v) => setValue("packagingLevel", v ? "protected" : undefined)}
-        />
-        <ToggleRow
-          id="packagingBoxed"
-          label={t("packagingOptions.boxed.label")}
-          description={t("packagingOptions.boxed.description")}
-          checked={watch("packagingLevel") === "boxed"}
-          onChange={(v) => setValue("packagingLevel", v ? "boxed" : undefined)}
-        />
       </div>
+
+      <PackagingField form={form} />
 
       <div>
         <Label>{t("photos")}</Label>
@@ -288,8 +272,7 @@ function EndpointFields({
     setValue(`${side}.postalCode`, "");
     // Not `blankToUndefined`-backed like `floor` — `lat`/`lng` are required
     // numbers in the schema, so clearing them for a fresh custom entry is a
-    // deliberate cast, the same way `packagingLevel`'s clear-to-empty above
-    // casts through the union rather than the schema's own optional type.
+    // deliberate cast.
     setValue(`${side}.lat`, undefined as unknown as number);
     setValue(`${side}.lng`, undefined as unknown as number);
     setValue(`${side}.locationEntry`, undefined);
@@ -582,32 +565,6 @@ function BudgetStep({ form }: StepProps) {
       </div>
 
       <PublishTimingField form={form} />
-    </div>
-  );
-}
-
-function ToggleRow({
-  id,
-  label,
-  description,
-  checked,
-  onChange,
-}: {
-  id: string;
-  label: string;
-  description: string;
-  checked: boolean;
-  onChange: (value: boolean) => void;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-4 rounded-lg border border-border p-3">
-      <div className="min-w-0">
-        <Label htmlFor={id} className="cursor-pointer">
-          {label}
-        </Label>
-        <p className="text-sm text-muted-foreground">{description}</p>
-      </div>
-      <Switch id={id} checked={checked} onCheckedChange={onChange} />
     </div>
   );
 }

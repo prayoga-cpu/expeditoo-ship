@@ -197,6 +197,12 @@ export function JobCard({ job, isHighlighted = false }: JobCardProps) {
           )}
           {job.isFragile && <Badge variant="outline">{t("fragile")}</Badge>}
           {job.needsHelp && <Badge variant="outline">{t("needsHelp")}</Badge>}
+          {job.needsProtection && (
+            <Badge variant="outline">{t("needsProtection")}</Badge>
+          )}
+          {job.needsPackaging && (
+            <Badge variant="outline">{t("needsPackaging")}</Badge>
+          )}
 
           {/*
             Size sits where the price does — hard right — because the two

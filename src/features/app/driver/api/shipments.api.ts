@@ -43,6 +43,8 @@ export interface DriverShipmentListing {
   quantity: number;
   isFragile: boolean;
   needsHelp: boolean;
+  needsProtection: boolean;
+  needsPackaging: boolean;
 }
 
 /**

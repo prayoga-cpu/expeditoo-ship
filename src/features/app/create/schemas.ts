@@ -244,6 +244,10 @@ export const jobFormSchema = z
       .optional(),
     needsHelp: z.boolean().default(false),
     packagingLevel: z.enum(["protected", "boxed"]).optional(),
+    // Services, beside the state above. `PackagingField` keeps the two from
+    // contradicting each other (`isRedundantService`), so nothing here needs to.
+    needsProtection: z.boolean().default(false),
+    needsPackaging: z.boolean().default(false),
 
     pickup: endpointSchema,
     dropoff: endpointSchema,

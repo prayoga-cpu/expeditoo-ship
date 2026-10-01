@@ -87,6 +87,8 @@ export function useJobForm() {
       quantity: 1,
       isFragile: false,
       needsHelp: false,
+      needsProtection: false,
+      needsPackaging: false,
       photos: [],
       publishMode: "now",
       pickup: { ...emptyEndpoint },

@@ -141,3 +141,36 @@ describe("expedionEscalationService.escalate — carrier route alerts", () => {
     expect(listingsService.createListing).not.toHaveBeenCalled();
   });
 });
+
+// cargo_packaging_services_spec.md §6: `isProtected` is a state set by the
+// Expedion form (protected or packed), so it maps onto the state field and its
+// absence onto the protection service — no longer onto "help loading".
+describe("expedionEscalationService.escalate — packaging", () => {
+  const escalatedWith = async (isProtected: boolean) => {
+    vi.mocked(expedionDal.getById).mockResolvedValue(
+      paidQuote({ isProtected }) as never
+    );
+    await expedionEscalationService.escalate("q_1", {});
+    return vi.mocked(listingsService.createListing).mock.calls[0][1];
+  };
+
+  it("asks the carrier to protect a lot that arrives unprotected", async () => {
+    const payload = await escalatedWith(false);
+
+    expect(payload.needsProtection).toBe(true);
+    expect(payload.packagingLevel).toBeUndefined();
+    expect(payload.needsHelp).toBe(false);
+  });
+
+  it("states a protected lot as already protected, and asks nothing", async () => {
+    const payload = await escalatedWith(true);
+
+    expect(payload.packagingLevel).toBe("protected");
+    expect(payload.needsProtection).toBe(false);
+    expect(payload.needsHelp).toBe(false);
+  });
+
+  it("never asks for packaging, which the Expedion app does not ask", async () => {
+    expect((await escalatedWith(false)).needsPackaging).toBe(false);
+  });
+});

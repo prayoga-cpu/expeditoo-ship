@@ -265,9 +265,11 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           </div>
         </header>
 
-        {/* Content Area - Wrapper provides consistent padding */}
+        {/* Content Area - Wrapper provides consistent padding. `relative`
+            keeps absolutely positioned descendants inside this scroller — see
+            MainLayout, where their escape showed up as a second scrollbar. */}
         <main
-          className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden pb-[88px] xl:pb-0 overscroll-contain"
+          className="relative flex-1 min-h-0 overflow-y-auto overflow-x-hidden pb-[88px] xl:pb-0 overscroll-contain"
           style={{ scrollbarGutter: "stable" }}
         >
           <div className="p-4 md:p-6">{children}</div>

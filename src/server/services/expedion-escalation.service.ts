@@ -281,7 +281,15 @@ export const expedionEscalationService = {
           quantity: 1,
           // Auction lots are antiques and art far more often than not.
           isFragile: true,
-          needsHelp: !quote.isProtected,
+          // `isProtected` is a state — the Expedion form's "protected" and
+          // "packed" both set it — so it maps onto the state field at its
+          // lower bound, and its absence onto the service. It used to be
+          // written into `needsHelp` (help loading), the only field that
+          // existed then (cargo_packaging_services_spec.md §6).
+          packagingLevel: quote.isProtected ? "protected" : undefined,
+          needsProtection: !quote.isProtected,
+          needsPackaging: false,
+          needsHelp: false,
           pickup: {
             lat: quote.pickupLat!,
             lng: quote.pickupLng!,

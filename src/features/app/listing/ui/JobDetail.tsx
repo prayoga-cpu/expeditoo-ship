@@ -14,6 +14,8 @@ import {
   HandHelping,
   RotateCcw,
   ShieldCheck,
+  Shield,
+  PackageOpen,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -233,6 +235,20 @@ function JobHeader({ job }: { job: Job }) {
           <Badge variant="outline">
             <ShieldCheck className="mr-1 h-3 w-3" />
             {t(`packaging.${job.packagingLevel}`)}
+          </Badge>
+        )}
+        {/* Work the carrier does on site, beside the state badge above —
+            cargo_packaging_services_spec.md §5. */}
+        {job.needsProtection && (
+          <Badge variant="outline">
+            <Shield className="mr-1 h-3 w-3" />
+            {t("needsProtection")}
+          </Badge>
+        )}
+        {job.needsPackaging && (
+          <Badge variant="outline">
+            <PackageOpen className="mr-1 h-3 w-3" />
+            {t("needsPackaging")}
           </Badge>
         )}
       </div>

@@ -142,6 +142,23 @@ describe("toCreatePayload", () => {
     expect(payload.pickup).toMatchObject({ lat: 45.75, lng: 4.85, note: "Gate" });
   });
 
+  it("sends the packaging services beside the state they sit next to", () => {
+    const payload = toCreatePayload(
+      values({
+        packagingLevel: "protected",
+        needsProtection: false,
+        needsPackaging: true,
+      }),
+      true
+    );
+
+    expect(payload).toMatchObject({
+      packagingLevel: "protected",
+      needsProtection: false,
+      needsPackaging: true,
+    });
+  });
+
   it("leaves the rest of the contract exactly as it was", () => {
     const payload = toCreatePayload(values(), false);
 

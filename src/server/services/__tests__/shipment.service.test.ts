@@ -94,6 +94,8 @@ const shipmentRow = (over: Record<string, unknown> = {}) => ({
     quantity: 1,
     isFragile: false,
     needsHelp: true,
+    needsProtection: true,
+    needsPackaging: false,
     budgetCents: 50000,
     shipperId: "shipper-1",
   },
@@ -175,6 +177,9 @@ describe("shipmentService.getShipmentDetail (driver viewer)", () => {
     expect(detail.listing.title).toBe("Pallet to Marseille");
     expect(detail.listing.weightKg).toBe(320);
     expect(detail.listing.needsHelp).toBe(true);
+    // Work the driver does on site (cargo_packaging_services_spec.md §5).
+    expect(detail.listing.needsProtection).toBe(true);
+    expect(detail.listing.needsPackaging).toBe(false);
     expect(detail.shipper).toEqual({
       id: "shipper-1",
       name: "Sofia Shipper",

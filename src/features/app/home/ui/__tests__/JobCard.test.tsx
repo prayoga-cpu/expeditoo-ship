@@ -42,6 +42,8 @@ const JOB: BoardJob = {
   isFragile: true,
   needsHelp: false,
   packagingLevel: null,
+  needsProtection: false,
+  needsPackaging: false,
 
   pickupAddress: "1 rue de la Gare",
   pickupCity: "Voisins-le-Bretonneux",
@@ -219,5 +221,25 @@ describe("JobCard detail", () => {
 
     // JOB carries no dimensions, and a guess would be worse than silence.
     expect(screen.queryByTitle(/Taille/)).toBeNull();
+  });
+
+  // cargo_packaging_services_spec.md §5: work the carrier prices, so it is on
+  // the card beside "help loading" rather than only behind the click.
+  it("badges the packaging services the requester asked for", () => {
+    render(
+      <JobCard
+        job={withPhotos({ needsProtection: true, needsPackaging: true })}
+      />
+    );
+
+    expect(screen.getByText(fr.jobBoard.card.needsProtection)).toBeInTheDocument();
+    expect(screen.getByText(fr.jobBoard.card.needsPackaging)).toBeInTheDocument();
+  });
+
+  it("badges neither when none was asked for", () => {
+    render(<JobCard job={withPhotos()} />);
+
+    expect(screen.queryByText(fr.jobBoard.card.needsProtection)).toBeNull();
+    expect(screen.queryByText(fr.jobBoard.card.needsPackaging)).toBeNull();
   });
 });

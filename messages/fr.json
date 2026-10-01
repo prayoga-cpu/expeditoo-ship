@@ -966,14 +966,26 @@
       "fragileNotePlaceholder": "ex. plateau en verre, à garder à l'endroit",
       "help": "Aide au chargement",
       "helpHint": "Le transporteur doit aider à charger et décharger",
+      "packaging": "Emballage",
+      "packagingHint": "Dites-nous comment l'objet est préparé, ou ce que le transporteur doit faire.",
       "packagingOptions": {
         "protected": {
-          "label": "Protégé",
-          "description": "Film bulle, couverture, polystyrène…"
+          "label": "Déjà protégé",
+          "description": "Vous l'avez protégé : film bulle, couverture…"
         },
         "boxed": {
-          "label": "Emballé",
-          "description": "Protégé, puis mis en carton"
+          "label": "Déjà emballé",
+          "description": "Vous l'avez protégé et mis en carton"
+        }
+      },
+      "serviceOptions": {
+        "needsProtection": {
+          "label": "À protéger",
+          "description": "Le transporteur le protège : film bulle, couverture…"
+        },
+        "needsPackaging": {
+          "label": "À emballer",
+          "description": "Le transporteur fournit le carton et l'emballe"
         }
       },
       "photos": "Photos (facultatif)",
@@ -1209,9 +1221,11 @@
       "fragile": "Fragile",
       "needsHelp": "Aide au chargement",
       "packaging": {
-        "protected": "Protégé",
-        "boxed": "Emballé"
+        "protected": "Déjà protégé",
+        "boxed": "Déjà emballé"
       },
+      "needsProtection": "À protéger",
+      "needsPackaging": "À emballer",
       "budget": "Budget {amount}",
       "load": "Marchandise",
       "weight": "Poids",
@@ -1346,6 +1360,8 @@
       "quantity": "Quantité",
       "fragile": "Fragile",
       "needsHelp": "Aide au chargement requise",
+      "needsProtection": "Protection requise",
+      "needsPackaging": "Emballage requis",
       "timeline": "Historique",
       "cancellationReason": "Motif d'annulation"
     },
@@ -3386,6 +3402,8 @@
       "viaExpedion": "via Expedion",
       "fragile": "Fragile",
       "needsHelp": "Aide au chargement",
+      "needsProtection": "À protéger",
+      "needsPackaging": "À emballer",
       "sizeTitle": "Taille {size}"
     },
     "map": {

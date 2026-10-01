@@ -140,10 +140,12 @@ export function DriverLayout({ children }: DriverLayoutProps) {
           </div>
         </header>
 
-        {/* Content Area - Wrapper provides consistent padding */}
+        {/* Content Area - Wrapper provides consistent padding. `relative`
+            keeps absolutely positioned descendants inside this scroller — see
+            MainLayout, where their escape showed up as a second scrollbar. */}
         <main
           className={cn(
-            "flex-1 min-h-0 overflow-y-auto overflow-x-hidden xl:pb-0",
+            "relative flex-1 min-h-0 overflow-y-auto overflow-x-hidden xl:pb-0",
             !hideBottomNav && "pb-[88px]"
           )}
           style={{ scrollbarGutter: "stable" }}

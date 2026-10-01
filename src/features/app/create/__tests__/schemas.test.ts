@@ -282,6 +282,28 @@ describe("jobFormSchema", () => {
     if (parsed.success) expect(parsed.data.packagingLevel).toBeUndefined();
   });
 
+  // cargo_packaging_services_spec.md §1: what the carrier must do, beside the
+  // state above. Never required; `PackagingField` keeps them coherent.
+  it("asks for no packaging service by default", () => {
+    const parsed = jobFormSchema.safeParse(form());
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.needsProtection).toBe(false);
+      expect(parsed.data.needsPackaging).toBe(false);
+    }
+  });
+
+  it("accepts both packaging services at once", () => {
+    const parsed = jobFormSchema.safeParse(
+      form({ needsProtection: true, needsPackaging: true })
+    );
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.needsProtection).toBe(true);
+      expect(parsed.data.needsPackaging).toBe(true);
+    }
+  });
+
   it("makes an apartment declare its floor and lift", () => {
     const flat = endpoint({ locationType: "apartment" });
     const raised = messages(form({ pickup: flat }));

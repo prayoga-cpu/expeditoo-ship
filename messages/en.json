@@ -966,14 +966,26 @@
       "fragileNotePlaceholder": "e.g. glass top, keep upright",
       "help": "Help loading",
       "helpHint": "The carrier must help load and unload",
+      "packaging": "Packaging",
+      "packagingHint": "Tell us how the item is prepared, or what the carrier needs to do.",
       "packagingOptions": {
         "protected": {
-          "label": "Protected",
-          "description": "Bubble wrap, blanket, polystyrene…"
+          "label": "Already protected",
+          "description": "You've wrapped it: bubble wrap, blanket…"
         },
         "boxed": {
-          "label": "Boxed",
-          "description": "Protected, then put in a box"
+          "label": "Already packaged",
+          "description": "You've wrapped it and put it in a box"
+        }
+      },
+      "serviceOptions": {
+        "needsProtection": {
+          "label": "Needs protection",
+          "description": "The carrier wraps it: bubble wrap, blankets…"
+        },
+        "needsPackaging": {
+          "label": "Needs packaging",
+          "description": "The carrier brings a box and packs it"
         }
       },
       "photos": "Photos (optional)",
@@ -1209,9 +1221,11 @@
       "fragile": "Fragile",
       "needsHelp": "Loading help",
       "packaging": {
-        "protected": "Protected",
-        "boxed": "Boxed"
+        "protected": "Already protected",
+        "boxed": "Already packaged"
       },
+      "needsProtection": "Needs protection",
+      "needsPackaging": "Needs packaging",
       "budget": "Budget {amount}",
       "load": "Load",
       "weight": "Weight",
@@ -1346,6 +1360,8 @@
       "quantity": "Quantity",
       "fragile": "Fragile",
       "needsHelp": "Loading help required",
+      "needsProtection": "Protection required",
+      "needsPackaging": "Packaging required",
       "timeline": "History",
       "cancellationReason": "Cancellation reason"
     },
@@ -3386,6 +3402,8 @@
       "viaExpedion": "via Expedion",
       "fragile": "Fragile",
       "needsHelp": "Help loading",
+      "needsProtection": "Needs protection",
+      "needsPackaging": "Needs packaging",
       "sizeTitle": "Size {size}"
     },
     "map": {

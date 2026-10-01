@@ -4,6 +4,7 @@ import {
   TIME_SLOTS,
 } from "@/lib/availability-window";
 import { MAX_PATH_POINTS } from "@/lib/route-corridor";
+import { PACKAGING_SERVICES, isRedundantService } from "@/lib/cargo-packaging";
 import { listingOriginEnum, listingStatusEnum } from "@/db/schema/listings";
 
 // ========================================
@@ -128,6 +129,10 @@ const baseListingSchema = z.object({
   // Absent means "not stated", not "unprotected" — the same convention
   // `legal_form` uses (admin_user_management_spec.md), never guessed at.
   packagingLevel: z.enum(["protected", "boxed"]).optional(),
+  // Services the carrier performs, as distinct from the state above
+  // (cargo_packaging_services_spec.md).
+  needsProtection: z.boolean().default(false),
+  needsPackaging: z.boolean().default(false),
 
   pickup: endpointSchema,
   dropoff: endpointSchema,
@@ -207,6 +212,20 @@ export const createListingSchema = baseListingSchema.superRefine((data, ctx) => 
     });
   }
 
+  // "Already boxed" beside "needs packing" tells the carrier two opposite
+  // things; the form never produces the pair, so only a hand-built call can.
+  if (
+    PACKAGING_SERVICES.some(
+      (service) => data[service] && isRedundantService(data.packagingLevel, service)
+    )
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "PACKAGING_CONTRADICTION",
+      path: ["packagingLevel"],
+    });
+  }
+
   if (data.pickupFrom >= data.pickupUntil) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
@@ -252,6 +271,8 @@ export const MATERIAL_FIELDS = [
   "needsHelp",
   "isFragile",
   "packagingLevel",
+  "needsProtection",
+  "needsPackaging",
   "pickup",
   "dropoff",
   "pickupFrom",

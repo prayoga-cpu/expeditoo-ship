@@ -255,13 +255,22 @@ function CargoCard({ shipment }: { shipment: DriverShipmentDetail }) {
           )}
         </div>
 
-        {(listing?.isFragile || listing?.needsHelp) && (
+        {(listing?.isFragile ||
+          listing?.needsHelp ||
+          listing?.needsProtection ||
+          listing?.needsPackaging) && (
           <div className="flex flex-wrap gap-2">
             {listing.isFragile && (
               <Badge variant="outline">{t("fragile")}</Badge>
             )}
             {listing.needsHelp && (
               <Badge variant="outline">{t("needsHelp")}</Badge>
+            )}
+            {listing.needsProtection && (
+              <Badge variant="outline">{t("needsProtection")}</Badge>
+            )}
+            {listing.needsPackaging && (
+              <Badge variant="outline">{t("needsPackaging")}</Badge>
             )}
           </div>
         )}

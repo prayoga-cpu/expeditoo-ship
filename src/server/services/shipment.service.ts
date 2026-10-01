@@ -119,6 +119,8 @@ const DRIVER_LISTING_FIELDS = [
   "quantity",
   "isFragile",
   "needsHelp",
+  "needsProtection",
+  "needsPackaging",
 ] as const;
 
 /** A party reduced to what an avatar and a name need, nothing more. */

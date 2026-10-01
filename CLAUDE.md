@@ -632,3 +632,10 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
 13. `.prettierc` is misnamed (missing an `r`), so Prettier never loads it and
    falls back to `trailingComma: "all"`. Running Prettier reformats whole files.
    Match surrounding style by hand instead.
+14. **The app shells scroll inside `<main>`, and `<main>` is `relative` on
+   purpose** (`MainLayout`, `DriverLayout`, `AdminLayout`). An absolutely
+   positioned descendant with no positioned ancestor inside the scroller —
+   `sr-only` is one — takes the viewport as its containing block: `<main>`
+   neither clips nor scrolls it, the document grows to wherever it sits, and a
+   second page-level scrollbar slides the whole shell over blank space. That
+   was a client-reported bug on `/create` (2.56.0). Keep the `relative`.

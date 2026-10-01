@@ -77,6 +77,8 @@ function toInsert(
     isFragile: data.isFragile,
     needsHelp: data.needsHelp,
     packagingLevel: data.packagingLevel,
+    needsProtection: data.needsProtection,
+    needsPackaging: data.needsPackaging,
 
     // Explicit null, not undefined: Drizzle treats an undefined insert field
     // as "use the column default," and there is no default for these two.

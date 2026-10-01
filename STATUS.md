@@ -27,6 +27,16 @@ adversarial verification pass — treat their detail as slightly less certain.
 Work that needs a human hand outside the codebase. Add to this list rather
 than leaving it in a chat message.
 
+- [ ] **Run Actions → "Migrate database" for
+      `0032_listing_packaging_services` before the 2.56.0 deploy reaches
+      production.** `createListing` writes `needs_protection` /
+      `needs_packaging` on every insert, and the board and admin reads select
+      every column the schema declares. Without the migration, every new
+      transport request fails and those reads answer 500, which is the `0027`
+      failure mode. It is additive (`ADD COLUMN IF NOT EXISTS`, defaulted to
+      `false`), so running it ahead of the deploy is safe; the current code
+      ignores the columns.
+
 - [ ] **Verify a sending domain in Resend and set `EMAIL_FROM` — 2.53.0's
       in-house drivers cannot sign in until you do.** Production sends from
       Resend's sandbox sender (`onboarding@resend.dev`, the fallback in
@@ -260,6 +270,155 @@ than leaving it in a chat message.
       treatment, with no code change and nothing backdated
       (`docs/specs/invoice_at_payment_spec.md` §4.1). The variables are listed
       in `.env.example`.
+
+---
+
+## ✅ 2026-09-30 — Packaging Services on /create, and One Scrollbar (2.56.0)
+
+_"There is a double scroll bar on the right and it's a little bit
+disappointing because it let think there is a problem of view on the website
+like a bottom whitebpage instead form fields"_ and _"Possible to add 2 fields :
+Need to bebprotected Need to be packaged"_. That is client feedback from
+2026-09-29 on a photo of `/create` step 1. The owner's instruction was
+_"implement those feedbacks"_.
+
+Contract in `docs/specs/cargo_packaging_services_spec.md` (plan:
+`docs/plans/plan_cargo_packaging_services.md`).
+
+**The scrollbar was a real bug, not a style complaint.** Every shell
+(`MainLayout`, `DriverLayout`, `AdminLayout`) scrolls inside `<main>`, and
+`<main>` was not positioned. `OptionCard` (the weight and size cards) hides
+its radio with `sr-only`, which is `position: absolute`. No ancestor up to
+`<html>` was positioned, so those 14 radios took the viewport as their
+containing block. That meant they were neither clipped nor scrolled by
+`<main>`, and they stretched the *document* to wherever they sat. The browser
+then added a page scrollbar beside `<main>`'s own, and dragging it slid the
+`h-screen` shell up over empty space. That is the client's "bottom white
+page". The fix is `relative` on `<main>` in all three shells, so the bug
+cannot come back from any other `sr-only` or `absolute` descendant, and
+`relative` on `OptionCard`'s label so the card is correct in any container.
+Nothing inside `<main>` relied on anchoring to the viewport: the loaders size
+themselves from `--loader-offset-*` heights, and the impersonation banner is
+`fixed`.
+
+**The two fields half-existed, with the opposite meaning.** The last two
+toggles in the client's photo were `packagingLevel`, *Protégé* / *Emballé*.
+These record how the goods **already are** (`0027`; the Expedion form asks
+« L'objet est-il déjà protégé ou emballé ? »). The client asked for a
+**service**: the carrier must protect or pack the item. That changes what a
+carrier prices and whether they bring materials, so it is a new fact rather
+than a relabel. What changed:
+- `0032_listing_packaging_services.sql` adds `needs_protection` and
+  `needs_packaging`, both `boolean NOT NULL DEFAULT false`, like `is_fragile`
+  and `needs_help`. `false` means "not requested", which is exactly true of
+  every older row. That is unlike `packaging_level`, where absence must not
+  be read as "unprotected".
+- `src/lib/cargo-packaging.ts` holds `isRedundantService`, the one place that
+  says which pairs contradict. `boxed` covers both services; `protected`
+  covers protection only, because a wrapped item may still need a box.
+- `listings.dto.ts`: both fields are added, both join `MATERIAL_FIELDS`
+  (toggling one after bids invalidates live offers), and `createListingSchema`
+  refuses a contradiction with `PACKAGING_CONTRADICTION`.
+- `listings.service.ts` inserts both, and `DRIVER_LISTING_FIELDS` projects
+  both to the driver.
+- The form uses a new `PackagingField`: states on the first row, services on
+  the second (one column below `sm`), under an *Emballage* label and hint. The
+  state rows are relabelled *Déjà protégé* / *Déjà emballé* and the services
+  are *À protéger* / *À emballer*. `ToggleRow` moved to its own file so both
+  components share it.
+- Services are badged wherever `needsHelp` already is (`JobCard`, `JobDetail`,
+  `/driver/shipments/[id]`), because they are the same kind of fact: work done
+  on site. `JobDetail`'s state badge now reads *Déjà protégé* / *Déjà
+  emballé*.
+
+**Judgment calls**
+- **The last switch wins; the form refuses nothing.** Turning a state on
+  clears the services it covers, and turning a covering service on clears the
+  state. Only a hand-built `POST` can produce a contradiction, and that is
+  `400`.
+- **Escalation now writes the real fields.** `expedion-escalation.service.ts`
+  used to write `needsHelp: !quote.isProtected`, putting "unprotected" into
+  *help loading* because it was the only field there was. It now writes
+  `needsProtection: !isProtected`, plus `packagingLevel: 'protected'` when the
+  flag is set. That is the lower bound: the Expedion form sets the one boolean
+  for both "protected" and "packed" (`_Packing` in the Flutter quote form).
+  **This is a behaviour change for new escalations**: an unprotected auction
+  lot no longer shows *Aide au chargement*. Its description already said
+  « Objet non emballé, à protéger », which is now what the badge says.
+- **The state badge stays off the board card and the driver screen**, as it
+  was. Only the services, which a carrier acts on, were added there.
+
+**Found on the way**
+- **`beta-fixtures.test.ts` had been red for everyone since 2026-09-26.** Its
+  "offer fixture" pins `NOW = 2026-09-23` and builds a slot three days later,
+  but `createOfferSchema` checks `SLOT_IN_PAST` against the real clock
+  (`offers.dto.ts`, `new Date()`). The fix is test-only: that one `describe`
+  pins `Date` with vitest fake timers. The seed itself is unaffected, because
+  it runs at the real "now".
+- `expedion-price-suggestion.service.ts` feeds its prompt the line « Emballage
+  protégé demandé : oui/non » from `isProtected`, reading the state as a
+  *request*. It was left as it is (see Known limits).
+
+**Verification.** Three other sessions were editing the same working tree, so
+every number below is for that shared tree at close. `npx tsc --noEmit`: 0
+errors. `pnpm lint`: 0 errors, 82 warnings, the same count as 2.54.0. The 2
+warnings in files this touches (`register` in `WeightBracketField.tsx`,
+`paymentsService` in `shipment.service.test.ts`) are on lines it does not
+touch. `pnpm test`: 155 files, 1984 tests, 1983 passed. The one failure,
+`payments.service.test.ts` › "pay at accept quoteCharge adds the fee and names
+the saved card", is another session's in-flight pay-at-accept work. **34 new
+tests, all passing**: 25 in three new files (`cargo-packaging.test.ts` 8,
+`listing-packaging.test.ts` 8, `PackagingField.test.tsx` 9) and 9 in existing
+ones (form schema 2, payload 1, `JobCard` 2, `createListing` 1, escalation 3).
+The driver-projection test also asserts both fields. `pnpm changelog:check`
+ok, and FR/EN parity was checked by key diff. **In Chromium**, against this
+repo's dev server on :3001 and the local Postgres (the throwaway account was
+minted and then deleted), `/create` step 1 was checked at 1440×800 and
+390×844, in light/FR and dark/EN. With the fix the document height equals the
+viewport in all four. Removing the added `relative`s on the live page brings
+the page scrollbar back, with the document at 1233–1831 px, which is the
+client's bug reproduced on the real form. The coherence rules were driven by
+real clicks: both services on; *Déjà emballé* clears both; *Déjà protégé* +
+*À emballer* coexist; *À protéger* clears *Déjà protégé*. The grid pairs the
+rows at equal heights.
+
+**Known limits**
+- **A full `/create` submit was not driven in the browser.** The shared tree
+  held another session's uncommitted `listings.reference` column, which was
+  not in the local database, so any listing write would have failed on that
+  column. Each seam (form schema, payload, DTO, insert) is unit-tested.
+  `JobDetail` and the driver screen's new badges were not rendered in a
+  browser either; `JobCard`'s are covered by tests.
+- A `PATCH` that turns a service on while the stored row holds a state that
+  covers it is not refused. No UI edits a listing's cargo today.
+- An Expedion lot the client marked "packed" reads *Déjà protégé*, because
+  the three-way choice reaches this repo as one boolean.
+- The price-suggestion prompt still reads `isProtected` as "protected
+  packaging requested".
+- **`RequestSummary`**, the 2.55.0 session's summary on `/home` and
+  `/listings/me`, picks up the *Déjà…* relabel but does not yet list *À
+  protéger* / *À emballer*. That was left deliberately, so neither session's
+  commit depends on the other's uncommitted code. Add it once both have
+  landed.
+
+- [x] **Shell**: `MainLayout.tsx`, `DriverLayout.tsx`, `AdminLayout.tsx`
+      (`relative` on `<main>`), `WeightBracketField.tsx` (`OptionCard`).
+- [x] **Schema**: `0032_listing_packaging_services.sql` + journal (idx 31),
+      `db/schema/listings.ts`.
+- [x] **Server**: `lib/cargo-packaging.ts`, `listings.dto.ts`,
+      `listings.service.ts`, `shipment.service.ts`,
+      `expedion-escalation.service.ts`.
+- [x] **Form**: `create/schemas.ts`, `useJobForm.tsx`, `jobs.api.ts`,
+      `ui/PackagingField.tsx` (new), `ui/ToggleRow.tsx` (new), `JobForm.tsx`.
+- [x] **Display**: `JobDetail.tsx`, `JobCard.tsx`,
+      `driver/shipments/[id]/page.tsx`, `listing/types.ts`,
+      `driver/api/shipments.api.ts`.
+- [x] **Strings**: `create.what.{packaging,packagingHint,serviceOptions.*}`,
+      `create.what.packagingOptions.*` relabelled,
+      `myJobs.detail.{packaging.*,needsProtection,needsPackaging}`,
+      `jobBoard.card.*` and `driver.shipmentDetail.*` for the two services,
+      in both files.
+- [x] **Docs**: new spec and plan.
 
 ---
 

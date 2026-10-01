@@ -102,6 +102,10 @@ export const listings = pgTable(
     isFragile: boolean("is_fragile").default(false).notNull(),
     needsHelp: boolean("needs_help").default(false).notNull(),
     packagingLevel: packagingLevelEnum("packaging_level"),
+    // What the carrier must *do*, beside how the goods already *are* above
+    // (0032, cargo_packaging_services_spec.md). `false` = not requested.
+    needsProtection: boolean("needs_protection").default(false).notNull(),
+    needsPackaging: boolean("needs_packaging").default(false).notNull(),
 
     // ---- Where: pickup ----
     // Nullable: a requester who types the address by hand, with no map pin

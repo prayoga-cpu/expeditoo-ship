@@ -435,6 +435,17 @@ describe("createListing", () => {
     expect(row.origin).toBe("direct");
   });
 
+  it("writes the packaging services the request carries", async () => {
+    await listingsService.createListing(
+      "user-1",
+      createInput({ needsProtection: true, needsPackaging: false })
+    );
+
+    const row = vi.mocked(listingsDal.create).mock.calls[0][0];
+    expect(row.needsProtection).toBe(true);
+    expect(row.needsPackaging).toBe(false);
+  });
+
   it("resolves a category when the caller names none", async () => {
     await listingsService.createListing("user-1", createInput());
 

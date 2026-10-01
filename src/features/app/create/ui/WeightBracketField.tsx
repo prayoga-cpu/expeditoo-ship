@@ -173,6 +173,11 @@ function WeightExactInput({
  * replaced by a `<button>` so the group keeps radio semantics and arrow-key
  * navigation; `sr-only` hides it, and the focus ring moves to the card so a
  * keyboard user can still see where they are.
+ *
+ * `sr-only` is `position: absolute`, so the card is `relative`: the input is
+ * then placed against the card rather than the nearest positioned ancestor,
+ * which on /create was the viewport — six weight and eight size radios
+ * escaping the shell's scroller were the client's "double scroll bar".
  */
 export function OptionCard({
   id,
@@ -193,7 +198,7 @@ export function OptionCard({
     <Label
       htmlFor={id}
       className={cn(
-        "flex min-h-[92px] cursor-pointer flex-col items-start justify-center gap-1 rounded-lg border p-4 text-left transition-colors",
+        "relative flex min-h-[92px] cursor-pointer flex-col items-start justify-center gap-1 rounded-lg border p-4 text-left transition-colors",
         "focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
         selected
           ? "border-primary bg-primary/5"
