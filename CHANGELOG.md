@@ -14,6 +14,18 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.57.1] - 2026-10-01 · fix
+
+- **Fixed: your request's summary said "Not stated" when you had asked the
+  carrier to protect or package the item.** On your home page and in "My
+  requests", the Protection line now shows "Needs protection" and "Needs
+  packaging" when you asked for them, next to "Already protected" or "Already
+  packaged" and "Fragile".
+- **Fixed (admin): "Direct requests" on the Overview listed drafts.** It now
+  lists only requests that were actually posted. A draft, or a request
+  scheduled for later, can only be opened by its author, so clicking one
+  there showed a loader that never finished.
+
 ## [2.57.0] - 2026-09-30 · feat
 
 - **Every transport request now has a reference number.** It reads "Réf.

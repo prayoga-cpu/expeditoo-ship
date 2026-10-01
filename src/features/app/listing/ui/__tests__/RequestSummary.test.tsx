@@ -28,6 +28,8 @@ const job = (over: Partial<Job> = {}) =>
     dropoffUntil: "2026-10-04T16:00:00.000Z",
     isFlexible: false,
     packagingLevel: "protected",
+    needsProtection: false,
+    needsPackaging: false,
     isFragile: false,
     needsHelp: false,
     weightKg: 50,
@@ -90,6 +92,59 @@ describe("RequestSummary", () => {
     expect(screen.getByText("Protection").nextElementSibling?.textContent).toBe(
       "Non précisée"
     );
+  });
+
+  // The two services of cargo_packaging_services_spec.md. A request asking
+  // only for one of them used to read "Non précisée" here, on the line the
+  // client asked for, while the job page showed the badge.
+  it("shows a service the carrier is asked for, instead of 'not stated'", () => {
+    const { onError } = renderSummary(
+      job({ packagingLevel: null, needsProtection: true })
+    );
+
+    expect(screen.getByText("Protection").nextElementSibling?.textContent).toBe(
+      fr.myJobs.detail.needsProtection
+    );
+    expect(errors(onError)).toEqual([]);
+  });
+
+  it("lists the state, then both services, then Fragile", () => {
+    renderSummary(
+      job({
+        packagingLevel: "protected",
+        needsProtection: true,
+        needsPackaging: true,
+        isFragile: true,
+      })
+    );
+
+    expect(screen.getByText("Protection").nextElementSibling?.textContent).toBe(
+      [
+        fr.myJobs.detail.packaging.protected,
+        fr.myJobs.detail.needsProtection,
+        fr.myJobs.detail.needsPackaging,
+        "Fragile",
+      ].join(" · ")
+    );
+  });
+
+  it("keeps Fragile beside 'not stated' when nothing else was said", () => {
+    renderSummary(job({ packagingLevel: null, isFragile: true }));
+    expect(screen.getByText("Protection").nextElementSibling?.textContent).toBe(
+      "Non précisée · Fragile"
+    );
+  });
+
+  it("names the services in English too", () => {
+    const { onError } = renderSummary(
+      job({ packagingLevel: null, needsPackaging: true }),
+      "en"
+    );
+
+    expect(screen.getByText("Protection").nextElementSibling?.textContent).toBe(
+      en.myJobs.detail.needsPackaging
+    );
+    expect(errors(onError)).toEqual([]);
   });
 
   it("lists the load: weight, quantity above one, and loading help", () => {

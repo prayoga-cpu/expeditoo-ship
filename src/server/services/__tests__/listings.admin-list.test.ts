@@ -29,7 +29,12 @@ describe("listingsService.adminList", () => {
   });
 
   it("passes the origin filter through to the DAL", async () => {
-    const filters = { origin: "direct" as const, page: 1, limit: 5 };
+    const filters = {
+      origin: "direct" as const,
+      posted: true,
+      page: 1,
+      limit: 5,
+    };
 
     await expect(
       listingsService.adminList({ userId: "admin-1", isAdmin: true }, filters)

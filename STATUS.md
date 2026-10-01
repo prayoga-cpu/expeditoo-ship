@@ -284,6 +284,55 @@ than leaving it in a chat message.
 
 ---
 
+## ✅ 2026-10-01 — The Summary Names the Packaging Services, and the Admin Panel Lists Posted Requests Only (2.57.1)
+
+_No new request. Two gaps found on 2026-10-01 while 2.55.0–2.57.0 were being
+split into one commit per release for the push, by reading each release
+against the client's feedback of 2026-09-29: "details for appointments and
+protection level" and "I don't see the new ad in administration panel"._
+
+**What changed**
+- **`RequestSummary`'s Protection line reads all three facts.** 2.55.0 built
+  the line from `packagingLevel` alone, because `needsProtection` and
+  `needsPackaging` were another session's uncommitted 2.56.0 work at the time.
+  Shipped together, a request asking only for *À protéger* read *Protection :
+  Non précisée* on `/home` and `/listings/me` while its own page showed the
+  badge. The line is now the state, then the two services, then *Fragile*,
+  labelled with `myJobs.detail.*` so it uses the job page's words. *Non
+  précisée* only when none of the three was said.
+- **`GET /api/admin/listings` takes `posted=true`**, and Supervision's
+  *Demandes directes* panel asks for it (`useRecentDirectRequests`).
+  `listingsDal.adminList` adds `notInArray(status, ['draft', 'scheduled'])`.
+  The panel's subtitle already said *Publiées sur Expeditoo…*, yet it listed
+  drafts, and `listingsService.getListing` answers `LISTING_NOT_FOUND` for a
+  draft or scheduled listing to anyone but its author, so the row led to
+  `JobDetail`'s loader with nothing behind it.
+
+**Judgment calls**
+- **`posted` is `z.enum(["true", "false"])`, not `z.coerce.boolean()`.** The
+  coercion reads the string `"false"` as true.
+- **Annonces is unchanged.** It still lists drafts, which is right for
+  moderation, and *Voir les détails* on someone else's draft still shows the
+  endless loader. The proper fix is in the service (staff may read a draft)
+  and in `JobDetail` (an error state), both shared with other work; see Known
+  limits.
+
+**Verification.** In a git worktree at `ship/2.57.0` plus this change only.
+- `npx tsc --noEmit`: 0 errors. `pnpm lint`: 0 errors, 82 warnings, none new.
+- `npx vitest run`: 1913 passed of 1913. 5 are new: 4 on the Protection line
+  (a service alone, state plus both services, *Fragile* beside *Non précisée*,
+  English) and 1 on the `posted` flag. Two existing tests were extended.
+- `pnpm changelog:check`: ok at 2.57.1.
+- Not re-checked in a browser: both changes are covered by the unit tests
+  above, and the screens they touch were browser-checked in 2.55.0.
+
+**Known limits**
+- In Annonces, *Voir les détails* on a draft or scheduled request that belongs
+  to someone else, or `/admin/listings?id=` with an id that no longer exists,
+  still shows a loader that never finishes.
+- The admin reference search (2.57.0) only covers the 50 newest requests,
+  because Annonces loads one page and filters it in the browser.
+
 ## ✅ 2026-09-30 — Job Reference Number, and Expedion No Longer Announced to Drivers (2.57.0)
 
 _"it should be useful to add the field « ad reference » for users (asker and

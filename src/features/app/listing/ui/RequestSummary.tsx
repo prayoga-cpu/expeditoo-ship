@@ -17,6 +17,8 @@ type SummaryJob = Pick<
   | "dropoffUntil"
   | "isFlexible"
   | "packagingLevel"
+  | "needsProtection"
+  | "needsPackaging"
   | "isFragile"
   | "needsHelp"
   | "weightKg"
@@ -46,16 +48,23 @@ const WINDOW_FORMAT = {
  */
 export function RequestSummary({ job, titleClassName }: RequestSummaryProps) {
   const t = useTranslations("myJobs.summary");
-  const tPackaging = useTranslations("myJobs.detail.packaging");
+  const tDetail = useTranslations("myJobs.detail");
   const format = useFormatter();
 
   const range = (from: string, until: string) =>
     format.dateTimeRange(new Date(from), new Date(until), WINDOW_FORMAT);
 
-  // `null` is "not stated", never "unprotected" (the schema's rule for
-  // `packaging_level`), so it gets its own words rather than a blank.
+  // How the item is prepared, then what the carrier is asked to do with it
+  // (cargo_packaging_services_spec.md §1), in the job page's own words. With
+  // neither said it reads "not stated", never "unprotected": the schema's
+  // rule for `packaging_level`.
+  const stated = [
+    job.packagingLevel ? tDetail(`packaging.${job.packagingLevel}`) : null,
+    job.needsProtection ? tDetail("needsProtection") : null,
+    job.needsPackaging ? tDetail("needsPackaging") : null,
+  ].filter(Boolean);
   const protection = [
-    job.packagingLevel ? tPackaging(job.packagingLevel) : t("protectionNone"),
+    ...(stated.length > 0 ? stated : [t("protectionNone")]),
     job.isFragile ? t("fragile") : null,
   ]
     .filter(Boolean)

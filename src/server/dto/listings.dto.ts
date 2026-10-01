@@ -396,6 +396,14 @@ export const adminListingsQuerySchema = z.object({
   // Absent means both inlets. `direct` is what Supervision's "Demandes
   // directes" panel reads (request_summary_spec.md §3.1).
   origin: z.enum(listingOriginEnum.enumValues).optional(),
+  // "true" leaves out what nobody has posted yet: drafts and requests
+  // scheduled for later. Only their author may open those, so a staff list
+  // that links to them leads to a page that never loads
+  // (request_summary_spec.md §3.1).
+  posted: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((value) => value === "true"),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(50),
 });

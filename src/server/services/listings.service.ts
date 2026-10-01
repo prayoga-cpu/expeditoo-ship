@@ -299,6 +299,7 @@ export const listingsService = {
     filters: {
       status?: Listing["status"];
       origin?: Listing["origin"];
+      posted?: boolean;
       page: number;
       limit: number;
     }

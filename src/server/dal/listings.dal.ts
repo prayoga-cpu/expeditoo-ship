@@ -21,6 +21,7 @@ import {
   gte,
   lte,
   lt,
+  notInArray,
   or,
   sql,
   count,
@@ -435,6 +436,8 @@ export const listingsDal = {
     filters: {
       status?: ListingStatus;
       origin?: ListingOrigin;
+      /** Leave out drafts and scheduled requests: not on the board yet. */
+      posted?: boolean;
       page: number;
       limit: number;
     },
@@ -444,7 +447,10 @@ export const listingsDal = {
     // left, so an unfiltered call still matches every row.
     const where = and(
       filters.status ? eq(listings.status, filters.status) : undefined,
-      filters.origin ? eq(listings.origin, filters.origin) : undefined
+      filters.origin ? eq(listings.origin, filters.origin) : undefined,
+      filters.posted
+        ? notInArray(listings.status, ["draft", "scheduled"])
+        : undefined
     );
 
     const items = await tx.query.listings.findMany({

@@ -35,6 +35,8 @@ export interface AdminListingsParams {
   status?: ListingStatus;
   /** Absent means both inlets. */
   origin?: ListingOrigin;
+  /** True leaves out drafts and requests scheduled for later. */
+  posted?: boolean;
   page?: number;
   limit?: number;
 }

@@ -94,12 +94,20 @@ export function useAdminListings() {
 /**
  * The newest requests posted at `/create`, with how many there are in all,
  * for Supervision's "Demandes directes" panel (request_summary_spec.md §3.2).
+ *
+ * Posted ones only. A draft or a scheduled request is not on the board, and
+ * only its author may open it, so listing one here linked to a page that
+ * never finished loading.
  */
 export function useRecentDirectRequests(limit = 5) {
   return useQuery({
     queryKey: adminListingKeys.recentDirect(limit),
     queryFn: async () => {
-      const page = await adminListingsApi.list({ origin: "direct", limit });
+      const page = await adminListingsApi.list({
+        origin: "direct",
+        posted: true,
+        limit,
+      });
       return { items: page.items.map(toAdminListing), total: page.total };
     },
     staleTime: 0,

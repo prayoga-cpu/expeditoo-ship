@@ -52,10 +52,13 @@ The summary shows, in order:
    (`format.dateTimeRange`, day + short month + hh:mm). A same-day window
    collapses to `26 sept., 09:00 – 12:00`.
 3. **Livraison / Delivery**: `dropoffFrom`–`dropoffUntil`, same format.
-4. **Protection**: `packagingLevel` labelled with the job page's own words
-   (`myJobs.detail.packaging.*`: *Protégé* / *Emballé*). `null` reads
-   *Non précisée* / *Not stated*, never "unprotected" (the schema's rule for
-   this column). `isFragile` appends *Fragile*.
+4. **Protection**: how the item is prepared, then what the carrier is asked
+   to do, in the job page's own words: `packagingLevel`
+   (`myJobs.detail.packaging.*`: *Déjà protégé* / *Déjà emballé*), then
+   `needsProtection` (*À protéger*) and `needsPackaging` (*À emballer*), from
+   2.57.1. With none of the three it reads *Non précisée* / *Not stated*, never
+   "unprotected" (the schema's rule for `packaging_level`). `isFragile`
+   appends *Fragile*.
 5. **Marchandise / Load**: `weightKg` as `N kg` (the job page's format),
    `quantity` when above 1, and *Aide au chargement* when `needsHelp`.
 6. *Dates flexibles* when `isFlexible`.
@@ -83,11 +86,20 @@ Airtable import and Expedion-app quotes. A request posted at `/create` is a
 value is a 400 (`VALIDATION_ERROR` from the Zod parse). Permission is
 unchanged: admin or operator, else `FORBIDDEN_ROLE`.
 
+From 2.57.1 it also accepts `posted=true`, which leaves out `draft` and
+`scheduled` listings. `false` or absent keeps every status; any other value is
+a 400. `posted` is an enum of the two strings, not `z.coerce.boolean`, which
+would read `"false"` as true.
+
 ### 3.2 Supervision
 
 A *Demandes directes* card sits directly under *Devis récents*:
 
-- Heading with the total count of direct requests (the response's `total`).
+- Heading with the total count of posted direct requests (the response's
+  `total`).
+- Posted requests only (`posted=true`): a draft or a scheduled request is not
+  on the board and only its author may open it, so until 2.57.1 a row for one
+  linked to a page that never finished loading.
 - The five newest, each with title, `pickupCity → dropoffCity`, status badge,
   budget, requester name and posted date. Each row links to
   `/admin/listings?id=<listing id>`.
@@ -128,7 +140,7 @@ that field. There is no separate first/last-name column and none is added.
       label, *Non précisée* for `null`, fragile, quantity, flexible, FR and EN
       with no missing-message errors.
 - [ ] `adminListingsQuerySchema`: accepts `direct` / `expedion` / absent,
-      rejects anything else.
+      rejects anything else; `posted` is true only for `"true"`.
 - [ ] `listingsService.adminList`: passes `origin` through; refuses a non-staff
       viewer.
 - [ ] `RecentDirectRequestsPanel`: rows with deep links, total, empty state,
