@@ -95,6 +95,12 @@ The card shows: a status badge (same tone/labels as `/listings/me`'s
 `STATUS_TONE` and `myJobs.status.*`), the job title, the offer count
 (`myJobs.offers`), and a link to `/listing/:id`.
 
+> **Superseded in part (2.55.0).** The card now also carries the budget and
+> the full `RequestSummary`: route on the title's line, both appointment
+> windows, protection level and load. The "become a driver" card above it is
+> hidden from anyone who has posted a request. Contract:
+> `request_summary_spec.md` §1–§2.
+
 `completed`, `cancelled`, `expired` and `draft` are deliberately excluded —
 the first three belong to history (`/listings/me`'s delivered tab and the
 status filter already cover them), and a draft is not "a request" yet.

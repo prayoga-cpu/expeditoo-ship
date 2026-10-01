@@ -26,12 +26,14 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageLoader } from "@/components/ui/page-loader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useRecentDirectRequests } from "@/features/app/admin/hooks/useAdminListings";
 import { StatCard } from "@/features/app/admin/ui/StatCard";
 import { formatCurrency, formatNumber } from "@/lib/currency";
 import type { ExpedionReportSection } from "@/server/services/expedion-report.service";
 
 import { useExpedionReport } from "../hooks/useExpedionReport";
 import { QuoteQueueTable, type QueueColumn } from "./QuoteQueueTable";
+import { RecentDirectRequestsPanel } from "./RecentDirectRequestsPanel";
 import { RecentQuotesPanel } from "./RecentQuotesPanel";
 
 /**
@@ -77,6 +79,10 @@ const QUEUES: {
 
 export function ExpedionDashboard() {
   const { data, isLoading, error } = useExpedionReport();
+  // Its own query, not a section of the report: the rows are `listings`, which
+  // `GET /api/admin/listings` already serves, and a failure here must not take
+  // the Expedion figures down with it.
+  const directRequests = useRecentDirectRequests();
   const t = useTranslations("admin.expedion");
   // Controlled so a data-quality tile can jump straight to the queue it is
   // counting, rather than leaving the operator to find the right tab
@@ -140,6 +146,16 @@ export function ExpedionDashboard() {
 
       {/* ---- What arrived and what needs doing, before any figure ---- */}
       <RecentQuotesPanel rows={data.recent} unavailable={missing.has("recent")} />
+
+      {/* Requests posted on Expeditoo itself. The panel above reads Expedion
+          quotes only — the Airtable import and the Expedion app — so without
+          this a new request from /create never reached the landing page. */}
+      <RecentDirectRequestsPanel
+        rows={directRequests.data?.items ?? []}
+        total={directRequests.data?.total ?? 0}
+        isLoading={directRequests.isLoading}
+        isError={directRequests.isError}
+      />
 
       {/* ---- KPIs: the auction business, then the platform around it ---- */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">

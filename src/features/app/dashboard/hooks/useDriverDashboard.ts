@@ -9,6 +9,7 @@ import { useMyRequests } from "@/features/app/listing/hooks/useMyRequests";
 import { useSavedCards } from "@/features/app/profile/hooks/useSavedCards";
 import type { ListingStatus } from "@/features/app/listing/types";
 import { orderRunsByProgress } from "../orderRuns";
+import { showsDriverInvite } from "../driverInvite";
 
 /** Shipment states that mean "currently on the road, or about to be". */
 const ACTIVE_SHIPMENT_STATUSES = "PENDING,ASSIGNED,PICKED_UP,IN_TRANSIT";
@@ -71,6 +72,15 @@ export function useDriverDashboard() {
       (job) => job.origin === "direct" && NEEDS_CARD_STATUSES.includes(job.status)
     );
 
+  // A failed fetch counts as "no requests": the card is then shown, as it was
+  // before it learned to step aside for requesters (request_summary_spec.md §1).
+  const showDriverInvite = showsDriverInvite({
+    hasApplication: Boolean(application.data),
+    requestCount: myRequests.isError
+      ? 0
+      : (myRequests.data?.length ?? null),
+  });
+
   return {
     application: application.data,
     isApplicationLoading: application.isLoading,
@@ -88,5 +98,6 @@ export function useDriverDashboard() {
     isRunsLoading: activeRuns.isLoading,
 
     needsCardNudge,
+    showDriverInvite,
   };
 }

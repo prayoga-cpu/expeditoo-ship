@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { DriverBottomNav } from "./DriverBottomNav";
 import { AppSidebarHeader } from "@/components/layouts/AppSidebarHeader";
+import { HeaderAccount } from "@/components/layouts/HeaderAccount";
 import { AppVersionLink } from "@/components/ui/app-version";
 import { useTranslations } from "next-intl";
 import { useActiveAccessMode } from "@/lib/use-active-access-mode";
@@ -134,6 +135,7 @@ export function DriverLayout({ children }: DriverLayoutProps) {
               </Button>
               <FeedbackLauncher />
               <NotificationBell />
+              <HeaderAccount profileHref="/driver/profile" />
             </div>
           </div>
         </header>

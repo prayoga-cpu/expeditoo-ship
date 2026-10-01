@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   IDS,
   LISTINGS,
@@ -50,6 +50,17 @@ describe("listing fixtures", () => {
 });
 
 describe("offer fixture", () => {
+  // `createOfferSchema` refuses a slot that has already ended by the *wall
+  // clock* (offers.dto.ts), and this slot sits three days after the pinned
+  // NOW. Pinning only NOW made the test start failing on 2026-09-26.
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(NOW);
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("proposes one morning slot on the job's own pickup day", () => {
     const pickupFrom = utcAt(3, 7, NOW);
     const input = offerInput(pickupFrom, "veh_1", 23_500, "ok");

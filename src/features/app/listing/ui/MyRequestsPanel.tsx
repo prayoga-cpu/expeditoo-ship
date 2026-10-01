@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ClipboardList, Gavel, MapPin, Plus, AlertTriangle } from "lucide-react";
+import { ClipboardList, Gavel, Plus, AlertTriangle } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import { CenteredEmptyState } from "@/components/ui/centered-empty-state";
 import { PageLoader } from "@/components/ui/page-loader";
 import { formatCurrency } from "@/lib/currency";
 import { useMyRequests } from "../hooks/useMyRequests";
+import { RequestSummary } from "./RequestSummary";
 import { STATUS_TONE } from "../statusTone";
 import type { Job, ListingStatus } from "../types";
 
@@ -120,15 +121,12 @@ function JobRow({ job }: { job: Job }) {
                 <Badge variant="secondary">via Expedion</Badge>
               )}
             </div>
-            <h3 className="mt-2 truncate text-lg font-semibold text-foreground group-hover:text-primary">
-              {job.title}
-            </h3>
-            <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
-              <MapPin className="h-4 w-4 shrink-0" />
-              <span className="truncate">
-                {job.pickupCity} → {job.dropoffCity}
-              </span>
-            </p>
+            <div className="mt-2">
+              <RequestSummary
+                job={job}
+                titleClassName="text-lg font-semibold text-foreground group-hover:text-primary"
+              />
+            </div>
           </div>
 
           <div className="shrink-0 text-right">

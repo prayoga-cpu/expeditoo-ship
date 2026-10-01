@@ -56,6 +56,19 @@ function ListingStatusBadge({ status }: { status: Listing["status"] }) {
   );
 }
 
+// Which inlet the job came in by. A request posted at `/create` and a job
+// escalated from Expedion looked identical here, although different people
+// award them: the requester for the first, an operator for the second
+// (request_summary_spec.md §3.3).
+function ListingOriginBadge({ origin }: { origin: Listing["origin"] }) {
+  const t = useTranslations("admin.listings.table.origin");
+  return (
+    <Badge variant={origin === "direct" ? "outline" : "secondary"}>
+      {t(origin)}
+    </Badge>
+  );
+}
+
 // Action menu component
 function ListingActions({
   listingId,
@@ -127,18 +140,25 @@ export function ListingsTable({
           <DataTableColumnHeader column={column} title={t("title")} />
         ),
         cell: ({ row }) => (
-          <span className="font-medium">{row.original.title}</span>
+          <div className="flex flex-col gap-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-medium">{row.original.title}</span>
+              <ListingOriginBadge origin={row.original.origin} />
+            </div>
+            <span className="text-xs text-muted-foreground">
+              {row.original.pickupCity} → {row.original.dropoffCity}
+            </span>
+          </div>
         ),
         filterFn: (row, id, filterValue) => {
-          const title = row.original.title.toLowerCase();
-          const shipperName = row.original.shipper.name.toLowerCase();
-          const shipperEmail = row.original.shipper.email.toLowerCase();
           const value = (filterValue as string).toLowerCase();
-          return (
-            title.includes(value) ||
-            shipperName.includes(value) ||
-            shipperEmail.includes(value)
-          );
+          return [
+            row.original.title,
+            row.original.shipper.name,
+            row.original.shipper.email,
+            row.original.pickupCity,
+            row.original.dropoffCity,
+          ].some((field) => field.toLowerCase().includes(value));
         },
       },
       {

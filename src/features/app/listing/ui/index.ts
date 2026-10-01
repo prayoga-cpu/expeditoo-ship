@@ -7,3 +7,4 @@ export { DeliveryHistoryPanel } from "./DeliveryHistoryPanel";
 export { DeliveredRequestCard } from "./DeliveredRequestCard";
 export { AvailableCarriersPanel } from "./AvailableCarriersPanel";
 export { CarrierMatchCard } from "./CarrierMatchCard";
+export { RequestSummary } from "./RequestSummary";

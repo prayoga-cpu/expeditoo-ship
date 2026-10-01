@@ -263,6 +263,138 @@ than leaving it in a chat message.
 
 ---
 
+## ✅ 2026-09-30 — Request Summary for Requesters, Direct Requests in the Admin Panel, and the Signed-In Name (2.55.0)
+
+_Client feedback, 2026-09-29, verbatim: "This item fieldy is for the carrier
+only,not the asker.So it should be deleted. It should appear whe n the carrier
+or asker want to deal" · "About this field,the asker should have a summary with
+all the informations of his ad" · "Same line as item sofa: departure and
+arrival city.and details for appointments and protection level" · "Same with
+field « my asks »" · "I don't see the new ad in administration panel.is it only
+airtable import?" · "Please add the name and firstname of user in top right"_
+
+**What shipped.** Contract in `docs/specs/request_summary_spec.md` (plan:
+`docs/plans/plan_request_summary.md`); `listing_posted_feedback_spec.md` §2.4
+now points at it.
+
+- **The driver invite steps aside for requesters.** `DriverDashboard` rendered
+  *Commencez à rouler avec EXPEDITOO* for anyone without a carrier
+  application, i.e. every requester. It now renders on `showsDriverInvite`
+  (`src/features/app/dashboard/driverInvite.ts`): hidden while
+  `/api/listings/me` loads, hidden once the caller has any request (drafts and
+  scheduled included), shown on a fetch error (the old behaviour). "When they
+  want to deal" already existed: `JobBidSection` shows `BecomeCarrierCard` to
+  a signed-in non-carrier on an open job, so no entry point was added.
+  `MainLayout`'s comment still describes the dashboard card as the way a
+  not-yet-qualified user reaches `/carrier/application`; for a requester the
+  job page is now that way.
+- **`RequestSummary`** (`src/features/app/listing/ui/RequestSummary.tsx`),
+  shared by `MyRequestStatusCard` on `/home` and `JobRow` on `/listings/me` so
+  the two cannot drift. Title and `pickupCity → dropoffCity` in one wrapping
+  row ("Same line as item sofa"), then Retrait / Livraison windows through
+  `format.dateTimeRange` (a same-day window collapses to one date),
+  Protection (`packagingLevel` in the job page's words,
+  `myJobs.detail.packaging.*`; `null` reads *Non précisée*, never
+  "unprotected"; plus *Fragile*), Marchandise (`weightKg` as `JobDetail`
+  prints it, quantity above 1, *Aide au chargement*) and *Dates flexibles*.
+  The `/home` card also shows the budget. Every field was already on `Job`,
+  so there is no API change.
+- **Direct requests reach the admin landing page.** Supervision's *Devis
+  récents* is built from `expedion_quotes` alone (`expedion-report.dal.ts`),
+  so a `/create` request (a `listings` row with `origin = 'direct'`) never
+  appeared there: the client's "is it only airtable import?" was right.
+  `GET /api/admin/listings` now takes `origin` (`adminListingsQuerySchema` →
+  `listingsService.adminList` → `listingsDal.adminList`, an `and()` of
+  optional predicates). New client API
+  `src/features/app/admin/api/listings.api.ts`; `useRecentDirectRequests`
+  (`origin=direct&limit=5`) feeds `RecentDirectRequestsPanel`, mounted under
+  `RecentQuotesPanel` in `ExpedionDashboard`. It is its own query rather than
+  a report section, so its failure cannot take the Expedion figures down. Rows
+  deep-link to `/admin/listings?id=`, which now holds the opened listing in
+  the URL (Suspense-wrapped for `useSearchParams`, as `/admin/users` is) with
+  a *Toutes les annonces* back link. `ListingsTable` shows an origin badge and
+  the route and searches cities; `admin.listings.table.seller` went from
+  *Vendeur* to *Demandeur*.
+- **`HeaderAccount`** (`src/components/layouts/HeaderAccount.tsx`) is the
+  rightmost control in `MainLayout`, `AdminLayout` and `DriverLayout`: avatar
+  (`user.image`, else initials) plus `user.name` from `md` up, linked to that
+  shell's profile, with the full name as `aria-label` at every width. Signup
+  has one *Nom complet* field, so "name and firstname" is `user.name`; there is
+  no schema change.
+
+**Judgment calls**
+- **Hidden for requesters, not deleted for everyone.** The client wrote both
+  "should be deleted" and "should appear when the carrier or asker want to
+  deal". A new account with no request may be a would-be driver, and the card
+  is still their clearest way in. This was offered to the user as the
+  recommended option; they said "implement those feedbacks" without choosing,
+  so the recommendation was taken.
+- **Protection is `packagingLevel` + fragile only.** `needsProtection` /
+  `needsPackaging` are the 2.56.0 packaging work, uncommitted in another
+  session while this was built. Referencing them would have made this commit
+  depend on code that did not exist on `main`, which is how production's
+  build broke on 2026-09-10. That session will add *À protéger* / *À
+  emballer* to the same line; the relabelled `myJobs.detail.packaging.*`
+  flows through with no change here.
+- **The panel sits below Supervision's early return.** If the Expedion report
+  itself fails, the page shows the report error and the panel is not rendered.
+  A failed report is already a failed page.
+
+**Found on the way past**
+- **`useAdminListings` kept a five-minute cache with `refetchOnMount:
+  false`.** An admin who had opened Annonces before a request was posted kept
+  the stale list for up to five minutes: the second reason a new request
+  looked missing. It now uses `staleTime: 0` and goes through
+  `adminListingsApi` instead of hand-rolled `fetch`.
+- **No next-intl `timeZone` was configured**, so every `format.dateTime` logged
+  `ENVIRONMENT_FALLBACK` (ten times on one Supervision load). `/home` had no
+  next-intl date until the summary. `LocaleProvider` now passes
+  `Intl.DateTimeFormat().resolvedOptions().timeZone`, the zone next-intl was
+  already falling back to, so no rendered time changes. It is read only in
+  the branch that renders after mount, so there is no SSR mismatch.
+
+**Verification.** Three other sessions had uncommitted work in the shared tree
+(their schema was ahead of the local database, and their files were mid-edit),
+so every gate below ran in a git worktree of HEAD plus this change only.
+- `npx tsc --noEmit`: 0 errors. `pnpm lint`: 0 errors, 82 warnings, all
+  already on HEAD (the three in `ListingsTable.tsx` are unused imports that
+  predate this change).
+- `npx vitest run`: 1815 passed of 1815, 32 of them new. One of the rest,
+  `beta-fixtures.test.ts` › "offer fixture", had been red on HEAD since
+  2026-09-26: it pinned a date that `createOfferSchema` checks against the
+  real clock. The 2.56.0 session's test-only fix (fake timers around that
+  one describe) rides in this commit, so that every commit in the series
+  2.55.0–2.58.0 is green on its own.
+- FR/EN parity: exact, by key diff.
+- Chromium (Playwright against the worktree's dev server on :3100 and local
+  `expeditoo_dev`, with throwaway `rs-check` accounts and a request, all
+  deleted afterwards): 48 checks passed.
+  - Requester: the summary text, with windows in Europe/Paris. Title and
+    route on the same row. No invite card, and the name top right, linked to
+    `/profile`. At 390 px in dark mode: initials only, and neither the page
+    nor the header overflows. English labels.
+  - Newcomer: the invite card shows.
+  - Admin: the panel sits under *Devis récents* with its total and at most
+    five rows. A row opens `/admin/listings?id=…`, and browser Back returns.
+    A cold deep link opens. Annonces shows the badges, the route and
+    *Demandeur*. City search goes 10 → 4 → 10 rows.
+  - The console on `/home` and `/listings/me` is clean after the `timeZone`
+    change. The only remaining entry is the Lit dev-mode warning, which
+    predates this.
+- `pnpm changelog:check`: ok at 2.55.0 in the worktree.
+
+**Known limits**
+- The windows render in the viewer's time zone, like `JobDetail`, so a viewer
+  outside France or Belgium sees them shifted.
+- The panel shows the five newest. *Toutes les annonces* opens the unfiltered
+  list: Annonces has no origin filter control, though the API now takes
+  `origin`. Annonces still loads only the 50 newest with no pagination, as
+  before.
+- *Effacer les filtres* stays visible after the search box is cleared,
+  because an empty filter value stays in `columnFilters`. This predates the
+  change and is cosmetic.
+- There is no separate first/last name.
+
 ## ✅ 2026-09-24 — Type the Address or Paste a Google Maps Link on /create (2.54.0)
 
 _"if user switch to input address manually instead of the map pin, give 2

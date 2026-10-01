@@ -171,6 +171,17 @@ vi.mock("../../hooks/useExpedionReport", () => ({
   useCarrierOptions: () => ({ data: [], isLoading: false }),
 }));
 
+// The direct-requests panel runs its own query. Empty here, so its heading and
+// empty state are checked against both catalogues; its rows are covered in
+// RecentDirectRequestsPanel.test.tsx.
+vi.mock("@/features/app/admin/hooks/useAdminListings", () => ({
+  useRecentDirectRequests: () => ({
+    data: { items: [], total: 0 },
+    isLoading: false,
+    isError: false,
+  }),
+}));
+
 // recharts measures its container, which jsdom reports as 0×0 and then warns
 // about on every render. The chart's own correctness is not what this asserts.
 vi.mock("recharts", async () => {
@@ -244,6 +255,21 @@ describe("ExpedionDashboard", () => {
     // The queue tabs carry their pending counts.
     expect(
       screen.getByRole("tab", { name: /À chiffrer/ })
+    ).toBeInTheDocument();
+  });
+
+  it("puts requests posted on Expeditoo beside the Expedion quotes", () => {
+    state.report = REPORT;
+    state.isLoading = false;
+    state.error = null;
+
+    renderWith("fr", fr);
+
+    // The client could not find a new request here: the quotes panel reads
+    // `expedion_quotes` only (request_summary_spec.md §3.2).
+    expect(screen.getByText("Demandes directes")).toBeInTheDocument();
+    expect(
+      screen.getByText("Aucune demande directe pour l'instant")
     ).toBeInTheDocument();
   });
 

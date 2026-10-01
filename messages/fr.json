@@ -155,6 +155,9 @@
     "accessSwitcher": {
       "srLabel": "Changer d'accès",
       "addCarrierAccess": "Ajouter l'accès transporteur"
+    },
+    "header": {
+      "profile": "Voir mon profil"
     }
   },
   "auth": {
@@ -1265,6 +1268,18 @@
         "listingNotFound": "Cette demande est introuvable."
       },
       "truncated": "{shown} transporteurs affichés sur {total}."
+    },
+    "summary": {
+      "pickup": "Retrait",
+      "dropoff": "Livraison",
+      "protection": "Protection",
+      "protectionNone": "Non précisée",
+      "fragile": "Fragile",
+      "load": "Marchandise",
+      "weight": "{weight} kg",
+      "quantity": "{count, plural, one {# objet} other {# objets}}",
+      "needsHelp": "Aide au chargement",
+      "flexible": "Dates flexibles"
     }
   },
   "driver": {
@@ -2264,14 +2279,18 @@
       "table": {
         "searchPlaceholder": "Rechercher des annonces...",
         "title": "Titre",
-        "seller": "Vendeur",
+        "seller": "Demandeur",
         "price": "Prix",
         "status": "Statut",
         "views": "Vues",
         "created": "Créé",
         "actions": "Actions",
         "viewDetails": "Voir les détails",
-        "delete": "Supprimer"
+        "delete": "Supprimer",
+        "origin": {
+          "direct": "Directe",
+          "expedion": "via Expedion"
+        }
       },
       "dialogs": {
         "deleteTitle": "Supprimer l'annonce",
@@ -2279,7 +2298,8 @@
         "cancel": "Annuler",
         "delete": "Supprimer",
         "processing": "Suppression..."
-      }
+      },
+      "backToList": "Toutes les annonces"
     },
     "drivers": {
       "title": "Chauffeurs",
@@ -2744,6 +2764,17 @@
         "comment": "Commentaire",
         "yes": "Oui",
         "no": "Non"
+      },
+      "directRequests": {
+        "title": "Demandes directes",
+        "subtitle": "Publiées sur Expeditoo avec « Demander un transport ». Les devis Expedion et l'import Airtable sont au-dessus.",
+        "total": "{count} au total",
+        "viewAll": "Toutes les annonces",
+        "loading": "Chargement…",
+        "error": "Impossible de charger les demandes directes",
+        "empty": "Aucune demande directe pour l'instant",
+        "emptyBody": "Les demandes publiées avec « Demander un transport » apparaîtront ici.",
+        "requester": "par {name}"
       }
     },
     "awards": {

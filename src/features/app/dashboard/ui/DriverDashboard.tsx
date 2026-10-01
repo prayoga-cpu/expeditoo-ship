@@ -9,6 +9,8 @@ import { Card } from "@/components/ui/card";
 import { PageLoader } from "@/components/ui/page-loader";
 import { ApplicationStatusBanner } from "@/features/app/carrier/ui";
 import { STATUS_TONE } from "@/features/app/listing/statusTone";
+import { RequestSummary } from "@/features/app/listing/ui/RequestSummary";
+import { formatCurrency } from "@/lib/currency";
 import type { Job } from "@/features/app/listing/types";
 import { useDriverDashboard } from "../hooks/useDriverDashboard";
 import { useMyRequestStatus } from "../hooks/useMyRequestStatus";
@@ -101,9 +103,17 @@ function MyRequestStatusCard({ job }: { job: Job }) {
         <span className="text-sm text-muted-foreground">
           {tStatus("offers", { count: job.offersCount })}
         </span>
+        <span className="ml-auto font-mono font-semibold">
+          {formatCurrency(job.budgetCents)}
+        </span>
       </div>
 
-      <p className="mt-2 font-medium">{job.title}</p>
+      {/* The whole request, not just its name: the client asked for the
+          cities, the appointments and the protection level here
+          (request_summary_spec.md §2). */}
+      <div className="mt-2">
+        <RequestSummary job={job} />
+      </div>
 
       <Button asChild variant="outline" className="mt-4 w-full sm:w-auto">
         <Link href={`/listing/${job.id}`}>{t("myRequest.action")}</Link>
@@ -134,6 +144,7 @@ export function DriverDashboard() {
     currentRun,
     isRunsLoading,
     needsCardNudge,
+    showDriverInvite,
   } = useDriverDashboard();
   const { featured: featuredRequest } = useMyRequestStatus();
 
@@ -150,8 +161,11 @@ export function DriverDashboard() {
 
       {application && <ApplicationStatusBanner application={application} />}
 
-      {/* No application at all: the only thing worth offering is the way in. */}
-      {!application && (
+      {/* No application, and not here as a requester either: the only thing
+          worth offering is the way in. Someone who has posted a request came
+          to ship, and meets this invitation on a job page instead, when they
+          want to deal (request_summary_spec.md §1). */}
+      {showDriverInvite && (
         <Card className="p-5">
           <div className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-primary" aria-hidden />

@@ -155,6 +155,9 @@
     "accessSwitcher": {
       "srLabel": "Switch access",
       "addCarrierAccess": "Add carrier access"
+    },
+    "header": {
+      "profile": "View my profile"
     }
   },
   "auth": {
@@ -1265,6 +1268,18 @@
         "listingNotFound": "This request could not be found."
       },
       "truncated": "Showing {shown} carriers out of {total}."
+    },
+    "summary": {
+      "pickup": "Pickup",
+      "dropoff": "Delivery",
+      "protection": "Protection",
+      "protectionNone": "Not stated",
+      "fragile": "Fragile",
+      "load": "Load",
+      "weight": "{weight} kg",
+      "quantity": "{count, plural, one {# item} other {# items}}",
+      "needsHelp": "Loading help",
+      "flexible": "Flexible dates"
     }
   },
   "driver": {
@@ -2264,14 +2279,18 @@
       "table": {
         "searchPlaceholder": "Search listings...",
         "title": "Title",
-        "seller": "Seller",
+        "seller": "Requester",
         "price": "Price",
         "status": "Status",
         "views": "Views",
         "created": "Created",
         "actions": "Actions",
         "viewDetails": "View Details",
-        "delete": "Delete"
+        "delete": "Delete",
+        "origin": {
+          "direct": "Direct",
+          "expedion": "via Expedion"
+        }
       },
       "dialogs": {
         "deleteTitle": "Delete Listing",
@@ -2279,7 +2298,8 @@
         "cancel": "Cancel",
         "delete": "Delete",
         "processing": "Deleting..."
-      }
+      },
+      "backToList": "All listings"
     },
     "drivers": {
       "title": "Drivers",
@@ -2744,6 +2764,17 @@
         "comment": "Comment",
         "yes": "Yes",
         "no": "No"
+      },
+      "directRequests": {
+        "title": "Direct requests",
+        "subtitle": "Posted on Expeditoo with “Request transport”. Expedion quotes and the Airtable import are above.",
+        "total": "{count} in total",
+        "viewAll": "All listings",
+        "loading": "Loading…",
+        "error": "Couldn't load direct requests",
+        "empty": "No direct requests yet",
+        "emptyBody": "Requests posted with “Request transport” will show up here.",
+        "requester": "by {name}"
       }
     },
     "awards": {

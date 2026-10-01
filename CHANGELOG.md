@@ -14,6 +14,33 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.55.0] - 2026-09-30 · ux
+
+- **Your request now reads in full on your home page.** "Your request" shows
+  the route next to the item's name, the pickup and delivery windows, how
+  the item is protected, what is being moved and the budget, where it used
+  to show only the item's name. "My requests" shows the same summary on
+  every request.
+- **The "Start driving with EXPEDITOO" card no longer greets people who post
+  requests.** Once you have posted a request, your home page is about that
+  request. You can still apply to drive: open any job and the invitation is
+  there, at the moment you would want to make an offer.
+- **Requests posted on Expeditoo now appear on the admin Overview
+  (« Supervision »).** A new "Direct requests" card under "Recent quotes"
+  lists the five newest requests made with "Request transport", and how many
+  there are in all. "Recent quotes" only ever listed Expedion quotes, from
+  the Airtable import and the Expedion app, so a request posted on the site
+  never showed there. Click one to open it.
+- **Admin Listings shows where each job came from and where it goes.** Each
+  row says "Direct" or "via Expedion" and shows the route, the search also
+  finds cities, and the "Seller" column is now "Requester".
+- **Fixed: a new request could look missing from admin Listings.** The list
+  kept showing what it had loaded up to five minutes earlier. It now
+  refreshes every time you open it.
+- **Your name is now at the top right of every screen**: the app, the driver
+  area and the admin panel. Click it to open your profile. On a phone your
+  initials show instead.
+
 ## [2.54.0] - 2026-09-24 · feat
 
 - **Can't find your place on the map? You can now paste a Google Maps link

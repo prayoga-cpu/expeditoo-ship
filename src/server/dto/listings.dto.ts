@@ -4,7 +4,7 @@ import {
   TIME_SLOTS,
 } from "@/lib/availability-window";
 import { MAX_PATH_POINTS } from "@/lib/route-corridor";
-import { listingStatusEnum } from "@/db/schema/listings";
+import { listingOriginEnum, listingStatusEnum } from "@/db/schema/listings";
 
 // ========================================
 // Listings DTO — the transport job
@@ -372,6 +372,9 @@ export const browseListingsQuerySchema = z.object({
  */
 export const adminListingsQuerySchema = z.object({
   status: z.enum(listingStatusEnum.enumValues).optional(),
+  // Absent means both inlets. `direct` is what Supervision's "Demandes
+  // directes" panel reads (request_summary_spec.md §3.1).
+  origin: z.enum(listingOriginEnum.enumValues).optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(50),
 });

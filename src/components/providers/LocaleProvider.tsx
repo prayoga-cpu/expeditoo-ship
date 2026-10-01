@@ -84,9 +84,19 @@ export function LocaleProvider({ children }: LocaleProviderProps) {
         );
     }
 
+    // The browser's own zone, which is what next-intl already falls back to.
+    // Naming it changes no rendered time; it stops every date formatted through
+    // next-intl logging ENVIRONMENT_FALLBACK. Safe to read here: this branch
+    // only renders on the client, after the mount effect above.
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
     return (
         <LocaleContext.Provider value={{ locale, setLocale, isLoading }}>
-            <NextIntlClientProvider locale={locale} messages={messages}>
+            <NextIntlClientProvider
+                locale={locale}
+                messages={messages}
+                timeZone={timeZone}
+            >
                 {children}
             </NextIntlClientProvider>
         </LocaleContext.Provider>

@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { AdminBottomNav } from "./AdminBottomNav";
 import { AppSidebarHeader } from "@/components/layouts/AppSidebarHeader";
+import { HeaderAccount } from "@/components/layouts/HeaderAccount";
 import { useAdminNavCounts } from "../hooks/useAdminNavCounts";
 import type { AdminNavCounts } from "@/server/services/admin-nav.service";
 import { useTranslations } from "next-intl";
@@ -259,6 +260,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               <LangToggle className="mr-1" />
               <FeedbackLauncher />
               <NotificationBell />
+              <HeaderAccount profileHref="/admin/profile" />
             </div>
           </div>
         </header>

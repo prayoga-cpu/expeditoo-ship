@@ -294,7 +294,12 @@ export const listingsService = {
   /** `GET /api/admin/listings` — every status, admin/operator only. */
   async adminList(
     viewer: Viewer,
-    filters: { status?: Listing["status"]; page: number; limit: number }
+    filters: {
+      status?: Listing["status"];
+      origin?: Listing["origin"];
+      page: number;
+      limit: number;
+    }
   ) {
     if (!viewer.isAdmin && !viewer.isOperator) {
       throw err("FORBIDDEN_ROLE", 403);

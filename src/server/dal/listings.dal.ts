@@ -5,6 +5,7 @@ import {
   photos,
   type InsertListing,
   type InsertPhoto,
+  type ListingOrigin,
   type ListingStatus,
 } from "@/db/schema/listings";
 
@@ -424,12 +425,20 @@ export const listingsDal = {
    * not apply here.
    */
   async adminList(
-    filters: { status?: ListingStatus; page: number; limit: number },
+    filters: {
+      status?: ListingStatus;
+      origin?: ListingOrigin;
+      page: number;
+      limit: number;
+    },
     tx: Executor = db
   ) {
-    const where = filters.status
-      ? eq(listings.status, filters.status)
-      : undefined;
+    // `and()` drops undefined operands, and answers undefined when none are
+    // left, so an unfiltered call still matches every row.
+    const where = and(
+      filters.status ? eq(listings.status, filters.status) : undefined,
+      filters.origin ? eq(listings.origin, filters.origin) : undefined
+    );
 
     const items = await tx.query.listings.findMany({
       where,
