@@ -6,6 +6,7 @@ import { carriersDal } from "@/server/dal/carriers.dal";
 import { userHasRole } from "@/server/dal/users.dal";
 import { notificationsService } from "@/server/services/notifications.service";
 import { paymentsService } from "@/server/services/payments.service";
+import { stripeService } from "@/server/services/stripe.service";
 import {
   expedionBridgeService,
   notifyExpedion,
@@ -16,7 +17,10 @@ import {
   type ResolvedOfferSlot,
 } from "@/lib/offer-slots";
 import { rearmedExpiry, rearmedWindow } from "@/lib/listing-window";
-import type { CreateOfferInput } from "@/server/dto/offers.dto";
+import type {
+  CreateOfferInput,
+  PreparePaymentInput,
+} from "@/server/dto/offers.dto";
 import type { InsertListing, Listing } from "@/db/schema/listings";
 import type { Offer } from "@/db/schema/offers";
 import type { Vehicle } from "@/db/schema/carriers";
@@ -132,6 +136,151 @@ async function requireApprovedCarrier(userId: string) {
   if (!carrier) throw err("CARRIER_NOT_APPROVED", 403);
   if (carrier.status !== "approved") throw err("CARRIER_NOT_APPROVED", 403);
   return carrier;
+}
+
+type OfferWithSlots = NonNullable<Awaited<ReturnType<typeof offersDal.getById>>>;
+
+/**
+ * Which of the carrier's proposed slots is being booked. Absent means the
+ * earliest, which is already the offer's stored pair — so an offer with one
+ * slot, and the lanes that propose none, need name nothing.
+ */
+function bookedSlot(offer: OfferWithSlots, slotId?: string) {
+  const booked = slotId
+    ? offer.slots.find((slot) => slot.id === slotId)
+    : undefined;
+  if (slotId && !booked) throw err("SLOT_NOT_ON_OFFER", 400);
+
+  // `SLOT_IN_PAST` is a submit-time rule (offers.dto.ts), and until bids
+  // could be restored that was enough — an offer was accepted within its own
+  // window or not at all. A withdrawal now puts rejected bids back in play on
+  // a listing whose window may have slid forward, so the slot an operator
+  // picks off the award queue can be behind us; booking it would write a past
+  // `scheduled_pickup` and report a past pickup date to the client.
+  if (booked && booked.startsAt <= new Date()) {
+    throw err("SLOT_IN_PAST", 409);
+  }
+  return booked;
+}
+
+/**
+ * Who may award depends on where the job came from.
+ *
+ * A direct listing is awarded by the shipper who posted it. An escalated
+ * Expedion job is owned by a system account nobody signs into, so there is
+ * no shipper to do the picking — an operator awards in the client's place.
+ * Without this branch every escalated job would be unawardable.
+ */
+async function assertMayAward(
+  actorUserId: string,
+  listing: Pick<Listing, "shipperId" | "origin">
+) {
+  if (listing.shipperId === actorUserId) return;
+  if (listing.origin !== "expedion") throw err("FORBIDDEN_NOT_SHIPPER", 403);
+
+  const [isOperator, isAdmin] = await Promise.all([
+    userHasRole(actorUserId, "operator"),
+    userHasRole(actorUserId, "admin"),
+  ]);
+  if (!isOperator && !isAdmin) throw err("FORBIDDEN_NOT_OPERATOR", 403);
+}
+
+/**
+ * A listing can be posted and bid on with no map pin (a manually-typed
+ * address); a shipment cannot, because `shipments.pickupLat/pickupLng` stay
+ * NOT NULL — a driver needs a real point to navigate to.
+ */
+type Pins = Pick<Listing, "pickupLat" | "pickupLng" | "dropoffLat" | "dropoffLng">;
+
+function hasBothPins<T extends Pins>(
+  listing: T
+): listing is T & { [K in keyof Pins]: number } {
+  return (
+    listing.pickupLat !== null &&
+    listing.pickupLng !== null &&
+    listing.dropoffLat !== null &&
+    listing.dropoffLng !== null
+  );
+}
+
+/**
+ * The award's own checks, run before a card is touched
+ * (pay_at_accept_spec.md §4). Nothing here is the concurrency guarantee —
+ * `commitAward` re-checks inside its lock — it only keeps a card from being
+ * authorised for an award that lock is certain to refuse.
+ */
+async function loadAwardable(
+  actorUserId: string,
+  offerId: string,
+  slotId?: string
+) {
+  const offer = await offersDal.getById(offerId);
+  if (!offer) throw err("OFFER_NOT_FOUND", 404);
+  bookedSlot(offer, slotId);
+
+  const listing = await listingsDal.getById(offer.listingId);
+  if (!listing) throw err("LISTING_NOT_FOUND", 404);
+  await assertMayAward(actorUserId, listing);
+
+  if (offer.status !== "pending") throw err("OFFER_NOT_PENDING", 409);
+  if (listing.status !== "open" || listing.acceptedOfferId) {
+    throw err("LISTING_NOT_OPEN", 409);
+  }
+  if (!hasBothPins(listing)) throw err("COORDINATES_REQUIRED", 422);
+
+  const carrier = await carriersDal.getByUserId(offer.carrierId);
+  if (!carrier || carrier.status !== "approved") {
+    throw err("CARRIER_NO_LONGER_APPROVED", 409);
+  }
+
+  return { offer, listing };
+}
+
+/**
+ * Hands back an authorisation an accept is not going to capture, so the
+ * requester's bank releases the hold now (pay_at_accept_spec.md §3.4).
+ *
+ * Not when this offer is already the listing's accepted one: that is the
+ * requester's own double-submit losing the race to its first request, which
+ * is capturing this very intent.
+ */
+async function releaseUnusedIntent(
+  paymentIntentId: string | undefined,
+  award: { offerId: string; listingId: string; shipperId: string }
+) {
+  if (!paymentIntentId) return;
+
+  const fresh = await listingsDal.getById(award.listingId).catch(() => null);
+  if (fresh?.acceptedOfferId === award.offerId) return;
+
+  await paymentsService.releaseAcceptIntent(paymentIntentId, award);
+}
+
+/**
+ * Hands back a second card authorised for an award that already happened
+ * (pay_at_accept_spec.md §3.4). The requester's first accept went through but
+ * its answer never reached them, so they paid again: this intent was never
+ * captured, and its hold would sit on their statement for a week.
+ *
+ * Only once the award's payment is on record under a *different* intent. With
+ * no row yet, or the same id, this may be a double-submit whose first request
+ * is still capturing this very intent, and cancelling it would fail that
+ * capture.
+ */
+async function releaseSupersededIntent(
+  paymentIntentId: string | undefined,
+  shipmentId: string | undefined,
+  award: { offerId: string; listingId: string; shipperId: string }
+) {
+  if (!paymentIntentId || !shipmentId) return;
+
+  const payment = await paymentsService
+    .getForShipment(shipmentId)
+    .catch(() => undefined);
+  const paidWith = payment?.stripePaymentIntentId;
+  if (!paidWith || paidWith === paymentIntentId) return;
+
+  await paymentsService.releaseAcceptIntent(paymentIntentId, award);
 }
 
 // ========================================
@@ -289,28 +438,12 @@ export const offersService = {
   async acceptOffer(
     actorUserId: string,
     offerId: string,
-    opts: { selfAward?: boolean; slotId?: string } = {}
+    opts: { selfAward?: boolean; slotId?: string; paymentIntentId?: string } = {}
   ) {
     const existing = await offersDal.getById(offerId);
     if (!existing) throw err("OFFER_NOT_FOUND", 404);
 
-    // Which of the carrier's proposed slots is being booked. Absent means the
-    // earliest, which is already the offer's stored pair — so an offer with one
-    // slot, and the lanes that propose none, need name nothing.
-    const booked = opts.slotId
-      ? existing.slots.find((slot) => slot.id === opts.slotId)
-      : undefined;
-    if (opts.slotId && !booked) throw err("SLOT_NOT_ON_OFFER", 400);
-
-    // `SLOT_IN_PAST` is a submit-time rule (offers.dto.ts), and until bids
-    // could be restored that was enough — an offer was accepted within its own
-    // window or not at all. A withdrawal now puts rejected bids back in play on
-    // a listing whose window may have slid forward, so the slot an operator
-    // picks off the award queue can be behind us; booking it would write a past
-    // `scheduled_pickup` and report a past pickup date to the client.
-    if (booked && booked.startsAt <= new Date()) {
-      throw err("SLOT_IN_PAST", 409);
-    }
+    const booked = bookedSlot(existing, opts.slotId);
 
     const listing = await listingsDal.getById(existing.listingId);
     if (!listing) throw err("LISTING_NOT_FOUND", 404);
@@ -323,41 +456,40 @@ export const offersService = {
     const isSelfAward =
       opts.selfAward === true && existing.carrierId === actorUserId;
 
-    // Who may award depends on where the job came from.
-    //
-    // A direct listing is awarded by the shipper who posted it. An escalated
-    // Expedion job is owned by a system account nobody signs into, so there is
-    // no shipper to do the picking — an operator awards in the client's place.
-    // Without this branch every escalated job would be unawardable.
-    if (!isSelfAward && listing.shipperId !== actorUserId) {
-      if (listing.origin !== "expedion") {
-        throw err("FORBIDDEN_NOT_SHIPPER", 403);
-      }
+    if (!isSelfAward) await assertMayAward(actorUserId, listing);
 
-      const [isOperator, isAdmin] = await Promise.all([
-        userHasRole(actorUserId, "operator"),
-        userHasRole(actorUserId, "admin"),
-      ]);
-      if (!isOperator && !isAdmin) {
-        throw err("FORBIDDEN_NOT_OPERATOR", 403);
-      }
-    }
+    // Past the permission check, so a card this actor authorised for this
+    // award is theirs to have released if the award does not use it.
+    const award = {
+      offerId,
+      listingId: listing.id,
+      shipperId: listing.shipperId,
+    };
 
     // Idempotency: this offer already won, so return what that produced.
     if (existing.status === "accepted") {
       const shipment = await listingsDal.getShipmentByOfferId(offerId);
+      await releaseSupersededIntent(opts.paymentIntentId, shipment?.id, award);
       return { offer: existing, shipment, alreadyAccepted: true };
     }
 
-    if (existing.status !== "pending") throw err("OFFER_NOT_PENDING", 409);
+    const release = () => releaseUnusedIntent(opts.paymentIntentId, award);
 
-    // A carrier suspended after bidding must not be awarded work.
-    const carrier = await carriersDal.getByUserId(existing.carrierId);
-    if (!carrier || carrier.status !== "approved") {
-      throw err("CARRIER_NO_LONGER_APPROVED", 409);
+    let result: Awaited<ReturnType<typeof this.commitAward>>;
+    try {
+      if (existing.status !== "pending") throw err("OFFER_NOT_PENDING", 409);
+
+      // A carrier suspended after bidding must not be awarded work.
+      const carrier = await carriersDal.getByUserId(existing.carrierId);
+      if (!carrier || carrier.status !== "approved") {
+        throw err("CARRIER_NO_LONGER_APPROVED", 409);
+      }
+
+      result = await this.commitAward(offerId, listing.id, booked);
+    } catch (cause) {
+      await release();
+      throw cause;
     }
-
-    const result = await this.commitAward(offerId, listing.id, booked);
 
     // Stripe is called after the commit, never inside it: an HTTP call holding
     // a row lock open would block every other accept on this listing.
@@ -381,6 +513,10 @@ export const offersService = {
         // listing would be a second debit against a party that never had a
         // card — the payment is recorded, not taken.
         source: listing.origin === "expedion" ? "expedion" : "stripe",
+        // The card the requester authorised in the payment dialog, captured
+        // rather than a saved card charged (pay_at_accept_spec.md §3.3).
+        offerId,
+        paymentIntentId: opts.paymentIntentId,
       });
     } catch (cause) {
       // The award is undone so the job returns to the marketplace with every
@@ -390,6 +526,7 @@ export const offersService = {
         offerId,
         result.rejectedOffers.map((o) => o.id)
       );
+      await release();
       throw cause;
     }
 
@@ -407,6 +544,61 @@ export const offersService = {
     await notifyAwardOutcome(existing, result.rejectedOffers, listing.title);
 
     return { ...result, payment, alreadyAccepted: false };
+  },
+
+  /**
+   * What accepting this offer would debit, for the payment dialog to show
+   * before anything is authorised (pay_at_accept_spec.md §3.1). Read-only.
+   */
+  async paymentQuote(actorUserId: string, offerId: string, slotId?: string) {
+    const { offer, listing } = await loadAwardable(actorUserId, offerId, slotId);
+
+    // The client paid in Expedion when they accepted the quote, so the
+    // operator awarding in their place is shown the bid and nothing to pay.
+    if (listing.origin === "expedion") {
+      return {
+        required: false,
+        reason: "prepaid" as const,
+        priceCents: offer.priceCents,
+        platformFeeCents: 0,
+        totalCents: offer.priceCents,
+        savedCard: null,
+      };
+    }
+
+    return await paymentsService.quoteCharge({
+      amountCents: offer.priceCents,
+      stripeCustomerId: listing.shipper?.stripeCustomerId ?? null,
+    });
+  },
+
+  /**
+   * Authorises the requester's card for this award, before `acceptOffer`
+   * captures it (pay_at_accept_spec.md §3.2). Only a direct job is paid here.
+   */
+  async preparePayment(
+    actorUserId: string,
+    offerId: string,
+    input: PreparePaymentInput
+  ) {
+    const { offer, listing } = await loadAwardable(
+      actorUserId,
+      offerId,
+      input.slotId
+    );
+    if (listing.origin === "expedion") throw err("PAYMENT_NOT_REQUIRED", 409);
+
+    return await paymentsService.authoriseForAccept({
+      shipperId: listing.shipperId,
+      offerId: offer.id,
+      listingId: listing.id,
+      amountCents: offer.priceCents,
+      // Resolved only once a charge is certain to be attempted, so a refused
+      // call never leaves a Stripe customer behind.
+      resolveCustomer: () => stripeService.getOrCreateCustomer(listing.shipperId),
+      method: input.method,
+      saveCard: input.saveCard,
+    });
   },
 
   /**
@@ -431,19 +623,10 @@ export const offersService = {
       if (!locked) throw err("LISTING_NOT_FOUND", 404);
       if (locked.status !== "open") throw err("LISTING_NOT_OPEN", 409);
       if (locked.acceptedOfferId) throw err("LISTING_ALREADY_AWARDED", 409);
-      // A listing can be posted and bid on with no map pin (a manually-typed
-      // address); a shipment cannot, because `shipments.pickupLat/pickupLng`
-      // stay NOT NULL — a driver needs a real point to navigate to. Refuse
-      // the award with a clear, typed error rather than let this insert hit
-      // a Postgres constraint violation inside the transaction.
-      if (
-        locked.pickupLat === null ||
-        locked.pickupLng === null ||
-        locked.dropoffLat === null ||
-        locked.dropoffLng === null
-      ) {
-        throw err("COORDINATES_REQUIRED", 422);
-      }
+      // Refused with a clear, typed error rather than letting the shipment
+      // insert below hit a Postgres constraint violation inside the
+      // transaction (see `hasBothPins`).
+      if (!hasBothPins(locked)) throw err("COORDINATES_REQUIRED", 422);
 
       const offer = await offersDal.getByIdForUpdate(offerId, tx);
       if (!offer || offer.status !== "pending") {

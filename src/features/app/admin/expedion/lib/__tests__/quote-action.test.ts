@@ -5,6 +5,7 @@ import type { QuoteRow } from "@/server/dal/expedion-report.dal";
 import {
   canRepriceQuote,
   canSupplyMissingPrice,
+  draftEscalationBlockers,
   escalationHoursLeft,
   isNewQuote,
   nextAction,
@@ -450,5 +451,37 @@ describe("canSupplyMissingPrice", () => {
         })
       ).toBe(false);
     }
+  });
+});
+
+describe("draftEscalationBlockers — postal codes", () => {
+  const ready = {
+    pickupLat: 45.75,
+    pickupLng: 4.85,
+    deliveryLat: 50.85,
+    deliveryLng: 4.35,
+    pickupAddress: "1 rue de la Vente",
+    pickupCity: "Lyon",
+    pickupPostalCode: "69000",
+    deliveryAddress: "Place du Roi Baudouin",
+    deliveryCity: "Bruxelles",
+    deliveryPostalCode: "1000",
+    weightKg: 40,
+    acceptedPriceCents: 10_000,
+  };
+
+  // The checklist mirrors the service, so a Brussels delivery must read ready
+  // here too rather than showing a blocker Publish would not raise.
+  it("reads a 4- or 6-digit code as present", () => {
+    expect(draftEscalationBlockers(ready)).toEqual([]);
+    expect(
+      draftEscalationBlockers({ ...ready, deliveryPostalCode: "010011" })
+    ).toEqual([]);
+  });
+
+  it("still flags a code that is too short", () => {
+    expect(
+      draftEscalationBlockers({ ...ready, deliveryPostalCode: "123" })
+    ).toEqual(["deliveryPostalCode"]);
   });
 });

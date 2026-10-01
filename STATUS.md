@@ -27,6 +27,25 @@ adversarial verification pass — treat their detail as slightly less certain.
 Work that needs a human hand outside the codebase. Add to this list rather
 than leaving it in a chat message.
 
+- [ ] **Decide about the scheduled jobs before setting `APP_URL` and
+      `CRON_SECRET`.** No scheduled job has ever succeeded in production
+      (1,556 runs, 0 successes: both values are unset in the GitHub repo), so
+      the escalation sweep, listing expiry, scheduled publishing, document
+      expiry and image cleanup do not run. Setting them turns all five on at
+      once, and the first escalation sweep will publish the one quote that
+      has been due since 2026-09-20 and text its client. Assign or cancel that
+      quote first if that is not wanted. Until they are set, open jobs never
+      expire and a job scheduled to publish later never publishes.
+- [ ] **Make one real accept on production after 2.58.0 deploys, then cancel
+      it.** 2.58.0 changes how the requester's card is taken: typed into a
+      dialog when they accept, authorised on-session and captured by the
+      award. It was verified against Stripe **test** mode only, and production
+      has never taken a real payment (its 3 payment rows are beta-seed mocks).
+      Post a small direct job, bid on it from a carrier account, accept it
+      with a real card, check the receipt email and the `payments` row
+      (`captured`, a real `pi_…`), then cancel the job and check the refund
+      lands. If the card form fails to load or to confirm, the live
+      publishable key in Vercel does not pair with the live secret key.
 - [ ] **Run Actions → "Migrate database" for `0033_listing_reference`
       before the 2.57.0 deploy reaches production.** Every listing read
       selects `reference` (Drizzle selects every column the schema declares),
@@ -283,6 +302,242 @@ than leaving it in a chat message.
       in `.env.example`.
 
 ---
+
+## ✅ 2026-10-01 — Pay When Accepting, No Saved Card Needed; Postal Codes of 4–6 Digits (2.58.0)
+
+Two lines of client feedback, from photos of a test session (WhatsApp,
+2026-09-29). On `/create`, showing *1000 BRUXELLES* refused with *"Doit
+comporter 5 chiffres"*: _"About zipcode : 4,5 or 6 numbers(not only 5)"_. On
+the dashboard banner reading *"vous ne pourrez pas accepter une offre tant que
+vous n'en avez pas ajouté une"*: _"About credit card informations,not
+necessary to have a registered one but It can be easier"_. The owner's
+instruction was _"implement those feedbacks"_.
+
+Contracts: `docs/specs/postal_codes_abroad_spec.md` and
+`docs/specs/pay_at_accept_spec.md` (plan:
+`docs/plans/plan_client_feedback_postal_card.md`).
+`payment_at_booking_spec.md` §2.2 and §4 carry pointers to the new spec.
+
+### Postal codes
+
+`src/lib/postal-code.ts` is the one definition: `JOB_POSTAL_CODE_PATTERN`
+(`^\d{4,6}$`) and `normaliseJobPostalCode` (strip non-digits, keep 4–6). It
+is read by the `/create` schema, `listings.dto.ts`, the escalation's
+`normalisePostalCode`, the fix-form mirror in `quote-action.ts`, and the two
+SQL predicates in `expedion-report.dal.ts`. **Production data backed the
+client**: by delivery postal code, 3,796 Expedion quotes have 5 digits, 317
+have 4 (Austria 120, Belgium 64, Switzerland) and 53 have 6 (Romania 54), all
+counted read-only through `mirror_readonly`. Every 4- and 6-digit one was an
+escalation blocker. **Driver-side codes stay at 5 digits** (KYC, trips,
+in-house drivers use `POSTAL_CODE_PATTERN`): those are French businesses with
+a SIRET. Letters are still refused. A Dutch *1012 AB* normalises to its four
+area digits on import, and a UK code comes out too short and blocks.
+
+### Pay when accepting
+
+**Before:** posting has been card-free since `ce0388f`, but accepting a direct
+job still charged a saved card off-session *after* the award, and with none
+it threw `PAYMENT_METHOD_REQUIRED` and undid the award.
+
+**Now** accepting opens `AcceptPaymentDialog`
+(`features/app/offers/ui/`). It is used on `/listing/[id]` and on job-lane
+thread offer bubbles:
+
+1. `GET /api/offers/:id/payment` returns the quote: price, platform fee,
+   total, and the saved card's brand and last 4. It is read-only and never
+   creates a Stripe customer. `reason` is `charge`, `mock` (test mode) or
+   `prepaid` (an operator on an escalated job).
+2. `POST /api/offers/:id/payment` authorises. `saved` confirms the first saved
+   card **on-session** (`requires_capture`, or `requires_action` for 3-D
+   Secure, which Stripe.js puts in front of the requester via
+   `handleNextAction`). `new` returns a client secret for deferred-mode
+   Elements and sets `setup_future_usage` only when the box is ticked. Both
+   use `capture_method: "manual"`, and `metadata` names
+   `purpose/offerId/listingId/shipperId/platformFeeCents`.
+3. `POST /api/offers/:id/accept { paymentIntentId }`: `chargeForShipment`
+   gains a `captureAuthorised` branch **before the mock branch** (a real
+   `pi_…` stays real under `MOCK_PAYMENTS`). It checks every metadata field
+   and the amount (`PAYMENT_INTENT_MISMATCH`) and the status
+   (`PAYMENT_NOT_AUTHORISED`), then captures.
+
+**Nothing is awarded unpaid and nothing is taken for an award that failed**:
+the card is authorised before `commitAward` and captured after it. If the
+accept fails past the permission check (offer withdrawn, another bid won,
+carrier suspended, capture failed), `releaseUnusedIntent` cancels the intent,
+so the bank releases the hold now. There are two guards: it only touches an
+intent whose metadata names this award and this requester, and it does
+nothing when this same offer is already the listing's accepted one. That
+second case is the requester's own double-submit, whose first request is
+capturing the intent. The award's checks were extracted from `acceptOffer`
+into `bookedSlot`, `assertMayAward`, `hasBothPins` and `loadAwardable`, so
+the quote, the authorisation and the accept refuse identically
+(`pay_at_accept_spec.md` §4).
+
+**Judgment calls**
+- **The dialog is not modal.** A Radix modal sets `pointer-events: none` on
+  `<body>` and its focus trap pulls focus back from outside. Stripe mounts the
+  3-D Secure challenge outside the dialog, so a real bank's code entry would
+  have been unusable. It is `modal={false}` with its own backdrop, and it
+  refuses outside interaction instead of closing mid-payment.
+- **The saved-card box starts unticked.** The client asked for a saved card to
+  be possible, not assumed.
+- **Stripe Link is off** (`wallets: { link: "never" }`). Its own "save my
+  details" sign-up rendered under the card fields as a second, different way
+  of keeping the card.
+- **The off-session saved-card lane stays, and one UI path still uses it.**
+  A carrier taking a job outright (`takeJob`, `TakeJobPanel`) has no requester
+  at the keyboard, so the requester's saved card is charged off-session as
+  before. With no saved card that take fails `PAYMENT_METHOD_REQUIRED`: the
+  carrier sees the generic error and their take stays behind as a pending
+  bid, which the requester can then accept and pay in the dialog. That has
+  been so since posting stopped requiring a card (`ce0388f`).
+- **A failed accept only says "not debited" when the server refused it.** A
+  typed 4xx means the award was undone and the card released. A dropped
+  connection, a timeout or a 5xx leaves the outcome unknown: the accept does
+  the award, the capture, the receipt PDF and its email in one request, and a
+  function that dies after the capture has debited the card. The dialog then
+  says the card may have been debited, refetches the page behind it and stops
+  offering Pay (`wasRefused`, `useAcceptFailure`).
+- **A second card authorised for an award that already happened is released**
+  (`releaseSupersededIntent`). A requester who pays again after an unknown
+  outcome would otherwise carry a second hold for a week. It acts only when
+  the award's payment is on record under a *different* intent, because with no
+  row yet the first request may still be capturing this very one.
+- **A chat offer the recipient declined no longer asks again.** `decline`
+  answers the thread offer and leaves the bid pending, on purpose: whoever
+  awards the job may still take it. But the bubble shows the *bid's* status on
+  the job lane, so it went on reading « En attente » with both buttons, and
+  Accept opened the payment dialog, authorised the card, and was then refused
+  by `requireRespondable` before `acceptOffer`, where every release lives.
+  The hold stayed a week. Now the recipient's bubble shows « Refusée » and no
+  buttons (the sender's is unchanged: their bid is still live), and
+  `threadOffersService.accept` releases the card if its gate refuses
+  (`releaseRefusedIntent`). Before this release the same clicks only produced
+  an error toast; the hold was new with the dialog.
+- **The accept intent carries no `transfer_group`**, so the
+  `payment_intent.succeeded` webhook ignores it. See the next section for why.
+
+**Found on the way past, not fixed — and live in production:** the webhook's
+`payment_intent.succeeded` branch calls `recordCarrierPayout` →
+`schedulePayout`. That was right when capture happened at delivery. Since
+`payment_at_booking_spec.md` moved capture to the award, a real off-session
+charge schedules the driver's payout **at award time**, and
+`withdrawalsDal.availableFor` counts `scheduled` rows as withdrawable. So a
+driver could ask to withdraw pay for a job they have not delivered.
+Production runs the real path (see the next paragraph), so this is not
+waiting on a flag. It has not happened only because no real charge has ever
+been taken there. `settleDelivery` already schedules at delivery. The fix is
+to drop that call from the webhook, which is a money-path change nobody asked
+for, so it is listed rather than made. The new lane avoids it by not setting a
+`transfer_group`. The requester's own accept no longer uses the old lane, but
+a carrier's take still does, so the exposure is narrower, not gone.
+
+**This release changes the live payment flow, and was verified in test mode
+only.** `MOCK_PAYMENTS` is unset in Vercel, and `env-assertions.ts` refuses to
+boot production with it on or with a key that is not `sk_live_` (Operator
+to-do, "Production is already NOT mocking payments"). So on production the
+dialog shows the real card form and takes real money. Read-only through
+`mirror_readonly` on 2026-10-01: production holds **3 payments, all
+`pi_mock_`, all written by the beta seed**, and no real one. The first accept
+by a real requester will be the first live charge this platform has ever
+taken. Production's platform fee is 10%, which the requester now sees before
+paying; until this release it was added to the charge without being shown.
+An earlier draft of this entry said the testing deployment runs with mocks.
+That was wrong, and came from reading "payments run behind `MOCK_PAYMENTS`"
+in `CLAUDE.md` as a statement about production.
+
+**Found on the way past, not fixed: no scheduled job has ever run in
+production.** `scheduled-jobs.yml` needs repo variable `APP_URL` and secret
+`CRON_SECRET`. Neither is set (`gh variable list` is empty; the only secret is
+`POSTGRES_URL_PRODUCTION`), so every run stops at *"Repo variable APP_URL is
+unset"*: 1,556 runs since 2026-08-20, 0 successes, and `vercel.json` declares
+no crons. So the escalation sweep, listing expiry, scheduled publishing,
+carrier-document expiry and image cleanup do not run. The database agrees: one
+quote has been paid, unassigned and due since 2026-09-20 and was never
+escalated, and the only escalated quote carries the beta seed's timestamp.
+**The first sweep after someone sets the two values will publish that quote
+and text its client**, whatever release is deployed. See the Operator to-do.
+
+**Fixed on the way past:** a chat accept failing on `PAYMENT_METHOD_REQUIRED`
+showed the generic error, because that code was not in `useThreadOffer`'s
+list. `COORDINATES_REQUIRED` toasted the raw code on the job page, since the
+error carried no message. Both now have wording, and the quote surfaces them
+before any card is asked for.
+
+### Verification
+
+- `npx tsc --noEmit`: 0 errors, repo-wide. `pnpm lint`: 0 errors (81 existing
+  warnings, none in touched files). `npx vitest run`: **2,011 passed, 0
+  failed**, with three other sessions' work in the same tree.
+- **103 new test cases**: 35 postal (`postal-code.test.ts`,
+  `listing-postal-code.test.ts`, schema, escalation, fix-form mirror) and 68
+  pay-at-accept (`offers.pay-at-accept.test.ts` 23, `payments.service.test.ts`
+  24, `AcceptPaymentDialog.test.tsx` 11, `thread-offers.service.test.ts` 5,
+  `ThreadOfferBubble.test.tsx` 5).
+- **Stripe test mode, server calls**, run from a scratch script with the test
+  key: saved card on-session → `requires_capture` → capture `succeeded`; the
+  `authenticationRequired` card → `requires_action` / `use_stripe_sdk`;
+  `chargeCustomerFail` → `StripeCardError` (→ `PAYMENT_DECLINED`); a new card
+  with `setup_future_usage` ends up attached to the customer and one without
+  does not; cancel works from `requires_capture` and from
+  `requires_payment_method`; an accept intent has `transfer_group: null`.
+- **Chromium, end to end**, on an isolated copy of the tree on :3102 against
+  the local DB, with real test-mode payments and outbound email and realtime
+  blanked. Four throwaway `pay-check` jobs Lyon → Bruxelles 1000, fee set to
+  5% for the run:
+  - FR/light: new card, saved → captured €201.00 + €10.05, receipt INV raised.
+  - EN/dark: the saved *Visa •••• 4242* in one tap → captured.
+  - FR/dark: a 3-D Secure card, the challenge clicked through **inside the
+    non-modal dialog** → captured.
+  - `MOCK_PAYMENTS` on, a requester with no card: the dashboard banner shows
+    the new wording, and the dialog's test-mode step awards with a `pi_mock_`
+    row. No Stripe customer was created.
+  - A second pass on 2026-10-01, for the one path the first had not run: a
+    3-D Secure card saved on one job, then charged **from saved** on the next.
+    No card form, the challenge raised by `handleNextAction` and completed
+    inside the dialog → captured.
+  - The page behind measured 127 grey with the dialog open, 255 without.
+  - Every row, the Stripe test customer and one dangling authorisation from an
+    aborted run were cleaned up. The fee went back to 0 and postgres was
+    stopped.
+
+- **Not verified:** live mode, and anything on Vercel. Nothing on a laptop can
+  reach production's Stripe keys. Apple Pay and Google Pay are switched off in
+  the dialog for that reason: only the typed-card form was tested.
+
+### Known limits
+
+- **A job posted with a typed address is still not awardable**
+  (`COORDINATES_REQUIRED`, 2.50.0), and the map is France-only (search,
+  pin, and the `listings.dto.ts` bounding box). A Brussels job typed by hand
+  now posts and gets bids but cannot be awarded. The dialog says so in words.
+  Whether jobs outside France are wanted is a question for the client
+  (`ROADMAP.md` §9 lists multi-country as out of scope).
+- **An Expedion quote that delivers abroad publishes, if it has coordinates.**
+  The France check is `createListingSchema`'s `superRefine`
+  (`listings.dto.ts`, `LOCATION_OUT_OF_COUNTRY`), and that schema is parsed in
+  one place, `POST /api/listings`. Escalation calls
+  `listingsService.createListing` directly with a typed object, so nothing on
+  that path looks at the country. That was already so for 5-digit countries
+  (Germany, Italy, Spain, US ZIPs); the 4–6 rule extends it to Belgium,
+  Austria, Switzerland and Romania. **Nothing in today's data is affected**:
+  read-only on 2026-10-01, 2 of 4,658 quotes have delivery coordinates and
+  neither is abroad, and no pending, accepted or paid quote would pass the
+  other eight checks with a 4- or 6-digit code. An operator who adds
+  coordinates at `/admin/expedion` and presses Publish would send a foreign
+  delivery to the board and text its client. Whether French drivers should
+  see those is the same question as the map: one for the client. An earlier
+  draft of this entry said such a quote was refused at publish. It is not.
+- An authorisation abandoned before the accept call is released by the bank
+  after about seven days. The aborted browser run above produced exactly one.
+- The test-mode confirm step shows only where `MOCK_PAYMENTS` is on: local
+  development and the beta seed. Production shows the card form.
+- The live publishable key in Vercel has to be the one that pairs with the
+  live secret key, and nothing here can check it. A mismatch would fail at
+  the card form. See the Operator to-do.
+- The dialog's messages and choices are pinned in jsdom with Stripe stood in
+  for (`AcceptPaymentDialog.test.tsx`). The card form itself, 3-D Secure and
+  the capture are covered by the Chromium pass only.
 
 ## ✅ 2026-10-01 — The Summary Names the Packaging Services, and the Admin Panel Lists Posted Requests Only (2.57.1)
 

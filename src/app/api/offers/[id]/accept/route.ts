@@ -25,12 +25,15 @@ export async function POST(req: Request, { params }: RouteParams) {
     // An offer carrying one slot has nothing to choose between, and the client
     // has always posted this with no body at all — so an unparseable body is an
     // empty one, not a 400.
-    const { slotId } = acceptOfferSchema.parse(
+    const { slotId, paymentIntentId } = acceptOfferSchema.parse(
       await req.json().catch(() => ({}))
     );
 
+    // `paymentIntentId` is the card the requester just authorised in the
+    // payment dialog (docs/specs/pay_at_accept_spec.md §3.3).
     const result = await offersService.acceptOffer(session.user.id, offerId, {
       slotId,
+      paymentIntentId,
     });
 
     return ok(result, result.alreadyAccepted ? 200 : 201);

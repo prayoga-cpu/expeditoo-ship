@@ -5,6 +5,7 @@ import { threadOffersDal } from "@/server/dal/thread-offers.dal";
 import { carriersDal } from "@/server/dal/carriers.dal";
 import { offersDal } from "@/server/dal/offers.dal";
 import { offersService } from "./offers.service";
+import { paymentsService } from "./payments.service";
 import * as userService from "./user.service";
 import { publishNewMessage } from "./message-publish";
 import { resolveOfferSlots } from "@/lib/offer-slots";
@@ -258,18 +259,31 @@ export const threadOffersService = {
    * Say yes, from inside the chat.
    *
    * On the job lane this is the one money path: `offersService.acceptOffer`
-   * commits the award, the shipment and the payment hold. No `slotId` is
-   * passed because a chat offer carries exactly one slot, so there is nothing
-   * to choose between and nothing to get wrong (spec §1.2).
+   * commits the award, the shipment and the charge. No `slotId` is passed
+   * because a chat offer carries exactly one slot, so there is nothing to
+   * choose between and nothing to get wrong (spec §1.2). `paymentIntentId` is
+   * the card the requester authorised in the payment dialog, exactly as on the
+   * job page (pay_at_accept_spec.md §2).
    */
-  async accept(userId: string, threadOfferId: string) {
-    const { threadOffer } = await requireRespondable(userId, threadOfferId);
+  async accept(
+    userId: string,
+    threadOfferId: string,
+    opts: { paymentIntentId?: string } = {}
+  ) {
+    const { threadOffer } = await requireRespondable(
+      userId,
+      threadOfferId
+    ).catch(async (cause) => {
+      await releaseRefusedIntent(userId, threadOfferId, opts.paymentIntentId);
+      throw cause;
+    });
 
     let shipmentId: string | null = null;
     if (threadOffer.offerId) {
       const result = await offersService.acceptOffer(
         userId,
-        threadOffer.offerId
+        threadOffer.offerId,
+        { paymentIntentId: opts.paymentIntentId }
       );
       shipmentId = result?.shipment?.id ?? null;
     }
@@ -334,6 +348,36 @@ async function requireParticipant(conversationId: string, userId: string) {
     throw err("CONVERSATION_NOT_FOUND", 404);
   }
   return conversation;
+}
+
+/**
+ * Hands back the card a recipient authorised for an offer this thread then
+ * would not let them accept (pay_at_accept_spec.md §3.4).
+ *
+ * The payment dialog authorises against the *bid*, and on the job lane the bid
+ * stays pending after the thread offer was declined. So the refusal below
+ * comes after the hold exists and before `acceptOffer`, where every other
+ * release lives, and without this the hold sat on the card for a week.
+ *
+ * `releaseAcceptIntent` only cancels an intent minted for this bid by this
+ * user and still unused, so naming someone else's does nothing.
+ */
+async function releaseRefusedIntent(
+  userId: string,
+  threadOfferId: string,
+  paymentIntentId: string | undefined
+) {
+  if (!paymentIntentId) return;
+
+  const threadOffer = await threadOffersDal
+    .getById(threadOfferId)
+    .catch(() => null);
+  if (!threadOffer?.offerId) return;
+
+  await paymentsService.releaseAcceptIntent(paymentIntentId, {
+    offerId: threadOffer.offerId,
+    shipperId: userId,
+  });
 }
 
 /** Shared gate for accept and decline: a participant, but not the sender. */

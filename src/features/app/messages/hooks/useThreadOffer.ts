@@ -24,6 +24,9 @@ const BID_ERRORS = [
 
 /** Failures this surface is the first to name. */
 const OFFER_ERRORS = [
+  "PAYMENT_CHARGE_FAILED",
+  "PAYMENT_NOT_AUTHORISED",
+  "COORDINATES_REQUIRED",
   "CONVERSATION_HAS_NO_LISTING",
   "THREAD_OFFER_LIVE",
   "NOT_YOUR_OFFER",
@@ -78,9 +81,16 @@ export function useThreadOffer(conversationId: string) {
     onError: report,
   });
 
+  // `paymentIntentId`: the card authorised in `AcceptPaymentDialog` on the job
+  // lane of a direct job. The dialog awaits this, so it must reject on failure.
   const accept = useMutation({
-    mutationFn: (threadOfferId: string) =>
-      messagesApi.acceptOffer(threadOfferId),
+    mutationFn: ({
+      threadOfferId,
+      paymentIntentId,
+    }: {
+      threadOfferId: string;
+      paymentIntentId?: string;
+    }) => messagesApi.acceptOffer(threadOfferId, paymentIntentId),
     onSuccess: () => {
       toast.success(t("accepted"));
       refresh();

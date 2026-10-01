@@ -284,11 +284,18 @@ export const messagesApi = {
     return unwrap(res, "Failed to send offer");
   },
 
+  /**
+   * `paymentIntentId` is the card the requester authorised in the payment
+   * dialog, on the job lane of a direct job. Absent where nothing is paid.
+   */
   async acceptOffer(
-    threadOfferId: string
+    threadOfferId: string,
+    paymentIntentId?: string
   ): Promise<{ threadOffer: ThreadOfferView; shipmentId: string | null }> {
     const res = await fetch(`/api/messages/offers/${threadOfferId}/accept`, {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ paymentIntentId }),
     });
     return unwrap(res, "Failed to accept offer");
   },

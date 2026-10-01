@@ -14,6 +14,39 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.58.0] - 2026-10-01 · feat
+
+- **You no longer need a saved card to accept an offer.** Accepting now opens
+  a payment window: pay with your saved card in one tap, or type a card right
+  there. Tick "Enregistrer cette carte" if you want it kept for next time; it
+  is never kept unless you tick it.
+- **You see what you pay before you pay it.** The window shows the transport
+  price, the service fee and the total taken now. It is taken when you choose
+  the carrier, and refunded if the transport is cancelled.
+- **Payments your bank wants to confirm now go through.** If your bank asks
+  you to approve the payment in its app or with a code (3-D Secure), its
+  window opens and you approve it there. Before, those payments failed.
+- **The same window opens when you accept an offer sent in a message.**
+  Before, a requester without a saved card got "something went wrong" in the
+  chat.
+- **Postal codes of 4, 5 or 6 digits are accepted on a transport request**:
+  4 in Belgium, Switzerland, Austria and Luxembourg, 5 in France, 6 in
+  Romania. Before, "1000 Bruxelles" was refused with "Doit comporter 5
+  chiffres".
+- **Operators: Expedion quotes with a 4- or 6-digit postal code are no longer
+  marked "postal code missing".** A quote that delivers abroad can therefore
+  be published to the board once it has a point on the map, as quotes with a
+  5-digit foreign code already could. None of today's quotes is affected: none
+  delivering abroad has a map point.
+- **Fixed: an offer you declined in a message kept showing "En attente" with
+  both buttons.** It now shows "Refusée" on your side and no longer asks you
+  to accept it, or to pay for it.
+- **The dashboard reminder about cards now says what is true**: a saved card
+  makes accepting faster, and you can accept without one.
+- **Fixed: accepting an offer on a request with no point on the map showed an
+  error code.** It now explains that a carrier cannot be chosen without a map
+  point for the pickup and the delivery.
+
 ## [2.57.1] - 2026-10-01 · fix
 
 - **Fixed: your request's summary said "Not stated" when you had asked the

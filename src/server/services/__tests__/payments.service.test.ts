@@ -119,7 +119,12 @@ vi.mock("drizzle-orm", async (importOriginal) => ({
 }));
 vi.mock("@/lib/stripe", () => ({
   stripe: {
-    paymentIntents: { create: vi.fn() },
+    paymentIntents: {
+      create: vi.fn(),
+      retrieve: vi.fn(),
+      capture: vi.fn(),
+      cancel: vi.fn(),
+    },
     paymentMethods: { list: vi.fn() },
     refunds: { create: vi.fn() },
     transfers: { create: vi.fn() },
@@ -876,5 +881,323 @@ describe("mock money chain end to end", () => {
     expect(stripe.paymentIntents.create).not.toHaveBeenCalled();
     expect(stripe.refunds.create).not.toHaveBeenCalled();
     expect(stripe.transfers.create).not.toHaveBeenCalled();
+  });
+});
+
+// ========================================
+// Paying when accepting — docs/specs/pay_at_accept_spec.md
+// ========================================
+
+describe("pay at accept", () => {
+  /** An intent the payment dialog authorised for offer-1, fee 900. */
+  const authorised = (over: Record<string, unknown> = {}) => ({
+    id: "pi_acc_1",
+    status: "requires_capture",
+    amount: 18_900,
+    currency: "eur",
+    metadata: {
+      purpose: "offer_accept",
+      offerId: "offer-1",
+      listingId: "job-1",
+      shipperId: "shipper-1",
+      platformFeeCents: "900",
+    },
+    ...over,
+  });
+
+  const withIntent = (over: Record<string, unknown> = {}) =>
+    chargeParams({
+      offerId: "offer-1",
+      paymentIntentId: "pi_acc_1",
+      stripeCustomerId: "cus_1",
+      ...over,
+    });
+
+  const acceptParams = (over: Record<string, unknown> = {}) => ({
+    shipperId: "shipper-1",
+    offerId: "offer-1",
+    listingId: "job-1",
+    amountCents: 18_000,
+    resolveCustomer: vi.fn().mockResolvedValue("cus_1"),
+    method: "saved" as const,
+    saveCard: false,
+    ...over,
+  });
+
+  describe("chargeForShipment with an authorised intent", () => {
+    beforeEach(() => {
+      vi.mocked(stripe.paymentIntents.retrieve).mockResolvedValue(authorised() as never);
+      vi.mocked(stripe.paymentIntents.capture).mockResolvedValue({
+        id: "pi_acc_1",
+        status: "succeeded",
+      } as never);
+    });
+
+    it("captures it and never looks for a saved card", async () => {
+      const payment = await paymentsService.chargeForShipment(withIntent());
+
+      expect(stripe.paymentIntents.capture).toHaveBeenCalledWith("pi_acc_1");
+      expect(stripe.paymentMethods.list).not.toHaveBeenCalled();
+      expect(stripe.paymentIntents.create).not.toHaveBeenCalled();
+      expect(payment).toMatchObject({
+        status: "captured",
+        stripePaymentIntentId: "pi_acc_1",
+        amountCents: 18_000,
+        platformFeeCents: 900,
+        source: "stripe",
+      });
+    });
+
+    it("captures a real intent even while MOCK_PAYMENTS is on", async () => {
+      process.env.MOCK_PAYMENTS = "true";
+
+      const payment = await paymentsService.chargeForShipment(withIntent());
+
+      expect(stripe.paymentIntents.capture).toHaveBeenCalled();
+      expect(payment.stripePaymentIntentId).toBe("pi_acc_1");
+    });
+
+    it("keeps the fee the requester was shown, not a rate changed since", async () => {
+      vi.mocked(platformSettingsService.getFeeBasisPoints).mockResolvedValue(1_000);
+
+      try {
+        const payment = await paymentsService.chargeForShipment(withIntent());
+
+        expect(payment.platformFeeCents).toBe(900);
+        expect(platformSettingsService.getFeeBasisPoints).not.toHaveBeenCalled();
+      } finally {
+        vi.mocked(platformSettingsService.getFeeBasisPoints).mockResolvedValue(0);
+      }
+    });
+
+    it.each([
+      ["another offer", { metadata: { ...authorised().metadata, offerId: "offer-2" } }],
+      ["another requester", { metadata: { ...authorised().metadata, shipperId: "shipper-2" } }],
+      ["another listing", { metadata: { ...authorised().metadata, listingId: "job-2" } }],
+      ["another purpose", { metadata: { ...authorised().metadata, purpose: "other" } }],
+      ["another amount", { amount: 1_000 }],
+    ])("refuses an intent minted for %s", async (_label, over) => {
+      vi.mocked(stripe.paymentIntents.retrieve).mockResolvedValue(authorised(over) as never);
+
+      expect(await codeFrom(() => paymentsService.chargeForShipment(withIntent())))
+        .toBe("PAYMENT_INTENT_MISMATCH");
+      expect(stripe.paymentIntents.capture).not.toHaveBeenCalled();
+      expect(harness.paymentRows).toHaveLength(0);
+    });
+
+    it("refuses an intent the card never authorised", async () => {
+      vi.mocked(stripe.paymentIntents.retrieve).mockResolvedValue(
+        authorised({ status: "requires_action" }) as never
+      );
+
+      expect(await codeFrom(() => paymentsService.chargeForShipment(withIntent())))
+        .toBe("PAYMENT_NOT_AUTHORISED");
+      expect(stripe.paymentIntents.capture).not.toHaveBeenCalled();
+    });
+
+    it("marks the row failed when the capture is refused", async () => {
+      vi.mocked(stripe.paymentIntents.capture).mockRejectedValue(new Error("expired"));
+
+      expect(await codeFrom(() => paymentsService.chargeForShipment(withIntent())))
+        .toBe("PAYMENT_CHARGE_FAILED");
+      expect(harness.paymentRows[0]).toMatchObject({ status: "failed" });
+    });
+  });
+
+  describe("quoteCharge", () => {
+    it("adds the fee and names the saved card", async () => {
+      delete process.env.MOCK_PAYMENTS;
+      vi.mocked(platformSettingsService.getFeeBasisPoints).mockResolvedValueOnce(500);
+      vi.mocked(stripe.paymentMethods.list).mockResolvedValue({
+        data: [{ id: "pm_1", card: { brand: "visa", last4: "4242" } }],
+      } as never);
+
+      const quote = await paymentsService.quoteCharge({
+        amountCents: 18_000,
+        stripeCustomerId: "cus_1",
+      });
+
+      expect(quote).toEqual({
+        required: true,
+        reason: "charge",
+        priceCents: 18_000,
+        platformFeeCents: 900,
+        totalCents: 18_900,
+        savedCard: { brand: "visa", last4: "4242" },
+      });
+    });
+
+    it("asks Stripe nothing for a requester with no customer yet", async () => {
+      delete process.env.MOCK_PAYMENTS;
+
+      const quote = await paymentsService.quoteCharge({
+        amountCents: 18_000,
+        stripeCustomerId: null,
+      });
+
+      expect(quote.savedCard).toBeNull();
+      expect(stripe.paymentMethods.list).not.toHaveBeenCalled();
+    });
+
+    it("says nothing is charged in test mode", async () => {
+      const quote = await paymentsService.quoteCharge({
+        amountCents: 18_000,
+        stripeCustomerId: "cus_1",
+      });
+
+      expect(quote).toMatchObject({ required: false, reason: "mock" });
+      expect(stripe.paymentMethods.list).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("authoriseForAccept", () => {
+    beforeEach(() => {
+      delete process.env.MOCK_PAYMENTS;
+      vi.mocked(platformSettingsService.getFeeBasisPoints).mockResolvedValue(500);
+      givenSavedCard("pm_1");
+      vi.mocked(stripe.paymentIntents.create).mockResolvedValue({
+        id: "pi_new",
+        status: "requires_capture",
+        client_secret: "pi_new_secret",
+      } as never);
+    });
+
+    afterEach(() => {
+      vi.mocked(platformSettingsService.getFeeBasisPoints).mockResolvedValue(0);
+    });
+
+    it("confirms the saved card on-session, held for capture, marked for this award", async () => {
+      const result = await paymentsService.authoriseForAccept(acceptParams());
+
+      const args = vi.mocked(stripe.paymentIntents.create).mock.calls[0][0];
+      expect(args).toMatchObject({
+        amount: 18_900,
+        currency: "eur",
+        customer: "cus_1",
+        payment_method: "pm_1",
+        payment_method_types: ["card"],
+        capture_method: "manual",
+        confirm: true,
+        metadata: {
+          purpose: "offer_accept",
+          offerId: "offer-1",
+          listingId: "job-1",
+          shipperId: "shipper-1",
+          platformFeeCents: "900",
+        },
+      });
+      // The requester is pressing Pay, so the bank may ask them for 3DS.
+      expect(args).not.toHaveProperty("off_session");
+      expect(result).toEqual({
+        paymentIntentId: "pi_new",
+        status: "requires_capture",
+        clientSecret: "pi_new_secret",
+      });
+    });
+
+    it("hands back the client secret when the bank wants 3-D Secure", async () => {
+      vi.mocked(stripe.paymentIntents.create).mockResolvedValue({
+        id: "pi_3ds",
+        status: "requires_action",
+        client_secret: "pi_3ds_secret",
+      } as never);
+
+      const result = await paymentsService.authoriseForAccept(acceptParams());
+
+      expect(result).toMatchObject({ status: "requires_action", clientSecret: "pi_3ds_secret" });
+    });
+
+    it("refuses the saved-card lane when there is no saved card", async () => {
+      vi.mocked(stripe.paymentMethods.list).mockResolvedValue({ data: [] } as never);
+
+      expect(await codeFrom(() => paymentsService.authoriseForAccept(acceptParams())))
+        .toBe("PAYMENT_METHOD_REQUIRED");
+      expect(stripe.paymentIntents.create).not.toHaveBeenCalled();
+    });
+
+    it("turns a bank's refusal into PAYMENT_DECLINED", async () => {
+      vi.mocked(stripe.paymentIntents.create).mockRejectedValue(
+        Object.assign(new Error("Your card was declined."), { type: "StripeCardError" })
+      );
+
+      expect(await codeFrom(() => paymentsService.authoriseForAccept(acceptParams())))
+        .toBe("PAYMENT_DECLINED");
+    });
+
+    it("lets Stripe itself failing through as what it is", async () => {
+      vi.mocked(stripe.paymentIntents.create).mockRejectedValue(new Error("network"));
+
+      await expect(paymentsService.authoriseForAccept(acceptParams())).rejects.toThrow(
+        "network"
+      );
+    });
+
+    it("leaves a new card unconfirmed, and keeps it only when asked", async () => {
+      await paymentsService.authoriseForAccept(acceptParams({ method: "new" }));
+      await paymentsService.authoriseForAccept(
+        acceptParams({ method: "new", saveCard: true })
+      );
+
+      const [kept, saved] = vi.mocked(stripe.paymentIntents.create).mock.calls.map(
+        (call) => call[0]
+      );
+      expect(kept).not.toHaveProperty("confirm");
+      expect(kept).not.toHaveProperty("payment_method");
+      expect(kept).not.toHaveProperty("setup_future_usage");
+      expect(saved).toMatchObject({ setup_future_usage: "off_session" });
+      expect(stripe.paymentMethods.list).not.toHaveBeenCalled();
+    });
+
+    it("authorises nothing, and creates no customer, in test mode", async () => {
+      process.env.MOCK_PAYMENTS = "true";
+      const params = acceptParams();
+
+      expect(await codeFrom(() => paymentsService.authoriseForAccept(params)))
+        .toBe("PAYMENT_NOT_REQUIRED");
+      expect(params.resolveCustomer).not.toHaveBeenCalled();
+      expect(stripe.paymentIntents.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("releaseAcceptIntent", () => {
+    const award = { offerId: "offer-1", shipperId: "shipper-1" };
+
+    it("cancels this award's unused authorisation", async () => {
+      vi.mocked(stripe.paymentIntents.retrieve).mockResolvedValue(authorised() as never);
+
+      await paymentsService.releaseAcceptIntent("pi_acc_1", award);
+
+      expect(stripe.paymentIntents.cancel).toHaveBeenCalledWith("pi_acc_1");
+    });
+
+    it("leaves an intent minted for someone else alone", async () => {
+      vi.mocked(stripe.paymentIntents.retrieve).mockResolvedValue(
+        authorised({ metadata: { ...authorised().metadata, shipperId: "shipper-2" } }) as never
+      );
+
+      await paymentsService.releaseAcceptIntent("pi_acc_1", award);
+
+      expect(stripe.paymentIntents.cancel).not.toHaveBeenCalled();
+    });
+
+    it("does not try to cancel money already taken", async () => {
+      vi.mocked(stripe.paymentIntents.retrieve).mockResolvedValue(
+        authorised({ status: "succeeded" }) as never
+      );
+
+      await paymentsService.releaseAcceptIntent("pi_acc_1", award);
+
+      expect(stripe.paymentIntents.cancel).not.toHaveBeenCalled();
+    });
+
+    it("never throws, because the accept is already failing", async () => {
+      vi.mocked(stripe.paymentIntents.retrieve).mockRejectedValue(new Error("down"));
+      const log = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      await expect(
+        paymentsService.releaseAcceptIntent("pi_acc_1", award)
+      ).resolves.toBeUndefined();
+      log.mockRestore();
+    });
   });
 });

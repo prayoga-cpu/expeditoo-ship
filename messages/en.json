@@ -652,6 +652,9 @@
         "PICKUP_OUTSIDE_WINDOW": "That day is outside the job's pickup window.",
         "VEHICLE_NOT_OWNED": "That vehicle is not in your fleet.",
         "CANNOT_BID_OWN_LISTING": "You cannot bid on your own job.",
+        "PAYMENT_CHARGE_FAILED": "The payment did not go through. Your card was not charged.",
+        "PAYMENT_NOT_AUTHORISED": "The payment was not confirmed. Please try again.",
+        "COORDINATES_REQUIRED": "This request has no map point for the pickup or the delivery, and a carrier cannot be chosen without one.",
         "generic": "Could not send this offer. Please try again."
       }
     },
@@ -1154,7 +1157,7 @@
       "dimensionsPartial": "Give all three dimensions, or none",
       "addressRequired": "Address is required",
       "cityRequired": "City is required",
-      "postalCode": "Must be 5 digits",
+      "postalCode": "Must be 4 to 6 digits",
       "pinRequired": "Place the pin on the map",
       "outsideFrance": "We only carry within France",
       "floorRequired": "Floor is required for an apartment",
@@ -1251,6 +1254,7 @@
         "alreadyAccepted": "This offer was already accepted",
         "alreadyAwarded": "Another offer was just accepted for this job",
         "paymentMethodRequired": "Add a payment method before accepting an offer",
+        "paymentFailed": "The payment did not go through. Your card was not charged.",
         "failed": "Could not accept this offer"
       },
       "reopened": "Back on the board"
@@ -3313,9 +3317,9 @@
       "action": "View my request"
     },
     "cardNudge": {
-      "title": "Add a card to accept offers",
-      "description": "One of your requests is open for bids, but you have no card on file yet. Carriers can still bid, but you won't be able to accept an offer until you add one.",
-      "action": "Add a card"
+      "title": "Save a card to go faster",
+      "description": "You pay when you accept an offer, by entering your card. A saved card lets you do it in one tap.",
+      "action": "Save a card"
     },
     "stats": {
       "openJobs": "Jobs open for bids",
@@ -3769,6 +3773,52 @@
       "previous": "Previous",
       "next": "Next",
       "showing": "{shown} of {total} feedback items"
+    }
+  },
+  "acceptPayment": {
+    "title": "Accept this offer",
+    "descriptionCharge": "You pay now, when you choose this carrier. If the transport is cancelled, you are refunded.",
+    "descriptionFree": "Check the amount before you confirm.",
+    "loading": "Working out the amount…",
+    "price": "Transport price",
+    "fee": "Service fee",
+    "total": "Total charged now",
+    "offerAmount": "Offer amount",
+    "totalNotCharged": "Total, not charged",
+    "prepaid": "The client already paid for this transport in Expedion: nothing is charged here.",
+    "mock": "Test mode: no card is charged.",
+    "payWith": "Pay with",
+    "savedCard": "{brand} •••• {last4}",
+    "otherCard": "Another card",
+    "saveCard": "Save this card for my next bookings",
+    "saveCardHint": "Optional. You can remove it from your profile.",
+    "secure": "Secure payment by Stripe. We never store your card number.",
+    "pay": "Pay {amount} and accept",
+    "confirm": "Accept the offer",
+    "processing": "Confirming…",
+    "cancel": "Cancel",
+    "close": "Close",
+    "acceptFailed": "The offer was not accepted and your card was not charged.",
+    "acceptRefused": "The offer was not accepted.",
+    "acceptUnknown": "We could not confirm that the offer was accepted. Close this window and check its status before trying again.",
+    "acceptUnknownPaid": "We could not confirm that the offer was accepted, and your card may have been charged. Close this window and check the offer's status before paying again.",
+    "errors": {
+      "generic": "The payment did not go through. Try again or use another card.",
+      "notAuthorised": "The payment was not confirmed. Please try again.",
+      "stripeUnavailable": "Online payment is unavailable right now.",
+      "PAYMENT_DECLINED": "Your bank declined this payment. Try another card.",
+      "PAYMENT_METHOD_REQUIRED": "Your saved card could not be found. Use another card.",
+      "PAYMENT_NOT_REQUIRED": "There is nothing to pay for this offer.",
+      "OFFER_NOT_PENDING": "This offer is no longer available.",
+      "OFFER_NOT_FOUND": "This offer could not be found.",
+      "LISTING_NOT_OPEN": "This request is no longer open for offers.",
+      "LISTING_NOT_FOUND": "This request could not be found.",
+      "COORDINATES_REQUIRED": "This request has no map point for the pickup or the delivery, and a carrier cannot be chosen without one.",
+      "CARRIER_NO_LONGER_APPROVED": "This carrier can no longer be chosen.",
+      "SLOT_IN_PAST": "This slot has already passed. Choose another one.",
+      "SLOT_NOT_ON_OFFER": "This slot is not part of the offer.",
+      "FORBIDDEN_NOT_SHIPPER": "Only the person who posted the request can accept an offer.",
+      "FORBIDDEN_NOT_OPERATOR": "Only an operator can award this job."
     }
   }
 }

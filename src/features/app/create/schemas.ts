@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { isValidPhoneNumber } from "libphonenumber-js/min";
 
+import { JOB_POSTAL_CODE_PATTERN } from "@/lib/postal-code";
+
 import {
   HEAVY_BRACKET_ID,
   HEAVY_BRACKET_MIN_KG,
@@ -115,7 +117,9 @@ export const endpointSchema = z
     lng: z.number().optional(),
     address: z.string().min(1, "create.validation.addressRequired"),
     city: z.string().min(1, "create.validation.cityRequired"),
-    postalCode: z.string().regex(/^\d{5}$/, "create.validation.postalCode"),
+    postalCode: z
+      .string()
+      .regex(JOB_POSTAL_CODE_PATTERN, "create.validation.postalCode"),
     locationType: z.enum(LOCATION_TYPES),
     floor: z.preprocess(
       blankToUndefined,

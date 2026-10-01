@@ -9,6 +9,7 @@ import { threadOffersDal } from "@/server/dal/thread-offers.dal";
 import { carriersDal } from "@/server/dal/carriers.dal";
 import { offersDal } from "@/server/dal/offers.dal";
 import { offersService } from "../offers.service";
+import { paymentsService } from "../payments.service";
 import * as userService from "../user.service";
 import { publishNewMessage } from "../message-publish";
 
@@ -49,6 +50,10 @@ vi.mock("../offers.service", async (importOriginal) => {
     },
   };
 });
+
+vi.mock("../payments.service", () => ({
+  paymentsService: { releaseAcceptIntent: vi.fn() },
+}));
 
 vi.mock("../user.service", () => ({ hasRole: vi.fn() }));
 vi.mock("../message-publish", () => ({ publishNewMessage: vi.fn() }));
@@ -496,11 +501,72 @@ describe("responding", () => {
     );
   });
 
+  // The payment dialog authorises against the bid, which is still pending
+  // after a decline in the chat. The refusal then lands before `acceptOffer`,
+  // where every other release lives (pay_at_accept_spec.md §3.4).
+  it("releases the card authorised for an offer this thread already answered", async () => {
+    vi.mocked(threadOffersDal.getById).mockResolvedValue(
+      pending({ status: "declined" }) as never
+    );
+
+    expect(
+      await codeFrom(
+        threadOffersService.accept(ME, "to-1", { paymentIntentId: "pi_1" })
+      )
+    ).toBe("OFFER_NOT_PENDING");
+    expect(paymentsService.releaseAcceptIntent).toHaveBeenCalledWith("pi_1", {
+      offerId: "offer-1",
+      shipperId: ME,
+    });
+    expect(offersService.acceptOffer).not.toHaveBeenCalled();
+  });
+
+  it("has nothing to release when no card was authorised", async () => {
+    vi.mocked(threadOffersDal.getById).mockResolvedValue(
+      pending({ status: "declined" }) as never
+    );
+
+    await codeFrom(threadOffersService.accept(ME, "to-1"));
+
+    expect(paymentsService.releaseAcceptIntent).not.toHaveBeenCalled();
+  });
+
+  it("releases nothing on the standalone lane, where no card is ever taken", async () => {
+    vi.mocked(threadOffersDal.getById).mockResolvedValue(
+      pending({ status: "declined", offerId: null }) as never
+    );
+
+    await codeFrom(
+      threadOffersService.accept(ME, "to-1", { paymentIntentId: "pi_1" })
+    );
+
+    expect(paymentsService.releaseAcceptIntent).not.toHaveBeenCalled();
+  });
+
+  it("leaves the card alone when the accept goes through", async () => {
+    await threadOffersService.accept(ME, "to-1", { paymentIntentId: "pi_1" });
+
+    expect(paymentsService.releaseAcceptIntent).not.toHaveBeenCalled();
+  });
+
   it("awards through the offers engine without naming a slot", async () => {
     const result = await threadOffersService.accept(ME, "to-1");
 
-    expect(offersService.acceptOffer).toHaveBeenCalledWith(ME, "offer-1");
+    expect(offersService.acceptOffer).toHaveBeenCalledWith(ME, "offer-1", {
+      paymentIntentId: undefined,
+    });
+    // A chat offer carries one slot, so there is none to name (spec §1.2).
+    const opts = vi.mocked(offersService.acceptOffer).mock.calls[0][2];
+    expect(opts).not.toHaveProperty("slotId");
     expect(result.shipmentId).toBe("ship-1");
+  });
+
+  it("hands the card authorised in the payment dialog to the award", async () => {
+    await threadOffersService.accept(ME, "to-1", { paymentIntentId: "pi_123" });
+
+    expect(offersService.acceptOffer).toHaveBeenCalledWith(ME, "offer-1", {
+      paymentIntentId: "pi_123",
+    });
   });
 
   it("moves no money on the standalone lane", async () => {

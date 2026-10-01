@@ -108,9 +108,36 @@ export type CreateOfferInput = z.infer<typeof createOfferSchema>;
  */
 export const acceptOfferSchema = z.object({
   slotId: z.string().min(1).optional(),
+  /**
+   * The card the requester just authorised in the payment dialog, to capture
+   * instead of charging a saved one. Absent on every lane that pays nothing
+   * here, and on a direct job paid with a saved card through the older
+   * off-session path (pay_at_accept_spec.md §3.3).
+   */
+  paymentIntentId: z.string().startsWith("pi_").max(255).optional(),
 });
 
 export type AcceptOfferInput = z.infer<typeof acceptOfferSchema>;
+
+/** `GET /api/offers/:id/payment` — what accepting would cost, before paying. */
+export const paymentQuoteQuerySchema = z.object({
+  slotId: z.string().min(1).optional(),
+});
+
+/**
+ * `POST /api/offers/:id/payment` — authorise the card for this award.
+ *
+ * `saved` puts it on the first saved card; `new` returns a client secret for
+ * the card form. `saveCard` keeps a new card for next time, and means nothing
+ * on `saved` (pay_at_accept_spec.md §3.2).
+ */
+export const preparePaymentSchema = z.object({
+  method: z.enum(["saved", "new"]),
+  saveCard: z.boolean().default(false),
+  slotId: z.string().min(1).optional(),
+});
+
+export type PreparePaymentInput = z.infer<typeof preparePaymentSchema>;
 
 /** Query for listing offers. Sort is only honoured for the shipper view. */
 export const listOffersQuerySchema = z.object({

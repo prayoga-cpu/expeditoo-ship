@@ -28,6 +28,7 @@ import { listingsDal } from "@/server/dal/listings.dal";
 import { offersService } from "@/server/services/offers.service";
 import { expedionSmsService } from "@/server/services/expedion-sms.service";
 import { notifyExpedionAdmins } from "@/server/services/expedion-realtime.service";
+import { normaliseJobPostalCode } from "@/lib/postal-code";
 import {
   ExpedionError,
   canTransition,
@@ -139,12 +140,13 @@ async function resolveCategoryId(): Promise<string> {
 // Mapping
 // ========================================
 
-/** Postal codes must be exactly five digits for the listing contract. */
-function normalisePostalCode(value: string | null): string | null {
-  if (!value) return null;
-  const digits = value.replace(/\D/g, "");
-  return /^\d{5}$/.test(digits) ? digits : null;
-}
+/**
+ * The listing contract's postal code: 4 to 6 digits. Expedion delivers to
+ * Belgium, Austria and Romania as well as France, and a five-digit rule here
+ * turned every one of those quotes into a "missing postal code" blocker
+ * (postal_codes_abroad_spec.md).
+ */
+const normalisePostalCode = normaliseJobPostalCode;
 
 /** `description` has a 20-character floor; a terse lot line needs padding. */
 function buildDescription(quote: ExpedionQuote): string {

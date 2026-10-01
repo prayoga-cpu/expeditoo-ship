@@ -2,6 +2,7 @@ import type {
   EscalationBlockerCode,
   QuoteRow,
 } from "@/server/dal/expedion-report.dal";
+import { normaliseJobPostalCode } from "@/lib/postal-code";
 
 /**
  * What a quote is waiting for, and who it is waiting on.
@@ -346,7 +347,7 @@ export interface EscalationDraft {
 }
 
 function hasPostalCode(value: string | null | undefined): boolean {
-  return !!value && /^\d{5}$/.test(value.replace(/\D/g, ""));
+  return normaliseJobPostalCode(value) !== null;
 }
 
 /**

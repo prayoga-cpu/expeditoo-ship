@@ -22,6 +22,7 @@ import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatCurrency } from "@/lib/currency";
+import { AcceptPaymentDialog } from "@/features/app/offers/ui/AcceptPaymentDialog";
 import {
   Select,
   SelectContent,
@@ -303,6 +304,13 @@ function JobOffers({
 }) {
   const t = useTranslations("myJobs.detail");
   const [sort, setSort] = useState("price_asc");
+  // The offer being accepted, kept after the dialog closes so it can animate
+  // out with its content rather than blanking first.
+  const [accepting, setAccepting] = useState<{
+    offerId: string;
+    slotId?: string;
+  } | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const { data: offers } = useJobOffers(listingId, sort);
   const acceptOffer = useAcceptOffer(listingId);
@@ -327,8 +335,27 @@ function JobOffers({
         job={job}
         canAccept={canAccept}
         isAccepting={acceptOffer.isPending}
-        onAccept={(offerId, slotId) => acceptOffer.mutate({ offerId, slotId })}
+        // Every accept goes through the dialog: it shows what will be debited
+        // and takes the card, or confirms there is nothing to pay
+        // (pay_at_accept_spec.md §2).
+        onAccept={(offerId, slotId) => {
+          setAccepting({ offerId, slotId });
+          setDialogOpen(true);
+        }}
       />
+
+      {accepting && (
+        <AcceptPaymentDialog
+          key={`${accepting.offerId}:${accepting.slotId ?? ""}`}
+          offerId={accepting.offerId}
+          slotId={accepting.slotId}
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          onConfirm={(paymentIntentId) =>
+            acceptOffer.mutateAsync({ ...accepting, paymentIntentId })
+          }
+        />
+      )}
     </section>
   );
 }

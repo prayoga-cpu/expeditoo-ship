@@ -652,6 +652,9 @@
         "PICKUP_OUTSIDE_WINDOW": "Ce jour est en dehors de la fenêtre d'enlèvement de l'annonce.",
         "VEHICLE_NOT_OWNED": "Ce véhicule ne fait pas partie de votre flotte.",
         "CANNOT_BID_OWN_LISTING": "Vous ne pouvez pas enchérir sur votre propre annonce.",
+        "PAYMENT_CHARGE_FAILED": "Le paiement n'a pas abouti. Votre carte n'a pas été débitée.",
+        "PAYMENT_NOT_AUTHORISED": "Le paiement n'a pas été confirmé. Réessayez.",
+        "COORDINATES_REQUIRED": "Cette demande n'a pas de point sur la carte pour l'enlèvement ou la livraison, et un transporteur ne peut pas être retenu sans ce point.",
         "generic": "Impossible d'envoyer cette offre. Réessayez."
       }
     },
@@ -1154,7 +1157,7 @@
       "dimensionsPartial": "Indiquez les trois dimensions, ou aucune",
       "addressRequired": "L'adresse est obligatoire",
       "cityRequired": "La ville est obligatoire",
-      "postalCode": "Doit comporter 5 chiffres",
+      "postalCode": "Doit comporter 4 à 6 chiffres",
       "pinRequired": "Placez le repère sur la carte",
       "outsideFrance": "Nous ne transportons qu'en France",
       "floorRequired": "L'étage est obligatoire pour un appartement",
@@ -1251,6 +1254,7 @@
         "alreadyAccepted": "Cette offre a déjà été acceptée",
         "alreadyAwarded": "Une autre offre vient d'être acceptée pour cette demande",
         "paymentMethodRequired": "Ajoutez un moyen de paiement avant d'accepter une offre",
+        "paymentFailed": "Le paiement n'a pas abouti. Votre carte n'a pas été débitée.",
         "failed": "Impossible d'accepter cette offre"
       },
       "reopened": "Remise en ligne"
@@ -3313,9 +3317,9 @@
       "action": "Voir ma demande"
     },
     "cardNudge": {
-      "title": "Ajoutez une carte pour accepter des offres",
-      "description": "Une de vos demandes est ouverte aux offres, mais vous n'avez pas encore de carte enregistrée. Les transporteurs peuvent toujours enchérir, mais vous ne pourrez pas accepter une offre tant que vous n'en avez pas ajouté une.",
-      "action": "Ajouter une carte"
+      "title": "Enregistrez une carte pour aller plus vite",
+      "description": "Vous paierez au moment d'accepter une offre, en saisissant votre carte. Une carte enregistrée vous permet de le faire en un clic.",
+      "action": "Enregistrer une carte"
     },
     "stats": {
       "openJobs": "Missions ouvertes aux offres",
@@ -3769,6 +3773,52 @@
       "previous": "Précédent",
       "next": "Suivant",
       "showing": "{shown} sur {total} retours"
+    }
+  },
+  "acceptPayment": {
+    "title": "Accepter cette offre",
+    "descriptionCharge": "Le paiement est pris maintenant, au moment où vous choisissez ce transporteur. Si le transport est annulé, vous êtes remboursé.",
+    "descriptionFree": "Vérifiez le montant avant de confirmer.",
+    "loading": "Calcul du montant…",
+    "price": "Prix du transport",
+    "fee": "Frais de service",
+    "total": "Total débité maintenant",
+    "offerAmount": "Montant de l'offre",
+    "totalNotCharged": "Total, non débité",
+    "prepaid": "Le client a déjà payé ce transport sur Expedion : rien n'est débité ici.",
+    "mock": "Mode test : aucune carte n'est débitée.",
+    "payWith": "Payer avec",
+    "savedCard": "{brand} •••• {last4}",
+    "otherCard": "Une autre carte",
+    "saveCard": "Enregistrer cette carte pour mes prochaines réservations",
+    "saveCardHint": "Facultatif. Vous pourrez la retirer depuis votre profil.",
+    "secure": "Paiement sécurisé par Stripe. Nous ne conservons pas le numéro de votre carte.",
+    "pay": "Payer {amount} et accepter",
+    "confirm": "Accepter l'offre",
+    "processing": "Validation…",
+    "cancel": "Annuler",
+    "close": "Fermer",
+    "acceptFailed": "L'offre n'a pas été acceptée et votre carte n'a pas été débitée.",
+    "acceptRefused": "L'offre n'a pas été acceptée.",
+    "acceptUnknown": "Nous n'avons pas pu confirmer que l'offre a été acceptée. Fermez cette fenêtre et vérifiez son statut avant de réessayer.",
+    "acceptUnknownPaid": "Nous n'avons pas pu confirmer que l'offre a été acceptée, et votre carte a peut-être été débitée. Fermez cette fenêtre et vérifiez le statut de l'offre avant de payer à nouveau.",
+    "errors": {
+      "generic": "Le paiement n'a pas abouti. Réessayez ou utilisez une autre carte.",
+      "notAuthorised": "Le paiement n'a pas été confirmé. Réessayez.",
+      "stripeUnavailable": "Le paiement en ligne n'est pas disponible pour le moment.",
+      "PAYMENT_DECLINED": "Votre banque a refusé ce paiement. Essayez une autre carte.",
+      "PAYMENT_METHOD_REQUIRED": "Votre carte enregistrée est introuvable. Utilisez une autre carte.",
+      "PAYMENT_NOT_REQUIRED": "Rien n'est à payer pour cette offre.",
+      "OFFER_NOT_PENDING": "Cette offre n'est plus disponible.",
+      "OFFER_NOT_FOUND": "Cette offre est introuvable.",
+      "LISTING_NOT_OPEN": "Cette demande n'est plus ouverte aux offres.",
+      "LISTING_NOT_FOUND": "Cette demande est introuvable.",
+      "COORDINATES_REQUIRED": "Cette demande n'a pas de point sur la carte pour l'enlèvement ou la livraison, et un transporteur ne peut pas être retenu sans ce point.",
+      "CARRIER_NO_LONGER_APPROVED": "Ce transporteur ne peut plus être retenu.",
+      "SLOT_IN_PAST": "Ce créneau est déjà passé. Choisissez-en un autre.",
+      "SLOT_NOT_ON_OFFER": "Ce créneau ne fait pas partie de l'offre.",
+      "FORBIDDEN_NOT_SHIPPER": "Seul l'auteur de la demande peut accepter une offre.",
+      "FORBIDDEN_NOT_OPERATOR": "Seul un opérateur peut attribuer cette mission."
     }
   }
 }

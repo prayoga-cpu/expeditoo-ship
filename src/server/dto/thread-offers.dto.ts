@@ -75,3 +75,12 @@ export const createThreadOfferSchema = z
   });
 
 export type CreateThreadOfferInput = z.infer<typeof createThreadOfferSchema>;
+
+/**
+ * Accepting in the bubble. On the job lane of a direct job the requester has
+ * just authorised their card in the payment dialog, and this names it
+ * (pay_at_accept_spec.md §2). Absent everywhere no money moves here.
+ */
+export const acceptThreadOfferSchema = z.object({
+  paymentIntentId: z.string().startsWith("pi_").max(255).optional(),
+});

@@ -48,10 +48,10 @@ const HAS_PICKUP_COORDS = sql`pickup_lat is not null and pickup_lng is not null`
 const HAS_DELIVERY_COORDS = sql`delivery_lat is not null and delivery_lng is not null`;
 const HAS_PICKUP_ADDRESS = sql`coalesce(pickup_address, '') <> ''`;
 const HAS_PICKUP_CITY = sql`coalesce(pickup_city, '') <> ''`;
-const HAS_PICKUP_POSTAL = sql`regexp_replace(coalesce(pickup_postal_code, ''), '[^0-9]', '', 'g') ~ '^[0-9]{5}$'`;
+const HAS_PICKUP_POSTAL = sql`regexp_replace(coalesce(pickup_postal_code, ''), '[^0-9]', '', 'g') ~ '^[0-9]{4,6}$'`;
 const HAS_DELIVERY_ADDRESS = sql`coalesce(delivery_address, '') <> ''`;
 const HAS_DELIVERY_CITY = sql`coalesce(delivery_city, '') <> ''`;
-const HAS_DELIVERY_POSTAL = sql`regexp_replace(coalesce(delivery_postal_code, ''), '[^0-9]', '', 'g') ~ '^[0-9]{5}$'`;
+const HAS_DELIVERY_POSTAL = sql`regexp_replace(coalesce(delivery_postal_code, ''), '[^0-9]', '', 'g') ~ '^[0-9]{4,6}$'`;
 const HAS_WEIGHT = sql`coalesce(weight_kg, 0) > 0`;
 const HAS_ACCEPTED_PRICE = sql`coalesce(accepted_price_cents, 0) >= 100`;
 

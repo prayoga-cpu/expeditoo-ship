@@ -436,3 +436,21 @@ describe("jobFormSchema", () => {
     ).toContain("create.validation.contactNameMax");
   });
 });
+
+// The client typed 1000 BRUXELLES and was told "Doit comporter 5 chiffres"
+// (postal_codes_abroad_spec.md): a job can start or end abroad.
+describe("jobFormSchema — postal codes", () => {
+  it.each(["1000", "75011", "010011"])("accepts %s on a typed address", (code) => {
+    const typed = endpoint({ lat: undefined, lng: undefined, postalCode: code });
+
+    expect(messages(form({ dropoff: typed }))).not.toContain(
+      "create.validation.postalCode"
+    );
+  });
+
+  it.each(["123", "1234567", "75 011", "AB123"])("refuses %j", (code) => {
+    expect(messages(form({ dropoff: endpoint({ postalCode: code }) }))).toContain(
+      "create.validation.postalCode"
+    );
+  });
+});

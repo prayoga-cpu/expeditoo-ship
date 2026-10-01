@@ -64,6 +64,11 @@ NULLs, so any number of `expedion` rows coexist.
 
 ### 2.2 `source: 'stripe'`
 
+> **Amended 2026-09-30 by `pay_at_accept_spec.md`.** The requester's card is
+> now normally authorised in a payment dialog when they accept, on-session, and
+> captured by the award — a saved card is no longer required. The off-session
+> lane below remains for an accept that names no authorised intent.
+
 1. `PAYMENT_METHOD_REQUIRED` (402) if `stripeCustomerId` is null.
 2. `PAYMENT_METHOD_REQUIRED` (402) if the customer has no saved card. The card
    was collected at posting (§4); its absence here means it was detached
@@ -105,6 +110,9 @@ Marked `TODO(EXPEDITOO-TESTING)` like every other mock, and listed in
 `docs/TESTING_MOCKS.md`.
 
 ## 4. A direct job may not go live without a card
+
+> **Superseded.** Posting stopped requiring a card in `ce0388f`, and accepting
+> no longer does either (`pay_at_accept_spec.md`). Kept for the history.
 
 Enforced in `listingsService`, not in the route.
 

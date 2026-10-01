@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { Check, CheckCheck, Truck } from "lucide-react";
 import { format } from "date-fns";
@@ -14,6 +15,7 @@ import { formatCurrency } from "@/lib/currency";
 import { parseDayString } from "@/lib/availability-window";
 import type { ThreadOfferView } from "../types";
 import { useThreadOffer } from "../hooks/useThreadOffer";
+import { AcceptPaymentDialog } from "@/features/app/offers/ui/AcceptPaymentDialog";
 
 /**
  * What the card actually shows.
@@ -71,10 +73,21 @@ export function ThreadOfferBubble({
   const locale = useLocale();
   const dateLocale = locale === "fr" ? fr : enUS;
   const { accept, decline, withdraw } = useThreadOffer(conversationId);
+  const [paying, setPaying] = useState(false);
 
-  const status = shownStatus(offer);
-  const isPending = status === "pending";
   const isJobLane = offer.offer !== null;
+  // The one case where the bid and the thread offer disagree: the recipient
+  // said no here, and the bid stays live for whoever awards the job. Their own
+  // card shows their answer. Asking again would open a payment dialog for an
+  // offer this thread will refuse (pay_at_accept_spec.md §3.4). The sender's
+  // card is left alone: their bid really is still pending.
+  const declinedHere =
+    isJobLane &&
+    !isOwn &&
+    offer.status === "declined" &&
+    shownStatus(offer) === "pending";
+  const status = declinedHere ? "declined" : shownStatus(offer);
+  const isPending = status === "pending";
   // The recipient decides. On the job lane awarding also has to be theirs to
   // do, which mirrors acceptOffer's own owner/operator fork.
   const canRespond = isPending && !isOwn && (!isJobLane || viewerCanAward);
@@ -169,7 +182,14 @@ export function ThreadOfferBubble({
                 size="sm"
                 className="flex-1"
                 disabled={busy}
-                onClick={() => accept.mutate(offer.id)}
+                // On the job lane accepting awards a real bid and may take a
+                // payment, so it goes through the same dialog as the job page.
+                // A standalone offer moves no money and needs no step.
+                onClick={() =>
+                  offer.offer
+                    ? setPaying(true)
+                    : accept.mutate({ threadOfferId: offer.id })
+                }
               >
                 {t("card.accept")}
               </Button>
@@ -201,6 +221,17 @@ export function ThreadOfferBubble({
             >
               {t("card.withdraw")}
             </Button>
+          )}
+
+          {offer.offer && (
+            <AcceptPaymentDialog
+              offerId={offer.offer.id}
+              open={paying}
+              onOpenChange={setPaying}
+              onConfirm={(paymentIntentId) =>
+                accept.mutateAsync({ threadOfferId: offer.id, paymentIntentId })
+              }
+            />
           )}
 
           {offer.offer && (

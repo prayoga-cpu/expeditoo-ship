@@ -1,4 +1,5 @@
 import { nanoid } from "nanoid";
+import type Stripe from "stripe";
 import { db } from "@/db";
 import { and, desc, eq } from "drizzle-orm";
 import {
@@ -76,15 +77,54 @@ type ChargeParams = {
   amountCents: number;
   stripeCustomerId: string | null;
   source: PaymentSource;
+  /** The award being paid for — what an authorised intent is checked against. */
+  offerId?: string;
+  /**
+   * An intent the requester authorised in the payment dialog. Captured instead
+   * of charging a saved card (pay_at_accept_spec.md §3.3).
+   */
+  paymentIntentId?: string;
 };
+
+/** What the requester is shown before paying, and what the card is debited. */
+export type ChargeQuote = {
+  required: boolean;
+  reason: "charge" | "mock" | "prepaid";
+  priceCents: number;
+  platformFeeCents: number;
+  totalCents: number;
+  savedCard: { brand: string; last4: string } | null;
+};
+
+/** Marks an intent as minted by the payment dialog, for nothing else to reuse. */
+const ACCEPT_INTENT_PURPOSE = "offer_accept";
+
+/** States an intent can be cancelled from — anything short of captured. */
+const RELEASABLE_INTENT_STATUSES = new Set<Stripe.PaymentIntent.Status>([
+  "requires_payment_method",
+  "requires_confirmation",
+  "requires_action",
+  "requires_capture",
+]);
 
 /** The card an off-session charge will be put on, or null if there is none. */
 async function firstSavedCard(customerId: string): Promise<string | null> {
+  return (await firstSavedCardDetails(customerId))?.id ?? null;
+}
+
+/** The same card, with what the payment dialog shows of it. */
+async function firstSavedCardDetails(customerId: string) {
   const methods = await stripe.paymentMethods.list({
     customer: customerId,
     type: "card",
   });
-  return methods.data[0]?.id ?? null;
+  const method = methods.data[0];
+  if (!method) return null;
+  return {
+    id: method.id,
+    brand: method.card?.brand ?? "card",
+    last4: method.card?.last4 ?? "",
+  };
 }
 
 /**
@@ -195,6 +235,121 @@ async function mockChargeForShipment(
     .returning();
 
   return row;
+}
+
+/**
+ * The platform fee an authorised intent was created with, once it is proven to
+ * be this award's (pay_at_accept_spec.md §3.3).
+ *
+ * The fee is read back from the intent rather than recomputed: an admin may
+ * change the rate between the dialog and the accept, and the requester is
+ * owed the total they were shown and authorised — nothing more is capturable
+ * anyway. Every other field is checked, because an intent id is a string any
+ * client can send, and the metadata is the only proof of what it was minted
+ * for: only this server can write it.
+ */
+function authorisedFeeFor(intent: Stripe.PaymentIntent, params: ChargeParams) {
+  const meta = intent.metadata ?? {};
+  const fee = Number(meta.platformFeeCents);
+
+  const isThisAward =
+    meta.purpose === ACCEPT_INTENT_PURPOSE &&
+    meta.offerId === params.offerId &&
+    meta.listingId === params.listingId &&
+    meta.shipperId === params.shipperId &&
+    Number.isInteger(fee) &&
+    fee >= 0 &&
+    intent.currency === "eur" &&
+    intent.amount === params.amountCents + fee;
+
+  if (!isThisAward) {
+    throw err("PAYMENT_INTENT_MISMATCH", 409, "This payment is not for this offer");
+  }
+
+  // The requester closed the 3-D Secure window, or the form never confirmed.
+  if (intent.status !== "requires_capture") {
+    throw err("PAYMENT_NOT_AUTHORISED", 402, "The card has not been authorised");
+  }
+
+  return fee;
+}
+
+/**
+ * Captures the card the requester authorised in the payment dialog.
+ *
+ * The intent carries no `transfer_group`, so the `payment_intent.succeeded`
+ * webhook ignores it: this capture is synchronous, and that webhook would also
+ * schedule the driver's payout now rather than on delivery.
+ */
+async function captureAuthorised(params: ChargeParams): Promise<Payment> {
+  const intent = await stripe.paymentIntents.retrieve(params.paymentIntentId!);
+  const platformFeeCents = authorisedFeeFor(intent, params);
+
+  const [row] = await db
+    .insert(payments)
+    .values({
+      ...baseRow(params, platformFeeCents),
+      stripePaymentIntentId: intent.id,
+      status: "pending",
+      source: "stripe",
+    })
+    .returning();
+
+  try {
+    const captured = await stripe.paymentIntents.capture(intent.id);
+    if (captured.status !== "succeeded") {
+      await markFailed(row.id, `intent ${captured.status}`);
+      throw err("PAYMENT_CHARGE_FAILED", 402, "Could not take payment");
+    }
+  } catch (cause) {
+    if (cause instanceof PaymentError) throw cause;
+    await markFailed(row.id, cause instanceof Error ? cause.message : "unknown");
+    throw err("PAYMENT_CHARGE_FAILED", 402, "Could not take payment");
+  }
+
+  const [settled] = await db
+    .update(payments)
+    .set({ status: "captured", capturedAt: new Date() })
+    .where(eq(payments.id, row.id))
+    .returning();
+
+  return await afterCapture(settled);
+}
+
+/** Stripe's refusal of a card, as opposed to Stripe being unreachable. */
+const isCardError = (cause: unknown) =>
+  typeof cause === "object" &&
+  cause !== null &&
+  (cause as { type?: unknown }).type === "StripeCardError";
+
+/**
+ * Confirms an accept intent against the requester's first saved card.
+ *
+ * On-session — no `off_session` — because the requester is the one pressing
+ * Pay. A bank refusal is `PAYMENT_DECLINED` so the dialog can offer another
+ * card; Stripe itself failing is left to reach the route as a 500.
+ */
+async function confirmSavedCard(
+  base: Stripe.PaymentIntentCreateParams,
+  customerId: string
+) {
+  const card = await firstSavedCard(customerId);
+  if (!card) {
+    throw err("PAYMENT_METHOD_REQUIRED", 402, "Add a payment method first");
+  }
+
+  try {
+    return await stripe.paymentIntents.create({
+      ...base,
+      payment_method: card,
+      confirm: true,
+    });
+  } catch (cause) {
+    if (isCardError(cause)) {
+      throw err("PAYMENT_DECLINED", 402, "The card was declined");
+    }
+    throw cause;
+  }
 }
 
 /**
@@ -374,6 +529,11 @@ export const paymentsService = {
       return await afterCapture(await recordExternalCharge(params));
     }
 
+    // Ahead of the mock branch too: an intent the requester authorised is a
+    // real `pi_…`, and a real intent stays real while MOCK_PAYMENTS is on
+    // (`mock-payments.ts`). Mocking it would leave their card held for a week.
+    if (params.paymentIntentId) return await captureAuthorised(params);
+
     // Read once per charge attempt. A hot path, but one row, one indexed
     // lookup — and an admin-configured rate must apply to every real charge,
     // not just the ones taken while someone happens to be watching.
@@ -473,6 +633,125 @@ export const paymentsService = {
     if (!record?.stripeCustomerId) return false;
 
     return (await firstSavedCard(record.stripeCustomerId)) !== null;
+  },
+
+  /**
+   * What accepting an offer on a direct job will debit, and with which card.
+   *
+   * Read-only: it never creates a Stripe customer, because the payment dialog
+   * asks this the moment it opens (pay_at_accept_spec.md §3.1). Under
+   * MOCK_PAYMENTS nothing is charged, so no card is looked up either.
+   */
+  async quoteCharge(params: {
+    amountCents: number;
+    stripeCustomerId: string | null;
+  }): Promise<ChargeQuote> {
+    const feeBasisPoints = await platformSettingsService.getFeeBasisPoints();
+    const platformFeeCents = platformFeeFor(params.amountCents, feeBasisPoints);
+    const mock = isMockPaymentsEnabled();
+
+    const card =
+      mock || !params.stripeCustomerId
+        ? null
+        : await firstSavedCardDetails(params.stripeCustomerId);
+
+    return {
+      required: !mock,
+      reason: mock ? "mock" : "charge",
+      priceCents: params.amountCents,
+      platformFeeCents,
+      totalCents: params.amountCents + platformFeeCents,
+      savedCard: card ? { brand: card.brand, last4: card.last4 } : null,
+    };
+  },
+
+  /**
+   * Authorises the requester's card for one award, on-session, and holds it
+   * for the seconds until `chargeForShipment` captures it.
+   *
+   * `saved` confirms here against the first saved card, and answers
+   * `requires_action` when the bank wants 3-D Secure — the requester is at the
+   * keyboard to answer it, which an off-session charge could never ask. `new`
+   * returns a client secret for the card form, and keeps the card only when
+   * the requester ticked the box (pay_at_accept_spec.md §3.2).
+   */
+  async authoriseForAccept(params: {
+    shipperId: string;
+    offerId: string;
+    listingId: string;
+    amountCents: number;
+    resolveCustomer: () => Promise<string>;
+    method: "saved" | "new";
+    saveCard: boolean;
+  }) {
+    // TODO(EXPEDITOO-TESTING): MOCK_PAYMENTS — nothing is charged, so there is nothing to authorise (see docs/TESTING_MOCKS.md).
+    if (isMockPaymentsEnabled()) {
+      throw err("PAYMENT_NOT_REQUIRED", 409, "Nothing to pay in test mode");
+    }
+
+    const customerId = await params.resolveCustomer();
+    const feeBasisPoints = await platformSettingsService.getFeeBasisPoints();
+    const platformFeeCents = platformFeeFor(params.amountCents, feeBasisPoints);
+
+    const base = {
+      amount: params.amountCents + platformFeeCents,
+      currency: "eur",
+      customer: customerId,
+      payment_method_types: ["card"],
+      capture_method: "manual" as const,
+      metadata: {
+        purpose: ACCEPT_INTENT_PURPOSE,
+        offerId: params.offerId,
+        listingId: params.listingId,
+        shipperId: params.shipperId,
+        platformFeeCents: String(platformFeeCents),
+      },
+    };
+
+    const intent =
+      params.method === "saved"
+        ? await confirmSavedCard(base, customerId)
+        : await stripe.paymentIntents.create({
+            ...base,
+            ...(params.saveCard ? { setup_future_usage: "off_session" } : {}),
+          });
+
+    return {
+      paymentIntentId: intent.id,
+      status: intent.status,
+      clientSecret: intent.client_secret,
+    };
+  },
+
+  /**
+   * Cancels an authorisation the award did not use, so the bank releases the
+   * hold now instead of in a week (pay_at_accept_spec.md §3.4).
+   *
+   * Only an intent minted for this award by this requester is touched — an id
+   * is a string anybody can send, and cancelling someone else's would void
+   * their payment. Never throws: the accept is already failing, and a release
+   * that does not go through only means the bank releases it later.
+   */
+  async releaseAcceptIntent(
+    paymentIntentId: string,
+    award: { offerId: string; shipperId: string }
+  ) {
+    try {
+      const intent = await stripe.paymentIntents.retrieve(paymentIntentId);
+      const meta = intent.metadata ?? {};
+      if (
+        meta.purpose !== ACCEPT_INTENT_PURPOSE ||
+        meta.offerId !== award.offerId ||
+        meta.shipperId !== award.shipperId
+      ) {
+        return;
+      }
+      if (!RELEASABLE_INTENT_STATUSES.has(intent.status)) return;
+
+      await stripe.paymentIntents.cancel(paymentIntentId);
+    } catch (error) {
+      console.error(`Could not release intent ${paymentIntentId}`, error);
+    }
   },
 
   /**

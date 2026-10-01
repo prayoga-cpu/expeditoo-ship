@@ -211,8 +211,10 @@ only inlet, and an operator awards in the client's place. Tracked in
 revamp above).
 
 **The repo is in user-testing mode.** Every MVP journey walks end to end through the
-UI, but payments run behind `MOCK_PAYMENTS` and the Expedion escalation demo runs off
+UI, but local payments run behind `MOCK_PAYMENTS` and the Expedion escalation demo runs off
 a seed script — read `docs/TESTING_MOCKS.md` before trusting anything money-shaped.
+**Production does not mock**: `env-assertions.ts` refuses to boot it with the flag on or
+without an `sk_live_` key, so an accept there takes real money.
 Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before shipping.
 
 **Gates — all green.** `npx tsc --noEmit` 0 errors · `pnpm lint` 0 errors ·
@@ -551,6 +553,20 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
   carrier here passes KYC with a `NOT NULL` SIRET and `legal_form` is optional
   free text, so the two boxes could not partition the set. 107 tests.
   `docs/specs/carriers_on_route_spec.md`
+- **A saved card is optional; the card is taken in the accept dialog.**
+  Accepting a direct job opens `AcceptPaymentDialog` (job page and job-lane
+  chat bubbles): a saved card in one tap, or a card typed on the spot and kept
+  only if the requester ticks the box. `GET /api/offers/:id/payment` quotes
+  price + fee + total; `POST` authorises **on-session** with manual capture
+  (so 3-D Secure is answered by the person at the keyboard); the accept
+  captures that intent after `commitAward`, and an accept that fails releases
+  it. The intent's metadata names the award and the requester, and is checked
+  on capture and on release — an intent id is a string anyone can send. The
+  dialog is **deliberately not modal**: a Radix modal blocks pointer events
+  and traps focus, and Stripe's 3-D Secure challenge mounts outside it. Job
+  postal codes accept **4–6 digits** (`src/lib/postal-code.ts`); a driver's
+  own address stays at 5. `docs/specs/pay_at_accept_spec.md`,
+  `docs/specs/postal_codes_abroad_spec.md`
 
 **Not done**
 - **`EXPEDION_APP_ORIGINS` is set in Vercel Production but not in `.env.local`**,
@@ -567,10 +583,18 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
   unaffected and every surface prints the same three lines as text beside the
   photo, so a fontless deployment loses the convenience, not the evidence.
   `TODO(EXPEDITOO-TESTING)` in `photo-stamp.service.ts`.
-- **Real Stripe charging** — the code path is written and the card is collected
-  for real at `/create`, but `MOCK_PAYMENTS` still short-circuits the charge
-  itself. Turning it off needs `pi_mock_` rows purged first: each is a captured
-  payment with no money behind it (`docs/TESTING_MOCKS.md` §1)
+- **Real Stripe charging is live in production and has never been exercised
+  there.** `MOCK_PAYMENTS` is unset in Vercel, so an accept takes real money
+  through the accept dialog — verified against Stripe **test** mode only (3-D
+  Secure included). As of 2026-10-01 production's only payment rows are
+  beta-seed mocks, so the first real accept is the first live charge (STATUS →
+  Operator to-do asks for one real accept-and-cancel). Locally the flag still
+  short-circuits the charge, and a `pi_mock_` row is a captured payment with
+  no money behind it (`docs/TESTING_MOCKS.md` §1). **The webhook is still
+  wrong**: `payment_intent.succeeded` calls `recordCarrierPayout`, which
+  schedules the driver's payout at *capture* — now award time — making pay for
+  an undelivered job withdrawable on the off-session lane. The dialog's
+  intents carry no `transfer_group`, so it ignores them (STATUS 2.58.0)
 - **Driver pay on either lane.** Escalation hands the driver the full
   `acceptedPriceCents` as the bid ceiling; direct assignment writes it as the
   offer price. The commission split (`ROADMAP.md` §10) is what decides how much

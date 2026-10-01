@@ -20,6 +20,30 @@ export interface AcceptOfferResult {
   alreadyAccepted: boolean;
 }
 
+/** What accepting would debit now — `GET /api/offers/:id/payment`. */
+export interface PaymentQuote {
+  /** False when nothing is charged here: paid in Expedion, or test mode. */
+  required: boolean;
+  reason: "charge" | "mock" | "prepaid";
+  priceCents: number;
+  platformFeeCents: number;
+  totalCents: number;
+  savedCard: { brand: string; last4: string } | null;
+}
+
+export interface PreparePaymentInput {
+  method: "saved" | "new";
+  saveCard?: boolean;
+  slotId?: string;
+}
+
+/** An intent authorised for this award, or one still waiting on the card. */
+export interface PreparedPayment {
+  paymentIntentId: string;
+  status: string;
+  clientSecret: string | null;
+}
+
 export interface TakeJobInput {
   vehicleId: string;
   message?: string;
@@ -43,9 +67,24 @@ export const offersApi = {
       { reason }
     ),
 
-  /** `slotId` books one of the carrier's proposed slots; absent takes the earliest. */
-  accept: (offerId: string, slotId?: string) =>
-    api.post<AcceptOfferResult>(`/api/offers/${offerId}/accept`, { slotId }),
+  /**
+   * `slotId` books one of the carrier's proposed slots; absent takes the
+   * earliest. `paymentIntentId` is the card just authorised in the payment
+   * dialog, which the award captures.
+   */
+  accept: (offerId: string, slotId?: string, paymentIntentId?: string) =>
+    api.post<AcceptOfferResult>(`/api/offers/${offerId}/accept`, {
+      slotId,
+      paymentIntentId,
+    }),
+
+  paymentQuote: (offerId: string, slotId?: string) =>
+    api.get<PaymentQuote>(
+      `/api/offers/${offerId}/payment${toQuery({ slotId })}`
+    ),
+
+  preparePayment: (offerId: string, input: PreparePaymentInput) =>
+    api.post<PreparedPayment>(`/api/offers/${offerId}/payment`, input),
 
   withdraw: (offerId: string) =>
     api.post<Offer>(`/api/offers/${offerId}/withdraw`),

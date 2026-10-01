@@ -4,6 +4,7 @@ import {
   TIME_SLOTS,
 } from "@/lib/availability-window";
 import { MAX_PATH_POINTS } from "@/lib/route-corridor";
+import { JOB_POSTAL_CODE_PATTERN } from "@/lib/postal-code";
 import { PACKAGING_SERVICES, isRedundantService } from "@/lib/cargo-packaging";
 import { listingOriginEnum, listingStatusEnum } from "@/db/schema/listings";
 
@@ -65,7 +66,8 @@ const endpointSchema = z.object({
   lng: z.number().min(-180).max(180).optional(),
   address: z.string().min(1, "Address is required"),
   city: z.string().min(1, "City is required"),
-  postalCode: z.string().regex(/^\d{5}$/, "INVALID_POSTAL_CODE"),
+  // 4 to 6 digits: a job can collect or deliver abroad (postal_codes_abroad_spec.md).
+  postalCode: z.string().regex(JOB_POSTAL_CODE_PATTERN, "INVALID_POSTAL_CODE"),
   locationType: z.enum(LOCATION_TYPES),
   floor: z.number().int().min(0).optional(),
   hasLift: z.boolean().optional(),

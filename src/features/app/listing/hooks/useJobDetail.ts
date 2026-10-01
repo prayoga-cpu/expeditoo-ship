@@ -29,18 +29,35 @@ export function useJobOffers(listingId: string, sort = "price_asc") {
   });
 }
 
+/** Payment failures that all mean the same thing to the requester. */
+const PAYMENT_FAILURES = [
+  "PAYMENT_CHARGE_FAILED",
+  "PAYMENT_NOT_AUTHORISED",
+  "PAYMENT_INTENT_MISMATCH",
+];
+
 /**
  * Accepting is the point of no return for the shipper: it awards the job,
- * rejects the other carriers and authorises payment. Both the job and its
+ * rejects the other carriers and takes the payment. Both the job and its
  * offers are refetched so the UI reflects the new award immediately.
+ *
+ * `paymentIntentId` is the card authorised in `AcceptPaymentDialog`, which
+ * awaits this mutation and so needs it to reject on failure.
  */
 export function useAcceptOffer(listingId: string) {
   const queryClient = useQueryClient();
   const t = useTranslations("myJobs.detail.accept");
 
   return useMutation({
-    mutationFn: ({ offerId, slotId }: { offerId: string; slotId?: string }) =>
-      offersApi.accept(offerId, slotId),
+    mutationFn: ({
+      offerId,
+      slotId,
+      paymentIntentId,
+    }: {
+      offerId: string;
+      slotId?: string;
+      paymentIntentId?: string;
+    }) => offersApi.accept(offerId, slotId, paymentIntentId),
     onSuccess: (result) => {
       // Not "payment authorised": what happens next depends on the inlet. A
       // direct job is charged here, an escalated one was already paid in
@@ -55,9 +72,11 @@ export function useAcceptOffer(listingId: string) {
           ? t("alreadyAwarded")
           : error instanceof ApiError && error.code === "PAYMENT_METHOD_REQUIRED"
             ? t("paymentMethodRequired")
-            : error instanceof Error
-              ? error.message
-              : t("failed");
+            : error instanceof ApiError && PAYMENT_FAILURES.includes(error.code)
+              ? t("paymentFailed")
+              : error instanceof Error
+                ? error.message
+                : t("failed");
       toast.error(message);
     },
   });

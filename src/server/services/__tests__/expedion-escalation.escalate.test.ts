@@ -142,6 +142,37 @@ describe("expedionEscalationService.escalate — carrier route alerts", () => {
   });
 });
 
+describe("expedionEscalationService.escalate — postal codes abroad", () => {
+  // Brussels (4 digits) and Bucharest (6) were "missing a postal code" to the
+  // old five-digit rule, which blocked escalation outright
+  // (postal_codes_abroad_spec.md).
+  it.each([
+    ["1000", "1000"],
+    ["010011", "010011"],
+    ["L-1234", "1234"],
+  ])("escalates a delivery to %s as %s", async (typed, stored) => {
+    vi.mocked(expedionDal.getById).mockResolvedValue(
+      paidQuote({ deliveryPostalCode: typed }) as never
+    );
+
+    await expedionEscalationService.escalate("q_1", {});
+
+    const payload = vi.mocked(listingsService.createListing).mock.calls[0][1];
+    expect(payload.dropoff.postalCode).toBe(stored);
+  });
+
+  it.each(["123", "1234567"])("still blocks %s", async (typed) => {
+    vi.mocked(expedionDal.getById).mockResolvedValue(
+      paidQuote({ deliveryPostalCode: typed }) as never
+    );
+
+    await expect(
+      expedionEscalationService.escalate("q_1", {})
+    ).rejects.toMatchObject({ code: "ESCALATION_INCOMPLETE" });
+    expect(listingsService.createListing).not.toHaveBeenCalled();
+  });
+});
+
 // cargo_packaging_services_spec.md §6: `isProtected` is a state set by the
 // Expedion form (protected or packed), so it maps onto the state field and its
 // absence onto the protection service — no longer onto "help loading".

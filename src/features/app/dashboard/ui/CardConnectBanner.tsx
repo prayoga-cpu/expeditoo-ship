@@ -10,12 +10,11 @@ import { Button } from "@/components/ui/button";
  * A requester with an open or awarded direct-origin listing and no saved
  * card, nudged toward /profile/payment-methods/create.
  *
- * Posting no longer requires a card. The charge still only happens when a
- * carrier is accepted (`chargeForShipment`), which throws
- * `PAYMENT_METHOD_REQUIRED` and reopens the listing (`compensateFailedAward`)
- * if there is still no card at that point — this banner is the advance
- * warning for a failure that would otherwise stay silent until someone
- * actually tries to accept a bid.
+ * A nudge, not a warning. Neither posting nor accepting needs a saved card:
+ * the requester types one into `AcceptPaymentDialog` when they accept a bid
+ * (pay_at_accept_spec.md). This used to say they could not accept without
+ * one, and the client said plainly that it should not be necessary — only
+ * easier, which is what a saved card now is: one tap instead of a form.
  */
 export function CardConnectBanner() {
   const t = useTranslations("dashboard.cardNudge");
