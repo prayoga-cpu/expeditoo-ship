@@ -159,8 +159,14 @@ export const EarningsStatementPDF = ({
       {lines.length === 0 ? (
         <Text style={styles.empty}>{emptyLabel}</Text>
       ) : (
-        lines.map((line) => (
-          <View key={line.reference} style={styles.tableRow} wrap={false}>
+        // Keyed with the position too: a job re-awarded after a withdrawal
+        // carries more than one run under the one reference.
+        lines.map((line, index) => (
+          <View
+            key={`${line.reference}-${index}`}
+            style={styles.tableRow}
+            wrap={false}
+          >
             <Text style={styles.colDate}>{day(line.deliveredAt)}</Text>
             <Text style={styles.colRef}>{line.reference}</Text>
             <Text style={styles.colRoute}>

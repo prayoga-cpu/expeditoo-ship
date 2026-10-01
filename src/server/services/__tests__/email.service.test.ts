@@ -84,6 +84,7 @@ describe('emailService', () => {
             await emailService.sendListingPostedEmail('user@test.com', {
                 recipientName: 'Jane',
                 listingTitle: 'Sofa to Marseille',
+                listingReference: 100042,
                 pickupCity: 'Lyon',
                 dropoffCity: 'Marseille',
                 budgetLabel: '250,00 €',

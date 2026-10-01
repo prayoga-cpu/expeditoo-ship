@@ -50,6 +50,7 @@ export interface ConversationResponse {
   listing: {
     id: string;
     title: string;
+    reference: number;
   } | null;
   lastMessageAt: string | null;
   lastMessage: string | null;
@@ -89,6 +90,7 @@ export interface ThreadResponse {
     listing: {
       id: string;
       title: string;
+      reference: number;
       // The DAL returns this relation as `photos`. It was read as `images`
       // for as long as the thread has existed, so the header always fell
       // back to the placeholder.

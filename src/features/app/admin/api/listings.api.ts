@@ -13,6 +13,8 @@ export type ListingOrigin = "direct" | "expedion";
 
 export interface AdminListingRow {
   id: string;
+  /** « Réf. 100042 » — listing_reference_spec.md. */
+  reference: number;
   title: string;
   status: ListingStatus;
   origin: ListingOrigin;

@@ -34,7 +34,6 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
 import { CenteredEmptyState } from "@/components/ui/centered-empty-state";
 import { JobCard } from "./JobCard";
-import { ExpedionSourceBanner } from "./ExpedionSourceBanner";
 import { RouteSearchBar } from "./RouteSearchBar";
 import { BoardMap } from "./BoardMap";
 import { AvailabilityField } from "./AvailabilityField";
@@ -138,8 +137,6 @@ export function JobBoard({ origin }: { origin?: "direct" | "expedion" } = {}) {
               : t("count", { count: total })}
         </p>
       </header>
-
-      <ExpedionSourceBanner />
 
       <RouteSearchBar
         mode={mode}

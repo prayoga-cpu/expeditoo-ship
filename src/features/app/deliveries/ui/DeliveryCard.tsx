@@ -2,6 +2,7 @@ import Link from "next/link";
 import { MapPin, Clock, User } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/currency";
+import { ListingReference } from "@/features/app/listing/ui/ListingReference";
 import { ShipmentStatusBadge } from "./ShipmentStatusBadge";
 import type { DeliverySummaryView } from "../types";
 
@@ -18,6 +19,9 @@ export function DeliveryCard({ delivery }: { delivery: DeliverySummaryView }) {
             <h3 className="truncate text-lg font-semibold text-foreground group-hover:text-primary">
               {delivery.title}
             </h3>
+            {delivery.reference !== null && (
+              <ListingReference reference={delivery.reference} />
+            )}
             <p className="mt-1.5 flex items-center gap-1.5 text-sm text-muted-foreground">
               <MapPin className="h-4 w-4 shrink-0" />
               <span className="truncate">

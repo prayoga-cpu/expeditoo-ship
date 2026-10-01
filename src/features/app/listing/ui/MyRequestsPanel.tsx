@@ -19,6 +19,7 @@ import { PageLoader } from "@/components/ui/page-loader";
 import { formatCurrency } from "@/lib/currency";
 import { useMyRequests } from "../hooks/useMyRequests";
 import { RequestSummary } from "./RequestSummary";
+import { ListingReference } from "./ListingReference";
 import { STATUS_TONE } from "../statusTone";
 import type { Job, ListingStatus } from "../types";
 
@@ -117,9 +118,7 @@ function JobRow({ job }: { job: Job }) {
               <Badge className={STATUS_TONE[job.status]}>
                 {t(`status.${job.status}`)}
               </Badge>
-              {job.origin === "expedion" && (
-                <Badge variant="secondary">via Expedion</Badge>
-              )}
+              <ListingReference reference={job.reference} />
             </div>
             <div className="mt-2">
               <RequestSummary

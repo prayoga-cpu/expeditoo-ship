@@ -34,6 +34,8 @@ export type DriverStatusMove = Exclude<DriverShipmentStatus, "CANCELLED" | "PEND
 /** The cargo facts a driver needs from the underlying job. */
 export interface DriverShipmentListing {
   id: string;
+  /** « Réf. 100042 » — listing_reference_spec.md. */
+  reference: number;
   title: string;
   description: string;
   weightKg: number;

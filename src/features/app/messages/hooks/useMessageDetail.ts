@@ -182,6 +182,7 @@ export function useMessageDetail(conversationId: string) {
         reviewsCount: other?.reviewsCount,
       },
       listing: threadData.conversation.listing?.title || "",
+      listingReference: threadData.conversation.listing?.reference,
       listingImage: threadData.conversation.listing?.photos?.[0]?.url,
       messages: [],
       offerContext: threadData.offerContext,

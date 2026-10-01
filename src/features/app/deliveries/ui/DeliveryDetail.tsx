@@ -29,6 +29,7 @@ import {
 import { ShipmentPhotoGallery } from "@/features/app/common/ui/ShipmentPhotoGallery";
 import { ShipmentIncidentsSection } from "@/features/app/incidents/ui";
 import { StopTransportDialog } from "@/features/app/common/ui/StopTransportDialog";
+import { ListingReference } from "@/features/app/listing/ui/ListingReference";
 import type { CancellationCategory } from "@/lib/cancellation-policy";
 import { ShipmentStatusBadge } from "./ShipmentStatusBadge";
 import { Timeline } from "./Timeline";
@@ -74,6 +75,9 @@ export function DeliveryDetail({
           <h1 className="mt-2 text-2xl font-semibold tracking-tight text-balance">
             {delivery.title}
           </h1>
+          {delivery.reference !== null && (
+            <ListingReference reference={delivery.reference} copyable />
+          )}
           {delivery.priceCents !== undefined && (
             <p className="mt-1 font-mono text-lg text-muted-foreground">
               {t("details.agreedPrice")} {formatCurrency(delivery.priceCents)}

@@ -14,6 +14,8 @@ export type DeliveryRole = "shipper" | "carrier" | "driver";
 export interface DeliverySummaryView {
   id: string;
   title: string;
+  /** The job's « Réf. »; null only when its listing no longer resolves. */
+  reference: number | null;
   status: ShipmentStatus;
   pickupAddress: string;
   dropoffAddress: string;
@@ -53,6 +55,8 @@ export interface DeliveryDetailView {
   id: string;
   listingId: string;
   title: string;
+  /** The job's « Réf. »; null only when its listing no longer resolves. */
+  reference: number | null;
   status: ShipmentStatus;
   /** Null when the viewer is not a party — an operator or admin looking on. */
   role: DeliveryRole | null;

@@ -8,6 +8,7 @@ import { Circle, CircleDot } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/currency";
+import { ListingReference } from "@/features/app/listing/ui/ListingReference";
 import type { CompletedTrip } from "../hooks/useCarrierTrips";
 
 const STATUS_STYLES: Record<string, string> = {
@@ -54,9 +55,11 @@ export function CompletedTripCard({ trip }: { trip: CompletedTrip }) {
             >
               {shipment.listing?.title ?? t("untitled")}
             </Link>
-            <p className="truncate font-mono text-xs text-muted-foreground">
-              {t("reference", { ref: earnings?.reference ?? shipment.id })}
-            </p>
+            {shipment.listing && (
+              <div>
+                <ListingReference reference={shipment.listing.reference} />
+              </div>
+            )}
           </div>
 
           {amountCents !== undefined && (

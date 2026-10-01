@@ -13,6 +13,7 @@ import {
 
 export interface AdminListing {
   id: string;
+  reference: number;
   title: string;
   shipper: {
     name: string;
@@ -37,6 +38,7 @@ export const adminListingKeys = {
 export function toAdminListing(row: AdminListingRow): AdminListing {
   return {
     id: row.id,
+    reference: row.reference,
     title: row.title,
     shipper: {
       name: row.shipper?.name || "Unknown",

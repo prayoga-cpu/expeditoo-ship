@@ -746,7 +746,7 @@
       "confirmedByClient": "Confirmed by the client",
       "awaitingClient": "Awaiting the client's confirmation",
       "channel": {
-        "expedion_app": "via the Expedion app",
+        "expedion_app": "via their mobile app",
         "link": "via the link they received",
         "app": "in the app"
       },
@@ -1217,7 +1217,6 @@
     },
     "detail": {
       "tab": "Details",
-      "viaExpedion": "via Expedion",
       "fragile": "Fragile",
       "needsHelp": "Loading help",
       "packaging": {
@@ -3257,7 +3256,6 @@
         "searchPlaceholder": "Search by title, reference, city…",
         "downloadStatement": "Download the period statement",
         "closedOn": "Closed on {date}",
-        "reference": "Reference {ref}",
         "untitled": "Transport",
         "commission": "Commission",
         "net": "Net",
@@ -3325,15 +3323,17 @@
       "liveOffers": "Bids awaiting a decision"
     }
   },
+  "listingReference": {
+    "label": "Ref. {reference}",
+    "copy": "Copy reference",
+    "copied": "Reference {reference} copied",
+    "copyFailed": "Couldn't copy the reference"
+  },
   "jobBoard": {
     "title": "Open jobs",
     "loading": "Loading…",
     "count": "{count} jobs accepting offers",
     "countOne": "{count} job accepting offers",
-    "source": {
-      "description": "Jobs badged “via Expedion” arrive from there — a client accepted a quote and has already paid.",
-      "cta": "Open Expedion"
-    },
     "search": "Search jobs",
     "clearSearch": "Clear search",
     "filters": "Filters",
@@ -3353,7 +3353,7 @@
     "empty": {
       "title": "No jobs match",
       "filtered": "Try widening your filters — new jobs arrive through the day.",
-      "none": "No jobs are open right now. New ones appear as Expedion escalates them."
+      "none": "No jobs are open right now. New jobs appear here as soon as they're posted."
     },
     "previous": "Previous",
     "next": "Next",
@@ -3399,7 +3399,6 @@
       "budget": "budget",
       "youBid": "You bid",
       "urgent": "URGENT",
-      "viaExpedion": "via Expedion",
       "fragile": "Fragile",
       "needsHelp": "Help loading",
       "needsProtection": "Needs protection",

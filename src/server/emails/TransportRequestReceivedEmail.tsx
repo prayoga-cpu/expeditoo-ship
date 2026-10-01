@@ -27,6 +27,8 @@ import * as React from "react";
 interface TransportRequestReceivedEmailProps {
   recipientName?: string | null;
   listingTitle: string;
+  /** « Réf. 100042 » — what to quote to a carrier or to support. */
+  listingReference: number;
   pickupCity: string;
   dropoffCity: string;
   budgetLabel: string;
@@ -36,6 +38,7 @@ interface TransportRequestReceivedEmailProps {
 export const TransportRequestReceivedEmail = ({
   recipientName,
   listingTitle,
+  listingReference,
   pickupCity,
   dropoffCity,
   budgetLabel,
@@ -63,6 +66,9 @@ export const TransportRequestReceivedEmail = ({
             <Section className="my-4">
               <Text className="text-[#666666] text-[13px] m-0 font-semibold">
                 {listingTitle}
+              </Text>
+              <Text className="text-[#666666] text-[13px] m-0 mt-1">
+                Référence : {listingReference}
               </Text>
               <Text className="text-[#666666] text-[13px] m-0 mt-1">
                 {pickupCity} → {dropoffCity}

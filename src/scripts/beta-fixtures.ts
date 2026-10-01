@@ -358,8 +358,8 @@ export function expedionQuoteRow(now: Date): InsertExpedionQuote {
     email: "beta-client@expeditoo.test",
     phone: null,
     description:
-      "BETA — Paire de fauteuils Louis XV cannés, lot 63. Devis Expedion " +
-      "payé, escaladé sur la place de marché pour attribution.",
+      "BETA — Paire de fauteuils Louis XV cannés, lot 63. Assises cannées " +
+      "fragiles, à porter par le cadre.",
     auctionHouseName: "Hôtel Drouot (BETA)",
     pickupAddress: PLACES.drouot.address,
     pickupPostalCode: PLACES.drouot.postalCode,

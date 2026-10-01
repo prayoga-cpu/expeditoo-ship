@@ -540,7 +540,7 @@ async function announceListingPosted(listing: Listing, shipperId: string) {
       userId: shipperId,
       type: "listing_posted",
       title: "Votre demande est en ligne",
-      message: `"${listing.title}" est visible par les transporteurs.`,
+      message: `"${listing.title}" (réf. ${listing.reference}) est visible par les transporteurs.`,
       linkUrl: `/listing/${listing.id}`,
       data: { listingId: listing.id },
     })
@@ -559,6 +559,7 @@ async function sendListingPostedEmail(listing: Listing, shipperId: string) {
   await emailService.sendListingPostedEmail(user.email, {
     recipientName: user.name,
     listingTitle: listing.title,
+    listingReference: listing.reference,
     pickupCity: listing.pickupCity,
     dropoffCity: listing.dropoffCity,
     budgetLabel: formatCurrency(listing.budgetCents),

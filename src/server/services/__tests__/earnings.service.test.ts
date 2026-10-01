@@ -27,7 +27,7 @@ const row = (overrides: Record<string, unknown> = {}) => ({
   listingId: "l1",
   listingTitle: "Canapé Châtellerault → Montrouge",
   origin: "expedion",
-  externalRef: "1670768",
+  listingReference: 100042,
   deliveredAt: new Date("2026-08-24"),
   pickupCity: "Châtellerault",
   dropoffCity: "Montrouge",
@@ -135,9 +135,23 @@ describe("earningsService.getForCarrier", () => {
     });
   });
 
-  it("falls back to the shipment id when the job carries no external ref", async () => {
+  it("references the job by its own number, not the Expedion quote id", async () => {
+    vi.mocked(earningsDal.listForCarrier).mockResolvedValue([row()] as never);
+    vi.mocked(earningsDal.summariseForCarrier).mockResolvedValue(
+      summary() as never
+    );
+
+    const result = await earningsService.getForCarrier(
+      "u1",
+      earningsQuerySchema.parse({})
+    );
+
+    expect(result.items[0].reference).toBe("100042");
+  });
+
+  it("falls back to the shipment id only when the job no longer resolves", async () => {
     vi.mocked(earningsDal.listForCarrier).mockResolvedValue([
-      row({ externalRef: null }),
+      row({ listingReference: null }),
     ] as never);
     vi.mocked(earningsDal.summariseForCarrier).mockResolvedValue(
       summary() as never

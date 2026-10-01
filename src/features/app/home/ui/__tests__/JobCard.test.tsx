@@ -29,6 +29,7 @@ const render = (ui: React.ReactElement) =>
 
 const JOB: BoardJob = {
   id: "job_1",
+  reference: 100042,
   shipperId: "user_1",
   status: "open",
   reopenedAt: null,

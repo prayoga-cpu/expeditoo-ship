@@ -511,6 +511,26 @@ describe("createListing", () => {
       );
     });
 
+    it("names the request by the reference the database gave it", async () => {
+      // The sequence issues it on insert (listing_reference_spec.md §5), so it
+      // is read from the created row, never from the input.
+      vi.mocked(listingsDal.create).mockImplementationOnce(
+        async (row) => ({ ...row, reference: 100042 }) as never
+      );
+
+      await listingsService.createListing("user-1", createInput());
+
+      expect(notificationsService.createNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining("réf. 100042"),
+        })
+      );
+      expect(emailService.sendListingPostedEmail).toHaveBeenCalledWith(
+        "jane@example.com",
+        expect.objectContaining({ listingReference: 100042 })
+      );
+    });
+
     it("stays silent for a draft", async () => {
       await listingsService.createListing(
         "user-1",

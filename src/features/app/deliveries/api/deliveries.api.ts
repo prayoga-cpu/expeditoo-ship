@@ -31,6 +31,8 @@ export interface ShipmentParty {
 /** The job the shipment executes. */
 export interface ShipmentListing {
   id: string;
+  /** « Réf. 100042 » — listing_reference_spec.md. */
+  reference: number;
   title: string;
   status: string;
 }

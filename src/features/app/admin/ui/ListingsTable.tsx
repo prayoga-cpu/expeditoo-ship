@@ -34,6 +34,8 @@ import { DataTable, DataTableColumnHeader, dateRangeFilterFn } from "./data-tabl
 import { formatCurrency } from "@/lib/currency";
 import { STATUS_TONE } from "@/features/app/listing/statusTone";
 import type { AdminListing } from "../hooks/useAdminListings";
+import { ListingReference } from "@/features/app/listing/ui/ListingReference";
+import { parseListingReference } from "@/lib/listing-reference";
 
 type Listing = AdminListing;
 
@@ -148,16 +150,22 @@ export function ListingsTable({
             <span className="text-xs text-muted-foreground">
               {row.original.pickupCity} → {row.original.dropoffCity}
             </span>
+            <ListingReference reference={row.original.reference} />
           </div>
         ),
         filterFn: (row, id, filterValue) => {
           const value = (filterValue as string).toLowerCase();
+          // « Réf. 100042 », prefix and all, is what support gets read out.
+          if (parseListingReference(value) === row.original.reference) {
+            return true;
+          }
           return [
             row.original.title,
             row.original.shipper.name,
             row.original.shipper.email,
             row.original.pickupCity,
             row.original.dropoffCity,
+            String(row.original.reference),
           ].some((field) => field.toLowerCase().includes(value));
         },
       },

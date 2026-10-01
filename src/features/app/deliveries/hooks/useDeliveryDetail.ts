@@ -90,6 +90,7 @@ function toDetailView(
     id: shipment.id,
     listingId: shipment.listingId,
     title: shipment.listing?.title ?? t("card.defaultTitle"),
+    reference: shipment.listing?.reference ?? null,
     status: shipment.status,
     role,
     priceCents: shipment.priceCents,

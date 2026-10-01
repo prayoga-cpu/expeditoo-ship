@@ -30,6 +30,7 @@ function matchesSearch(trip: CompletedTrip, term: string) {
 
   return [
     trip.shipment.listing?.title,
+    trip.shipment.listing?.reference,
     trip.shipment.id,
     trip.earnings?.reference,
     trip.shipment.pickupAddress,

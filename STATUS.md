@@ -27,6 +27,17 @@ adversarial verification pass — treat their detail as slightly less certain.
 Work that needs a human hand outside the codebase. Add to this list rather
 than leaving it in a chat message.
 
+- [ ] **Run Actions → "Migrate database" for `0033_listing_reference`
+      before the 2.57.0 deploy reaches production.** Every listing read
+      selects `reference` (Drizzle selects every column the schema declares),
+      so without it the board, job pages, deliveries and threads all answer
+      500. It is safe to run ahead of the deploy, because the current code
+      ignores the column and the database fills it on insert. It numbers
+      existing jobs by age from 100001 and re-runs without renumbering.
+      Apply `0032` first; the migrator does, in journal order. The same run
+      applies `0034_escalated_description_source` (data only: it strips the
+      « Job escaladé depuis Expedion Enchères. » line from escalated jobs).
+
 - [ ] **Run Actions → "Migrate database" for
       `0032_listing_packaging_services` before the 2.56.0 deploy reaches
       production.** `createListing` writes `needs_protection` /
@@ -272,6 +283,159 @@ than leaving it in a chat message.
       in `.env.example`.
 
 ---
+
+## ✅ 2026-09-30 — Job Reference Number, and Expedion No Longer Announced to Drivers (2.57.0)
+
+_"it should be useful to add the field « ad reference » for users (asker and
+shi[pper]) … And shipper-carrier"_ and, on a photo of the `/expedion` board
+with its Expedion Enchères banner, _"No need to inform about
+expedion-Encheres"_. That is client feedback from 2026-09-29 (WhatsApp). The
+owner's instruction was _"implement those feedbacks"_.
+
+Contracts in `docs/specs/listing_reference_spec.md` and
+`docs/specs/expedion_source_hidden_spec.md` (plan:
+`docs/plans/plan_listing_reference.md`).
+
+**Two questions went back to the client unanswered; this takes the
+defaults.** (1) "Ad reference" is read as a *référence d'annonce* the platform
+issues, not a free-text box the requester types into. If they meant their own
+purchase-order number, that is a separate nullable column beside this one, not
+a change to it. (2) The "via Expedion" badges went with the banner, because
+the banner existed only to explain the badge.
+
+**The reference.** `listings.reference`, `integer NOT NULL UNIQUE`, defaulted
+from `listing_reference_seq` (migration `0033_listing_reference`). The
+sequence is its only writer: the column is on neither `createListingSchema`
+nor `updateListingSchema`, and `toInsert` lists fields by hand anyway. It is
+**six digits from 100001, digits only**, because it gets read out on the
+phone, and the same sequence serves both inlets. Existing rows are numbered
+in `created_at, id` order. The column is added *nullable, without a default*
+and backfilled by `row_number()`. A volatile default on `ADD COLUMN` would
+have numbered them in physical order instead. The migration re-runs without
+renumbering anything (it backfills only `reference IS NULL`, counting up from
+the max), because a reference that changes after being quoted is worse than
+none. There is no display formatting: the i18n label is « Réf. {reference} »
+/ "Ref. {reference}", and `ListingReference` (`features/app/listing/ui`) is
+the only component that writes it. Its `copyable` variant copies the **bare
+number**, which is what every search takes.
+
+Where it shows: the job page header (copyable), « Mes demandes » rows and
+delivered cards, `/deliveries` cards and detail (copyable), the driver's run
+page (copyable), the thread context card, completed trips, the award queue
+and the admin listings table. It is **not on the board card**: a carrier who
+is not yet party to a job has nothing to quote. The board finds a job by it
+instead. `parseListingReference` (`src/lib/listing-reference.ts`) accepts
+`Réf.`/`ref`/`référence`/`n°`/`#` prefixes and inner spaces (« 100 042 »),
+and `listingsDal.browse` ORs `reference = n` with the full-text match, so
+every other board rule still applies. A referenced job that is expired or
+awarded does not come back.
+
+**Readers that pick listing columns by hand had to be told.**
+`DRIVER_LISTING_FIELDS` gained `reference` (it is not a commercial term), as
+did both `messages.dal.ts` listing projections and the earnings row.
+
+**Bugs found on the way**
+- **The client confirmation page printed the job's *title* under
+  "Référence"** (`describeToken`), and the confirmation email did the same on
+  the direct lane. Both now go through one `referenceFor`: the Expedion
+  bordereau when the job's quote has one (the number that client already
+  knows), otherwise the job reference. The page gained a quote lookup to
+  apply the same rule the email did.
+- **Earnings `reference` was `external_ref ?? shipmentId`**: the Expedion
+  quote id on one inlet and a raw 21-character id on the other, printed on
+  the carrier's statement PDF and the completed-trip card. It is the job
+  reference now. The PDF's row `key` was that same string, so it now carries
+  the index too, because a re-awarded job has more than one run under one
+  reference.
+- **« Mes demandes » had two "via Expedion" badges hardcoded in English**
+  (`MyRequestsPanel`, `DeliveredRequestCard`), outside next-intl. They are
+  gone with the rest.
+- **The driver's run page showed "Expédition #" plus the shipment nanoid**,
+  which nobody can read out. It shows the job reference now and keeps the old
+  line only for a run whose listing no longer resolves.
+- **Every escalated job's description ended « Job escaladé depuis Expedion
+  Enchères. »** (`buildDescription`), so removing the banner alone would have
+  left drivers told on every escalated job page. Only the Chromium pass caught
+  it, because no unit test reads a generated description. The line is gone
+  from the generator. Migration `0034_escalated_description_source` strips it
+  from stored jobs by exact match on `origin = 'expedion'` only (checked on a
+  scratch DB: the escalated row changed, a direct row containing the same words
+  did not, and a second run updated 0). The beta seed's lot text (« Devis
+  Expedion payé, escaladé sur la place de marché… »), which escalation copies
+  into the job, is reworded too.
+
+**Expedion, not announced.** Deleted `ExpedionSourceBanner.tsx`, and with it
+`ExpedionMark`/`ExpedionWordmark` in `brand-mark.tsx`, which had no other
+consumer (git has them, and the Flutter original is `ds_logo.dart`). Removed
+the badge from `JobCard`, `JobDetail` and both « Mes demandes » cards. Dropped
+the keys `jobBoard.source.*`, `jobBoard.card.viaExpedion` and
+`myJobs.detail.viaExpedion`, plus `carrier.trips.completed.reference`, which
+is now unused. Reworded `jobBoard.empty.none` (it said jobs appear "as
+Expedion escalates them", which has not been the only inlet since `/create`
+came back) and `deliveries.confirmation.channel.expedion_app` (« via son
+application mobile »). **Kept deliberately**: `listings.origin` and everything
+it decides, every admin/operator surface, and the **marketing site**, which
+presents Expeditoo as part of the Expedion group. That is a brand call for
+the client, not what they pointed at.
+
+**Verification**
+- `npx tsc --noEmit`: 0 errors, whole project. Three other sessions were
+  editing the same tree, and the run was repeated after they settled.
+- `pnpm lint` on every touched file: 0 errors. There are 4 warnings, all
+  pre-existing unused imports.
+- `pnpm vitest run`: 1986 of 1987 pass across 156 files. The one failure is
+  `changelog.test.ts`'s CHANGELOG/STATUS lockstep, caught mid-write: a
+  concurrent session had put its 2.55.0 into `CHANGELOG.md` and not yet into
+  this file. An earlier run's only failure, in `thread-offers.service`, was
+  that session's pay-at-accept work in flight, and it has since been fixed.
+  New:
+  `listing-reference.test.ts` (25), `listings-browse.dal.test.ts` (3, SQL
+  rendered by Drizzle's `PgDialect`), `dto/listing-reference.test.ts` (2),
+  `listing-reference-migration.test.ts` (5), `ListingReference.test.tsx` (6),
+  `JobDetail.test.tsx` (2), `DeliveryCard.test.tsx` (3) and
+  `expedion-not-announced.test.tsx` (4) and
+  `expedion-escalation.description.test.ts` (3), plus reference cases in the
+  confirmations (+4), earnings (+1), listings (+1), email and driver
+  redaction suites.
+- **`0033` against Postgres 17, on a scratch DB** with five rows inserted out
+  of age order and a same-instant tie. They came out 100001–100005 by
+  `created_at, id`. The next insert got 100006. A **second full run of the
+  migration renumbered nothing**, and the next insert got 100007. A duplicate
+  and a NULL were both refused by name (`listings_reference_unique`,
+  not-null). `pg_get_serial_sequence` resolves, and an empty table's first
+  insert got 100001. Then on the local dev DB (`pnpm db:migrate`, 31 → 33
+  applied): the six beta rows became 100001–100006 in creation order.
+- **API against the dev DB** (expeditoo dev server on :3001): board `q=100062`,
+  `q=Réf. 100117` and `q=#100 117` each returned exactly their job,
+  `q=fauteuils` still matched by text, and `q=100063` (never issued)
+  returned 0. The seeded 100002/100004/100006 correctly did not come back:
+  awarded or expired. `GET /api/listings/:id` carries `reference` as an
+  integer, and so do all 9 of 9 `GET /api/admin/listings` rows.
+- **Chromium** (Playwright, throwaway requester and admin accounts plus two
+  copied jobs, all deleted afterwards). The board has no banner and no
+  Expedion text. The job page header shows « Réf. 100062 » on an escalated
+  job with no origin badge. The copy button's accessible name is « Copier la
+  référence »; clicking it toasts « Référence 100117 copiée » and puts
+  exactly `100117` on the clipboard. Also shown: the « Mes demandes » row,
+  the delivery header, the driver's run page (light and dark, with no nanoid
+  left) and the thread card. The admin table filtered by « Réf. 100117 »
+  returns 1 row. EN reads "Ref. 100117" / "Copy reference". At 390 px in dark
+  theme there is no horizontal scroll. Staff cannot open
+  `/driver/shipments/[id]`, by design, so that page was checked as the run's
+  driver.
+
+**Known limits**
+- **The Flutter `expedion_encheres` app does not show the reference.** An
+  escalated job's client knows it by the bordereau, which is what the
+  confirmation page and email give them.
+- **Invoices and credit notes do not print it.** They carry their own
+  numbers, and their billed party is frozen onto the row
+  (`invoice_at_payment_spec.md`), so adding it is a document change for the
+  client to ask for.
+- The board search by reference finds only what the board would show anyway.
+  That is intended; support uses the admin table, which lists every status.
+- References have gaps (a failed insert consumes one), and nothing may assume
+  they are contiguous.
 
 ## ✅ 2026-09-30 — Packaging Services on /create, and One Scrollbar (2.56.0)
 

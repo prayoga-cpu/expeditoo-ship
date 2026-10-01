@@ -192,9 +192,6 @@ export function JobCard({ job, isHighlighted = false }: JobCardProps) {
               {t("urgent")}
             </Badge>
           )}
-          {job.origin === "expedion" && (
-            <Badge variant="secondary">{t("viaExpedion")}</Badge>
-          )}
           {job.isFragile && <Badge variant="outline">{t("fragile")}</Badge>}
           {job.needsHelp && <Badge variant="outline">{t("needsHelp")}</Badge>}
           {job.needsProtection && (

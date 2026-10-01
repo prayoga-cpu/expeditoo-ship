@@ -38,6 +38,7 @@ import {
   availabilityIntervals,
   type TimeSlot,
 } from "@/lib/availability-window";
+import { parseListingReference } from "@/lib/listing-reference";
 
 type Executor = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -302,9 +303,15 @@ export const listingsDal = {
       conditions.push(eq(listings.categoryId, filters.categoryId));
     }
     if (filters.q) {
+      const fullText = sql`to_tsvector('french', ${listings.title} || ' ' || ${listings.description})
+            @@ plainto_tsquery('french', ${filters.q})`;
+      // « Réf. 100042 » finds its job, and still only if the rest of the
+      // board's rules let it through (listing_reference_spec.md §4).
+      const reference = parseListingReference(filters.q);
       conditions.push(
-        sql`to_tsvector('french', ${listings.title} || ' ' || ${listings.description})
-            @@ plainto_tsquery('french', ${filters.q})`
+        reference === null
+          ? fullText
+          : or(eq(listings.reference, reference), fullText)
       );
     }
     if (filters.origin) {

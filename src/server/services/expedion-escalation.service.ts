@@ -158,7 +158,9 @@ function buildDescription(quote: ExpedionQuote): string {
       ? `Dimensions ${quote.lengthCm} x ${quote.widthCm} x ${quote.heightCm} cm.`
       : null,
     quote.isProtected ? "Objet emballé." : "Objet non emballé, à protéger.",
-    "Job escaladé depuis Expedion Enchères.",
+    // No line saying where the job came from: drivers read this, and the
+    // client asked that Expedion Enchères not be announced to them
+    // (expedion_source_hidden_spec.md). `origin` carries it for operators.
   ].filter(Boolean);
   return parts.join(" ").slice(0, 5000);
 }

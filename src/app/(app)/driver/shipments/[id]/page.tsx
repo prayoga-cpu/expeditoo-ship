@@ -22,6 +22,7 @@ import {
   Info,
 } from "lucide-react";
 import { useDriverShipmentDetail } from "@/features/app/driver/hooks/useDriverShipments";
+import { ListingReference } from "@/features/app/listing/ui/ListingReference";
 import type {
   DriverShipmentDetail,
   DriverShipmentListing,
@@ -72,10 +73,22 @@ export default function ShipmentDetailPage() {
             <h1 className="text-2xl md:text-3xl font-bold text-foreground">
               {shipment.listing?.title || t("shipmentDetails")}
             </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              {t("shipmentNumber")}
-              {id}
-            </p>
+            {/* The job's « Réf. » is the number worth quoting — to support, or
+                to the client on the phone. The run's own id is a 21-character
+                token nobody can read out, kept only for a run whose job no
+                longer resolves (listing_reference_spec.md §3). */}
+            {shipment.listing ? (
+              <ListingReference
+                reference={shipment.listing.reference}
+                copyable
+                className="mt-1"
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground mt-1">
+                {t("shipmentNumber")}
+                {id}
+              </p>
+            )}
           </div>
         </div>
         <ShipmentStatusBadge status={shipment.status} />

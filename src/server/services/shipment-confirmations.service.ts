@@ -102,6 +102,19 @@ function toView(row: {
   };
 }
 
+/**
+ * The number the client knows this job by: the bordereau Expedion printed,
+ * when the job came from a quote that has one, else the job's own reference
+ * (listing_reference_spec.md §5). Never the title, which is not a reference —
+ * it stood in for one until jobs had a number.
+ */
+function referenceFor(
+  listing: { reference: number } | null | undefined,
+  quote: { bordereauNumber: string | null } | null | undefined
+): string | null {
+  return quote?.bordereauNumber ?? (listing ? String(listing.reference) : null);
+}
+
 export interface AttestInput {
   shipmentId: string;
   milestone: ConfirmableMilestone;
@@ -330,10 +343,10 @@ export const shipmentConfirmationsService = {
     const shipment = await shipmentsDal.getById(claims.shipmentId);
     if (!shipment) throw err("SHIPMENT_NOT_FOUND", 404);
 
-    const existing = await shipmentsDal.getConfirmation(
-      claims.shipmentId,
-      claims.milestone
-    );
+    const [existing, quote] = await Promise.all([
+      shipmentsDal.getConfirmation(claims.shipmentId, claims.milestone),
+      expedionDal.getByListingId(shipment.listingId),
+    ]);
 
     return {
       milestone: claims.milestone,
@@ -345,7 +358,7 @@ export const shipmentConfirmationsService = {
       // somehow missing - a fallback here would reinstate exactly the leak.
       pickupCity: shipment.listing?.pickupCity ?? null,
       dropoffCity: shipment.listing?.dropoffCity ?? null,
-      reference: shipment.listing?.title ?? null,
+      reference: referenceFor(shipment.listing, quote),
       alreadyConfirmed: Boolean(existing),
       confirmedAt: existing?.createdAt ?? null,
       /**
@@ -402,7 +415,7 @@ export const shipmentConfirmationsService = {
       recipientName: quote?.firstName ?? shipment.shipper?.name ?? null,
       milestone,
       confirmUrl: url,
-      reference: quote?.bordereauNumber ?? shipment.listing?.title ?? null,
+      reference: referenceFor(shipment.listing, quote),
       dropoffAddress: shipment.dropoffAddress,
     });
   },

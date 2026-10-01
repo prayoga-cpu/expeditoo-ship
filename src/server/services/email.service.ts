@@ -226,6 +226,7 @@ export const emailService = {
     params: {
       recipientName?: string | null;
       listingTitle: string;
+      listingReference: number;
       pickupCity: string;
       dropoffCity: string;
       budgetLabel: string;

@@ -44,7 +44,7 @@ export const earningsDal = {
         listingId: shipments.listingId,
         listingTitle: listings.title,
         origin: listings.origin,
-        externalRef: listings.externalRef,
+        listingReference: listings.reference,
         deliveredAt: shipments.deliveredAt,
         pickupCity: listings.pickupCity,
         dropoffCity: listings.dropoffCity,

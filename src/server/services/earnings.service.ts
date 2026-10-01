@@ -56,7 +56,12 @@ function toItem(row: EarningsRow) {
     shipmentId: row.shipmentId,
     listingId: row.listingId,
     listingTitle: row.listingTitle ?? null,
-    reference: row.externalRef ?? row.shipmentId,
+    // The job's own number, on both inlets. It was the Expedion quote id on
+    // one and a raw shipment id on the other (listing_reference_spec.md §5).
+    reference:
+      row.listingReference === null
+        ? row.shipmentId
+        : String(row.listingReference),
     deliveredAt: row.deliveredAt,
     pickupCity: row.pickupCity ?? row.pickupAddress,
     dropoffCity: row.dropoffCity ?? row.dropoffAddress,

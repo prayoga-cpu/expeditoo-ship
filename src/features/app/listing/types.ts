@@ -32,6 +32,11 @@ export interface JobEndpoint {
 
 export interface Job {
   id: string;
+  /**
+   * « Réf. 100042 »: the number people quote to each other for this job.
+   * Issued by the database, never edited (listing_reference_spec.md).
+   */
+  reference: number;
   shipperId: string;
   status: ListingStatus;
   title: string;

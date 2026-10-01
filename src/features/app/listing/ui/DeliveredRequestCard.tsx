@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/currency";
 import type { DeliveredRequest } from "../hooks/useMyRequests";
+import { ListingReference } from "./ListingReference";
 
 /**
  * One delivery the requester received.
@@ -58,6 +59,9 @@ export function DeliveredRequestCard({ job, delivery }: DeliveredRequest) {
             >
               {job.title}
             </Link>
+            <div>
+              <ListingReference reference={job.reference} />
+            </div>
             {delivery.deliveredAt && (
               <p className="mt-0.5 text-xs text-muted-foreground">
                 {t("deliveredOn", {
@@ -85,20 +89,15 @@ export function DeliveredRequestCard({ job, delivery }: DeliveredRequest) {
           </div>
         </div>
 
-        {(delivery.hasProofOfDelivery || job.origin === "expedion") && (
+        {delivery.hasProofOfDelivery && (
           <div className="flex flex-wrap items-center gap-2 pt-1">
-            {delivery.hasProofOfDelivery && (
-              <Badge
-                variant="outline"
-                className="border-success/30 bg-success/10 text-success"
-              >
-                <FileCheck className="h-3.5 w-3.5" />
-                {t("proof")}
-              </Badge>
-            )}
-            {job.origin === "expedion" && (
-              <Badge variant="secondary">via Expedion</Badge>
-            )}
+            <Badge
+              variant="outline"
+              className="border-success/30 bg-success/10 text-success"
+            >
+              <FileCheck className="h-3.5 w-3.5" />
+              {t("proof")}
+            </Badge>
           </div>
         )}
       </CardContent>

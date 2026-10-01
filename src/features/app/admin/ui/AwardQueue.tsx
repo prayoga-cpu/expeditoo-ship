@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { PageLoader } from "@/components/ui/page-loader";
 import { CenteredEmptyState } from "@/components/ui/centered-empty-state";
 import { listingsApi } from "@/features/app/listing/api/listings.api";
+import { ListingReference } from "@/features/app/listing/ui/ListingReference";
 import { formatCurrency } from "@/lib/currency";
 
 const euros = (cents: number) => formatCurrency(cents, { fractionDigits: 0 });
@@ -79,7 +80,10 @@ export function AwardQueue() {
           <Link key={job.id} href={`/listing/${job.id}`} className="block">
             <Card className="p-4 transition-colors hover:bg-muted/50">
               <div className="flex flex-wrap items-start justify-between gap-2">
-                <p className="font-medium">{job.title}</p>
+                <div className="min-w-0">
+                  <p className="font-medium">{job.title}</p>
+                  <ListingReference reference={job.reference} />
+                </div>
                 <Badge variant="secondary" className="gap-1">
                   <Gavel className="h-3 w-3" aria-hidden />
                   {t("bidCount", { count: job.offersCount ?? 0 })}

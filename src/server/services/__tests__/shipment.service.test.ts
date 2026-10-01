@@ -84,6 +84,7 @@ const shipmentRow = (over: Record<string, unknown> = {}) => ({
   offer: { id: "offer-1", priceCents: 42000 },
   listing: {
     id: "job-1",
+    reference: 100042,
     title: "Pallet to Marseille",
     description: "One pallet, strapped",
     status: "in_progress",
@@ -175,6 +176,9 @@ describe("shipmentService.getShipmentDetail (driver viewer)", () => {
 
     expect(detail.pickupAddress).toBe("12 rue de Lyon, Paris");
     expect(detail.listing.title).toBe("Pallet to Marseille");
+    // Not a commercial term: what the driver quotes to support
+    // (listing_reference_spec.md §5).
+    expect(detail.listing.reference).toBe(100042);
     expect(detail.listing.weightKg).toBe(320);
     expect(detail.listing.needsHelp).toBe(true);
     // Work the driver does on site (cargo_packaging_services_spec.md §5).

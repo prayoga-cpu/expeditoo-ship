@@ -225,6 +225,20 @@
       "when": 1788145200000,
       "tag": "0032_listing_packaging_services",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1788148800000,
+      "tag": "0033_listing_reference",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1788152400000,
+      "tag": "0034_escalated_description_source",
+      "breakpoints": true
     }
   ]
 }

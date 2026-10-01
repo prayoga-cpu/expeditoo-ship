@@ -101,6 +101,8 @@ export interface Conversation {
     reviewsCount?: number;
   };
   listing: string;
+  /** The job's « Réf. », when the thread is about one. */
+  listingReference?: number;
   listingImage?: string;
   messages: ChatMessage[];
   offerContext?: ThreadOfferContext | null;

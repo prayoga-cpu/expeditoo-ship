@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { ChatMessage, Conversation } from "../types";
 import { ThreadOfferAction, ThreadOfferNotice } from "./ThreadOfferAction";
 import { ThreadOfferBubble } from "./ThreadOfferBubble";
+import { ListingReference } from "@/features/app/listing/ui/ListingReference";
 import { useTranslations } from "next-intl";
 
 /**
@@ -177,6 +178,9 @@ export function MessageDetail({
             <p className="font-medium text-foreground truncate">
               {conversation.listing}
             </p>
+            {conversation.listingReference !== undefined && (
+              <ListingReference reference={conversation.listingReference} />
+            )}
           </div>
         </div>
       )}

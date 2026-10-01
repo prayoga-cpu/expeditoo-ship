@@ -746,7 +746,7 @@
       "confirmedByClient": "Confirmé par le client",
       "awaitingClient": "En attente de confirmation du client",
       "channel": {
-        "expedion_app": "via l'application Expedion",
+        "expedion_app": "via son application mobile",
         "link": "via le lien reçu",
         "app": "depuis l'application"
       },
@@ -1217,7 +1217,6 @@
     },
     "detail": {
       "tab": "Détails",
-      "viaExpedion": "via Expedion",
       "fragile": "Fragile",
       "needsHelp": "Aide au chargement",
       "packaging": {
@@ -3257,7 +3256,6 @@
         "searchPlaceholder": "Rechercher par désignation, référence, ville…",
         "downloadStatement": "Télécharger le relevé de la période",
         "closedOn": "Clôturé le {date}",
-        "reference": "Référence {ref}",
         "untitled": "Transport",
         "commission": "Commission",
         "net": "Net",
@@ -3325,15 +3323,17 @@
       "liveOffers": "Offres en attente de décision"
     }
   },
+  "listingReference": {
+    "label": "Réf. {reference}",
+    "copy": "Copier la référence",
+    "copied": "Référence {reference} copiée",
+    "copyFailed": "Impossible de copier la référence"
+  },
   "jobBoard": {
     "title": "Voir les demandes",
     "loading": "Chargement…",
     "count": "{count} missions ouvertes aux offres",
     "countOne": "{count} mission ouverte aux offres",
-    "source": {
-      "description": "Les missions marquées « via Expedion » en proviennent — un client a accepté un devis et a déjà payé.",
-      "cta": "Ouvrir Expedion"
-    },
     "search": "Rechercher une mission",
     "clearSearch": "Effacer la recherche",
     "filters": "Filtres",
@@ -3353,7 +3353,7 @@
     "empty": {
       "title": "Aucune mission correspondante",
       "filtered": "Élargissez vos filtres — de nouvelles missions arrivent au fil de la journée.",
-      "none": "Aucune mission ouverte pour le moment. Elles apparaissent dès qu'Expedion en escalade une."
+      "none": "Aucune mission ouverte pour le moment. Les nouvelles missions apparaissent ici dès leur publication."
     },
     "previous": "Précédent",
     "next": "Suivant",
@@ -3399,7 +3399,6 @@
       "budget": "budget",
       "youBid": "Vous avez enchéri",
       "urgent": "URGENT",
-      "viaExpedion": "via Expedion",
       "fragile": "Fragile",
       "needsHelp": "Aide au chargement",
       "needsProtection": "À protéger",

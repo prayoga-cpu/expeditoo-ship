@@ -14,6 +14,33 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.57.0] - 2026-09-30 · feat
+
+- **Every transport request now has a reference number.** It reads "Réf.
+  100042" and it's the same number for everyone involved: you see it on the
+  request's page, in "Mes demandes", on your deliveries, on the driver's
+  delivery screen and at the top of a conversation about the request. Give
+  it to the carrier, the client or support and everyone knows exactly which
+  transport you mean. On the request, delivery and driver pages, a small
+  button copies it.
+- **Find a request by its reference.** Type the number into the search on
+  "Voir les demandes", with or without "Réf.", and the request comes straight
+  up (as long as it's still open to offers). Admins can search for it in the
+  requests table too.
+- **The reference is in the email and the notification you get when your
+  request goes live**, so you have it before anyone asks.
+- **Completed trips and your activity statement show the request's
+  reference.** They used to show an internal code that meant nothing to
+  anyone else.
+- **When the client confirms a pickup or a delivery from the link in their
+  text message, the page shows the request's reference.** It used to show
+  the request's title under "Référence".
+- **"Voir les demandes" no longer mentions Expedion Enchères.** The banner at
+  the top of the board and the "via Expedion" label on requests are gone, and
+  the description of an auction-house pickup no longer ends with "Job escaladé
+  depuis Expedion Enchères". A request is a request, wherever it came from.
+  The delivery timeline now says the client confirmed "via their mobile app".
+
 ## [2.56.0] - 2026-09-30 · feat
 
 - **Tell the carrier what to do with your item before it moves.** When you

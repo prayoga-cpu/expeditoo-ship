@@ -109,6 +109,9 @@ async function requirePhotoFor(shipmentId: string, next: ShipmentStatusType) {
  */
 const DRIVER_LISTING_FIELDS = [
   "id",
+  // Not a commercial term: the number a driver quotes to support or to the
+  // client about this run (listing_reference_spec.md §5).
+  "reference",
   "title",
   "description",
   "status",

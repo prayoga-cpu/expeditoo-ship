@@ -138,6 +138,7 @@ export const messagesDAL = {
               columns: {
                 id: true,
                 title: true,
+                reference: true,
               },
               with: {
                 photos: {
@@ -259,6 +260,7 @@ export const messagesDAL = {
           columns: {
             id: true,
             title: true,
+            reference: true,
             status: true,
             origin: true,
             shipperId: true,

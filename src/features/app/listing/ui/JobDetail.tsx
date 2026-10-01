@@ -34,6 +34,7 @@ import { PageLoader } from "@/components/ui/page-loader";
 import { useJobDetail, useJobOffers, useAcceptOffer } from "../hooks/useJobDetail";
 import { useListingCarriers } from "../hooks/useListingCarriers";
 import { JobBidSection } from "./JobBidSection";
+import { ListingReference } from "./ListingReference";
 import { AvailableCarriersPanel } from "./AvailableCarriersPanel";
 import { OfferCard } from "./OfferCard";
 import type { Job } from "../types";
@@ -210,9 +211,6 @@ function JobHeader({ job }: { job: Job }) {
     <header className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <Badge className={STATUS_TONE[job.status]}>{tStatus(job.status)}</Badge>
-        {job.origin === "expedion" && (
-          <Badge variant="secondary">{t("viaExpedion")}</Badge>
-        )}
         {job.reopenedAt && (
           <Badge variant="outline" className="border-warning/40 text-warning">
             <RotateCcw className="mr-1 h-3 w-3" />
@@ -253,9 +251,12 @@ function JobHeader({ job }: { job: Job }) {
         )}
       </div>
 
-      <h1 className="text-2xl font-semibold tracking-tight text-balance">
-        {job.title}
-      </h1>
+      <div className="space-y-1">
+        <h1 className="text-2xl font-semibold tracking-tight text-balance">
+          {job.title}
+        </h1>
+        <ListingReference reference={job.reference} copyable />
+      </div>
 
       <p className="font-mono text-lg text-muted-foreground">
         {t("budget", { amount: euros(job.budgetCents) })}

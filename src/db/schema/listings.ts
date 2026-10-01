@@ -161,6 +161,14 @@ export const listings = pgTable(
     origin: listingOriginEnum("origin").default("direct").notNull(),
     externalRef: text("external_ref"),
 
+    // « Réf. 100042 » — the number people quote to each other for this job
+    // (0033, listing_reference_spec.md). The sequence is its only writer: it
+    // is on neither the create nor the update schema, and never reissued.
+    reference: integer("reference")
+      .default(sql`nextval('listing_reference_seq')`)
+      .notNull()
+      .unique(),
+
     // ---- Metadata ----
     offersCount: integer("offers_count").default(0).notNull(),
     views: integer("views").default(0).notNull(),

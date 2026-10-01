@@ -61,6 +61,7 @@ function toSummary(
   return {
     id: shipment.id,
     title: shipment.listing?.title ?? t("card.defaultTitle"),
+    reference: shipment.listing?.reference ?? null,
     status: shipment.status,
     pickupAddress: shipment.pickupAddress,
     dropoffAddress: shipment.dropoffAddress,

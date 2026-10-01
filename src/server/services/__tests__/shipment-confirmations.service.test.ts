@@ -328,7 +328,12 @@ describe("describeToken", () => {
     pickupAddress: "1 rue de Rivoli, Paris",
     dropoffAddress: "5 cours Vitton, Lyon",
     listingId: "listing-1",
-    listing: { title: "Lot 42", pickupCity: "Paris", dropoffCity: "Lyon" },
+    listing: {
+      title: "Lot 42",
+      reference: 100042,
+      pickupCity: "Paris",
+      dropoffCity: "Lyon",
+    },
     priceCents: 45000,
     shipper: { id: "shipper-1", name: "Someone", email: "a@b.c" },
   };
@@ -344,13 +349,60 @@ describe("describeToken", () => {
 
     expect(subject).toMatchObject({
       milestone: "PICKED_UP",
-      reference: "Lot 42",
+      reference: "100042",
       alreadyConfirmed: false,
       confirmable: true,
     });
     // The page is reachable by anyone holding the link.
     expect(Object.keys(subject)).not.toContain("priceCents");
     expect(Object.keys(subject)).not.toContain("shipper");
+  });
+
+  it("names the job by its reference, never by its title", async () => {
+    // The title stood in for a reference until jobs had a number
+    // (listing_reference_spec.md §5).
+    vi.mocked(shipmentsDal.getById).mockResolvedValue(shipment as never);
+    vi.mocked(shipmentsDal.getConfirmation).mockResolvedValue(
+      undefined as never
+    );
+
+    const token = mintConfirmationToken("ship-1", "PICKED_UP")!;
+    const subject = await shipmentConfirmationsService.describeToken(token);
+
+    expect(subject.reference).toBe("100042");
+    expect(JSON.stringify(subject)).not.toContain("Lot 42");
+  });
+
+  it("gives an escalated job's client the bordereau they already know", async () => {
+    vi.mocked(shipmentsDal.getById).mockResolvedValue(shipment as never);
+    vi.mocked(shipmentsDal.getConfirmation).mockResolvedValue(
+      undefined as never
+    );
+    vi.mocked(expedionDal.getByListingId).mockResolvedValue({
+      id: "quote-1",
+      bordereauNumber: "BX-77",
+    } as never);
+
+    const token = mintConfirmationToken("ship-1", "PICKED_UP")!;
+    const subject = await shipmentConfirmationsService.describeToken(token);
+
+    expect(subject.reference).toBe("BX-77");
+  });
+
+  it("falls back to the job reference when the quote has no bordereau", async () => {
+    vi.mocked(shipmentsDal.getById).mockResolvedValue(shipment as never);
+    vi.mocked(shipmentsDal.getConfirmation).mockResolvedValue(
+      undefined as never
+    );
+    vi.mocked(expedionDal.getByListingId).mockResolvedValue({
+      id: "quote-1",
+      bordereauNumber: null,
+    } as never);
+
+    const token = mintConfirmationToken("ship-1", "PICKED_UP")!;
+    const subject = await shipmentConfirmationsService.describeToken(token);
+
+    expect(subject.reference).toBe("100042");
   });
 
   it("gives the cities and never the street addresses", async () => {
@@ -448,6 +500,26 @@ describe("requestConfirmation", () => {
         milestone: "DELIVERED",
         reference: "BX-77",
       })
+    );
+  });
+
+  it("names a direct job by its reference in the email, not its title", async () => {
+    vi.mocked(shipmentsDal.getById).mockResolvedValue({
+      id: "ship-1",
+      listingId: "listing-1",
+      dropoffAddress: "5 cours Vitton, Lyon",
+      listing: { title: "Lot 42", reference: 100042 },
+      shipper: { email: "requester@example.com", name: "Camille" },
+    } as never);
+
+    await shipmentConfirmationsService.requestConfirmation(
+      "ship-1",
+      "PICKED_UP"
+    );
+
+    expect(emailService.sendConfirmationRequestEmail).toHaveBeenCalledWith(
+      "requester@example.com",
+      expect.objectContaining({ reference: "100042" })
     );
   });
 
