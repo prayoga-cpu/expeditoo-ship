@@ -36,11 +36,14 @@ than leaving it in a chat message.
       has been due since 2026-09-20 and text its client. Assign or cancel that
       quote first if that is not wanted. Until they are set, open jobs never
       expire and a job scheduled to publish later never publishes.
-- [ ] **Run Actions → "Migrate database" for `0035_listing_availability`
-      before 2.59.0 deploys**, dispatched on the branch `release/2.59.0` so the
-      new code never meets an un-migrated database: it selects the four new
-      `listings` columns on every read. Additive (`ADD COLUMN IF NOT EXISTS`,
-      full-set defaults); the running 2.58.0 code ignores them.
+- [x] ~~Run Actions → "Migrate database" for `0035_listing_availability`
+      before 2.59.0 deploys~~ — **done 2026-10-04**, run `37190604540`,
+      dispatched on the branch `release/2.59.0` (commit `9eedc41`) before
+      `main` moved, so the new code never met an un-migrated database.
+      Confirmed read-only through `mirror_readonly`: the four `listings`
+      columns exist with their full-set defaults, and
+      `drizzle.__drizzle_migrations` holds 35 rows, the newest
+      `1788156000000` (`0035`).
 - [ ] **Take two product questions from 2.59.0 to the client.** (1) May an
       approved carrier take a *direct* request outright at its budget? Today
       any open job can be taken (`takeJob`, no origin check), which charges
