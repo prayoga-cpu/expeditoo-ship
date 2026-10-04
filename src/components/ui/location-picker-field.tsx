@@ -478,7 +478,8 @@ export function LocationPickerField({
           type="button"
           variant="link"
           size="sm"
-          className="h-auto gap-1 p-0 has-[>svg]:px-0 text-xs"
+          // Wraps: `/create`'s sentence is longer than a phone is wide.
+          className="h-auto gap-1 p-0 has-[>svg]:px-0 text-xs whitespace-normal text-left"
           onClick={allowManualOnly ? switchToManual : () => setShowLinkInput(true)}
         >
           <Link2 className="h-3 w-3" />

@@ -5,6 +5,7 @@ import { CalendarClock, MapPin, Package, ShieldCheck } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import type { Job } from "../types";
+import { AvailabilityLine } from "./AvailabilityLine";
 
 type SummaryJob = Pick<
   Job,
@@ -16,6 +17,10 @@ type SummaryJob = Pick<
   | "dropoffFrom"
   | "dropoffUntil"
   | "isFlexible"
+  | "pickupDays"
+  | "pickupPeriods"
+  | "dropoffDays"
+  | "dropoffPeriods"
   | "packagingLevel"
   | "needsProtection"
   | "needsPackaging"
@@ -29,6 +34,8 @@ interface RequestSummaryProps {
   job: SummaryJob;
   /** Sizes the title for its surface; the rest of the summary does not change. */
   titleClassName?: string;
+  /** The title's level in the page around it; a card under an `h2` keeps `h3`. */
+  titleAs?: "h2" | "h3";
 }
 
 const WINDOW_FORMAT = {
@@ -46,7 +53,11 @@ const WINDOW_FORMAT = {
  * drift apart. Cities only, never street addresses: this is a summary, and the
  * full addresses are one tap away on the job page.
  */
-export function RequestSummary({ job, titleClassName }: RequestSummaryProps) {
+export function RequestSummary({
+  job,
+  titleClassName,
+  titleAs: Title = "h3",
+}: RequestSummaryProps) {
   const t = useTranslations("myJobs.summary");
   const tDetail = useTranslations("myJobs.detail");
   const format = useFormatter();
@@ -83,9 +94,9 @@ export function RequestSummary({ job, titleClassName }: RequestSummaryProps) {
       {/* Title and route on one line, as the client asked; wraps only when the
           width runs out. */}
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h3 className={cn("min-w-0 font-medium wrap-break-word", titleClassName)}>
+        <Title className={cn("min-w-0 font-medium wrap-break-word", titleClassName)}>
           {job.title}
-        </h3>
+        </Title>
         <p className="flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground">
           <MapPin className="h-4 w-4 shrink-0" aria-hidden />
           <span className="wrap-break-word">
@@ -97,9 +108,11 @@ export function RequestSummary({ job, titleClassName }: RequestSummaryProps) {
       <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
         <SummaryItem icon={CalendarClock} label={t("pickup")}>
           {range(job.pickupFrom, job.pickupUntil)}
+          <AvailabilityLine days={job.pickupDays} periods={job.pickupPeriods} />
         </SummaryItem>
         <SummaryItem icon={CalendarClock} label={t("dropoff")}>
           {range(job.dropoffFrom, job.dropoffUntil)}
+          <AvailabilityLine days={job.dropoffDays} periods={job.dropoffPeriods} />
         </SummaryItem>
         <SummaryItem icon={ShieldCheck} label={t("protection")}>
           {protection}

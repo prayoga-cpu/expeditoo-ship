@@ -37,6 +37,7 @@ import { useListingCarriers } from "../hooks/useListingCarriers";
 import { JobBidSection } from "./JobBidSection";
 import { ListingReference } from "./ListingReference";
 import { AvailableCarriersPanel } from "./AvailableCarriersPanel";
+import { AvailabilityLine } from "./AvailabilityLine";
 import { OfferCard } from "./OfferCard";
 import type { Job } from "../types";
 
@@ -404,6 +405,8 @@ function JobRoute({ job }: { job: Job }) {
           locationType={job.pickupLocationType}
           from={job.pickupFrom}
           until={job.pickupUntil}
+          days={job.pickupDays}
+          periods={job.pickupPeriods}
         />
         <Endpoint
           title={t("dropoff")}
@@ -412,6 +415,8 @@ function JobRoute({ job }: { job: Job }) {
           locationType={job.dropoffLocationType}
           from={job.dropoffFrom}
           until={job.dropoffUntil}
+          days={job.dropoffDays}
+          periods={job.dropoffPeriods}
         />
       </div>
 
@@ -429,6 +434,8 @@ function Endpoint({
   locationType,
   from,
   until,
+  days,
+  periods,
 }: {
   title: string;
   address: string;
@@ -436,6 +443,8 @@ function Endpoint({
   locationType: string;
   from: string;
   until: string;
+  days?: Job["pickupDays"];
+  periods?: Job["pickupPeriods"];
 }) {
   // The /create form already names every location type; reusing its catalogue
   // keeps one vocabulary for the enum instead of two that can disagree.
@@ -458,6 +467,12 @@ function Endpoint({
         {format(new Date(from), "d MMM HH:mm", { locale: dateLocale })} –{" "}
         {format(new Date(until), "d MMM HH:mm", { locale: dateLocale })}
       </p>
+      {/* Indented to sit under the dates, past the calendar icon. */}
+      <AvailabilityLine
+        days={days}
+        periods={periods}
+        className="block pl-5 text-sm text-muted-foreground"
+      />
     </div>
   );
 }

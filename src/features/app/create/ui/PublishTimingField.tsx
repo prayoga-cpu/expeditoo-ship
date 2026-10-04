@@ -1,20 +1,15 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { FieldError } from "./FieldError";
+import { MOMENT_FORMAT } from "./PublicationNotice";
 import { forInput } from "../timing";
 import { PUBLISH_MODES, type PublishMode } from "../schemas";
+import { MIN_SCHEDULE_LEAD_MS, type ScheduleIssue } from "../publication";
 import type { JobFormApi } from "../hooks/useJobForm";
-
-/**
- * Lead time before a schedule is offered at all: enough that the value
- * survives the round trip to the server without landing in the past under
- * ordinary clock skew.
- */
-const MIN_SCHEDULE_LEAD_MS = 5 * 60 * 1000;
 
 /**
  * "Publish now" or "schedule for later" — the last choice in `/create`.
@@ -25,11 +20,32 @@ const MIN_SCHEDULE_LEAD_MS = 5 * 60 * 1000;
  * directly on the form the same way `budgetEuros` is, gets the platform's
  * own picker for free.
  */
-export function PublishTimingField({ form }: { form: JobFormApi["form"] }) {
+export function PublishTimingField({
+  form,
+  scheduleIssue,
+}: {
+  form: JobFormApi["form"];
+  /** From `publicationIssues` — a publication rule, so never a schema error. */
+  scheduleIssue: ScheduleIssue | null;
+}) {
   const t = useTranslations("create.budget.publish");
+  const tCreate = useTranslations("create");
+  const format = useFormatter();
   const { register, watch, setValue, formState } = form;
   const mode = watch("publishMode");
   const minLocal = forInput(Date.now() + MIN_SCHEDULE_LEAD_MS);
+
+  const issueMessage = !scheduleIssue
+    ? undefined
+    : scheduleIssue.kind === "required"
+      ? tCreate("validation.scheduledPublishRequired")
+      : scheduleIssue.kind === "past"
+        ? tCreate("validation.scheduledPublishPast")
+        : scheduleIssue.kind === "unschedulable"
+          ? tCreate("publication.scheduleImpossible")
+          : tCreate("publication.scheduleTooClose", {
+              latest: format.dateTime(scheduleIssue.latest, MOMENT_FORMAT),
+            });
 
   return (
     <div className="space-y-3 border-t border-border pt-5">
@@ -64,7 +80,9 @@ export function PublishTimingField({ form }: { form: JobFormApi["form"] }) {
             defaultValue={minLocal}
             {...register("scheduledPublishAt")}
           />
-          <FieldError message={formState.errors.scheduledPublishAt?.message} />
+          <FieldError
+            message={formState.errors.scheduledPublishAt?.message ?? issueMessage}
+          />
           <p className="mt-1 text-xs text-muted-foreground">{t("hint")}</p>
         </div>
       )}

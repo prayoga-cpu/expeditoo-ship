@@ -58,11 +58,19 @@ export function toCreatePayload(values: JobFormOutput, publish: boolean) {
     dropoffFrom: values.dropoffFrom.toISOString(),
     dropoffUntil: values.dropoffUntil.toISOString(),
     isFlexible: values.isFlexible,
+    // Weekdays and times of day at each end — full sets unless a flexible
+    // request narrowed them (request_availability_spec.md §3).
+    pickupDays: values.pickupDays,
+    pickupPeriods: values.pickupPeriods,
+    dropoffDays: values.dropoffDays,
+    dropoffPeriods: values.dropoffPeriods,
     // The form works in euros; the API is cents throughout.
     budgetCents: Math.round(values.budgetEuros * 100),
     photos: values.photos,
     publish,
-    ...(values.publishMode === "schedule" && values.scheduledPublishAt
+    // A draft keeps no schedule: nothing publishes a draft at its scheduled
+    // time (publication_timing_spec.md §2).
+    ...(publish && values.publishMode === "schedule" && values.scheduledPublishAt
       ? { scheduledPublishAt: values.scheduledPublishAt.toISOString() }
       : {}),
   };

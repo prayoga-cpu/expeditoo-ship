@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  ISO_WEEKDAYS,
   MAX_AVAILABILITY_DAYS,
   TIME_SLOTS,
 } from "@/lib/availability-window";
@@ -109,6 +110,40 @@ const requireApartmentDetail = (
   }
 };
 
+const hasNoDuplicates = (values: readonly unknown[]) =>
+  new Set(values).size === values.length;
+
+/**
+ * Who is there, when, at one end of a request (request_availability_spec.md
+ * §3). Absent means unrestricted — the column default — so these are
+ * `.optional()`, never `.default()`: a defaulted field becomes required on
+ * `CreateListingInput`, and the escalation literal would have to name it.
+ */
+const weekdaySet = z
+  .array(z.number().int().min(1).max(7))
+  .min(1)
+  .max(7)
+  .refine(hasNoDuplicates, "DUPLICATE_WEEKDAY")
+  .transform((days) =>
+    ISO_WEEKDAYS.filter((day) => days.includes(day))
+  );
+
+const periodSet = z
+  .array(z.enum(TIME_SLOTS))
+  .min(1)
+  .max(TIME_SLOTS.length)
+  .refine(hasNoDuplicates, "DUPLICATE_PERIOD")
+  .transform((periods) =>
+    TIME_SLOTS.filter((period) => periods.includes(period))
+  );
+
+const AVAILABILITY_FIELDS = [
+  ["pickupDays", ISO_WEEKDAYS.length],
+  ["pickupPeriods", TIME_SLOTS.length],
+  ["dropoffDays", ISO_WEEKDAYS.length],
+  ["dropoffPeriods", TIME_SLOTS.length],
+] as const;
+
 const baseListingSchema = z.object({
   title: z.string().min(2).max(120),
   description: z.string().min(5).max(5000),
@@ -144,6 +179,10 @@ const baseListingSchema = z.object({
   dropoffFrom: z.coerce.date(),
   dropoffUntil: z.coerce.date(),
   isFlexible: z.boolean().default(false),
+  pickupDays: weekdaySet.optional(),
+  pickupPeriods: periodSet.optional(),
+  dropoffDays: weekdaySet.optional(),
+  dropoffPeriods: periodSet.optional(),
 
   budgetCents: z.number().int().min(MIN_BUDGET_CENTS).max(MAX_BUDGET_CENTS),
   photos: z.array(z.string().url()).max(10).default([]),
@@ -249,6 +288,23 @@ export const createListingSchema = baseListingSchema.superRefine((data, ctx) => 
       path: ["dropoffFrom"],
     });
   }
+
+  // Weekdays and times of day narrow a flexible range; an exact request names
+  // its own hour, so a narrower set beside it would contradict it. Whether
+  // the range contains an allowed weekday needs the requester's calendar,
+  // which this payload does not carry — the form checks that one.
+  if (!data.isFlexible) {
+    for (const [field, full] of AVAILABILITY_FIELDS) {
+      const set = data[field];
+      if (set && set.length < full) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "AVAILABILITY_REQUIRES_FLEXIBLE",
+          path: [field],
+        });
+      }
+    }
+  }
 });
 
 export type CreateListingInput = z.infer<typeof createListingSchema>;
@@ -281,6 +337,11 @@ export const MATERIAL_FIELDS = [
   "pickupUntil",
   "dropoffFrom",
   "dropoffUntil",
+  "isFlexible",
+  "pickupDays",
+  "pickupPeriods",
+  "dropoffDays",
+  "dropoffPeriods",
 ] as const satisfies readonly (keyof UpdateListingInput)[];
 
 /** A comma-separated query parameter, as the URL carries it. */

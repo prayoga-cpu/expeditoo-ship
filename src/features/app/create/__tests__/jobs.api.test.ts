@@ -37,6 +37,10 @@ const values = (over: Partial<JobFormOutput> = {}): JobFormOutput =>
     pickupUntil: new Date("2026-09-01T16:00:00Z"),
     dropoffFrom: new Date("2026-09-02T08:00:00Z"),
     dropoffUntil: new Date("2026-09-02T16:00:00Z"),
+    pickupDays: [1, 2, 3, 4, 5, 6, 7],
+    pickupPeriods: ["morning", "afternoon", "evening"],
+    dropoffDays: [1, 2, 3, 4, 5, 6, 7],
+    dropoffPeriods: ["morning", "afternoon", "evening"],
     budgetEuros: 250,
     ...over,
   }) as JobFormOutput;
@@ -173,5 +177,51 @@ describe("toCreatePayload", () => {
     // Stamped server-side: it decides who may award the job.
     expect(payload).not.toHaveProperty("origin");
     expect(payload).not.toHaveProperty("categoryId");
+  });
+});
+
+// request_availability_spec.md §3, publication_timing_spec.md §2
+describe("toCreatePayload — when", () => {
+  it("sends the weekdays and times of day of each end", () => {
+    const payload = toCreatePayload(
+      values({
+        isFlexible: true,
+        pickupDays: [1, 2, 3, 4, 5],
+        pickupPeriods: ["morning", "afternoon"],
+        dropoffDays: [6],
+        dropoffPeriods: ["evening"],
+      }),
+      true
+    );
+
+    expect(payload).toMatchObject({
+      isFlexible: true,
+      pickupDays: [1, 2, 3, 4, 5],
+      pickupPeriods: ["morning", "afternoon"],
+      dropoffDays: [6],
+      dropoffPeriods: ["evening"],
+    });
+  });
+
+  it("sends a schedule with a publication", () => {
+    const scheduledPublishAt = new Date("2026-08-31T08:00:00Z");
+    const payload = toCreatePayload(
+      values({ publishMode: "schedule", scheduledPublishAt }),
+      true
+    );
+
+    expect(payload.scheduledPublishAt).toBe("2026-08-31T08:00:00.000Z");
+  });
+
+  it("keeps no schedule on a draft", () => {
+    const payload = toCreatePayload(
+      values({
+        publishMode: "schedule",
+        scheduledPublishAt: new Date("2026-08-31T08:00:00Z"),
+      }),
+      false
+    );
+
+    expect(payload).not.toHaveProperty("scheduledPublishAt");
   });
 });

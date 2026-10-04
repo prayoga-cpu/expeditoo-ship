@@ -192,3 +192,37 @@ describe("RequestSummary", () => {
     expect(errors(onError)).toEqual([]);
   });
 });
+
+// request_availability_spec.md §6
+describe("RequestSummary — weekdays and times of day", () => {
+  it("reads back a narrowed end under its window", () => {
+    const { onError } = renderSummary(
+      job({
+        isFlexible: true,
+        pickupDays: [1, 2, 3, 4, 5],
+        pickupPeriods: ["morning", "evening"],
+      })
+    );
+
+    expect(screen.getByText("Lun–Ven · Matin, Soir")).toBeInTheDocument();
+    expect(errors(onError)).toEqual([]);
+  });
+
+  it("in English too", () => {
+    renderSummary(job({ isFlexible: true, dropoffDays: [6, 7] }), "en");
+
+    expect(screen.getByText("Sat, Sun")).toBeInTheDocument();
+  });
+
+  it("says nothing for an end with no restriction", () => {
+    const { container } = renderSummary(
+      job({
+        pickupDays: [1, 2, 3, 4, 5, 6, 7],
+        pickupPeriods: ["morning", "afternoon", "evening"],
+      })
+    );
+
+    expect(container.textContent).not.toMatch(/Lun|Matin/);
+  });
+});
+

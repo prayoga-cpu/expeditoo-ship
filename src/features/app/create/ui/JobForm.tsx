@@ -26,6 +26,7 @@ import { ItemField } from "./ItemField";
 import { WeightBracketField } from "./WeightBracketField";
 import { TimingField } from "./TimingField";
 import { PublishTimingField } from "./PublishTimingField";
+import { PickupPublicationNotice } from "./PublicationNotice";
 import { SavedAddressPicker } from "./SavedAddressPicker";
 import { PackagingField } from "./PackagingField";
 import { ToggleRow } from "./ToggleRow";
@@ -59,6 +60,9 @@ export function JobForm(props: JobFormApi) {
     form,
     photos,
     timing,
+    pickupClampedFrom,
+    publication,
+    goToStep,
     handleTimingChange,
     currentStep,
     steps,
@@ -98,12 +102,23 @@ export function JobForm(props: JobFormApi) {
             form={form}
             timing={timing}
             onTimingChange={handleTimingChange}
+            pickupClampedFrom={pickupClampedFrom}
+            publication={publication}
           />
         )}
-        {currentStep === 3 && <BudgetStep form={form} />}
+        {currentStep === 3 && (
+          <BudgetStep
+            form={form}
+            publication={publication}
+            onEditDates={() => goToStep(2)}
+          />
+        )}
       </Card>
 
-      <div className="flex items-center justify-between gap-3">
+      {/* Wraps rather than overflows: at phone width the three buttons are
+          wider than the form, and `<main>` clips, so the primary action lost
+          its right edge. */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <Button
           type="button"
           variant="ghost"
@@ -113,7 +128,7 @@ export function JobForm(props: JobFormApi) {
           {t("buttons.back")}
         </Button>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap justify-end gap-2">
           <Button
             type="button"
             variant="outline"
@@ -521,9 +536,13 @@ function WhenStep({
   form,
   timing,
   onTimingChange,
+  pickupClampedFrom,
+  publication,
 }: StepProps & {
   timing: JobFormApi["timing"];
   onTimingChange: JobFormApi["handleTimingChange"];
+  pickupClampedFrom: JobFormApi["pickupClampedFrom"];
+  publication: JobFormApi["publication"];
 }) {
   const errors = form.formState.errors;
 
@@ -533,11 +552,22 @@ function WhenStep({
       onChange={onTimingChange}
       pickupError={errors.pickupFrom?.message ?? errors.pickupUntil?.message}
       dropoffError={errors.dropoffFrom?.message ?? errors.dropoffUntil?.message}
+      pickupDaysError={errors.pickupDays?.message}
+      dropoffDaysError={errors.dropoffDays?.message}
+      pickupClampedFrom={pickupClampedFrom}
+      publication={publication}
     />
   );
 }
 
-function BudgetStep({ form }: StepProps) {
+function BudgetStep({
+  form,
+  publication,
+  onEditDates,
+}: StepProps & {
+  publication: JobFormApi["publication"];
+  onEditDates: () => void;
+}) {
   const t = useTranslations("create.budget");
   const { register, formState } = form;
 
@@ -564,7 +594,13 @@ function BudgetStep({ form }: StepProps) {
         <p className="mt-2 text-sm text-muted-foreground">{t("hint")}</p>
       </div>
 
-      <PublishTimingField form={form} />
+      <PublishTimingField form={form} scheduleIssue={publication.schedule} />
+
+      {/* The pickup was chosen on the step before, but publication is decided
+          here — so is the warning the client asked for, and a way back to the
+          dates when they no longer leave carriers time to bid
+          (publication_timing_spec.md §3.3). */}
+      <PickupPublicationNotice publication={publication} onEditDates={onEditDates} />
     </div>
   );
 }

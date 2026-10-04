@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { useForm } from "react-hook-form";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { useForm, type FieldErrors } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -17,9 +17,12 @@ import {
   type JobFormOutput,
 } from "../schemas";
 import { jobsApi } from "../api/jobs.api";
+import { postCreateDestination } from "../destination";
+import { publicationIssues } from "../publication";
 import {
   defaultTimingState,
   resolveTimingWindows,
+  timingFieldValues,
   type TimingState,
 } from "../timing";
 
@@ -27,6 +30,8 @@ import {
 export const JOB_STEPS = ["what", "where", "when", "budget"] as const;
 
 const WHERE_STEP = 1;
+const WHEN_STEP = 2;
+const BUDGET_STEP = 3;
 
 const emptyEndpoint = {
   address: "",
@@ -40,6 +45,11 @@ const emptyEndpoint = {
   addressLabel: "",
 };
 
+/** A schema error, however it is displayed: `<FieldError>` carries the marker. */
+const FIELD_ERROR = "[data-field-error]";
+/** The pickup's publication notice: shown on steps 3 and 4, blocking « Publier » only. */
+const PUBLICATION_ERROR = "[data-publication-error]";
+
 /**
  * `handleNext` only validates the current step, so RHF's own
  * `shouldFocusError` (which runs inside `handleSubmit`) never fires for it —
@@ -48,10 +58,14 @@ const emptyEndpoint = {
  * size cards, the location picker) are `setValue`-driven rather than
  * `register`-ed, so `form.setFocus` cannot reach them either; every field's
  * error, however it is displayed, always goes through `<FieldError>`, so that
- * is what this looks for instead.
+ * is what this looks for. The publication notice has a marker of its own: it
+ * blocks nothing but « Publier », and must not take the scroll from the error
+ * that actually stopped « Suivant ».
  */
-function scrollToFirstError() {
-  const firstError = document.querySelector<HTMLElement>("[data-field-error]");
+function scrollToFirstError(selector: string) {
+  const firstError =
+    document.querySelector<HTMLElement>(selector) ??
+    document.querySelector<HTMLElement>(FIELD_ERROR);
   if (!firstError) return;
 
   const group = firstError.parentElement ?? firstError;
@@ -61,6 +75,20 @@ function scrollToFirstError() {
     "input, textarea, select, button, [role='radio'], [tabindex]"
   );
   focusable?.focus({ preventScroll: true });
+}
+
+/**
+ * The step holding the first error, in the order the steps are shown. An error
+ * on a field no step lists (a stray dimension, a photo) belongs to the first
+ * step, where those controls live.
+ */
+export function firstStepWithError(errors: FieldErrors): number | null {
+  const keys = Object.keys(errors);
+  if (keys.length === 0) return null;
+  const step = STEP_FIELDS.findIndex((fields) =>
+    (fields as readonly string[]).some((field) => keys.includes(field))
+  );
+  return step === -1 ? 0 : step;
 }
 
 export function useJobForm() {
@@ -74,6 +102,15 @@ export function useJobForm() {
   // which would otherwise throw away a request's exact date/time the moment
   // someone clicked "Next" and came back.
   const [timing, setTiming] = useState<TimingState>(() => defaultTimingState());
+  // The furthest step reached with « Suivant ». A failed submit may send the
+  // requester back to any of these, never forward past one they have not seen.
+  const [furthestStep, setFurthestStep] = useState(0);
+  // Bumped to scroll to the first error once the step holding it has mounted.
+  const [scrollRequest, setScrollRequest] = useState({ n: 0, selector: FIELD_ERROR });
+  // Set from the moment a submit starts until its request settles: between
+  // the click and `isPending` lie an async validation and a re-render, and a
+  // second click in that gap would post the request twice.
+  const inFlight = useRef(false);
 
   const form = useForm<JobFormValues>({
     resolver: zodResolver(jobFormSchema),
@@ -93,23 +130,73 @@ export function useJobForm() {
       publishMode: "now",
       pickup: { ...emptyEndpoint },
       dropoff: { ...emptyEndpoint },
-      ...resolveTimingWindows(timing),
+      // Seeded blank, not left unset. An unset number coerces to NaN, a type
+      // error that aborts the whole object before its `superRefine` — so the
+      // When step's date rules never ran on "Suivant" until the budget was
+      // typed on the step after it. Blank coerces to 0 and fails `.positive()`
+      // as an ordinary issue on its own step (publication_timing_spec.md §3.6).
+      // The DOM hands this field strings regardless of the declared type.
+      budgetEuros: "" as unknown as number,
+      ...timingFieldValues(resolveTimingWindows(timing)),
     },
   });
+
+  useEffect(() => {
+    if (scrollRequest.n > 0) {
+      requestAnimationFrame(() => scrollToFirstError(scrollRequest.selector));
+    }
+  }, [scrollRequest]);
+
+  /** Move to a step and bring its first error into view once it renders. */
+  const showStep = useCallback((step: number, selector = FIELD_ERROR) => {
+    setCurrentStep(step);
+    setScrollRequest(({ n }) => ({ n: n + 1, selector }));
+  }, []);
+
+  /**
+   * The same, after a submit: the requester pressed a button and may land on
+   * another step, so they are told which one and why.
+   */
+  const sendToStep = useCallback(
+    (step: number, selector = FIELD_ERROR) => {
+      toast.error(t("toast.checkStep", { step: t(`steps.${JOB_STEPS[step]}`) }));
+      showStep(step, selector);
+    },
+    [showStep, t]
+  );
+
+  /**
+   * Derive the When step's fields from `next`, measured from `now`. Called on
+   * every change and again before "Suivant" and every submit, so a range that
+   * starts today never posts a slot that has gone by in the meantime.
+   *
+   * Every field is written first and validated once after: validating each as
+   * it lands checked a half-updated set (a cleared « Du » beside the old
+   * « Au »), which is how a cleared date once threw inside the schema.
+   */
+  const syncTiming = useCallback(
+    (next: TimingState, now: Date, validate: boolean) => {
+      const windows = timingFieldValues(resolveTimingWindows(next, now));
+      form.setValue("pickupFrom", windows.pickupFrom);
+      form.setValue("pickupUntil", windows.pickupUntil);
+      form.setValue("dropoffFrom", windows.dropoffFrom);
+      form.setValue("dropoffUntil", windows.dropoffUntil);
+      form.setValue("isFlexible", windows.isFlexible);
+      form.setValue("pickupPeriods", windows.pickupPeriods);
+      form.setValue("dropoffPeriods", windows.dropoffPeriods);
+      form.setValue("pickupDays", windows.pickupDays);
+      form.setValue("dropoffDays", windows.dropoffDays);
+      if (validate) void form.trigger([...STEP_FIELDS[WHEN_STEP]]);
+    },
+    [form]
+  );
 
   const handleTimingChange = useCallback(
     (next: TimingState) => {
       setTiming(next);
-      const windows = resolveTimingWindows(next);
-      form.setValue("pickupFrom", windows.pickupFrom, { shouldValidate: true });
-      form.setValue("pickupUntil", windows.pickupUntil, { shouldValidate: true });
-      form.setValue("dropoffFrom", windows.dropoffFrom, { shouldValidate: true });
-      form.setValue("dropoffUntil", windows.dropoffUntil, {
-        shouldValidate: true,
-      });
-      form.setValue("isFlexible", windows.isFlexible);
+      syncTiming(next, new Date(), true);
     },
-    [form]
+    [syncTiming]
   );
 
   const createJob = useMutation({
@@ -120,34 +207,46 @@ export function useJobForm() {
       values: JobFormOutput;
       publish: boolean;
     }) => jobsApi.create(values, publish),
-    onSuccess: (_job, variables) => {
-      const scheduled = variables.values.publishMode === "schedule";
-      toast.success(
-        !variables.publish
-          ? t("toast.draftSaved")
-          : scheduled
-            ? t("toast.scheduled")
-            : t("toast.posted")
-      );
-      // A scheduled job is not live yet, so there is nothing to highlight on
-      // /home — it stays on /listings/me, the same as a draft, until the
-      // cron actually publishes it.
-      router.push(
-        variables.publish && !scheduled ? "/home" : "/listings/me"
-      );
+    onSuccess: (job, variables) => {
+      // `/listings/me` and `/home` would otherwise show the list as it was for
+      // up to a minute (`staleTime`).
+      queryClient.invalidateQueries({ queryKey: ["my-jobs"] });
+
+      if (variables.publish) {
+        // `replace`: the form's state dies with this page, so Back would only
+        // land on an empty form (request_posted_page_spec.md §1).
+        router.replace(postCreateDestination(job, true));
+        return;
+      }
+
+      // A draft is never refused for when it could be published, but if its
+      // pickup would stop it, the requester hears it now rather than later.
+      const pickup = publicationIssues(variables.values).pickup;
+      const note = pickup
+        ? t(pickup.kind === "inPast" ? "toast.draftNotePast" : "toast.draftNote")
+        : undefined;
+      toast.success(t("toast.draftSaved"), note ? { description: note } : undefined);
+      router.push(postCreateDestination(job, false));
     },
-    onError: (error) => {
-      // The one server rejection a person can actually act on, so it gets its
-      // own sentence rather than the raw code.
-      if (error instanceof ApiError && error.code === "PICKUP_TOO_SOON") {
-        toast.error(t("toast.pickupTooSoon"));
-        return;
+    onError: (error, variables) => {
+      // The server's publication refusals, for when its clock and the
+      // browser's disagree: each is said in words and sends the requester to
+      // the step that holds the date.
+      if (error instanceof ApiError) {
+        if (error.code === "PICKUP_IN_PAST" || error.code === "PICKUP_TOO_SOON") {
+          toast.error(
+            t(error.code === "PICKUP_IN_PAST" ? "toast.pickupInPast" : "toast.pickupTooSoon")
+          );
+          showStep(WHEN_STEP, PUBLICATION_ERROR);
+          return;
+        }
+        if (error.code === "SCHEDULED_PUBLISH_IN_PAST") {
+          toast.error(t("toast.schedulePast"));
+          showStep(BUDGET_STEP);
+          return;
+        }
       }
-      if (error instanceof ApiError && error.code === "SCHEDULED_PUBLISH_IN_PAST") {
-        toast.error(t("toast.schedulePast"));
-        return;
-      }
-      toast.error(t("toast.failed"));
+      toast.error(t(variables.publish ? "toast.failed" : "toast.draftFailed"));
     },
   });
 
@@ -166,10 +265,13 @@ export function useJobForm() {
    * does not block advancing: the job itself does not depend on this.
    */
   const saveRequestedAddresses = useCallback(async () => {
-    const values = form.getValues();
     for (const side of ["pickup", "dropoff"] as const) {
-      const endpoint = values[side];
+      const endpoint = form.getValues(side);
       if (!endpoint?.saveAddress) continue;
+      // Claimed before the request goes out, so a second call made while this
+      // one is pending — a double click, « Suivant » then a submit — finds
+      // nothing to save instead of saving the same address twice.
+      form.setValue(`${side}.saveAddress`, false);
 
       try {
         await createAddress({
@@ -181,46 +283,139 @@ export function useJobForm() {
           lat: endpoint.lat,
           lng: endpoint.lng,
         });
-        form.setValue(`${side}.saveAddress`, false);
         form.setValue(`${side}.addressLabel`, "");
         queryClient.invalidateQueries({ queryKey: addressBookKeys.all });
       } catch {
+        form.setValue(`${side}.saveAddress`, true);
         toast.error(t("toast.addressSaveFailed"));
       }
     }
   }, [form, queryClient, t]);
 
-  /** Only validates the fields on the current step, not the whole form. */
+  /**
+   * Only validates the fields on the current step, not the whole form. Not
+   * whether the pickup leaves carriers time to bid: that blocks « Publier »
+   * and nothing else, and holding « Suivant » for it would keep the requester
+   * from the Budget step — and so from saving the draft at all
+   * (publication_timing_spec.md §3.4). The When step shows it regardless.
+   */
   const handleNext = useCallback(async () => {
+    if (currentStep === WHEN_STEP) syncTiming(timing, new Date(), false);
+
     const fields = STEP_FIELDS[currentStep];
     const valid = await form.trigger(fields as never);
     if (!valid) {
-      // `trigger` resolves once `formState.errors` is updated, but React has
-      // not necessarily painted the new `FieldError` text yet — wait a frame
-      // so the element we're about to scroll to actually exists.
-      requestAnimationFrame(scrollToFirstError);
+      showStep(currentStep);
       return;
     }
 
     if (currentStep === WHERE_STEP) await saveRequestedAddresses();
 
-    setCurrentStep((step) => Math.min(step + 1, JOB_STEPS.length - 1));
-  }, [currentStep, form, saveRequestedAddresses]);
+    const next = Math.min(currentStep + 1, JOB_STEPS.length - 1);
+    setCurrentStep(next);
+    setFurthestStep((furthest) => Math.max(furthest, next));
+  }, [currentStep, form, saveRequestedAddresses, showStep, syncTiming, timing]);
 
   const handlePrev = useCallback(
     () => setCurrentStep((step) => Math.max(step - 1, 0)),
     []
   );
 
+  /**
+   * The whole schema for both buttons; the publication checks for "Publier"
+   * only. Whatever stops a submit moves to the step that holds it — nothing
+   * fails silently on a step that is not on screen any more.
+   */
   const submit = useCallback(
-    (publish: boolean) =>
-      form.handleSubmit((values) =>
-        createJob.mutate({
-          values: values as unknown as JobFormOutput,
-          publish,
-        })
-      )(),
-    [form, createJob]
+    (publish: boolean) => {
+      if (inFlight.current) return;
+      inFlight.current = true;
+      const release = () => {
+        inFlight.current = false;
+      };
+
+      syncTiming(timing, new Date(), false);
+      return form
+        .handleSubmit(
+          (values) => {
+            if (publish) {
+              const issues = publicationIssues(values);
+              if (issues.pickup) {
+                release();
+                return sendToStep(WHEN_STEP, PUBLICATION_ERROR);
+              }
+              if (issues.schedule) {
+                release();
+                return sendToStep(BUDGET_STEP);
+              }
+            }
+            // An address ticked « Enregistrer » is saved when the Where step is
+            // left with « Suivant » — or here, when the requester came back to
+            // it and submitted from there. Not awaited: the request does not
+            // depend on it, and a slow save must not hold « Publier » open.
+            void saveRequestedAddresses();
+            createJob.mutate(
+              { values: values as unknown as JobFormOutput, publish },
+              { onSettled: release }
+            );
+          },
+          (errors) => {
+            release();
+            const step = firstStepWithError(errors) ?? currentStep;
+            // Never forward past a step the requester has not seen: « Quand »
+            // would publish its untouched defaults. Every step up to the
+            // furthest reached is free of errors (the first error lies beyond
+            // it), so go on to the first step not yet reached
+            // (publication_timing_spec.md §3.5).
+            if (step > furthestStep) {
+              const next = furthestStep + 1;
+              toast.error(t("toast.finishSteps"));
+              void saveRequestedAddresses();
+              setFurthestStep(next);
+              showStep(next);
+              return;
+            }
+            sendToStep(step);
+          }
+        )()
+        .catch((error: unknown) => {
+          release();
+          throw error;
+        });
+    },
+    [
+      form,
+      createJob,
+      currentStep,
+      furthestStep,
+      saveRequestedAddresses,
+      sendToStep,
+      showStep,
+      syncTiming,
+      t,
+      timing,
+    ]
+  );
+
+  // Judged from a derivation made now, not from the fields: a flexible start
+  // was clamped to the clock when it was last derived, and read back fifteen
+  // minutes later it would claim « trop proche » about a request « Publier »
+  // would re-derive and post without complaint. `watch` re-renders this hook
+  // when the publication choice changes; the When step's state does the rest.
+  const now = new Date();
+  const live = resolveTimingWindows(timing, now);
+  const [publishMode, scheduledPublishAt] = form.watch([
+    "publishMode",
+    "scheduledPublishAt",
+  ]);
+  const publication = publicationIssues(
+    {
+      pickupFrom: live.pickupFrom,
+      pickupUntil: live.pickupUntil,
+      publishMode,
+      scheduledPublishAt,
+    },
+    now
   );
 
   return {
@@ -230,12 +425,18 @@ export function useJobForm() {
     steps: JOB_STEPS,
     isFirstStep: currentStep === 0,
     isLastStep: currentStep === JOB_STEPS.length - 1,
-    isSubmitting: createJob.isPending,
+    // From the click (`formState.isSubmitting` covers the validation) to the
+    // navigation: the request must never be postable twice.
+    isSubmitting:
+      form.formState.isSubmitting || createJob.isPending || createJob.isSuccess,
     timing,
+    pickupClampedFrom: live.pickupClampedFrom,
+    publication,
     handleTimingChange,
     handlePhotosChange,
     handleNext,
     handlePrev,
+    goToStep: showStep,
     publish: () => submit(true),
     saveDraft: () => submit(false),
   };

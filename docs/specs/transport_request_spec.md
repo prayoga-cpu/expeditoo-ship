@@ -65,10 +65,11 @@ a screen they have not reached. `STEP_FIELDS` in `schemas.ts` is the mapping.
   it into a taxonomy. `categoryId` is optional on the DTO and the service
   resolves a default (§4).
 - **No `origin` field.** Stamped by the service. See §5.
-- **No success page.** The restored one was written for the v1 goods auction
-  ("Auction Created Successfully!"). Publishing now routes to
-  `/listing/{id}` — the thing that was just created — and saving a draft routes
-  to `/listings/me`.
+- ~~**No success page.**~~ **Superseded in 2.59.0.** The restored one was
+  written for the v1 goods auction ("Auction Created Successfully!"), so none
+  was kept. The client then asked for one (2026-10-02): publishing — now or
+  scheduled — routes to `/create/success/{id}`, and saving a draft still routes
+  to `/listings/me`. Contract: `request_posted_page_spec.md`.
 
 ---
 

@@ -2,6 +2,11 @@ import { z } from "zod";
 import { isValidPhoneNumber } from "libphonenumber-js/min";
 
 import { JOB_POSTAL_CODE_PATTERN } from "@/lib/postal-code";
+import {
+  TIME_SLOTS,
+  toDayString,
+  weekdaysBetween,
+} from "@/lib/availability-window";
 
 import {
   HEAVY_BRACKET_ID,
@@ -265,6 +270,13 @@ export const jobFormSchema = z
     dropoffFrom: datetimeLocal,
     dropoffUntil: datetimeLocal,
     isFlexible: z.boolean().default(false),
+    // Derived by `timing.ts` from the When step, never typed: the weekdays
+    // and times of day someone is there at each end. Full sets in exact mode
+    // (request_availability_spec.md §1).
+    pickupDays: z.array(z.number().int().min(1).max(7)),
+    pickupPeriods: z.array(z.enum(TIME_SLOTS)),
+    dropoffDays: z.array(z.number().int().min(1).max(7)),
+    dropoffPeriods: z.array(z.enum(TIME_SLOTS)),
 
     budgetEuros: z.coerce
       .number()
@@ -364,27 +376,35 @@ export const jobFormSchema = z
       });
     }
 
-    if (data.publishMode === "schedule") {
-      if (!data.scheduledPublishAt) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "create.validation.scheduledPublishRequired",
-          path: ["scheduledPublishAt"],
-        });
-      } else if (data.scheduledPublishAt <= new Date()) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "create.validation.scheduledPublishPast",
-          path: ["scheduledPublishAt"],
-        });
-      } else if (data.scheduledPublishAt >= data.pickupFrom) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "create.validation.scheduledPublishAfterPickup",
-          path: ["scheduledPublishAt"],
-        });
+    // Every weekday unticked between the two dates is a contradiction in what
+    // was typed, not a question of time — so, unlike the publication checks in
+    // `publication.ts`, it blocks a draft too (request_availability_spec.md §4).
+    if (data.isFlexible) {
+      const ends = [
+        ["pickupDays", data.pickupFrom, data.pickupUntil, data.pickupDays],
+        ["dropoffDays", data.dropoffFrom, data.dropoffUntil, data.dropoffDays],
+      ] as const;
+      for (const [path, from, until, days] of ends) {
+        // A cleared date reaches here as the raw string a failed `.pipe` left
+        // behind, and an inverted window is reported by the rules above.
+        if (!(from instanceof Date) || !(until instanceof Date) || from >= until) {
+          continue;
+        }
+        const inRange = weekdaysBetween(toDayString(from), toDayString(until));
+        if (!inRange.some((day) => days.includes(day))) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "create.validation.noAllowedDay",
+            path: [path],
+          });
+        }
       }
     }
+
+    // No rule here compares a date with the clock. When a request may be
+    // published is a publication question, asked by `publication.ts` when it
+    // is published — never when it is saved as a draft
+    // (publication_timing_spec.md §3.6).
   });
 
 export type JobFormValues = z.input<typeof jobFormSchema>;
@@ -402,6 +422,13 @@ export const STEP_FIELDS = [
     "fragileNote",
   ],
   ["pickup", "dropoff"],
-  ["pickupFrom", "pickupUntil", "dropoffFrom", "dropoffUntil"],
+  [
+    "pickupFrom",
+    "pickupUntil",
+    "dropoffFrom",
+    "dropoffUntil",
+    "pickupDays",
+    "dropoffDays",
+  ],
   ["budgetEuros", "publishMode", "scheduledPublishAt"],
 ] as const;

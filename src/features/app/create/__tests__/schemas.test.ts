@@ -45,6 +45,11 @@ const form = (over: Record<string, unknown> = {}) => ({
   pickupUntil: iso(56),
   dropoffFrom: iso(72),
   dropoffUntil: iso(80),
+  // Full sets: what `resolveTimingWindows` derives for an exact request.
+  pickupDays: [1, 2, 3, 4, 5, 6, 7],
+  pickupPeriods: ["morning", "afternoon", "evening"],
+  dropoffDays: [1, 2, 3, 4, 5, 6, 7],
+  dropoffPeriods: ["morning", "afternoon", "evening"],
   budgetEuros: "250",
   ...over,
 });
@@ -452,5 +457,94 @@ describe("jobFormSchema — postal codes", () => {
     expect(messages(form({ dropoff: endpoint({ postalCode: code }) }))).toContain(
       "create.validation.postalCode"
     );
+  });
+});
+
+// publication_timing_spec.md §3.6, request_availability_spec.md §4
+describe("jobFormSchema — the When step", () => {
+  // 2030-01-05 is a Saturday, 2030-01-06 a Sunday.
+  const weekend = {
+    isFlexible: true,
+    pickupFrom: "2030-01-05T06:00",
+    pickupUntil: "2030-01-06T22:00",
+    dropoffFrom: "2030-01-07T06:00",
+    dropoffUntil: "2030-01-08T22:00",
+  };
+
+  it("runs the date rules while the budget is still blank", () => {
+    // The budget is typed on the step after this one. Seeded blank it is an
+    // ordinary issue, so the cross-date rules still run on "Suivant".
+    const raised = messages(
+      form({ budgetEuros: "", dropoffFrom: iso(24), dropoffUntil: iso(30) })
+    );
+
+    expect(raised).toContain("create.validation.budgetRequired");
+    expect(raised).toContain("create.validation.deliveryBeforePickup");
+  });
+
+  it("lost the date rules entirely while the budget was unset", () => {
+    // Why the form now seeds it: an unset number is a type error, which
+    // aborts the object before its `superRefine` runs.
+    const raised = messages(
+      form({ budgetEuros: undefined, dropoffFrom: iso(24), dropoffUntil: iso(30) })
+    );
+
+    expect(raised).not.toContain("create.validation.deliveryBeforePickup");
+  });
+
+  it("refuses a flexible range in which no ticked weekday falls", () => {
+    const parsed = jobFormSchema.safeParse(
+      form({ ...weekend, pickupDays: [1, 2, 3, 4, 5] })
+    );
+
+    expect(parsed.success).toBe(false);
+    if (!parsed.success) {
+      expect(parsed.error.issues).toContainEqual(
+        expect.objectContaining({
+          message: "create.validation.noAllowedDay",
+          path: ["pickupDays"],
+        })
+      );
+    }
+  });
+
+  it("accepts the range once one ticked weekday falls inside it", () => {
+    expect(
+      jobFormSchema.safeParse(form({ ...weekend, pickupDays: [6] })).success
+    ).toBe(true);
+  });
+
+  it("checks delivery weekdays the same way", () => {
+    // Monday 7 → Tuesday 8, with only the weekend ticked.
+    expect(messages(form({ ...weekend, dropoffDays: [6, 7] }))).toContain(
+      "create.validation.noAllowedDay"
+    );
+  });
+
+  it("reports a cleared flexible date instead of throwing", () => {
+    // A cleared « Du » reaches the root refinement as the raw "" the failed
+    // `.pipe` left behind.
+    const input = form({ ...weekend, pickupFrom: "" });
+
+    expect(() => jobFormSchema.safeParse(input)).not.toThrow();
+    expect(messages(input)).toContain("create.validation.dateRequired");
+  });
+
+  it("leaves weekdays alone for an exact request", () => {
+    expect(
+      jobFormSchema.safeParse(
+        form({ ...weekend, isFlexible: false, pickupDays: [1] })
+      ).success
+    ).toBe(true);
+  });
+
+  it("does not judge a schedule against the clock", () => {
+    // When a request may go live is a publication question, asked by
+    // `publication.ts` on « Publier » — never one that blocks a draft.
+    expect(
+      jobFormSchema.safeParse(
+        form({ publishMode: "schedule", scheduledPublishAt: iso(-1) })
+      ).success
+    ).toBe(true);
   });
 });

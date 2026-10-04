@@ -846,6 +846,7 @@
         "vehicleInactive": "inactif",
         "price": "Votre prix (€)",
         "overBudget": "Au-dessus du budget du client. Autorisé — expliquez pourquoi ci-dessous.",
+        "pickupPreference": "Préférence du client pour l'enlèvement : {value}",
         "message": "Message (facultatif)",
         "messagePlaceholder": "Dites au client pourquoi vous êtes le bon transporteur pour cette course.",
         "submit": "Envoyer l'offre",
@@ -907,12 +908,16 @@
       "schedule": "Planifier la demande"
     },
     "toast": {
-      "posted": "Demande publiée — les transporteurs peuvent enchérir",
-      "scheduled": "Demande planifiée — elle sera publiée à l'heure choisie",
       "draftSaved": "Brouillon enregistré",
-      "pickupTooSoon": "Le retrait est trop proche pour laisser le temps d'enchérir. Reportez-le.",
+      "draftNote": "À noter : l'enlèvement est trop proche de la publication pour publier cette demande telle quelle.",
+      "draftNotePast": "À noter : le créneau d'enlèvement de ce brouillon est déjà passé.",
+      "pickupTooSoon": "L'enlèvement est trop proche de la publication : les transporteurs n'auraient pas le temps de faire une offre. Modifiez-le à l'étape « Quand ».",
+      "pickupInPast": "Ce créneau d'enlèvement est déjà passé. Modifiez-le à l'étape « Quand ».",
       "schedulePast": "Cette heure de publication est trop proche ou déjà passée. Choisissez-en une plus tard.",
       "failed": "Impossible de publier votre demande. Veuillez réessayer.",
+      "draftFailed": "Impossible d'enregistrer le brouillon. Veuillez réessayer.",
+      "checkStep": "Vérifiez l'étape « {step} ».",
+      "finishSteps": "Complétez les étapes suivantes pour enregistrer votre demande.",
       "addressSaveFailed": "Impossible d'enregistrer cette adresse dans votre profil. Votre demande n'est pas affectée."
     },
     "what": {
@@ -1117,18 +1122,38 @@
       "untilDateLabel": "Au",
       "slotLabel": "Moment de la journée",
       "hourLabel": "Heure précise",
-      "slotPreferenceLabel": "Moment de la journée préféré",
-      "slotPreferenceHint": "Facultatif — resserre votre créneau, les transporteurs peuvent tout de même proposer en dehors.",
+      "slotPreferenceLabel": "Moments de la journée possibles",
+      "slotPreferenceHint": "Choisissez un ou plusieurs moments. Les transporteurs peuvent tout de même proposer en dehors.",
       "slot": {
         "any": "N'importe quand",
         "morning": "Matin",
         "afternoon": "Après-midi",
         "evening": "Soir"
-      }
+      },
+      "daysLabel": "Jours possibles",
+      "daysOutOfRange": "Les jours grisés ne tombent pas entre vos dates.",
+      "weekdays": {
+        "1": "Lun",
+        "2": "Mar",
+        "3": "Mer",
+        "4": "Jeu",
+        "5": "Ven",
+        "6": "Sam",
+        "7": "Dim"
+      },
+      "clampedFrom": "Les créneaux déjà passés ne comptent pas : l'enlèvement commencera au plus tôt le {from}."
+    },
+    "publication": {
+      "pickupInPast": "Ce créneau d'enlèvement est déjà passé. Choisissez des dates à venir.",
+      "pickupTooSoon": "L'enlèvement est trop proche de la publication : les transporteurs n'auraient pas le temps de faire une offre. Choisissez un enlèvement qui commence au plus tôt le {earliest}.",
+      "biddingShort": "L'enlèvement est proche de la publication : les transporteurs pourront faire une offre jusqu'au {closesAt} seulement. Pour en recevoir davantage, prévoyez l'enlèvement plus tard.",
+      "scheduleTooClose": "La publication est trop proche de l'enlèvement : planifiez-la au plus tard le {latest}, ou choisissez un enlèvement plus tard.",
+      "scheduleImpossible": "L'enlèvement est trop proche pour planifier la publication : publiez maintenant, ou choisissez un enlèvement plus tard.",
+      "editDates": "Modifier les dates"
     },
     "budget": {
       "label": "Combien pensez-vous payer ?",
-      "hint": "C'est une estimation, pas une limite. Les transporteurs peuvent enchérir au-dessus ou en dessous, et vous choisissez l'offre que vous acceptez.",
+      "hint": "C'est une estimation, pas une limite : les transporteurs peuvent proposer plus ou moins, et vous choisissez l'offre que vous acceptez. Un transporteur peut aussi accepter directement votre demande à ce prix.",
       "publish": {
         "label": "Quand cette demande doit-elle être publiée ?",
         "now": "Maintenant",
@@ -1178,7 +1203,34 @@
       "invalidPhone": "Indiquez un numéro de téléphone valide",
       "scheduledPublishRequired": "Choisissez une date et une heure de publication",
       "scheduledPublishPast": "Choisissez un moment dans le futur",
-      "scheduledPublishAfterPickup": "Publiez avant le début du créneau de retrait"
+      "noAllowedDay": "Aucun des jours cochés ne tombe entre ces dates."
+    },
+    "success": {
+      "open": {
+        "title": "Merci ! Votre demande est publiée.",
+        "lead": "Les transporteurs peuvent dès maintenant vous faire des offres."
+      },
+      "scheduled": {
+        "title": "Merci ! Votre demande est planifiée.",
+        "lead": "Elle sera publiée le {date}. Les transporteurs pourront alors vous faire des offres."
+      },
+      "budget": "Budget indiqué : {amount}",
+      "next": {
+        "title": "Et maintenant ?",
+        "offers": "Les transporteurs vous envoient leurs offres jusqu'au {date}.",
+        "notify": "Vous êtes prévenu dans l'application à chaque nouvelle offre.",
+        "choose": "Vous comparez les offres et choisissez votre transporteur — à moins qu'un transporteur n'accepte directement votre demande à votre budget.",
+        "pay": "Rien n'est prélevé avant que le transport soit attribué : quand vous acceptez une offre, ou quand un transporteur accepte votre demande à votre budget."
+      },
+      "actions": {
+        "view": "Voir ma demande",
+        "myRequests": "Mes demandes",
+        "another": "Déposer une autre demande"
+      },
+      "notFound": {
+        "title": "Demande introuvable",
+        "description": "Elle a peut-être été supprimée, ou ce lien n'est pas le bon."
+      }
     }
   },
   "myJobs": {

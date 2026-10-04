@@ -1,6 +1,6 @@
 /** Shapes returned by the transport-job REST layer. */
 
-import type { TimeSlot } from "@/lib/availability-window";
+import type { IsoWeekday, TimeSlot } from "@/lib/availability-window";
 
 export type ListingStatus =
   | "draft"
@@ -73,6 +73,16 @@ export interface Job {
   dropoffFrom: string;
   dropoffUntil: string;
   isFlexible: boolean;
+  /**
+   * Who is there, when: ISO weekdays and times of day at each end. The full
+   * set means unrestricted. Optional because two projections
+   * (`messages.dal.ts`, `thread-offers.service.ts`) build a job without them,
+   * and an absent set reads as unrestricted (request_availability_spec.md §3).
+   */
+  pickupDays?: IsoWeekday[];
+  pickupPeriods?: TimeSlot[];
+  dropoffDays?: IsoWeekday[];
+  dropoffPeriods?: TimeSlot[];
 
   budgetCents: number;
   acceptedOfferId: string | null;
@@ -87,6 +97,8 @@ export interface Job {
    * job that was posted — and a carrier bidding on it is entitled to know.
    */
   reopenedAt: string | null;
+  /** Set while status is `scheduled`: the moment it goes live. */
+  scheduledPublishAt?: string | null;
   createdAt: string;
 
   /**

@@ -77,6 +77,10 @@ chosen). The existing capture-time invoice email
 Already implemented (`useJobForm.tsx`, `createJob.onSuccess`,
 `toast.success(t("toast.posted"))`). No change.
 
+> **Superseded (2.59.0).** A publication no longer toasts: it lands on the
+> thank-you page, which says the same and more (`request_posted_page_spec.md`).
+> A draft still toasts `toast.draftSaved`.
+
 ### 2.4 Homepage status
 
 `/home` (`DriverDashboard.tsx`) gains a card, rendered when the caller has at

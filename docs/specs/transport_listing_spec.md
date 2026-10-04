@@ -179,7 +179,7 @@ No edits at all once `awarded` → `409 LISTING_NOT_EDITABLE`.
 | # | Case | Behaviour |
 |---|---|---|
 | 1 | `pickupFrom` in the past at publish time | `400 PICKUP_IN_PAST` — checked at publish, not at draft creation |
-| 2 | `expiresAt` computed to a past time (job posted < 6 h before pickup) | Clamp to `now + 30 min`; if that exceeds `pickupFrom`, reject `400 PICKUP_TOO_SOON` |
+| 2 | `expiresAt` computed to a past time (job posted < 6 h before pickup) | Clamp to `now + 30 min`; if that exceeds `pickupFrom`, reject `400 PICKUP_TOO_SOON` — also at publish only. Until 2.59.0 a draft was refused here too, which contradicted row 1; a draft now stores a placeholder `expires_at` and no schedule (`publication_timing_spec.md` §2) |
 | 3 | Weight given, dimensions omitted | Allowed. Vehicle capacity check falls back to weight only |
 | 4 | Geocoding fails for a typed address | Reject `400 ADDRESS_NOT_GEOCODABLE`; the UI requires a picked suggestion |
 | 5 | Shipper publishes with no payment method | Allowed — payment is only required at accept time (`offers_engine_spec.md` §5) |

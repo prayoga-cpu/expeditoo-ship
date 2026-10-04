@@ -49,6 +49,40 @@ export function resolveExpiresAt(pickupFrom: Date, now = new Date()): Date {
   return expiresAt;
 }
 
+/**
+ * The publication rules, for a job that is actually going live — now, or at
+ * its scheduled instant. Returns the bidding deadline.
+ */
+function assertPublishable(data: CreateListingInput, now: Date): Date {
+  if (data.pickupFrom <= now) throw err("PICKUP_IN_PAST", 400);
+
+  // A schedule is a promise to go live later; the promise itself has to be
+  // in the future, or "later" is a lie.
+  if (data.scheduledPublishAt && data.scheduledPublishAt <= now) {
+    throw err("SCHEDULED_PUBLISH_IN_PAST", 400);
+  }
+
+  // The bidding window is measured from whichever moment the job actually
+  // reaches the board: the scheduled instant for a scheduled job, `now`
+  // otherwise. A schedule whose own instant leaves no usable window (e.g. at
+  // or after `pickupFrom`) fails here with the same `PICKUP_TOO_SOON` a normal
+  // too-soon pickup already gets.
+  return resolveExpiresAt(data.pickupFrom, data.scheduledPublishAt ?? now);
+}
+
+/**
+ * A draft is not going anywhere, so no publication rule applies to it — the
+ * comment above `PICKUP_IN_PAST` always said so, but `resolveExpiresAt` ran for
+ * drafts too and refused the same date as `PICKUP_TOO_SOON`, which is the
+ * toast the client got for pressing "Enregistrer le brouillon"
+ * (publication_timing_spec.md §2). `expires_at` is NOT NULL, so a draft gets a
+ * placeholder: every reader of the column filters on `status = 'open'` first,
+ * and `publishListing` recomputes it.
+ */
+function draftExpiresAt(pickupFrom: Date, now: Date): Date {
+  return expiresAtFor(pickupFrom, now) ?? pickupFrom;
+}
+
 function toInsert(
   shipperId: string,
   data: CreateListingInput,
@@ -111,10 +145,18 @@ function toInsert(
     dropoffFrom: data.dropoffFrom,
     dropoffUntil: data.dropoffUntil,
     isFlexible: data.isFlexible,
+    // Absent means unrestricted: Drizzle then writes the column default, the
+    // full set (request_availability_spec.md §2).
+    pickupDays: data.pickupDays,
+    pickupPeriods: data.pickupPeriods,
+    dropoffDays: data.dropoffDays,
+    dropoffPeriods: data.dropoffPeriods,
 
     budgetCents: data.budgetCents,
     expiresAt,
-    scheduledPublishAt: data.scheduledPublishAt ?? null,
+    // The column means "while status is `scheduled`", and nothing publishes a
+    // draft at its scheduled time — so a draft keeps none.
+    scheduledPublishAt: data.publish ? (data.scheduledPublishAt ?? null) : null,
   };
 }
 
@@ -138,28 +180,9 @@ export const listingsService = {
     options: { notifyRouteMatches?: boolean } = {}
   ) {
     const now = new Date();
-
-    // A draft may sit unposted, so the pickup window is only enforced when the
-    // job actually goes live.
-    if (data.publish && data.pickupFrom <= now) {
-      throw err("PICKUP_IN_PAST", 400);
-    }
-
-    // A schedule is a promise to go live later; the promise itself has to be
-    // in the future, or "later" is a lie.
-    if (data.scheduledPublishAt && data.scheduledPublishAt <= now) {
-      throw err("SCHEDULED_PUBLISH_IN_PAST", 400);
-    }
-
-    // The bidding window is measured from whichever moment the job actually
-    // reaches the board: the scheduled instant for a scheduled job, `now` for
-    // everything else (open or draft alike). A schedule whose own instant
-    // leaves no usable window (e.g. at or after `pickupFrom`) fails here with
-    // the same `PICKUP_TOO_SOON` a normal too-soon pickup already gets.
-    const expiresAt = resolveExpiresAt(
-      data.pickupFrom,
-      data.scheduledPublishAt ?? now
-    );
+    const expiresAt = data.publish
+      ? assertPublishable(data, now)
+      : draftExpiresAt(data.pickupFrom, now);
     // A requester describes an object, not a taxonomy node, so the category is
     // resolved here when the caller did not name one.
     const categoryId =

@@ -36,6 +36,18 @@ than leaving it in a chat message.
       has been due since 2026-09-20 and text its client. Assign or cancel that
       quote first if that is not wanted. Until they are set, open jobs never
       expire and a job scheduled to publish later never publishes.
+- [ ] **Run Actions → "Migrate database" for `0035_listing_availability`
+      before 2.59.0 deploys**, dispatched on the branch `release/2.59.0` so the
+      new code never meets an un-migrated database: it selects the four new
+      `listings` columns on every read. Additive (`ADD COLUMN IF NOT EXISTS`,
+      full-set defaults); the running 2.58.0 code ignores them.
+- [ ] **Take two product questions from 2.59.0 to the client.** (1) May an
+      approved carrier take a *direct* request outright at its budget? Today
+      any open job can be taken (`takeJob`, no origin check), which charges
+      the requester's saved card off-session; the thank-you page now says so.
+      (2) Saving a draft works now, but a requester still cannot publish,
+      edit or delete a draft from « Mes demandes » — should that be built
+      next? See the 2.59.0 entry's Known limits.
 - [ ] **Make one real accept on production after 2.58.0 deploys, then cancel
       it.** 2.58.0 changes how the requester's card is taken: typed into a
       dialog when they accept, authorised on-session and captured by the
@@ -295,6 +307,265 @@ than leaving it in a chat message.
       in `.env.example`.
 
 ---
+
+## ✅ 2026-10-04 — A Thank-You Page, Weekdays and Times of Day, and Drafts That Save (2.59.0)
+
+Three reports from the client (mat nicolas, FR, v2.58.0, `/create`,
+2026-10-02), two through the in-app feedback form and one on WhatsApp with
+photos of a test session:
+
+- `#XBYUSQ2D` — _"LAST PAGE FORM : create a landing page of thanks to register
+  the ask for shipment on website"_, with a Cocolis screen as the reference.
+- `#5-FSXWN_` — _"FORM PAGE3 BELOW THE TWO LINES OF THE DATE(pickup and
+  delivery), put horizontally names of days of the week with checkbox already
+  checked. About availability, add possible to morning and afternoon( and also
+  evening): not only one"_.
+- WhatsApp — _"When i click on the bitton register(on the left of the button
+  publish),there is a message on the right bottom of the page(has to be
+  changed:warning about dates of pickup and publish too close)"_. The toast
+  read « Le retrait est trop proche pour laisser le temps d'enchérir.
+  Reportez-le. »
+
+The owner's instruction: _"fix everything one by one then test, if everything
+clarified please directly push to main"_.
+
+Contracts: `docs/specs/publication_timing_spec.md`,
+`docs/specs/request_availability_spec.md`,
+`docs/specs/request_posted_page_spec.md` (plan:
+`docs/plans/plan_create_form_feedback.md`). `transport_request_spec.md` §3
+("No success page"), `transport_listing_spec.md` §7 row 2 and
+`listing_posted_feedback_spec.md` §2.3 carry pointers to them.
+
+### What the client actually hit
+
+Their values were Flexible, « Du 02/10 au 03/10 », Matin, pressed at 13:47
+on the 2nd.
+
+- **The pickup was not "too close": it was 7 h 47 in the past.** A flexible
+  range started at the first slot's opening hour, so "02/10, Matin" meant
+  02/10 06:00, and « N'importe quand » meant midnight. **Any flexible request
+  starting today was unpublishable** once that hour had passed, and the date
+  picker offers today.
+- **A draft was refused by a publication rule.** `createListing` skipped
+  `PICKUP_IN_PAST` for a draft ("a draft may sit unposted", `f12971f`).
+  However, `resolveExpiresAt` ran for drafts too and refused the same date as
+  `PICKUP_TOO_SOON`. A 2.25.1 test pinned this "rather than endorsing it".
+  Pressing « Publier » would have been worse: `PICKUP_IN_PAST` had no message,
+  so it showed « Impossible de publier votre demande. Veuillez réessayer. »,
+  which no retry could fix.
+- **The When step's date rules never ran on « Suivant ».** `budgetEuros` had
+  no default, and an unset number coerces to `NaN`. Zod treats that as a type
+  error and aborts the object before the root `superRefine`. On step 4, the
+  same errors sat on fields that were not on screen, and `handleSubmit` had
+  no invalid handler. So « Publier » and « Enregistrer le brouillon » could
+  silently do nothing.
+- **There was nowhere to say which days or several times of day.** The form
+  held one time of day and no weekday. Its four instants can only describe one
+  continuous window, so « Lun–Ven, matin et soir » could not be stored. The
+  French subtitle had promised « jours de la semaine et tranches horaires »
+  all along.
+
+### What changed
+
+**Publication rules gate publication only.**
+- `src/lib/listing-window.ts` gains `publicationProblem` and
+  `earliestPickupFor`. `expiresAtFor` is **unchanged**: re-boarding is tested
+  against its 6 h – 6 h 30 band (`offers.service.test.ts`).
+- In `listings.service.ts`, `createListing` runs `assertPublishable` (the
+  three codes, in their old order) only when `publish` is set. A draft stores
+  `draftExpiresAt` = `expiresAtFor(pickupFrom, now) ?? pickupFrom`. That is a
+  placeholder for a NOT NULL column: every reader filters on `status = 'open'`
+  first, and `publishListing` recomputes it. A draft also stores **no
+  schedule**: the column means "while `scheduled`", and nothing publishes a
+  draft at its time.
+- In the form, `src/features/app/create/publication.ts` asks the same question
+  from now and gives the answer in words. Step 3 shows it under « Enlèvement »;
+  step 4 shows it as a banner with « Modifier les dates », and under the
+  schedule picker.
+- Two tiers:
+  - **Error.** No time to bid, with « au plus tôt le {earliest} ». A window
+    still under way reads as too close, not « déjà passé ».
+  - **Warning.** Bidding would close within 6 h, « jusqu'au {closesAt} ». This
+    is the warning the client asked for. It shows the server's real deadline.
+- It blocks **« Publier » only**: not « Enregistrer le brouillon », and not even
+  « Suivant ». Holding « Suivant » kept a too-soon request away from the
+  Budget step, and so from ever being saved. The first Chromium pass found
+  this.
+
+**Several times of day and the days of the week** (migration `0035`).
+- Four jsonb columns: `pickup_days`, `pickup_periods`, `dropoff_days`,
+  `dropoff_periods`. They use ISO weekday numbering, like
+  `carrier_routes.days_of_week`. The defaults are the full sets, meaning
+  "unrestricted", so no existing or escalated row needed back-filling.
+- The DTO takes them `.optional()`, normalised, with duplicates refused. It
+  refuses a narrowed set on an exact request (`AVAILABILITY_REQUIRES_FLEXIBLE`).
+- `MATERIAL_FIELDS` gains the four, plus `isFlexible`, which was missing.
+- `timing.ts` derives the window from the allowed (day, period) intervals:
+  - A range that starts today starts at the first slot still usable: now +
+    30 min + a 5 min margin, rounded up to the half hour.
+  - A delivery never starts before the pickup.
+  - Only the ticked days the range can hold are stored. A greyed-out day keeps
+    its tick on screen, so that widening the range restores it, but it never
+    reaches a carrier.
+- The form re-derives at submit with a fresh `now`, and judges publication
+  from a render-time derivation. Values stored fifteen minutes earlier
+  produced a false « trop proche ».
+- The read-back line (« Lun–Ven · Matin, Soir ») appears in `RequestSummary`,
+  in `JobDetail`'s route card, and in `SubmitOfferForm`. It is **never
+  enforced**: a flexible job already accepts slots outside its window.
+
+**The thank-you page.**
+- `/create/success/[id]` shows the reference number, the request read back
+  with its budget, and « jusqu'au {expiresAt} ». It offers three ways on.
+- A scheduled request gets « …est planifiée » and its date.
+- Another user's request, or one that has moved on, is handed to
+  `/listing/:id`.
+- Focus moves to the `h1`. The request toast is gone, and every app page shares
+  one document title, so nothing else would announce it to a screen reader.
+
+**The form's own flow.**
+- A failed submit moves to the step that holds the error and says which one.
+  It **never jumps forward past a step not yet reached**. Jumping straight to
+  « Budget » once skipped « Quand » unseen, and a request could then have been
+  published with its untouched defaults. Instead it goes on to the first step
+  not yet reached (`furthestStep + 1`). Every step before that is free of
+  errors by then.
+- **A request is never posted twice.** A ref refuses a second submit while
+  one is in flight. The buttons are disabled from the click to the navigation
+  (`formState.isSubmitting || isPending || isSuccess`).
+- An address ticked « Enregistrer » is now saved on submit too, without being
+  awaited: a slow save must not hold « Publier » open. The tick is claimed
+  before the request goes out, so overlapping calls never save it twice.
+- The pickup notice has its own marker, `data-publication-error`, so a
+  « Suivant » refused for another error scrolls to that error.
+- The draft toast says when the pickup window has passed or is too close.
+- The server's codes now go to step 3 with a sentence.
+- A schedule must sit 15 min short of the server's own limit (30 min before
+  pickup). The publishing cron runs every five minutes, starts late, and
+  `publishScheduled` re-checks against the moment it runs. When no schedule
+  the picker offers could still work, the form says « publiez maintenant »
+  rather than naming a moment that has already passed.
+
+### Judgment calls
+
+- **« N'importe quand » is all three times of day.** The flexible "any" window
+  is now 06:00–22:00 instead of 00:00–23:59. No offer slot exists outside
+  those hours, and a `takeJob` booking `estimatedPickup = pickupFrom` no
+  longer books midnight.
+- **A range starting today is clamped, not refused.** The part of a range that
+  has already passed cannot be offered. The hint « Les créneaux déjà passés ne
+  comptent pas : l'enlèvement commencera au plus tôt le … » says where it now
+  starts. Bidding then closes 6 h before that start, so a start close to now
+  gets the 30-minute minimum, and the warning tier says so.
+- **The thank-you page never mentions email.** `announceListingPosted` emails
+  only on publish-now, skips it when the preference is off, and swallows
+  failures. Production's Resend sandbox also reaches only the owner (see
+  Operator to-do).
+- **The copy is true about `takeJob`; the behaviour is left alone.** An
+  approved carrier can take *any* open job at its budget, and a direct
+  request's saved card is then charged off-session (with no card the take is
+  refused). The review caught « Vous ne payez qu'au moment où vous acceptez une
+  offre » as false. The page and the budget hint now say a carrier may take
+  the request at its budget, and that nothing is charged before the award.
+  Whether direct requests should be takeable at all is the client's call (see
+  Known limits).
+- **The phone layout.** Below `sm`, the four time-of-day toggles sit as a 2×2
+  grid of pills. A quarter of a 320 px row is narrower than « N'importe ».
+
+### Found on the way, fixed
+
+- At 375 px the form's button row (« Retour · Enregistrer le brouillon ·
+  Suivant ») was 18 px wider than the form. `<main>` clips, so on phones the
+  primary button lost its right edge on every step. It now wraps.
+- The Where step's « Saisissez l'adresse… » link could not wrap, and
+  overflowed by 93 px (`location-picker-field.tsx`). It now wraps.
+
+### Review
+
+- **First round.** A five-dimension review (timing, form flow, server, page,
+  spec and copy), with one refute-by-default verifier per finding.
+  - 27 findings: 15 confirmed (2 major), 12 rejected.
+  - The 2 major ones: the forward jump past « Quand », and the `takeJob`
+    truthfulness of the page.
+  - All 15 are fixed and tested.
+- **Second round, on the fixes themselves.** 9 findings: 7 confirmed, which
+  reduce to 5 distinct problems, and 2 rejected. All 5 are fixed and tested:
+  - awaiting the address save opened a window in which a second click posted
+    the request twice;
+  - the notice took the scroll from the error that blocked « Suivant »;
+  - the walk-on started from the current step instead of the furthest one;
+  - the schedule advice could name a time that had already passed;
+  - « date … passée » was wrong for a single passed slot.
+- The Chromium run found one more problem of the same kind, also fixed:
+  holding « Suivant » for a publication problem made a too-soon draft
+  impossible to save.
+
+### Verification
+
+- `npx tsc --noEmit` 0 errors.
+- `pnpm lint` 0 errors; the 40 changed TS files have 0 warnings.
+- `pnpm test`: 166 files, 2,149 tests. The new and changed suites:
+  `timing.test.ts`, `publication.test.ts`, `useJobForm.test.tsx` (the step
+  walk, double submit and address saves, driving the real hook),
+  `TimingField.test.tsx`, `RequestPostedScreen.test.tsx`,
+  `destination.test.ts`, `listing-window.test.ts`,
+  `listing-availability.test.ts` and the listings DTO test. The draft test in
+  `listings.service.test.ts` was flipped.
+- `pnpm changelog:check` passes.
+- `pnpm build` passes on a snapshot worktree; it lists `/create/success` and
+  `/create/success/[id]`.
+- `0035` was applied through `pnpm db:migrate` to the local dev database;
+  existing rows read the full default sets.
+- **Chromium, end to end**, against the dev server on the local database. The
+  browser was on `Europe/Paris` with its clock pinned to 13:47 on 2026-10-04,
+  the client's afternoon:
+  - « Du 04/10 au 05/10, Matin »: the start moved to 5 oct. 06:00. Only Lun
+    and Dim were enabled in the weekday row; the rest were greyed and still
+    ticked.
+  - Matin + Après-midi: the start moved to 4 oct. 14:30, with the warning
+    « jusqu'au 4 oct., 14:17 ».
+  - Exact 14:00: the error showed « au plus tôt le 4 oct., 14:30 ».
+    « Suivant » went on to step 4, which repeated the error. « Publier » sent
+    the requester back with « Vérifiez l'étape « Quand » ».
+  - Draft from step 3: « Complétez les étapes suivantes… » walked on to the
+    Budget step. Saving then gave « Brouillon enregistré · À noter :
+    l'enlèvement est trop proche… » and landed on `/listings/me`.
+  - Publish: landed on the thank-you page, with no email claim. The job page
+    showed « Matin » under the window.
+  - Checked in FR and EN, light and dark. At 375 and 320 px there was no
+    horizontal overflow on any step or on the page.
+- **Not verified:** production before its migration and deploy (below);
+  Resend delivery; the scheduled-publish cron, which does not run in
+  production (Operator to-do).
+
+### Known limits
+
+- **A saved draft is still a dead end.** The requester can view it in « Mes
+  demandes » but cannot publish, edit or delete it. `publishListing` has no
+  route, `PATCH` has no caller, and `listingsApi.cancel` has no caller.
+  Saving now works, which makes this the next thing the client will hit.
+- **Carriers can take a direct request at its budget**, charging a saved card
+  off-session (`takeJob`, no origin check). The copy now says so. Restricting
+  it to Expedion jobs is a product question for the client.
+- **`GET /api/listings` and `GET /api/listings/:id` need no session and
+  return the requester's full `user` row** (email, `stripeCustomerId`,
+  preferences, `lastLoginAt`), plus street addresses and contact phones
+  (`shipper: true` in `listings.dal.ts`). This predates this release and was
+  found during it. It needs its own change.
+- Weekdays and times of day are display-only. The board's day filter,
+  carrier-route matching and route alerts still read only the outer window,
+  and re-boarding slides the window but not the weekdays.
+- The bidding deadline is measured from the start of the pickup window. A
+  flexible window starting soon closes to bids in about 30 minutes even if it
+  runs until tomorrow. In the 6 h – 6 h 30 band, `expiresAtFor` gives under
+  30 minutes. The form shows the real deadline; it does not change it.
+- Pre-existing issues the reviews confirmed, outside this change:
+  - the chat offer form gates days but not periods;
+  - the opening chat line formats dates in UTC;
+  - `upcomingOccurrences` steps 24 h across DST;
+  - the `offer_received` bell is in English;
+  - `PATCH /api/listings/:id` does not inherit `createListingSchema`'s
+    cross-field rules, `AVAILABILITY_REQUIRES_FLEXIBLE` included.
 
 ## ✅ 2026-10-01 — Pay When Accepting, No Saved Card Needed; Postal Codes of 4–6 Digits (2.58.0)
 

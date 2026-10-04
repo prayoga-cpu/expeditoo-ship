@@ -567,6 +567,22 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
   postal codes accept **4–6 digits** (`src/lib/postal-code.ts`); a driver's
   own address stays at 5. `docs/specs/pay_at_accept_spec.md`,
   `docs/specs/postal_codes_abroad_spec.md`
+- **A thank-you page, weekdays and times of day, and drafts that save**
+  (2.59.0, client feedback 2026-10-02). `/create/success/[id]` thanks the
+  requester after a publish or a schedule and says nothing about email — the
+  sandbox sender reaches nobody but the owner (`request_posted_page_spec.md`).
+  A flexible end carries `pickup_days` / `pickup_periods` / `dropoff_days` /
+  `dropoff_periods` (0035, jsonb; the full set means unrestricted), shown on
+  the summary, the job page and the offer form, and **never enforced** on an
+  offer — a flexible job already takes slots outside its window
+  (`request_availability_spec.md`). **A draft is never refused for how
+  close its pickup is**: `createListing` runs `PICKUP_IN_PAST` /
+  `SCHEDULED_PUBLISH_IN_PAST` / `PICKUP_TOO_SOON` only when publishing, and the
+  form asks the same question through `publicationProblem`
+  (`src/lib/listing-window.ts`) on the dates step. A draft still has to pass
+  the schema — required fields, dates that agree with each other. A flexible range starting today starts at the first slot still
+  usable; before, "today" meant midnight and could never be published
+  (`publication_timing_spec.md`).
 
 **Not done**
 - **`EXPEDION_APP_ORIGINS` is set in Vercel Production but not in `.env.local`**,
@@ -663,3 +679,11 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
    neither clips nor scrolls it, the document grows to wherever it sits, and a
    second page-level scrollbar slides the whole shell over blank space. That
    was a client-reported bug on `/create` (2.56.0). Keep the `relative`.
+15. **No rule in `jobFormSchema` may compare a date with the clock.**
+   `handleSubmit` runs the whole schema for « Enregistrer le brouillon » too,
+   and a draft is never refused for how close its pickup is. When a request
+   may go live is `publication.ts`'s question: shown on steps 3 and 4,
+   enforced on « Publier » only — not even on « Suivant », or a too-soon
+   request could never reach the Budget step to be saved. And keep `budgetEuros` seeded `""`: an unset number is a type error
+   that aborts Zod before the root `superRefine`, which is how the When step's
+   date rules silently never ran.

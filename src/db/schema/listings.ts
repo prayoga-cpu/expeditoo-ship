@@ -7,8 +7,15 @@ import {
   doublePrecision,
   boolean,
   index,
+  jsonb,
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
+import {
+  ISO_WEEKDAYS,
+  TIME_SLOTS,
+  type IsoWeekday,
+  type TimeSlot,
+} from "@/lib/availability-window";
 import { user } from "./users";
 
 // ========================================
@@ -149,6 +156,25 @@ export const listings = pgTable(
     dropoffFrom: timestamp("dropoff_from").notNull(),
     dropoffUntil: timestamp("dropoff_until").notNull(),
     isFlexible: boolean("is_flexible").default(false).notNull(),
+    // Who is there, when, at each end: ISO weekdays (1 = Monday) and times of
+    // day. The full set — the default — means "no restriction"; only a
+    // flexible request narrows them (0035, request_availability_spec.md).
+    pickupDays: jsonb("pickup_days")
+      .$type<IsoWeekday[]>()
+      .default([...ISO_WEEKDAYS])
+      .notNull(),
+    pickupPeriods: jsonb("pickup_periods")
+      .$type<TimeSlot[]>()
+      .default([...TIME_SLOTS])
+      .notNull(),
+    dropoffDays: jsonb("dropoff_days")
+      .$type<IsoWeekday[]>()
+      .default([...ISO_WEEKDAYS])
+      .notNull(),
+    dropoffPeriods: jsonb("dropoff_periods")
+      .$type<TimeSlot[]>()
+      .default([...TIME_SLOTS])
+      .notNull(),
 
     // ---- Money ----
     // The shipper's expectation, not a cap. Carriers may bid above it.

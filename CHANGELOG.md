@@ -14,6 +14,42 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.59.0] - 2026-10-04 · feat
+
+- **A thank-you page once your request is posted.** After « Publier la
+  demande » you land on a page that thanks you, gives your request's reference
+  number, reads the request back, says until when carriers can make offers,
+  and offers three ways on: view the request, see all your requests, or post
+  another one. A scheduled request gets the same page, with the date it goes
+  live. The page also says plainly that nothing is charged before the
+  transport is awarded.
+- **Say which days, and pick several times of day.** When your dates are
+  flexible, each pair of dates — pickup and delivery — now has the days of the
+  week underneath, all ticked to start with: untick the days nobody is there.
+  You can also pick morning *and* afternoon (and evening), not just one;
+  « N'importe quand » means all three. Carriers see your days and times on
+  your request, and right where they choose when to come.
+- **Saving a draft no longer fails because its pickup is too close.**
+  « Enregistrer le brouillon » used to show « Le retrait est trop proche… » and
+  save nothing. A draft now saves however close its pickup is — it still needs
+  the form filled in — and if the pickup would stop it being published, the
+  confirmation says so.
+- **The form says it when the pickup is too close to publication — on the
+  dates step, in plain words.** It names the earliest pickup that works,
+  repeats it beside « Publier », and holds publishing until you change it.
+  When carriers would have only a few hours to make an offer, it tells you
+  until when.
+- **A flexible request starting today now works.** « Du » today used to count
+  from midnight, or from this morning, which had already passed, so such a
+  request could never be published. It now starts at the first time still
+  possible, and the form shows from when.
+- **No more buttons that silently do nothing.** When something needs fixing,
+  « Publier » and « Enregistrer le brouillon » take you to the step that holds
+  it and say which one — one step at a time if you have not reached it yet,
+  so no step is ever skipped unseen.
+- **On a phone**, the buttons at the bottom of the form, the time-of-day
+  choices and the « Saisissez l'adresse » link no longer run off the screen.
+
 ## [2.58.0] - 2026-10-01 · feat
 
 - **You no longer need a saved card to accept an offer.** Accepting now opens

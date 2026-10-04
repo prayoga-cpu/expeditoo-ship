@@ -21,6 +21,18 @@ export const SLOT_HOURS: Record<TimeSlot, { start: number; end: number }> = {
 };
 
 /**
+ * ISO weekdays, 1 = Monday … 7 = Sunday — the numbering
+ * `carrier_routes.days_of_week` stores, and a request's `pickup_days` /
+ * `dropoff_days` too (request_availability_spec.md §1).
+ */
+export const ISO_WEEKDAYS = [1, 2, 3, 4, 5, 6, 7] as const;
+
+export type IsoWeekday = (typeof ISO_WEEKDAYS)[number];
+
+/** The ISO weekday of a date, in its local calendar. */
+export const isoWeekday = (date: Date) => (date.getDay() || 7) as IsoWeekday;
+
+/**
  * Six weeks of planning is already more than a driver holds in their head, and
  * the cap is what bounds the `OR` the DAL builds.
  */
@@ -55,6 +67,26 @@ export const parseDayString = (day: string) => {
   const [year, month, date] = day.split("-").map(Number);
   return new Date(year, month - 1, date);
 };
+
+/**
+ * The ISO weekdays that occur from one `YYYY-MM-DD` day to another, inclusive,
+ * ascending. Calendar steps rather than 24-hour ones — a day with a DST change
+ * is 23 or 25 hours long — and at most seven of them, since a longer range
+ * holds every weekday. Empty when either day is malformed or `until` is before
+ * `from`.
+ */
+export function weekdaysBetween(from: string, until: string): IsoWeekday[] {
+  if (!isAvailabilityDay(from) || !isAvailabilityDay(until) || until < from) {
+    return [];
+  }
+  const seen = new Set<IsoWeekday>();
+  const cursor = parseDayString(from);
+  for (let i = 0; i < ISO_WEEKDAYS.length && toDayString(cursor) <= until; i++) {
+    seen.add(isoWeekday(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return ISO_WEEKDAYS.filter((day) => seen.has(day));
+}
 
 /** Midnight today: a job can still be collected later on the current day. */
 export const startOfToday = () => {
@@ -110,13 +142,13 @@ export function slotInterval(
   };
 }
 
-interface HourRange {
+export interface HourRange {
   start: number;
   end: number;
 }
 
 /** Chosen slots as the fewest contiguous hour ranges that cover them. */
-function mergeSlots(slots: readonly TimeSlot[]): HourRange[] {
+export function mergeSlots(slots: readonly TimeSlot[]): HourRange[] {
   const chosen = TIME_SLOTS.filter((slot) => slots.includes(slot)).map(
     (slot) => SLOT_HOURS[slot]
   );

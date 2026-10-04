@@ -476,21 +476,104 @@ describe("createListing", () => {
     expect(code).toBe("PICKUP_IN_PAST");
   });
 
-  // Pinning existing behaviour rather than endorsing it. `createListing` says
-  // the pickup window "is only enforced when the job actually goes live", and
-  // its own PICKUP_IN_PAST check is indeed gated on `publish` — but
-  // `resolveExpiresAt` runs unconditionally straight afterwards and rejects the
-  // same date under a different code. So a draft with a past pickup is refused
-  // too, just not by the check that was written to refuse it.
-  it("also refuses a draft with a past pickup, via the expiry calculation", async () => {
+  // publication_timing_spec.md §2. This used to be pinned the other way round
+  // ("rather than endorsing it"): `resolveExpiresAt` ran for drafts too, and
+  // the client got « Le retrait est trop proche… » for pressing « Enregistrer
+  // le brouillon ».
+  it("saves a draft whose pickup has already passed", async () => {
+    const pickupFrom = at(-HOUR);
+    await listingsService.createListing(
+      "user-1",
+      createInput({ pickupFrom, publish: false })
+    );
+
+    const row = vi.mocked(listingsDal.create).mock.calls[0][0];
+    expect(row.status).toBe("draft");
+    // A placeholder for a NOT NULL column nothing reads while it is a draft.
+    expect(row.expiresAt).toEqual(pickupFrom);
+  });
+
+  it("saves a draft whose pickup is too soon to bid on", async () => {
+    await listingsService.createListing(
+      "user-1",
+      createInput({ pickupFrom: at(0.25 * HOUR), publish: false })
+    );
+
+    expect(vi.mocked(listingsDal.create).mock.calls[0][0].status).toBe("draft");
+  });
+
+  it("keeps no schedule on a draft, and does not judge it", async () => {
+    await listingsService.createListing(
+      "user-1",
+      createInput({ publish: false, scheduledPublishAt: at(-HOUR) })
+    );
+
+    const row = vi.mocked(listingsDal.create).mock.calls[0][0];
+    expect(row.status).toBe("draft");
+    expect(row.scheduledPublishAt).toBeNull();
+  });
+
+  it("still refuses to publish a schedule that has already passed", async () => {
     const code = await codeFrom(() =>
       listingsService.createListing(
         "user-1",
-        createInput({ pickupFrom: at(-HOUR), publish: false })
+        createInput({ scheduledPublishAt: at(-HOUR) })
+      )
+    );
+
+    expect(code).toBe("SCHEDULED_PUBLISH_IN_PAST");
+  });
+
+  it("still refuses to publish a pickup too soon to bid on", async () => {
+    const code = await codeFrom(() =>
+      listingsService.createListing(
+        "user-1",
+        createInput({ pickupFrom: at(0.25 * HOUR) })
       )
     );
 
     expect(code).toBe("PICKUP_TOO_SOON");
+  });
+
+  it("keeps the schedule of a request that will go live later", async () => {
+    const scheduledPublishAt = at(2 * HOUR);
+    await listingsService.createListing(
+      "user-1",
+      createInput({ scheduledPublishAt })
+    );
+
+    const row = vi.mocked(listingsDal.create).mock.calls[0][0];
+    expect(row.status).toBe("scheduled");
+    expect(row.scheduledPublishAt).toEqual(scheduledPublishAt);
+  });
+
+  // request_availability_spec.md §3
+  it("writes the weekdays and times of day the request carries", async () => {
+    await listingsService.createListing(
+      "user-1",
+      createInput({
+        isFlexible: true,
+        pickupDays: [1, 2, 3],
+        pickupPeriods: ["morning", "evening"],
+        dropoffDays: [6],
+        dropoffPeriods: ["afternoon"],
+      })
+    );
+
+    const row = vi.mocked(listingsDal.create).mock.calls[0][0];
+    expect(row.pickupDays).toEqual([1, 2, 3]);
+    expect(row.pickupPeriods).toEqual(["morning", "evening"]);
+    expect(row.dropoffDays).toEqual([6]);
+    expect(row.dropoffPeriods).toEqual(["afternoon"]);
+  });
+
+  it("leaves them to the column default when the request names none", async () => {
+    await listingsService.createListing("user-1", createInput());
+
+    const row = vi.mocked(listingsDal.create).mock.calls[0][0];
+    // Undefined, so Drizzle writes the default: the full set, unrestricted.
+    expect(row.pickupDays).toBeUndefined();
+    expect(row.dropoffPeriods).toBeUndefined();
   });
 
   // listing_posted_feedback_spec.md §1-2

@@ -846,6 +846,7 @@
         "vehicleInactive": "inactive",
         "price": "Your price (€)",
         "overBudget": "Above the client's budget. Allowed — explain why below.",
+        "pickupPreference": "Client's preference for pickup: {value}",
         "message": "Message (optional)",
         "messagePlaceholder": "Tell the client why you are the right carrier for this job.",
         "submit": "Submit offer",
@@ -891,7 +892,7 @@
   },
   "create": {
     "title": "Request transport",
-    "subtitle": "Carriers respond to your request, so make it as precise as possible. Check your item dimensions and access, and who's available at pickup and delivery.",
+    "subtitle": "Carriers respond to your request, so make it as precise as possible. Check your item dimensions and access, and who's available at pickup and delivery (days of the week and times of day).",
     "steps": {
       "what": "What",
       "where": "Where",
@@ -907,12 +908,16 @@
       "schedule": "Schedule request"
     },
     "toast": {
-      "posted": "Request posted — carriers can now bid",
-      "scheduled": "Request scheduled — it will go live at the time you chose",
       "draftSaved": "Draft saved",
-      "pickupTooSoon": "Pickup is too soon for carriers to bid. Push it later.",
+      "draftNote": "Note: pickup is too close to publication to post this request as it is.",
+      "draftNotePast": "Note: this draft's pickup window has already passed.",
+      "pickupTooSoon": "Pickup is too close to publication: carriers would have no time to make an offer. Change it on the \"When\" step.",
+      "pickupInPast": "This pickup window has already passed. Change it on the \"When\" step.",
       "schedulePast": "That publish time is too close or already past. Pick a later one.",
       "failed": "Could not post your request. Please try again.",
+      "draftFailed": "Could not save your draft. Please try again.",
+      "checkStep": "Check the \"{step}\" step.",
+      "finishSteps": "Complete the next steps to save your request.",
       "addressSaveFailed": "Could not save that address to your profile. Your request itself is unaffected."
     },
     "what": {
@@ -1117,18 +1122,38 @@
       "untilDateLabel": "Until",
       "slotLabel": "Time of day",
       "hourLabel": "Exact time",
-      "slotPreferenceLabel": "Preferred time of day",
-      "slotPreferenceHint": "Optional — narrows your window, but carriers can still propose outside it.",
+      "slotPreferenceLabel": "Possible times of day",
+      "slotPreferenceHint": "Pick one or more. Carriers can still propose outside them.",
       "slot": {
         "any": "Any time",
         "morning": "Morning",
         "afternoon": "Afternoon",
         "evening": "Evening"
-      }
+      },
+      "daysLabel": "Possible days",
+      "daysOutOfRange": "Greyed-out days fall outside your dates.",
+      "weekdays": {
+        "1": "Mon",
+        "2": "Tue",
+        "3": "Wed",
+        "4": "Thu",
+        "5": "Fri",
+        "6": "Sat",
+        "7": "Sun"
+      },
+      "clampedFrom": "Times that have already passed don't count: pickup starts {from} at the earliest."
+    },
+    "publication": {
+      "pickupInPast": "This pickup window has already passed. Choose dates still to come.",
+      "pickupTooSoon": "Pickup is too close to publication: carriers would have no time to make an offer. Choose a pickup starting {earliest} or later.",
+      "biddingShort": "Pickup is close to publication: carriers can only make an offer until {closesAt}. For more offers, plan the pickup later.",
+      "scheduleTooClose": "Publication is too close to pickup: schedule it for {latest} at the latest, or choose a later pickup.",
+      "scheduleImpossible": "Pickup is too close to schedule the publication: publish now, or choose a later pickup.",
+      "editDates": "Change the dates"
     },
     "budget": {
       "label": "What do you expect to pay?",
-      "hint": "This is an expectation, not a limit. Carriers may bid above or below it, and you choose which offer to accept.",
+      "hint": "It's an estimate, not a cap: carriers can offer more or less, and you choose the offer you accept. A carrier can also take your request at this price directly.",
       "publish": {
         "label": "When should this go live?",
         "now": "Now",
@@ -1178,7 +1203,34 @@
       "invalidPhone": "Enter a valid phone number",
       "scheduledPublishRequired": "Pick a date and time to publish",
       "scheduledPublishPast": "Pick a moment in the future",
-      "scheduledPublishAfterPickup": "Publish before the pickup window starts"
+      "noAllowedDay": "None of the ticked days falls between these dates."
+    },
+    "success": {
+      "open": {
+        "title": "Thank you! Your request is live.",
+        "lead": "Carriers can start making you offers now."
+      },
+      "scheduled": {
+        "title": "Thank you! Your request is scheduled.",
+        "lead": "It goes live on {date}. Carriers can make you offers from then."
+      },
+      "budget": "Your budget: {amount}",
+      "next": {
+        "title": "What happens next?",
+        "offers": "Carriers send you their offers until {date}.",
+        "notify": "You are notified in the app for every new offer.",
+        "choose": "You compare the offers and choose your carrier — unless a carrier takes your request at your budget directly.",
+        "pay": "Nothing is charged until the transport is awarded: when you accept an offer, or when a carrier takes your request at your budget."
+      },
+      "actions": {
+        "view": "View my request",
+        "myRequests": "My requests",
+        "another": "Post another request"
+      },
+      "notFound": {
+        "title": "Request not found",
+        "description": "It may have been deleted, or this link is wrong."
+      }
     }
   },
   "myJobs": {

@@ -12,7 +12,8 @@
  *
  * Pure and throw-free on purpose: `listings.service.ts` wraps `expiresAtFor`
  * to raise `PICKUP_TOO_SOON`, and `offers.service.ts` cannot import that
- * service — it is imported *by* it.
+ * service — it is imported *by* it. The `/create` form imports it too, to
+ * warn before posting (publication_timing_spec.md §1).
  *
  * See docs/specs/cancellations_spec.md §4.3.
  */
@@ -41,6 +42,31 @@ export function expiresAtFor(pickupFrom: Date, now = new Date()): Date | null {
 
   const clamped = new Date(now.getTime() + MIN_BIDDING_WINDOW_MS);
   return clamped > pickupFrom ? null : clamped;
+}
+
+/** The earliest pickup a job published at `publishAt` can carry. */
+export function earliestPickupFor(publishAt: Date): Date {
+  return new Date(publishAt.getTime() + MIN_BIDDING_WINDOW_MS);
+}
+
+export type PublicationProblem = "PICKUP_IN_PAST" | "PICKUP_TOO_SOON";
+
+/**
+ * Why a job collecting from `pickupFrom` cannot go live at `publishAt`, or
+ * `null` when it can — the two refusals `createListing` makes, in its order.
+ *
+ * Here so the `/create` form can say it before the round trip, in words, on
+ * the step where the date was chosen, instead of a corner toast after it
+ * (publication_timing_spec.md §1). The server keeps its own throwing path;
+ * both read `expiresAtFor`, so the two cannot disagree on the arithmetic.
+ */
+export function publicationProblem(
+  pickupFrom: Date,
+  publishAt: Date,
+  now = new Date()
+): PublicationProblem | null {
+  if (pickupFrom <= now) return "PICKUP_IN_PAST";
+  return expiresAtFor(pickupFrom, publishAt) ? null : "PICKUP_TOO_SOON";
 }
 
 export interface ListingWindow {

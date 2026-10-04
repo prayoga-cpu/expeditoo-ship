@@ -19,6 +19,7 @@ import { CenteredEmptyState } from "@/components/ui/centered-empty-state";
 import { useVehicles } from "@/features/app/carrier/hooks/useCarrier";
 import { useSubmitOffer } from "../hooks/useCarrierOffers";
 import { OfferSlotsField } from "./OfferSlotsField";
+import { useAvailabilityText } from "@/features/app/listing/ui/AvailabilityLine";
 import type { Job } from "@/features/app/listing/types";
 import type { OfferSlotInput } from "@/lib/offer-slots";
 import { formatCurrency } from "@/lib/currency";
@@ -50,6 +51,10 @@ export function SubmitOfferForm({ job }: SubmitOfferFormProps) {
   const [slots, setSlots] = useState<OfferSlotInput[]>([]);
   const [deliveryLeadDays, setDeliveryLeadDays] = useState(0);
   const [message, setMessage] = useState("");
+  // The requester's weekdays and times of day for the pickup, right where the
+  // carrier picks slots. A preference: a flexible job still takes slots
+  // outside it (request_availability_spec.md §6–7).
+  const pickupPreference = useAvailabilityText(job.pickupDays, job.pickupPeriods);
 
   if (isLoading) return null;
 
@@ -139,6 +144,12 @@ export function SubmitOfferForm({ job }: SubmitOfferFormProps) {
           </p>
         )}
       </div>
+
+      {pickupPreference && (
+        <p className="text-sm text-muted-foreground">
+          {t("pickupPreference", { value: pickupPreference })}
+        </p>
+      )}
 
       <OfferSlotsField
         slots={slots}
