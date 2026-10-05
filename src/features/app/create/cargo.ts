@@ -67,6 +67,31 @@ export function resolveWeightKg(
   return exactWeightKg ?? WEIGHT_BRACKET_MAX_KG[bracket] ?? undefined;
 }
 
+/** The brackets with a ceiling, smallest first. */
+const CEILED_BRACKETS = ["upTo5", "upTo30", "upTo100", "upTo500", "upTo1000"] as const;
+
+/**
+ * The reverse of `resolveWeightKg`, for resuming a saved request
+ * (draft_requests_spec.md §2). A ceiling reads back as its bracket; any other
+ * figure as the smallest bracket above it with the figure typed in — which the
+ * schema accepts as refining that bracket; above a tonne it is freight, which
+ * states its weight. `notSure` and `upTo500` share 500 kg and read back as
+ * `upTo500`: the number, the only thing a carrier sees, is the same.
+ */
+export function bracketForWeight(weightKg: number): {
+  weightBracket: WeightBracketId;
+  exactWeightKg?: number;
+} {
+  if (weightKg > HEAVY_BRACKET_MIN_KG) {
+    return { weightBracket: HEAVY_BRACKET_ID, exactWeightKg: weightKg };
+  }
+  const ceiling = CEILED_BRACKETS.find((id) => WEIGHT_BRACKET_MAX_KG[id] === weightKg);
+  if (ceiling) return { weightBracket: ceiling };
+  const above =
+    CEILED_BRACKETS.find((id) => WEIGHT_BRACKET_MAX_KG[id] >= weightKg) ?? "upTo1000";
+  return { weightBracket: above, exactWeightKg: weightKg };
+}
+
 export const SIZE_PRESET_IDS = ["xs", "s", "m", "l", "xl", "xxl"] as const;
 
 export type SizePresetId = (typeof SIZE_PRESET_IDS)[number];
@@ -109,6 +134,30 @@ export function resolveDimensions(
     };
   }
   return preset ? { ...SIZE_PRESET_DIMENSIONS[preset] } : {};
+}
+
+/**
+ * The reverse of `resolveDimensions`: no size stays no size, a preset's exact
+ * measurements read back as that preset, anything else as typed numbers. A
+ * typed size that happens to equal a preset reads as the preset — the same
+ * numbers either way.
+ */
+export function sizeForDimensions(dims: {
+  lengthCm: number | null;
+  widthCm: number | null;
+  heightCm: number | null;
+}): { sizeMode: SizeMode; sizePreset?: SizePresetId } & Partial<Dimensions> {
+  const { lengthCm, widthCm, heightCm } = dims;
+  if (lengthCm == null || widthCm == null || heightCm == null) {
+    return { sizeMode: "preset" };
+  }
+  const preset = SIZE_PRESET_IDS.find((id) => {
+    const d = SIZE_PRESET_DIMENSIONS[id];
+    return d.lengthCm === lengthCm && d.widthCm === widthCm && d.heightCm === heightCm;
+  });
+  return preset
+    ? { sizeMode: "preset", sizePreset: preset }
+    : { sizeMode: "exact", lengthCm, widthCm, heightCm };
 }
 
 /**

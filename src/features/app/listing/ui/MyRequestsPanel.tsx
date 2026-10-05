@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ClipboardList, Gavel, Plus, AlertTriangle } from "lucide-react";
+import { ClipboardList, Gavel, Plus, AlertTriangle, TriangleAlert } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ import { formatCurrency } from "@/lib/currency";
 import { useMyRequests } from "../hooks/useMyRequests";
 import { RequestSummary } from "./RequestSummary";
 import { ListingReference } from "./ListingReference";
+import { DraftActions } from "./DraftActions";
 import { STATUS_TONE } from "../statusTone";
 import type { Job, ListingStatus } from "../types";
 
@@ -105,13 +106,17 @@ export function MyRequestsPanel() {
   );
 }
 
+/** Not yet seen by anyone but its author: still to be finished. */
+const isUnpublished = (job: Job) => job.status === "draft" || job.status === "scheduled";
+
 function JobRow({ job }: { job: Job }) {
   const t = useTranslations("myJobs");
-  const format = useFormatter();
 
+  // The card is a link to the request; the actions on a request not yet live
+  // sit below it, outside the link (draft_requests_spec.md §1).
   return (
-    <Link href={`/listing/${job.id}`} className="block">
-      <Card className="group cursor-pointer p-4 transition-colors hover:border-primary/40 sm:p-5">
+    <Card className="group p-4 transition-colors hover:border-primary/40 sm:p-5">
+      <Link href={`/listing/${job.id}`} className="block cursor-pointer">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
@@ -139,15 +144,51 @@ function JobRow({ job }: { job: Job }) {
           </div>
         </div>
 
-        <p className="mt-3 border-t border-border pt-3 text-xs text-muted-foreground">
-          {/* Was `date-fns` with no locale, so a French reader got "2 Aug 2026". */}
-          {t("posted", {
-            date: format.dateTime(new Date(job.createdAt), {
+        <RowDate job={job} />
+      </Link>
+
+      {isUnpublished(job) && <DraftActions job={job} className="mt-3" />}
+    </Card>
+  );
+}
+
+/**
+ * The date that matters for where the request is: when a draft was last
+ * saved, when a scheduled one goes live, when a live one really went live —
+ * not when it was first written (draft_requests_spec.md §5). « Publiée le »
+ * only from `publishedAt`: a request that never went live — expired by the
+ * scheduler, cancelled while scheduled — says when it was written instead.
+ */
+function RowDate({ job }: { job: Job }) {
+  const t = useTranslations("myJobs");
+  const format = useFormatter();
+  const day = (iso: string) => format.dateTime(new Date(iso), { dateStyle: "medium" });
+  const datesPassed = job.status === "draft" && new Date(job.pickupUntil) < new Date();
+
+  const label =
+    job.status === "draft"
+      ? t("savedOn", { date: day(job.updatedAt ?? job.createdAt) })
+      : job.status === "scheduled" && job.scheduledPublishAt
+        ? t("scheduledFor", {
+            date: format.dateTime(new Date(job.scheduledPublishAt), {
               dateStyle: "medium",
+              timeStyle: "short",
             }),
-          })}
-        </p>
-      </Card>
-    </Link>
+          })
+        : job.publishedAt
+          ? t("posted", { date: day(job.publishedAt) })
+          : t("created", { date: day(job.createdAt) });
+
+  return (
+    <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border pt-3 text-xs text-muted-foreground">
+      <span>{label}</span>
+      {datesPassed && (
+        // Amber on the icon only: amber text on the card is under 4.5:1.
+        <span className="flex items-center gap-1 font-medium text-foreground">
+          <TriangleAlert className="h-3.5 w-3.5 text-warning" aria-hidden />
+          {t("draft.datesPassed")}
+        </span>
+      )}
+    </p>
   );
 }

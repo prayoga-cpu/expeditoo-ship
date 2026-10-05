@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { SIZE_PRESET_DIMENSIONS } from "../cargo";
-import type { JobFormOutput } from "../schemas";
+import { jobFormSchema, type JobFormOutput } from "../schemas";
 import { toCreatePayload } from "../api/jobs.api";
 
 /**
@@ -177,6 +177,45 @@ describe("toCreatePayload", () => {
     // Stamped server-side: it decides who may award the job.
     expect(payload).not.toHaveProperty("origin");
     expect(payload).not.toHaveProperty("categoryId");
+  });
+});
+
+// numeric_input_spec.md §7: the text the Budget box holds, through the schema,
+// to the cents the API is sent — on the digits, never a float short.
+describe("toCreatePayload — a budget typed as text", () => {
+  const typed = (budgetEuros: string) =>
+    jobFormSchema.parse({
+      title: "Two-seater sofa",
+      description: "A sofa and a coffee table, ground floor at both ends.",
+      weightBracket: "upTo100",
+      pickup: endpoint,
+      dropoff: {
+        ...endpoint,
+        lat: 43.3,
+        lng: 5.37,
+        city: "Marseille",
+        postalCode: "13001",
+      },
+      pickupFrom: "2030-01-07T08:00",
+      pickupUntil: "2030-01-07T16:00",
+      dropoffFrom: "2030-01-08T08:00",
+      dropoffUntil: "2030-01-08T16:00",
+      pickupDays: [1, 2, 3, 4, 5, 6, 7],
+      pickupPeriods: ["morning", "afternoon", "evening"],
+      dropoffDays: [1, 2, 3, 4, 5, 6, 7],
+      dropoffPeriods: ["morning", "afternoon", "evening"],
+      budgetEuros,
+    });
+
+  it.each([
+    ["40,5", 4050],
+    ["40,05", 4005],
+    ["40.05", 4005],
+    ["89,90", 8990],
+    ["040", 4000],
+    ["100000", 10_000_000],
+  ])("posts « %s » € as %d cents", (text, cents) => {
+    expect(toCreatePayload(typed(text), true).budgetCents).toBe(cents);
   });
 });
 

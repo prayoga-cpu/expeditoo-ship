@@ -158,11 +158,16 @@ shows where and when the photo was taken.
 
 ## 6. Known gaps left standing (not mocked — just not done)
 
-- **Payouts stop at `scheduled`.** `executePayout` has no callers and banking details
-  are never forwarded to Stripe (`carrier.service.ts` TODO). A carrier earnings *view*
-  exists at `/carrier/trips` → Effectués, but it reports €0 net because the platform
-  retains 100% while `COMMISSION_RATE` is 1.0 — nothing moves money. This is the
-  documented Phase C boundary.
+- **Nothing in the app moves money to a driver.** `COMMISSION_RATE` is 0.1, so a
+  delivery writes a payout row for 90 % of the price — real money owed — but
+  `executePayout` has no callers, and the carrier's IBAN is neither stored (only its
+  last 4 characters are) nor forwarded anywhere. The driver asks for their balance in
+  *Mes gains*; an operator approves it, makes the bank transfer by hand outside the
+  app, and records its reference (`withdrawals.service.ts`). The balance counts only
+  delivered jobs whose payment is still captured (`docs/specs/payout_safety_spec.md`).
+  The earnings view at `/carrier/trips` → Effectués shows each delivery's net. How
+  drivers will be paid for real — Expeditoo's own bank transfer, or a licensed
+  provider such as Stripe — waits on the client's legal model.
 - **No realtime shipment data.** Only the notification bell is pushed over Ably; the
   shipment-data path (`publishDataUpdate` server-side, the `data:update` handler
   client-side) exists on both ends but was never connected, and shipment queries have
@@ -193,12 +198,13 @@ pnpm dev
    approve a carrier application at `/admin/applications` (the screen hits the real
    `carrier-applications` routes now), or insert the role directly for speed.
 4. As the carrier, open the job → the bid form is mounted on the job detail page.
-5. As the shipper, accept the offer → payment is authorised with a `pi_mock_` intent
-   and a shipment is created.
+5. As the shipper, accept the offer → the payment is recorded as taken with a
+   `pi_mock_` intent (nothing is charged) and a shipment is created.
 6. Assign a driver, then walk `ASSIGNED → PICKED_UP → IN_TRANSIT → DELIVERED` in
    `/driver/shipments/[id]`, finishing with the proof-of-delivery upload.
-7. Delivery captures the mock payment, takes the commission at the configured
-   rate — 100% during the testing phase, so the payout row is 0 — and records it.
+7. Delivery takes no further money — the mock payment was taken at step 5 — and
+   writes the driver's payout row at the configured rate: a 10 % commission, so 90 %
+   of the price is owed and shows in *Mes gains* once the job is delivered.
 8. Both sides can review from the delivery detail page.
 
 ### Expedion escalation

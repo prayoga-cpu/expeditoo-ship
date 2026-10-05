@@ -2,7 +2,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 /**
  * Covers docs/specs/invoice_at_payment_spec.md §2 — the webhook stops writing
- * the payments row itself.
+ * the payments row itself — and payout_safety_spec.md §1: it stops writing the
+ * driver's payout too.
  *
  * Without this file, reverting `stripe.service.ts` to its bare
  * `db.update(payments).set({ status: "captured" })` left the whole suite green:
@@ -21,8 +22,14 @@ vi.mock("@/db", () => ({
     },
   },
 }));
+// The webhook no longer reads shipments. This answers with a real one anyway,
+// so a webhook that went back to writing the payout would reach
+// `schedulePayout` and fail the case below, rather than bail out on an unknown
+// shipment and pass it by accident.
 vi.mock("@/server/dal/shipments.dal", () => ({
-  shipmentsDal: { getOwnership: vi.fn().mockResolvedValue(null) },
+  shipmentsDal: {
+    getOwnership: vi.fn().mockResolvedValue({ carrierId: "carrier-1" }),
+  },
 }));
 vi.mock("@/lib/stripe", () => ({
   stripe: {
@@ -72,6 +79,20 @@ describe("payment_intent.succeeded", () => {
     // The bare UPDATE it replaced set no `capturedAt` and had no status
     // predicate, so it could resurrect a refunded payment.
     expect(dbSpy.update).not.toHaveBeenCalled();
+  });
+
+  it("schedules no payout — the driver is owed at delivery, not at capture", async () => {
+    // Since the client pays at booking, the capture is the award. Scheduling
+    // here made pay for a job nobody had driven yet withdrawable at once;
+    // `settleDelivery` is the only writer now.
+    vi.mocked(stripe.webhooks.constructEvent).mockReturnValue(
+      intentSucceeded() as never
+    );
+
+    await stripeService.handleWebhook("{}", "sig");
+
+    expect(paymentsService.captureByIntent).toHaveBeenCalled();
+    expect(paymentsService.schedulePayout).not.toHaveBeenCalled();
   });
 
   it("ignores an intent this platform did not group", async () => {

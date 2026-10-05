@@ -1,7 +1,8 @@
-import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, ne, sql, type SQL } from "drizzle-orm";
 
 import { db } from "@/db";
-import { payouts } from "@/db/schema/payments";
+import { payments, payouts } from "@/db/schema/payments";
+import { shipments } from "@/db/schema/shipments";
 import { user } from "@/db/schema/users";
 import {
   withdrawals,
@@ -9,14 +10,34 @@ import {
   type Withdrawal,
 } from "@/db/schema/withdrawals";
 
-type Executor = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
+export type Executor =
+  | typeof db
+  | Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/**
+ * What a driver may ask for: earned, not yet asked for, and still backed by a
+ * delivery and by money the platform holds (payout_safety_spec.md §2.1).
+ *
+ * `scheduled` alone used to be the whole test. It is what `schedulePayout`
+ * writes — but the capture webhook wrote it at award, before anyone had driven
+ * anywhere, and a refund through `POST /api/admin/refunds` left it standing for
+ * a job whose client had their money back. The row's own status can answer
+ * neither question, so the shipment and the payment are asked directly. The
+ * joins are inner on purpose: a payout whose payment row is gone cannot be
+ * shown to be paid for.
+ */
+function availableTo(carrierUserId: string): SQL {
+  return and(
+    eq(payouts.carrierId, carrierUserId),
+    eq(payouts.status, "scheduled"),
+    isNull(payouts.withdrawalId),
+    eq(shipments.status, "DELIVERED"),
+    eq(payments.status, "captured")
+  )!;
+}
 
 export const withdrawalsDal = {
-  /**
-   * What a driver could ask for right now: every payout not already claimed by
-   * a withdrawal. `scheduled` is the status `schedulePayout` writes; anything
-   * failed or cancelled is deliberately not counted as available money.
-   */
+  /** The available balance, and how many deliveries it is made of. */
   async availableFor(carrierUserId: string, tx: Executor = db) {
     const [row] = await tx
       .select({
@@ -24,13 +45,9 @@ export const withdrawalsDal = {
         deliveries: sql<number>`count(*)::int`,
       })
       .from(payouts)
-      .where(
-        and(
-          eq(payouts.carrierId, carrierUserId),
-          eq(payouts.status, "scheduled"),
-          isNull(payouts.withdrawalId)
-        )
-      );
+      .innerJoin(shipments, eq(shipments.id, payouts.shipmentId))
+      .innerJoin(payments, eq(payments.id, payouts.paymentId))
+      .where(availableTo(carrierUserId));
 
     return row ?? { amountCents: 0, deliveries: 0 };
   },
@@ -53,18 +70,37 @@ export const withdrawalsDal = {
     return Boolean(row);
   },
 
-  /** The unclaimed payout rows themselves, for stamping into a request. */
+  /** The available payout rows themselves, for stamping into a request. */
   async availableRows(carrierUserId: string, tx: Executor = db) {
     return await tx
       .select({ id: payouts.id, amountCents: payouts.amountCents })
       .from(payouts)
-      .where(
-        and(
-          eq(payouts.carrierId, carrierUserId),
-          eq(payouts.status, "scheduled"),
-          isNull(payouts.withdrawalId)
-        )
-      );
+      .innerJoin(shipments, eq(shipments.id, payouts.shipmentId))
+      .innerJoin(payments, eq(payments.id, payouts.paymentId))
+      .where(availableTo(carrierUserId));
+  },
+
+  /**
+   * The payouts a request holds, with the facts that decide whether each may
+   * still be paid (`payoutStanding`, payout_safety_spec.md §2.2).
+   *
+   * The payment is a LEFT join where the balance's is inner: here a missing
+   * payment is an answer — not paid for — and dropping the row would make the
+   * request look smaller than the amount frozen on it.
+   */
+  async claimedPayouts(withdrawalId: string, tx: Executor = db) {
+    return await tx
+      .select({
+        id: payouts.id,
+        amountCents: payouts.amountCents,
+        status: payouts.status,
+        shipmentStatus: shipments.status,
+        paymentStatus: payments.status,
+      })
+      .from(payouts)
+      .innerJoin(shipments, eq(shipments.id, payouts.shipmentId))
+      .leftJoin(payments, eq(payments.id, payouts.paymentId))
+      .where(eq(payouts.withdrawalId, withdrawalId));
   },
 
   async create(data: InsertWithdrawal, tx: Executor = db) {
@@ -118,43 +154,101 @@ export const withdrawalsDal = {
       .orderBy(withdrawals.createdAt);
   },
 
-  async update(
+  /**
+   * Writes an operator's decision onto a request that is still open, and
+   * returns nothing when it is not. Two operators answering the same request at
+   * once would otherwise both win, and the second could turn a paid request
+   * into a refused one.
+   */
+  async updateOpen(
     id: string,
     data: Partial<InsertWithdrawal>,
-    tx: Executor = db
+    tx: Executor = db,
+    /** Only from this status — the one the deciding operator saw. */
+    from?: "requested" | "approved"
   ) {
     const [row] = await tx
       .update(withdrawals)
       .set({ ...data, updatedAt: new Date() })
-      .where(eq(withdrawals.id, id))
+      .where(
+        and(
+          eq(withdrawals.id, id),
+          from
+            ? eq(withdrawals.status, from)
+            : inArray(withdrawals.status, ["requested", "approved"])
+        )
+      )
       .returning();
     return row;
   },
 
-  /** Claims payouts for a request, or releases them when it is refused. */
-  async setPayoutWithdrawal(
+  // Every payout write below names the status it moves *from*, so a refund or
+  // a second operator acting at the same moment is never overwritten — the
+  // caller compares what moved with what it meant to move
+  // (payout_safety_spec.md §4).
+
+  /** Claims payouts for a new request: only rows still free to claim. */
+  async claimPayouts(
     payoutIds: string[],
-    withdrawalId: string | null,
-    status: "scheduled" | "processing" | "paid",
+    withdrawalId: string,
     tx: Executor = db
   ) {
+    if (payoutIds.length === 0) return [];
+    return await tx
+      .update(payouts)
+      .set({ withdrawalId, status: "processing", updatedAt: new Date() })
+      .where(
+        and(
+          inArray(payouts.id, payoutIds),
+          eq(payouts.status, "scheduled"),
+          isNull(payouts.withdrawalId)
+        )
+      )
+      .returning({ id: payouts.id });
+  },
+
+  /** Records a request's payouts as transferred. */
+  async settlePayouts(payoutIds: string[], tx: Executor = db) {
+    if (payoutIds.length === 0) return [];
+    const now = new Date();
+    return await tx
+      .update(payouts)
+      .set({ status: "paid", paidAt: now, updatedAt: now })
+      .where(
+        and(inArray(payouts.id, payoutIds), eq(payouts.status, "processing"))
+      )
+      .returning({ id: payouts.id });
+  },
+
+  /** Hands a refused request's payouts back to the balance. */
+  async releasePayouts(payoutIds: string[], tx: Executor = db) {
     if (payoutIds.length === 0) return;
     await tx
       .update(payouts)
       .set({
-        withdrawalId,
-        status,
-        paidAt: status === "paid" ? new Date() : null,
+        status: "scheduled",
+        withdrawalId: null,
+        paidAt: null,
         updatedAt: new Date(),
       })
-      .where(sql`${payouts.id} = any(${payoutIds})`);
+      .where(
+        and(inArray(payouts.id, payoutIds), eq(payouts.status, "processing"))
+      );
   },
 
-  async payoutIdsFor(withdrawalId: string, tx: Executor = db) {
-    const rows = await tx
-      .select({ id: payouts.id })
-      .from(payouts)
-      .where(eq(payouts.withdrawalId, withdrawalId));
-    return rows.map((r) => r.id);
+  /**
+   * Voids whatever a refused request still holds once its payable rows have
+   * been released — and never a `paid` one, whose money has left.
+   */
+  async voidClaimedPayouts(withdrawalId: string, tx: Executor = db) {
+    await tx
+      .update(payouts)
+      .set({ status: "cancelled", withdrawalId: null, updatedAt: new Date() })
+      .where(
+        and(
+          eq(payouts.withdrawalId, withdrawalId),
+          ne(payouts.status, "paid")
+        )
+      );
   },
 };

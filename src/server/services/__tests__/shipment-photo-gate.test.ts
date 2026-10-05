@@ -107,9 +107,11 @@ describe("pickup needs a pickup photo", () => {
       "ship-1",
       "pickup"
     );
+    // From the status it was read at, or not at all (cancellations_spec.md §7.1).
     expect(shipmentsDal.updateStatus).toHaveBeenCalledWith(
       "ship-1",
-      "PICKED_UP"
+      "PICKED_UP",
+      { expected: "ASSIGNED" }
     );
   });
 });
@@ -167,7 +169,8 @@ describe("who the gate applies to, and what it leaves alone", () => {
     expect(shipmentPhotosService.hasStagePhoto).not.toHaveBeenCalled();
     expect(shipmentsDal.updateStatus).toHaveBeenCalledWith(
       "ship-1",
-      "IN_TRANSIT"
+      "IN_TRANSIT",
+      { expected: "PICKED_UP" }
     );
   });
 

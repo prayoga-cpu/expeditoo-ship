@@ -1,5 +1,4 @@
 import { db } from "@/db";
-import { shipmentsDal } from "@/server/dal/shipments.dal";
 import { paymentsService } from "@/server/services/payments.service";
 import { user } from "@/db/schema/users";
 import { stripe } from "@/lib/stripe";
@@ -237,7 +236,7 @@ export const stripeService = {
         break;
       }
 
-      // 2. Payment Succeeded (Handle Transfers)
+      // 2. Payment Succeeded: settle the charge, and nothing else
       case "payment_intent.succeeded": {
         const paymentIntent = event.data.object as Stripe.PaymentIntent;
         const transferGroup = paymentIntent.transfer_group;
@@ -248,11 +247,13 @@ export const stripeService = {
           // outside every service — raising no document — and a retry arriving
           // after a refund turned the refunded row back into a captured one
           // (docs/specs/invoice_at_payment_spec.md §2).
+          //
+          // The driver's payout is not written here. It was, and since the
+          // client pays at booking the capture is the award: pay for a job
+          // nobody had driven yet, withdrawable at once. The driver is owed
+          // at delivery, and `settleDelivery` is the only writer
+          // (payout_safety_spec.md §1).
           await paymentsService.captureByIntent(paymentIntent.id);
-
-          // Trigger transfers (Seller + Driver)
-          // NOTE: This logic might move to a separate function triggered here
-          await this.recordCarrierPayout(paymentIntent);
         }
         break;
       }
@@ -303,28 +304,6 @@ export const stripeService = {
     return status;
   },
 
-  /**
-   * Records the carrier's payout once the held funds are captured.
-   *
-   * The goods model split one payment between a seller and a driver. A
-   * transport job has a single counterparty, so what remains is the job price
-   * less the platform commission, which was held at source.
-   */
-  async recordCarrierPayout(paymentIntent: Stripe.PaymentIntent) {
-    const shipmentId = paymentIntent.metadata?.shipmentId;
-    if (!shipmentId) {
-      console.error("payment_intent without shipmentId", paymentIntent.id);
-      return;
-    }
-
-    const shipment = await shipmentsDal.getOwnership(shipmentId);
-    if (!shipment) {
-      console.error("payment_intent for unknown shipment", shipmentId);
-      return;
-    }
-
-    await paymentsService.schedulePayout(shipmentId, shipment.carrierId);
-  },
   /**
    * The Stripe customer this user already has, or null.
    *

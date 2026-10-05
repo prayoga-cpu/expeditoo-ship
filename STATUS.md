@@ -27,6 +27,43 @@ adversarial verification pass — treat their detail as slightly less certain.
 Work that needs a human hand outside the codebase. Add to this list rather
 than leaving it in a chat message.
 
+- [ ] **Run Actions → "Migrate database" for `0036_listing_published_at`
+      before 2.60.0 deploys.** It adds `listings.published_at` and back-fills
+      it; the 2.60.0 code reads the column on every listing query.
+- [ ] **Tell the client now about the listing data exposure — GDPR, 72
+      hours.** Until 2.60.0, `GET /api/listings` and `GET /api/listings/:id`
+      needed no sign-in and returned, for every request ever published, the
+      requester's whole account row (name, email, Stripe customer and account
+      ids, preferences, last login), the street addresses and exact map
+      points, the contact names and phone numbers, and the access notes (door
+      codes); for a job escalated from Expedion, the buyer's home address and
+      phone. `GET /api/users/:id/listings` did the same, and a requester
+      reading bids received each bidding carrier's account row and number
+      plate. Found 2026-10-04, closed by 2.60.0. The client operates the
+      service, so as data controller it is theirs to judge whether this is a
+      personal data breach: if it is likely to put people at risk, the CNIL
+      must be notified within 72 hours of becoming aware (GDPR art. 33), and
+      the people themselves when the risk is high (art. 34); either way it
+      goes in their breach register. Those running the platform for them must
+      tell them without undue delay (art. 33(2)). Keep whatever access logs
+      exist — Vercel's are short-lived.
+- [ ] **Ask the client how carriers are to be paid (item 14).** Send the
+      French message in the 2.60.0 entry; the answer of their lawyer or
+      accountant picks the rail (plain SEPA transfers if Expeditoo sells the
+      transport in its own name; a licensed provider if it is an
+      intermediary). Nothing is built until then.
+- [ ] **Review the legal pages.** The privacy policy changed on 5 October
+      2026 (payment data, Stripe's role, the RIB); its own « Modifications »
+      section promises an in-app notice for substantial changes — decide
+      whether this is one. It still names Supabase as the database processor
+      while production runs on Neon. `/terms` still says « aucun client n'y
+      dépose de course directement » and « Le payeur est le client qui a
+      commandé la course dans Expedion », untrue since `/create` came back.
+- [ ] **Carriers who connected Stripe before 2.60.0.** `/profile` offered
+      Stripe Connect onboarding until now, and anyone who completed it gave
+      Stripe their bank details, while `/privacy` now names Stripe for
+      clients' card payments only. Check `user.stripe_account_id` in
+      production and decide whether to close those accounts or say so.
 - [ ] **Decide about the scheduled jobs before setting `APP_URL` and
       `CRON_SECRET`.** No scheduled job has ever succeeded in production
       (1,556 runs, 0 successes: both values are unset in the GitHub repo), so
@@ -44,13 +81,10 @@ than leaving it in a chat message.
       columns exist with their full-set defaults, and
       `drizzle.__drizzle_migrations` holds 35 rows, the newest
       `1788156000000` (`0035`).
-- [ ] **Take two product questions from 2.59.0 to the client.** (1) May an
-      approved carrier take a *direct* request outright at its budget? Today
-      any open job can be taken (`takeJob`, no origin check), which charges
-      the requester's saved card off-session; the thank-you page now says so.
-      (2) Saving a draft works now, but a requester still cannot publish,
-      edit or delete a draft from « Mes demandes » — should that be built
-      next? See the 2.59.0 entry's Known limits.
+- [x] ~~Take two product questions from 2.59.0 to the client~~ —
+      **answered 2026-10-05** by the owner: (1) takes stay on escalated jobs
+      only (2.60.0, `take_job_spec.md`); (2) finishing a draft was built in
+      2.60.0 (`draft_requests_spec.md`).
 - [ ] **Make one real accept on production after 2.58.0 deploys, then cancel
       it.** 2.58.0 changes how the requester's card is taken: typed into a
       dialog when they accept, authorised on-session and captured by the
@@ -308,6 +342,339 @@ than leaving it in a chat message.
       treatment, with no code change and nothing backdated
       (`docs/specs/invoice_at_payment_spec.md` §4.1). The variables are listed
       in `.env.example`.
+
+---
+
+## ✅ 2026-10-05 — Drafts You Can Finish, Requests That Stay Private, Numbers as Typed, Takes on Escalated Jobs Only, Payouts Only for Delivered Jobs (2.60.0)
+
+The owner's list after 2.59.0 (items 10–13 answer the 2.59.0 report, 14 is a
+new client message):
+
+- **10** — _"auto prefix/auto fix the type that 040 can't be happen, so it'll
+  be regex to automatically typed the 40"_.
+- **11** — _"implement these full logics feature, build the screens, and make
+  it possible"_: 2.59.0's known limit, a saved draft could not be published,
+  edited or deleted.
+- **12** — _"it's approved please go ahead with your suggestion"_: take only
+  escalated jobs at their budget.
+- **13** — _"please reach what client expect from this feedback, or your
+  analyze and suggested decision"_: 2.59.0's finding that the public listing
+  endpoints returned the requester's whole `user` row.
+- **14** — the client on WhatsApp: _"About payment of paticular
+  carrier,perhaps is ther another solution than Stripe with IBAN bank
+  transfer"_.
+- _"get back to me with full report that everything is solved, otherwise
+  don't execute yet but ask back things to confirm to me"_. Asked first, and
+  the answers (2026-10-05) set the scope: IBAN — ask the client and their
+  lawyer before building any rail, and fix now only what is wrong whatever they
+  choose; take — escalated jobs only; privacy — data plus vetted addresses;
+  drafts — with a real publication date, scheduled requests included; then
+  ship as 2.59.0 was.
+
+Contracts: `docs/specs/listing_privacy_spec.md`,
+`docs/specs/draft_requests_spec.md`, `docs/specs/numeric_input_spec.md`,
+`docs/specs/take_job_spec.md`, `docs/specs/payout_safety_spec.md` (plans
+beside them in `docs/plans/`). Amended: `cancellations_spec.md` (§7.1, §8.2),
+`offers_engine_spec.md`, `publication_timing_spec.md`,
+`listing_posted_feedback_spec.md`, `transport_listing_spec.md`,
+`job_card_photo_spec.md`, `my_requests_history_spec.md`,
+`marketing_footer_pages_spec.md`, `cargo_input_spec.md`,
+`request_posted_page_spec.md`, `pay_at_accept_spec.md`,
+`offer_time_slots_spec.md`, `stripe_connect_spec.md`.
+
+### What changed
+
+**Requests stay private (13).**
+- `src/server/services/listing-view.ts` classifies every `listings` column
+  exactly once — public, vetted (the two streets), coordinates (exact, or
+  rounded to 2 decimals by `src/lib/listing-coordinates.ts`), private — and
+  projects by audience: the owner and staff (`admin`, `operator`) read `full`,
+  an approved carrier `vetted`, everyone else `public`. A new column is private
+  until classified; `listing-view.test.ts` fails until it is.
+- The requester is `{id, name, image, rating}` for everyone. Contacts and
+  access notes reach only `full`; the carrier reads them from the shipment,
+  which copies them at award. The projection lives in the service, not the
+  DAL: the award path reads `listing.shipper.stripeCustomerId` from
+  `listingsDal.getById`.
+- `GET /api/listings` (the board) and `GET /api/users/:id/listings` need a
+  session; `GET /api/listings/:id` stays a shareable link; `GET
+  /api/listings/me` is projected `full`.
+- **The board's location filters answer at the viewer's precision.** Below
+  `vetted`, the radius, the corridor (both ends and the direction) and the
+  distance sort run on rounded coordinates in SQL, the same rounding the view
+  applies, and the DAL defaults to rounded (fails closed). Before, ~135
+  radius queries recovered an exact pin a public viewer was shown only to
+  ~1 km (review, round 1).
+- Every other payload that carried a person: bids read by a requester show
+  the carrier as a name and a face and the vehicle without its plate; a
+  carrier's own bids carry the listing `vetted`; shipments project the
+  parties and the listing for the requester and the carrier; the accept
+  answer (fresh and already-accepted) and the take answer are `{ offer,
+  shipment: { id }, alreadyAccepted }` (`toAwardView`, `acceptOfferForCaller`)
+  — the take used to hand the taker every rival's bid and the payment row, a
+  repeat accept the carrier's whole `user` row and plate; cancel and withdraw
+  answer `{ shipment: { id }, listingId, alreadyCancelled }`, first call and
+  repeat — the repeat used to load every party's `user` row and the price,
+  to a driver too.
+- `JobDetail` shows « Adresse exacte communiquée aux transporteurs vérifiés. »
+  where a street is withheld; a 404 reads « Demande introuvable », any other
+  failure « Impossible de charger cette demande » with « Réessayer ».
+
+**Drafts and scheduled requests can be finished (11).** Migration `0036`:
+`listings.published_at`, back-filled from `created_at` for every row that is
+not `draft`/`scheduled` (a few of those never went live — expired by the
+scheduler or cancelled while scheduled — and cannot be told apart after the
+fact).
+- `GET|PUT|DELETE /api/listings/:id/draft`, `POST /api/listings/:id/unschedule`
+  → `getDraft` / `saveDraft` / `deleteDraft` / `unschedule`. Owner only; 404
+  for anyone else; 409 `LISTING_NOT_DRAFT` / `LISTING_NOT_SCHEDULED` once it
+  moved on.
+- `saveDraft` takes exactly `createListingSchema` and writes through the same
+  `toColumns` as `createListing`, in one transaction with `replacePhotos`,
+  conditional on the row still being `draft`/`scheduled`. **Every optional
+  column is written** (`null`, or the full availability set): an update skips
+  an undefined column, so a cleared size, floor, note or packaging state kept
+  its old value and « Déjà emballé » survived beside « À emballer » (review).
+  Going live announces through the same `goLive`. `publishListing` (no route,
+  no announcement, no status predicate) is gone.
+- `publishScheduled` decides each due request **under its row lock**
+  (`lockDueScheduled`: `FOR UPDATE SKIP LOCKED`, still scheduled and due) and
+  re-derives `expiresAt` from the locked row; everything said afterwards is
+  said from the row as written (review). Exercised against the local
+  Postgres.
+- The board orders by `coalesce(published_at, created_at)` with the unique
+  `reference` as tiebreaker on every sort, so `LIMIT`/`OFFSET` pages never
+  overlap.
+- `/create?draft=<id>[&step=budget][&publish=now]` (server component; a draft
+  needs a session). `fromListing` rebuilds the form, and a stored row round-
+  trips through it unchanged. A saved exact time off the half-hour list, or an
+  exact window other than the form's one hour (a draft saved before either
+  existed), opens the form on « Quand » with a notice naming both — so
+  « Publier » never posts a time the requester did not see.
+- « Mes demandes »: actions sit outside the card's link; « Enregistré le »,
+  « Publication prévue le », « Publiée le » (only with `publishedAt`), « Créée
+  le » for a request that never went live. A draft's page carries a banner and
+  the same actions. Un-scheduling updates the open page at once; each 409 and
+  404 says what actually happened; the resume form stays mounted through a
+  failed background refetch.
+
+**Typed numbers (10).** `src/lib/numeric-input.ts` and
+`src/components/ui/numeric-input.tsx`: every number on `/create` and the
+carriers' price boxes are text boxes that drop leading zeros as typed, keep
+the field's decimals with « , » or « . », show the language's separator and
+keep the caret. **A deletion keeps the zeros it exposes until the box is
+left** — tidied at once, « 200 » with its « 2 » replaced by « 1 » read « 10 »,
+a price ten times too small (review). What counts as a deletion is the
+browser's `inputType` when it says the edit inserted text, so a « 0 » typed
+over « 20 » of « 2040 » still reads « 40 »; the floor box holds its own text
+like the weight's, so « 100 » → Delete « 1 » → « 2 » is 200 (round 2). A
+refused edit restores the selection it had, a selection noted before a Tab is
+forgotten. The quantity takes 99 999 (`NUMERIC_RULES.QUANTITY`; `MAX_QUANTITY` in
+the DTO too) — it was cut at three digits, so 1200 posted as 120. Fixed in the
+same pass: 1,05 t saved as 15 t, and `QuoteDetailDialog`'s 40,05 € → 405 € and
+12,05 kg → 125 kg.
+
+**Takes on escalated jobs only (12).** `offersService.takeJob` answers 409
+`TAKE_NOT_AVAILABLE` on a direct request; `isSelfAward` requires
+`expedion`; « Prendre cette course » renders only there. The 2.59.0 copy that
+warned requesters about takes is reverted.
+
+**Payouts only for delivered jobs the client still pays for (14).** No IBAN
+is stored and no rail is built.
+- The `payment_intent.succeeded` webhook records the charge only;
+  `settleDelivery` is the only payout writer and needs the captured payment.
+- A status move is a **compare-and-set** (`shipmentsDal.updateStatus` with
+  `expected`): the carrier and their driver pressing « Livré » together used
+  to settle twice and schedule two payouts (review).
+- The balance counts a payout only while it is scheduled, unclaimed, its
+  shipment `DELIVERED` and its payment `captured`; a refund cancels the job's
+  unpaid payouts in the same transaction.
+- Withdrawals: approve and mark-paid refuse `WITHDRAWAL_HAS_INVALID_PAYOUT`
+  unless every payout is payable; a decision that loses a race to a
+  colleague's answers `WITHDRAWAL_ALREADY_SETTLED` (re-read, never a
+  reordering — that deadlocks against reject on real Postgres); refusing an
+  *approved* request needs a confirmation that the transfer was never sent and
+  sends the driver its own notice. Every decision carries the status the
+  operator saw (`seenStatus`): a refusal sent from a stale « Demandé » row
+  answers `WITHDRAWAL_STATUS_CHANGED` instead of landing, unconfirmed, on a
+  request a colleague has approved — perhaps already paid by hand — and the
+  queue reads again and switches to « Tous », where the request shows
+  approved and its « Refuser » asks first; `approve` writes only from
+  `requested`, so two racing approvals tell the driver once (review, rounds 2
+  and 3).
+- `/profile` loses the Stripe Connect card. The landing no longer promises
+  payment within 7 days; `/privacy` and `/verification` now say Stripe handles
+  clients' card payments only, a typed IBAN is kept as its last four
+  characters, and the RIB stays with the compliance documents (privacy policy
+  dated 5 October 2026). `src/i18n/__tests__/payout-claims.test.ts` keeps
+  those claims out.
+
+### Judgment calls
+
+- **Pre-existing leaks were fixed, not deferred**, when they contradicted
+  this release's own promise (no email or Stripe id in any listing, offer or
+  shipment payload; one payout per delivered job): the take's rival bids, the
+  repeat accept, the cancel repeat, the double settle, the public pages' Stripe
+  claims. The review's skeptics rejected them as older than the release; the
+  owner's decision 13 is what they would have kept false.
+- **Rounded pins, rounded searches.** Refusing location filters to public
+  viewers was the other option; requesters and pending carriers use the board
+  too, so the filters stay and answer at the precision the view already shows.
+- **Publishing always goes through the Budget step**, from the card too: only
+  the browser can re-derive a flexible window from the requester's clock, and
+  that step shows when bids would close.
+- **A deletion is not tidied until blur.** The owner asked that « 040 » never
+  stay; it still never stays once the box is left, and typing or pasting is
+  tidied as it lands.
+- **A suspended carrier keeps the vetted view of their own bids**, as
+  `listing_privacy_spec.md` §3 says: every bid was made while approved, and an
+  accepted one may still be running.
+- **The IBAN rail waits for the legal answer** (Operator to-do). Expeditoo
+  selling the transport in its own name allows plain SEPA transfers; acting
+  as an intermediary makes collecting for carriers a regulated payment
+  service.
+
+### Found on the way, fixed
+
+- A stale tab repeating « Annuler » on a withdrawn carrier's old run closed
+  the job's *new* award: the new winner's offer rejected, the listing
+  cancelled, the new run left going and its money taken
+  (`finishCancel`'s `|| listing.status === "awarded"`).
+- `PATCH /api/shipments/:id/status` answered a driver with the price.
+- Four carrier-facing strings had lost their accents (« encherir »,
+  « approuvee », « operateur »…), and « l'expéditeur choisit le gagnant » was
+  untrue on escalated jobs.
+- `/privacy` claimed « jamais un IBAN complet » while the RIB is a required
+  KYC document; `/auction-houses` still said funds are captured only on
+  delivery.
+- `ItemField` updated the form inside `setRows` updaters (React warning while
+  rendering); `WeightBracketField` registered a field it never used.
+- The driver shell's profile linked « Revenus » to `/earnings`, which never
+  existed — and showed it to drivers, who are never shown pay. It now opens
+  « Mes gains » (`/carrier/withdrawals`), for a carrier only.
+- A delivered trip read « Versement programmé » for money that only moves
+  when the driver asks; it reads « Crédité sur votre solde ». The landing's
+  « J+7 — Paiement garanti » tile, a testimonial's « payé dans la semaine » and
+  `/driver/help`'s "processed weekly" went with the 7-day promise; the tile now
+  shows the 20 € minimum for a transfer request.
+
+### Review
+
+- **Round 1** — six reviewers (privacy, drafts server, drafts screens, number
+  boxes, money, copy and specs), one refute-by-default skeptic per finding. A
+  usage limit stopped the first run after 4 findings; the resumed run found
+  33: 23 confirmed (6 major), 10 rejected (9 as older than the release or as
+  the spec intends, 1 as unreachable). All 23 are fixed with tests. Of the
+  seven distinct issues behind the rejections, six were fixed anyway
+  (Judgment calls); the suspended carrier's view was kept, as the spec says. The fixes went through five isolated streams with
+  disjoint files, each re-checking its findings before touching code.
+- **Round 2, on the fixes** — five reviewers (privacy, money, drafts, number
+  boxes, copy) over `fd97857..54f55cf`: 14 findings, 12 confirmed (all minor
+  after verification), 1 rejected as older than the release, and 1 whose
+  skeptic hit a server overload — confirmed by hand and fixed (the stale
+  « Demandé » row). All 13 are fixed with tests, one of them a regression
+  the integration itself introduced (the legacy-window notice that never
+  showed). Two more were fixed on the way: the dead `/earnings` link and the
+  trips label.
+- **Round 3, on round 2's fixes** — three reviewers over `1da55d0..5e3718b`:
+  5 findings, 4 confirmed (minor), 1 rejected as older than the release. No
+  code was wrong; the gaps were tests and words. A bounced decision left the
+  operator on a « Demandé » list the request had just left, so the queue now
+  switches to « Tous » and shows it approved; the floor box is tested through
+  a mount (a resumed draft, « Retour »), the earnings link with the roles a
+  real carrier holds, the queue's client side for each bounce; and « En
+  attente », a label the queue never shows, became « Demandé ».
+
+### Verification
+
+- `npx tsc --noEmit` 0 errors.
+- `pnpm lint` 0 errors; 65 warnings, none in a file this release touches.
+- `pnpm test`: 188 files, 2,591 tests (run with `--maxWorkers=4`; a default
+  run under a load average of 35 timed out three first renders at 5 s, which
+  pass alone and in the quieter run).
+- `pnpm changelog:check` passes. `pnpm build` passes on a snapshot worktree
+  of the release state (compiled in 23.5 s; `/create` is now server-rendered
+  on demand, as it reads the query on the server).
+- `0036` applied to the local database through `pnpm db:migrate`; live rows
+  back-filled, drafts left empty. `publishScheduled` run against the local
+  Postgres through the new row lock: opened, dated, schedule cleared, expiry
+  from the pickup.
+- **Chromium**, dev server on the local database, `Europe/Paris`: 76 checks —
+  drafts resumed, published from the Budget step (« 040 » → « 40 », « 40,5 »),
+  un-scheduled from the card and from the page (banner at once; a stale second
+  click says « n'est plus planifiée »), deleted after confirmation; a legacy
+  09:15 draft opening on « Quand » with its notice; « Créée le »; not-found
+  vs load-failed with retry; privacy (street hidden from a requester, shown to
+  an approved carrier; the board 401 signed out; a 100 m search around an
+  exact pin empty for a requester, found for a carrier); take absent on a
+  direct request, its answer `{offer, shipment:{id}, alreadyAccepted}` on an
+  escalated one; quantity 1200; « 200 » → Backspace on the « 2 » → « 1 » →
+  « 100 », blur « 00 » → « 0 »; the floor « 100 » → « 200 » the same way; a
+  09:00–17:00 legacy draft named as a window on « Quand »; the landing's
+  « 20 € » tile with no « J+7 » in FR light and EN dark at 390 px; the profile
+  without Stripe; `/privacy` copy; FR and EN, light and dark, 390 px with no
+  horizontal scroll.
+- **Not verified:** production before its migration and deploy (below);
+  real Stripe; the scheduled-publish cron in production (it does not run —
+  Operator to-do); Resend delivery.
+
+### Known limits
+
+- `/signin` never reads `callbackUrl`: signing in from a draft link lands on
+  `/home`, as from every protected page (app-wide, older).
+- `shipmentsDal.assignDriver` has no status predicate: two concurrent
+  assignments both write (no money moves).
+- `LandingStats` restates the 20 € minimum (`TRANSFER_MINIMUM_CENTS`) because
+  `withdrawals.service.ts` is server-only; `payout-claims.test.ts` fails if
+  the two drift.
+- Marketing claims outside payouts, for the owner: « Vérifié en 24 heures »,
+  « ASSURÉ PAR EXPEDION », « couverts ad valorem par Expedion » (while
+  `/verification` requires the carrier's own goods-in-transit insurance), and
+  "booked instantly" while an operator awards.
+- Driver notices for withdrawals are English strings stored on the
+  notification row, like the rest of that service.
+- The `CM` box refuses a fifth digit (100 m or more) without a message.
+- Weekdays and times of day stay display-only (2.59.0).
+- Older, still open (payout_safety_spec.md §8): `chargeForShipment`'s
+  "already charged?" check is an unordered `findFirst`; `earnings.dal`
+  counts cancelled payouts as pending; the queue does not list the jobs a
+  request covers; a request approved, transferred and then partly refunded
+  cannot be settled cleanly; on escalated jobs the balance counts payouts
+  whose money Expedion took (the commission split is still unnamed).
+
+### The client message for item 14 (owner to send)
+
+> Bonjour,
+>
+> Oui, c'est possible : dans le meilleur des cas, le transporteur n'aurait
+> qu'à nous donner son IBAN, sans compte Stripe à créer.
+>
+> Dans l'application, Stripe ne sert qu'à encaisser le paiement du client. Le
+> transporteur, lui, est payé par virement : après la livraison, il demande
+> son solde dans « Mes gains », un opérateur valide la demande puis fait le
+> virement.
+>
+> Une seule question décide de la suite : Expeditoo vend-il le transport en
+> son propre nom, c'est-à-dire que le client nous paie et que nous payons
+> ensuite le transporteur comme sous-traitant ?
+> - Si oui, de simples virements SEPA depuis notre compte bancaire suffisent.
+>   Vendre le transport en son nom peut toutefois relever du statut de
+>   commissionnaire de transport, qui a ses propres obligations.
+> - Si Expeditoo n'est qu'un intermédiaire entre le client et le
+>   transporteur, l'argent encaissé revient au transporteur, et le faire
+>   transiter par notre compte est un service de paiement réservé aux
+>   établissements agréés (article L. 314-1 du Code monétaire et financier).
+>   Il faudrait alors passer par un prestataire agréé, comme Stripe, qui peut
+>   tourner en arrière-plan : le transporteur remplirait seulement un court
+>   formulaire dans l'application (identité et IBAN), sans compte Stripe à
+>   gérer.
+>
+> Pouvez-vous valider ce point avec votre avocat ou votre expert-comptable ?
+> Dès que nous avons sa réponse, nous mettons en place la solution qui
+> correspond.
+>
+> Bien à vous,
+
 
 ---
 

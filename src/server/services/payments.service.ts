@@ -1,7 +1,7 @@
 import { nanoid } from "nanoid";
 import type Stripe from "stripe";
 import { db } from "@/db";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray, type SQL } from "drizzle-orm";
 import {
   payments,
   payouts,
@@ -69,6 +69,10 @@ export const commissionFor = (amountCents: number) =>
 // ========================================
 // Helpers
 // ========================================
+
+type Executor =
+  | typeof db
+  | Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 type ChargeParams = {
   shipperId: string;
@@ -278,8 +282,7 @@ function authorisedFeeFor(intent: Stripe.PaymentIntent, params: ChargeParams) {
  * Captures the card the requester authorised in the payment dialog.
  *
  * The intent carries no `transfer_group`, so the `payment_intent.succeeded`
- * webhook ignores it: this capture is synchronous, and that webhook would also
- * schedule the driver's payout now rather than on delivery.
+ * webhook ignores it: this capture is synchronous and settles the row itself.
  */
 async function captureAuthorised(params: ChargeParams): Promise<Payment> {
   const intent = await stripe.paymentIntents.retrieve(params.paymentIntentId!);
@@ -369,7 +372,47 @@ async function findJobPayment(listingId: string): Promise<Payment | null> {
     orderBy: [desc(payments.createdAt)],
   });
 
+  return capturedOrLatest(rows);
+}
+
+/**
+ * The same question asked of one shipment, for the same reason: a declined
+ * attempt can share a shipment with the charge that later succeeded, and
+ * nothing makes `payments.shipment_id` unique. `settleDelivery` reads this, and
+ * since the capture webhook stopped writing payouts, `settleDelivery` is the
+ * only writer of a driver's pay — an unordered read that handed it the dead
+ * attempt would leave a delivered job unpaid (payout_safety_spec.md §1).
+ */
+async function findShipmentPayment(shipmentId: string): Promise<Payment | null> {
+  const rows = await db.query.payments.findMany({
+    where: eq(payments.shipmentId, shipmentId),
+    orderBy: [desc(payments.createdAt)],
+  });
+
+  return capturedOrLatest(rows);
+}
+
+/** From newest-first attempts: the one that took the money, else the newest. */
+function capturedOrLatest(rows: Payment[]): Payment | null {
   return rows.find((row) => row.status === "captured") ?? rows[0] ?? null;
+}
+
+/**
+ * Voids the driver's share of money that has gone back to the client
+ * (payout_safety_spec.md §3).
+ *
+ * `processing` is included, where only `scheduled` used to be: a payout a
+ * withdrawal request has claimed is still unpaid — nothing is transferred until
+ * an operator records it — and leaving it standing let that request be
+ * approved, and a refusal put it straight back in the balance. `paid` is never
+ * touched: that money has already left.
+ */
+async function voidUnpaidPayouts(scope: SQL, tx: Executor = db) {
+  return await tx
+    .update(payouts)
+    .set({ status: "cancelled" })
+    .where(and(scope, inArray(payouts.status, ["scheduled", "processing"])))
+    .returning();
 }
 
 /** A transfer Stripe refused, recorded on the row so support can read why. */
@@ -389,8 +432,9 @@ async function markPayoutFailed(payoutId: string, cause: unknown) {
  * `paid` is idempotency and returns rather than throwing; these two are the
  * cases where transferring would be money leaving with nothing behind it.
  *
- *  - `cancelled` is written by `cancelPayoutForShipment` when the client has
- *    been refunded (cancellations_spec.md §6.6). The job's money went back, so
+ *  - `cancelled` is written by `cancelPayoutForShipment` and `markRefunded`
+ *    when the client has been refunded (cancellations_spec.md §6.6,
+ *    payout_safety_spec.md §3). The job's money went back, so
  *    sending the driver their share of it pays them out of the platform's own
  *    pocket for a delivery nobody bought.
  *  - A `withdrawalId` means the row is already claimed by a withdrawal request,
@@ -422,8 +466,8 @@ function refuseUnpayable(payout: Payout): void {
  * The Connect account a payout may be sent to, or the reason it may not.
  *
  * `payouts.carrier_id` is a **user** id — the column references `user.id`, and
- * both writers (`settleDelivery` and the capture webhook) pass
- * `shipments.carrier_id`, which references it too. That is also where
+ * its one writer (`settleDelivery`) passes `shipments.carrier_id`, which
+ * references it too. That is also where
  * onboarding puts the account: `stripeService.createConnectAccount` writes
  * `stripeAccountId` onto the user row. This read went to
  * `carriers.stripe_account_id` instead — a column the schema declares and
@@ -809,28 +853,21 @@ export const paymentsService = {
   },
 
   /**
-   * Voids a payout whose money has just gone back to the client.
+   * Voids the payout of a run that has just been called off.
    *
-   * The payout is written by the Stripe webhook at **capture**, and capture is
-   * award time since payment-at-booking — so a job cancelled before anyone
-   * drives anywhere can already carry a `scheduled` payout, and
-   * `withdrawalsDal.availableFor` counts exactly that status as money the
-   * driver may ask for. `cancelled` is a value `payout_status` already had and
-   * nothing wrote (cancellations_spec.md §6.6).
+   * Payouts are written at delivery now, and a delivered run cannot be
+   * cancelled — so what this still finds was written by the capture webhook at
+   * award before 2.60.0: `scheduled`, or `processing` if a withdrawal request
+   * has claimed it since. Either way the run is over and that pay is not owed,
+   * even when the refund itself is Expedion's to make or fails: it is called
+   * before the refund and whatever its outcome (cancellations_spec.md §6.6,
+   * payout_safety_spec.md §3). The withdrawal link is kept, so the request it
+   * sits in visibly covers a voided payout until an operator refuses it.
    *
    * Contained like the refund itself: a cancellation must not fail on this.
    */
   async cancelPayoutForShipment(shipmentId: string) {
-    const [row] = await db
-      .update(payouts)
-      .set({ status: "cancelled" })
-      .where(
-        and(
-          eq(payouts.shipmentId, shipmentId),
-          eq(payouts.status, "scheduled")
-        )
-      )
-      .returning();
+    const [row] = await voidUnpaidPayouts(eq(payouts.shipmentId, shipmentId));
 
     return row ?? null;
   },
@@ -843,15 +880,27 @@ export const paymentsService = {
    * and previously wrote the row itself. Wiring the credit note to one of them
    * would leave the other giving money back with a paid invoice still standing
    * (docs/specs/invoice_at_payment_spec.md §5).
+   *
+   * The driver's unpaid share goes in the same transaction as the flip. That
+   * admin route is the one path that can refund a *delivered* job, and it
+   * voided nothing, so the driver could still withdraw pay for a job whose
+   * client had their money back. Apart, a withdrawal settled between the two
+   * writes would record as paid a payout whose money was already returned
+   * (payout_safety_spec.md §3).
    */
   async markRefunded(paymentId: string) {
-    const [refunded] = await db
-      .update(payments)
-      .set({ status: "refunded", refundedAt: new Date() })
-      .where(eq(payments.id, paymentId))
-      .returning();
+    const refunded = await db.transaction(async (tx) => {
+      const [row] = await tx
+        .update(payments)
+        .set({ status: "refunded", refundedAt: new Date() })
+        .where(eq(payments.id, paymentId))
+        .returning();
 
-    if (!refunded) throw err("PAYMENT_NOT_FOUND", 404);
+      if (!row) throw err("PAYMENT_NOT_FOUND", 404);
+
+      await voidUnpaidPayouts(eq(payouts.paymentId, row.id), tx);
+      return row;
+    });
 
     // An issued, numbered, emailed document is corrected by a second document,
     // never by mutating the first. Contained like the issue itself: the money
@@ -899,12 +948,24 @@ export const paymentsService = {
   /**
    * Records what the carrier has earned. Commission is held at source, so the
    * payout is the job price minus the platform's cut.
+   *
+   * Called from one place, `settleDelivery`, on the transition into
+   * `DELIVERED`. The capture webhook called it too, at award, which made pay
+   * for an undriven job withdrawable (payout_safety_spec.md §1).
+   *
+   * Drawn on the captured charge only: the balance counts a payout as long as
+   * the payment it names is still captured, so one drawn on a declined attempt
+   * that shares the shipment would never be paid.
    */
   async schedulePayout(shipmentId: string, carrierId: string) {
-    const payment = await db.query.payments.findFirst({
-      where: eq(payments.shipmentId, shipmentId),
-    });
-    if (!payment) throw err("PAYMENT_NOT_FOUND", 404);
+    const payment = await findShipmentPayment(shipmentId);
+    if (payment?.status !== "captured") {
+      throw err(
+        "PAYMENT_NOT_CAPTURED",
+        409,
+        "No captured payment for this shipment"
+      );
+    }
 
     const existing = await db.query.payouts.findFirst({
       where: eq(payouts.shipmentId, shipmentId),
@@ -982,10 +1043,9 @@ export const paymentsService = {
     }
   },
 
+  /** The money taken for this shipment — see `findShipmentPayment`. */
   async getForShipment(shipmentId: string) {
-    return await db.query.payments.findFirst({
-      where: eq(payments.shipmentId, shipmentId),
-    });
+    return await findShipmentPayment(shipmentId);
   },
 
   async getCarrierPayouts(carrierId: string) {

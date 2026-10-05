@@ -19,9 +19,16 @@ const takeJobSchema = z.object({
  * An approved carrier takes an open job outright at the posted budget, instead
  * of bidding and waiting to be picked.
  *
+ * Escalated jobs only. A direct request is awarded by its requester, so taking
+ * one is refused with TAKE_NOT_AVAILABLE (take_job_spec.md) — by the service,
+ * like every other rule about who may award, never here.
+ *
  * Two drivers tapping this at the same moment is the expected case, not the
  * edge case: both mint an offer, both reach the award, and the second is
  * refused by the row lock with LISTING_NOT_OPEN.
+ *
+ * Answers `{ offer, shipment: { id }, alreadyAccepted }`: the carrier's own
+ * offer, never the rival bids the award rejected (take_job_spec.md §2).
  */
 export async function POST(req: Request, { params }: RouteParams) {
   try {

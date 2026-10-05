@@ -5,13 +5,9 @@ import { usePathname } from "next/navigation";
 import { Bug } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { PaymentMethods } from "./PaymentMethods";
 import { FeedbackDialog } from "@/features/app/feedback/ui";
-import { formatCurrency } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -28,7 +24,6 @@ import {
 import {
   MapPin,
   CreditCard,
-  Gavel,
   Star,
   Settings,
   Plus,
@@ -53,22 +48,11 @@ import { useUserRoles } from "../hooks/useUserRoles";
 import { PageLoader } from "@/components/ui/page-loader";
 import { PageWrapper } from "@/components/ui/page-wrapper";
 import { LottieLoader } from "@/components/ui/lottie-loader";
-import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
-import { toast } from "sonner";
-import { ApiError } from "@/lib/fetcher";
-import { payoutApi } from "@/features/app/profile/api";
 
 export function Profile() {
   const {
     user,
-    cards,
-    isAddCardOpen,
-    setIsAddCardOpen,
-    newCard,
-    setNewCard,
-    handleAddCard,
-    handleDeleteCard,
     handleLogout,
     isUploadingImage,
     uploadProfilePicture,
@@ -83,59 +67,6 @@ export function Profile() {
   // File input ref for profile picture
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
-  const [isConnectingPayout, setIsConnectingPayout] = useState(false);
-
-  /**
-   * Opens Stripe onboarding, and says so when it cannot.
-   *
-   * This button was silent on every failure: it read `data.url`, found none
-   * and returned, so a refusal looked exactly like a button that does nothing.
-   * Both halves of the fix are here — a pending state while the round trip is
-   * in flight, and a toast naming what happened.
-   */
-  const handleConnectPayout = async () => {
-    setIsConnectingPayout(true);
-    try {
-      const { url } = await payoutApi.startOnboarding();
-
-      // Left pending on purpose: the browser is leaving for Stripe, and
-      // restoring the idle label would flash it over a navigating page.
-      window.location.href = url;
-    } catch (error) {
-      console.error(error);
-      toast.error(
-        error instanceof ApiError && error.code === "STRIPE_REQUEST_REJECTED"
-          ? t("payout.error.rejected")
-          : t("payout.error.generic")
-      );
-      setIsConnectingPayout(false);
-    }
-  };
-
-  /**
-   * The other lane that fails silently.
-   *
-   * Stripe sends a user back to `/api/stripe/connect/refresh` when the
-   * onboarding link has expired, and that route redirects here with
-   * `?stripe=error` when it cannot mint a replacement — the same refusal the
-   * button now reports. Nothing read the flag, so the browser simply landed
-   * back on the profile with no explanation.
-   */
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("stripe") !== "error") return;
-
-    toast.error(t("payout.error.generic"));
-
-    // Dropped from the URL so a reload does not re-announce a stale failure.
-    params.delete("stripe");
-    const query = params.toString();
-    window.history.replaceState(
-      null,
-      "",
-      `${window.location.pathname}${query ? `?${query}` : ""}`
-    );
-  }, [t]);
 
   const handleUploadClick = () => {
     setIsAvatarModalOpen(false);
@@ -367,53 +298,12 @@ export function Profile() {
             </CardContent>
           </Card>
 
-          {/* Payout Configuration (Stripe Connect) */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Shield className="w-5 h-5 text-primary" />
-                {t("payout.title")}
-              </CardTitle>
-              {user.stripeAccountStatus === "active" ? (
-                <span className="text-green-600 bg-green-100 px-3 py-1 rounded-full text-xs font-medium">
-                  {t("payout.status.active")}
-                </span>
-              ) : (
-                <span className="text-yellow-600 bg-yellow-100 px-3 py-1 rounded-full text-xs font-medium">
-                  {user.stripeAccountStatus === "pending"
-                    ? t("payout.status.pending")
-                    : t("payout.status.notConnected")}
-                </span>
-              )}
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col gap-4">
-                <p className="text-muted-foreground text-sm">
-                  {user.stripeAccountStatus === "active"
-                    ? t("payout.description.active")
-                    : t("payout.description.inactive")}
-                </p>
-                {user.stripeAccountStatus !== "active" && (
-                  <Button
-                    onClick={handleConnectPayout}
-                    disabled={isConnectingPayout}
-                    className="w-full sm:w-auto self-start"
-                  >
-                    {isConnectingPayout ? (
-                      <>
-                        <LottieLoader width={20} height={20} className="mr-2" />
-                        {t("payout.button.loading")}
-                      </>
-                    ) : user.stripeAccountStatus === "pending" ? (
-                      t("payout.button.continue")
-                    ) : (
-                      t("payout.button.connect")
-                    )}
-                  </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          {/* A "Configuration des virements" card used to sit here, telling
+              every user — drivers or not — to connect a Stripe account to be
+              paid "for items you sell or deliveries you make". Goods-marketplace
+              copy, and untrue: drivers are paid through Mes gains, and the
+              Connect account it opened is paid into by nothing. The routes
+              behind it are kept (payout_safety_spec.md §5). */}
         </div>
       </div>
     </PageWrapper>
@@ -496,11 +386,12 @@ function QuickLinks({ userRoles }: { userRoles?: string[] }) {
   // If we are on the Driver Profile page, show ONLY relevant driver links that aren't in the bottom nav
   if (isDriverProfile && isDriver) {
     const driverLinks = [
-      {
-        href: "/earnings",
-        labelKey: "earnings",
-        icon: TrendingUp,
-      },
+      // Earnings live at « Mes gains »; `/earnings` never existed. A carrier
+      // who also drives keeps the link; a driver who is not a carrier is never
+      // shown pay.
+      ...(userRoles?.includes("carrier")
+        ? [{ href: "/carrier/withdrawals", labelKey: "earnings", icon: TrendingUp }]
+        : []),
       {
         href: "/profile/reviews",
         labelKey: "myReviews",

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Truck, TriangleAlert, RotateCw } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -13,8 +13,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -26,6 +26,11 @@ import {
 import { CenteredEmptyState } from "@/components/ui/centered-empty-state";
 import { useVehicles } from "@/features/app/carrier/hooks/useCarrier";
 import { formatCurrency } from "@/lib/currency";
+import {
+  NUMERIC_RULES,
+  centsToInput,
+  parseCents,
+} from "@/lib/numeric-input";
 import { TIME_SLOTS, type TimeSlot } from "@/lib/availability-window";
 import type { ThreadOfferContext } from "../types";
 import { useThreadOffer } from "../hooks/useThreadOffer";
@@ -57,6 +62,7 @@ export function ThreadOfferDialog({
 }: ThreadOfferDialogProps) {
   const t = useTranslations("messages.offer");
   const tForm = useTranslations("listing.bid.form");
+  const locale = useLocale();
   const job = context.job;
   const isJobLane = context.lane === "job" && job !== null;
 
@@ -70,21 +76,25 @@ export function ThreadOfferDialog({
   const [deliveryLeadDays, setDeliveryLeadDays] = useState(0);
   const [message, setMessage] = useState("");
 
-  // Reset when the dialog opens, so a cancelled draft never resurfaces.
+  // Reset when the dialog opens, so a cancelled draft never resurfaces. The
+  // budget is written as the box shows money, « 89,90 » in French
+  // (numeric_input_spec.md §6).
   useEffect(() => {
     if (!open) return;
     setVehicleId("");
-    setPriceEuros(job ? String(job.budgetCents / 100) : "");
+    setPriceEuros(job ? centsToInput(job.budgetCents, locale) : "");
     setDay(null);
     setSlot(TIME_SLOTS[0]);
     setDeliveryLeadDays(0);
     setMessage("");
-  }, [open, job]);
+  }, [open, job, locale]);
 
-  const priceCents = Math.round(Number(priceEuros) * 100);
-  const overBudget = job ? priceCents > job.budgetCents : false;
+  // Read on the digits, so « 40,05 » is 4005 cents and a blank box is none.
+  const priceCents = parseCents(priceEuros);
+  const overBudget =
+    job !== null && priceCents !== null && priceCents > job.budgetCents;
   const canSubmit =
-    Number.isFinite(priceCents) &&
+    priceCents !== null &&
     priceCents >= 100 &&
     day !== null &&
     (!isJobLane || vehicleId !== "") &&
@@ -92,7 +102,7 @@ export function ThreadOfferDialog({
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    if (!canSubmit || !day) return;
+    if (!canSubmit || !day || priceCents === null) return;
     submit.mutate(
       {
         priceCents,
@@ -160,12 +170,9 @@ export function ThreadOfferDialog({
 
             <div className="space-y-2">
               <Label htmlFor="thread-offer-price">{tForm("price")}</Label>
-              <Input
+              <NumericInput
                 id="thread-offer-price"
-                type="number"
-                min={1}
-                step="1"
-                inputMode="decimal"
+                rules={NUMERIC_RULES.MONEY}
                 value={priceEuros}
                 onChange={(e) => setPriceEuros(e.target.value)}
               />

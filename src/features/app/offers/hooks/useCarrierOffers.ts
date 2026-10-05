@@ -84,8 +84,11 @@ export function useWithdrawOffer() {
  *
  * The error worth naming is LISTING_NOT_OPEN: two drivers tapping at the same
  * moment is the expected case, and the loser needs to be told somebody beat
- * them to it rather than shown a generic failure. Messages go through
- * next-intl rather than the hardcoded English map above, which predates it.
+ * them to it rather than shown a generic failure. TAKE_NOT_AVAILABLE is a
+ * direct request, where the panel is not shown at all (take_job_spec.md);
+ * named anyway, so a refusal that does arrive points the driver at the offer
+ * form rather than reading as a failure. Messages go through next-intl rather
+ * than the hardcoded English map above, which predates it.
  */
 export function useTakeJob(listingId: string) {
   const queryClient = useQueryClient();
@@ -108,6 +111,7 @@ export function useTakeJob(listingId: string) {
         "VEHICLE_CAPACITY_WEIGHT",
         "VEHICLE_CAPACITY_DIMENSIONS",
         "OFFER_ALREADY_EXISTS",
+        "TAKE_NOT_AVAILABLE",
       ];
       toast.error(
         known.includes(code) ? t(`errors.${code}`) : t("errors.generic")

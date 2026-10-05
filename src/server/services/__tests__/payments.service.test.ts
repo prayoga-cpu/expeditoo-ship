@@ -2,12 +2,15 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // The payments service talks to the db directly (no DAL), so the harness is a
 // minimal in-memory stand-in for exactly the Drizzle chains it uses:
-// insert().values().returning(), update().set().where().returning(), and
-// db.query.<table>.findFirst/findMany. `eq` is mocked to a {column, value}
-// marker the harness matches rows against.
+// insert().values().returning(), update().set().where().returning(),
+// db.query.<table>.findFirst/findMany, and a transaction that hands the same
+// stand-in back as its `tx`. `eq` and `inArray` are mocked to markers the
+// harness matches rows against.
 const harness = vi.hoisted(() => {
   type Row = Record<string, unknown>;
-  type Leaf = { column: string; value: unknown };
+  type Leaf =
+    | { column: string; value: unknown }
+    | { column: string; values: unknown[] };
   type Where = Leaf | { all: Where[] } | undefined;
 
   const paymentsTable = {
@@ -19,6 +22,7 @@ const harness = vi.hoisted(() => {
   const payoutsTable = {
     id: "id",
     shipmentId: "shipmentId",
+    paymentId: "paymentId",
     carrierId: "carrierId",
     status: "status",
   };
@@ -41,6 +45,7 @@ const harness = vi.hoisted(() => {
   const matches = (row: Row, where: Where): boolean => {
     if (!where) return true;
     if ("all" in where) return where.all.every((w) => matches(row, w));
+    if ("values" in where) return where.values.includes(row[where.column]);
     return row[where.column] === where.value;
   };
 
@@ -85,6 +90,10 @@ const harness = vi.hoisted(() => {
       payouts: query(payoutRows),
       user: query(userRows),
     },
+    // No isolation to model: a case that throws inside it is asserting the
+    // throw, not a rollback.
+    transaction: async <T,>(fn: (tx: unknown) => Promise<T>): Promise<T> =>
+      await fn(db),
   };
 
   const reset = () => {
@@ -114,6 +123,7 @@ vi.mock("@/db/schema/users", () => ({ user: harness.userTable }));
 vi.mock("drizzle-orm", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   eq: (column: unknown, value: unknown) => ({ column, value }),
+  inArray: (column: unknown, values: unknown[]) => ({ column, values }),
   and: (...parts: unknown[]) => ({ all: parts.filter(Boolean) }),
   desc: (column: unknown) => ({ column, direction: "desc" }),
 }));
@@ -634,7 +644,7 @@ describe("paymentsService.chargeForShipment — the escalated lane", () => {
 // ========================================
 
 describe("paymentsService.cancelPayoutForShipment", () => {
-  it("voids a payout the webhook scheduled at award", async () => {
+  it("voids a scheduled payout — one the webhook wrote at award before 2.60.0", async () => {
     harness.payoutRows.push({
       id: "pyt-1",
       shipmentId: "ship-1",
@@ -647,7 +657,26 @@ describe("paymentsService.cancelPayoutForShipment", () => {
     expect(cancelled?.status).toBe("cancelled");
   });
 
-  it("returns null when there is nothing scheduled", async () => {
+  it("voids a payout a withdrawal request has already claimed", async () => {
+    // `processing` survived the refund, and refusing the request then put it
+    // straight back in the balance (payout_safety_spec.md §3).
+    harness.payoutRows.push({
+      id: "pyt-1",
+      shipmentId: "ship-1",
+      carrierId: "carrier-1",
+      status: "processing",
+      withdrawalId: "wd-1",
+    });
+
+    const cancelled = await paymentsService.cancelPayoutForShipment("ship-1");
+
+    expect(cancelled?.status).toBe("cancelled");
+    // Still linked, so the request visibly covers a voided payout until an
+    // operator refuses it.
+    expect(cancelled?.withdrawalId).toBe("wd-1");
+  });
+
+  it("returns null when there is nothing unpaid", async () => {
     expect(await paymentsService.cancelPayoutForShipment("ship-1")).toBeNull();
   });
 
@@ -661,6 +690,116 @@ describe("paymentsService.cancelPayoutForShipment", () => {
 
     expect(await paymentsService.cancelPayoutForShipment("ship-1")).toBeNull();
     expect(harness.payoutRows[0].status).toBe("paid");
+  });
+});
+
+describe("a refund voids the driver's unpaid share", () => {
+  /** The job's charge, and every state its payout could be in. */
+  const givenPaidJobWithPayouts = async () => {
+    const payment = await paymentsService.chargeForShipment(chargeParams());
+    harness.payoutRows.push(
+      { id: "pyt-scheduled", paymentId: payment.id, status: "scheduled" },
+      {
+        id: "pyt-claimed",
+        paymentId: payment.id,
+        status: "processing",
+        withdrawalId: "wd-1",
+      },
+      { id: "pyt-paid", paymentId: payment.id, status: "paid" },
+      // Another job's money: none of this refund's business.
+      { id: "pyt-other", paymentId: "pay-other", status: "scheduled" }
+    );
+    return payment;
+  };
+
+  const statusOf = (id: string) =>
+    harness.payoutRows.find((row) => row.id === id)?.status;
+
+  it("voids scheduled and claimed payouts drawn on the refunded payment", async () => {
+    // `POST /api/admin/refunds` reaches `markRefunded` directly and can refund
+    // a delivered job; it used to void nothing, so the driver could still
+    // withdraw pay for a job whose client had their money back.
+    const payment = await givenPaidJobWithPayouts();
+
+    await paymentsService.markRefunded(payment.id);
+
+    expect(statusOf("pyt-scheduled")).toBe("cancelled");
+    expect(statusOf("pyt-claimed")).toBe("cancelled");
+  });
+
+  it("leaves a paid payout and another payment's payouts alone", async () => {
+    const payment = await givenPaidJobWithPayouts();
+
+    await paymentsService.markRefunded(payment.id);
+
+    expect(statusOf("pyt-paid")).toBe("paid");
+    expect(statusOf("pyt-other")).toBe("scheduled");
+  });
+
+  it("is reached by the job-level refund too", async () => {
+    await givenPaidJobWithPayouts();
+
+    await paymentsService.refundForJob("job-1");
+
+    expect(statusOf("pyt-scheduled")).toBe("cancelled");
+    expect(statusOf("pyt-claimed")).toBe("cancelled");
+  });
+});
+
+// ========================================
+// The money taken for one shipment
+// ========================================
+//
+// `payments.shipment_id` has no unique index, and a declined attempt can share
+// a shipment with the charge that succeeded. Since the webhook stopped writing
+// payouts, `settleDelivery` is the only writer, so reading the dead attempt
+// would leave a delivered job unpaid (payout_safety_spec.md §1).
+
+/** A charge on `ship-1` that never went through. */
+const givenDeclinedAttempt = () =>
+  harness.paymentRows.push({
+    id: "pay-declined",
+    shipmentId: "ship-1",
+    listingId: "job-1",
+    status: "failed",
+    amountCents: 99_000,
+    commissionCents: 9_900,
+    currency: "eur",
+  });
+
+/** The charge on `ship-1` that took the money. */
+const givenCapturedCharge = () =>
+  harness.paymentRows.push({
+    id: "pay-live",
+    shipmentId: "ship-1",
+    listingId: "job-1",
+    status: "captured",
+    amountCents: 18_000,
+    commissionCents: commissionFor(18_000),
+    currency: "eur",
+  });
+
+describe("paymentsService.getForShipment", () => {
+  it("prefers the captured charge over a later declined attempt", async () => {
+    givenCapturedCharge();
+    givenDeclinedAttempt();
+
+    expect((await paymentsService.getForShipment("ship-1"))?.id).toBe("pay-live");
+  });
+
+  it("prefers the captured charge over an earlier declined attempt", async () => {
+    givenDeclinedAttempt();
+    givenCapturedCharge();
+
+    expect((await paymentsService.getForShipment("ship-1"))?.id).toBe("pay-live");
+  });
+
+  it("falls back to the newest attempt when none took the money", async () => {
+    givenDeclinedAttempt();
+
+    expect((await paymentsService.getForShipment("ship-1"))?.id).toBe(
+      "pay-declined"
+    );
   });
 });
 
@@ -691,6 +830,32 @@ describe("paymentsService.schedulePayout", () => {
 
     expect(second.id).toBe(first.id);
     expect(harness.payoutRows).toHaveLength(1);
+  });
+
+  it("draws on the captured charge when a declined attempt shares the shipment", async () => {
+    // The balance counts a payout only while the payment it names is captured,
+    // so one drawn on the dead attempt would never be paid.
+    givenDeclinedAttempt();
+    givenCapturedCharge();
+
+    const payout = await paymentsService.schedulePayout("ship-1", "carrier-1");
+
+    expect(payout).toMatchObject({
+      paymentId: "pay-live",
+      amountCents: 18_000 - commissionFor(18_000),
+    });
+  });
+
+  it("refuses a shipment with no captured payment, writing nothing", async () => {
+    givenDeclinedAttempt();
+
+    expect(
+      await codeFrom(() => paymentsService.schedulePayout("ship-1", "carrier-1"))
+    ).toBe("PAYMENT_NOT_CAPTURED");
+    expect(
+      await codeFrom(() => paymentsService.schedulePayout("ship-2", "carrier-1"))
+    ).toBe("PAYMENT_NOT_CAPTURED");
+    expect(harness.payoutRows).toHaveLength(0);
   });
 });
 

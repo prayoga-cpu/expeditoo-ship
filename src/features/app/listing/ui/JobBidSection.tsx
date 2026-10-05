@@ -19,10 +19,10 @@ interface JobBidSectionProps {
 
 /**
  * Decides which bidding surface a viewer gets, mirroring the offers service's
- * own gates (offers.service.ts): carriers bid, owners never see a form for
- * their own job, and other signed-in users are invited to apply. The service
- * re-checks everything server-side - this component only spares people a
- * doomed submit.
+ * own gates (offers.service.ts): carriers bid, only an escalated job can also
+ * be taken outright, owners never see a form for their own job, and other
+ * signed-in users are invited to apply. The service re-checks everything
+ * server-side - this component only spares people a doomed submit.
  */
 export function JobBidSection({ job, viewerId }: JobBidSectionProps) {
   const { user, isLoading } = useAuth();
@@ -51,12 +51,17 @@ export function JobBidSection({ job, viewerId }: JobBidSectionProps) {
   if (!roles.includes("carrier")) return <BecomeCarrierCard />;
   if (notApprovedSubmits.length > 0) return <NotApprovedCard />;
 
-  // Both routes are offered, take-it-now first. A driver who wants the job at
-  // the posted price should not have to compose a bid to say so, and a driver
-  // who wants to bid under it still can.
+  // On an escalated job both routes are offered, take-it-now first. A driver
+  // who wants the job at the posted price should not have to compose a bid to
+  // say so, and a driver who wants to bid under it still can.
+  //
+  // A direct request is never taken: its requester chooses the offer and pays
+  // for it themselves (take_job_spec.md), so the form is the only route there
+  // — and it opens on the budget, so offering the posted price is still one
+  // vehicle and a slot away. `takeJob` refuses it too, TAKE_NOT_AVAILABLE.
   return (
     <div className="space-y-4">
-      <TakeJobPanel job={job} />
+      {job.origin === "expedion" && <TakeJobPanel job={job} />}
       <SubmitOfferForm job={job} />
     </div>
   );

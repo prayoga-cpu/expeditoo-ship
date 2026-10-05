@@ -67,12 +67,16 @@ That is why the `onError` fallback exists rather than being defensive padding �
 on today's data it is the path the Expedion inlet actually takes.
 
 Closing the gap is a **permission decision, not a UI one**, and it is not made
-here: `GET /api/listings` takes no session at all, so widening that route to
-"anyone who can see an open listing" would put auction-lot photos in front of
-anonymous visitors. The two candidate fixes are to copy the photo into public
-listing storage at escalation time, or to serve it through a listing-scoped
-route that checks the viewer. Whoever picks one should say so in
-`expedion_post_payment_fork_spec.md`.
+here. The board, `GET /api/listings`, needs a session since 2.60.0, but a
+job's own link, `GET /api/listings/:id`, deliberately does not — a job stays
+a link anyone can be sent (`listing_privacy_spec.md` §3) — and every audience
+reads its photo URLs. Widening the files route to "anyone who can see an open
+listing" would therefore still put auction-lot photos in front of anonymous
+visitors, through any shared link. (Written when `GET /api/listings` took no
+session at all; the conclusion survives the board closing.) The two candidate
+fixes are to copy the photo into public listing storage at escalation time, or
+to serve it through a listing-scoped route that checks the viewer. Whoever
+picks one should say so in `expedion_post_payment_fork_spec.md`.
 
 ## 5. Test coverage required
 

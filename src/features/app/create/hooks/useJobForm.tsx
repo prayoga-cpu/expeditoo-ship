@@ -5,11 +5,14 @@ import { useForm, type FieldErrors } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { ApiError } from "@/lib/fetcher";
 import { createAddress } from "@/features/app/profile/api/addresses.api";
 import { addressBookKeys } from "./useAddressBook";
+import { draftRefusal } from "@/features/app/listing/hooks/useDraftActions";
+import { jobKeys } from "@/features/app/listing/hooks/useJobDetail";
+import type { DraftJob } from "@/features/app/listing/types";
 import {
   jobFormSchema,
   STEP_FIELDS,
@@ -18,6 +21,7 @@ import {
 } from "../schemas";
 import { jobsApi } from "../api/jobs.api";
 import { postCreateDestination } from "../destination";
+import { fromListing, type ResumedForm } from "../from-listing";
 import { publicationIssues } from "../publication";
 import {
   defaultTimingState,
@@ -91,20 +95,47 @@ export function firstStepWithError(errors: FieldErrors): number | null {
   return step === -1 ? 0 : step;
 }
 
-export function useJobForm() {
+/**
+ * A request that has not gone live, to finish (draft_requests_spec.md §2), and
+ * where to open it: step 1 to edit, the Budget step to publish — with
+ * « Maintenant » chosen when that is what the requester pressed.
+ */
+export interface JobFormSeed {
+  draft?: DraftJob;
+  startStep?: number;
+  publishNow?: boolean;
+}
+
+export function useJobForm(seed: JobFormSeed = {}) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const t = useTranslations("create");
-  const [currentStep, setCurrentStep] = useState(0);
-  const [photos, setPhotos] = useState<string[]>([]);
+  const tMyJobs = useTranslations("myJobs");
+  const locale = useLocale();
+  // Read once: a resumed request is the form's starting point, not a value it
+  // tracks. Re-mounting (a different draft) is the caller's `key`.
+  const [resumed] = useState<ResumedForm | null>(() =>
+    seed.draft ? fromListing(seed.draft, { locale, now: new Date() }) : null
+  );
+  const draftId = seed.draft?.id;
+  // A saved time the list could not show was moved: the requester sees the
+  // When step first, whichever step they asked for, so « Publier » never posts
+  // a time they did not see (draft_requests_spec.md §2).
+  const [currentStep, setCurrentStep] = useState(() =>
+    resumed?.snappedTimes.length ? WHEN_STEP : (seed.startStep ?? 0)
+  );
+  const [photos, setPhotos] = useState<string[]>(resumed?.photos ?? []);
   // The "When" step's own shape — see `../timing.ts`. Lives here rather than
   // inside `WhenStep` because that component unmounts on every step change,
   // which would otherwise throw away a request's exact date/time the moment
   // someone clicked "Next" and came back.
-  const [timing, setTiming] = useState<TimingState>(() => defaultTimingState());
+  const [timing, setTiming] = useState<TimingState>(
+    () => resumed?.timing ?? defaultTimingState()
+  );
   // The furthest step reached with « Suivant ». A failed submit may send the
   // requester back to any of these, never forward past one they have not seen.
-  const [furthestStep, setFurthestStep] = useState(0);
+  // A saved request passed the whole schema once: every step is reached.
+  const [furthestStep, setFurthestStep] = useState(resumed ? JOB_STEPS.length - 1 : 0);
   // Bumped to scroll to the first error once the step holding it has mounted.
   const [scrollRequest, setScrollRequest] = useState({ n: 0, selector: FIELD_ERROR });
   // Set from the moment a submit starts until its request settles: between
@@ -130,13 +161,18 @@ export function useJobForm() {
       publishMode: "now",
       pickup: { ...emptyEndpoint },
       dropoff: { ...emptyEndpoint },
-      // Seeded blank, not left unset. An unset number coerces to NaN, a type
-      // error that aborts the whole object before its `superRefine` — so the
-      // When step's date rules never ran on "Suivant" until the budget was
-      // typed on the step after it. Blank coerces to 0 and fails `.positive()`
-      // as an ordinary issue on its own step (publication_timing_spec.md §3.6).
-      // The DOM hands this field strings regardless of the declared type.
-      budgetEuros: "" as unknown as number,
+      // Seeded blank, not left unset. An unset budget is a type error that
+      // aborts the whole object before its `superRefine` — so the When step's
+      // date rules never ran on "Suivant" until the budget was typed on the
+      // step after it. Blank reads as 0 and fails `.positive()` as an ordinary
+      // issue on its own step (publication_timing_spec.md §3.6). The field
+      // holds the box's text, « 40,5 », and the schema reads it
+      // (numeric_input_spec.md §7).
+      budgetEuros: "",
+      ...resumed?.values,
+      ...(seed.publishNow ? { publishMode: "now" as const, scheduledPublishAt: "" } : {}),
+      // Derived now, from the resumed When step too: a flexible start saved
+      // yesterday is re-clamped to today's clock.
       ...timingFieldValues(resolveTimingWindows(timing)),
     },
   });
@@ -206,11 +242,17 @@ export function useJobForm() {
     }: {
       values: JobFormOutput;
       publish: boolean;
-    }) => jobsApi.create(values, publish),
+    }) =>
+      draftId
+        ? jobsApi.saveDraft(draftId, values, publish)
+        : jobsApi.create(values, publish),
     onSuccess: (job, variables) => {
       // `/listings/me` and `/home` would otherwise show the list as it was for
       // up to a minute (`staleTime`).
       queryClient.invalidateQueries({ queryKey: ["my-jobs"] });
+      // The cached draft would send the thank-you page straight past itself
+      // (it only thanks for a request that is live or scheduled).
+      if (draftId) queryClient.removeQueries({ queryKey: ["job", draftId] });
 
       if (variables.publish) {
         // `replace`: the form's state dies with this page, so Back would only
@@ -243,6 +285,19 @@ export function useJobForm() {
         if (error.code === "SCHEDULED_PUBLISH_IN_PAST") {
           toast.error(t("toast.schedulePast"));
           showStep(BUDGET_STEP);
+          return;
+        }
+        // Deleted in another tab, or published or closed there or by the
+        // scheduler, while this one was open: said as it is, never as worth a
+        // retry.
+        const refusal = draftRefusal(error);
+        if (draftId && refusal) {
+          toast.error(tMyJobs(`draft.${refusal}`));
+          queryClient.invalidateQueries({ queryKey: ["my-jobs"] });
+          queryClient.invalidateQueries({ queryKey: jobKeys.detail(draftId) });
+          // Still there: its own page is where it lives now. Gone: the form
+          // stays, and what was typed with it.
+          if (refusal !== "notFound") router.replace(`/listing/${draftId}`);
           return;
         }
       }
@@ -418,9 +473,17 @@ export function useJobForm() {
     now
   );
 
+  // Said on the When step while each moved time is still the one selected:
+  // once the requester picks another, they have seen it.
+  const snappedTimes = (resumed?.snappedTimes ?? []).filter(
+    (time) => timing.mode === "exact" && timing[time.side].hour === time.hour
+  );
+
   return {
     form,
     photos,
+    isResuming: Boolean(draftId),
+    snappedTimes,
     currentStep,
     steps: JOB_STEPS,
     isFirstStep: currentStep === 0,

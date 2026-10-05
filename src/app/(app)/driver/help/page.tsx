@@ -64,9 +64,12 @@ export default function DriverHelpPage() {
           <AccordionItem value="item-1">
             <AccordionTrigger>How do I get paid?</AccordionTrigger>
             <AccordionContent>
-              Payments are processed weekly for all completed deliveries. Ensure
-              your bank details are up to date in your profile. You can view
-              your earnings in the "Wallet" section.
+              Your earnings for a job are credited to your balance when the
+              delivery is recorded. Nothing is transferred automatically:
+              request a withdrawal in "My earnings" once your balance reaches
+              the minimum. An operator then makes the bank transfer by hand,
+              to the account on your RIB, so it is not instant. If you change
+              banks, upload a new RIB in "My application".
             </AccordionContent>
           </AccordionItem>
           <AccordionItem value="item-2">

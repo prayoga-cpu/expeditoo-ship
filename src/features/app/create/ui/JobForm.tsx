@@ -3,10 +3,12 @@
 import { useCallback, useEffect, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
+import { TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { NumericInput, useNumericText } from "@/components/ui/numeric-input";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -19,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Stepper } from "@/components/Stepper";
 import { InlineLoader } from "@/components/ui/page-loader";
+import { NUMERIC_RULES } from "@/lib/numeric-input";
 import { PhotoDropzone } from "./PhotoDropzone";
 import { FieldError } from "./FieldError";
 import { SizeField } from "./SizeField";
@@ -33,6 +36,7 @@ import { ToggleRow } from "./ToggleRow";
 import { LOCATION_TYPES, type LocationType } from "../schemas";
 import { useAddressBook, type Address } from "../hooks/useAddressBook";
 import type { JobFormApi } from "../hooks/useJobForm";
+import type { SnappedTime } from "../from-listing";
 
 // `maplibre-gl` + `react-map-gl` are only needed once someone reaches the
 // "Where" step, but a static import puts them in the same chunk as "What" —
@@ -59,6 +63,8 @@ export function JobForm(props: JobFormApi) {
   const {
     form,
     photos,
+    isResuming,
+    snappedTimes,
     timing,
     pickupClampedFrom,
     publication,
@@ -79,7 +85,9 @@ export function JobForm(props: JobFormApi) {
   return (
     <div className="mx-auto w-full max-w-2xl space-y-6 p-4 sm:p-6 xl:max-w-3xl 2xl:max-w-4xl">
       <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          {t(isResuming ? "resume.title" : "title")}
+        </h1>
         <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
       </header>
 
@@ -104,6 +112,7 @@ export function JobForm(props: JobFormApi) {
             onTimingChange={handleTimingChange}
             pickupClampedFrom={pickupClampedFrom}
             publication={publication}
+            snappedTimes={snappedTimes}
           />
         )}
         {currentStep === 3 && (
@@ -502,19 +511,10 @@ function EndpointFields({
             <Label htmlFor={`${side}-floor`} required>
               {t("floor")}
             </Label>
-            <Input
+            <FloorInput
               id={`${side}-floor`}
-              type="number"
-              min={0}
-              // `floor` passes through a preprocess, so its input type is
-              // `unknown`; only a number is meaningful to show.
-              value={typeof endpoint?.floor === "number" ? endpoint.floor : ""}
-              onChange={(e) =>
-                setValue(
-                  `${side}.floor`,
-                  e.target.value === "" ? undefined : Number(e.target.value)
-                )
-              }
+              value={endpoint?.floor}
+              onChange={(floor) => setValue(`${side}.floor`, floor)}
             />
             <FieldError message={error?.floor?.message} />
           </div>
@@ -532,31 +532,99 @@ function EndpointFields({
   );
 }
 
+/**
+ * An apartment's floor: a number in the form, its own text in the box
+ * (numeric_input_spec.md §6). A deletion keeps the zeros it exposes, and
+ * « 00 » is a text no number reads back as: re-derived from the floor, the
+ * box was rewritten to « 0 » with the caret thrown to the end, so « 100 »
+ * with its « 1 » deleted and a « 2 » typed in its place gave floor 2, not
+ * 200 (found in review).
+ */
+function FloorInput({
+  id,
+  value,
+  onChange,
+}: {
+  id: string;
+  /**
+   * The form's floor, typed `unknown` as every preprocessed field is
+   * (numeric_input_spec.md §7): a number, or `undefined`.
+   */
+  value: unknown;
+  onChange: (floor: number | undefined) => void;
+}) {
+  const field = useNumericText(value, (floor) =>
+    floor == null ? "" : String(floor)
+  );
+  return (
+    <NumericInput
+      id={id}
+      rules={NUMERIC_RULES.COUNT}
+      value={field.text}
+      onChange={(e) => {
+        const text = e.target.value;
+        const floor = text === "" ? undefined : Number(text);
+        field.typed(text, floor);
+        onChange(floor);
+      }}
+    />
+  );
+}
+
 function WhenStep({
   form,
   timing,
   onTimingChange,
   pickupClampedFrom,
   publication,
+  snappedTimes,
 }: StepProps & {
   timing: JobFormApi["timing"];
   onTimingChange: JobFormApi["handleTimingChange"];
   pickupClampedFrom: JobFormApi["pickupClampedFrom"];
   publication: JobFormApi["publication"];
+  snappedTimes: JobFormApi["snappedTimes"];
 }) {
   const errors = form.formState.errors;
 
   return (
-    <TimingField
-      timing={timing}
-      onChange={onTimingChange}
-      pickupError={errors.pickupFrom?.message ?? errors.pickupUntil?.message}
-      dropoffError={errors.dropoffFrom?.message ?? errors.dropoffUntil?.message}
-      pickupDaysError={errors.pickupDays?.message}
-      dropoffDaysError={errors.dropoffDays?.message}
-      pickupClampedFrom={pickupClampedFrom}
-      publication={publication}
-    />
+    <div className="space-y-5">
+      <SnappedTimesNotice times={snappedTimes} />
+      <TimingField
+        timing={timing}
+        onChange={onTimingChange}
+        pickupError={errors.pickupFrom?.message ?? errors.pickupUntil?.message}
+        dropoffError={errors.dropoffFrom?.message ?? errors.dropoffUntil?.message}
+        pickupDaysError={errors.pickupDays?.message}
+        dropoffDaysError={errors.dropoffDays?.message}
+        pickupClampedFrom={pickupClampedFrom}
+        publication={publication}
+      />
+    </div>
+  );
+}
+
+/**
+ * A resumed request's exact time that the half-hour list could not show, and
+ * the one selected instead (draft_requests_spec.md §2). A warning, not an
+ * error: it blocks nothing. Amber is carried by the icon and the tint, as in
+ * `PickupPublicationNotice` — amber text measured under 4.5:1.
+ */
+function SnappedTimesNotice({ times }: { times: SnappedTime[] }) {
+  const t = useTranslations("create.resume.snappedTime");
+  if (times.length === 0) return null;
+
+  return (
+    <div className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/10 p-3 text-sm text-foreground">
+      <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden />
+      <div className="space-y-1">
+        {times.map((time) => (
+          <p key={time.side}>
+            {t(time.side, { saved: time.saved, selected: time.selected })}
+          </p>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -581,11 +649,12 @@ function BudgetStep({
           <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-xl font-semibold text-muted-foreground">
             €
           </span>
-          <Input
+          {/* Text, not a number box: « 040 » reads « 40 » as it is typed,
+              and cents take the language's separator
+              (numeric_input_spec.md §1). The form holds the text. */}
+          <NumericInput
             id="budgetEuros"
-            type="number"
-            step="1"
-            min={1}
+            rules={NUMERIC_RULES.MONEY}
             className="h-14 pl-10 text-2xl font-semibold"
             {...register("budgetEuros")}
           />

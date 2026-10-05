@@ -38,10 +38,11 @@ import { shipmentService, ShipmentError } from "../shipment.service";
 import { shipmentsDal } from "@/server/dal/shipments.dal";
 import { listingsDal } from "@/server/dal/listings.dal";
 import { shipmentConfirmationsService } from "@/server/services/shipment-confirmations.service";
-import { paymentsService } from "@/server/services/payments.service";
 import { getUserById } from "@/server/dal/users.dal";
 import { emailService } from "@/server/services/email.service";
 import { notificationsService } from "@/server/services/notifications.service";
+import { paymentsService } from "@/server/services/payments.service";
+import { notifyExpedion } from "@/server/services/expedion-bridge.service";
 
 /** A full user row as the DAL loads it - permission-blind by design. */
 /**
@@ -225,7 +226,31 @@ describe("shipmentService.getShipmentDetail (shipper and carrier)", () => {
 
     expect(detail.priceCents).toBe(42000);
     expect(detail.offer).toEqual({ id: "offer-1", priceCents: 42000 });
-    expect(detail.shipper).toEqual(shipmentRow().shipper);
+    // A name and a face, never the account (listing_privacy_spec.md §3).
+    const shipper = shipmentRow().shipper as Record<string, unknown>;
+    expect(detail.shipper).toEqual({
+      id: shipper.id,
+      name: shipper.name,
+      image: shipper.image,
+    });
+  });
+
+  it("shows the requester the carrier as a name and a face only", async () => {
+    const detail = (await shipmentService.getShipmentDetail("ship-1", {
+      userId: "shipper-1",
+    })) as unknown as Record<string, unknown>;
+
+    expect(Object.keys(detail.carrier as object).sort()).toEqual(["id", "image", "name"]);
+    expect(JSON.stringify(detail)).not.toMatch(/@example\.com|cus_|acct_/);
+  });
+
+  it("shows the carrier the requester the same way", async () => {
+    const detail = (await shipmentService.getShipmentDetail("ship-1", {
+      userId: "carrier-1",
+    })) as unknown as Record<string, unknown>;
+
+    expect(Object.keys(detail.shipper as object).sort()).toEqual(["id", "image", "name"]);
+    expect(JSON.stringify(detail.shipper)).not.toMatch(/@example\.com|cus_/);
   });
 
   it("gives the carrier the agreed price too", async () => {
@@ -242,6 +267,155 @@ describe("shipmentService.getShipmentDetail (shipper and carrier)", () => {
         shipmentService.getShipmentDetail("ship-1", { userId: "nobody" })
       )
     ).toBe("FORBIDDEN");
+  });
+});
+
+// ========================================
+// The job inside a shipment — listing_privacy_spec.md §3
+// ========================================
+//
+// The DAL loads the live listing row. A carrier stays a party to a run they
+// withdrew from, so without the projection they went on reading the door code
+// the requester typed for the next carrier.
+
+describe("shipmentService — the listing inside a shipment", () => {
+  const withPrivateListing = () =>
+    shipmentRow({
+      pickupContactPhone: "+33600000001",
+      listing: {
+        ...(shipmentRow().listing as Record<string, unknown>),
+        pickupAddress: "12 rue de Lyon",
+        pickupContactPhone: "+33612345678",
+        pickupNote: "Code 4521B",
+        externalRef: "quote-9",
+        acceptedOfferId: "offer-1",
+      },
+    });
+
+  beforeEach(() => {
+    vi.mocked(shipmentsDal.getById).mockResolvedValue(withPrivateListing() as never);
+  });
+
+  const detailFor = async (viewer: { userId: string; isOperator?: boolean }) =>
+    (await shipmentService.getShipmentDetail("ship-1", viewer)) as unknown as Record<
+      string,
+      Record<string, unknown>
+    >;
+
+  it("gives the carrier the job as an approved carrier reads it", async () => {
+    const detail = await detailFor({ userId: "carrier-1" });
+
+    expect(detail.listing.title).toBe("Pallet to Marseille");
+    expect(detail.listing.reference).toBe(100042);
+    expect(detail.listing.budgetCents).toBe(50000);
+    expect(detail.listing.pickupAddress).toBe("12 rue de Lyon");
+    for (const field of ["pickupContactPhone", "pickupNote", "externalRef", "acceptedOfferId"]) {
+      expect(detail.listing).not.toHaveProperty(field);
+    }
+    // What the run needs of those comes from the shipment's own copy.
+    expect(detail.pickupContactPhone).toBe("+33600000001");
+  });
+
+  it("gives the requester their own job in full", async () => {
+    const detail = await detailFor({ userId: "shipper-1" });
+
+    expect(detail.listing.pickupContactPhone).toBe("+33612345678");
+    expect(detail.listing.pickupNote).toBe("Code 4521B");
+    expect(detail.listing.externalRef).toBe("quote-9");
+  });
+
+  it("projects the list the same way", async () => {
+    vi.mocked(shipmentsDal.getForUser).mockResolvedValue({
+      items: [withPrivateListing()],
+      total: 1,
+    } as never);
+
+    const page = await shipmentService.getUserShipments(
+      { userId: "carrier-1" },
+      { page: 1, limit: 20 }
+    );
+
+    expect((page.items[0] as Record<string, unknown>).listing).not.toHaveProperty("pickupNote");
+  });
+
+  it("leaves staff the row as it is", async () => {
+    const detail = await detailFor({ userId: "op-1", isOperator: true });
+
+    expect(detail.listing.pickupNote).toBe("Code 4521B");
+  });
+});
+
+// ========================================
+// One move, one writer — cancellations_spec.md §7.1
+// ========================================
+//
+// The carrier and their driver pressing « Livré » at once both pass the
+// transition check on the same read. Only one may move the run; the other must
+// write nothing, and above all must not settle a second payout.
+
+describe("shipmentService.updateStatus — one move, one writer", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Object.assign(shipmentsDal, {
+      getOwnership: vi.fn().mockResolvedValue({
+        id: "ship-1",
+        listingId: "job-1",
+        shipperId: "shipper-1",
+        carrierId: "carrier-1",
+        driverId: "driver-1",
+        status: "IN_TRANSIT",
+      }),
+      // The other request moved the row first: nothing is IN_TRANSIT any more.
+      updateStatus: vi.fn().mockResolvedValue(undefined),
+      createEvent: vi.fn().mockResolvedValue({}),
+    });
+    Object.assign(listingsDal, {
+      update: vi.fn().mockResolvedValue({}),
+      getById: vi.fn().mockResolvedValue({ id: "job-1", title: "Pallet" }),
+    });
+  });
+
+  const deliver = () =>
+    shipmentService.updateStatus("ship-1", "DELIVERED", { userId: "driver-1" });
+
+  it("moves the run only from the status it read", async () => {
+    vi.mocked(shipmentsDal.updateStatus).mockResolvedValueOnce({ id: "ship-1" } as never);
+
+    await deliver();
+
+    expect(shipmentsDal.updateStatus).toHaveBeenCalledWith("ship-1", "DELIVERED", {
+      expected: "IN_TRANSIT",
+    });
+    expect(paymentsService.schedulePayout).toHaveBeenCalledTimes(1);
+  });
+
+  it("answers a driver without the price", async () => {
+    vi.mocked(shipmentsDal.updateStatus).mockResolvedValueOnce({
+      id: "ship-1",
+      status: "DELIVERED",
+      priceCents: 15_000,
+    } as never);
+
+    const answer = await deliver();
+
+    expect(answer).toMatchObject({ id: "ship-1", status: "DELIVERED" });
+    expect(answer).not.toHaveProperty("priceCents");
+  });
+
+  it("refuses the DELIVERED that lost, and settles nothing", async () => {
+    await expect(deliver()).rejects.toMatchObject({
+      code: "INVALID_STATUS_TRANSITION",
+      status: 409,
+    });
+
+    expect(paymentsService.getForShipment).not.toHaveBeenCalled();
+    expect(paymentsService.schedulePayout).not.toHaveBeenCalled();
+    expect(shipmentsDal.createEvent).not.toHaveBeenCalled();
+    expect(listingsDal.update).not.toHaveBeenCalled();
+    expect(notificationsService.createNotification).not.toHaveBeenCalled();
+    expect(emailService.sendShipmentUpdateEmail).not.toHaveBeenCalled();
+    expect(shipmentConfirmationsService.requestConfirmation).not.toHaveBeenCalled();
+    expect(notifyExpedion).not.toHaveBeenCalled();
   });
 });
 

@@ -35,7 +35,7 @@ export const TIMING_MODES = ["exact", "flexible"] as const;
 export type TimingMode = (typeof TIMING_MODES)[number];
 
 /** How wide the arrival window is around an exact time. */
-const EXACT_WINDOW_HOURS = 1;
+export const EXACT_WINDOW_HOURS = 1;
 
 /**
  * Room for the request to reach the server after the form decided: the form

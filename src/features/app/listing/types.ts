@@ -52,7 +52,11 @@ export interface Job {
   needsProtection: boolean;
   needsPackaging: boolean;
 
-  pickupAddress: string;
+  /**
+   * The street, for the owner, staff and approved carriers only; others read
+   * the city and the postal code (listing_privacy_spec.md §1).
+   */
+  pickupAddress?: string;
   pickupCity: string;
   pickupPostalCode: string;
   pickupLocationType: string;
@@ -61,7 +65,7 @@ export interface Job {
   pickupLat: number | null;
   pickupLng: number | null;
 
-  dropoffAddress: string;
+  dropoffAddress?: string;
   dropoffCity: string;
   dropoffPostalCode: string;
   dropoffLocationType: string;
@@ -85,7 +89,8 @@ export interface Job {
   dropoffPeriods?: TimeSlot[];
 
   budgetCents: number;
-  acceptedOfferId: string | null;
+  /** Owner and staff only: absent from anyone else's view (listing_privacy_spec.md §2). */
+  acceptedOfferId?: string | null;
   origin: "direct" | "expedion";
 
   offersCount: number;
@@ -99,7 +104,10 @@ export interface Job {
   reopenedAt: string | null;
   /** Set while status is `scheduled`: the moment it goes live. */
   scheduledPublishAt?: string | null;
+  /** When it first went live; null while a draft or scheduled (0036). */
+  publishedAt?: string | null;
   createdAt: string;
+  updatedAt?: string;
 
   /**
    * Lowest `order` first — `photosInOrder` in `listings.dal.ts` sorts the
@@ -118,6 +126,28 @@ export interface Job {
    * consequence written separately (my_requests_history_spec.md §3).
    */
   delivery?: JobDelivery | null;
+}
+
+/**
+ * A request that has not gone live, as its owner reads it to finish it: the
+ * street, the access details, the contacts and the schedule included
+ * (draft_requests_spec.md §2, listing_privacy_spec.md §1 "full").
+ */
+export interface DraftJob extends Job {
+  pickupAddress: string;
+  dropoffAddress: string;
+  pickupFloor: number | null;
+  pickupHasLift: boolean | null;
+  pickupNote: string | null;
+  pickupContactName: string | null;
+  pickupContactPhone: string | null;
+  dropoffFloor: number | null;
+  dropoffHasLift: boolean | null;
+  dropoffNote: string | null;
+  dropoffContactName: string | null;
+  dropoffContactPhone: string | null;
+  scheduledPublishAt: string | null;
+  updatedAt: string;
 }
 
 /** The transporter who carried a job, as the requester is allowed to see them. */

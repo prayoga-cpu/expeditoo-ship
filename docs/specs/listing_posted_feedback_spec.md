@@ -20,6 +20,23 @@ Draft → publish later, via `publishListing`, is **not** covered by this spec.
 `publishListing` is a different code path (it does not call `createListing`)
 and firing this from there too is a separate, reviewable decision.
 
+> **Superseded (2.60.0).** `publishListing` is gone — no route ever called it.
+> A saved request goes live through `listingsService.saveDraft`
+> (`PUT /api/listings/:id/draft`, `draft_requests_spec.md` §3), and it fires
+> this spec's behaviour exactly as `createListing` does: both call one
+> function, `goLive`, when the request goes live **now** — `publish` with no
+> `scheduledPublishAt` — and `goLive` holds the system-account guard above.
+> `saveDraft` calls it after its conditional update and the photo replacement
+> commit, and only from the write that won, so a second tab or a double click
+> announces nothing. `goLive` also sends the carrier route alerts
+> (`carrier_route_alerts_spec.md` §3), which are not this spec's.
+>
+> A request scheduled for later fires nothing when it is saved, from either
+> path (`createListing` never announced one either). When its moment comes,
+> `publishScheduled` turns it live and sends its own bell — « Your scheduled job
+> is live », type `listing` — and the route alerts; neither §2.1's bell nor
+> §2.2's email.
+
 ## 2. What fires
 
 All three below are independent: each is wrapped in its own
@@ -109,15 +126,26 @@ The card shows: a status badge (same tone/labels as `/listings/me`'s
 the first three belong to history (`/listings/me`'s delivered tab and the
 status filter already cover them), and a draft is not "a request" yet.
 
+> **Superseded in part (2.60.0).** The most recently **published** request
+> wins, not the most recently created: `featuredRequest` compares
+> `publishedAt`, falling back to `createdAt` for a row that has none. A draft
+> finished today was posted today, whatever day it was first saved
+> (`draft_requests_spec.md` §5). `scheduled` is left out like `draft` — it is
+> not one of the three statuses — since no carrier can see it yet.
+
 ## 3. Edge cases
 
 - **Draft saved, never published**: nothing in this spec fires. Publishing it
-  later via "Publish" is out of scope (see §1).
+  later via "Publish" is out of scope (see §1). *Since 2.60.0:* finishing it
+  later — « Publier » on a draft, « Publier maintenant » on a scheduled
+  request — goes through the form to `saveDraft`, which fires §2 exactly as a
+  new request does (§1's note).
 - **Escalated (Expedion) listing**: nothing in this spec fires (§1's second
   guard). The Expedion client's own confirmation is a separate, already-shipped
   mechanism (the Expedion app itself).
 - **Two direct requests open at once**: the dashboard card shows only the most
-  recently created; the rest are still visible on `/listings/me`.
+  recently published (2.60.0, §2.4's note); the rest are still visible on
+  `/listings/me`.
 - **Email send fails (Resend error, network)**: logged via `console.error`,
   swallowed. The listing is unaffected; the notification and toast already
   fired independently.
@@ -145,11 +173,16 @@ status filter already cover them), and a draft is not "a request" yet.
     with `publish: true`.
   - A rejection from either dependency does not reject `createListing`'s own
     promise.
+  - `saveDraft` publishing now announces once — bell, email and route alerts;
+    saving it as a draft or scheduling it announces nothing; a lost race
+    announces nothing (`draft_requests_spec.md` §7).
 - `email.service.test.ts`: `sendListingPostedEmail` renders and sends with the
   right `to`/subject.
 - `src/features/app/dashboard/__tests__/myRequestStatus.test.ts`:
-  `featuredRequest` — picks the most recent among `open`/`awarded`/
-  `in_progress`; ignores `draft`/`completed`/`cancelled`/`expired`; returns
-  `null` on no match; empty list in, `null` out.
+  `featuredRequest` — picks the most recently published (`publishedAt`, else
+  `createdAt`) among `open`/`awarded`/`in_progress`, so a draft finished today
+  leads over a request written later but live earlier; ignores
+  `draft`/`completed`/`cancelled`/`expired`; returns `null` on no match; empty
+  list in, `null` out.
 - `src/i18n/__tests__/locale-parity.test.ts` continues to pass with the new
   keys added to both `messages/en.json` and `messages/fr.json`.

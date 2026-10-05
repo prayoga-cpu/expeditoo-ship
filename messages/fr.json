@@ -414,27 +414,6 @@
       "deleteError": "Échec de la suppression de la carte",
       "loadError": "Échec du chargement des moyens de paiement"
     },
-    "payout": {
-      "title": "Configuration des virements",
-      "status": {
-        "active": "Actif",
-        "pending": "Configuration en attente",
-        "notConnected": "Non connecté"
-      },
-      "description": {
-        "active": "Votre compte de virement est configuré et prêt à recevoir les fonds de vos ventes/livraisons.",
-        "inactive": "Pour recevoir les paiements de vos articles vendus ou de vos livraisons, vous devez connecter votre compte Stripe."
-      },
-      "button": {
-        "continue": "Continuer la configuration",
-        "connect": "Connecter le compte de virement",
-        "loading": "Ouverture de Stripe…"
-      },
-      "error": {
-        "rejected": "Stripe a refusé la création du compte de virement. Le problème vient de chez nous, pas de vous — réessayez plus tard ou contactez le support.",
-        "generic": "Impossible de démarrer la configuration des virements. Veuillez réessayer."
-      }
-    },
     "picture": {
       "title": "Photo de profil",
       "upload": "Télécharger une nouvelle photo",
@@ -810,11 +789,11 @@
       "packaging": "Emballage personnalisé non inclus"
     },
     "bid": {
-      "becomeCarrierTitle": "Envie d'encherir sur ce type de mission ?",
-      "becomeCarrierDescription": "Les transporteurs se disputent le prix et le delai, et l'expediteur choisit le gagnant. Postulez une fois, puis encherissez sur toutes les missions.",
+      "becomeCarrierTitle": "Envie d'enchérir sur ce type de mission ?",
+      "becomeCarrierDescription": "Les transporteurs se disputent le prix et le délai. Selon la mission, le gagnant est choisi par la personne qui l'a publiée ou par un opérateur. Postulez une fois, puis enchérissez sur toutes les missions.",
       "becomeCarrierCta": "Devenir transporteur",
-      "notApprovedTitle": "Votre candidature transporteur n'est pas encore approuvee",
-      "notApprovedDescription": "Les offres se debloquent des qu'un operateur approuve votre candidature. Consultez son statut pour voir ce qu'il manque.",
+      "notApprovedTitle": "Votre candidature transporteur n'est pas encore approuvée",
+      "notApprovedDescription": "Les offres se débloquent dès qu'un opérateur approuve votre candidature. Consultez son statut pour voir ce qu'il manque.",
       "notApprovedCta": "Voir ma candidature",
       "takeJobTitle": "Prendre cette course maintenant",
       "takeJobDescription": "Acceptez-la au prix affiché de {price}. Sans enchère, sans attendre d’être choisi.",
@@ -831,7 +810,8 @@
         "VEHICLE_CAPACITY_WEIGHT": "Ce véhicule ne peut pas transporter ce chargement.",
         "VEHICLE_CAPACITY_DIMENSIONS": "Ce véhicule est trop petit pour ce chargement.",
         "OFFER_ALREADY_EXISTS": "Vous avez déjà une offre en cours sur cette course.",
-        "generic": "Impossible de prendre cette course. Veuillez réessayer."
+        "generic": "Impossible de prendre cette course. Veuillez réessayer.",
+        "TAKE_NOT_AVAILABLE": "Ce client choisit lui-même son transporteur : faites-lui une offre."
       },
       "form": {
         "title": "Faire une offre",
@@ -1153,7 +1133,7 @@
     },
     "budget": {
       "label": "Combien pensez-vous payer ?",
-      "hint": "C'est une estimation, pas une limite : les transporteurs peuvent proposer plus ou moins, et vous choisissez l'offre que vous acceptez. Un transporteur peut aussi accepter directement votre demande à ce prix.",
+      "hint": "C'est une estimation, pas une limite : les transporteurs peuvent proposer plus ou moins, et vous choisissez l'offre que vous acceptez.",
       "publish": {
         "label": "Quand cette demande doit-elle être publiée ?",
         "now": "Maintenant",
@@ -1203,7 +1183,13 @@
       "invalidPhone": "Indiquez un numéro de téléphone valide",
       "scheduledPublishRequired": "Choisissez une date et une heure de publication",
       "scheduledPublishPast": "Choisissez un moment dans le futur",
-      "noAllowedDay": "Aucun des jours cochés ne tombe entre ces dates."
+      "noAllowedDay": "Aucun des jours cochés ne tombe entre ces dates.",
+      "budgetMin": "Indiquez un montant d'au moins 1 €",
+      "budgetMax": "Le montant ne peut pas dépasser 100 000 €",
+      "quantityMin": "Indiquez au moins 1",
+      "floorMin": "Indiquez 0 (rez-de-chaussée) ou un étage supérieur",
+      "wholeNumber": "Indiquez un nombre entier",
+      "quantityMax": "La quantité totale ne peut pas dépasser 99 999"
     },
     "success": {
       "open": {
@@ -1219,8 +1205,8 @@
         "title": "Et maintenant ?",
         "offers": "Les transporteurs vous envoient leurs offres jusqu'au {date}.",
         "notify": "Vous êtes prévenu dans l'application à chaque nouvelle offre.",
-        "choose": "Vous comparez les offres et choisissez votre transporteur — à moins qu'un transporteur n'accepte directement votre demande à votre budget.",
-        "pay": "Rien n'est prélevé avant que le transport soit attribué : quand vous acceptez une offre, ou quand un transporteur accepte votre demande à votre budget."
+        "choose": "Vous comparez les offres et choisissez votre transporteur.",
+        "pay": "Vous ne payez qu'au moment où vous acceptez une offre."
       },
       "actions": {
         "view": "Voir ma demande",
@@ -1230,6 +1216,16 @@
       "notFound": {
         "title": "Demande introuvable",
         "description": "Elle a peut-être été supprimée, ou ce lien n'est pas le bon."
+      }
+    },
+    "resume": {
+      "title": "Reprendre ma demande",
+      "notFound": "Demande introuvable",
+      "notFoundDesc": "Elle a peut-être été supprimée, ou ce lien n'est pas le bon.",
+      "back": "Mes demandes",
+      "snappedTime": {
+        "pickup": "L'heure d'enlèvement enregistrée, {saved}, ne fait pas partie des horaires proposés : l'heure sélectionnée est maintenant {selected}. Vérifiez-la avant de publier.",
+        "dropoff": "L'heure de livraison enregistrée, {saved}, ne fait pas partie des horaires proposés : l'heure sélectionnée est maintenant {selected}. Vérifiez-la avant de publier."
       }
     }
   },
@@ -1243,6 +1239,8 @@
     "loadFailed": "Impossible de charger vos demandes",
     "offers": "{count, plural, =0 {Aucune offre} one {# offre} other {# offres}}",
     "posted": "Publiée le {date}",
+    "savedOn": "Enregistré le {date}",
+    "scheduledFor": "Publication prévue le {date}",
     "tabs": {
       "requests": "Demandes",
       "history": "Historique"
@@ -1309,7 +1307,16 @@
         "paymentFailed": "Le paiement n'a pas abouti. Votre carte n'a pas été débitée.",
         "failed": "Impossible d'accepter cette offre"
       },
-      "reopened": "Remise en ligne"
+      "reopened": "Remise en ligne",
+      "addressHidden": "Adresse exacte communiquée aux transporteurs vérifiés.",
+      "notFound": "Demande introuvable",
+      "notFoundDesc": "Elle a peut-être été retirée, ou vous n'y avez pas accès.",
+      "backHome": "Retour à l'accueil",
+      "loadError": {
+        "title": "Impossible de charger cette demande",
+        "description": "La demande n'a pas pu être chargée. Réessayez dans un instant.",
+        "retry": "Réessayer"
+      }
     },
     "carriers": {
       "tab": "Transporteurs disponibles",
@@ -1349,7 +1356,30 @@
       "quantity": "{count, plural, one {# objet} other {# objets}}",
       "needsHelp": "Aide au chargement",
       "flexible": "Dates flexibles"
-    }
+    },
+    "draft": {
+      "publish": "Publier",
+      "publishNow": "Publier maintenant",
+      "resume": "Reprendre",
+      "edit": "Modifier",
+      "unschedule": "Repasser en brouillon",
+      "delete": "Supprimer",
+      "deleteTitle": "Supprimer ce brouillon ?",
+      "deleteScheduledTitle": "Supprimer cette demande planifiée ?",
+      "deleteDescription": "Cette demande sera supprimée définitivement. Aucun transporteur ne l'a encore vue.",
+      "keep": "Garder",
+      "confirmDelete": "Supprimer définitivement",
+      "deleted": "Demande supprimée",
+      "unscheduled": "Demande repassée en brouillon",
+      "failed": "Impossible d'effectuer cette action. Veuillez réessayer.",
+      "bannerDraft": "Brouillon — pas encore visible par les transporteurs.",
+      "bannerScheduled": "Planifiée — publication le {date}. Invisible des transporteurs d'ici là.",
+      "datesPassed": "Dates passées — à mettre à jour",
+      "notScheduled": "Cette demande n'est plus planifiée.",
+      "noLongerEditable": "Cette demande a été publiée ou fermée entre-temps : elle ne peut plus être modifiée ici.",
+      "notFound": "Cette demande est introuvable : elle a peut-être été supprimée entre-temps."
+    },
+    "created": "Créée le {date}"
   },
   "driver": {
     "title": "Chauffeur",
@@ -1521,10 +1551,10 @@
       "badge": "Le réseau de transporteurs du groupe Expedion",
       "titleLine1": "Les courses viennent à vous.",
       "titleLine2": "Vous fixez le prix.",
-      "subtitle": "Quand la flotte d'Expedion est complète, la course est publiée ici automatiquement. Enchérissez votre prix, remportez le trajet, livrez, soyez payé sous 7 jours. Zéro prospection.",
+      "subtitle": "Quand la flotte d'Expedion est complète, la course est publiée ici automatiquement. Enchérissez votre prix, remportez le trajet, livrez, soyez payé par virement. Zéro prospection.",
       "step1": "Une course se libère",
       "step2": "Vous enchérissez à la baisse",
-      "step3": "Livrez, payé sous 7 j",
+      "step3": "Livrez, soyez payé",
       "primaryCta": "Rejoindre le réseau",
       "secondaryCta": "Voir les courses ouvertes",
       "primaryCtaAuthed": "Ouvrir votre profil"
@@ -1540,7 +1570,7 @@
       "leading": "Votre offre est en tête",
       "bidCta": "Enchérir, tout compris",
       "bidInputLabel": "Votre offre en euros",
-      "insured": "ASSURÉ PAR EXPEDION · PAYÉ SOUS 7 JOURS",
+      "insured": "ASSURÉ PAR EXPEDION · PAYÉ PAR VIREMENT",
       "errorInvalid": "Saisissez un montant en euros.",
       "errorTooLow": "Les offres sérieuses commencent à {min} €.",
       "errorTooHigh": "Votre offre doit passer sous {best} €."
@@ -1549,7 +1579,7 @@
       "jobsPerMonth": "Courses publiées par mois",
       "timeToAward": "Délai moyen d'attribution",
       "emptyKm": "De kilomètres à vide",
-      "guaranteedPayment": "Paiement garanti"
+      "transferMinimum": "Solde minimum pour demander un virement"
     },
     "howItWorks": {
       "eyebrow": "COMMENT ÇA MARCHE",
@@ -1569,7 +1599,7 @@
       },
       "step4": {
         "title": "Livrez, un seul suivi",
-        "desc": "Vos étapes alimentent le suivi que l'acheteur voit dans Expedion. Preuve de livraison déposée, paiement sous 7 jours."
+        "desc": "Vos étapes alimentent le suivi que l'acheteur voit dans Expedion. Preuve de livraison déposée, gains crédités, virement à votre demande."
       }
     },
     "jobBoard": {
@@ -1599,8 +1629,8 @@
         "desc": "Expedion vend, chiffre et emballe. Vous ne négociez jamais avec le client final, vous roulez."
       },
       "item3": {
-        "title": "Payé sous 7 jours",
-        "desc": "C'est le groupe qui vous paie, pas le client. Preuve de livraison déposée, virement envoyé, garanti."
+        "title": "Payé par virement",
+        "desc": "C'est le groupe qui vous paie, pas le client. Preuve de livraison déposée, gains crédités, virement à votre demande."
       },
       "item4": {
         "title": "Assurance déjà en place",
@@ -1643,7 +1673,7 @@
         "role": "Transporteur, Gironde · 214 courses"
       },
       "two": {
-        "quote": "« Tout arrive emballé et photographié par Expedion. On charge, on roule, on est payé dans la semaine. »",
+        "quote": "« Tout arrive emballé et photographié par Expedion. On charge, on roule. »",
         "author": "Sophie L.",
         "role": "Chauffeure indépendante, Orléans · 88 courses"
       }
@@ -1736,7 +1766,7 @@
       },
       "privacy": {
         "title": "Ce que deviennent vos documents",
-        "body": "Les pièces d'identité et les documents de conformité sont conservés dans un stockage privé. Ils ne sont jamais servis depuis une adresse publique, jamais rattachés à une course, et jamais montrés à un autre transporteur ni au client dont vous réalisez la livraison. Seuls les opérateurs qui instruisent votre dossier peuvent les ouvrir. Les coordonnées bancaires sont détenues par notre prestataire de paiement : nous ne conservons que les quatre derniers chiffres, pour que vous reconnaissiez votre propre compte.",
+        "body": "Les pièces d'identité et les documents de conformité sont conservés dans un stockage privé. Ils ne sont jamais servis depuis une adresse publique, jamais rattachés à une course, et jamais montrés à un autre transporteur ni au client dont vous réalisez la livraison. Seuls les opérateurs qui instruisent votre dossier peuvent les ouvrir. Nous ne transmettons vos coordonnées bancaires à aucun prestataire de paiement : de l'IBAN et du BIC saisis, nous ne conservons que les quatre derniers caractères, pour que vous reconnaissiez votre propre compte, et votre RIB est conservé comme vos autres documents. Vos gains vous sont versés par virement d'Expeditoo, quand vous en faites la demande.",
         "expiry": "Si un document expire et n'est pas remplacé, le compte est suspendu plutôt que laissé libre d'enchérir avec une couverture qui n'existe plus. Le remplacement du document rétablit l'accès."
       },
       "cta": "Devenir transporteur",
@@ -1783,8 +1813,8 @@
             "desc": "Chaque enchérisseur a passé les contrôles d'identité, de SIRET, d'assurance et de véhicule avant même de voir la course."
           },
           {
-            "title": "Payé à la livraison, pas avant",
-            "desc": "Les fonds sont autorisés à l'attribution de la course et débités seulement une fois la livraison confirmée."
+            "title": "Rien n'est dû au transporteur avant la livraison",
+            "desc": "Le transporteur n'est rémunéré qu'une fois la livraison enregistrée, photo à l'appui : rien ne lui revient pour une course qu'il n'a pas livrée."
           }
         ]
       },
@@ -2039,7 +2069,7 @@
       "eyebrow": "CONFIDENTIALITÉ",
       "title": "Politique de confidentialité",
       "intro": "Quelles données personnelles Expeditoo détient, pourquoi, pendant combien de temps, et les droits dont vous disposez sur elles.",
-      "lastUpdated": "DERNIÈRE MISE À JOUR — 22 AOÛT 2026",
+      "lastUpdated": "DERNIÈRE MISE À JOUR — 5 OCTOBRE 2026",
       "sections": [
         {
           "title": "Qui est responsable",
@@ -2056,7 +2086,7 @@
             "Données de véhicule — immatriculation, type et capacité du véhicule avec lequel vous enchérissez",
             "Données d'activité — offres soumises, courses attribuées, horodatages d'enlèvement et de livraison, preuve de livraison",
             "Messages échangés via la plateforme, y compris les conversations de support",
-            "Données de paiement — détenues par notre prestataire de paiement. Nous conservons les quatre derniers chiffres d'un compte bancaire pour que vous le reconnaissiez, jamais un IBAN complet",
+            "Données de paiement — les données de carte d'un client sont traitées par notre prestataire de paiement, Stripe, et ne sont jamais conservées sur nos serveurs. De l'IBAN et du BIC qu'un transporteur saisit, nous ne conservons que les quatre derniers caractères, pour qu'il reconnaisse son compte ; le RIB qu'il dépose est conservé avec ses documents de conformité",
             "Données techniques — adresse IP et informations d'appareil, utilisées pour la sécurité et la prévention des abus"
           ]
         },
@@ -2082,7 +2112,7 @@
             "Nous ne vendons aucune donnée personnelle. Elles ne sont partagées qu'avec les sous-traitants qui font fonctionner le service, chacun tenu d'agir sur nos instructions :"
           ],
           "items": [
-            "Stripe — autorisation, débit des paiements et versements aux transporteurs",
+            "Stripe — autorisation, débit et remboursement des paiements par carte des clients",
             "Supabase — la base de données qui héberge les enregistrements de la plateforme",
             "Cloudflare R2 — stockage de fichiers, y compris les documents de conformité privés",
             "Resend — e-mails transactionnels",
@@ -3111,7 +3141,7 @@
       },
       "banking": {
         "title": "Coordonnées bancaires",
-        "description": "Utilisées pour vous payer après chaque livraison. Nous ne conservons que les 4 derniers caractères.",
+        "description": "Nous ne conservons que les 4 derniers caractères de l'IBAN et du BIC saisis, pour que vous reconnaissiez votre compte. Vos gains vous sont virés à votre demande, sur le compte de votre RIB : si vous changez de banque, déposez aussi un nouveau RIB.",
         "onFile": "Enregistré : IBAN ····{iban} · BIC ····{bic}",
         "iban": "IBAN",
         "bic": "BIC",
@@ -3330,7 +3360,7 @@
           "IN_TRANSIT": "En transit"
         },
         "payout": {
-          "scheduled": "Versement programmé",
+          "scheduled": "Crédité sur votre solde",
           "processing": "Versement en cours",
           "paid": "Versé",
           "failed": "Versement échoué",
@@ -3519,7 +3549,10 @@
       "REFERENCE_REQUIRED": "Ajoutez d’abord la référence du virement.",
       "WITHDRAWAL_ALREADY_SETTLED": "Ce retrait a déjà été traité.",
       "WITHDRAWAL_NOT_REQUESTED": "Ce retrait n’est plus en attente d’approbation.",
-      "generic": "Une erreur est survenue. Veuillez réessayer."
+      "generic": "Une erreur est survenue. Veuillez réessayer.",
+      "WITHDRAWAL_HAS_INVALID_PAYOUT": "Ce retrait comprend une course remboursée, annulée ou pas encore livrée, et ne peut donc être ni approuvé ni enregistré comme payé. Refusez-le : ce qui reste dû au transporteur redeviendra disponible et il pourra refaire une demande.",
+      "WITHDRAWAL_BALANCE_CHANGED": "Votre solde vient de changer. Rechargez la page, puis refaites votre demande.",
+      "WITHDRAWAL_STATUS_CHANGED": "Ce retrait a changé entre-temps : la liste est à jour, vérifiez-le avant de décider."
     },
     "loadFailed": "Gains indisponibles",
     "loadFailedHint": "Impossible de charger votre solde. Réessayez dans un instant — si le problème persiste, contactez le support.",
@@ -3538,6 +3571,12 @@
       "draft": "Terminer mon dossier",
       "blocked": "Ouvrir mon dossier",
       "none": "Devenir transporteur"
+    },
+    "refuseApproved": {
+      "title": "Refuser ce retrait approuvé ?",
+      "description": "Le montant de {amount} retourne dans le solde de {name}, hors courses remboursées ou annulées depuis, et pourra être redemandé. Ne refusez que si le virement n’a jamais été envoyé : sinon, les mêmes livraisons seraient payées deux fois.",
+      "keep": "Laisser approuvé",
+      "confirm": "Refuser — virement non envoyé"
     }
   },
   "platformSettings": {

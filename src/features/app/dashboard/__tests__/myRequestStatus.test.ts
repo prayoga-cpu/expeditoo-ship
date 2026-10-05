@@ -42,3 +42,20 @@ describe("featuredRequest", () => {
     expect(featured?.id).toBe("in-progress");
   });
 });
+
+// draft_requests_spec.md §5
+describe("featuredRequest — published, not written", () => {
+  it("leads with a draft finished today over a request written later but live earlier", () => {
+    const finishedToday = {
+      ...job("draft-finished", "open", "2026-01-01T00:00:00.000Z"),
+      publishedAt: "2026-01-10T00:00:00.000Z",
+    } as Job;
+    const liveEarlier = {
+      ...job("written-later", "open", "2026-01-05T00:00:00.000Z"),
+      publishedAt: "2026-01-05T00:00:00.000Z",
+    } as Job;
+
+    expect(featuredRequest([liveEarlier, finishedToday])?.id).toBe("draft-finished");
+  });
+});
+

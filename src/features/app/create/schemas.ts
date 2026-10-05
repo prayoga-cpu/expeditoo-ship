@@ -2,6 +2,7 @@ import { z } from "zod";
 import { isValidPhoneNumber } from "libphonenumber-js/min";
 
 import { JOB_POSTAL_CODE_PATTERN } from "@/lib/postal-code";
+import { parseDecimal } from "@/lib/numeric-input";
 import {
   TIME_SLOTS,
   toDayString,
@@ -63,6 +64,17 @@ const FRANCE_BOUNDS = { minLat: 41.3, maxLat: 51.2, minLng: -5.2, maxLng: 9.7 };
 /** Matches `MIN_ROUTE_METRES` in `listings.dto.ts`. */
 const MIN_ROUTE_METRES = 500;
 
+/** `MIN_BUDGET_CENTS` / `MAX_BUDGET_CENTS` in `listings.dto.ts`, in euros. */
+const BUDGET_EUROS = { min: 1, max: 100_000 };
+
+/**
+ * Matches `MAX_QUANTITY` in `listings.dto.ts`: the most items a request may
+ * count — all that the quantity box reaches (`NUMERIC_RULES.QUANTITY`), said
+ * in words where a sixth digit is refused without a word, and where item rows
+ * add up past it (numeric_input_spec.md §8).
+ */
+const QUANTITY_MAX = 99_999;
+
 const isInFrance = (lat: number, lng: number) =>
   lat >= FRANCE_BOUNDS.minLat &&
   lat <= FRANCE_BOUNDS.maxLat &&
@@ -86,13 +98,28 @@ function metresBetween(
 }
 
 /**
- * An emptied number input reports `""`, and `z.coerce.number()` reads that as
- * 0 — which passes `.min(0)` and fails `.positive()` with a message about
- * being greater than zero, neither of which is what the person did. Treating
- * blank as absent lets `.optional()` mean what it says.
+ * An emptied box reports `""`, which as a number is 0 — passing `.min(0)` and
+ * failing `.positive()` with a message about being greater than zero, neither
+ * of which is what the person did. Treating blank as absent lets `.optional()`
+ * mean what it says.
  */
 const blankToUndefined = (value: unknown) =>
   value === "" || value === null ? undefined : value;
+
+/**
+ * What a `NumericInput` holds — « 45,5 » in French, « 45.5 » in English — as
+ * the number it shows. `z.coerce.number()` read « 45,5 » as NaN: a type error,
+ * which aborts the object before its `superRefine`, so the When step's date
+ * rules would stop running at the first French comma. Text that is not a
+ * number reads as 0 instead, an ordinary issue on its own field
+ * (numeric_input_spec.md §7).
+ */
+const typedNumber = (value: unknown) =>
+  typeof value === "string" ? (parseDecimal(value) ?? 0) : value;
+
+/** The same, where a blank box means "not given". */
+const optionalTypedNumber = (value: unknown) =>
+  typedNumber(blankToUndefined(value));
 
 /** "YYYY-MM-DDTHH:mm" from a `datetime-local` field, parsed to a Date. */
 const datetimeLocal = z
@@ -110,8 +137,8 @@ const optionalDatetimeLocal = z.preprocess(
 );
 
 const optionalPositive = z.preprocess(
-  blankToUndefined,
-  z.coerce.number().positive("create.validation.aboveZero").optional()
+  optionalTypedNumber,
+  z.number().positive("create.validation.aboveZero").optional()
 );
 
 export const endpointSchema = z
@@ -127,8 +154,12 @@ export const endpointSchema = z
       .regex(JOB_POSTAL_CODE_PATTERN, "create.validation.postalCode"),
     locationType: z.enum(LOCATION_TYPES),
     floor: z.preprocess(
-      blankToUndefined,
-      z.coerce.number().int().min(0).optional()
+      optionalTypedNumber,
+      z
+        .number()
+        .int("create.validation.wholeNumber")
+        .min(0, "create.validation.floorMin")
+        .optional()
     ),
     hasLift: z.boolean().optional(),
     // What the carrier cannot see from the street, and who they call once
@@ -230,8 +261,8 @@ export const jobFormSchema = z
       message: "create.validation.weightRequired",
     }),
     exactWeightKg: z.preprocess(
-      blankToUndefined,
-      z.coerce
+      optionalTypedNumber,
+      z
         .number()
         .positive("create.validation.aboveZero")
         .max(44_000, "create.validation.weightMax")
@@ -243,7 +274,16 @@ export const jobFormSchema = z
     lengthCm: optionalPositive,
     widthCm: optionalPositive,
     heightCm: optionalPositive,
-    quantity: z.coerce.number().int().min(1).default(1),
+    quantity: z
+      .preprocess(
+        typedNumber,
+        z
+          .number()
+          .int("create.validation.wholeNumber")
+          .min(1, "create.validation.quantityMin")
+          .max(QUANTITY_MAX, "create.validation.quantityMax")
+      )
+      .default(1),
     isFragile: z.boolean().default(false),
     // Only meaningful while `isFragile` is on; `toCreatePayload` folds it into
     // `description` rather than the DTO learning a field of its own.
@@ -278,9 +318,20 @@ export const jobFormSchema = z
     dropoffDays: z.array(z.number().int().min(1).max(7)),
     dropoffPeriods: z.array(z.enum(TIME_SLOTS)),
 
-    budgetEuros: z.coerce
-      .number()
-      .positive("create.validation.budgetRequired"),
+    // Held as the text the box shows (« 40,5 »), seeded "" rather than left
+    // unset: blank reads as 0 and fails `.positive()` as an ordinary issue,
+    // where an unset value is a type error that would silence the When
+    // step's date rules (publication_timing_spec.md §3.6). The bounds are the
+    // server's, said here rather than as a failed publish nobody can retry
+    // past (numeric_input_spec.md §8).
+    budgetEuros: z.preprocess(
+      typedNumber,
+      z
+        .number()
+        .positive("create.validation.budgetRequired")
+        .min(BUDGET_EUROS.min, "create.validation.budgetMin")
+        .max(BUDGET_EUROS.max, "create.validation.budgetMax")
+    ),
     photos: z.array(z.string().url()).max(10).default([]),
 
     publishMode: z.enum(PUBLISH_MODES).default("now"),

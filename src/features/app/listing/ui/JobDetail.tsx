@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useLocale, useTranslations } from "next-intl";
+import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { format } from "date-fns";
 import { enUS, fr } from "date-fns/locale";
 import {
@@ -16,12 +17,15 @@ import {
   ShieldCheck,
   Shield,
   PackageOpen,
+  SearchX,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatCurrency } from "@/lib/currency";
+import { ApiError } from "@/lib/fetcher";
 import { AcceptPaymentDialog } from "@/features/app/offers/ui/AcceptPaymentDialog";
 import {
   Select,
@@ -39,6 +43,8 @@ import { ListingReference } from "./ListingReference";
 import { AvailableCarriersPanel } from "./AvailableCarriersPanel";
 import { AvailabilityLine } from "./AvailabilityLine";
 import { OfferCard } from "./OfferCard";
+import { DraftActions } from "./DraftActions";
+import { STATUS_TONE } from "../statusTone";
 import type { Job } from "../types";
 
 interface JobDetailProps {
@@ -58,16 +64,6 @@ interface JobDetailProps {
 type JobTab = "details" | "carriers";
 
 const euros = formatCurrency;
-
-const STATUS_TONE: Record<string, string> = {
-  open: "bg-success/15 text-success border-success/30",
-  awarded: "bg-primary/15 text-primary border-primary/30",
-  in_progress: "bg-primary/15 text-primary border-primary/30",
-  completed: "bg-muted text-muted-foreground border-border",
-  cancelled: "bg-destructive/15 text-destructive border-destructive/30",
-  expired: "bg-warning/15 text-warning border-warning/30",
-  draft: "bg-muted text-muted-foreground border-border",
-};
 
 /**
  * The tab lives in the URL rather than in state so a reload, a back button and
@@ -96,7 +92,7 @@ export function JobDetail({
   viewerId,
   isOperator = false,
 }: JobDetailProps) {
-  const { data: job, isLoading } = useJobDetail(listingId);
+  const { data: job, error, isFetching, refetch } = useJobDetail(listingId);
 
   const isShipper = viewerId !== null && job?.shipperId === viewerId;
   const canAward = isOperator && job?.origin === "expedion";
@@ -111,7 +107,12 @@ export function JobDetail({
   // who never sees the tab.
   const { data: carriers } = useListingCarriers(listingId, canAct);
 
-  if (isLoading || !job) return <PageLoader />;
+  // Never a loader forever (CLAUDE.md gotcha 9), and « introuvable » only when
+  // the server says so: a dropped connection or a 500 is a failed load, with a
+  // retry. A copy on screen stays when a later read fails for another reason.
+  if (isGone(error)) return <JobNotFound />;
+  if (!job && error && !isFetching) return <JobLoadFailed onRetry={() => void refetch()} />;
+  if (!job) return <PageLoader />;
 
   const details = (
     <JobDetailsTab
@@ -192,14 +193,54 @@ function JobDetailsTab({
   viewerId: string | null;
   canAccept: boolean;
 }) {
+  // Only its author can open a request not yet live (`getListing`), and
+  // nobody has bid on it: what it needs is a way to finish it, not an empty
+  // offers section saying carriers have been told (draft_requests_spec.md §1).
+  const unpublished = job.status === "draft" || job.status === "scheduled";
+
   return (
     <div className="space-y-6">
       <JobHeader job={job} />
+      {unpublished && <DraftBanner job={job} />}
       <JobRoute job={job} />
       <JobLoad job={job} />
-      <JobOffers job={job} listingId={listingId} canAccept={canAccept} />
-      <JobBidSection job={job} viewerId={viewerId} />
+      {!unpublished && (
+        <>
+          <JobOffers job={job} listingId={listingId} canAccept={canAccept} />
+          <JobBidSection job={job} viewerId={viewerId} />
+        </>
+      )}
     </div>
+  );
+}
+
+function DraftBanner({ job }: { job: Job }) {
+  const t = useTranslations("myJobs.draft");
+  const format = useFormatter();
+  const router = useRouter();
+  const scheduled = job.status === "scheduled";
+  const datesPassed = !scheduled && new Date(job.pickupUntil) < new Date();
+
+  return (
+    <Card className="space-y-3 border-primary/30 bg-primary/5 p-4">
+      <p className="text-sm">
+        {scheduled && job.scheduledPublishAt
+          ? t("bannerScheduled", {
+              date: format.dateTime(new Date(job.scheduledPublishAt), {
+                dateStyle: "medium",
+                timeStyle: "short",
+              }),
+            })
+          : t("bannerDraft")}
+      </p>
+      {datesPassed && (
+        <p className="flex items-center gap-1.5 text-sm font-medium">
+          <AlertTriangle className="h-4 w-4 text-warning" aria-hidden />
+          {t("datesPassed")}
+        </p>
+      )}
+      <DraftActions job={job} onDeleted={() => router.replace("/listings/me")} />
+    </Card>
   );
 }
 
@@ -427,6 +468,48 @@ function JobRoute({ job }: { job: Job }) {
   );
 }
 
+/** Not there for this viewer: deleted, someone else's draft, or not theirs to see. */
+const isGone = (error: unknown) =>
+  error instanceof ApiError && (error.status === 404 || error.status === 403);
+
+function JobNotFound() {
+  const t = useTranslations("myJobs.detail");
+  return (
+    <CenteredEmptyState
+      variant="page"
+      icon={SearchX}
+      title={t("notFound")}
+      description={t("notFoundDesc")}
+    >
+      <Button asChild variant="outline">
+        <Link href="/home">{t("backHome")}</Link>
+      </Button>
+    </CenteredEmptyState>
+  );
+}
+
+/** Any other failure: the request may well be there, so the way on is a retry. */
+function JobLoadFailed({ onRetry }: { onRetry: () => void }) {
+  const t = useTranslations("myJobs.detail");
+  return (
+    <CenteredEmptyState
+      variant="page"
+      icon={AlertTriangle}
+      title={t("loadError.title")}
+      description={t("loadError.description")}
+    >
+      <div className="flex flex-wrap justify-center gap-2">
+        <Button variant="outline" onClick={onRetry}>
+          {t("loadError.retry")}
+        </Button>
+        <Button asChild variant="ghost">
+          <Link href="/home">{t("backHome")}</Link>
+        </Button>
+      </div>
+    </CenteredEmptyState>
+  );
+}
+
 function Endpoint({
   title,
   address,
@@ -438,7 +521,7 @@ function Endpoint({
   periods,
 }: {
   title: string;
-  address: string;
+  address?: string;
   city: string;
   locationType: string;
   from: string;
@@ -449,6 +532,7 @@ function Endpoint({
   // The /create form already names every location type; reusing its catalogue
   // keeps one vocabulary for the enum instead of two that can disagree.
   const tTypes = useTranslations("create.locationTypes");
+  const tDetail = useTranslations("myJobs.detail");
   const locale = useLocale();
   const dateLocale = locale === "fr" ? fr : enUS;
 
@@ -457,7 +541,11 @@ function Endpoint({
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
         {title}
       </p>
-      <p className="font-medium">{address}</p>
+      {address ? (
+        <p className="font-medium">{address}</p>
+      ) : (
+        <p className="text-sm text-muted-foreground">{tDetail("addressHidden")}</p>
+      )}
       <p className="text-sm text-muted-foreground">{city}</p>
       <Badge variant="outline" className="mt-1">
         {tTypes(locationType)}

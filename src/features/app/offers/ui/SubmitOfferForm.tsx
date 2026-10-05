@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import { Truck, TriangleAlert } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -23,6 +23,11 @@ import { useAvailabilityText } from "@/features/app/listing/ui/AvailabilityLine"
 import type { Job } from "@/features/app/listing/types";
 import type { OfferSlotInput } from "@/lib/offer-slots";
 import { formatCurrency } from "@/lib/currency";
+import {
+  NUMERIC_RULES,
+  centsToInput,
+  parseCents,
+} from "@/lib/numeric-input";
 
 interface SubmitOfferFormProps {
   job: Job;
@@ -43,11 +48,16 @@ const euros = formatCurrency;
  */
 export function SubmitOfferForm({ job }: SubmitOfferFormProps) {
   const t = useTranslations("listing.bid.form");
+  const locale = useLocale();
   const { data: vehicles, isLoading } = useVehicles();
   const submitOffer = useSubmitOffer(job.id);
 
   const [vehicleId, setVehicleId] = useState("");
-  const [priceEuros, setPriceEuros] = useState(String(job.budgetCents / 100));
+  // The budget as the box shows money — « 89,90 » in French, where
+  // `String(cents / 100)` wrote « 89.9 » (numeric_input_spec.md §6).
+  const [priceEuros, setPriceEuros] = useState(() =>
+    centsToInput(job.budgetCents, locale)
+  );
   const [slots, setSlots] = useState<OfferSlotInput[]>([]);
   const [deliveryLeadDays, setDeliveryLeadDays] = useState(0);
   const [message, setMessage] = useState("");
@@ -84,10 +94,15 @@ export function SubmitOfferForm({ job }: SubmitOfferFormProps) {
     );
   };
 
-  const priceCents = Math.round(Number(priceEuros) * 100);
-  const overBudget = priceCents > job.budgetCents;
+  // Read on the digits, so « 40,05 » is 4005 cents and a blank box is none.
+  const priceCents = parseCents(priceEuros);
+  const overBudget = priceCents !== null && priceCents > job.budgetCents;
   const canSubmit =
-    vehicleId && priceCents >= 100 && slots.length > 0 && !submitOffer.isPending;
+    vehicleId &&
+    priceCents !== null &&
+    priceCents >= 100 &&
+    slots.length > 0 &&
+    !submitOffer.isPending;
 
   return (
     <Card className="space-y-5 p-4 sm:p-6">
@@ -129,11 +144,9 @@ export function SubmitOfferForm({ job }: SubmitOfferFormProps) {
 
       <div>
         <Label htmlFor="price">{t("price")}</Label>
-        <Input
+        <NumericInput
           id="price"
-          type="number"
-          min={1}
-          step="1"
+          rules={NUMERIC_RULES.MONEY}
           value={priceEuros}
           onChange={(e) => setPriceEuros(e.target.value)}
         />
@@ -179,6 +192,7 @@ export function SubmitOfferForm({ job }: SubmitOfferFormProps) {
         className="w-full"
         disabled={!canSubmit}
         onClick={() =>
+          priceCents !== null &&
           submitOffer.mutate({
             vehicleId,
             priceCents,

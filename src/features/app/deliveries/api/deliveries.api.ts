@@ -144,10 +144,15 @@ export const deliveriesApi = {
 
   getById: (id: string) => api.get<ShipmentWithEvents>(`/api/shipments/${id}`),
 
+  /** Which run, which job, and whether this call is the one that stopped it. */
   cancel: (
     id: string,
     body: { category: CancellationCategory; reason?: string }
-  ) => api.post<Shipment>(`/api/shipments/${id}/cancel`, body),
+  ) =>
+    api.post<{ shipment: { id: string }; listingId: string; alreadyCancelled: boolean }>(
+      `/api/shipments/${id}/cancel`,
+      body
+    ),
 
   /**
    * The client's attestation, from the app rather than from the link they were

@@ -111,13 +111,17 @@ Excluded on purpose:
 ### 4.2 Why the query names its columns
 
 `shipmentsDal`'s shared `withParties` bundle loads each party as a **full user
-row**, and `redactForDriver` (`shipment.service.ts:136`) narrows it only when
+row**, and `redactForDriver` (`shipment.service.ts`) narrows it only when
 the viewer is a driver. `GET /api/shipments` therefore already hands a shipper
 the carrier's `email`, `stripeAccountId`, `banned` and `preferences`.
 
 `listDeliveredForListings` selects named columns so it cannot inherit that. "It
 is already in the JSON elsewhere" is not a licence; the defensible line is the
 **rendered** precedent of §4.1. The leak itself is §9.1.
+
+> **Fixed (2.60.0)** — §9.1. The DAL still loads full rows; the service now
+> narrows them for the requester and the carrier too. The named columns stay:
+> a query that cannot inherit a leak is still the right shape.
 
 ### 4.3 Why two queries rather than a relation
 
@@ -221,9 +225,14 @@ in both languages. A test rendering either tab must pass
 
 ## 9. Known limitations
 
-1. `GET /api/shipments` still returns the carrier's whole `user` row to a
-   shipper (§4.2). This endpoint does not, but the leak on the shipments read
-   path is untouched and wants its own fix in `shipment.service.ts`.
+1. **Fixed in 2.60.0.** `GET /api/shipments` returned the carrier's whole
+   `user` row to a shipper (§4.2), and the leak was left for its own fix.
+   `redactParties` (`shipment.service.ts`) now hands the requester and the
+   carrier every party of a shipment — `shipper`, `carrier`, `driver` — as
+   `{id, name, image}`, on the list and on `GET /api/shipments/:id` alike;
+   staff keep the full rows and a driver reads less, as before
+   (`listing_privacy_spec.md` §3). `shipment.service.test.ts` pins it on the
+   detail read; the list goes through the same `viewOf`.
 2. `shipments.carrierId` is `on delete cascade`, and `usersDal.deleteUser` is a
    hard delete reachable from the `/admin/users` delete action. Deleting a
    carrier therefore **deletes every shipment they carried**, and the

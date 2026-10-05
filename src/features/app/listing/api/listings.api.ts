@@ -1,5 +1,5 @@
 import { api, toQuery } from "@/lib/fetcher";
-import type { Job, BrowseResult, OffersResponse } from "../types";
+import type { Job, BrowseResult, DraftJob, OffersResponse } from "../types";
 
 export interface BrowseParams {
   categoryId?: string;
@@ -40,5 +40,13 @@ export const listingsApi = {
   mine: (status?: string) =>
     api.get<Job[]>(`/api/listings/me${toQuery({ status })}`),
 
-  cancel: (id: string) => api.delete<{ deleted: boolean }>(`/api/listings/${id}`),
+  /** A request not yet live, everything included, to finish it. */
+  getDraft: (id: string) => api.get<DraftJob>(`/api/listings/${id}/draft`),
+
+  /** Gone for good: nobody but its author has seen it. */
+  deleteDraft: (id: string) =>
+    api.delete<{ deleted: true }>(`/api/listings/${id}/draft`),
+
+  /** A scheduled request back to a draft. */
+  unschedule: (id: string) => api.post<DraftJob>(`/api/listings/${id}/unschedule`),
 };

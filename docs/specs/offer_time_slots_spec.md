@@ -159,8 +159,9 @@ with no `offer_slots` rows.
 **Only internal callers can produce it.** The DTO requires at least one slot, so
 no request can. It exists for the two lanes where nothing is being proposed:
 
-- `offersService.takeJob` — the driver takes the job as posted; there is no
-  negotiation on price and none on timing either.
+- `offersService.takeJob` — the driver takes the job as posted (escalated jobs
+  only, `take_job_spec.md`); there is no negotiation on price and none on
+  timing either.
 - `expedionEscalationService.assignDirect` — an operator assigns from the pool.
 
 Both previously passed `listing.pickupFrom` / `listing.dropoffFrom` by hand.

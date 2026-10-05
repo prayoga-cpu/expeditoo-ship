@@ -225,9 +225,15 @@ export const shipmentsDal = {
     return row;
   },
 
+  /**
+   * Moves a run. With `expected`, a compare-and-set: the row moves only if it
+   * is still in that status, and `undefined` comes back when it was not — so
+   * of two requests making the same move at once, exactly one gets the row.
+   */
   async updateStatus(
     id: string,
     status: ShipmentStatusType,
+    guard: { expected?: ShipmentStatusType } = {},
     tx: Executor = db
   ) {
     const timestamps: Partial<InsertShipment> = {};
@@ -238,7 +244,11 @@ export const shipmentsDal = {
     const [result] = await tx
       .update(shipments)
       .set({ status, ...timestamps, updatedAt: new Date() })
-      .where(eq(shipments.id, id))
+      .where(
+        guard.expected
+          ? and(eq(shipments.id, id), eq(shipments.status, guard.expected))
+          : eq(shipments.id, id)
+      )
       .returning();
     return result;
   },

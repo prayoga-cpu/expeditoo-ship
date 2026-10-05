@@ -9,15 +9,21 @@ import { ok, unauthorised, handleError } from "@/lib/api-response";
 
 /**
  * GET /api/listings
- * Marketplace browse. Only open jobs, visible to anyone.
+ * The board: open jobs, each as the caller may read it. Signed-in only — every
+ * caller already was (the board, the dashboard, the award queue), and a
+ * signed-out list of every live job was the widest door the requester data
+ * leaked through (listing_privacy_spec.md §3).
  */
 export async function GET(req: Request) {
   try {
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session) return unauthorised();
+
     const query = browseListingsQuerySchema.parse(
       Object.fromEntries(new URL(req.url).searchParams)
     );
 
-    return ok(await listingsService.browse(query));
+    return ok(await listingsService.browse(query, session.user.id));
   } catch (error) {
     return handleError(error, "Browse listings");
   }

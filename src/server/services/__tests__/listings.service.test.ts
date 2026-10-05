@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+vi.mock("@/db", () => ({
+  // The transaction boundary is the database's guarantee; what is asserted
+  // here is the sequence of writes inside it.
+  db: { transaction: vi.fn(async (cb: (tx: unknown) => unknown) => cb({})) },
+}));
 vi.mock("@/server/dal/listings.dal", () => ({ listingsDal: {} }));
 vi.mock("@/server/dal/shipments.dal", () => ({ shipmentsDal: {} }));
 vi.mock("@/server/services/offers.service", () => ({
@@ -24,6 +29,13 @@ vi.mock("@/server/dal/users.dal", () => ({
 vi.mock("@/server/services/account-policy", () => ({
   isSystemAccount: (id: string) => id === "system-account",
 }));
+// Who is asking decides what of a listing they read (listing_privacy_spec.md).
+vi.mock("@/server/services/user.service", () => ({
+  hasAnyRole: vi.fn().mockResolvedValue(false),
+}));
+vi.mock("@/server/dal/carriers.dal", () => ({
+  carriersDal: { getByUserId: vi.fn().mockResolvedValue(undefined) },
+}));
 
 import {
   listingsService,
@@ -37,6 +49,8 @@ import { notificationsService } from "@/server/services/notifications.service";
 import { emailService } from "@/server/services/email.service";
 import { carrierRouteAlertsService } from "@/server/services/carrier-route-alerts.service";
 import { getUserById } from "@/server/dal/users.dal";
+import { hasAnyRole } from "@/server/services/user.service";
+import { carriersDal } from "@/server/dal/carriers.dal";
 
 const HOUR = 60 * 60 * 1000;
 const MINUTE = 60 * 1000;
@@ -66,6 +80,11 @@ beforeEach(() => {
     incrementViews: vi.fn(),
     ensureDefaultCategory: vi.fn().mockResolvedValue("transport-general"),
     findDueScheduled: vi.fn().mockResolvedValue([]),
+    lockDueScheduled: vi.fn().mockResolvedValue(undefined),
+    updateUnpublished: vi.fn(async (id, _shipper, data) => ({ ...job(), id, ...data })),
+    deleteUnpublished: vi.fn().mockResolvedValue({ id: "job-1" }),
+    updateIfStatus: vi.fn(async (id, _status, data) => ({ ...job(), id, ...data })),
+    replacePhotos: vi.fn(),
   });
   Object.assign(shipmentsDal, {
     listDeliveredForListings: vi.fn().mockResolvedValue([]),
@@ -117,47 +136,175 @@ describe("resolveExpiresAt", () => {
 });
 
 // ========================================
-// Publishing — §1, §3
+// Finishing a saved request — draft_requests_spec.md §2–§5
 // ========================================
 
-describe("listingsService.publishListing", () => {
-  it("moves a draft to open and recomputes the window", async () => {
-    Object.assign(listingsDal, {
-      getById: vi.fn().mockResolvedValue(job({ status: "draft" })),
-    });
+describe("listingsService — finishing a saved request", () => {
+  const draftInput = (over: Record<string, unknown> = {}) =>
+    createInput({ publish: false, photos: ["https://x/a.jpg", "https://x/b.jpg"], ...over });
 
-    const result = await listingsService.publishListing("shipper-1", "job-1");
+  it("saves it again as a draft, with its photos, and announces nothing", async () => {
+    const view = await listingsService.saveDraft("shipper-1", "job-1", draftInput());
 
-    expect(result.status).toBe("open");
-    expect(result.expiresAt).toBeInstanceOf(Date);
+    const [, shipper, columns] = vi.mocked(listingsDal.updateUnpublished).mock.calls[0];
+    expect(shipper).toBe("shipper-1");
+    expect(columns).toMatchObject({ status: "draft", scheduledPublishAt: null, publishedAt: null });
+    expect(listingsDal.replacePhotos).toHaveBeenCalledWith(
+      "job-1",
+      [
+        expect.objectContaining({ url: "https://x/a.jpg", order: 0 }),
+        expect.objectContaining({ url: "https://x/b.jpg", order: 1 }),
+      ],
+      expect.anything()
+    );
+    expect(notificationsService.createNotification).not.toHaveBeenCalled();
+    expect(view).toBeDefined();
   });
 
-  it("refuses to publish a job that is already live", async () => {
-    expect(
-      await codeFrom(() => listingsService.publishListing("shipper-1", "job-1"))
-    ).toBe("LISTING_NOT_DRAFT");
+  it("writes every field the payload leaves out, so what was cleared is cleared", async () => {
+    // An update skips an undefined column: a size, floor, note or packaging
+    // state removed while finishing the draft would otherwise survive it.
+    await listingsService.saveDraft("shipper-1", "job-1", draftInput());
+
+    const [, , columns] = vi.mocked(listingsDal.updateUnpublished).mock.calls[0];
+    expect(columns).toMatchObject({
+      lengthCm: null,
+      widthCm: null,
+      heightCm: null,
+      packagingLevel: null,
+      pickupFloor: null,
+      pickupHasLift: null,
+      pickupNote: null,
+      pickupContactName: null,
+      pickupContactPhone: null,
+      dropoffFloor: null,
+      dropoffHasLift: null,
+      dropoffNote: null,
+      dropoffContactName: null,
+      dropoffContactPhone: null,
+      pickupDays: [1, 2, 3, 4, 5, 6, 7],
+      pickupPeriods: ["morning", "afternoon", "evening"],
+      dropoffDays: [1, 2, 3, 4, 5, 6, 7],
+      dropoffPeriods: ["morning", "afternoon", "evening"],
+    });
   });
 
-  it("refuses to publish once the pickup date has passed", async () => {
-    Object.assign(listingsDal, {
-      getById: vi
-        .fn()
-        .mockResolvedValue(job({ status: "draft", pickupFrom: at(-HOUR) })),
-    });
+  it("publishes it now exactly like a new request: dated, announced once", async () => {
+    await listingsService.saveDraft("shipper-1", "job-1", draftInput({ publish: true }));
 
+    const [, , columns] = vi.mocked(listingsDal.updateUnpublished).mock.calls[0];
+    expect(columns.status).toBe("open");
+    expect(columns.publishedAt).toBeInstanceOf(Date);
+    expect(notificationsService.createNotification).toHaveBeenCalledTimes(1);
+    expect(emailService.sendListingPostedEmail).toHaveBeenCalledTimes(1);
+    expect(carrierRouteAlertsService.notifyMatchingCarriers).toHaveBeenCalledTimes(1);
+  });
+
+  it("schedules it without announcing anything yet", async () => {
+    await listingsService.saveDraft(
+      "shipper-1",
+      "job-1",
+      draftInput({ publish: true, scheduledPublishAt: at(2 * HOUR) })
+    );
+
+    const [, , columns] = vi.mocked(listingsDal.updateUnpublished).mock.calls[0];
+    expect(columns).toMatchObject({ status: "scheduled", publishedAt: null });
+    expect(notificationsService.createNotification).not.toHaveBeenCalled();
+  });
+
+  it("keeps the publication rules for publishing, never for a draft", async () => {
     expect(
-      await codeFrom(() => listingsService.publishListing("shipper-1", "job-1"))
+      await codeFrom(() =>
+        listingsService.saveDraft("shipper-1", "job-1", draftInput({ publish: true, pickupFrom: at(-HOUR) }))
+      )
     ).toBe("PICKUP_IN_PAST");
+
+    await expect(
+      listingsService.saveDraft("shipper-1", "job-1", draftInput({ pickupFrom: at(-HOUR) }))
+    ).resolves.toBeDefined();
   });
 
-  it("lets only the owner publish", async () => {
-    Object.assign(listingsDal, {
-      getById: vi.fn().mockResolvedValue(job({ status: "draft" })),
-    });
+  it("loses a race cleanly: already live is a conflict, and nothing is announced", async () => {
+    vi.mocked(listingsDal.updateUnpublished).mockResolvedValueOnce(undefined);
+    Object.assign(listingsDal, { getById: vi.fn().mockResolvedValue(job({ status: "open" })) });
 
     expect(
-      await codeFrom(() => listingsService.publishListing("intruder", "job-1"))
-    ).toBe("FORBIDDEN_NOT_OWNER");
+      await codeFrom(() => listingsService.saveDraft("shipper-1", "job-1", draftInput({ publish: true })))
+    ).toBe("LISTING_NOT_DRAFT");
+    expect(listingsDal.replacePhotos).not.toHaveBeenCalled();
+    expect(notificationsService.createNotification).not.toHaveBeenCalled();
+  });
+
+  it("does not admit someone else's request exists", async () => {
+    vi.mocked(listingsDal.updateUnpublished).mockResolvedValueOnce(undefined);
+    Object.assign(listingsDal, { getById: vi.fn().mockResolvedValue(job({ status: "draft" })) });
+
+    expect(
+      await codeFrom(() => listingsService.saveDraft("intruder", "job-1", draftInput()))
+    ).toBe("LISTING_NOT_FOUND");
+  });
+
+  it("reads a draft back for its owner only, and only while unpublished", async () => {
+    Object.assign(listingsDal, { getById: vi.fn().mockResolvedValue(job({ status: "draft" })) });
+    await expect(listingsService.getDraft("shipper-1", "job-1")).resolves.toBeDefined();
+    expect(await codeFrom(() => listingsService.getDraft("intruder", "job-1"))).toBe(
+      "LISTING_NOT_FOUND"
+    );
+
+    Object.assign(listingsDal, { getById: vi.fn().mockResolvedValue(job({ status: "open" })) });
+    expect(await codeFrom(() => listingsService.getDraft("shipper-1", "job-1"))).toBe(
+      "LISTING_NOT_DRAFT"
+    );
+  });
+
+  it("deletes a draft, and refuses one that went live meanwhile", async () => {
+    await expect(listingsService.deleteDraft("shipper-1", "job-1")).resolves.toEqual({
+      deleted: true,
+    });
+
+    vi.mocked(listingsDal.deleteUnpublished).mockResolvedValueOnce(undefined);
+    Object.assign(listingsDal, { getById: vi.fn().mockResolvedValue(job({ status: "open" })) });
+    expect(await codeFrom(() => listingsService.deleteDraft("shipper-1", "job-1"))).toBe(
+      "LISTING_NOT_DRAFT"
+    );
+  });
+
+  it("turns a scheduled request back into a draft", async () => {
+    Object.assign(listingsDal, {
+      getById: vi.fn().mockResolvedValue(job({ status: "scheduled", scheduledPublishAt: at(HOUR) })),
+    });
+
+    await listingsService.unschedule("shipper-1", "job-1");
+
+    expect(listingsDal.updateIfStatus).toHaveBeenCalledWith(
+      "job-1",
+      "scheduled",
+      expect.objectContaining({ status: "draft", scheduledPublishAt: null })
+    );
+  });
+
+  it("refuses to un-schedule what is not scheduled", async () => {
+    vi.mocked(listingsDal.updateIfStatus).mockResolvedValueOnce(undefined);
+
+    expect(await codeFrom(() => listingsService.unschedule("shipper-1", "job-1"))).toBe(
+      "LISTING_NOT_SCHEDULED"
+    );
+  });
+});
+
+describe("createListing — the publication date", () => {
+  it("dates a request that goes live now, and nothing else", async () => {
+    await listingsService.createListing("user-1", createInput());
+    await listingsService.createListing("user-1", createInput({ publish: false }));
+    await listingsService.createListing(
+      "user-1",
+      createInput({ scheduledPublishAt: at(24 * HOUR) })
+    );
+
+    const rows = vi.mocked(listingsDal.create).mock.calls.map(([row]) => row);
+    expect(rows[0].publishedAt).toBeInstanceOf(Date);
+    expect(rows[1].publishedAt).toBeNull();
+    expect(rows[2].publishedAt).toBeNull();
   });
 });
 
@@ -567,13 +714,14 @@ describe("createListing", () => {
     expect(row.dropoffPeriods).toEqual(["afternoon"]);
   });
 
-  it("leaves them to the column default when the request names none", async () => {
+  it("writes the full set when the request names none — unrestricted, as the column default", async () => {
     await listingsService.createListing("user-1", createInput());
 
     const row = vi.mocked(listingsDal.create).mock.calls[0][0];
-    // Undefined, so Drizzle writes the default: the full set, unrestricted.
-    expect(row.pickupDays).toBeUndefined();
-    expect(row.dropoffPeriods).toBeUndefined();
+    // Written rather than left undefined: the same columns finish a draft,
+    // and an update skips an undefined column (draft_requests_spec.md §3).
+    expect(row.pickupDays).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(row.dropoffPeriods).toEqual(["morning", "afternoon", "evening"]);
   });
 
   // listing_posted_feedback_spec.md §1-2
@@ -722,36 +870,112 @@ describe("publishScheduled", () => {
       ...over,
     });
 
+  /**
+   * The run reads `read`; the row lock then finds `locked` — the same row
+   * unless it was saved meanwhile, `null` when it is no longer there to take.
+   */
+  function queue(read: ReturnType<typeof due>, locked: ReturnType<typeof due> | null = read) {
+    vi.mocked(listingsDal.findDueScheduled).mockResolvedValue([read] as never);
+    vi.mocked(listingsDal.lockDueScheduled).mockResolvedValue((locked ?? undefined) as never);
+    vi.mocked(listingsDal.updateIfStatus).mockImplementation(async (id, _status, data) => ({
+      ...(locked ?? read),
+      id,
+      ...data,
+    }) as never);
+  }
+
   it("flips a due listing open and notifies matching carriers", async () => {
-    vi.mocked(listingsDal.findDueScheduled).mockResolvedValue([due()] as never);
+    queue(due());
 
     const published = await listingsService.publishScheduled();
 
     expect(published).toBe(1);
-    expect(listingsDal.update).toHaveBeenCalledWith(
+    expect(listingsDal.updateIfStatus).toHaveBeenCalledWith(
       "job-scheduled",
-      expect.objectContaining({ status: "open", scheduledPublishAt: null })
+      "scheduled",
+      expect.objectContaining({
+        status: "open",
+        scheduledPublishAt: null,
+        publishedAt: expect.any(Date),
+      }),
+      expect.anything()
     );
     expect(
       carrierRouteAlertsService.notifyMatchingCarriers
     ).toHaveBeenCalledWith(expect.objectContaining({ id: "job-scheduled" }));
   });
 
+  it("decides each request under its row lock, inside a transaction", async () => {
+    const now = new Date();
+    queue(due());
+
+    await listingsService.publishScheduled(now);
+
+    const { db } = await import("@/db");
+    expect(db.transaction).toHaveBeenCalledTimes(1);
+    expect(listingsDal.lockDueScheduled).toHaveBeenCalledWith("job-scheduled", now, expect.anything());
+  });
+
+  it("works from the row as locked, not the copy the run read first", async () => {
+    // Saved between the scan and the lock: a new title and a later pickup.
+    const now = new Date();
+    const pickupFrom = at(96 * HOUR);
+    queue(due({ title: "Old title" }), due({ title: "New title", pickupFrom }));
+
+    await listingsService.publishScheduled(now);
+
+    expect(listingsDal.updateIfStatus).toHaveBeenCalledWith(
+      "job-scheduled",
+      "scheduled",
+      expect.objectContaining({ expiresAt: resolveExpiresAt(pickupFrom, now) }),
+      expect.anything()
+    );
+    expect(carrierRouteAlertsService.notifyMatchingCarriers).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "New title" })
+    );
+    expect(notificationsService.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({ message: expect.stringContaining("New title") })
+    );
+  });
+
+  it("leaves a request saved, re-scheduled or deleted since the run read it", async () => {
+    // The lock finds it no longer scheduled and due — or held by a save.
+    queue(due(), null);
+
+    await expect(listingsService.publishScheduled()).resolves.toBe(0);
+    expect(listingsDal.updateIfStatus).not.toHaveBeenCalled();
+    expect(notificationsService.createNotification).not.toHaveBeenCalled();
+    expect(carrierRouteAlertsService.notifyMatchingCarriers).not.toHaveBeenCalled();
+  });
+
   it("does not notify a listing whose window closed before its scheduled instant fired", async () => {
-    vi.mocked(listingsDal.findDueScheduled).mockResolvedValue([
-      due({ pickupFrom: at(-HOUR) }),
-    ] as never);
+    queue(due({ pickupFrom: at(-HOUR) }));
 
     const published = await listingsService.publishScheduled();
 
     expect(published).toBe(0);
+    expect(listingsDal.updateIfStatus).toHaveBeenCalledWith(
+      "job-scheduled",
+      "scheduled",
+      { status: "expired", scheduledPublishAt: null },
+      expect.anything()
+    );
     expect(
       carrierRouteAlertsService.notifyMatchingCarriers
     ).not.toHaveBeenCalled();
   });
 
+  it("leaves a request that is no longer scheduled alone", async () => {
+    // Un-scheduled or published by hand between the lock and the write.
+    queue(due());
+    vi.mocked(listingsDal.updateIfStatus).mockResolvedValueOnce(undefined);
+
+    await expect(listingsService.publishScheduled()).resolves.toBe(0);
+    expect(carrierRouteAlertsService.notifyMatchingCarriers).not.toHaveBeenCalled();
+  });
+
   it("does not let a notify failure stop the publish loop", async () => {
-    vi.mocked(listingsDal.findDueScheduled).mockResolvedValue([due()] as never);
+    queue(due());
     vi.mocked(
       carrierRouteAlertsService.notifyMatchingCarriers
     ).mockRejectedValueOnce(new Error("db down"));
@@ -900,3 +1124,190 @@ describe("getMyListings", () => {
     );
   });
 });
+
+// listing_privacy_spec.md §1–§3
+describe("listingsService — what each viewer reads", () => {
+  const private_ = (over: Record<string, unknown> = {}) =>
+    job({
+      pickupAddress: "12 rue de la République",
+      pickupContactPhone: "+33612345678",
+      pickupNote: "Code 4521B",
+      pickupLat: 45.764043,
+      externalRef: "quote-9",
+      shipper: { id: "shipper-1", name: "Mat", image: null, rating: 0, email: "mat@example.com", stripeCustomerId: "cus_1" },
+      ...over,
+    });
+
+  // Once, so a viewer set up for one test cannot leak into the next.
+  const asApprovedCarrier = () =>
+    vi.mocked(carriersDal.getByUserId).mockResolvedValueOnce({ status: "approved" } as never);
+  const asStaff = () => vi.mocked(hasAnyRole).mockResolvedValueOnce(true);
+
+  it("gives a stranger the job without the street, the contacts or the account", async () => {
+    Object.assign(listingsDal, { getById: vi.fn().mockResolvedValue(private_()) });
+
+    const view = (await listingsService.getListing("job-1", "visitor-9")) as Record<string, unknown>;
+
+    expect(view).not.toHaveProperty("pickupAddress");
+    expect(view).not.toHaveProperty("pickupContactPhone");
+    expect(view).not.toHaveProperty("pickupNote");
+    expect(view.pickupLat).toBe(45.76);
+    expect(JSON.stringify(view)).not.toMatch(/mat@example\.com|cus_1/);
+  });
+
+  it("gives a signed-out visitor the same", async () => {
+    Object.assign(listingsDal, { getById: vi.fn().mockResolvedValue(private_()) });
+
+    const view = (await listingsService.getListing("job-1", null)) as Record<string, unknown>;
+
+    expect(view).not.toHaveProperty("pickupAddress");
+  });
+
+  it("gives the owner everything of their own request", async () => {
+    Object.assign(listingsDal, { getById: vi.fn().mockResolvedValue(private_()) });
+
+    const view = (await listingsService.getListing("job-1", "shipper-1")) as Record<string, unknown>;
+
+    expect(view.pickupAddress).toBe("12 rue de la République");
+    expect(view.pickupContactPhone).toBe("+33612345678");
+    expect(JSON.stringify(view)).not.toMatch(/mat@example\.com/);
+  });
+
+  it("projects every job on the board and keeps the paging", async () => {
+    Object.assign(listingsDal, {
+      browse: vi.fn().mockResolvedValue({ items: [private_()], total: 1 }),
+    });
+
+    const result = await listingsService.browse({ page: 1, limit: 20 } as never, "visitor-9");
+
+    expect(result.total).toBe(1);
+    expect(result.items[0]).not.toHaveProperty("pickupContactPhone");
+    expect(JSON.stringify(result)).not.toMatch(/mat@example\.com/);
+  });
+
+  it("gives an approved carrier the street and the exact pin, never the contacts", async () => {
+    Object.assign(listingsDal, { getById: vi.fn().mockResolvedValue(private_()) });
+    asApprovedCarrier();
+
+    const view = (await listingsService.getListing("job-1", "carrier-9")) as Record<string, unknown>;
+
+    expect(view.pickupAddress).toBe("12 rue de la République");
+    expect(view.pickupLat).toBe(45.764043);
+    expect(view).not.toHaveProperty("pickupContactPhone");
+    expect(view).not.toHaveProperty("pickupNote");
+    expect(view).not.toHaveProperty("externalRef");
+  });
+
+  it("gives staff the request in full, as its owner reads it", async () => {
+    Object.assign(listingsDal, { getById: vi.fn().mockResolvedValue(private_()) });
+    asStaff();
+
+    const view = (await listingsService.getListing("job-1", "operator-9")) as Record<string, unknown>;
+
+    expect(view.pickupContactPhone).toBe("+33612345678");
+    expect(view.pickupNote).toBe("Code 4521B");
+    expect(view.externalRef).toBe("quote-9");
+    expect(view.pickupLat).toBe(45.764043);
+    // The admin endpoints carry the requester's email; this one does not.
+    expect(JSON.stringify(view)).not.toMatch(/mat@example\.com|cus_1/);
+  });
+
+  it("hides a scheduled request from everyone but its author, as a draft", async () => {
+    // Decided before who is asking is even looked up: not yet on the board
+    // belongs to its author alone.
+    Object.assign(listingsDal, {
+      getById: vi.fn().mockResolvedValue(private_({ status: "scheduled" })),
+    });
+
+    expect(await codeFrom(() => listingsService.getListing("job-1", "carrier-9"))).toBe(
+      "LISTING_NOT_FOUND"
+    );
+    await expect(listingsService.getListing("job-1", "shipper-1")).resolves.toMatchObject({
+      status: "scheduled",
+    });
+  });
+
+  it("searches a plain account's board on the rounded pins", async () => {
+    // A radius search on the exact pin gives the pin back one question at a
+    // time, whatever the card rounds it to.
+    await listingsService.browse({ page: 1, limit: 20 } as never, "visitor-9");
+
+    expect(listingsDal.browse).toHaveBeenCalledWith(expect.anything(), {
+      exactLocation: false,
+    });
+  });
+
+  it("gives an approved carrier the board with streets and exact pins, searched exactly", async () => {
+    Object.assign(listingsDal, {
+      browse: vi.fn().mockResolvedValue({ items: [private_()], total: 1 }),
+    });
+    asApprovedCarrier();
+
+    const result = await listingsService.browse({ page: 1, limit: 20 } as never, "carrier-9");
+    const [item] = result.items as Record<string, unknown>[];
+
+    expect(listingsDal.browse).toHaveBeenCalledWith(expect.anything(), {
+      exactLocation: true,
+    });
+    expect(item.pickupAddress).toBe("12 rue de la République");
+    expect(item.pickupLat).toBe(45.764043);
+    expect(item).not.toHaveProperty("pickupContactPhone");
+  });
+
+  it("gives staff the board in full, searched exactly", async () => {
+    Object.assign(listingsDal, {
+      browse: vi.fn().mockResolvedValue({ items: [private_()], total: 1 }),
+    });
+    asStaff();
+
+    const result = await listingsService.browse({ page: 1, limit: 20 } as never, "operator-9");
+    const [item] = result.items as Record<string, unknown>[];
+
+    expect(listingsDal.browse).toHaveBeenCalledWith(expect.anything(), {
+      exactLocation: true,
+    });
+    expect(item.pickupNote).toBe("Code 4521B");
+    expect(item.externalRef).toBe("quote-9");
+  });
+
+  it("shows the viewer their own request in full beside someone else's", async () => {
+    Object.assign(listingsDal, {
+      browse: vi.fn().mockResolvedValue({
+        items: [private_(), private_({ id: "job-2", shipperId: "someone-else" })],
+        total: 2,
+      }),
+    });
+
+    const result = await listingsService.browse({ page: 1, limit: 20 } as never, "shipper-1");
+    const [own, theirs] = result.items as Record<string, unknown>[];
+
+    expect(own.pickupContactPhone).toBe("+33612345678");
+    expect(own.pickupLat).toBe(45.764043);
+    expect(theirs).not.toHaveProperty("pickupAddress");
+    expect(theirs.pickupLat).toBe(45.76);
+    // Their own row reads in full; the search does not — they are not vetted.
+    expect(listingsDal.browse).toHaveBeenCalledWith(expect.anything(), {
+      exactLocation: false,
+    });
+  });
+
+  it("hands the owner their own list through the full view, not whole", async () => {
+    // GET /api/listings/me: the owner's, so everything classified — but a key
+    // nobody classified stays behind, as on every other listing route.
+    vi.mocked(listingsDal.getByShipperId).mockResolvedValue([
+      private_({
+        somethingNew: "secret",
+        photos: [{ id: "p1", url: "https://x/p1.jpg", order: 0, listingId: "job-1" }],
+      }),
+    ] as never);
+
+    const [row] = await listingsService.getMyListings("shipper-1");
+
+    expect(row.pickupContactPhone).toBe("+33612345678");
+    expect(row.externalRef).toBe("quote-9");
+    expect(row).not.toHaveProperty("somethingNew");
+    expect(row.photos).toEqual([{ id: "p1", url: "https://x/p1.jpg", order: 0 }]);
+    expect(row.delivery).toBeNull();
+  });
+});
+

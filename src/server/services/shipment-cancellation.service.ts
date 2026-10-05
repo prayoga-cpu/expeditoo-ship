@@ -162,6 +162,18 @@ function assertCategory(side: CancellationSide, category: CancellationCategory) 
   }
 }
 
+/**
+ * The carrier's verb, and staff's. An employed driver must not destroy their
+ * carrier's award, and the requester's verb is `cancelJob` (§4.2). Asked
+ * before anything about the run's state, the repeat included.
+ */
+function assertMayWithdraw(who: ResolvedActor) {
+  if (who.party === "driver") {
+    throw err("FORBIDDEN_DRIVER_CANNOT_WITHDRAW", 403);
+  }
+  if (who.side === "requester") throw err("FORBIDDEN", 403);
+}
+
 // ========================================
 // Money
 // ========================================
@@ -181,10 +193,11 @@ async function settleMoney(
   listing: Listing,
   shipmentId: string
 ): Promise<{ refundFailed: boolean }> {
-  // The driver's side of the ledger, first and unconditionally: the payout is
-  // scheduled by the Stripe webhook at capture — award time — so it can exist
-  // before anyone has driven anywhere, and it counts as withdrawable money
-  // until something says otherwise.
+  // The driver's side of the ledger, first and unconditionally. Payouts are
+  // written at delivery now, but one the capture webhook wrote at award before
+  // 2.60.0 can still sit on a run that never got there, and a withdrawal
+  // request may already hold it — the run is over either way, refund or not
+  // (payout_safety_spec.md §3).
   await paymentsService
     .cancelPayoutForShipment(shipmentId)
     .catch((e) => console.error("[cancellation] payout void failed", e));
@@ -379,6 +392,11 @@ export const shipmentCancellationService = {
     const { ownership, listing } = await loadJob(shipmentId);
     const who = resolveActor(ownership, listing, actor);
 
+    // Before the repeat, not after it: finishing a half-applied cancellation
+    // is ending the client's job too, and that is not a transporter's to do —
+    // nor is turning a half-applied withdrawal into a cancellation.
+    if (who.side === "transporter") throw err("USE_WITHDRAW_ENDPOINT", 409);
+
     // A repeat finishes the job rather than answering "already done". The work
     // spans four tables and is not one transaction, so a run that flipped to
     // CANCELLED and then failed on the listing or the bridge would otherwise be
@@ -386,14 +404,13 @@ export const shipmentCancellationService = {
     if (ownership.status === "CANCELLED") {
       return await finishCancel(ownership, listing, who.side, input.reason);
     }
-    if (who.side === "transporter") throw err("USE_WITHDRAW_ENDPOINT", 409);
     assertCategory(who.side, input.category);
     assertCancellable(who.side, ownership.status);
     assertCurrentRun(listing, ownership);
 
     const { refundFailed } = await settleMoney(listing, shipmentId);
 
-    const shipment = await shipmentsDal.cancel(shipmentId, {
+    await shipmentsDal.cancel(shipmentId, {
       reason: input.reason ?? null,
       side: who.side,
       category: input.category,
@@ -410,7 +427,7 @@ export const shipmentCancellationService = {
     await settleCancelledJob(listing, who.side, input.reason ?? null);
     await announceCancelled(ownership, listing, who);
 
-    return { shipment, alreadyCancelled: false };
+    return outcome(ownership, false);
   },
 
   /**
@@ -428,6 +445,8 @@ export const shipmentCancellationService = {
   ) {
     const { ownership, listing } = await loadJob(shipmentId);
     const who = resolveActor(ownership, listing, { kind: "session", viewer });
+    // Before the repeat: nobody refused a live run re-boards a cancelled one.
+    assertMayWithdraw(who);
 
     // As in `cancelJob`: a repeat finishes the work rather than no-opping, so
     // a withdrawal that died between the shipment row and the re-board can be
@@ -435,10 +454,6 @@ export const shipmentCancellationService = {
     if (ownership.status === "CANCELLED") {
       return await finishWithdraw(ownership, listing);
     }
-    if (who.party === "driver") {
-      throw err("FORBIDDEN_DRIVER_CANNOT_WITHDRAW", 403);
-    }
-    if (who.side === "requester") throw err("FORBIDDEN", 403);
     assertCategory(who.side, input.category);
     if (ownership.status === "DELIVERED") {
       throw err("INVALID_STATUS_TRANSITION", 409);
@@ -450,7 +465,7 @@ export const shipmentCancellationService = {
 
     const { refundFailed } = await settleMoney(listing, shipmentId);
 
-    const shipment = await shipmentsDal.cancel(shipmentId, {
+    await shipmentsDal.cancel(shipmentId, {
       reason: input.reason ?? null,
       side: who.side,
       category: input.category,
@@ -470,7 +485,7 @@ export const shipmentCancellationService = {
     notifyExpedion(expedionBridgeService.onAwardWithdrawn({ listingId: listing.id }));
     await announceWithdrawn(ownership, listing, restored, who.side);
 
-    return { shipment, listingId: listing.id, alreadyCancelled: false };
+    return outcome(ownership, false);
   },
 
   /**
@@ -637,15 +652,14 @@ async function finishCancel(
   side: CancellationSide,
   reason?: string
 ) {
-  if (isCurrentRun(listing, ownership) || listing.status === "awarded") {
+  // Only while this run is still the job's award. A job re-awarded to
+  // another carrier since is that carrier's now: settling here from a stale
+  // tab would close it, reject the new winner and refund nobody.
+  if (isCurrentRun(listing, ownership)) {
     await settleCancelledJob(listing, side, reason ?? null);
   }
 
-  return {
-    shipment: await shipmentsDal.getById(ownership.id),
-    listingId: listing.id,
-    alreadyCancelled: true as const,
-  };
+  return outcome(ownership, true);
 }
 
 /** The withdraw half of the same repair. */
@@ -657,10 +671,25 @@ async function finishWithdraw(ownership: JobOwnership, listing: Listing) {
     );
   }
 
+  return outcome(ownership, true);
+}
+
+/**
+ * What both verbs answer, first call and repeat alike: which run, which job,
+ * and whether this call is the one that stopped it.
+ *
+ * Never the shipment itself. The repeat used to answer with
+ * `shipmentsDal.getById`, which loads every party's whole `user` row — email,
+ * Stripe ids — plus the price, the offer and the listing's budget, to whichever
+ * party pressed twice, a driver included (listing_privacy_spec.md §3,
+ * roles_spec.md §3). The caller refetches the run through the routes that
+ * project it.
+ */
+function outcome(ownership: JobOwnership, alreadyCancelled: boolean) {
   return {
-    shipment: await shipmentsDal.getById(ownership.id),
-    listingId: listing.id,
-    alreadyCancelled: true as const,
+    shipment: { id: ownership.id },
+    listingId: ownership.listingId,
+    alreadyCancelled,
   };
 }
 

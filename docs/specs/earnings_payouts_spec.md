@@ -1,5 +1,14 @@
 # Specification: Earnings & Payouts (Driver/Seller)
 
+> **Superseded — goods-marketplace era (v1).** Nothing below describes how a
+> driver is paid today. There are no sellers and no Stripe Connect transfer
+> (`executePayout` has no caller), and the Express Dashboard is no longer
+> offered (`stripe_connect_spec.md`): a delivery writes the driver's payout,
+> the driver asks for their balance (minimum €20), and Expeditoo makes the
+> bank transfer by hand (`payout_safety_spec.md` §0–§5). The app passes no
+> driver's bank details to Stripe (`carrier_kyc_spec.md` §4.3). Kept for the
+> history.
+
 ## 1. Overview
 
 The Earnings system tracks the movement of funds from successfully completed transactions to the individual's withdrawable balance. It provides transparency for Sellers and Drivers regarding their gross income, platform fees, and net payouts.

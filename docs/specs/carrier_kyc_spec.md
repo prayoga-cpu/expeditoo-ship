@@ -158,6 +158,19 @@ KYC documents are identity documents. They are **not** public assets.
    `ibanLast4` / `bicLast4` are persisted for display; the full value goes straight
    to Stripe. This keeps the deployment out of scope for storing raw bank
    credentials.
+
+   > **Corrected (2.60.0).** Nothing typed into the banking form goes to
+   > Stripe, and nothing ever did: the full IBAN and BIC are validated and
+   > discarded, and nothing is forwarded anywhere (`carrierService.setBanking`,
+   > `payout_safety_spec.md` §6). A driver is paid by a bank transfer Expeditoo
+   > makes by hand when they ask for their balance (`payout_safety_spec.md`
+   > §0). The full IBAN does exist in one place: the `rib` document (§1), the
+   > bank-details slip a carrier uploads, which is a KYC file like the others —
+   > private storage and presigned reads (items 1–2), never a database column.
+   > The public pages say so (`marketing_footer_pages_spec.md` §4). (Stripe
+   > Connect's hosted onboarding, offered on `/profile` until 2.60.0, took bank
+   > details on Stripe's own pages; that is the account holder's dealing with
+   > Stripe, not this form's.)
 4. Accepted: `application/pdf`, `image/jpeg`, `image/png`. Max 10 MB.
    Anything else → `400 UNSUPPORTED_DOCUMENT_TYPE`.
 5. Document rows are never hard-deleted while the carrier is `approved` — they are

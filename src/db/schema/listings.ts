@@ -209,6 +209,11 @@ export const listings = pgTable(
     // back to null the moment the cron flips the listing to `open` (or
     // expires it, if its own pickup window closed first).
     scheduledPublishAt: timestamp("scheduled_publish_at"),
+    // When the request first went live — now, or when the scheduler published
+    // it; null while it is a draft or scheduled. Not `created_at`: a draft
+    // finished days later was dated, and sorted, by the day it was saved
+    // (0036, draft_requests_spec.md §5).
+    publishedAt: timestamp("published_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()

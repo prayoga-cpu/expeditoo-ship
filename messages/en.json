@@ -414,27 +414,6 @@
       "deleteError": "Failed to remove card",
       "loadError": "Failed to load payment methods"
     },
-    "payout": {
-      "title": "Payout Configuration",
-      "status": {
-        "active": "Active",
-        "pending": "Pending Setup",
-        "notConnected": "Not Connected"
-      },
-      "description": {
-        "active": "Your payout account is set up and ready to receive funds from sales/deliveries.",
-        "inactive": "To receive payments for items you sell or deliveries you make, you must connect your Stripe account."
-      },
-      "button": {
-        "continue": "Continue Setup",
-        "connect": "Connect Payout Account",
-        "loading": "Opening Stripe…"
-      },
-      "error": {
-        "rejected": "Stripe refused to open the payout account. This is on our side, not yours — please try again later or contact support.",
-        "generic": "Payout setup could not be started. Please try again."
-      }
-    },
     "picture": {
       "title": "Profile Picture",
       "upload": "Upload New Photo",
@@ -811,7 +790,7 @@
     },
     "bid": {
       "becomeCarrierTitle": "Want to bid on jobs like this?",
-      "becomeCarrierDescription": "Carriers compete on price and ETA, and the shipper picks the winner. Apply once, then bid on every job.",
+      "becomeCarrierDescription": "Carriers compete on price and ETA. Depending on the job, the winner is picked by the person who posted it or by an operator. Apply once, then bid on every job.",
       "becomeCarrierCta": "Become a carrier",
       "notApprovedTitle": "Your carrier application isn't approved yet",
       "notApprovedDescription": "Bidding unlocks as soon as an operator approves your application. Check its status to see what's missing.",
@@ -831,7 +810,8 @@
         "VEHICLE_CAPACITY_WEIGHT": "That vehicle cannot carry this load.",
         "VEHICLE_CAPACITY_DIMENSIONS": "That vehicle is too small for this load.",
         "OFFER_ALREADY_EXISTS": "You already have a live offer on this job.",
-        "generic": "Could not take this job. Please try again."
+        "generic": "Could not take this job. Please try again.",
+        "TAKE_NOT_AVAILABLE": "This client chooses their carrier: make an offer instead."
       },
       "form": {
         "title": "Submit an offer",
@@ -1153,7 +1133,7 @@
     },
     "budget": {
       "label": "What do you expect to pay?",
-      "hint": "It's an estimate, not a cap: carriers can offer more or less, and you choose the offer you accept. A carrier can also take your request at this price directly.",
+      "hint": "It's an estimate, not a cap: carriers can offer more or less, and you choose the offer you accept.",
       "publish": {
         "label": "When should this go live?",
         "now": "Now",
@@ -1203,7 +1183,13 @@
       "invalidPhone": "Enter a valid phone number",
       "scheduledPublishRequired": "Pick a date and time to publish",
       "scheduledPublishPast": "Pick a moment in the future",
-      "noAllowedDay": "None of the ticked days falls between these dates."
+      "noAllowedDay": "None of the ticked days falls between these dates.",
+      "budgetMin": "Enter an amount of at least €1",
+      "budgetMax": "The amount cannot exceed €100,000",
+      "quantityMin": "Enter at least 1",
+      "floorMin": "Enter 0 (ground floor) or a higher floor",
+      "wholeNumber": "Enter a whole number",
+      "quantityMax": "The total quantity cannot exceed 99,999"
     },
     "success": {
       "open": {
@@ -1219,8 +1205,8 @@
         "title": "What happens next?",
         "offers": "Carriers send you their offers until {date}.",
         "notify": "You are notified in the app for every new offer.",
-        "choose": "You compare the offers and choose your carrier — unless a carrier takes your request at your budget directly.",
-        "pay": "Nothing is charged until the transport is awarded: when you accept an offer, or when a carrier takes your request at your budget."
+        "choose": "You compare the offers and choose your carrier.",
+        "pay": "You only pay when you accept an offer."
       },
       "actions": {
         "view": "View my request",
@@ -1230,6 +1216,16 @@
       "notFound": {
         "title": "Request not found",
         "description": "It may have been deleted, or this link is wrong."
+      }
+    },
+    "resume": {
+      "title": "Resume my request",
+      "notFound": "Request not found",
+      "notFoundDesc": "It may have been deleted, or this link is wrong.",
+      "back": "My requests",
+      "snappedTime": {
+        "pickup": "The saved pickup time, {saved}, isn't one of the times on offer: the time selected is now {selected}. Check it before publishing.",
+        "dropoff": "The saved delivery time, {saved}, isn't one of the times on offer: the time selected is now {selected}. Check it before publishing."
       }
     }
   },
@@ -1243,6 +1239,8 @@
     "loadFailed": "Could not load your requests",
     "offers": "{count, plural, =0 {No offers} one {# offer} other {# offers}}",
     "posted": "Posted {date}",
+    "savedOn": "Saved on {date}",
+    "scheduledFor": "Goes live on {date}",
     "tabs": {
       "requests": "Requests",
       "history": "History"
@@ -1309,7 +1307,16 @@
         "paymentFailed": "The payment did not go through. Your card was not charged.",
         "failed": "Could not accept this offer"
       },
-      "reopened": "Back on the board"
+      "reopened": "Back on the board",
+      "addressHidden": "Exact address shared with verified carriers.",
+      "notFound": "Request not found",
+      "notFoundDesc": "It may have been removed, or you don't have access to it.",
+      "backHome": "Back to home",
+      "loadError": {
+        "title": "Could not load this request",
+        "description": "The request could not be loaded. Try again in a moment.",
+        "retry": "Try again"
+      }
     },
     "carriers": {
       "tab": "Available carriers",
@@ -1349,7 +1356,30 @@
       "quantity": "{count, plural, one {# item} other {# items}}",
       "needsHelp": "Loading help",
       "flexible": "Flexible dates"
-    }
+    },
+    "draft": {
+      "publish": "Publish",
+      "publishNow": "Publish now",
+      "resume": "Resume",
+      "edit": "Edit",
+      "unschedule": "Back to draft",
+      "delete": "Delete",
+      "deleteTitle": "Delete this draft?",
+      "deleteScheduledTitle": "Delete this scheduled request?",
+      "deleteDescription": "This request will be deleted for good. No carrier has seen it yet.",
+      "keep": "Keep",
+      "confirmDelete": "Delete for good",
+      "deleted": "Request deleted",
+      "unscheduled": "Request back to draft",
+      "failed": "That didn't work. Please try again.",
+      "bannerDraft": "Draft — not visible to carriers yet.",
+      "bannerScheduled": "Scheduled — goes live on {date}. Carriers can't see it until then.",
+      "datesPassed": "Dates passed — update them",
+      "notScheduled": "This request is no longer scheduled.",
+      "noLongerEditable": "This request was published or closed in the meantime: it can no longer be changed here.",
+      "notFound": "This request can't be found: it may have been deleted in the meantime."
+    },
+    "created": "Created {date}"
   },
   "driver": {
     "title": "Driver",
@@ -1500,10 +1530,10 @@
       "badge": "The carrier network of the Expedion group",
       "titleLine1": "The jobs come to you.",
       "titleLine2": "You set the price.",
-      "subtitle": "When Expedion's own fleet is full, the job is posted here automatically. Bid your price, win the run, deliver, get paid within 7 days. No prospecting, ever.",
+      "subtitle": "When Expedion's own fleet is full, the job is posted here automatically. Bid your price, win the run, deliver, get paid by bank transfer. No prospecting, ever.",
       "step1": "A job opens",
       "step2": "You underbid",
-      "step3": "Deliver, paid in 7 days",
+      "step3": "Deliver, get paid",
       "primaryCta": "Join the network",
       "secondaryCta": "See open jobs",
       "primaryCtaAuthed": "Open your profile"
@@ -1519,7 +1549,7 @@
       "leading": "Your offer is in the lead",
       "bidCta": "Bid in euros, all-in",
       "bidInputLabel": "Your offer in euros",
-      "insured": "INSURED BY EXPEDION · PAID WITHIN 7 DAYS",
+      "insured": "INSURED BY EXPEDION · PAID BY TRANSFER",
       "errorInvalid": "Enter an amount in euros.",
       "errorTooLow": "Serious offers start at {min} €.",
       "errorTooHigh": "Your offer has to undercut {best} €."
@@ -1528,7 +1558,7 @@
       "jobsPerMonth": "Jobs posted per month",
       "timeToAward": "Average time to award",
       "emptyKm": "Empty kilometres filled",
-      "guaranteedPayment": "Guaranteed payment"
+      "transferMinimum": "Minimum balance to request a transfer"
     },
     "howItWorks": {
       "eyebrow": "HOW IT WORKS",
@@ -1548,7 +1578,7 @@
       },
       "step4": {
         "title": "Deliver, one status feed",
-        "desc": "Your updates feed the same tracking the buyer sees in Expedion. Proof of delivery in, payment out within 7 days."
+        "desc": "Your updates feed the same tracking the buyer sees in Expedion. Proof of delivery in, earnings credited, transfer on request."
       }
     },
     "jobBoard": {
@@ -1578,8 +1608,8 @@
         "desc": "Expedion sells, quotes and packs. You never negotiate with the end client, you just drive."
       },
       "item3": {
-        "title": "Paid within 7 days",
-        "desc": "The group pays you, not the client. Proof of delivery in, transfer out, guaranteed."
+        "title": "Paid by bank transfer",
+        "desc": "The group pays you, not the client. Proof of delivery in, earnings credited, transfer on request."
       },
       "item4": {
         "title": "Insurance already on",
@@ -1622,7 +1652,7 @@
         "role": "Carrier, Gironde · 214 jobs"
       },
       "two": {
-        "quote": "“Everything arrives packed and photographed by Expedion. We load, we drive, we get paid the same week.”",
+        "quote": "“Everything arrives packed and photographed by Expedion. We load, we drive.”",
         "author": "Sophie L.",
         "role": "Owner-driver, Orléans · 88 jobs"
       }
@@ -1715,7 +1745,7 @@
       },
       "privacy": {
         "title": "What happens to your documents",
-        "body": "Identity and compliance documents are held in private storage. They are never served from a public address, never attached to a job, and never shown to another carrier or to the client whose delivery you are carrying. Only operators reviewing your application can open them. Bank details are held by our payment provider — we keep only the last four digits so you can recognise your own account.",
+        "body": "Identity and compliance documents are held in private storage. They are never served from a public address, never attached to a job, and never shown to another carrier or to the client whose delivery you are carrying. Only operators reviewing your application can open them. We do not pass your bank details to any payment provider: of the IBAN and BIC you enter we keep only the last four characters, so you can recognise your own account, and your RIB is kept like your other documents. Your earnings are paid by bank transfer from Expeditoo when you ask for them.",
         "expiry": "If a document expires and is not replaced, the account is suspended rather than left to bid with cover that no longer exists. Replacing the document restores it."
       },
       "cta": "Apply as a driver",
@@ -1762,8 +1792,8 @@
             "desc": "Every bidder has passed identity, SIRET, insurance and vehicle checks before seeing the job at all."
           },
           {
-            "title": "Paid on delivery, not before",
-            "desc": "Funds are authorised when a driver is awarded the job and captured only once delivery is confirmed."
+            "title": "Nothing is owed to the carrier before delivery",
+            "desc": "The carrier earns only once the delivery is recorded, with a photo as proof: nothing is owed for a job they did not deliver."
           }
         ]
       },
@@ -2018,7 +2048,7 @@
       "eyebrow": "PRIVACY",
       "title": "Privacy policy",
       "intro": "What personal data Expeditoo holds, why it holds it, how long for, and the rights you have over it.",
-      "lastUpdated": "LAST UPDATED — 22 AUGUST 2026",
+      "lastUpdated": "LAST UPDATED — 5 OCTOBER 2026",
       "sections": [
         {
           "title": "Who is responsible",
@@ -2035,7 +2065,7 @@
             "Vehicle data — registration, type and capacity of the vehicle you bid with",
             "Activity data — bids submitted, jobs awarded, collection and delivery timestamps, proof of delivery",
             "Messages exchanged through the platform, including support conversations",
-            "Payment data — held by our payment provider. We store the last four digits of a bank account so you can recognise it, and never a full IBAN",
+            "Payment data — a client's card details are processed by our payment provider, Stripe, and never stored on our servers. Of the IBAN and BIC a carrier enters, we keep only the last four characters, so they can recognise their account; the bank details document (RIB) they upload is kept with their compliance documents",
             "Technical data — IP address and device information, used for security and abuse prevention"
           ]
         },
@@ -2061,7 +2091,7 @@
             "We do not sell personal data. It is shared only with the processors that run the service, each bound to act on our instructions:"
           ],
           "items": [
-            "Stripe — payment authorisation, capture and carrier payouts",
+            "Stripe — authorisation, capture and refund of clients' card payments",
             "Supabase — the database holding platform records",
             "Cloudflare R2 — file storage, including private compliance documents",
             "Resend — transactional email",
@@ -3111,7 +3141,7 @@
       },
       "banking": {
         "title": "Payout banking details",
-        "description": "Used to pay you after each delivery. We keep only the last 4 characters.",
+        "description": "We keep only the last 4 characters of the IBAN and BIC you enter, so you can recognise your account. Your earnings are transferred when you ask for them, to the account on your RIB — if you change banks, upload a new RIB too.",
         "onFile": "On file: IBAN ····{iban} · BIC ····{bic}",
         "iban": "IBAN",
         "bic": "BIC",
@@ -3330,7 +3360,7 @@
           "IN_TRANSIT": "In transit"
         },
         "payout": {
-          "scheduled": "Payout scheduled",
+          "scheduled": "Credited to your balance",
           "processing": "Payout processing",
           "paid": "Paid",
           "failed": "Payout failed",
@@ -3519,7 +3549,10 @@
       "REFERENCE_REQUIRED": "Add the transfer reference first.",
       "WITHDRAWAL_ALREADY_SETTLED": "This withdrawal has already been settled.",
       "WITHDRAWAL_NOT_REQUESTED": "This withdrawal is no longer waiting for approval.",
-      "generic": "Something went wrong. Please try again."
+      "generic": "Something went wrong. Please try again.",
+      "WITHDRAWAL_HAS_INVALID_PAYOUT": "This withdrawal includes a job that was refunded, cancelled or not yet delivered, so it can be neither approved nor recorded as paid. Refuse it: what the carrier is still owed becomes available again, and they can make a new request.",
+      "WITHDRAWAL_BALANCE_CHANGED": "Your balance has just changed. Reload the page, then make your request again.",
+      "WITHDRAWAL_STATUS_CHANGED": "This withdrawal changed in the meantime: the list is up to date, check it before deciding."
     },
     "loadFailed": "Earnings unavailable",
     "loadFailedHint": "We could not load your balance. Try again in a moment — if it keeps failing, contact support.",
@@ -3538,6 +3571,12 @@
       "draft": "Finish my application",
       "blocked": "Open my application",
       "none": "Become a driver"
+    },
+    "refuseApproved": {
+      "title": "Refuse an approved withdrawal?",
+      "description": "The {amount} goes back to {name}'s balance, except for any job refunded or cancelled since, and can be requested again. Only refuse if the transfer was never sent: otherwise the same deliveries would be paid twice.",
+      "keep": "Keep it approved",
+      "confirm": "Refuse — transfer not sent"
     }
   },
   "platformSettings": {

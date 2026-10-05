@@ -234,19 +234,27 @@ beyond France.
    what the client already paid Expedion; the driver bids below it and the
    difference is the margin.
 
-   **Answered for the testing phase, 2026-08-26:** no split. `COMMISSION_RATE`
-   is `1.0`, so the platform keeps everything and a payout row is written at 0.
-   This matches what the system already did — no code path has ever moved money
-   to a driver — it just stops the ledger claiming otherwise.
+   **The rate applied today is 10 %.** `COMMISSION_RATE` is `0.1`
+   (`payments.service.ts`): the platform keeps a tenth of the job price and the
+   driver is owed the rest. It read `1.0` for part of 2026-08-26 while the split
+   was undecided and was put back the same day (`16fa2e1`) — this entry kept
+   saying `1.0` until 2.60.0. The driver's share is not sent automatically: the
+   delivery writes a payout row, the driver asks for their balance in *Mes
+   gains*, and an operator approves it, makes the bank transfer by hand and
+   records its reference (`withdrawals.service.ts`,
+   `docs/specs/payout_safety_spec.md`).
 
-   Still open, and all of it blocks paying a real driver:
-   - the actual split, whenever a driver is to be paid;
-   - `payments` records no rate per row, so a 10% row and a 100% row are told
-     apart only by date;
-   - **`/terms` still says "the balance is paid out to the carrier"**, which at
-     this rate is false. That is a legal question, not an engineering one;
-   - `carriers.stripe_account_id` is written by nothing, so `executePayout`
-     would throw `CARRIER_ACCOUNT_MISSING` even if it were called.
+   Still open:
+   - who pays the driver on an escalated job: that client paid Expedion, and
+     the money never reaches Expeditoo's Stripe balance, yet the delivery still
+     credits the driver here;
+   - `payments` records no rate per row, so a row's commission is told apart
+     from a different rate only by date;
+   - **how drivers are paid for real** — by Expeditoo's own bank transfer, if it
+     sells the transport in its own name, or through a licensed payment
+     provider such as Stripe, if it acts as an intermediary. A legal question
+     for the client and their lawyer, raised when the client asked for IBAN
+     transfers instead of Stripe (2.60.0).
 2. **Whether person-level driver applications survive French licensing.** KBIS is
    no longer required, but SIRET and a transport licence still are for anything
    at or above 7.5 t. If regulation pushes back, the company layer returns.

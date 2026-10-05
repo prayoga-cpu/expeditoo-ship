@@ -15,6 +15,9 @@ interface RouteParams {
  * proposed time slots they are booking. Idempotent: re-accepting an offer that
  * already won returns the existing shipment rather than creating a second one
  * (docs/specs/offers_engine_spec.md §5).
+ *
+ * Answers `{ offer, shipment: { id }, alreadyAccepted }` and nothing else —
+ * the projection is the service's (`acceptOfferForCaller`).
  */
 export async function POST(req: Request, { params }: RouteParams) {
   try {
@@ -31,10 +34,11 @@ export async function POST(req: Request, { params }: RouteParams) {
 
     // `paymentIntentId` is the card the requester just authorised in the
     // payment dialog (docs/specs/pay_at_accept_spec.md §3.3).
-    const result = await offersService.acceptOffer(session.user.id, offerId, {
-      slotId,
-      paymentIntentId,
-    });
+    const result = await offersService.acceptOfferForCaller(
+      session.user.id,
+      offerId,
+      { slotId, paymentIntentId }
+    );
 
     return ok(result, result.alreadyAccepted ? 200 : 201);
   } catch (error) {

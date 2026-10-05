@@ -442,6 +442,138 @@ describe("jobFormSchema", () => {
   });
 });
 
+// numeric_input_spec.md §7–8: what the boxes hold is text, « 40,5 » in French.
+describe("jobFormSchema — typed numbers", () => {
+  const dated = { dropoffFrom: iso(24), dropoffUntil: iso(30) };
+  const flat = (floor: unknown) =>
+    endpoint({ locationType: "apartment", floor, hasLift: false });
+
+  it.each([
+    ["40,5", 40.5],
+    ["40.5", 40.5],
+    ["040", 40],
+    ["1", 1],
+    ["100000", 100_000],
+  ])("reads a budget of %j as %d euros", (text, euros) => {
+    const parsed = jobFormSchema.safeParse(form({ budgetEuros: text }));
+
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data.budgetEuros).toBe(euros);
+  });
+
+  it("refuses a budget under the server's 1 €", () => {
+    expect(messages(form({ budgetEuros: "0,50" }))).toContain(
+      "create.validation.budgetMin"
+    );
+  });
+
+  it("refuses a budget over the server's 100 000 €", () => {
+    expect(messages(form({ budgetEuros: "100001" }))).toContain(
+      "create.validation.budgetMax"
+    );
+    expect(messages(form({ budgetEuros: "100000,01" }))).toContain(
+      "create.validation.budgetMax"
+    );
+  });
+
+  it("asks for a blank budget first, and still runs the date rules", () => {
+    const parsed = jobFormSchema.safeParse(form({ budgetEuros: "", ...dated }));
+
+    expect(parsed.success).toBe(false);
+    if (!parsed.success) {
+      const budget = parsed.error.issues.filter((i) => i.path[0] === "budgetEuros");
+      // The resolver shows the first issue on a field.
+      expect(budget[0].message).toBe("create.validation.budgetRequired");
+      expect(parsed.error.issues.map((i) => i.message)).toContain(
+        "create.validation.deliveryBeforePickup"
+      );
+    }
+  });
+
+  it("reads dimensions typed with a comma", () => {
+    const parsed = jobFormSchema.safeParse(
+      form({ sizeMode: "exact", lengthCm: "45,5", widthCm: "30", heightCm: "20.5" })
+    );
+
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.lengthCm).toBe(45.5);
+      expect(parsed.data.heightCm).toBe(20.5);
+    }
+  });
+
+  it("still runs the date rules with the dimensions as text", () => {
+    // `z.coerce.number()` read « 45,5 » as NaN, a type error that skipped them.
+    const raised = messages(
+      form({
+        sizeMode: "exact",
+        lengthCm: "45,5",
+        widthCm: "30",
+        heightCm: "20",
+        ...dated,
+      })
+    );
+
+    expect(raised).toContain("create.validation.deliveryBeforePickup");
+  });
+
+  it("reads an exact weight typed with a comma", () => {
+    const parsed = jobFormSchema.safeParse(
+      form({ weightBracket: "over1000", exactWeightKg: "1500,5" })
+    );
+
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data.exactWeightKg).toBe(1500.5);
+  });
+
+  it("answers a blank or zero quantity in words", () => {
+    expect(messages(form({ quantity: "" }))).toContain(
+      "create.validation.quantityMin"
+    );
+    expect(messages(form({ quantity: "0" }))).toContain(
+      "create.validation.quantityMin"
+    );
+  });
+
+  it("reads a quantity held as text or as a number", () => {
+    for (const quantity of ["3", 3]) {
+      const parsed = jobFormSchema.safeParse(form({ quantity }));
+      expect(parsed.success).toBe(true);
+      if (parsed.success) expect(parsed.data.quantity).toBe(3);
+    }
+  });
+
+  it("takes as many items as the quantity box holds, and says so past it", () => {
+    for (const quantity of ["1200", "99999", 99_999]) {
+      expect(messages(form({ quantity }))).toEqual([]);
+    }
+    // A sixth digit typed is refused without a word; item rows, held as
+    // their sum, add up past it.
+    for (const quantity of ["100000", 120_000]) {
+      expect(messages(form({ quantity }))).toContain(
+        "create.validation.quantityMax"
+      );
+    }
+  });
+
+  it("answers a floor below the ground floor, or between two, in words", () => {
+    expect(messages(form({ pickup: flat(-1) }))).toContain(
+      "create.validation.floorMin"
+    );
+    expect(messages(form({ pickup: flat("1,5") }))).toContain(
+      "create.validation.wholeNumber"
+    );
+  });
+
+  it("reads floor 0 as the ground floor, not as no floor", () => {
+    for (const floor of ["0", 0]) {
+      const parsed = jobFormSchema.safeParse(form({ pickup: flat(floor) }));
+      expect(parsed.success).toBe(true);
+      if (parsed.success) expect(parsed.data.pickup.floor).toBe(0);
+    }
+  });
+});
+
 // The client typed 1000 BRUXELLES and was told "Doit comporter 5 chiffres"
 // (postal_codes_abroad_spec.md): a job can start or end abroad.
 describe("jobFormSchema — postal codes", () => {

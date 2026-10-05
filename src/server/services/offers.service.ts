@@ -1,4 +1,5 @@
 import { nanoid } from "nanoid";
+import { getTableColumns } from "drizzle-orm";
 import { db } from "@/db";
 import { offersDal } from "@/server/dal/offers.dal";
 import { listingsDal } from "@/server/dal/listings.dal";
@@ -17,12 +18,13 @@ import {
   type ResolvedOfferSlot,
 } from "@/lib/offer-slots";
 import { rearmedExpiry, rearmedWindow } from "@/lib/listing-window";
+import { PARTY_FIELDS, project, toListingView } from "@/server/services/listing-view";
 import type {
   CreateOfferInput,
   PreparePaymentInput,
 } from "@/server/dto/offers.dto";
 import type { InsertListing, Listing } from "@/db/schema/listings";
-import type { Offer } from "@/db/schema/offers";
+import { offers, type Offer } from "@/db/schema/offers";
 import type { Vehicle } from "@/db/schema/carriers";
 
 // ========================================
@@ -128,6 +130,59 @@ function assertListingOpen(listing: Listing | undefined): asserts listing {
   if (!listing) throw err("LISTING_NOT_FOUND", 404);
   if (listing.status !== "open") throw err("LISTING_NOT_OPEN", 409);
   if (listing.expiresAt <= new Date()) throw err("LISTING_EXPIRED", 409);
+}
+
+/** What a requester needs of a bidder's vehicle: what it is and what it carries. */
+const VEHICLE_FIELDS = [
+  "id",
+  "type",
+  "make",
+  "model",
+  "maxWeightKg",
+  "maxLengthCm",
+  "maxWidthCm",
+  "maxHeightCm",
+] as const;
+
+/**
+ * A bid as its requester (or staff) reads it: the carrier as a name, a face
+ * and a rating, the vehicle without its plate. The DAL loads both whole
+ * (listing_privacy_spec.md §3).
+ */
+function asSeenByRequester<T extends { carrier?: unknown; vehicle?: unknown }>(offer: T) {
+  return {
+    ...offer,
+    carrier: project(offer.carrier, PARTY_FIELDS),
+    vehicle: project(offer.vehicle, VEHICLE_FIELDS),
+  };
+}
+
+/** An offer's own columns: the row, without anything the DAL loads beside it. */
+const OFFER_COLUMNS = Object.keys(getTableColumns(offers));
+
+/**
+ * An award as its HTTP caller reads it — the requester accepting and the
+ * carrier taking alike: the offer as its own row, the shipment by id, and
+ * whether this call is the one that made the award.
+ *
+ * Never the rest of what `acceptOffer` returns. `rejectedOffers` is every
+ * rival's bid — price, message, vehicle, user id — and a carrier sees only
+ * their own (offers_engine_spec.md §6); `payment` is the platform's row,
+ * commission included; and on the idempotent branch the offer comes from
+ * `offersDal.getById`, with the carrier's whole `user` row and the plate
+ * (listing_privacy_spec.md §3). Those stay inside the service, for
+ * `notifyAwardOutcome`, the compensation and `assignDirect`.
+ */
+function toAwardView(award: {
+  offer: unknown;
+  shipment?: { id: string } | null;
+  alreadyAccepted: boolean;
+}) {
+  return {
+    offer: project(award.offer, OFFER_COLUMNS),
+    shipment: award.shipment ? { id: award.shipment.id } : null,
+    alreadyAccepted: award.alreadyAccepted,
+  };
 }
 
 /** An approved carrier account is the licence to bid. */
@@ -378,6 +433,13 @@ export const offersService = {
    *
    * The price is the listing's budget. There is no negotiation on this lane —
    * the driver is accepting the job as posted, not bidding under it.
+   *
+   * **Escalated jobs only** (take_job_spec.md). An escalated job has nobody
+   * of its own to choose: an operator awards in the client's place, and the
+   * client already paid in Expedion. A direct request has its requester, who
+   * chooses the offer and pays for it in the accept dialog
+   * (pay_at_accept_spec.md); a take would make that choice for them and
+   * charge their saved card with nobody at the keyboard.
    */
   async takeJob(
     carrierUserId: string,
@@ -386,6 +448,12 @@ export const offersService = {
   ) {
     const listing = await listingsDal.getById(listingId);
     assertListingOpen(listing);
+
+    // Before `submitOffer`, so a refused take leaves no bid behind. A 409
+    // rather than a 403: the carrier may still bid on this job, just not by
+    // this lane. `!== "expedion"` rather than `=== "direct"`, so an origin
+    // nobody anticipated is refused rather than let through.
+    if (listing.origin !== "expedion") throw err("TAKE_NOT_AVAILABLE", 409);
 
     const offer = await this.submitOffer(carrierUserId, listingId, {
       vehicleId: data.vehicleId,
@@ -410,7 +478,13 @@ export const offersService = {
       selfAward: true,
     });
 
-    return { ...award, offer: { ...award.offer, selfAccepted: true } };
+    // The route hands this to the carrier who took the job, so it is the award
+    // view: their own offer and the shipment's id, never the rivals' bids the
+    // award just rejected.
+    return toAwardView({
+      ...award,
+      offer: { ...award.offer, selfAccepted: true },
+    });
   },
 
   /** Withdraw a live bid. The carrier may then submit one replacement. */
@@ -453,8 +527,15 @@ export const offersService = {
     // branch is the difference between "a driver took an open job" and "anyone
     // who can create an offer can award it to themselves". The caller has to
     // say so, and only `takeJob` does.
+    //
+    // And only on an escalated job (take_job_spec.md §3). `takeJob` refuses a
+    // direct one before any bid exists; this is the second line, so a flag
+    // that reaches here on a direct job falls through to the requester's own
+    // gate and is refused FORBIDDEN_NOT_SHIPPER.
     const isSelfAward =
-      opts.selfAward === true && existing.carrierId === actorUserId;
+      opts.selfAward === true &&
+      existing.carrierId === actorUserId &&
+      listing.origin === "expedion";
 
     if (!isSelfAward) await assertMayAward(actorUserId, listing);
 
@@ -544,6 +625,22 @@ export const offersService = {
     await notifyAwardOutcome(existing, result.rejectedOffers, listing.title);
 
     return { ...result, payment, alreadyAccepted: false };
+  },
+
+  /**
+   * `POST /api/offers/:id/accept`: `acceptOffer`, answered as `toAwardView` —
+   * fresh and idempotent alike. The internal callers (`assignDirect`, the
+   * thread-offer bubble, the seed) call `acceptOffer` and keep the shipment it
+   * created; nothing that reaches a browser should.
+   *
+   * No `selfAward` here: only `takeJob` may say that, and it is not this lane.
+   */
+  async acceptOfferForCaller(
+    actorUserId: string,
+    offerId: string,
+    opts: { slotId?: string; paymentIntentId?: string } = {}
+  ) {
+    return toAwardView(await this.acceptOffer(actorUserId, offerId, opts));
   },
 
   /**
@@ -785,7 +882,10 @@ export const offersService = {
 
     if (isShipper || opts.isStaff) {
       const all = await offersDal.listByListing(listingId, opts.sort);
-      return { scope: "full" as const, offers: sortOffers(all, opts.sort) };
+      return {
+        scope: "full" as const,
+        offers: sortOffers(all, opts.sort).map(asSeenByRequester),
+      };
     }
 
     if (viewerId) {
@@ -803,11 +903,20 @@ export const offersService = {
     return { scope: "aggregate" as const, ...aggregate };
   },
 
+  /**
+   * A carrier's own bids. The job inside each is the approved carrier's view
+   * of it — the contacts and the access notes come with the shipment, if they
+   * win (listing_privacy_spec.md §3).
+   */
   async getCarrierOffers(
     carrierUserId: string,
     filters: { status?: Offer["status"]; page: number; limit: number }
   ) {
-    return await offersDal.listByCarrier(carrierUserId, filters);
+    const rows = await offersDal.listByCarrier(carrierUserId, filters);
+    return rows.map((offer) => ({
+      ...offer,
+      listing: offer.listing ? toListingView(offer.listing, "vetted") : offer.listing,
+    }));
   },
 
   /** Called by the expiry cron and by material edits to a listing. */

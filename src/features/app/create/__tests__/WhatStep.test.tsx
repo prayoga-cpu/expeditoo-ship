@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { NextIntlClientProvider } from "next-intl";
-import { useForm } from "react-hook-form";
+import { useForm, type UseFormGetValues } from "react-hook-form";
 import { describe, expect, it, vi } from "vitest";
 
 import en from "../../../../../messages/en.json";
@@ -22,6 +22,9 @@ import { WeightBracketField } from "../ui/WeightBracketField";
  */
 const onError = vi.fn();
 
+/** The rendered form's values, for what a field sends up rather than shows. */
+let getValues: UseFormGetValues<JobFormValues>;
+
 function Harness({
   locale,
   messages,
@@ -35,6 +38,7 @@ function Harness({
     resolver: zodResolver(jobFormSchema),
     defaultValues: { sizeMode: "preset" },
   });
+  getValues = form.getValues;
 
   return (
     <NextIntlClientProvider locale={locale} messages={messages} onError={onError}>
@@ -57,6 +61,17 @@ const choose = (id: string) => {
   const option = document.getElementById(id);
   if (!option) throw new Error(`no option card ${id}`);
   fireEvent.click(option);
+};
+
+/**
+ * Keys typed one at a time at the end of a box, each read back from the box
+ * before the next — the way the 15 t bug happened: « 1.0 » came back as « 1 »
+ * before the « 5 » arrived.
+ */
+const typeKeys = (input: HTMLInputElement, keys: string) => {
+  for (const key of keys) {
+    fireEvent.change(input, { target: { value: input.value + key } });
+  }
 };
 
 describe.each([
@@ -124,6 +139,38 @@ describe("weight", () => {
     ) as HTMLInputElement;
     expect(optional.value).toBe("");
   });
+
+  // numeric_input_spec.md §9: the box was re-derived from the kilograms after
+  // every keystroke, so « 1.0 » t read « 1 » and 1.05 t was stored as 15 t.
+  it("stores 1050 kg for 1.05 t, and keeps « 1,05 » on screen", () => {
+    renderFields();
+    choose("weight-over1000");
+    // Radix answers a letter on a closed select by picking the option it
+    // starts — the unit labelled « t ».
+    fireEvent.keyDown(screen.getByRole("combobox", { name: "Unité" }), {
+      key: "t",
+    });
+
+    const figure = screen.getByLabelText(/^Poids exact(?!,)/) as HTMLInputElement;
+    typeKeys(figure, "1.05");
+
+    expect(figure.value).toBe("1,05");
+    expect(getValues("exactWeightKg")).toBe(1050);
+  });
+
+  it("clears a figure typed for a bracket when the next one is picked", () => {
+    renderFields();
+    choose("weight-upTo30");
+    const figure = screen.getByLabelText(/si vous le connaissez/) as HTMLInputElement;
+    typeKeys(figure, "12,5");
+    expect(getValues("exactWeightKg")).toBe(12.5);
+
+    // Same box, another bracket: what was typed must not ride along.
+    choose("weight-upTo100");
+
+    expect(figure.value).toBe("");
+    expect(getValues("exactWeightKg")).toBeUndefined();
+  });
 });
 
 describe("what and how many", () => {
@@ -144,10 +191,88 @@ describe("what and how many", () => {
     );
   });
 
-  it("will not offer a quantity below one", () => {
+  it("takes neither a minus sign nor part of an item", () => {
+    // A text box now, so no `min`: the rule drops « - » and refuses a
+    // separator, and the schema answers 0 with `quantityMin`.
     renderFields();
+    const quantity = screen.getByLabelText("Quantité") as HTMLInputElement;
 
-    expect(screen.getByLabelText("Quantité")).toHaveAttribute("min", "1");
+    fireEvent.change(quantity, { target: { value: "-3" } });
+    expect(quantity.value).toBe("3");
+
+    fireEvent.change(quantity, { target: { value: "3,5" } });
+    expect(quantity.value).toBe("3");
+    expect(getValues("quantity")).toBe("3");
+  });
+
+  // numeric_input_spec.md §6: the count took a floor's three digits, so
+  // « 1200 » chairs read « 120 » and were posted as 120 (found in review).
+  it("counts past 999, in the one box and in a row", () => {
+    renderFields();
+    const one = screen.getByLabelText("Quantité") as HTMLInputElement;
+
+    typeKeys(one, "1200");
+    expect(one.value).toBe("1200");
+    expect(getValues("quantity")).toBe("1200");
+
+    fireEvent.change(screen.getByLabelText("Que transportez-vous ?", { exact: false }), {
+      target: { value: "Chaises" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Ajouter un autre objet/ }));
+    const [row] = screen.getAllByLabelText("Quantité") as HTMLInputElement[];
+    expect(row.value).toBe("1200");
+
+    // Retyped to another four-digit count: Backspace, then « 5 ».
+    fireEvent.change(row, { target: { value: "120" } });
+    typeKeys(row, "5");
+    expect(row.value).toBe("1205");
+    expect(getValues("quantity")).toBe(1205);
+  });
+
+  // numeric_input_spec.md §6: each row's count snapped back to « 1 » on
+  // every keystroke, so « 2 » typed over « 1 » became « 12 ».
+  it("lets a row's quantity be emptied and retyped, and puts 1 back on blur", () => {
+    renderFields();
+    fireEvent.change(screen.getByLabelText("Que transportez-vous ?", { exact: false }), {
+      target: { value: "Canapé" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Ajouter un autre objet/ }));
+    const [first] = screen.getAllByLabelText("Quantité") as HTMLInputElement[];
+
+    fireEvent.change(first, { target: { value: "" } });
+    expect(first.value).toBe("");
+    // Counted as one while blank: a row mid-retype is not a row of nothing.
+    expect(getValues("quantity")).toBe(1);
+
+    typeKeys(first, "2");
+    expect(first.value).toBe("2");
+    expect(getValues("quantity")).toBe(2);
+
+    fireEvent.change(first, { target: { value: "" } });
+    fireEvent.blur(first);
+    expect(first.value).toBe("1");
+  });
+
+  // numeric_input_spec.md §5.1: the box's tidy reaches the row before the
+  // row's own blur. The other way round, the row put « 1 » back and the tidy,
+  // worked out from the same rows, overwrote it with « 0 ».
+  it("reads « 1 » once a row's « 100 » is left with its « 1 » deleted", () => {
+    renderFields();
+    fireEvent.change(screen.getByLabelText("Que transportez-vous ?", { exact: false }), {
+      target: { value: "Canapé" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Ajouter un autre objet/ }));
+    const [first] = screen.getAllByLabelText("Quantité") as HTMLInputElement[];
+
+    typeKeys(first, "00");
+    expect(first.value).toBe("100");
+    // A deletion keeps the zeros it exposes, until the box is left.
+    fireEvent.change(first, { target: { value: "00" } });
+    expect(first.value).toBe("00");
+
+    fireEvent.blur(first);
+    expect(first.value).toBe("1");
+    expect(getValues("quantity")).toBe(1);
   });
 });
 
@@ -170,6 +295,17 @@ describe("size", () => {
     expect(screen.getByLabelText("Largeur (cm)")).toBeInTheDocument();
     expect(screen.getByLabelText("Hauteur (cm)")).toBeInTheDocument();
     expect(document.getElementById("size-l")).toBeNull();
+  });
+
+  it("holds a dimension as typed, in the language's own way", () => {
+    renderFields();
+    fireEvent.click(screen.getByRole("radio", { name: "Dimensions exactes" }));
+    const length = screen.getByLabelText("Longueur (cm)") as HTMLInputElement;
+
+    typeKeys(length, "045.5");
+
+    expect(length.value).toBe("45,5");
+    expect(getValues("lengthCm")).toBe("45,5");
   });
 
   it("keeps a mode selected when its button is pressed a second time", () => {

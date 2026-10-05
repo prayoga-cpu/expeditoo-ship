@@ -19,6 +19,10 @@ import {
   type Viewer,
 } from "@/server/services/shipment-access";
 import { shipmentConfirmationsService } from "@/server/services/shipment-confirmations.service";
+import {
+  toListingView,
+  type ListingAudience,
+} from "@/server/services/listing-view";
 import { confirmationUrl } from "@/lib/confirmation-token";
 import type { ConfirmableMilestone } from "@/lib/confirmation-token";
 import type {
@@ -195,6 +199,48 @@ function redactForDriver<T extends Record<string, unknown>>(
   };
 }
 
+/** A shipment's listing, projected for `audience`; absent stays absent. */
+function listingAs(listing: unknown, audience: ListingAudience) {
+  return listing && typeof listing === "object"
+    ? toListingView(listing as Record<string, unknown>, audience)
+    : (listing ?? null);
+}
+
+/**
+ * The requester and the carrier read each other — and the driver — as a name
+ * and a face. The DAL loads every party as a whole `user` row, so without this
+ * each saw the other's email, Stripe ids and preferences
+ * (listing_privacy_spec.md §3). Staff keep the full rows; a driver already
+ * gets less (`redactForDriver`).
+ *
+ * The listing goes through the listing projection too: the requester's own
+ * job in full, the carrier's as an approved carrier reads any job. The live
+ * row carries the contacts, the access notes and `externalRef`, and a carrier
+ * stays a party to a run they withdrew from — so they would go on reading the
+ * door code the requester types for the next carrier. What the carrier needs
+ * of those is on the shipment itself, copied at award.
+ */
+function redactParties<T extends Record<string, unknown>>(
+  shipment: T,
+  party: Party
+): T | Record<string, unknown> {
+  if (party !== "shipper" && party !== "carrier") return shipment;
+  return {
+    ...shipment,
+    listing: listingAs(shipment.listing, party === "shipper" ? "full" : "vetted"),
+    shipper: project(shipment.shipper, DRIVER_PARTY_FIELDS),
+    carrier: project(shipment.carrier, DRIVER_PARTY_FIELDS),
+    driver: project(shipment.driver, DRIVER_PARTY_FIELDS),
+  };
+}
+
+/** What `party` may read of a shipment. */
+function viewOf<T extends Record<string, unknown>>(shipment: T, party: Party) {
+  return party === "driver"
+    ? redactForDriver(shipment, party)
+    : redactParties(shipment, party);
+}
+
 // ========================================
 // Service
 // ========================================
@@ -207,7 +253,7 @@ export const shipmentService = {
     const party = partyFor(shipment, viewer);
     if (party === "none") throw err("FORBIDDEN", 403);
 
-    return redactForDriver(shipment, party);
+    return viewOf(shipment, party);
   },
 
   async getUserShipments(
@@ -220,7 +266,7 @@ export const shipmentService = {
     );
 
     return {
-      items: items.map((s) => redactForDriver(s, partyFor(s, viewer))),
+      items: items.map((s) => viewOf(s, partyFor(s, viewer))),
       total,
       page: filters.page,
       limit: filters.limit,
@@ -297,7 +343,14 @@ export const shipmentService = {
     // delivery that cannot be undone.
     await requirePhotoFor(shipmentId, next);
 
-    const updated = await shipmentsDal.updateStatus(shipmentId, next);
+    // From the status read above, or not at all: when the carrier and their
+    // driver press « Livré » together, only one moves the row, and nothing
+    // below may run for the other — above all not a second `settleDelivery`.
+    const updated = await shipmentsDal.updateStatus(shipmentId, next, {
+      expected: ownership.status,
+    });
+    if (!updated) throw err("INVALID_STATUS_TRANSITION", 409);
+
     await this.recordEvent(shipmentId, next, ownership.status, viewer, party, note);
 
     if (next === "DELIVERED") {
@@ -310,7 +363,8 @@ export const shipmentService = {
     reportToExpedion(ownership.listingId, next, shipmentId);
     requestClientConfirmation(shipmentId, next);
 
-    return updated;
+    // The row carries the price: a driver is never shown it (roles_spec.md).
+    return viewOf(updated, party);
   },
 
   async getEvents(shipmentId: string, viewer: Viewer) {

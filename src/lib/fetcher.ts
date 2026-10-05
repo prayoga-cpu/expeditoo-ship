@@ -71,6 +71,7 @@ const withBody = (method: string) =>
 export const api = {
   get: <T,>(url: string) => request<T>(url),
   post: withBody("POST"),
+  put: withBody("PUT"),
   patch: withBody("PATCH"),
   delete: <T,>(url: string) => request<T>(url, { method: "DELETE" }),
 };

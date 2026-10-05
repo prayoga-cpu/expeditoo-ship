@@ -3,7 +3,9 @@
 `/create` step 1 ("Quoi") · `src/features/app/create/`
 
 Related: [`transport_listing_spec.md`](./transport_listing_spec.md) §2, whose
-payload this changes nothing about.
+payload this changes nothing about. Every number typed on this step — the
+weight figure, the three centimetre boxes, the quantity — is a text box since
+2.60.0: [`numeric_input_spec.md`](./numeric_input_spec.md).
 
 ---
 

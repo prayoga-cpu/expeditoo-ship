@@ -14,6 +14,62 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.60.0] - 2026-10-05 · feat
+
+- **Finish a draft from « Mes demandes ».** A saved draft now has its own
+  buttons: « Publier » opens it at the budget step, ready to publish;
+  « Reprendre » opens it from the start to change anything; « Supprimer »
+  deletes it once you confirm. The same buttons sit on the draft's own page,
+  and the card says when you last saved it. If a draft's saved time is not one
+  the form offers any more, it opens on the dates step and says which time it
+  now holds, so nothing is published at a time you have not seen.
+- **A scheduled request can still change before it goes live.** « Publier
+  maintenant », « Modifier », « Repasser en brouillon » (it then waits for you
+  instead of publishing at its time) or « Supprimer ». The card says when it
+  will go live.
+- **« Publiée le » is the day your request really went live**, not the day it
+  was first saved, and the newest requests come first on the board. A request
+  that never went live says « Créée le ».
+- **You choose who carries your request.** A carrier could take a request you
+  posted at its budget without you choosing them. Now you always compare the
+  offers, choose your carrier, and pay only when you accept an offer. Drivers:
+  « Prendre cette course » no longer appears on these requests — make an offer
+  instead.
+- **Your details stay private.** A request no longer shares anyone's email
+  address or payment details, and a carrier's offer no longer shows the
+  requester their number plate. Contact names, phone numbers and access notes
+  go only to the person who posted the request, our team and, once the job is
+  awarded, the carrier doing it. The street address and the exact point on the
+  map go only to approved carriers; anyone else sees the town and an
+  approximate point, and searching the board by distance works to that same
+  approximate point. Browsing requests now needs an account; a link to a
+  single request still opens for anyone.
+- **Number boxes keep what you mean.** « 040 » becomes « 40 » as you type, in
+  every number box of the request form and in the carriers' price boxes. Cents
+  take a comma in French and a point in English (« 40,50 »). Deleting a digit
+  no longer shrinks the amount: in « 200 », replacing the « 2 » with a « 1 »
+  gives « 100 ». The budget says straight away when it is under 1 € or over
+  100 000 €, and the number of items now goes up to 99 999.
+- **Fixed: weights and amounts saved wrong.** A weight of 1,05 t was saved as
+  15 t. In the operators' quote window, an accepted price or a declared value
+  of 40,05 € was saved as 405 €, and a weight of 12,05 kg as 125 kg.
+- **Carriers: the Stripe card is gone from your profile.** It asked you to
+  connect a Stripe account to be paid, which is not how you are paid: after a
+  delivery, ask for your balance in « Mes gains » and an operator pays it by
+  bank transfer. The website no longer promises payment within 7 days, the
+  privacy and verification pages now say exactly what happens to your bank
+  details, and a delivered trip reads « Crédité sur votre solde » rather than
+  « Versement programmé ».
+- **Carriers: a job counts in your balance once it is delivered**, never
+  before, and a job that is refunded comes out of what you can withdraw. A
+  delivery confirmed by you and your driver at the same moment counts once.
+- **Operators: a withdrawal holding a refunded or undelivered job can no longer
+  be approved or recorded as paid.** An approved request can now be refused,
+  after confirming that the transfer was never sent, which puts what the
+  carrier is still owed back in their balance. A decision taken from an
+  out-of-date list — a request a colleague has just approved — is refused and
+  the list refreshes, instead of landing unconfirmed.
+
 ## [2.59.0] - 2026-10-04 · feat
 
 - **A thank-you page once your request is posted.** After « Publier la

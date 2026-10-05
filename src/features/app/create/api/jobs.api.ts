@@ -17,9 +17,28 @@ import type { JobFormOutput } from "../schemas";
  * same way: it has no column of its own, so it is folded into `description`
  * rather than teaching the DTO a new field.
  */
+const FRAGILE_NOTE_SEPARATOR = "\n\nFragile: ";
+
 function withFragileNote(values: JobFormOutput): string {
   const note = values.isFragile ? values.fragileNote?.trim() : undefined;
-  return note ? `${values.description}\n\nFragile: ${note}` : values.description;
+  return note ? `${values.description}${FRAGILE_NOTE_SEPARATOR}${note}` : values.description;
+}
+
+/**
+ * The reverse, for resuming a saved request: without it every save would fold
+ * the note in once more (draft_requests_spec.md §2). Split at the last
+ * separator, so a description that itself mentions "Fragile:" stays whole.
+ */
+export function splitFragileNote(
+  description: string,
+  isFragile: boolean
+): { description: string; fragileNote?: string } {
+  const at = isFragile ? description.lastIndexOf(FRAGILE_NOTE_SEPARATOR) : -1;
+  if (at === -1) return { description };
+  return {
+    description: description.slice(0, at),
+    fragileNote: description.slice(at + FRAGILE_NOTE_SEPARATOR.length),
+  };
 }
 
 /**
@@ -79,4 +98,7 @@ export function toCreatePayload(values: JobFormOutput, publish: boolean) {
 export const jobsApi = {
   create: (values: JobFormOutput, publish: boolean) =>
     api.post<Job>("/api/listings", toCreatePayload(values, publish)),
+  /** A request that has not gone live, saved again, scheduled or published. */
+  saveDraft: (listingId: string, values: JobFormOutput, publish: boolean) =>
+    api.put<Job>(`/api/listings/${listingId}/draft`, toCreatePayload(values, publish)),
 };

@@ -53,21 +53,9 @@ async function fetchDefaultAddress(): Promise<AddressData | null> {
   return null;
 }
 
-/**
- * Fetch user's Stripe status directly from database
- * Bypasses session cache for real-time status
- */
-async function fetchStripeStatus(): Promise<{
-  stripeAccountId: string | null;
-  stripeAccountStatus: string | null;
-}> {
-  const res = await fetch("/api/users/me/stripe-status");
-  const data = await res.json();
-  if (data.success && data.data) {
-    return data.data;
-  }
-  return { stripeAccountId: null, stripeAccountStatus: null };
-}
+// The Stripe Connect status was read here for the payout card, which is gone
+// (payout_safety_spec.md §5). `/api/users/me/stripe-status` still answers; the
+// profile no longer waits on it.
 
 /**
  * Custom hook for profile data and actions
@@ -99,14 +87,6 @@ export function useProfile() {
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
-  // Fetch Stripe status directly from database (bypasses stale session)
-  const { data: stripeStatus, isLoading: isStripeLoading } = useQuery({
-    queryKey: ["user-stripe-status"],
-    queryFn: fetchStripeStatus,
-    enabled: !!userData?.id,
-    staleTime: 30 * 1000, // Shorter cache (30s) for more responsive updates
-  });
-
   // User data from auth context with real rating stats and address
   const user = useMemo(
     () => ({
@@ -123,11 +103,8 @@ export function useProfile() {
         zip: defaultAddress?.zip || "",
         country: defaultAddress?.country || "",
       },
-      // Use stripeStatus from API (fresh from DB) instead of session
-      stripeAccountId: stripeStatus?.stripeAccountId,
-      stripeAccountStatus: stripeStatus?.stripeAccountStatus,
     }),
-    [userData, stats, defaultAddress, stripeStatus]
+    [userData, stats, defaultAddress]
   );
 
   // Check if user is using OAuth (Google SSO)
@@ -268,10 +245,9 @@ export function useProfile() {
     setIsUploadingImage(true);
 
     try {
-      // Update user profile and session via Better Auth Client
-      await authClient.updateUser({
-        image: null, // Better Auth might require special handling for null, but usually works
-      } as any); // Cast as any if type definition is strict about string
+      // Update user profile and session via Better Auth Client. Its update
+      // type takes `image: string | null`, so clearing needs no cast.
+      await authClient.updateUser({ image: null });
 
       // Refresh page
       window.location.reload();
@@ -290,8 +266,7 @@ export function useProfile() {
 
   return {
     user,
-    isLoading:
-      isLoading || isStatsLoading || isAddressLoading || isStripeLoading,
+    isLoading: isLoading || isStatsLoading || isAddressLoading,
     cards,
     isAddCardOpen,
     setIsAddCardOpen,

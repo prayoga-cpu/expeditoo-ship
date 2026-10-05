@@ -5,6 +5,7 @@ import {
   photos,
   type InsertListing,
   type InsertPhoto,
+  type Listing,
   type ListingOrigin,
   type ListingStatus,
 } from "@/db/schema/listings";
@@ -19,6 +20,7 @@ import {
   desc,
   eq,
   gte,
+  inArray,
   lte,
   lt,
   notInArray,
@@ -40,8 +42,12 @@ import {
   type TimeSlot,
 } from "@/lib/availability-window";
 import { parseListingReference } from "@/lib/listing-reference";
+import { COORDINATE_SCALE } from "@/lib/listing-coordinates";
 
 type Executor = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/** A request nobody but its author has seen: still editable, still deletable. */
+const UNPUBLISHED: ListingStatus[] = ["draft", "scheduled"];
 
 export interface BrowseFilters {
   categoryId?: string;
@@ -73,17 +79,39 @@ export interface BrowseFilters {
 }
 
 /**
+ * Not filters: who is asking, decided by the service and never by a query
+ * string, which is why it is not a field of `BrowseFilters`.
+ */
+export interface BrowseOptions {
+  /**
+   * The location filters and the distance sort read the exact pins. Only for
+   * a viewer shown every job's exact pin (staff, approved carriers); anyone
+   * else is searched on the pins as their cards round them, so absent means
+   * rounded (listing_privacy_spec.md §3).
+   */
+  exactLocation?: boolean;
+}
+
+/** A coordinate as a location filter reads it: the column, or the column rounded. */
+type CoordinateSql = AnyColumn | SQL;
+
+/**
  * Great-circle distance in km between a listing's pickup point and a target,
  * as a SQL expression. Good enough for marketplace radius filtering; PostGIS
  * would be the move if this ever needs to be exact.
  */
-const distanceKmSql = (lat: number, lng: number): SQL<number> =>
+const distanceKmSql = (
+  lat: number,
+  lng: number,
+  pickupLat: CoordinateSql,
+  pickupLng: CoordinateSql
+): SQL<number> =>
   sql<number>`(
     6371 * acos(
       least(1, greatest(-1,
-        cos(radians(${lat})) * cos(radians(${listings.pickupLat}))
-        * cos(radians(${listings.pickupLng}) - radians(${lng}))
-        + sin(radians(${lat})) * sin(radians(${listings.pickupLat}))
+        cos(radians(${lat})) * cos(radians(${pickupLat}))
+        * cos(radians(${pickupLng}) - radians(${lng}))
+        + sin(radians(${lat})) * sin(radians(${pickupLat}))
       ))
     )
   )`;
@@ -113,6 +141,30 @@ const real = (value: number): SQL<number> =>
   sql<number>`${value}::double precision`;
 
 /**
+ * A coordinate column as the public view shows it — `roundCoordinate` in
+ * `src/lib/listing-coordinates.ts`, transcribed: the same double arithmetic,
+ * so the filter and the card round every pin to the same point.
+ */
+const roundedSql = (column: AnyColumn): SQL<number> =>
+  sql<number>`(floor(${column} * ${real(COORDINATE_SCALE)} + ${real(0.5)}) / ${real(COORDINATE_SCALE)})`;
+
+/**
+ * The four coordinates the location filters read, at the precision the
+ * viewer may know them. A filter on the exact pin answers more precisely
+ * than a card that rounds it, one radius at a time.
+ */
+const endpointsAt = (exact: boolean) => {
+  const at = (column: AnyColumn): CoordinateSql =>
+    exact ? column : roundedSql(column);
+  return {
+    pickupLat: at(listings.pickupLat),
+    pickupLng: at(listings.pickupLng),
+    dropoffLat: at(listings.dropoffLat),
+    dropoffLng: at(listings.dropoffLng),
+  };
+};
+
+/**
  * One leg's point-to-segment terms, as SQL.
  *
  * A transcription of `positionOnSegment` in `src/lib/route-corridor.ts`, built
@@ -123,8 +175,8 @@ const real = (value: number): SQL<number> =>
 const segmentTerms = (
   segment: CorridorSegment,
   lngScale: number,
-  latColumn: AnyColumn,
-  lngColumn: AnyColumn
+  latColumn: CoordinateSql,
+  lngColumn: CoordinateSql
 ) => {
   const dx = segment.bx - segment.ax;
   const dy = segment.by - segment.ay;
@@ -155,8 +207,8 @@ const segmentTerms = (
 /** How far a listing endpoint sits off the nearest leg, in km. */
 const pathDetourKmSql = (
   path: CorridorPath,
-  latColumn: AnyColumn,
-  lngColumn: AnyColumn
+  latColumn: CoordinateSql,
+  lngColumn: CoordinateSql
 ): SQL<number> => {
   const detours = path.segments.map(
     (segment) => segmentTerms(segment, path.lngScale, latColumn, lngColumn).detourKm
@@ -176,8 +228,8 @@ const pathDetourKmSql = (
  */
 const pathProgressKmSql = (
   path: CorridorPath,
-  latColumn: AnyColumn,
-  lngColumn: AnyColumn
+  latColumn: CoordinateSql,
+  lngColumn: CoordinateSql
 ): SQL<number> => {
   const rows = path.segments.map((segment) => {
     const { detourKm, progressKm } = segmentTerms(
@@ -294,7 +346,11 @@ export const listingsDal = {
   },
 
   /** Marketplace browse. Only open jobs are ever returned here. */
-  async browse(filters: BrowseFilters, tx: Executor = db) {
+  async browse(
+    filters: BrowseFilters,
+    options: BrowseOptions = {},
+    tx: Executor = db
+  ) {
     const conditions: (SQL | undefined)[] = [
       eq(listings.status, "open"),
       gte(listings.expiresAt, new Date()),
@@ -373,11 +429,16 @@ export const listingsDal = {
           ])
         : null;
 
+    // Every location question below — radius, corridor, direction, and the
+    // distance sort — reads the pins at the precision this viewer may know
+    // them, never more precisely than their cards show.
+    const at = endpointsAt(options.exactLocation === true);
+
     /** Distance from the driver, however they described where they are going. */
     const proximityKm = path
-      ? pathDetourKmSql(path, listings.pickupLat, listings.pickupLng)
+      ? pathDetourKmSql(path, at.pickupLat, at.pickupLng)
       : hasOrigin
-        ? distanceKmSql(filters.fromLat!, filters.fromLng!)
+        ? distanceKmSql(filters.fromLat!, filters.fromLng!, at.pickupLat, at.pickupLng)
         : null;
 
     if (path) {
@@ -387,12 +448,12 @@ export const listingsDal = {
       conditions.push(
         lte(proximityKm!, filters.radiusKm!),
         lte(
-          pathDetourKmSql(path, listings.dropoffLat, listings.dropoffLng),
+          pathDetourKmSql(path, at.dropoffLat, at.dropoffLng),
           filters.radiusKm!
         ),
         lte(
-          pathProgressKmSql(path, listings.pickupLat, listings.pickupLng),
-          pathProgressKmSql(path, listings.dropoffLat, listings.dropoffLng)
+          pathProgressKmSql(path, at.pickupLat, at.pickupLng),
+          pathProgressKmSql(path, at.dropoffLat, at.dropoffLng)
         )
       );
     } else if (proximityKm) {
@@ -400,15 +461,23 @@ export const listingsDal = {
     }
 
     const where = and(...conditions);
+    // « Plus récentes » means most recently *published*: a draft finished
+    // today or a request the scheduler published today is news today, whatever
+    // day it was first saved (draft_requests_spec.md §5).
+    const newest = desc(sql`coalesce(${listings.publishedAt}, ${listings.createdAt})`);
+    // The unique reference settles ties, which LIMIT/OFFSET pages need: rows
+    // that sort equal have no stable order between two queries, so a job
+    // could show on two pages and another on none. Ties are common — one
+    // scheduler run publishes its whole batch at one instant, and budgets
+    // repeat.
+    const tiebreak = desc(listings.reference);
     const orderBy = {
-      created_desc: [desc(listings.createdAt)],
-      budget_desc: [desc(listings.budgetCents)],
-      budget_asc: [asc(listings.budgetCents)],
-      pickup_asc: [asc(listings.pickupFrom)],
-      distance_asc: proximityKm
-        ? [asc(proximityKm)]
-        : [desc(listings.createdAt)],
-    }[filters.sort ?? "created_desc"] ?? [desc(listings.createdAt)];
+      created_desc: [newest, tiebreak],
+      budget_desc: [desc(listings.budgetCents), tiebreak],
+      budget_asc: [asc(listings.budgetCents), tiebreak],
+      pickup_asc: [asc(listings.pickupFrom), tiebreak],
+      distance_asc: proximityKm ? [asc(proximityKm), tiebreak] : [newest, tiebreak],
+    }[filters.sort ?? "created_desc"] ?? [newest, tiebreak];
 
     const items = await tx.query.listings.findMany({
       where,
@@ -476,6 +545,66 @@ export const listingsDal = {
     });
   },
 
+  /**
+   * Overwrites a request that has not gone live — a draft or a scheduled one —
+   * in one conditional statement, so two tabs, a double click or a delete in
+   * between cannot both win: whoever finds the row in that state writes it,
+   * and the other gets `undefined` (draft_requests_spec.md §3).
+   */
+  async updateUnpublished(
+    id: string,
+    shipperId: string,
+    data: Partial<InsertListing>,
+    tx: Executor = db
+  ): Promise<Listing | undefined> {
+    const [result] = await tx
+      .update(listings)
+      .set({ ...data, updatedAt: new Date() })
+      .where(
+        and(
+          eq(listings.id, id),
+          eq(listings.shipperId, shipperId),
+          inArray(listings.status, UNPUBLISHED)
+        )
+      )
+      .returning();
+    return result;
+  },
+
+  /** The same guard for a delete; the photos go with it (cascade). */
+  async deleteUnpublished(
+    id: string,
+    shipperId: string,
+    tx: Executor = db
+  ): Promise<{ id: string } | undefined> {
+    const [result] = await tx
+      .delete(listings)
+      .where(
+        and(
+          eq(listings.id, id),
+          eq(listings.shipperId, shipperId),
+          inArray(listings.status, UNPUBLISHED)
+        )
+      )
+      .returning({ id: listings.id });
+    return result;
+  },
+
+  /** Moves a listing only if it is still in `status` — the scheduler's guard. */
+  async updateIfStatus(
+    id: string,
+    status: ListingStatus,
+    data: Partial<InsertListing>,
+    tx: Executor = db
+  ): Promise<Listing | undefined> {
+    const [result] = await tx
+      .update(listings)
+      .set({ ...data, updatedAt: new Date() })
+      .where(and(eq(listings.id, id), eq(listings.status, status)))
+      .returning();
+    return result;
+  },
+
   /** Scheduled jobs whose go-live instant has arrived, for the publish cron. */
   async findDueScheduled(now: Date, tx: Executor = db) {
     return await tx.query.listings.findMany({
@@ -484,6 +613,27 @@ export const listingsDal = {
         lte(listings.scheduledPublishAt, now)
       ),
     });
+  },
+
+  /**
+   * The scheduler's claim on one request: the row, locked for the caller's
+   * transaction, only while it is still scheduled and due. A request saved
+   * meanwhile is read as saved — re-scheduled for later, it no longer
+   * matches — and one being saved right now is skipped until the next run.
+   */
+  async lockDueScheduled(id: string, now: Date, tx: Executor): Promise<Listing | undefined> {
+    const [row] = await tx
+      .select()
+      .from(listings)
+      .where(
+        and(
+          eq(listings.id, id),
+          eq(listings.status, "scheduled"),
+          lte(listings.scheduledPublishAt, now)
+        )
+      )
+      .for("update", { skipLocked: true });
+    return row;
   },
 
   async incrementViews(id: string, tx: Executor = db) {
@@ -502,6 +652,12 @@ export const listingsDal = {
 
   async deletePhotos(listingId: string, tx: Executor = db) {
     await tx.delete(photos).where(eq(photos.listingId, listingId));
+  },
+
+  /** A request's photos, replaced as a set — what the form holds is the truth. */
+  async replacePhotos(listingId: string, rows: InsertPhoto[], tx: Executor = db) {
+    await tx.delete(photos).where(eq(photos.listingId, listingId));
+    if (rows.length > 0) await tx.insert(photos).values(rows);
   },
 
   // ---- Shipment handoff ----

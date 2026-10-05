@@ -12,7 +12,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const harness = vi.hoisted(() => {
   type Row = Record<string, unknown>;
-  type Where = { column: string; value: unknown } | undefined;
+  type Where =
+    | { column: string; value: unknown }
+    | { column: string; values: unknown[] }
+    | { all: Where[] }
+    | undefined;
 
   const paymentsTable = {
     id: "id",
@@ -21,7 +25,12 @@ const harness = vi.hoisted(() => {
     createdAt: "createdAt",
     stripePaymentIntentId: "stripePaymentIntentId",
   };
-  const payoutsTable = { id: "id", shipmentId: "shipmentId" };
+  const payoutsTable = {
+    id: "id",
+    shipmentId: "shipmentId",
+    paymentId: "paymentId",
+    status: "status",
+  };
   const userTable = { id: "id" };
 
   const paymentRows: Row[] = [];
@@ -29,8 +38,15 @@ const harness = vi.hoisted(() => {
   const rowsFor = (table: object) =>
     table === paymentsTable ? paymentRows : payoutRows;
 
-  const matches = (row: Row, where: Where) =>
-    !where || row[where.column] === where.value;
+  // `markRefunded` voids the payouts drawn on the payment with a compound
+  // predicate (payout_safety_spec.md §3), so `and` and `inArray` are applied
+  // rather than read as a match-everything.
+  const matches = (row: Row, where: Where): boolean => {
+    if (!where) return true;
+    if ("all" in where) return where.all.every((w) => matches(row, w));
+    if ("values" in where) return where.values.includes(row[where.column]);
+    return row[where.column] === where.value;
+  };
 
   const query = (store: Row[]) => ({
     findFirst: async (opts: { where?: Where } = {}) =>
@@ -65,6 +81,8 @@ const harness = vi.hoisted(() => {
       payouts: query(payoutRows),
       user: query([]),
     },
+    transaction: async <T,>(fn: (tx: unknown) => Promise<T>): Promise<T> =>
+      await fn(db),
   };
 
   return {
@@ -73,6 +91,7 @@ const harness = vi.hoisted(() => {
     payoutsTable,
     userTable,
     paymentRows,
+    payoutRows,
     reset: () => {
       paymentRows.length = 0;
       payoutRows.length = 0;
@@ -89,6 +108,8 @@ vi.mock("@/db/schema/users", () => ({ user: harness.userTable }));
 vi.mock("drizzle-orm", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   eq: (column: unknown, value: unknown) => ({ column, value }),
+  inArray: (column: unknown, values: unknown[]) => ({ column, values }),
+  and: (...parts: unknown[]) => ({ all: parts.filter(Boolean) }),
   // The refund lookup orders by creation; the harness keeps insertion order,
   // which is the same thing here.
   desc: (column: unknown) => column,
@@ -270,6 +291,20 @@ describe("markRefunded", () => {
   it("corrects the document it gave a receipt for", async () => {
     await paymentsService.markRefunded("pay-1");
 
+    expect(invoicesService.createCreditNoteForPayment).toHaveBeenCalledWith(
+      "pay-1"
+    );
+  });
+
+  it("voids the driver's unpaid share and still raises the correction", async () => {
+    // The void runs inside the refund's transaction; the credit note after it,
+    // contained as before (payout_safety_spec.md §3).
+    harness.payoutRows.push({ id: "pyt-1", paymentId: "pay-1", status: "processing" });
+
+    const row = await paymentsService.markRefunded("pay-1");
+
+    expect(row.status).toBe("refunded");
+    expect(harness.payoutRows[0].status).toBe("cancelled");
     expect(invoicesService.createCreditNoteForPayment).toHaveBeenCalledWith(
       "pay-1"
     );

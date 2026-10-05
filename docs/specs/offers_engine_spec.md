@@ -217,11 +217,29 @@ All of the following commit together or none do:
 ### Idempotency
 
 Re-POSTing accept on an already-`accepted` offer returns `200` with the existing
-shipment, **not** `409` and **not** a second shipment. Keyed on `offer.id`.
+shipment's id, **not** `409` and **not** a second shipment. Keyed on `offer.id`.
 
-### Response `200`
+### Response `201` (`200` on a repeat)
 
-`{ offer, shipment, payment: { status, clientSecret? } }`
+`{ offer, shipment: { id } | null, alreadyAccepted }` — built by
+`offersService.acceptOfferForCaller` (`toAwardView`), the same answer
+`POST /api/listings/:id/take` gives (`take_job_spec.md` §2):
+
+- `offer` is the accepted offer's **own columns** (`getTableColumns(offers)`)
+  and nothing beside them. On a repeat the offer is re-read through
+  `offersDal.getById`, which loads the carrier's whole `user` row — email,
+  Stripe ids, preferences — and the vehicle with its plate; neither leaves
+  (`listing_privacy_spec.md` §3).
+- `shipment` is its id. The requester reads the run through
+  `GET /api/shipments/:id`, which projects it.
+- Never `rejectedOffers` — every rival's price, message, vehicle and user id
+  (§6: a carrier sees only their own bid) — and never the `payment` row. Both
+  stay inside the service, where `notifyAwardOutcome` and the compensation
+  (§5.8) use them.
+
+`acceptOffer` itself still returns the shipment row, the rejected bids and
+the payment: its internal callers — `assignDirect`, the thread-offer bubble,
+the seed — use the shipment, and none of them hands the result to a browser.
 
 ---
 
@@ -240,6 +258,10 @@ Visibility differs by viewer — this matters, and is easy to get wrong:
 
 Sort options: `price_asc` (default), `price_desc`, `rating_desc`, `pickup_asc`,
 `created_desc`.
+
+The rule holds for every response, not only this one. A carrier who takes a
+job is answered with their own offer and nothing of the bids the award
+rejected (§5 Response).
 
 `GET /api/carrier/offers?status=` — the authenticated carrier's own offers across
 all listings, for the "my offers" screen.
@@ -284,5 +306,8 @@ When a listing passes `expiresAt` with no accepted offer (cron, per
   rate (100% during the testing phase).
 - Concurrent accept — only one wins (edge case 1).
 - Accept idempotency (§5).
+- The accept answer, fresh and repeat: exactly `offer`, `shipment: { id }` and
+  `alreadyAccepted` — no rival bid, no payment row, and on the repeat no
+  carrier `user` row and no plate (§5 Response).
 - Stripe-failure compensation restores `open` + `pending` (§5.8).
 - Visibility matrix in §6 for all four viewer classes.

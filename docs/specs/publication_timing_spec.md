@@ -22,7 +22,7 @@ away, is **not** changed: re-boarding is tested against it
 (`offers.service.test.ts`, "refuses to re-board into a window too short to bid
 in"). The form reports the real deadline instead (§3.2).
 
-## 2. Server — `listingsService.createListing`
+## 2. Server — `listingsService.createListing` and `saveDraft`
 
 | `publish` | Checks (in this order) | `expires_at` | `scheduled_publish_at` |
 |---|---|---|---|
@@ -31,11 +31,16 @@ in"). The form reports the real deadline instead (§3.2).
 
 A draft's `expires_at` is a placeholder for a NOT NULL column: every reader of
 it filters on `status = 'open'` first (board, `findExpired`,
-`assertListingOpen`, thread offers) and `publishListing` recomputes it. A draft
-keeps no schedule: the column means "while status is `scheduled`" and nothing
-publishes a draft at its scheduled time.
+`assertListingOpen`, thread offers), and finishing the draft recomputes it. A
+draft keeps no schedule: the column means "while status is `scheduled`" and
+nothing publishes a draft at its scheduled time.
 
-`publishListing` is unchanged (it re-checks both codes against `now`).
+Since 2.60.0 `publishListing` is gone — no route ever called it — and a saved
+request is finished through `saveDraft` (`PUT /api/listings/:id/draft`,
+`draft_requests_spec.md` §3), which applies this table exactly as
+`createListing` does: the three checks against its own `now` when it
+publishes or schedules, none when it saves a draft again. Both share
+`assertPublishable`, so the two paths cannot drift.
 
 ## 3. Client — `/create`
 
@@ -125,6 +130,9 @@ A blocked action moves to the step that holds the problem and scrolls to it.
   coerced to `NaN` is a type error, which aborts the object before the root
   `superRefine`; `""` coerces to 0 and fails `.positive()` as an ordinary issue,
   so the When step's cross-date rules now run when « Suivant » is pressed there.
+  Since 2.60.0 the field holds the box's text and a preprocess reads it rather
+  than `z.coerce` — same effect, and « 40,5 » is no longer `NaN`
+  (`numeric_input_spec.md` §7).
 - The three schedule rules (`scheduledPublishRequired`, `scheduledPublishPast`,
   `scheduledPublishAfterPickup`) leave the schema: they are publication rules
   (§3.2) and must not block a draft.
@@ -198,7 +206,9 @@ and overflowed by 93 px; it wraps too.
 - `src/server/services/__tests__/listings.service.test.ts`: the pinned test
   flips — a draft with a past pickup is created as `draft` with
   `expiresAt = pickupFrom`; a draft with a past schedule is created with
-  `scheduledPublishAt: null`; publishing keeps all three codes.
+  `scheduledPublishAt: null`; publishing keeps all three codes. `saveDraft`
+  keeps the publication rules for publishing and never for a draft
+  (`draft_requests_spec.md` §7).
 - `src/features/app/create/__tests__/jobs.api.test.ts`: a draft's payload has no
   `scheduledPublishAt`.
 - Locale parity.

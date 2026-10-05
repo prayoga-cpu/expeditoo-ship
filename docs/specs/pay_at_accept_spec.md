@@ -38,7 +38,7 @@ to them instead of failing the charge.
 | Owner of a `direct` job, `MOCK_PAYMENTS` off | Payment (§3) |
 | Owner of a `direct` job, `MOCK_PAYMENTS` on (local dev, beta seed — never production) | Confirmation only, "Mode test : aucune carte n'est débitée" |
 | Operator/admin on an `expedion` job | Confirmation only, "Le client a déjà payé ce transport sur Expedion" |
-| A carrier taking a job (`takeJob`), `assignDirect` | No dialog; unchanged. On a direct job `takeJob` still charges the requester's **saved** card off-session, and with none it fails `PAYMENT_METHOD_REQUIRED` and stays a pending bid |
+| A carrier taking an escalated job (`takeJob`), `assignDirect` | No dialog; unchanged. Both are `expedion` jobs, recorded rather than charged. Since 2.60.0 a direct job cannot be taken (`TAKE_NOT_AVAILABLE`, `take_job_spec.md`); until then a take charged the requester's **saved** card off-session, and with none failed `PAYMENT_METHOD_REQUIRED` and stayed a pending bid |
 | Standalone thread offer (no job) | No dialog; no money moves, unchanged |
 
 Surfaces: the offer cards on `/listing/[id]` and the accept button in a
@@ -130,6 +130,12 @@ This branch sits **before** the mock branch: a real `pi_…` stays real while
 
 Without `paymentIntentId` the existing lanes are unchanged: `expedion` records,
 mock mocks, and a direct job with a saved card is charged off-session.
+
+> **Amended (2.60.0) by `take_job_spec.md`.** No screen reaches that last
+> branch any more. Its one UI caller was a carrier taking a direct job, which
+> is now refused; the dialog sends an intent whenever a charge is due. It
+> answers only an accept the requester sends through the API with no intent,
+> and stays because §6 pins it.
 
 ### 3.4 Releasing an authorisation that was not used
 

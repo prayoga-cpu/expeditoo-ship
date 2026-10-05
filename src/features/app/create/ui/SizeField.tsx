@@ -1,10 +1,11 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { RadioGroup } from "@/components/ui/radio-group";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { NUMERIC_RULES } from "@/lib/numeric-input";
 import {
   SIZE_MODES,
   SIZE_PRESET_DIMENSIONS,
@@ -77,31 +78,30 @@ export function SizeField({ form }: { form: JobFormApi["form"] }) {
           })}
         </RadioGroup>
       ) : (
+        // The form holds each box's text, « 45,5 » included; the schema
+        // reads it (numeric_input_spec.md §7).
         <div className="grid grid-cols-3 gap-3">
           <div>
             <Label htmlFor="lengthCm">{t("length")}</Label>
-            <Input
+            <NumericInput
               id="lengthCm"
-              type="number"
-              step="1"
+              rules={NUMERIC_RULES.CM}
               {...register("lengthCm")}
             />
           </div>
           <div>
             <Label htmlFor="widthCm">{t("width")}</Label>
-            <Input
+            <NumericInput
               id="widthCm"
-              type="number"
-              step="1"
+              rules={NUMERIC_RULES.CM}
               {...register("widthCm")}
             />
           </div>
           <div>
             <Label htmlFor="heightCm">{t("height")}</Label>
-            <Input
+            <NumericInput
               id="heightCm"
-              type="number"
-              step="1"
+              rules={NUMERIC_RULES.CM}
               {...register("heightCm")}
             />
           </div>

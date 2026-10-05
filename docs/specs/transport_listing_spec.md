@@ -27,6 +27,16 @@ draft ──publish──► open ──accept offer──► awarded ──pick
 
 Only `open` listings accept offers (`docs/specs/offers_engine_spec.md` §3).
 
+> **Amended (2.60.0).** `scheduled` sits between `draft` and `open`: published
+> for a later moment, invisible to carriers until `publishScheduled` turns it
+> `open` — or `expired`, when its pickup window closed first
+> (`publication_timing_spec.md`). Neither `draft` nor `scheduled` is final:
+> the owner finishes, re-schedules or publishes either through
+> `PUT /api/listings/:id/draft`, turns a `scheduled` one back into a `draft`
+> with `POST /api/listings/:id/unschedule`, and deletes either outright with
+> `DELETE /api/listings/:id/draft` (`draft_requests_spec.md` §1–§4).
+> `published_at` records the moment a request first went live (§5 there).
+
 ---
 
 ## 2. Fields
@@ -109,13 +119,30 @@ Carriers may bid above budget (`offers_engine_spec.md` edge case 7).
 
 | Method | Path | Auth | Notes |
 |---|---|---|---|
-| `POST` | `/api/listings` | shipper | Creates `draft` or `open` via `publish: bool` |
-| `GET` | `/api/listings` | any | Marketplace browse; only `open` |
-| `GET` | `/api/listings/:id` | any | Non-owners never see `draft` → `404` |
+| `POST` | `/api/listings` | any session | Creates `draft`, `scheduled` or `open` (`publish`, `scheduledPublishAt`). No role check (`transport_request_spec.md`) |
+| `GET` | `/api/listings` | session — `401` without | The board; only `open`. Each row projected for the viewer (`listing_privacy_spec.md` §3) |
+| `GET` | `/api/listings/:id` | none needed | A job stays a shareable link; projected for the viewer. `draft` and `scheduled` → `404` for anyone but the owner |
 | `PATCH` | `/api/listings/:id` | owner | §4 |
-| `POST` | `/api/listings/:id/publish` | owner | `draft` → `open` |
-| `POST` | `/api/listings/:id/cancel` | owner or admin | §5 |
-| `GET` | `/api/listings/me` | owner | The shipper's own, any status |
+| `DELETE` | `/api/listings/:id` | owner or admin | §5 (`cancelListing`). An `awarded` job → `409 CANCEL_VIA_SHIPMENT`: it is cancelled on its shipment (`cancellations_spec.md` §8) |
+| `GET` | `/api/listings/me` | session | The caller's own, any status |
+| `GET` | `/api/listings/:id/draft` | owner | A `draft` or `scheduled` request, to resume it. `404` for anyone else, `409 LISTING_NOT_DRAFT` once live |
+| `PUT` | `/api/listings/:id/draft` | owner | Saves it again, schedules it or publishes it now; the body is `createListingSchema` |
+| `DELETE` | `/api/listings/:id/draft` | owner | Hard-deletes a `draft` or `scheduled` request |
+| `POST` | `/api/listings/:id/unschedule` | owner | `scheduled` → `draft`; `409 LISTING_NOT_SCHEDULED` otherwise |
+
+> **Amended (2.60.0).** This table listed `POST /api/listings/:id/publish` and
+> `POST /api/listings/:id/cancel`; neither route ever existed. A draft goes
+> live through `PUT …/draft` (`draft_requests_spec.md` §3), and
+> `listingsService.publishListing`, which no route called, is removed.
+> Cancelling is `DELETE /api/listings/:id`. The board needs a session since
+> 2.60.0; a job's own link deliberately does not. "Owner" is enforced by the
+> service; the route only requires a session. The four `…/draft` and
+> `…/unschedule` rows are specified in `draft_requests_spec.md` §2–§4 and §6.
+>
+> The other routes under `/api/listings/:id/` act on a job rather than edit
+> it, and are specified where they live: `offers` (`offers_engine_spec.md`),
+> `take` (`take_job_spec.md`), `revoke-award` (`cancellations_spec.md`),
+> `carriers` and `carriers/:matchId/contact` (`carriers_on_route_spec.md`).
 
 ### Browse filters (`GET /api/listings`)
 
@@ -124,7 +151,10 @@ Carriers may bid above budget (`offers_engine_spec.md` edge case 7).
 `toLat`/`toLng`, `days`/`slots`/`tzOffset`, `minBudget`/`maxBudget`,
 `pickupFrom`/`pickupUntil`, `maxWeightKg`, `sort`
 (`created_desc` default, `budget_desc`, `budget_asc`, `pickup_asc`, `distance_asc`),
-`page`/`limit` (limit ≤ 50).
+`page`/`limit` (limit ≤ 50). Since 2.60.0 `created_desc` orders by
+publication — `published_at`, falling back to `created_at` — and every sort
+ends on the unique `reference`, so two pages never share or skip a row
+(`draft_requests_spec.md` §5).
 
 The location and availability parameters are specified in
 `board_route_search_spec.md`: an arrival turns the radius filter into a
@@ -133,6 +163,11 @@ driver can actually drive.
 
 A carrier browsing sees `hasBid: boolean` on each row so the UI can mark jobs
 already bid on.
+
+> **Not built** (found 2.60.0). No server code has ever set `hasBid`: the
+> client's `BoardJob` declares it optional and `JobCard` renders a marker when
+> it is true, so the marker never shows. Recorded here rather than left as a
+> promise.
 
 ---
 
@@ -161,6 +196,13 @@ No edits at all once `awarded` → `409 LISTING_NOT_EDITABLE`.
 | `awarded` | → `cancelled`, Stripe authorisation **released** (never captured), shipment cancelled, carrier notified. Repeated cancellations at this stage are flagged for admin review |
 | `in_progress` | Shipper cannot self-cancel → `409 CANCEL_REQUIRES_SUPPORT` |
 | `completed` | → `409 LISTING_NOT_CANCELLABLE` |
+
+> **Superseded for `awarded` and `in_progress`.** `DELETE /api/listings/:id`
+> refuses both with `409 CANCEL_VIA_SHIPMENT`: a job with a driver is
+> cancelled on its shipment, and the client is refunded, not released
+> (`cancellations_spec.md` §4, §6, §8). Since 2.60.0 the owner deletes a
+> `draft` or `scheduled` request through `DELETE /api/listings/:id/draft`
+> (§3).
 
 ---
 
@@ -195,4 +237,8 @@ No edits at all once `awarded` → `409 LISTING_NOT_EDITABLE`.
 - Publish transitions and the `expiresAt` clamp (edge case 2).
 - Material vs non-material edit behaviour (§4), asserting offer invalidation counts.
 - Cancellation matrix (§5) including the Stripe release path.
-- Browse filter correctness, especially radius search and the `hasBid` flag.
+- Browse filter correctness, especially radius search. (The `hasBid` flag this
+  line also named was never built — §3.)
+- Who reads what on `browse` and `getListing`, and the `404` on a `draft` or
+  `scheduled` request for anyone but its owner: `listing_privacy_spec.md` §5.
+- The draft routes (§3): `draft_requests_spec.md` §7.

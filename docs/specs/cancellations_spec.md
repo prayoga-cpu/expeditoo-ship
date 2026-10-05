@@ -309,6 +309,12 @@ exist, and `withdrawalsDal.availableFor` counts a `scheduled` payout as
 withdrawable regardless of the payment behind it. A post-delivery reversal stays
 an admin refund, and §10.3 records the gap.
 
+> **Superseded in part — 2.60.0, `payout_safety_spec.md` §2–§3.** A refund,
+> the admin one included, now voids every unpaid payout of the job (`scheduled`
+> or `processing`), and the balance counts a payout only while its shipment is
+> `DELIVERED` and its payment `captured`. A payout already `paid` is still never
+> clawed back.
+
 ---
 
 ## 6. Money
@@ -394,6 +400,29 @@ incidentally. The photo gate's actual invariant is unchanged and is re-asserted
 there: **a job being called off is the last thing that should demand a photograph
 first.**
 
+### 7.1 One move, one writer (2.60.0)
+
+`updateStatus` checks the transition against the status it read
+(`getOwnership`), and the write used to match on the id alone. Two requests
+making the same move at once — the carrier and their driver both pressing
+« Livré », or staff and the driver — both passed the check and both wrote, so
+both ran everything after: two `shipment_events` rows, two client
+notifications and emails, and two `settleDelivery` calls. `schedulePayout`
+checks then inserts, so the second could schedule a **second payout for one
+delivery**, which the withdrawal balance would then count twice.
+
+The write is now a compare-and-set: `shipmentsDal.updateStatus(id, next,
+{ expected })` adds `AND status = expected` and returns `undefined` when no row
+matched, and `updateStatus` passes the status it read. The request that finds
+no row answers **`409 INVALID_STATUS_TRANSITION`** — what it would have been
+told a moment later — and runs nothing else: no event, no listing completion,
+no settlement, no notification, no email, no confirmation request, no Expedion
+write-back. The driver's screen already words that code « Cette livraison a
+évolué. Actualisez pour voir son état actuel. »
+
+`expected` is optional, so a caller with no read to compare against keeps the
+plain write; `updateStatus` is the only caller today.
+
 ---
 
 ## 8. API
@@ -438,11 +467,38 @@ already translate — so no new class is needed in either list.
 
 ### 8.2 Idempotency
 
-A second cancellation of an already-`CANCELLED` shipment returns the existing row
-with `alreadyCancelled: true`. Today the second call fires the refund **first**
+A second cancellation of an already-`CANCELLED` shipment answers with
+`alreadyCancelled: true`. Today the second call fires the refund **first**
 and only then discovers `canTransition('CANCELLED','CANCELLED')` is false, so a
 refund attempt goes out under a 409. The precedent is `shipment_confirmations`,
 which absorbs a repeat rather than erroring.
+
+**The answer (2.60.0).** Both verbs, first call and repeat alike, answer
+`{ shipment: { id }, listingId, alreadyCancelled }` and nothing else. The
+repeat used to answer with `shipmentsDal.getById` — every party's whole `user`
+row (email, Stripe ids), the price, the offer and the listing's budget — to
+whichever party pressed twice; a driver read the requester's Stripe ids and
+the price they must never see (`roles_spec.md` §3), and a requester's double
+tap on « Annuler » was enough to reach it. The caller rereads the run through
+`GET /api/shipments/:id`, which projects it (`listing_privacy_spec.md` §3).
+
+**Who may use a verb is asked before the repeat.** `cancelJob` refuses a
+transporter `USE_WITHDRAW_ENDPOINT` before it looks at the status: finishing a
+half-applied cancellation is ending the client's job, and finishing a
+half-applied *withdrawal* as a cancellation would kill a job that was meant to
+go back on the board. `withdrawFromJob` refuses a driver
+(`FORBIDDEN_DRIVER_CANNOT_WITHDRAW`) and the requester (`FORBIDDEN`) before it
+too, so nobody refused a live run can re-board a cancelled one. The category
+and status checks stay after the repeat, as before.
+
+**A repeat settles only its own run (2.60.0).** The cancel repeat used to
+finish the settlement when the run was still the job's award *or* the job
+was `awarded` at all. The second arm only ever matched a job re-awarded to
+another carrier after a withdrawal — a half-applied cancellation still names
+its own offer, `shipments.offer_id` being `NOT NULL` — so a requester's stale
+tab pressing « Annuler » on the old run closed the new award: the new winner's
+offer rejected and the listing cancelled, while the new run went on and its
+money stayed taken. The repeat now settles only while `isCurrentRun` holds.
 
 ---
 
@@ -511,7 +567,9 @@ for `CANCELLED` gains the same line.
    rejected: it leaves a driverless job's money with the platform, and the
    client's own protection is worth more than the saved round trip.
 3. **No clawback after delivery** (§5.6). `payout_status = 'cancelled'` and
-   `invoice_status = 'void'` exist and nothing writes either.
+   `invoice_status = 'void'` exist and nothing writes either. *Narrowed by
+   2.60.0:* a refund now writes `cancelled` on every unpaid payout of the job
+   (`payout_safety_spec.md` §3); money already paid out is still not recovered.
 4. **The re-boarded job is not the job that was posted.** Its window may have
    slid 24 h and the replacement's price will differ. The client is told; they
    are not *asked*. For a hard-deadline job an operator has to catch it.
@@ -584,6 +642,29 @@ for `CANCELLED` gains the same line.
   decrements `offers_count` for the withdrawn winner.
 - `compensateFailedAward` repairs the expiry and leaves the client's dates alone.
 - `DELETE /api/listings/:id` refuses an awarded job, for an admin too.
+
+**The answer and the refusals before the repeat** (§8.2, same file)
+- Cancel and withdraw answer `{ shipment: { id }, listingId, alreadyCancelled }`
+  on a first call and on a repeat, and the repeat never reads
+  `shipmentsDal.getById`.
+- On a `CANCELLED` run, a driver calling withdraw gets
+  `FORBIDDEN_DRIVER_CANNOT_WITHDRAW`, the requester `FORBIDDEN`, and a carrier
+  calling cancel `USE_WITHDRAW_ENDPOINT` — with no re-board and no listing
+  write.
+- A cancel repeated on an old run leaves a job re-awarded to another carrier
+  alone: no listing write, no bridge call, no refund.
+
+**One move, one writer** (§7.1)
+- `src/server/dal/__tests__/shipments-status.dal.test.ts` (rendered SQL):
+  with `expected`, the UPDATE matches `id AND status = expected`; without it,
+  the id alone.
+- `shipment.service.test.ts`: `updateStatus` moves the run only from the
+  status it read; a `DELIVERED` whose write matched no row answers
+  `INVALID_STATUS_TRANSITION` and calls none of `getForShipment`,
+  `schedulePayout`, `createEvent`, the listing update, the notification, the
+  email, the confirmation request or the Expedion write-back.
+- `shipment-photo-gate.test.ts`: the gated and ungated moves pass the
+  expected status.
 
 **Payments** (`src/server/services/__tests__/payments.service.test.ts`)
 - `refundForJob` finds the captured payment by listing, including one detached from a dead shipment.

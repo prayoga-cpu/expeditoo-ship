@@ -26,6 +26,16 @@ a second submit while one is in flight), so no gap can post it twice
 
 The destination is decided by `postCreateDestination(job, publish)` (pure).
 
+> **Amended (2.60.0).** The same routing applies when the form finishes a
+> saved request (`/create?draft=<id>`, `draft_requests_spec.md` §2–§3): the
+> answer is then `PUT /api/listings/:id/draft`'s, for the same id. Before
+> navigating, the form drops any cached `["job", id]` copy — the one the
+> request's own page leaves behind, which still holds it as it was before the
+> save. Read as a `draft`, §3 would go straight past the thank-you page to
+> `/listing/{id}`; read as `scheduled`, a request just published would be
+> thanked as still scheduled. A request published meanwhile (409
+> `LISTING_NOT_DRAFT`) is `draft_requests_spec.md` §2's case, not this page's.
+
 ## 2. Route
 
 - `src/app/(app)/(main)/create/success/[id]/page.tsx` — server component. No
@@ -63,12 +73,19 @@ The card, centred in the shell (no `min-h-screen`: `<main>` scrolls):
 
 ### What it says, and on what authority
 
+> **Amended (2.60.0) by `take_job_spec.md`.** In 2.59.0 a carrier could take
+> any open job at its budget, so two rows here read "you choose — unless a
+> carrier takes it at your budget" and "nothing charged before the award", and
+> `next.choose` / `next.pay` (§4) said the same. Taking is now for escalated
+> jobs only, and this page renders only for `/create` jobs, which are always
+> `direct` — so both sentences are back to the plain promise.
+
 | Sentence | True because |
 |---|---|
-| offers until `{expiresAt}` | `listings.expires_at`, set by `createListing` from the publication moment |
+| offers until `{expiresAt}` | `listings.expires_at`, set from the publication moment by `createListing`, or by `saveDraft` for a finished draft (`publication_timing_spec.md` §2) |
 | notified in the app for each offer | `offersService.submitOffer` creates a bell notification for the owner |
-| you choose — unless a carrier takes it at your budget | a carrier may take any open job at its budget (`offersService.takeJob`, `TakeJobPanel`), with no origin check |
-| nothing charged before the award | `pay_at_accept_spec.md`: the card is taken in the accept dialog; on `takeJob` the requester's **saved** card is charged off-session at award, and with none the take is refused (`PAYMENT_METHOD_REQUIRED`) |
+| you choose your carrier | on a `direct` job `acceptOffer` admits the owner and nobody else, and `takeJob` refuses it (`TAKE_NOT_AVAILABLE`, `take_job_spec.md` §2–§3) |
+| you pay only when you accept an offer | the card is taken when the requester accepts, in the accept dialog (`pay_at_accept_spec.md` §3); with no take on a direct job, nothing else charges it |
 | scheduled for `{scheduledPublishAt}` | the row's own column (added to `Job`) |
 
 It does **not** say an email was sent. `announceListingPosted` sends one only on
@@ -90,8 +107,8 @@ no count.
 | `next.title` | Et maintenant ? | What happens next? |
 | `next.offers` | Les transporteurs vous envoient leurs offres jusqu'au {date}. | Carriers send you their offers until {date}. |
 | `next.notify` | Vous êtes prévenu dans l'application à chaque nouvelle offre. | You are notified in the app for every new offer. |
-| `next.choose` | Vous comparez les offres et choisissez votre transporteur — à moins qu'un transporteur n'accepte directement votre demande à votre budget. | You compare the offers and choose your carrier — unless a carrier takes your request at your budget directly. |
-| `next.pay` | Rien n'est prélevé avant que le transport soit attribué : quand vous acceptez une offre, ou quand un transporteur accepte votre demande à votre budget. | Nothing is charged until the transport is awarded: when you accept an offer, or when a carrier takes your request at your budget. |
+| `next.choose` | Vous comparez les offres et choisissez votre transporteur. | You compare the offers and choose your carrier. |
+| `next.pay` | Vous ne payez qu'au moment où vous acceptez une offre. | You only pay when you accept an offer. |
 | `actions.view` | Voir ma demande | View my request |
 | `actions.myRequests` | Mes demandes | My requests |
 | `actions.another` | Déposer une autre demande | Post another request |
@@ -110,4 +127,7 @@ Dates through `useFormatter` (day, short month, hour, minute).
 - `src/features/app/create/__tests__/destination.test.ts`:
   `postCreateDestination` — publish → `/create/success/{id}`, draft →
   `/listings/me`.
+- `src/features/app/create/__tests__/useJobForm.test.tsx`: a resumed draft
+  published with PUT lands on `/create/success/{id}` for the same id
+  (`draft_requests_spec.md` §7).
 - Locale parity.

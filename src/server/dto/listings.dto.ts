@@ -34,6 +34,8 @@ export const MIN_BUDGET_CENTS = 100;
 export const MAX_BUDGET_CENTS = 10_000_000;
 /** French road transport limit. */
 export const MAX_WEIGHT_KG = 44_000;
+/** The most items one request counts — all the form's quantity box reaches. */
+export const MAX_QUANTITY = 99_999;
 /** Minimum separation between pickup and dropoff, in metres. */
 export const MIN_ROUTE_METRES = 500;
 
@@ -160,7 +162,7 @@ const baseListingSchema = z.object({
   lengthCm: z.number().positive().optional(),
   widthCm: z.number().positive().optional(),
   heightCm: z.number().positive().optional(),
-  quantity: z.number().int().min(1).default(1),
+  quantity: z.number().int().min(1).max(MAX_QUANTITY).default(1),
   isFragile: z.boolean().default(false),
   needsHelp: z.boolean().default(false),
   // Absent means "not stated", not "unprotected" — the same convention

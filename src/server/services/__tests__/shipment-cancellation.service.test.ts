@@ -677,6 +677,25 @@ describe("repairing a half-applied cancellation", () => {
     expect(shipmentsDal.cancel).not.toHaveBeenCalled();
   });
 
+  it("leaves a job re-awarded to another carrier alone when an old run is cancelled again", async () => {
+    // A stale tab repeating « Annuler » on the withdrawn carrier's run: the job
+    // has been re-boarded and awarded to someone else since.
+    vi.mocked(listingsDal.getById).mockResolvedValue(
+      listing({ status: "awarded", acceptedOfferId: "offer-new-winner" }) as never
+    );
+
+    const result = await shipmentCancellationService.cancelJob(
+      "ship-1",
+      { category: "no_longer_needed" },
+      { kind: "session", viewer: SHIPPER }
+    );
+
+    expect(result.alreadyCancelled).toBe(true);
+    expect(listingsDal.update).not.toHaveBeenCalled();
+    expect(expedionBridgeService.onJobCancelled).not.toHaveBeenCalled();
+    expect(paymentsService.refundForJob).not.toHaveBeenCalled();
+  });
+
   it("re-boards a job left awarded behind a cancelled run", async () => {
     const result = await shipmentCancellationService.withdrawFromJob(
       "ship-1",
@@ -704,6 +723,113 @@ describe("repairing a half-applied cancellation", () => {
     );
 
     expect(expedionBridgeService.onJobCancelled).toHaveBeenCalled();
+  });
+});
+
+// ========================================
+// What a cancellation answers
+// ========================================
+//
+// The repeat used to answer with `shipmentsDal.getById` — every party's whole
+// `user` row, the price, the offer and the listing's budget — to whichever
+// party pressed twice, a driver included.
+
+describe("the answer, first call or repeat", () => {
+  const ANSWER = { shipment: { id: "ship-1" }, listingId: "job-1" };
+
+  beforeEach(() => {
+    vi.mocked(shipmentsDal.getById).mockResolvedValue({
+      id: "ship-1",
+      priceCents: 15_000,
+      shipper: { id: "shipper-1", email: "client@example.com", stripeCustomerId: "cus_requester" },
+      listing: { id: "job-1", budgetCents: 20_000 },
+    } as never);
+  });
+
+  const cancelled = () =>
+    vi.mocked(shipmentsDal.getOwnership).mockResolvedValue(
+      ownership({ status: "CANCELLED" }) as never
+    );
+
+  it("names the run and the job when a cancellation lands", async () => {
+    const result = await shipmentCancellationService.cancelJob(
+      "ship-1",
+      { category: "no_longer_needed" },
+      { kind: "session", viewer: SHIPPER }
+    );
+
+    expect(result).toEqual({ ...ANSWER, alreadyCancelled: false });
+  });
+
+  it("names them the same way on a repeat, and reads no shipment graph", async () => {
+    cancelled();
+
+    const result = await shipmentCancellationService.cancelJob(
+      "ship-1",
+      { category: "other" },
+      { kind: "session", viewer: SHIPPER }
+    );
+
+    expect(result).toEqual({ ...ANSWER, alreadyCancelled: true });
+    expect(shipmentsDal.getById).not.toHaveBeenCalled();
+  });
+
+  it("answers a withdrawal, and its repeat, with the same shape", async () => {
+    const first = await shipmentCancellationService.withdrawFromJob(
+      "ship-1",
+      { category: "vehicle_breakdown" },
+      CARRIER
+    );
+    cancelled();
+    const repeat = await shipmentCancellationService.withdrawFromJob(
+      "ship-1",
+      { category: "other" },
+      CARRIER
+    );
+
+    expect(first).toEqual({ ...ANSWER, alreadyCancelled: false });
+    expect(repeat).toEqual({ ...ANSWER, alreadyCancelled: true });
+    expect(JSON.stringify(repeat)).not.toMatch(/cus_requester|client@example\.com|15000/);
+  });
+
+  it("refuses a driver on a cancelled run before the repeat, and re-boards nothing", async () => {
+    cancelled();
+
+    expect(
+      await codeFrom(() =>
+        shipmentCancellationService.withdrawFromJob("ship-1", { category: "other" }, DRIVER)
+      )
+    ).toBe("FORBIDDEN_DRIVER_CANNOT_WITHDRAW");
+    expect(offersService.reopenForRebid).not.toHaveBeenCalled();
+  });
+
+  it("refuses the requester on a cancelled run before the repeat, too", async () => {
+    cancelled();
+
+    expect(
+      await codeFrom(() =>
+        shipmentCancellationService.withdrawFromJob("ship-1", { category: "other" }, SHIPPER)
+      )
+    ).toBe("FORBIDDEN");
+    expect(offersService.reopenForRebid).not.toHaveBeenCalled();
+  });
+
+  it("sends a transporter next door on a cancelled run, closing nothing", async () => {
+    // Finishing a half-applied cancellation is ending the client's job — and
+    // finishing a half-applied *withdrawal* as a cancellation would kill a job
+    // that was meant to go back on the board.
+    cancelled();
+
+    expect(
+      await codeFrom(() =>
+        shipmentCancellationService.cancelJob(
+          "ship-1",
+          { category: "other" },
+          { kind: "session", viewer: CARRIER }
+        )
+      )
+    ).toBe("USE_WITHDRAW_ENDPOINT");
+    expect(listingsDal.update).not.toHaveBeenCalled();
   });
 });
 
@@ -837,11 +963,11 @@ describe("revokeAward tells the carrier", () => {
 // ========================================
 
 describe("the payout behind a cancelled run", () => {
-  it("is voided, because it was scheduled at award and counts as withdrawable", async () => {
-    // The Stripe webhook schedules the payout at capture, and capture is award
-    // time since payment-at-booking — so a job cancelled before anyone drives
-    // anywhere already carries a `scheduled` payout that
-    // `withdrawalsDal.availableFor` sums into the driver's balance.
+  it("is voided, whatever a withdrawal request has made of it", async () => {
+    // Payouts are written at delivery now, but one the capture webhook wrote
+    // at award before 2.60.0 can sit on a run that never got there — and a
+    // withdrawal request may already hold it. `cancelPayoutForShipment` voids
+    // both (payout_safety_spec.md §3).
     await shipmentCancellationService.cancelJob(
       "ship-1",
       { category: "no_longer_needed" },

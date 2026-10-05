@@ -15,6 +15,7 @@ import {
   useWithdrawalQueue,
 } from "../hooks/useWithdrawals";
 import type { ReviewRow } from "../api/withdrawals.api";
+import { RefuseButton } from "./RefuseButton";
 
 const TONE: Record<ReviewRow["status"], string> = {
   requested: "bg-warning/15 text-warning border-warning/30",
@@ -35,7 +36,10 @@ export function WithdrawalQueue() {
   const format = useFormatter();
   const [status, setStatus] = useState<string | undefined>("requested");
   const { data: rows, isLoading } = useWithdrawalQueue(status);
-  const decide = useDecideWithdrawal();
+  // Moved on by a colleague, a request leaves the « Demandé » list: show
+  // every status, so the operator sees it as it now is — approved, its
+  // *Refuse* asking first.
+  const decide = useDecideWithdrawal({ onStatusChanged: () => setStatus(undefined) });
   const [reference, setReference] = useState<Record<string, string>>({});
 
   const filters = ["requested", "approved", "paid", "rejected"] as const;
@@ -105,8 +109,14 @@ export function WithdrawalQueue() {
 
                 {(row.status === "requested" || row.status === "approved") && (
                   <div className="flex w-full flex-col gap-2 sm:w-auto">
-                    {row.status === "requested" && (
-                      <div className="flex gap-2">
+                    {/* Refuse stays on an approved row. A refund landing after
+                        approval makes the request unpayable, and this is its
+                        only way out — while it stays open the driver cannot
+                        ask for anything else. There it asks first, since the
+                        transfer may already have been made
+                        (payout_safety_spec.md §4). */}
+                    <div className="flex gap-2">
+                      {row.status === "requested" && (
                         <Button
                           type="button"
                           size="sm"
@@ -114,28 +124,29 @@ export function WithdrawalQueue() {
                           onClick={() =>
                             decide.mutate({
                               id: row.id,
-                              input: { action: "approve" },
+                              input: { action: "approve", seenStatus: "requested" },
                             })
                           }
                         >
                           {t("approve")}
                         </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          disabled={decide.isPending}
-                          onClick={() =>
-                            decide.mutate({
-                              id: row.id,
-                              input: { action: "reject" },
-                            })
-                          }
-                        >
-                          {t("reject")}
-                        </Button>
-                      </div>
-                    )}
+                      )}
+                      <RefuseButton
+                        row={row}
+                        disabled={decide.isPending}
+                        onRefuse={() =>
+                          decide.mutate({
+                            id: row.id,
+                            // A row still showing « Demandé » refuses
+                            // nothing a colleague has approved since.
+                            input: {
+                              action: "reject",
+                              seenStatus: row.status === "approved" ? "approved" : "requested",
+                            },
+                          })
+                        }
+                      />
+                    </div>
                     <div className="flex gap-2">
                       <Input
                         aria-label={t("referenceLabel")}

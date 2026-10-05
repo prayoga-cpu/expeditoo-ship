@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
-import { Input } from "@/components/ui/input";
+import { useLocale, useTranslations } from "next-intl";
 import { Label } from "@/components/ui/label";
+import { NumericInput, useNumericText } from "@/components/ui/numeric-input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
@@ -13,6 +13,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import {
+  NUMERIC_RULES,
+  numberToInput,
+  parseDecimal,
+  parseScaled,
+} from "@/lib/numeric-input";
 import {
   HEAVY_BRACKET_ID,
   UNSURE_BRACKET_ID,
@@ -34,7 +40,7 @@ import { FieldError } from "./FieldError";
  */
 export function WeightBracketField({ form }: { form: JobFormApi["form"] }) {
   const t = useTranslations("create.what");
-  const { register, setValue, watch, formState } = form;
+  const { setValue, watch, formState } = form;
   const bracket = watch("weightBracket");
 
   return (
@@ -72,7 +78,6 @@ export function WeightBracketField({ form }: { form: JobFormApi["form"] }) {
         <WeightExactInput
           label={t("weightExact")}
           required
-          minKg={1000}
           value={watch("exactWeightKg") as number | undefined}
           onChange={(kg) => setValue("exactWeightKg", kg, { shouldValidate: true })}
           errors={formState.errors}
@@ -86,7 +91,6 @@ export function WeightBracketField({ form }: { form: JobFormApi["form"] }) {
       {bracket && bracket !== HEAVY_BRACKET_ID && bracket !== UNSURE_BRACKET_ID && (
         <WeightExactInput
           label={t("weightExactOptional")}
-          minKg={1}
           value={watch("exactWeightKg") as number | undefined}
           onChange={(kg) => setValue("exactWeightKg", kg, { shouldValidate: true })}
           errors={formState.errors}
@@ -99,32 +103,55 @@ export function WeightBracketField({ form }: { form: JobFormApi["form"] }) {
 const WEIGHT_UNITS = ["kg", "t"] as const;
 type WeightUnit = (typeof WEIGHT_UNITS)[number];
 
+/** Kilograms as the box shows them in `unit`: 1050 → « 1050 », or « 1,05 » t. */
+function weightText(kg: number | undefined, unit: WeightUnit, locale: string) {
+  if (kg === undefined) return "";
+  return unit === "t"
+    ? numberToInput(kg / 1000, NUMERIC_RULES.TONNES.decimals, locale)
+    : numberToInput(kg, NUMERIC_RULES.KG.decimals, locale);
+}
+
+/**
+ * What the box reads as, in kilograms. Tonnes are worked out on the digits:
+ * « 1,001 » t is 1001 kg, where 1.001 × 1000 is 1000.9999999999999.
+ */
+function textToKg(text: string, unit: WeightUnit): number | undefined {
+  const kg =
+    unit === "t"
+      ? parseScaled(text, NUMERIC_RULES.TONNES.decimals)
+      : parseDecimal(text);
+  return kg ?? undefined;
+}
+
 /**
  * The figure is always stored and validated in kilograms — `weightKg` is what
  * the DTO has always wanted, and `exactWeightKg`'s `.max(44_000)` is written
  * in kg — so the unit toggle only ever converts at the edges. `unit` is local
- * display state, never sent anywhere: switching it re-renders the same kg
- * value in the other scale rather than mutating what's stored.
+ * display state, never sent anywhere: switching it shows the same kg value in
+ * the other scale rather than mutating what's stored.
+ *
+ * The box keeps the text that was typed. It used to be re-derived from the
+ * kilograms after every keystroke, and « 1.0 » t came back as « 1 », so
+ * typing 1.05 t stored 15 t (numeric_input_spec.md §9). It is rebuilt from
+ * the kilograms only when they change from outside — a bracket switched,
+ * which clears them — or when the unit changes.
  */
 function WeightExactInput({
   label,
   required,
-  minKg,
   value,
   onChange,
   errors,
 }: {
   label: string;
   required?: boolean;
-  minKg: number;
   value: number | undefined;
   onChange: (kg: number | undefined) => void;
   errors: FieldErrors<JobFormValues>;
 }) {
-  const t = useTranslations("create.what");
+  const locale = useLocale();
   const [unit, setUnit] = useState<WeightUnit>("kg");
-  const toDisplay = (kg: number | undefined) =>
-    kg === undefined ? "" : String(unit === "t" ? kg / 1000 : kg);
+  const field = useNumericText(value, (kg) => weightText(kg, unit, locale));
 
   return (
     <div className="space-y-1.5">
@@ -132,39 +159,51 @@ function WeightExactInput({
         {label}
       </Label>
       <div className="flex gap-2">
-        <Input
+        <NumericInput
           id="exactWeightKg"
-          type="number"
-          step={unit === "t" ? "0.001" : "1"}
-          min={unit === "t" ? minKg / 1000 : minKg}
-          value={toDisplay(value)}
+          rules={unit === "t" ? NUMERIC_RULES.TONNES : NUMERIC_RULES.KG}
+          value={field.text}
           onChange={(e) => {
-            const typed = e.target.value === "" ? undefined : Number(e.target.value);
-            onChange(
-              typed === undefined || Number.isNaN(typed)
-                ? undefined
-                : unit === "t"
-                  ? typed * 1000
-                  : typed
-            );
+            const kg = textToKg(e.target.value, unit);
+            field.typed(e.target.value, kg);
+            onChange(kg);
           }}
           className="flex-1"
         />
-        <Select value={unit} onValueChange={(next) => setUnit(next as WeightUnit)}>
-          <SelectTrigger className="w-20" aria-label={t("weightUnit.label")}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {WEIGHT_UNITS.map((u) => (
-              <SelectItem key={u} value={u}>
-                {t(`weightUnit.${u}`)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <WeightUnitSelect
+          unit={unit}
+          onChange={(next) => {
+            setUnit(next);
+            field.reshow((kg) => weightText(kg, next, locale));
+          }}
+        />
       </div>
       <FieldError message={errors.exactWeightKg?.message} />
     </div>
+  );
+}
+
+function WeightUnitSelect({
+  unit,
+  onChange,
+}: {
+  unit: WeightUnit;
+  onChange: (unit: WeightUnit) => void;
+}) {
+  const t = useTranslations("create.what");
+  return (
+    <Select value={unit} onValueChange={(next) => onChange(next as WeightUnit)}>
+      <SelectTrigger className="w-20" aria-label={t("weightUnit.label")}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {WEIGHT_UNITS.map((u) => (
+          <SelectItem key={u} value={u}>
+            {t(`weightUnit.${u}`)}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 

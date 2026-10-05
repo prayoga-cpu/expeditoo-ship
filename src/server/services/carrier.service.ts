@@ -191,8 +191,10 @@ export const carrierService = {
   },
 
   /**
-   * Validates then forwards banking details to Stripe, persisting only the
-   * last 4 of each. The full IBAN never reaches our database.
+   * Persists only the last 4 characters of the IBAN and the BIC. The full IBAN
+   * never reaches our database — and, despite what this comment used to say,
+   * it is not forwarded to Stripe either: nothing is sent anywhere
+   * (payout_safety_spec.md §6).
    */
   async setBanking(userId: string, data: CarrierBankingInput) {
     const carrier = await this.requireOwnCarrier(userId);

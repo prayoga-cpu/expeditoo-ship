@@ -40,6 +40,8 @@ export interface DecideInput {
   action: "approve" | "reject" | "mark_paid";
   reference?: string;
   note?: string;
+  /** What the operator saw: a request that moved on since is refused. */
+  seenStatus?: "requested" | "approved";
 }
 
 export const withdrawalsApi = {

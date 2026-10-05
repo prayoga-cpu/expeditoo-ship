@@ -126,8 +126,11 @@ listing, and shipment status writes back so the Expedion client sees progress.
 `external_ref` holds the quote id and is the **idempotency key** that stops a
 retried escalation minting a second listing.
 
-New listings are always `expedion`. `direct` survives only as the default on
-legacy rows, and `/expedion` filters them out.
+A request posted at `/create` is `direct`; an escalated quote is `expedion`.
+Both sit on the one board at `/expedion` (the route kept its name), and
+`origin` decides who awards: the requester on a direct job; an operator — or
+an approved driver taking it at its budget — on an escalated one
+(`take_job_spec.md`).
 
 **The `carriers` table is person-level.** Applicants are individual drivers, not
 haulage companies, so KBIS is not required — an auto-entrepreneur has none.
@@ -204,8 +207,9 @@ next-intl (FR + EN) · next-pwa + Capacitor (Android) · Vitest + Playwright.
 
 ## Where Things Stand
 
-The driver-side revamp is complete: the shipper surface is gone, Expedion is the
-only inlet, and an operator awards in the client's place. Tracked in
+The driver-side revamp is complete, and the requester came back with `/create`
+(2026-08-26): an escalated job is awarded by an operator in the client's place,
+a direct request by the person who posted it. Tracked in
 `docs/plans/plan_phase_a_bidding_core.md` and
 `docs/plans/plan_transport_only_refinement.md` (both partly superseded by the
 revamp above).
@@ -218,16 +222,19 @@ without an `sk_live_` key, so an accept there takes real money.
 Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before shipping.
 
 **Gates — all green.** `npx tsc --noEmit` 0 errors · `pnpm lint` 0 errors ·
-438 unit tests pass · `pnpm build` succeeds.
+2,591 unit tests pass (2.60.0) · `pnpm build` succeeds.
 
 **Done**
 - Schema remodelled to the transport model; one clean initial migration
 - Goods-auction surface deleted, including its checkout, browse card and categories
-- **Shipper surface deleted**: job form, `create/success`, my-jobs list. `/listings/me`
-  redirected to `/expedion` — **no longer true**: restoring `/create` brought the
-  requester back, and it now renders `MyRequestsScreen` (two URL-held tabs, the
-  `/create` draft included). A request you cannot find again is not a request.
-- **`/expedion` job board**, pinned to `origin='expedion'` (filter threaded DTO → DAL → client)
+- **Shipper surface deleted**, then restored: the job form, `create/success` and
+  the my-jobs list came back with `/create` (2026-08-26). `/listings/me`
+  renders `MyRequestsScreen` (two URL-held tabs, drafts and scheduled requests
+  included, each with its own actions since 2.60.0). A request you cannot find
+  again is not a request.
+- **`/expedion` job board**: every open job a driver can bid on, from either
+  inlet. It was pinned to `origin='expedion'`; the pin went when `/create`
+  came back, and `JobBoard` still takes an `origin` prop
 - **`/home` is the driver dashboard**: application status, current run, open jobs,
   bids awaiting decision
 - **Operator award queue** at `/admin/awards`; `offersService.acceptOffer` accepts an
@@ -292,8 +299,8 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
   a captured payment. `/profile/invoices` was linked from nothing but an email
   body and is now in the profile quick links, with the Cocolis period filter and
   a bundle download. The carrier's half is a **relevé d'activité**, not a
-  facture: while `COMMISSION_RATE` is 1.0 the net is €0 and the screen says so
-  rather than inventing a split. `docs/specs/billing_documents_spec.md`
+  facture, showing the price less the 10 % commission (`COMMISSION_RATE` is
+  0.1, `payments.service.ts`). `docs/specs/billing_documents_spec.md`
 - **Two migrations had never run anywhere.** `0009_offer_self_accepted` and a
   second `0010_withdrawals` were absent from `meta/_journal.json`, and the
   migrator walks the journal, not the directory — so production had no
@@ -583,6 +590,25 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
   the schema — required fields, dates that agree with each other. A flexible range starting today starts at the first slot still
   usable; before, "today" meant midnight and could never be published
   (`publication_timing_spec.md`).
+- **Drafts you can finish, requests that stay private, numbers as typed,
+  takes on escalated jobs only, payouts only for delivered jobs** (2.60.0,
+  the owner's items 10–14). **Privacy**: every listing leaves through
+  `listing-view.ts` by audience (gotcha 16); the board needs a session and its
+  location filters run at the viewer's precision (rounded SQL below
+  `vetted`, failing closed); accept, take, cancel and withdraw answer ids and
+  the caller's own offer, never a relation graph (`toAwardView`,
+  `acceptOfferForCaller`). **Drafts**: `GET|PUT|DELETE
+  /api/listings/:id/draft` and `POST …/unschedule`; `saveDraft` writes every
+  optional column (gotcha 19); `publishScheduled` works under a row lock;
+  `listings.published_at` (0036). **Numbers**: `NumericInput` keeps a
+  deletion's zeros until blur, so « 200 » → « 100 » never reads « 10 »
+  (gotcha 18). **Take**: `TAKE_NOT_AVAILABLE` on a direct request.
+  **Payouts**: one writer (gotcha 17); a status move is a compare-and-set, so
+  a double « Livré » settles once; a withdrawal that loses a race answers
+  `WITHDRAWAL_ALREADY_SETTLED`. No IBAN rail — the client and their lawyer
+  decide first (STATUS 2.60.0). `listing_privacy_spec.md`,
+  `draft_requests_spec.md`, `numeric_input_spec.md`, `take_job_spec.md`,
+  `payout_safety_spec.md`
 
 **Not done**
 - **`EXPEDION_APP_ORIGINS` is set in Vercel Production but not in `.env.local`**,
@@ -606,11 +632,7 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
   beta-seed mocks, so the first real accept is the first live charge (STATUS →
   Operator to-do asks for one real accept-and-cancel). Locally the flag still
   short-circuits the charge, and a `pi_mock_` row is a captured payment with
-  no money behind it (`docs/TESTING_MOCKS.md` §1). **The webhook is still
-  wrong**: `payment_intent.succeeded` calls `recordCarrierPayout`, which
-  schedules the driver's payout at *capture* — now award time — making pay for
-  an undelivered job withdrawable on the off-session lane. The dialog's
-  intents carry no `transfer_group`, so it ignores them (STATUS 2.58.0)
+  no money behind it (`docs/TESTING_MOCKS.md` §1).
 - **Driver pay on either lane.** Escalation hands the driver the full
   `acceptedPriceCents` as the bid ceiling; direct assignment writes it as the
   offer price. The commission split (`ROADMAP.md` §10) is what decides how much
@@ -618,22 +640,32 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
 - **Commission split on Expedion-origin jobs is undecided** (`ROADMAP.md` §10).
   `budgetCents` is what the client already paid; the margin is whatever the driver
   bids below it. Payouts cannot go live until this is named.
-- Payouts stop at `scheduled`. A carrier earnings *view* now exists at
-  `/carrier/trips` → Effectués, but it reports €0 net because the platform
-  retains 100% during testing — nothing moves money
+- **Payouts are recorded, never sent.** A payout goes `scheduled` (written at
+  delivery) → `processing` (claimed by a withdrawal) → `paid` once an operator
+  records a bank transfer made by hand outside the app. How a driver should
+  really be paid — a plain SEPA transfer from the platform's own bank, or a
+  licensed provider — waits on the client and their lawyer (STATUS 2.60.0,
+  Operator to-do). The IBAN a driver types is kept as its last 4 characters
+  only; the account an operator transfers to is the one on the RIB the driver
+  uploads with their compliance documents
 - Realtime shipment data: the Ably path exists on both ends but is not connected
 - `seller`/`buyer` vocabulary still in ~50 files (live paths fixed; the rest cosmetic)
-- Marketing copy still describes a two-sided marketplace and oversells (J+7 payout,
-  live bid refresh, 24 h verification)
+- Marketing copy still describes a two-sided marketplace and oversells (live
+  bid refresh, 24 h verification). The J+7 payout promise went in 2.60.0
 - E2E proving the exit criteria end to end
 
 ## Gotchas
 
 1. **No goods-auction concepts.** No `bids` on items, no `orders`, no `sellers`
-   or `buyers`. And no shipper-facing surface at all — Expedion is the inlet.
+   or `buyers`. The requester's surface is `/create`, « Mes demandes » and
+   the job page; it posts transport, never goods.
 2. A listing is a *job*. `budgetCents` is what the Expedion client already paid,
    **not a cap** — it is the ceiling the platform's margin comes out of.
-3. Lowest price never wins automatically. An **operator** chooses.
+3. Lowest price never wins automatically. On a direct request the
+   **requester** chooses and pays in the accept dialog; on an escalated job an
+   **operator** chooses, or an approved driver takes it at its budget.
+   `takeJob` answers `TAKE_NOT_AVAILABLE` on a direct request — a take there
+   would award a job nobody chose and charge a card nobody presented.
 4. Money is **taken when the transport is chosen**, not on delivery — the client
    pays at booking (`docs/specs/payment_at_booking_spec.md`), and that is when
    the receipt is raised and emailed (`invoice_at_payment_spec.md`). Delivery
@@ -644,7 +676,8 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
    in Expedion. `payments.source` records which of the two happened; it is not
    `listings.origin` under another name.
 5. KYC documents are private. Never serve them by direct URL, and never persist
-   a full IBAN — only the last 4.
+   a typed IBAN in full — only the last 4. (The RIB a driver uploads carries
+   the full IBAN; it is a KYC document like the others, in private storage.)
 6. No feature flags, no backwards-compatibility shims. Make changes directly.
 7. Docs under `docs/specs/` and `docs/plans/` written for the v1 goods
    marketplace are stale. The Phase A specs listed above are current.
@@ -686,4 +719,33 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
    enforced on « Publier » only — not even on « Suivant », or a too-soon
    request could never reach the Budget step to be saved. And keep `budgetEuros` seeded `""`: an unset number is a type error
    that aborts Zod before the root `superRefine`, which is how the When step's
-   date rules silently never ran.
+   date rules silently never ran. Never `z.coerce.number()` a typed field
+   either: every number on `/create` is a `NumericInput` holding text
+   (« 45,5 »), which coerce reads as `NaN` — the same type error. Read it with
+   the `typedNumber` preprocess (`numeric_input_spec.md` §7).
+16. **A listing leaves the server only through `listing-view.ts`.**
+   `toListingView` / `viewFor` project by audience — the owner and staff read
+   `full`, an approved carrier `vetted` (streets, exact pins), everyone else
+   `public` (town, pin rounded to ~1 km, no contacts or notes). Never hand a
+   DAL listing, offer or shipment row to a client: `listingsDal.getById` still
+   joins the requester's whole `user` row, because the award path reads
+   `stripeCustomerId` from it. A new `listings` column is private until it is
+   classified, and `listing-view.test.ts` fails until it is
+   (`listing_privacy_spec.md`).
+17. **A payout has one writer**: `settleDelivery`, on `DELIVERED`, from a
+   captured payment. The Stripe webhook records charges and nothing else. A
+   payout is payable only while its shipment is `DELIVERED` and its payment
+   `captured`; a refund cancels the job's unpaid payouts in the same
+   transaction; and every payout status write names the status it moves from
+   (`payout_safety_spec.md`).
+18. **A box whose number lives elsewhere keeps its own text**
+   (`useNumericText`). Re-deriving the text from the number on every
+   keystroke turned « 1.0 » into « 1 »: 1.05 t saved as 15 t, 40.05 € as
+   405 €, 12.05 kg as 125 kg.
+19. **`published_at`, not `created_at`, is the day a request went live**, and
+   every path into a live status stamps it (`createListing`, `saveDraft`,
+   `publishScheduled`). A draft or scheduled request is finished through
+   `saveDraft` — one transaction, conditional on the row still being `draft`
+   or `scheduled` — and published only through the form's Budget step: only
+   the browser can re-derive a flexible window from the requester's own clock
+   (`draft_requests_spec.md`).

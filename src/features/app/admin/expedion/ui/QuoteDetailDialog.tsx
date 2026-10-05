@@ -44,9 +44,20 @@ import {
   LocationPickerField,
   type LocationPickerValue,
 } from "@/components/ui/location-picker-field";
+import {
+  NumericInput,
+  useNumericText,
+} from "@/components/ui/numeric-input";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { formatCurrency } from "@/lib/currency";
+import {
+  centsToInput,
+  numberToInput,
+  parseCents,
+  parseDecimal,
+  type NumericRules,
+} from "@/lib/numeric-input";
 import { cn } from "@/lib/utils";
 import {
   canRepriceQuote,
@@ -804,54 +815,37 @@ export function QuoteDetailDialog({
                           {t("dimensions")}
                         </Label>
                         <div className="mt-1 flex items-center gap-1">
-                          <Input
-                            type="number"
-                            value={form.lengthCm?.toString() ?? ""}
-                            onChange={(e) =>
-                              setField(
-                                "lengthCm",
-                                e.target.value === "" ? null : Number(e.target.value)
-                              )
-                            }
+                          <QuoteNumberInput
+                            kind="measure"
+                            value={form.lengthCm}
+                            onChange={(v) => setField("lengthCm", v)}
                             placeholder="L"
                             className="h-8"
                           />
                           <span className="text-muted-foreground">×</span>
-                          <Input
-                            type="number"
-                            value={form.widthCm?.toString() ?? ""}
-                            onChange={(e) =>
-                              setField(
-                                "widthCm",
-                                e.target.value === "" ? null : Number(e.target.value)
-                              )
-                            }
+                          <QuoteNumberInput
+                            kind="measure"
+                            value={form.widthCm}
+                            onChange={(v) => setField("widthCm", v)}
                             placeholder="l"
                             className="h-8"
                           />
                           <span className="text-muted-foreground">×</span>
-                          <Input
-                            type="number"
-                            value={form.heightCm?.toString() ?? ""}
-                            onChange={(e) =>
-                              setField(
-                                "heightCm",
-                                e.target.value === "" ? null : Number(e.target.value)
-                              )
-                            }
+                          <QuoteNumberInput
+                            kind="measure"
+                            value={form.heightCm}
+                            onChange={(v) => setField("heightCm", v)}
                             placeholder="h"
                             className="h-8"
                           />
                           <span className="text-muted-foreground text-xs">cm</span>
                         </div>
                       </div>
-                      <EditableField
+                      <NumberEditableField
                         label={t("weight")}
-                        type="number"
-                        value={form.weightKg?.toString() ?? ""}
-                        onChange={(v) =>
-                          setField("weightKg", v === "" ? null : Number(v))
-                        }
+                        kind="measure"
+                        value={form.weightKg}
+                        onChange={(v) => setField("weightKg", v)}
                         placeholder="kg"
                       />
                       <div className="flex items-center gap-2 text-sm">
@@ -869,20 +863,11 @@ export function QuoteDetailDialog({
                           {t("protected")}
                         </Label>
                       </div>
-                      <EditableField
+                      <NumberEditableField
                         label={t("declaredValue")}
-                        type="number"
-                        value={
-                          form.declaredValueCents != null
-                            ? String(form.declaredValueCents / 100)
-                            : ""
-                        }
-                        onChange={(v) =>
-                          setField(
-                            "declaredValueCents",
-                            v === "" ? null : Math.round(Number(v) * 100)
-                          )
-                        }
+                        kind="money"
+                        value={form.declaredValueCents}
+                        onChange={(v) => setField("declaredValueCents", v)}
                       />
                       <EditableField
                         label={t("valueBracket")}
@@ -941,20 +926,11 @@ export function QuoteDetailDialog({
                       (`PRICE_LOCKED`). The correction path is Refund and
                       re-quote. */}
                   {isEditing && canSupplyMissingPrice(data) ? (
-                    <EditableField
+                    <NumberEditableField
                       label={t("accepted")}
-                      type="number"
-                      value={
-                        form.acceptedPriceCents != null
-                          ? String(form.acceptedPriceCents / 100)
-                          : ""
-                      }
-                      onChange={(v) =>
-                        setField(
-                          "acceptedPriceCents",
-                          v === "" ? null : Math.round(Number(v) * 100)
-                        )
-                      }
+                      kind="money"
+                      value={form.acceptedPriceCents}
+                      onChange={(v) => setField("acceptedPriceCents", v)}
                       placeholder="0"
                     />
                   ) : (
@@ -1129,7 +1105,7 @@ function EditableField({
   label: string;
   value: string;
   onChange: (value: string) => void;
-  type?: "text" | "email" | "date" | "number";
+  type?: "text" | "email" | "date";
   placeholder?: string;
 }) {
   return (
@@ -1144,6 +1120,85 @@ function EditableField({
         onChange={(e) => onChange(e.target.value)}
         className="mt-1 h-8"
       />
+    </div>
+  );
+}
+
+/**
+ * Euros an operator may type. Seven whole digits is the most that always fits
+ * the cents columns, both `int4`; a declared value is what an auction lot is
+ * worth, so it may pass the 100 000 € of `MONEY` (numeric_input_spec.md §6).
+ */
+const QUOTE_MONEY: NumericRules = { decimals: 2, integerDigits: 7 };
+
+/**
+ * A weight or a dimension. They arrive from the AI extraction with whatever
+ * precision it read, and three decimals shows any of them as stored.
+ */
+const QUOTE_MEASURE: NumericRules = { decimals: 3, integerDigits: 6 };
+
+interface QuoteNumberInputProps {
+  /** `money` is held in cents, `measure` as the number itself. */
+  kind: "money" | "measure";
+  value: number | null | undefined;
+  onChange: (value: number | null) => void;
+  placeholder?: string;
+  className?: string;
+}
+
+/**
+ * A number on the quote, held as the text the operator typed.
+ *
+ * These boxes used to be re-derived from the number after every keystroke —
+ * `String(cents / 100)`, `weightKg.toString()` — and React rewrote « 40.0 »
+ * as « 40 », so « 40.05 » saved 405 € and « 12.05 » kg saved 125 kg
+ * (numeric_input_spec.md §9). The text is rebuilt from the number only when it
+ * changes from outside, as when « Analyser avec l'IA » refills the form.
+ */
+function QuoteNumberInput({
+  kind,
+  value,
+  onChange,
+  placeholder,
+  className,
+}: QuoteNumberInputProps) {
+  const locale = useLocale();
+  const money = kind === "money";
+  const field = useNumericText(value ?? null, (current) =>
+    current === null
+      ? ""
+      : money
+        ? centsToInput(current, locale)
+        : numberToInput(current, QUOTE_MEASURE.decimals, locale)
+  );
+
+  return (
+    <NumericInput
+      rules={money ? QUOTE_MONEY : QUOTE_MEASURE}
+      value={field.text}
+      placeholder={placeholder}
+      className={className}
+      onChange={(event) => {
+        const text = event.target.value;
+        const next =
+          text === "" ? null : money ? parseCents(text) : parseDecimal(text);
+        field.typed(text, next);
+        onChange(next);
+      }}
+    />
+  );
+}
+
+function NumberEditableField({
+  label,
+  ...input
+}: QuoteNumberInputProps & { label: string }) {
+  return (
+    <div className="min-w-0 text-sm">
+      <Label className="text-muted-foreground text-xs font-normal">
+        {label}
+      </Label>
+      <QuoteNumberInput {...input} className="mt-1 h-8" />
     </div>
   );
 }

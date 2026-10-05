@@ -575,7 +575,74 @@ describe("offersService.acceptOffer", () => {
       expect.objectContaining({ source: "stripe", shipperId: "shipper-1" })
     );
   });
+
+  // What `POST /api/offers/:id/accept` hands the browser (spec §5): the offer
+  // as a row and the shipment by id. `acceptOffer` itself keeps the shipment
+  // for `assignDirect`, as the tests above read it.
+  describe("as the accept route answers it", () => {
+    it("is the offer and the shipment's id — no rival bid, no payment row", async () => {
+      Object.assign(offersDal, {
+        setPendingStatusForListing: vi.fn().mockResolvedValue([RIVAL]),
+      });
+      vi.mocked(paymentsService.chargeForShipment).mockResolvedValue({
+        id: "pay-1",
+        commissionCents: 18_000,
+        stripePaymentIntentId: "pi_123",
+      } as never);
+
+      const result = await offersService.acceptOfferForCaller("shipper-1", "offer-1");
+
+      expect(Object.keys(result).sort()).toEqual(["alreadyAccepted", "offer", "shipment"]);
+      expect(result.offer).toMatchObject({ id: "offer-1", status: "accepted" });
+      expect(result.shipment).toEqual({ id: expect.any(String) });
+      expect(result.alreadyAccepted).toBe(false);
+      expect(JSON.stringify(result)).not.toMatch(
+        /rival-carrier|rival-van|06 11 22 33 44|commissionCents|pi_123|rue de Rivoli/
+      );
+    });
+
+    it("answers a repeat the same way: no carrier account, no plate", async () => {
+      // A stale tab, a double submit, a retry after a lost answer. The offer is
+      // re-read with the carrier's whole `user` row and the vehicle beside it.
+      Object.assign(offersDal, {
+        getById: vi.fn().mockResolvedValue({
+          ...winning,
+          status: "accepted",
+          carrier: {
+            id: "carrier-1",
+            name: "Transports Martin",
+            email: "martin@example.com",
+            stripeAccountId: "acct_martin",
+            stripeCustomerId: "cus_martin",
+          },
+          vehicle: { id: "veh-1", make: "Renault", plateNumber: "AB-123-CD" },
+        }),
+      });
+
+      const result = await offersService.acceptOfferForCaller("shipper-1", "offer-1");
+
+      expect(result.alreadyAccepted).toBe(true);
+      expect(result.shipment).toEqual({ id: "ship-existing" });
+      expect(result.offer).toMatchObject({ id: "offer-1", priceCents: 18_000 });
+      expect(result.offer).not.toHaveProperty("carrier");
+      expect(result.offer).not.toHaveProperty("vehicle");
+      expect(result.offer).not.toHaveProperty("slots");
+      expect(JSON.stringify(result)).not.toMatch(
+        /martin@example\.com|acct_martin|cus_martin|AB-123-CD/
+      );
+    });
+  });
 });
+
+/** A bid the award rejects: someone else's price, words and van. */
+const RIVAL = {
+  id: "offer-2",
+  carrierId: "rival-carrier",
+  vehicleId: "rival-van",
+  priceCents: 14_500,
+  message: "Dispo demain, appelez-moi au 06 11 22 33 44",
+  status: "rejected",
+};
 
 // ========================================
 // Visibility — §6
@@ -643,10 +710,16 @@ describe("offersService.getOffersForViewer", () => {
 });
 
 // ========================================
-// Take it now — transport self-accept
+// Take it now — transport self-accept, escalated jobs only
+// docs/specs/take_job_spec.md
 // ========================================
 
 describe("offersService.takeJob", () => {
+  // Every take meant to succeed runs on an escalated job: a direct request is
+  // never taken (spec §1), and the fixture carries no origin of its own.
+  const escalated = (over: Record<string, unknown> = {}) =>
+    listing({ origin: "expedion", ...over });
+
   beforeEach(() => {
     Object.assign(offersDal, {
       ...offersDal,
@@ -670,11 +743,17 @@ describe("offersService.takeJob", () => {
     });
     Object.assign(listingsDal, {
       ...listingsDal,
-      getByIdForUpdate: vi.fn().mockResolvedValue(listing()),
+      getById: vi.fn().mockResolvedValue(escalated()),
+      getByIdForUpdate: vi.fn().mockResolvedValue(escalated()),
       createShipment: vi.fn(async (row) => row),
       update: vi.fn(async (id, data) => ({ id, ...data })),
       getShipmentByOfferId: vi.fn().mockResolvedValue(null),
     });
+    // Nobody here holds an operating role, so a take that succeeds went
+    // through the self-award branch. `clearAllMocks` keeps implementations,
+    // and the accept tests above leave this resolving `true`: without the
+    // reset, a broken self-award would pass here as an operator's award.
+    vi.mocked(userHasRole).mockResolvedValue(false);
     vi.mocked(paymentsService.chargeForShipment).mockResolvedValue({
       payment: { id: "pay-1", status: "authorised" },
     } as never);
@@ -698,10 +777,99 @@ describe("offersService.takeJob", () => {
     expect(offersDal.markSelfAccepted).toHaveBeenCalledWith(created.id);
   });
 
+  it("hands the taker their own offer and the shipment's id, never the rivals' bids", async () => {
+    // offers_engine_spec.md §6: a carrier sees only their own bid. The award
+    // rejects every rival, and that list stays inside the service.
+    Object.assign(offersDal, {
+      setPendingStatusForListing: vi.fn().mockResolvedValue([RIVAL]),
+    });
+    vi.mocked(paymentsService.chargeForShipment).mockResolvedValue({
+      id: "pay-1",
+      source: "expedion",
+      commissionCents: 20_000,
+    } as never);
+
+    const result = await offersService.takeJob("carrier-1", "job-1", { vehicleId: "veh-1" });
+
+    expect(Object.keys(result).sort()).toEqual(["alreadyAccepted", "offer", "shipment"]);
+    expect(result.offer).toMatchObject({ status: "accepted", selfAccepted: true });
+    expect(result.shipment).toEqual({ id: expect.any(String) });
+    expect(JSON.stringify(result)).not.toMatch(
+      /rival-carrier|rival-van|06 11 22 33 44|commissionCents|rue de Rivoli/
+    );
+  });
+
+  it("awards an escalated job to the driver who took it, charging nobody", async () => {
+    await offersService.takeJob("carrier-1", "job-1", { vehicleId: "veh-1" });
+
+    const created = vi.mocked(offersDal.create).mock.calls[0][0];
+    expect(listingsDal.update).toHaveBeenCalledWith(
+      "job-1",
+      { status: "awarded", acceptedOfferId: created.id },
+      expect.anything()
+    );
+    // The self-award branch: nobody's role was asked about.
+    expect(userHasRole).not.toHaveBeenCalled();
+    // The client paid in Expedion, so the award records that payment rather
+    // than taking one (payment_at_booking_spec.md §2.1).
+    expect(paymentsService.chargeForShipment).toHaveBeenCalledWith(
+      expect.objectContaining({ source: "expedion" })
+    );
+  });
+
+  // A direct request is awarded by its requester, who pays in the accept
+  // dialog (spec §1). Refused before `submitOffer`, so nothing is left behind:
+  // no bid, no self-taken mark, no charge.
+  it("refuses a direct request before any bid exists", async () => {
+    vi.mocked(listingsDal).getById = vi
+      .fn()
+      .mockResolvedValue(listing({ origin: "direct" }));
+    const submit = vi.spyOn(offersService, "submitOffer");
+
+    const code = await codeFrom(() =>
+      offersService.takeJob("carrier-1", "job-1", { vehicleId: "veh-1" })
+    );
+
+    expect(code).toBe("TAKE_NOT_AVAILABLE");
+    expect(submit).not.toHaveBeenCalled();
+    expect(offersDal.create).not.toHaveBeenCalled();
+    expect(offersDal.markSelfAccepted).not.toHaveBeenCalled();
+    expect(paymentsService.chargeForShipment).not.toHaveBeenCalled();
+    submit.mockRestore();
+  });
+
+  // `!== "expedion"`, not `=== "direct"` (spec §2): an origin nobody
+  // anticipated is refused rather than let through.
+  it("fails closed on an origin it does not know", async () => {
+    vi.mocked(listingsDal).getById = vi
+      .fn()
+      .mockResolvedValue(listing({ origin: "partner" }));
+
+    const code = await codeFrom(() =>
+      offersService.takeJob("carrier-1", "job-1", { vehicleId: "veh-1" })
+    );
+
+    expect(code).toBe("TAKE_NOT_AVAILABLE");
+  });
+
   it("refuses a job that is no longer open, which is the two-drivers race", async () => {
     vi.mocked(listingsDal).getById = vi
       .fn()
-      .mockResolvedValue(listing({ status: "awarded" }));
+      .mockResolvedValue(escalated({ status: "awarded" }));
+
+    const code = await codeFrom(() =>
+      offersService.takeJob("carrier-1", "job-1", { vehicleId: "veh-1" })
+    );
+
+    expect(code).toBe("LISTING_NOT_OPEN");
+  });
+
+  // The listing's own state is asked first (spec §2), so a closed direct job
+  // reads as closed rather than as a lane it never had.
+  it("reports a closed direct job as closed, not as untakeable", async () => {
+    vi.mocked(listingsDal).getById = vi
+      .fn()
+      .mockResolvedValue(listing({ origin: "direct", status: "awarded" }));
 
     const code = await codeFrom(() =>
       offersService.takeJob("carrier-1", "job-1", { vehicleId: "veh-1" })
@@ -761,6 +929,31 @@ describe("offersService.acceptOffer self-award gate", () => {
       }),
     });
     vi.mocked(listingsDal).getById = vi.fn().mockResolvedValue(listing());
+    vi.mocked(userHasRole).mockResolvedValue(false);
+
+    const code = await codeFrom(() =>
+      offersService.acceptOffer("carrier-1", "offer-1", { selfAward: true })
+    );
+
+    expect(code).toBe("FORBIDDEN_NOT_SHIPPER");
+  });
+
+  // Honoured on an escalated job only (take_job_spec.md §3). `takeJob` never
+  // sends the flag for a direct one; this is the line behind that, so a flag
+  // that gets here anyway meets the requester's own gate.
+  it("refuses the flag on a direct job, even on the carrier's own offer", async () => {
+    Object.assign(offersDal, {
+      ...offersDal,
+      getById: vi.fn().mockResolvedValue({
+        id: "offer-1",
+        listingId: "job-1",
+        carrierId: "carrier-1",
+        status: "pending",
+      }),
+    });
+    vi.mocked(listingsDal).getById = vi
+      .fn()
+      .mockResolvedValue(listing({ origin: "direct" }));
     vi.mocked(userHasRole).mockResolvedValue(false);
 
     const code = await codeFrom(() =>

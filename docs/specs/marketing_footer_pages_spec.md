@@ -61,13 +61,31 @@ Audience: a driver deciding whether to apply. Must state:
 - the four requirements — identity, SIRET, transport insurance, one vehicle;
 - that KBIS is **not** required, because an auto-entrepreneur has none;
 - that documents are stored privately and never served by URL;
-- that expiry is tracked and a lapsed document suspends the account.
+- that expiry is tracked and a lapsed document suspends the account;
+- *(2.60.0)* what happens to bank details: of the IBAN and BIC typed in, only
+  the last four characters are kept and nothing is passed to a payment
+  provider; the RIB is kept like the other documents; earnings are paid by a
+  bank transfer from Expeditoo when the driver asks for them
+  (`carrier_kyc_spec.md` §4.3, `payout_safety_spec.md` §0). Until 2.60.0 it
+  said they were « détenues par notre prestataire de paiement »; the form
+  never passed them to one.
 
 ### `/auction-houses`
 Audience: an auction house. Must state that the house never posts here — a
 quote is accepted and paid inside Expedion, and only a job no driver has taken
 inside 48 h escalates onto this network. Must not describe Expeditoo as a
 place to shop for transport directly.
+
+*(2.60.0)* Must not say the buyer's money waits for the delivery — the buyer
+paid inside Expedion. The fourth guarantee said funds were authorised at award
+and « débités seulement une fois la livraison confirmée »; it now says what is
+true on this side: the carrier earns only once the delivery is recorded, photo
+included, and nothing for a job they did not deliver (`payout_safety_spec.md`
+§1). Its title, « Payé à la livraison, pas avant », was the other half of the
+old claim: under « Ce que cela change pour vous » an auction house reads it as
+its buyer paying on delivery. The title names the carrier now — « Rien n'est
+dû au transporteur avant la livraison » / "Nothing is owed to the carrier
+before delivery".
 
 ### `/legal-notice`
 Structure required of a French mentions légales: publisher identity, legal
@@ -85,9 +103,60 @@ Rewritten onto the transport model. Neither may use `seller`, `buyer`, `item`,
 - the client pays Expedion; the driver bids down and an **operator** awards;
 - money is authorised on award and captured on delivery.
 
+> **Amended (recorded in 2.60.0).** Money is taken when the transport is
+> chosen, not captured on delivery (`payment_at_booking_spec.md`,
+> `pay_at_accept_spec.md`); the terms have said so since
+> `invoice_at_payment_spec.md`.
+
 Privacy must additionally cover the GDPR rights, the KYC document retention
 rule, and the subprocessors actually in use (Stripe, Resend, Ably, Cloudflare
 R2, Supabase).
+
+*(2.60.0)* Stripe is listed for the **clients' card payments** —
+authorisation, capture, refund — and nothing else: it holds no carrier's bank
+details and pays no carrier (`payout_safety_spec.md` §0, §5). The payment-data
+item says what is actually kept: a client's card details at Stripe, never on
+our servers; a carrier's IBAN and BIC as their last four characters; the RIB
+with the compliance documents. It used to say « jamais un IBAN complet », which
+the RIB makes untrue. `lastUpdated` moved with the change.
+
+### Payout claims, here and on the landing
+
+*(2.60.0)* Until the payout method is settled (`payout_safety_spec.md` §8),
+every page says only what is true today: Stripe takes the clients' card
+payments; a carrier's earnings join their balance when a delivery is recorded
+and are paid by a bank transfer from Expeditoo when they ask for it (minimum
+€20, `payout_safety_spec.md` §0). No page promises a delay, calls a payment
+guaranteed or scheduled, says a transfer leaves on delivery, or says a payment
+provider holds a carrier's bank details or pays them. What went for that
+reason:
+
+- « Payé sous 7 jours » — on the hero, the bid card, How it works and the
+  advantages.
+- The hero's fourth figure, « J+7 — Paiement garanti », hardcoded in
+  `LandingStats`. The row is `LP_GRID_4`, so the tile was replaced rather than
+  dropped: it is now the smallest balance a driver can ask to have
+  transferred, `MIN_WITHDRAWAL_CENTS` formatted (« 20 € »), over « Solde
+  minimum pour demander un virement » / "Minimum balance to request a
+  transfer". The component restates the figure because the service is
+  server-only; the test in §6 fails if the two part.
+- The second testimonial's « on est payé dans la semaine » / "we get paid the
+  same week". The clause is cut, not reworded: the words are attributed to a
+  driver.
+- `/auction-houses`' « Payé à la livraison, pas avant » (above).
+- On the banking form, « après chaque livraison », and then the claim that
+  the IBAN typed there is the account paid. Only its last four characters are
+  kept (`carrier_kyc_spec.md` §4.3), so the form says it keeps them for the
+  driver to recognise the account, that earnings are transferred on request
+  to the account on their RIB, and to upload a new RIB on a change of bank.
+- On a delivered trip (`/carrier/trips`, *Effectués*), a `scheduled` payout
+  read « Versement programmé » / "Payout scheduled". Nothing is scheduled —
+  the driver still has to ask — so it reads « Crédité sur votre solde » /
+  "Credited to your balance".
+- On `/driver/help`, hardcoded English like the rest of that page, "Payments
+  are processed weekly for all completed deliveries". The answer now says
+  earnings are credited when the delivery is recorded, and transferred by
+  hand once the driver requests a withdrawal.
 
 ## 5. Contact pipeline
 
@@ -152,3 +221,28 @@ Rules:
 - `contact` route: 400 on invalid body, 429 past the rate limit, 200 on
   success, and that no session is required.
 - i18n: FR and EN key sets are identical. This replaces the by-eye check.
+- *(2.60.0)* `src/i18n/__tests__/payout-claims.test.ts`, on the pattern of
+  `expedion-not-announced.test.tsx` (§4, "Payout claims"):
+  - in both languages, no string **anywhere in the catalogue** says a payment
+    provider holds bank details (« détenues par notre prestataire de
+    paiement », "held by our payment provider"), puts payouts on Stripe, says
+    "never a full IBAN", promises a delay (« sous 7 jours » / "within 7 days",
+    « dans la semaine » / "the same week", « chaque semaine » / "weekly"),
+    calls a payment guaranteed (« paiement garanti » / "guaranteed payment")
+    or a payout scheduled (« versement programmé » / "payout scheduled"), says
+    the carrier is « payé à la livraison » / "paid on delivery" or paid
+    « après chaque livraison », or says the money is captured only on
+    delivery. It first read eight namespaces and fewer phrasings, which let
+    the hero figure's label, a testimonial and the `/auction-houses` title
+    through. On the catalogues that version passed, this one fails on four
+    strings in each language: those three and the trip card's « Versement
+    programmé »;
+  - « J+7 » / "D+7" appears nowhere under `marketing`. It is looked for only
+    there: inside the app the same notation counts an offer's delivery days
+    (`listing.bid.slots.leadDays`);
+  - `carrier.application.banking.description` names the RIB;
+  - `LandingStats`, rendered in both languages: every label resolves, no
+    figure or label says any of the above or a « J+N », and one figure is
+    `MIN_WITHDRAWAL_CENTS`, formatted — a hardcoded value is caught too;
+  - `/driver/help`, rendered with "How do I get paid?" open: the answer says
+    none of the above, and that the driver requests a withdrawal.

@@ -6,8 +6,10 @@ import { ok, unauthorised, handleError } from "@/lib/api-response";
 
 /**
  * POST /api/carrier/banking
- * The full IBAN/BIC is validated, forwarded to Stripe and discarded; only the
- * last 4 of each is persisted.
+ * The full IBAN/BIC is validated and discarded; only the last 4 characters of
+ * each are persisted. Nothing is forwarded anywhere — not to Stripe, not to a
+ * bank — so no driver is paid from what this stores
+ * (payout_safety_spec.md §6).
  */
 export async function POST(req: Request) {
   try {

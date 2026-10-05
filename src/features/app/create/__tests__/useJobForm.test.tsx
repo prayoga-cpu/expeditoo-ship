@@ -1,10 +1,22 @@
 import type { ReactNode } from "react";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { NextIntlClientProvider } from "next-intl";
+import { NextIntlClientProvider, createTranslator, type Messages } from "next-intl";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { ApiError } from "@/lib/fetcher";
 import fr from "../../../../../messages/fr.json";
+
+/**
+ * Catalogue text by its path, resolved the way the hook resolves it — so a
+ * key this release adds reads the same here as in the toast it is checked
+ * against, with or without its catalogue entry yet.
+ */
+const tr = createTranslator({
+  locale: "fr",
+  messages: fr as Messages,
+  onError: () => {},
+});
 
 /**
  * The form's own flow (publication_timing_spec.md §3.5): what a button pressed
@@ -28,19 +40,30 @@ vi.mock("@/features/app/profile/api/addresses.api", () => ({
 }));
 
 const create = vi.fn();
-vi.mock("../api/jobs.api", () => ({ jobsApi: { create: (...a: unknown[]) => create(...a) } }));
+const saveDraft = vi.fn();
+vi.mock("../api/jobs.api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../api/jobs.api")>()),
+  jobsApi: {
+    create: (...a: unknown[]) => create(...a),
+    saveDraft: (...a: unknown[]) => saveDraft(...a),
+  },
+}));
 
 import { useJobForm } from "../hooks/useJobForm";
 
-function wrapper({ children }: { children: ReactNode }) {
-  const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
-  return (
+/** The provider tree, around a client the test can look into. */
+const withClient =
+  (client = new QueryClient({ defaultOptions: { mutations: { retry: false } } })) =>
+  ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={client}>
       <NextIntlClientProvider locale="fr" messages={fr} timeZone="Europe/Paris">
         {children}
       </NextIntlClientProvider>
     </QueryClientProvider>
   );
+
+function wrapper({ children }: { children: ReactNode }) {
+  return withClient()({ children });
 }
 
 const endpoint = (over: Record<string, unknown> = {}) => ({
@@ -80,6 +103,7 @@ async function reachWhere(result: { current: Form }, pickup = endpoint()) {
 beforeEach(() => {
   createAddress.mockResolvedValue({});
   create.mockResolvedValue({ id: "job-1", status: "draft" });
+  saveDraft.mockResolvedValue({ id: "draft-7", status: "open" });
 });
 
 describe("useJobForm — a submit from an earlier step", () => {
@@ -211,3 +235,177 @@ describe("useJobForm — never twice, never the long way round", () => {
     await waitFor(() => expect(result.current.currentStep).toBe(3));
   });
 });
+
+// draft_requests_spec.md §2–§3
+describe("useJobForm — finishing a saved request", () => {
+  const tomorrow = new Date(Date.now() + 24 * 3600_000);
+  tomorrow.setHours(9, 0, 0, 0);
+  const until = new Date(tomorrow.getTime() + 3600_000);
+  const delivery = new Date(tomorrow.getTime() + 24 * 3600_000);
+
+  const saved = {
+    id: "draft-7",
+    reference: 100077,
+    shipperId: "requester-1",
+    status: "draft",
+    title: "Canapé deux places",
+    description: "Un canapé, rez-de-chaussée des deux côtés.",
+    weightKg: 100,
+    lengthCm: null,
+    widthCm: null,
+    heightCm: null,
+    quantity: 1,
+    isFragile: false,
+    needsHelp: false,
+    packagingLevel: null,
+    needsProtection: false,
+    needsPackaging: false,
+    ...Object.fromEntries(
+      Object.entries(endpoint()).map(([k, v]) => [`pickup${k[0].toUpperCase()}${k.slice(1)}`, v])
+    ),
+    ...Object.fromEntries(
+      Object.entries(endpoint({ address: "3 rue Paradis", city: "Marseille", postalCode: "13001" })).map(
+        ([k, v]) => [`dropoff${k[0].toUpperCase()}${k.slice(1)}`, v]
+      )
+    ),
+    pickupLat: null,
+    pickupLng: null,
+    dropoffLat: null,
+    dropoffLng: null,
+    pickupFloor: null,
+    pickupHasLift: null,
+    dropoffFloor: null,
+    dropoffHasLift: null,
+    pickupFrom: tomorrow.toISOString(),
+    pickupUntil: until.toISOString(),
+    dropoffFrom: delivery.toISOString(),
+    dropoffUntil: new Date(delivery.getTime() + 3600_000).toISOString(),
+    isFlexible: false,
+    budgetCents: 4_000,
+    acceptedOfferId: null,
+    origin: "direct",
+    offersCount: 0,
+    views: 0,
+    expiresAt: tomorrow.toISOString(),
+    reopenedAt: null,
+    scheduledPublishAt: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    photos: [],
+  } as never;
+
+  it("opens on the Budget step with every step already reached", () => {
+    const { result } = renderHook(
+      () => useJobForm({ draft: saved, startStep: 3 }),
+      { wrapper }
+    );
+
+    expect(result.current.currentStep).toBe(3);
+    expect(result.current.isResuming).toBe(true);
+    expect(result.current.form.getValues("title")).toBe("Canapé deux places");
+    expect(String(result.current.form.getValues("budgetEuros"))).toBe("40");
+  });
+
+  it("publishes it with PUT, onto the same request, and thanks the requester", async () => {
+    const { result } = renderHook(
+      () => useJobForm({ draft: saved, startStep: 3 }),
+      { wrapper }
+    );
+
+    await act(() => result.current.publish());
+
+    await waitFor(() => expect(saveDraft).toHaveBeenCalledTimes(1));
+    expect(saveDraft.mock.calls[0][0]).toBe("draft-7");
+    expect(saveDraft.mock.calls[0][2]).toBe(true);
+    expect(create).not.toHaveBeenCalled();
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/create/success/draft-7"));
+  });
+
+  // A time saved by the form before the half-hour list: 09:15.
+  const quarterPast = new Date(tomorrow);
+  quarterPast.setMinutes(15);
+  const savedAtQuarterPast = {
+    ...(saved as object),
+    pickupFrom: quarterPast.toISOString(),
+    pickupUntil: new Date(quarterPast.getTime() + 3600_000).toISOString(),
+  } as never;
+
+  it("opens on the When step, not the one asked for, when a saved time had to move", () => {
+    const { result } = renderHook(
+      () => useJobForm({ draft: savedAtQuarterPast, startStep: 3, publishNow: true }),
+      { wrapper }
+    );
+
+    expect(result.current.currentStep).toBe(2);
+    expect(result.current.snappedTimes).toEqual([
+      { side: "pickup", saved: "09:15", selected: "09:30", hour: "09:30" },
+    ]);
+  });
+
+  // An exact request saved before the one-hour window: 09:00–17:00.
+  const savedAllDay = {
+    ...(saved as object),
+    pickupFrom: tomorrow.toISOString(),
+    pickupUntil: new Date(tomorrow.getTime() + 8 * 3600_000).toISOString(),
+  } as never;
+
+  it("says so, too, when the form narrows a saved window to its one hour", () => {
+    const { result } = renderHook(
+      () => useJobForm({ draft: savedAllDay, startStep: 3 }),
+      { wrapper }
+    );
+
+    expect(result.current.currentStep).toBe(2);
+    expect(result.current.snappedTimes).toEqual([
+      { side: "pickup", saved: "09:00–17:00", selected: "09:00–10:00", hour: "09:00" },
+    ]);
+
+    const { timing } = result.current;
+    act(() => result.current.handleTimingChange({ ...timing, pickup: { ...timing.pickup, hour: "10:00" } }));
+    expect(result.current.snappedTimes).toEqual([]);
+  });
+
+  it("stops saying so once the requester picks a time themselves", () => {
+    const { result } = renderHook(() => useJobForm({ draft: savedAtQuarterPast }), { wrapper });
+
+    const { timing } = result.current;
+    act(() => result.current.handleTimingChange({ ...timing, pickup: { ...timing.pickup, hour: "10:00" } }));
+
+    expect(result.current.snappedTimes).toEqual([]);
+  });
+
+  it("opens where it was asked to when every saved time is on the list", () => {
+    const { result } = renderHook(() => useJobForm({ draft: saved, startStep: 3 }), { wrapper });
+
+    expect(result.current.snappedTimes).toEqual([]);
+    expect(result.current.currentStep).toBe(3);
+  });
+
+  it("says a request deleted meanwhile is gone, never to try again, and keeps the form", async () => {
+    saveDraft.mockRejectedValue(new ApiError("LISTING_NOT_FOUND", "Listing not found", 404));
+    const { result } = renderHook(() => useJobForm({ draft: saved, startStep: 3 }), { wrapper });
+
+    await act(() => result.current.publish());
+
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith(tr("myJobs.draft.notFound")));
+    expect(toastError).not.toHaveBeenCalledWith(fr.create.toast.failed);
+    expect(replace).not.toHaveBeenCalled();
+  });
+
+  it("says a request published or closed meanwhile can no longer change, and hands over to its fresh page", async () => {
+    saveDraft.mockRejectedValue(new ApiError("LISTING_NOT_DRAFT", "Listing is not a draft", 409));
+    const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
+    client.setQueryData(["job", "draft-7"], { id: "draft-7", status: "scheduled" });
+    const { result } = renderHook(() => useJobForm({ draft: saved, startStep: 3 }), {
+      wrapper: withClient(client),
+    });
+
+    await act(() => result.current.publish());
+
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/listing/draft-7"));
+    expect(toastError).toHaveBeenCalledWith(tr("myJobs.draft.noLongerEditable"));
+    // Its page would otherwise show the copy read under a minute ago.
+    expect(client.getQueryState(["job", "draft-7"])?.isInvalidated).toBe(true);
+  });
+});
+

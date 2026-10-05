@@ -5,6 +5,13 @@ Covers `POST /api/stripe/connect`, `GET /api/stripe/connect/dashboard`,
 *Configuration des paiements* card in `src/features/app/profile/ui/Profile.tsx`,
 and `paymentsService.executePayout`.
 
+> **2.60.0 — the card is gone** (`payout_safety_spec.md` §5). §3's button, the
+> `?stripe=error` toast, `payoutApi` and the `profile.payout.*` keys were
+> removed: the card told every user to connect Stripe to be paid for « articles
+> vendus », and Stripe is not how drivers are paid. The routes, `stripeService`
+> and `executePayout` are unchanged and reachable only by URL, and §6's parity
+> line no longer applies.
+
 ---
 
 ## 1. What was actually wrong

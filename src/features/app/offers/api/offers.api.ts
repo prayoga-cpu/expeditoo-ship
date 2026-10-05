@@ -14,8 +14,13 @@ export interface SubmitOfferInput {
   message?: string;
 }
 
+/**
+ * What accepting or taking answers: the offer as its own row — no carrier,
+ * vehicle or slots beside it — and the shipment by id
+ * (offers_engine_spec.md §5).
+ */
 export interface AcceptOfferResult {
-  offer: Offer;
+  offer: Omit<Offer, "carrier" | "vehicle" | "slots">;
   shipment: { id: string } | null;
   alreadyAccepted: boolean;
 }

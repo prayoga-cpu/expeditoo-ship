@@ -1,4 +1,5 @@
 import { nanoid } from "nanoid";
+import { db } from "@/db";
 import { listingsDal, type BrowseFilters } from "@/server/dal/listings.dal";
 import { shipmentsDal } from "@/server/dal/shipments.dal";
 import { offersService } from "@/server/services/offers.service";
@@ -6,9 +7,16 @@ import { notificationsService } from "@/server/services/notifications.service";
 import { carrierRouteAlertsService } from "@/server/services/carrier-route-alerts.service";
 import { emailService } from "@/server/services/email.service";
 import { isSystemAccount } from "@/server/services/account-policy";
+import {
+  resolveListingViewer,
+  searchesExactLocation,
+  toListingView,
+  viewFor,
+} from "@/server/services/listing-view";
 import { getUserById } from "@/server/dal/users.dal";
 import { formatCurrency } from "@/lib/currency";
 import { expiresAtFor } from "@/lib/listing-window";
+import { ISO_WEEKDAYS, TIME_SLOTS } from "@/lib/availability-window";
 import {
   MATERIAL_FIELDS,
   type CreateListingInput,
@@ -77,17 +85,100 @@ function assertPublishable(data: CreateListingInput, now: Date): Date {
  * toast the client got for pressing "Enregistrer le brouillon"
  * (publication_timing_spec.md §2). `expires_at` is NOT NULL, so a draft gets a
  * placeholder: every reader of the column filters on `status = 'open'` first,
- * and `publishListing` recomputes it.
+ * and going live recomputes it — `saveDraft` through `assertPublishable`, the
+ * scheduler in `settleScheduled`.
  */
 function draftExpiresAt(pickupFrom: Date, now: Date): Date {
   return expiresAtFor(pickupFrom, now) ?? pickupFrom;
+}
+
+/** Going live now — not saved as a draft, not scheduled for later. */
+const isLiveNow = (data: CreateListingInput) =>
+  data.publish && !data.scheduledPublishAt;
+
+/**
+ * What a request's form decides, as columns — shared by a new request and a
+ * saved one being finished, so the two can never map a field differently
+ * (draft_requests_spec.md §3).
+ *
+ * Every optional field is written explicitly — `null`, or the full set for
+ * the availability columns — never left `undefined`. An insert reads
+ * `undefined` as the column default, but an update skips the column: a size,
+ * floor, note or packaging state the requester cleared while finishing a
+ * draft would keep its old value.
+ */
+function toColumns(data: CreateListingInput, expiresAt: Date, now: Date) {
+  return {
+    status: !data.publish
+      ? ("draft" as const)
+      : data.scheduledPublishAt
+        ? ("scheduled" as const)
+        : ("open" as const),
+    title: data.title,
+    description: data.description,
+    weightKg: data.weightKg,
+    lengthCm: data.lengthCm ?? null,
+    widthCm: data.widthCm ?? null,
+    heightCm: data.heightCm ?? null,
+    quantity: data.quantity,
+    isFragile: data.isFragile,
+    needsHelp: data.needsHelp,
+    packagingLevel: data.packagingLevel ?? null,
+    needsProtection: data.needsProtection,
+    needsPackaging: data.needsPackaging,
+
+    pickupLat: data.pickup.lat ?? null,
+    pickupLng: data.pickup.lng ?? null,
+    pickupAddress: data.pickup.address,
+    pickupCity: data.pickup.city,
+    pickupPostalCode: data.pickup.postalCode,
+    pickupLocationType: data.pickup.locationType,
+    pickupFloor: data.pickup.floor ?? null,
+    pickupHasLift: data.pickup.hasLift ?? null,
+    pickupNote: data.pickup.note ?? null,
+    pickupContactName: data.pickup.contactName ?? null,
+    pickupContactPhone: data.pickup.contactPhone ?? null,
+
+    dropoffLat: data.dropoff.lat ?? null,
+    dropoffLng: data.dropoff.lng ?? null,
+    dropoffAddress: data.dropoff.address,
+    dropoffCity: data.dropoff.city,
+    dropoffPostalCode: data.dropoff.postalCode,
+    dropoffLocationType: data.dropoff.locationType,
+    dropoffFloor: data.dropoff.floor ?? null,
+    dropoffHasLift: data.dropoff.hasLift ?? null,
+    dropoffNote: data.dropoff.note ?? null,
+    dropoffContactName: data.dropoff.contactName ?? null,
+    dropoffContactPhone: data.dropoff.contactPhone ?? null,
+
+    pickupFrom: data.pickupFrom,
+    pickupUntil: data.pickupUntil,
+    dropoffFrom: data.dropoffFrom,
+    dropoffUntil: data.dropoffUntil,
+    isFlexible: data.isFlexible,
+    // Absent means unrestricted: the full set, which is also the column
+    // default (request_availability_spec.md §2).
+    pickupDays: data.pickupDays ?? [...ISO_WEEKDAYS],
+    pickupPeriods: data.pickupPeriods ?? [...TIME_SLOTS],
+    dropoffDays: data.dropoffDays ?? [...ISO_WEEKDAYS],
+    dropoffPeriods: data.dropoffPeriods ?? [...TIME_SLOTS],
+
+    budgetCents: data.budgetCents,
+    expiresAt,
+    // The column means "while status is `scheduled`", and nothing publishes a
+    // draft at its scheduled time — so a draft keeps none.
+    scheduledPublishAt: data.publish ? (data.scheduledPublishAt ?? null) : null,
+    // The moment it went live, when that is now; the scheduler stamps its own.
+    publishedAt: isLiveNow(data) ? now : null,
+  } satisfies Partial<InsertListing>;
 }
 
 function toInsert(
   shipperId: string,
   data: CreateListingInput,
   expiresAt: Date,
-  categoryId: string
+  categoryId: string,
+  now: Date
 ): InsertListing {
   return {
     id: nanoid(),
@@ -100,64 +191,86 @@ function toInsert(
     // operator queue. Escalation stamps `expedion` on its own listings the
     // same way, from the server side.
     origin: "direct",
-    status: !data.publish ? "draft" : data.scheduledPublishAt ? "scheduled" : "open",
-    title: data.title,
-    description: data.description,
-    weightKg: data.weightKg,
-    lengthCm: data.lengthCm,
-    widthCm: data.widthCm,
-    heightCm: data.heightCm,
-    quantity: data.quantity,
-    isFragile: data.isFragile,
-    needsHelp: data.needsHelp,
-    packagingLevel: data.packagingLevel,
-    needsProtection: data.needsProtection,
-    needsPackaging: data.needsPackaging,
-
-    // Explicit null, not undefined: Drizzle treats an undefined insert field
-    // as "use the column default," and there is no default for these two.
-    pickupLat: data.pickup.lat ?? null,
-    pickupLng: data.pickup.lng ?? null,
-    pickupAddress: data.pickup.address,
-    pickupCity: data.pickup.city,
-    pickupPostalCode: data.pickup.postalCode,
-    pickupLocationType: data.pickup.locationType,
-    pickupFloor: data.pickup.floor,
-    pickupHasLift: data.pickup.hasLift,
-    pickupNote: data.pickup.note,
-    pickupContactName: data.pickup.contactName,
-    pickupContactPhone: data.pickup.contactPhone,
-
-    dropoffLat: data.dropoff.lat ?? null,
-    dropoffLng: data.dropoff.lng ?? null,
-    dropoffAddress: data.dropoff.address,
-    dropoffCity: data.dropoff.city,
-    dropoffPostalCode: data.dropoff.postalCode,
-    dropoffLocationType: data.dropoff.locationType,
-    dropoffFloor: data.dropoff.floor,
-    dropoffHasLift: data.dropoff.hasLift,
-    dropoffNote: data.dropoff.note,
-    dropoffContactName: data.dropoff.contactName,
-    dropoffContactPhone: data.dropoff.contactPhone,
-
-    pickupFrom: data.pickupFrom,
-    pickupUntil: data.pickupUntil,
-    dropoffFrom: data.dropoffFrom,
-    dropoffUntil: data.dropoffUntil,
-    isFlexible: data.isFlexible,
-    // Absent means unrestricted: Drizzle then writes the column default, the
-    // full set (request_availability_spec.md §2).
-    pickupDays: data.pickupDays,
-    pickupPeriods: data.pickupPeriods,
-    dropoffDays: data.dropoffDays,
-    dropoffPeriods: data.dropoffPeriods,
-
-    budgetCents: data.budgetCents,
-    expiresAt,
-    // The column means "while status is `scheduled`", and nothing publishes a
-    // draft at its scheduled time — so a draft keeps none.
-    scheduledPublishAt: data.publish ? (data.scheduledPublishAt ?? null) : null,
+    ...toColumns(data, expiresAt, now),
   };
+}
+
+/**
+ * One due request, decided under its row lock: opened with an expiry
+ * re-derived from its pickup as it now stands, or expired when that pickup
+ * leaves no time to bid. Null when it is no longer the scheduler's — saved,
+ * re-scheduled, un-scheduled, published or deleted since the run read it, or
+ * being saved this instant (draft_requests_spec.md §5).
+ */
+function settleScheduled(id: string, now: Date) {
+  return db.transaction(async (tx) => {
+    const listing = await listingsDal.lockDueScheduled(id, now, tx);
+    if (!listing) return null;
+
+    let expiresAt: Date;
+    try {
+      expiresAt = resolveExpiresAt(listing.pickupFrom, now);
+    } catch {
+      // Never opened, so it never took an offer — nothing for
+      // `expirePendingOffers` to do here, unlike `expireDueListings`.
+      const expired = await listingsDal.updateIfStatus(
+        id,
+        "scheduled",
+        { status: "expired", scheduledPublishAt: null },
+        tx
+      );
+      return expired ? { live: false as const, listing: expired } : null;
+    }
+
+    const live = await listingsDal.updateIfStatus(
+      id,
+      "scheduled",
+      { status: "open", expiresAt, scheduledPublishAt: null, publishedAt: now },
+      tx
+    );
+    return live ? { live: true as const, listing: live } : null;
+  });
+}
+
+const photoRows = (listingId: string, urls: string[]) =>
+  urls.map((url, order) => ({ id: nanoid(), listingId, url, order }));
+
+/**
+ * Everything that happens the moment a request goes live, for a new one and
+ * a finished draft alike: the requester's bell and email, and the carriers
+ * whose declared trajet it fits.
+ *
+ * The system account owns every escalated listing and nobody signs into it to
+ * read an email or a bell notification — `expedionEscalationService` reaches
+ * `createListing` with that account's id (listing_posted_feedback_spec.md §1).
+ * `notifyRouteMatches: false` is `assignDirect`'s: it awards a pre-chosen
+ * driver moments later, so alerting the board would be spurious
+ * (carrier_route_alerts_spec.md §3).
+ */
+async function goLive(
+  listing: Listing,
+  shipperId: string,
+  options: { notifyRouteMatches?: boolean } = {}
+) {
+  if (!isSystemAccount(shipperId)) {
+    await announceListingPosted(listing, shipperId);
+  }
+  if (options.notifyRouteMatches !== false) {
+    await carrierRouteAlertsService
+      .notifyMatchingCarriers(listing)
+      .catch((e) => console.error("carrier_route_match notify failed", e));
+  }
+}
+
+/**
+ * Why a draft write found nothing to write: someone else's, gone, or already
+ * live. Not-found rather than forbidden for someone else's, so an unpublished
+ * request does not leak its own existence.
+ */
+async function unpublishedError(listingId: string, shipperId: string) {
+  const row = await listingsDal.getById(listingId);
+  if (!row || row.shipperId !== shipperId) return err("LISTING_NOT_FOUND", 404);
+  return err("LISTING_NOT_DRAFT", 409);
 }
 
 function assertOwner(listing: Listing | undefined, userId: string): Listing {
@@ -188,54 +301,83 @@ export const listingsService = {
     const categoryId =
       data.categoryId ?? (await listingsDal.ensureDefaultCategory());
     const listing = await listingsDal.create(
-      toInsert(shipperId, data, expiresAt, categoryId)
+      toInsert(shipperId, data, expiresAt, categoryId, now)
     );
 
     if (data.photos.length > 0) {
-      await listingsDal.addPhotos(
-        data.photos.map((url, order) => ({
-          id: nanoid(),
-          listingId: listing.id,
-          url,
-          order,
-        }))
-      );
+      await listingsDal.addPhotos(photoRows(listing.id, data.photos));
     }
 
-    // The system account owns every escalated listing and nobody signs into
-    // it to read an email or a bell notification — `expedionEscalationService`
-    // reaches this same method with that account's id
-    // (listing_posted_feedback_spec.md §1). A scheduled job isn't live yet
-    // either, so there is nothing to announce until the cron actually
-    // publishes it.
-    if (data.publish && !data.scheduledPublishAt && !isSystemAccount(shipperId)) {
-      await announceListingPosted(listing, shipperId);
-    }
-
-    // A scheduled listing is not live yet: `publishScheduled` fires this same
-    // alert once its instant actually arrives.
-    if (
-      data.publish &&
-      !data.scheduledPublishAt &&
-      options.notifyRouteMatches !== false
-    ) {
-      await carrierRouteAlertsService
-        .notifyMatchingCarriers(listing)
-        .catch((e) => console.error("carrier_route_match notify failed", e));
-    }
+    // A draft or a scheduled job is not live yet: nothing to announce until
+    // it is (`saveDraft`, or the scheduler's `publishScheduled`).
+    if (isLiveNow(data)) await goLive(listing, shipperId, options);
 
     return listing;
   },
 
-  async publishListing(shipperId: string, listingId: string) {
-    const listing = assertOwner(await listingsDal.getById(listingId), shipperId);
-    if (listing.status !== "draft") throw err("LISTING_NOT_DRAFT", 409);
-    if (listing.pickupFrom <= new Date()) throw err("PICKUP_IN_PAST", 400);
+  /** A draft or scheduled request, as its owner reads it to finish it. */
+  async getDraft(shipperId: string, listingId: string) {
+    const listing = await listingsDal.getById(listingId);
+    if (!listing || listing.shipperId !== shipperId) {
+      throw err("LISTING_NOT_FOUND", 404);
+    }
+    if (listing.status !== "draft" && listing.status !== "scheduled") {
+      throw err("LISTING_NOT_DRAFT", 409);
+    }
+    return toListingView(listing, "full");
+  },
 
-    return await listingsDal.update(listingId, {
-      status: "open",
-      expiresAt: resolveExpiresAt(listing.pickupFrom),
+  /**
+   * Finishes a request that has not gone live: saved again as a draft,
+   * scheduled, or published now — with exactly a new request's rules and,
+   * when it goes live, its announcement (draft_requests_spec.md §3). The
+   * write is conditional, so only one of two racing tabs wins.
+   */
+  async saveDraft(shipperId: string, listingId: string, data: CreateListingInput) {
+    const now = new Date();
+    const expiresAt = data.publish
+      ? assertPublishable(data, now)
+      : draftExpiresAt(data.pickupFrom, now);
+
+    const listing = await db.transaction(async (tx) => {
+      const updated = await listingsDal.updateUnpublished(
+        listingId,
+        shipperId,
+        toColumns(data, expiresAt, now),
+        tx
+      );
+      if (updated) {
+        await listingsDal.replacePhotos(listingId, photoRows(listingId, data.photos), tx);
+      }
+      return updated;
     });
+    if (!listing) throw await unpublishedError(listingId, shipperId);
+
+    if (isLiveNow(data)) await goLive(listing, shipperId);
+    return toListingView(listing, "full");
+  },
+
+  /** Deletes a draft or scheduled request outright: nobody else has seen it. */
+  async deleteDraft(shipperId: string, listingId: string) {
+    const deleted = await listingsDal.deleteUnpublished(listingId, shipperId);
+    if (!deleted) throw await unpublishedError(listingId, shipperId);
+    return { deleted: true as const };
+  },
+
+  /** A scheduled request back to a draft: no schedule, nothing published. */
+  async unschedule(shipperId: string, listingId: string) {
+    const listing = await listingsDal.getById(listingId);
+    if (!listing || listing.shipperId !== shipperId) {
+      throw err("LISTING_NOT_FOUND", 404);
+    }
+    const now = new Date();
+    const updated = await listingsDal.updateIfStatus(listingId, "scheduled", {
+      status: "draft",
+      scheduledPublishAt: null,
+      expiresAt: draftExpiresAt(listing.pickupFrom, now),
+    });
+    if (!updated) throw err("LISTING_NOT_SCHEDULED", 409);
+    return toListingView(updated, "full");
   },
 
   /**
@@ -312,8 +454,34 @@ export const listingsService = {
     return { deleted: false, listing: cancelled };
   },
 
-  async browse(filters: BrowseFilters) {
-    return await listingsDal.browse(filters);
+  /**
+   * The board, as the caller may read it: each job projected for them —
+   * never the DAL's rows, which carry the requester's whole account
+   * (listing_privacy_spec.md §3).
+   *
+   * The viewer is resolved before the query, not beside it: who is asking
+   * also decides how precisely the location filters may answer. Run on the
+   * exact pins for someone shown rounded ones, a radius search gives the pin
+   * back one question at a time.
+   */
+  async browse(filters: BrowseFilters, viewerId: string) {
+    const viewer = await resolveListingViewer(viewerId);
+    const result = await listingsDal.browse(filters, {
+      exactLocation: searchesExactLocation(viewer),
+    });
+    return {
+      ...result,
+      items: result.items.map((listing) => viewFor(listing, viewer)),
+    };
+  },
+
+  /** A requester's live jobs, as the caller may read them. */
+  async getOpenListingsOf(userId: string, viewerId: string) {
+    const [rows, viewer] = await Promise.all([
+      listingsDal.getByShipperId(userId, "open"),
+      resolveListingViewer(viewerId),
+    ]);
+    return rows.map((listing) => viewFor(listing, viewer));
   },
 
   /** `GET /api/admin/listings` — every status, admin/operator only. */
@@ -351,7 +519,7 @@ export const listingsService = {
       await listingsDal.incrementViews(listingId);
     }
 
-    return listing;
+    return viewFor(listing, await resolveListingViewer(viewerId));
   },
 
   /**
@@ -381,10 +549,15 @@ export const listingsService = {
       if (!byListing.has(row.listingId)) byListing.set(row.listingId, row);
     }
 
-    return listings.map((listing) => ({
-      ...listing,
-      delivery: toDelivery(byListing.get(listing.id)),
-    }));
+    // The owner's own rows, so the `full` view — through the same allow-list
+    // as every other listing route rather than whole — and the delivery,
+    // which `toDelivery` has already projected (listing_privacy_spec.md §2).
+    return listings.map(
+      (listing): OwnRequest => ({
+        ...toListingView(listing, "full"),
+        delivery: toDelivery(byListing.get(listing.id)),
+      })
+    );
   },
 
   /** Expiry cron: a job whose window closed with no carrier selected. */
@@ -412,27 +585,22 @@ export const listingsService = {
   /**
    * Scheduled-publish cron: a job whose chosen "go live" instant has arrived.
    *
-   * `expiresAt` was already anchored on `scheduledPublishAt` at creation time,
-   * so the common case is a plain status flip. This still re-derives it
-   * against the actual firing time rather than trusting the stored value
-   * blindly — the cron that calls this can run late — so a job whose pickup
-   * window closed in the meantime is expired instead of opened dead.
+   * `expiresAt` is re-derived against the actual firing time rather than
+   * trusting the stored value — the cron that calls this can run late — so a
+   * job whose pickup window closed in the meantime is expired instead of
+   * opened dead. Each request is decided under its row lock
+   * (`settleScheduled`), and everything said about it afterwards is said from
+   * the row as written, never from the copy this run read first.
    */
   async publishScheduled(now = new Date()) {
     const due = await listingsDal.findDueScheduled(now);
     let published = 0;
 
-    for (const listing of due) {
-      let expiresAt: Date;
-      try {
-        expiresAt = resolveExpiresAt(listing.pickupFrom, now);
-      } catch {
-        // Never opened, so it never took an offer — nothing for
-        // `expirePendingOffers` to do here, unlike `expireDueListings`.
-        await listingsDal.update(listing.id, {
-          status: "expired",
-          scheduledPublishAt: null,
-        });
+    for (const { id } of due) {
+      const outcome = await settleScheduled(id, now);
+      if (!outcome) continue;
+      const { listing } = outcome;
+      if (!outcome.live) {
         await notificationsService
           .createNotification({
             userId: listing.shipperId,
@@ -445,12 +613,6 @@ export const listingsService = {
           .catch((e) => console.error("listing_schedule_failed notification failed", e));
         continue;
       }
-
-      await listingsDal.update(listing.id, {
-        status: "open",
-        expiresAt,
-        scheduledPublishAt: null,
-      });
       await notificationsService
         .createNotification({
           userId: listing.shipperId,
@@ -474,6 +636,11 @@ export const listingsService = {
 type DeliveredRow = Awaited<
   ReturnType<typeof shipmentsDal.listDeliveredForListings>
 >[number];
+
+/** One of the caller's own requests: the full view, and its delivery if any. */
+type OwnRequest = Record<string, unknown> & {
+  delivery: ReturnType<typeof toDelivery>;
+};
 
 /**
  * The delivery block the requester's history is drawn from.
