@@ -27,16 +27,20 @@ adversarial verification pass — treat their detail as slightly less certain.
 Work that needs a human hand outside the codebase. Add to this list rather
 than leaving it in a chat message.
 
-- [ ] **Run Actions → "Migrate database" for `0036_listing_published_at`
-      before 2.60.0 deploys.** It adds `listings.published_at` and back-fills
-      it; the 2.60.0 code reads the column on every listing query.
-- [ ] **Run Actions → "Migrate database" for `0037_address_used_for` before
-      2.62.0 deploys**, from the release branch, after `0036` (one run applies
-      both). It adds the nullable `addresses.used_for` with a check constraint
-      and rewrites saved-address names stored as a translation key's path
-      (`profile.address.labelPresets.home` → `home`). The 2.62.0 code selects
-      the column on every address read, so `/create` and `/profile` fail
-      without it.
+- [x] ~~Run Actions → "Migrate database" for `0036_listing_published_at`
+      before 2.60.0 deploys~~ and
+      ~~for `0037_address_used_for` before 2.62.0 deploys~~ — **done
+      2026-10-07**, one run, `37593118231`, dispatched on the branch
+      `release/2.62.0` (commit `9e2a8a0`, which carries 2.60.0, 2.61.0 and
+      2.62.0) before `main` moved, so the new code never met an un-migrated
+      database. An earlier run that day, `37592649508`, was dispatched on
+      `main` (`4891fb8`) and applied nothing, since `main` held neither
+      migration. Confirmed read-only through `mirror_readonly`:
+      `listings.published_at` and `addresses.used_for` exist,
+      `addresses_used_for_check` exists, no live listing lacks
+      `published_at`, no address label is still a translation key's path, and
+      `drizzle.__drizzle_migrations` holds 37 rows, the newest
+      `1788163200000` (`0037`).
 - [ ] **Tell the client now about the listing data exposure — GDPR, 72
       hours.** Until 2.60.0, `GET /api/listings` and `GET /api/listings/:id`
       needed no sign-in and returned, for every request ever published, the
