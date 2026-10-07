@@ -1,8 +1,8 @@
 import { useState, type ReactNode } from "react";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { NextIntlClientProvider } from "next-intl";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import fr from "../../../../../messages/fr.json";
 
@@ -18,9 +18,11 @@ vi.mock("next/navigation", () => ({
 // The location picker is a map loaded on demand; the floor sits beside it.
 vi.mock("next/dynamic", () => ({ default: () => () => null }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
+// The requester's address book, set per test (saved_addresses_spec.md §3).
+const book = vi.hoisted(() => ({ addresses: [] as unknown[] }));
 vi.mock("@/features/app/profile/api/addresses.api", () => ({
   createAddress: vi.fn(),
-  fetchAddresses: vi.fn(async () => []),
+  fetchAddresses: vi.fn(async () => book.addresses),
 }));
 // The real module otherwise: a resumed draft is rebuilt through its
 // `splitFragileNote`.
@@ -233,5 +235,85 @@ describe("the floor box, mounted over a floor already in the form", () => {
 
     expect(floorBox("pickup")?.value).toBe("3");
     expect(api.form.getValues("pickup.floor")).toBe(3);
+  });
+});
+
+describe("the saved addresses on « Où » (saved_addresses_spec.md §3)", () => {
+  const saved = (id: string, label: string, street: string, over = {}) => ({
+    id,
+    label,
+    street,
+    city: "Saleux",
+    zip: "80480",
+    country: "France",
+    isDefault: false,
+    lat: 49.86 + street.length / 1000,
+    lng: 2.24,
+    usedFor: null,
+    ...over,
+  });
+  // The owner's screenshot: « work » the newest, « home » before it — and
+  // both names stored as the translation key's path.
+  const work = saved("a-work", "profile.address.labelPresets.work", "Autoroute des Anglais");
+  const home = saved("a-home", "profile.address.labelPresets.home", "Voie du Loup");
+
+  const trigger = (side: "pickup" | "dropoff") =>
+    document.getElementById(`${side}-saved-address`) as HTMLElement;
+
+  beforeEach(() => {
+    book.addresses = [];
+    window.HTMLElement.prototype.hasPointerCapture ??= () => false;
+    window.HTMLElement.prototype.setPointerCapture ??= () => {};
+    window.HTMLElement.prototype.releasePointerCapture ??= () => {};
+    window.HTMLElement.prototype.scrollIntoView ??= () => {};
+  });
+
+  it("fills the pickup only, and opens the delivery on a new address", async () => {
+    book.addresses = [work, home];
+    render(<SteppedPage seed={{ startStep: 1 }} />, { wrapper });
+
+    await waitFor(() =>
+      expect(api.form.getValues("pickup.address")).toBe("Autoroute des Anglais")
+    );
+    expect(api.form.getValues("dropoff.address")).toBe("");
+    expect(trigger("dropoff")).toHaveTextContent(fr.create.where.useNewAddress);
+    // The new-address fields are open at the delivery, not at the pickup.
+    expect(document.getElementById("dropoff-save-address")).not.toBeNull();
+    expect(document.getElementById("pickup-save-address")).toBeNull();
+  });
+
+  it("names a saved address, never by its translation key", async () => {
+    book.addresses = [work, home];
+    render(<SteppedPage seed={{ startStep: 1 }} />, { wrapper });
+
+    await waitFor(() => expect(trigger("pickup")).toHaveTextContent("Travail"));
+    expect(document.body).not.toHaveTextContent("profile.address");
+  });
+
+  it("says the delivery is the pickup's address the moment it is chosen", async () => {
+    book.addresses = [home];
+    render(<SteppedPage seed={{ startStep: 1 }} />, { wrapper });
+    await waitFor(() =>
+      expect(api.form.getValues("pickup.address")).toBe("Voie du Loup")
+    );
+    expect(screen.queryByText(fr.create.validation.sameAddress)).toBeNull();
+
+    // Radix answers a letter on a closed select by picking the option it
+    // starts — « Domicile », the pickup's address.
+    fireEvent.keyDown(trigger("dropoff"), { key: "D" });
+
+    expect(api.form.getValues("dropoff.address")).toBe("Voie du Loup");
+    expect(screen.getByText(fr.create.validation.sameAddress)).toBeInTheDocument();
+  });
+
+  it("leaves a resumed request's addresses as they were saved", async () => {
+    book.addresses = [home];
+    render(<SteppedPage seed={{ draft: savedWithFloors(1, 1), startStep: 1 }} />, {
+      wrapper,
+    });
+
+    await waitFor(() => expect(trigger("pickup")).not.toBeNull());
+    expect(api.form.getValues("pickup.address")).toBe("12 rue de la République");
+    expect(api.form.getValues("dropoff.address")).toBe("3 rue Paradis");
   });
 });

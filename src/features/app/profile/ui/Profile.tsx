@@ -22,11 +22,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
-  MapPin,
   CreditCard,
   Star,
   Settings,
-  Plus,
   Edit2,
   Shield,
   HelpCircle,
@@ -42,6 +40,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useProfile } from "../hooks/useProfile";
+import { SavedAddressesCard } from "./SavedAddressesCard";
 import type { LucideIcon } from "lucide-react";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { useUserRoles } from "../hooks/useUserRoles";
@@ -236,47 +235,7 @@ export function Profile() {
 
         {/* Right Column - Details */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Address Section */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <MapPin className="w-5 h-5 text-primary" />
-                {t("address.title")}
-              </CardTitle>
-              <Link
-                href={
-                  user.address.street
-                    ? "/profile/addresses"
-                    : "/profile/addresses/create"
-                }
-              >
-                <Button variant="ghost" size="sm">
-                  {user.address.street ? (
-                    <Edit2 className="w-4 h-4" />
-                  ) : (
-                    <Plus className="w-4 h-4" />
-                  )}
-                </Button>
-              </Link>
-            </CardHeader>
-            <CardContent>
-              {user.address.street ? (
-                <div className="space-y-1">
-                  <p className="font-medium">{user.address.street}</p>
-                  <p className="text-muted-foreground">
-                    {user.address.city}, {user.address.zip}
-                  </p>
-                  <p className="text-muted-foreground">
-                    {user.address.country}
-                  </p>
-                </div>
-              ) : (
-                <p className="text-muted-foreground text-sm">
-                  {t("address.noAddress")}
-                </p>
-              )}
-            </CardContent>
-          </Card>
+          <SavedAddressesCard />
 
           {/* Payment Methods (For Buyers) */}
           <Card>

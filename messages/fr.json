@@ -356,12 +356,38 @@
       }
     },
     "address": {
-      "title": "Adresse",
-      "noAddress": "Aucune adresse définie. Ajoutez une adresse pour recevoir des envois.",
+      "title": "Adresses",
+      "noAddress": "Aucune adresse enregistrée. Enregistrez-en une pour remplir vos demandes plus vite.",
       "addAddress": "Ajouter une adresse",
       "editAddress": "Modifier l'adresse",
+      "addNew": "Ajouter une nouvelle adresse",
+      "manage": "Gérer mes adresses",
+      "showAll": "Tout afficher ({count})",
+      "showLess": "Réduire",
+      "loadError": "Impossible de charger vos adresses.",
+      "retry": "Réessayer",
+      "default": "Par défaut",
+      "usedFor": {
+        "pickup": "Retrait",
+        "dropoff": "Livraison"
+      },
+      "list": {
+        "title": "Mes adresses",
+        "back": "Retour au profil",
+        "empty": "Vous n'avez encore enregistré aucune adresse.",
+        "addFirst": "Ajouter votre première adresse",
+        "actions": "Actions pour {name}",
+        "setDefault": "Définir par défaut",
+        "edit": "Modifier",
+        "delete": "Supprimer",
+        "deleted": "Adresse supprimée",
+        "deletedDescription": "L'adresse a été supprimée.",
+        "errorTitle": "Erreur",
+        "deleteFailed": "Impossible de supprimer l'adresse. Veuillez réessayer."
+      },
       "form": {
         "labelPresetLabel": "Type d'adresse",
+        "labelPresetPlaceholder": "Choisissez un nom",
         "labelPresets": {
           "home": "Domicile",
           "work": "Travail",
@@ -383,6 +409,13 @@
         "detailsPlaceholder": "Étage, numéro d'appartement, digicode, etc.",
         "detailsHelp": "Aidez le livreur à vous trouver facilement",
         "default": "Définir comme adresse par défaut",
+        "usedForLabel": "Utiliser pour",
+        "usedForOptions": {
+          "any": "Retrait ou livraison",
+          "pickup": "Retrait",
+          "dropoff": "Livraison"
+        },
+        "usedForHint": "Vos nouvelles demandes commencent avec cette adresse déjà remplie de ce côté.",
         "save": "Enregistrer l'adresse",
         "update": "Mettre à jour",
         "saving": "Enregistrement...",
@@ -900,7 +933,9 @@
       "draftFailed": "Impossible d'enregistrer le brouillon. Veuillez réessayer.",
       "checkStep": "Vérifiez l'étape « {step} ».",
       "finishSteps": "Complétez les étapes suivantes pour enregistrer votre demande.",
-      "addressSaveFailed": "Impossible d'enregistrer cette adresse dans votre profil. Votre demande n'est pas affectée."
+      "addressSaveFailed": "Impossible d'enregistrer cette adresse dans votre profil. Votre demande n'est pas affectée.",
+      "sameAddress": "Le retrait et la livraison sont à la même adresse. Choisissez une autre adresse de livraison pour continuer.",
+      "tooClose": "Le retrait et la livraison sont trop proches l'un de l'autre. Vérifiez les deux adresses pour continuer."
     },
     "what": {
       "titleLabel": "Que transportez-vous ?",
@@ -1056,10 +1091,14 @@
       "pickup": "Retrait",
       "dropoff": "Livraison",
       "defaultAddress": "Par défaut",
+      "savedAddress": "Adresse enregistrée",
+      "alreadyAt": {
+        "pickup": "Déjà le retrait",
+        "dropoff": "Déjà la livraison"
+      },
       "useNewAddress": "Saisir une nouvelle adresse",
       "saveAddress": "Enregistrer cette adresse dans mon profil",
       "addressLabelField": "Libellé (facultatif)",
-      "addressLabelPlaceholder": "Ex : Domicile, Travail",
       "locationType": "Type de lieu",
       "select": "Sélectionner",
       "floor": "Étage",
@@ -1169,6 +1208,7 @@
       "outsideFrance": "Nous ne transportons qu'en France",
       "floorRequired": "L'étage est obligatoire pour un appartement",
       "liftRequired": "Indiquez aux transporteurs s'il y a un ascenseur",
+      "sameAddress": "Le retrait et la livraison sont à la même adresse",
       "tooClose": "Le retrait et la livraison sont trop proches l'un de l'autre",
       "dateRequired": "Choisissez une date et une heure",
       "pickupWindow": "Le créneau de retrait doit se terminer après son début",

@@ -15,16 +15,6 @@ interface UserStats {
   distribution: { 1: number; 2: number; 3: number; 4: number; 5: number };
 }
 
-interface AddressData {
-  id: string;
-  label: string;
-  street: string;
-  city: string;
-  zip: string;
-  country: string;
-  isDefault: boolean;
-}
-
 /**
  * Fetch user rating stats from API
  */
@@ -39,18 +29,6 @@ async function fetchUserStats(userId: string): Promise<UserStats> {
     total: 0,
     distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
   };
-}
-
-/**
- * Fetch user's default address from API
- */
-async function fetchDefaultAddress(): Promise<AddressData | null> {
-  const res = await fetch("/api/user/addresses/default");
-  const data = await res.json();
-  if (data.success && data.data) {
-    return data.data;
-  }
-  return null;
 }
 
 // The Stripe Connect status was read here for the payout card, which is gone
@@ -79,15 +57,10 @@ export function useProfile() {
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
-  // Fetch user's default address from API
-  const { data: defaultAddress, isLoading: isAddressLoading } = useQuery({
-    queryKey: ["user-default-address"],
-    queryFn: fetchDefaultAddress,
-    enabled: !!userData?.id,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-  });
+  // The saved addresses are the address card's own read, every one of them
+  // rather than the default alone (saved_addresses_spec.md §4.1).
 
-  // User data from auth context with real rating stats and address
+  // User data from auth context with real rating stats
   const user = useMemo(
     () => ({
       name: userData?.name || "User",
@@ -97,14 +70,8 @@ export function useProfile() {
       type: "Particulier",
       image: userData?.image,
       isVerified: userData?.isVerified ?? false,
-      address: {
-        street: defaultAddress?.street || "",
-        city: defaultAddress?.city || "",
-        zip: defaultAddress?.zip || "",
-        country: defaultAddress?.country || "",
-      },
     }),
-    [userData, stats, defaultAddress]
+    [userData, stats]
   );
 
   // Check if user is using OAuth (Google SSO)
@@ -266,7 +233,7 @@ export function useProfile() {
 
   return {
     user,
-    isLoading: isLoading || isStatsLoading || isAddressLoading,
+    isLoading: isLoading || isStatsLoading,
     cards,
     isAddCardOpen,
     setIsAddCardOpen,

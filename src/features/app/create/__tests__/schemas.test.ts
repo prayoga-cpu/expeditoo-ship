@@ -84,11 +84,47 @@ describe("jobFormSchema", () => {
   });
 
   it("rejects two points closer than the minimum route", () => {
-    // Roughly 40 m apart — a job nobody would drive.
-    const nextDoor = endpoint({ lat: 45.7504, lng: 4.85, postalCode: "69003" });
+    // Roughly 40 m apart — a job nobody would drive. Another street number:
+    // the same one is the same address, said in those words (below).
+    const nextDoor = endpoint({
+      lat: 45.7504,
+      lng: 4.85,
+      address: "14 rue A",
+      postalCode: "69003",
+    });
 
     expect(messages(form({ dropoff: nextDoor }))).toContain(
       "create.validation.tooClose"
+    );
+  });
+
+  // saved_addresses_spec.md §3.3: the owner's « Suivant » refused in silence.
+  it("says the address is the same when both ends are", () => {
+    expect(messages(form({ dropoff: endpoint() }))).toEqual([
+      "create.validation.sameAddress",
+    ]);
+  });
+
+  it("sees the same address without pins, and through case and accents", () => {
+    const typed = { lat: undefined, lng: undefined };
+    const pickup = endpoint({ ...typed, address: "12 Rue de l'Église" });
+    const dropoff = endpoint({ ...typed, address: "12 rue de l eglise", city: "LYON" });
+
+    expect(messages(form({ pickup, dropoff }))).toContain(
+      "create.validation.sameAddress"
+    );
+  });
+
+  it("does not call the same street in another town the same address", () => {
+    const villeurbanne = endpoint({
+      lat: undefined,
+      lng: undefined,
+      city: "Villeurbanne",
+      postalCode: "69100",
+    });
+
+    expect(messages(form({ dropoff: villeurbanne }))).not.toContain(
+      "create.validation.sameAddress"
     );
   });
 

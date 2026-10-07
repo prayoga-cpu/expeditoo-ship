@@ -14,6 +14,36 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.62.0] - 2026-10-07 · ux
+
+- **Your saved address no longer fills both ends of a request.** A new request
+  opened with the same saved address as both the pickup and the delivery. Now
+  the pickup is filled from your addresses and the delivery opens on « Saisir
+  une nouvelle adresse », ready to type — unless you keep an address for
+  deliveries, in which case that one is filled in.
+- **Keep an address for pickups or for deliveries.** In your profile,
+  « Utiliser pour » marks an address as where things usually leave from or
+  arrive at, and an address you save while posting a request remembers which
+  end it was typed at. Each end of your next request starts with its own.
+- **Saved addresses are a dropdown.** On « Où », each end has one « Adresse
+  enregistrée » list instead of a stack of cards, with « Saisir une nouvelle
+  adresse » always last. An address already used at the other end says so.
+- **« Suivant » says when the pickup and the delivery are the same address.**
+  It used to refuse without a word. The delivery now shows « Le retrait et la
+  livraison sont à la même adresse » the moment it happens, and « Suivant »
+  explains it in a message too.
+- **Addresses show their names.** Addresses showed
+  `profile.address.labelPresets.home` where they should have read
+  « Domicile ». « Domicile », « Travail », « Stockage » and « Voisin » now
+  show in your language. Saving an address from a request offers the same
+  names, and one saved without a name takes its town's.
+- **Your profile lists all your addresses.** The « Adresses » card said there
+  were none unless one was your default, and its button only led to adding
+  another. It now lists every saved address — three, then « Tout afficher » —
+  each opening its edit page, with « Ajouter une nouvelle adresse » and
+  « Gérer mes adresses » underneath. The « Mes adresses » page is now in
+  French as well as English.
+
 ## [2.61.0] - 2026-10-07 · ux
 
 - **« Devenir chauffeur » opens, wherever you start from.** The access menu's

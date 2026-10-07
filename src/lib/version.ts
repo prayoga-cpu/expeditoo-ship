@@ -6,4 +6,4 @@
  * `src/lib/__tests__/changelog.test.ts` both fail when they disagree, because a
  * stale version silently mislabels the release history (AGENTS.md §8).
  */
-export const APP_VERSION = "2.61.0";
+export const APP_VERSION = "2.62.0";

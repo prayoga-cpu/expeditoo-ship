@@ -97,6 +97,34 @@ function metresBetween(
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 
+/** An address as compared for sameness: case, accents and punctuation aside. */
+function comparable(text: string | undefined): string {
+  return (text ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+/**
+ * Whether the two ends are written as the same address
+ * (saved_addresses_spec.md §3.3) — whatever their pins say, and whether they
+ * came from the address book or were typed. Both must be given: two blank
+ * ends are a missing address, said by their own rules.
+ */
+export function sameEndpoint(
+  a: { address?: string; postalCode?: string; city?: string } | undefined,
+  b: { address?: string; postalCode?: string; city?: string } | undefined
+): boolean {
+  if (!a?.address?.trim() || !b?.address?.trim()) return false;
+  return (
+    comparable(a.address) === comparable(b.address) &&
+    comparable(a.postalCode) === comparable(b.postalCode) &&
+    comparable(a.city) === comparable(b.city)
+  );
+}
+
 /**
  * An emptied box reports `""`, which as a number is 0 — passing `.min(0)` and
  * failing `.positive()` with a message about being greater than zero, neither
@@ -383,10 +411,18 @@ export const jobFormSchema = z
       }
     }
 
-    // Only checkable when both ends have a real pin — a manually-typed
-    // endpoint on either side leaves nothing to measure, so the guard is
-    // skipped rather than half-applied.
-    if (
+    // The same address at both ends says so in those words, not as two
+    // points too close together; and it needs no pin to be seen.
+    if (sameEndpoint(data.pickup, data.dropoff)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "create.validation.sameAddress",
+        path: ["dropoff", "address"],
+      });
+    } else if (
+      // Only checkable when both ends have a real pin — a manually-typed
+      // endpoint on either side leaves nothing to measure, so the guard is
+      // skipped rather than half-applied.
       data.pickup.lat !== undefined &&
       data.pickup.lng !== undefined &&
       data.dropoff.lat !== undefined &&

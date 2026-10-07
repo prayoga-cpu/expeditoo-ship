@@ -222,7 +222,7 @@ without an `sk_live_` key, so an accept there takes real money.
 Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before shipping.
 
 **Gates — all green.** `npx tsc --noEmit` 0 errors · `pnpm lint` 0 errors ·
-2,622 unit tests pass (2.61.0) · `pnpm build` succeeds.
+2,655 unit tests pass (2.62.0) · `pnpm build` succeeds.
 
 **Done**
 - Schema remodelled to the transport model; one clean initial migration
@@ -617,6 +617,18 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
   row did not, and `MainLayout` bounced the page back to the panel. The
   banner no longer says « approuvé » to an account without driver roles.
   Nothing here grants a role. `become_driver_spec.md`
+- **Saved addresses, one per end** (2.62.0). `addresses.used_for`
+  (`'pickup' | 'dropoff'`, null = either; `0037`) lets `/create` fill each end
+  with its own address. `autoPickAddresses` (`create/address-book.ts`) runs
+  **once per form** from `useJobForm.prefillAddresses`, never puts one address
+  at both ends, fills the delivery only from an address kept for deliveries,
+  and never touches a resumed draft. The saved addresses are a `Select` per
+  end. `sameEndpoint` raises `create.validation.sameAddress` ahead of
+  `tooClose`, shown live under the delivery and toasted on « Suivant ». A
+  preset name is **stored as its id** (`home`) and translated on display
+  through `addressDisplayName` (`src/lib/saved-address.ts`), which also reads
+  the `profile.address.labelPresets.*` paths the profile form once stored
+  by mistake. `/profile` lists every address. `saved_addresses_spec.md`
 
 **Not done**
 - **`EXPEDION_APP_ORIGINS` is set in Vercel Production but not in `.env.local`**,

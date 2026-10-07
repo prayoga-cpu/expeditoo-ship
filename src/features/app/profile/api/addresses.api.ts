@@ -1,3 +1,5 @@
+import type { AddressSide } from "@/lib/saved-address";
+
 export interface Address {
     id: string;
     label: string;
@@ -9,6 +11,8 @@ export interface Address {
     isDefault: boolean;
     lat?: number;
     lng?: number;
+    /** Which end of a transport it usually is; null means either. */
+    usedFor?: AddressSide | null;
 }
 
 export interface CreateAddressInput {
@@ -23,6 +27,7 @@ export interface CreateAddressInput {
     lat?: number;
     lng?: number;
     isDefault?: boolean;
+    usedFor?: AddressSide | null;
 }
 
 export interface ApiResponse<T> {

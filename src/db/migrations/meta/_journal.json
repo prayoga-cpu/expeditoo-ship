@@ -253,6 +253,13 @@
       "when": 1788159600000,
       "tag": "0036_listing_published_at",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1788163200000,
+      "tag": "0037_address_used_for",
+      "breakpoints": true
     }
   ]
 }

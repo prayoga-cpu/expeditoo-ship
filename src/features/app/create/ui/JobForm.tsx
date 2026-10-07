@@ -31,10 +31,12 @@ import { TimingField } from "./TimingField";
 import { PublishTimingField } from "./PublishTimingField";
 import { PickupPublicationNotice } from "./PublicationNotice";
 import { SavedAddressPicker } from "./SavedAddressPicker";
+import { AddressLabelField } from "@/features/app/profile/ui/AddressLabelField";
 import { PackagingField } from "./PackagingField";
 import { ToggleRow } from "./ToggleRow";
-import { LOCATION_TYPES, type LocationType } from "../schemas";
+import { LOCATION_TYPES, sameEndpoint, type LocationType } from "../schemas";
 import { useAddressBook, type Address } from "../hooks/useAddressBook";
+import { applySavedAddress, matchSavedAddress, type Side } from "../address-book";
 import type { JobFormApi } from "../hooks/useJobForm";
 import type { SnappedTime } from "../from-listing";
 
@@ -78,6 +80,7 @@ export function JobForm(props: JobFormApi) {
     handlePhotosChange,
     handleNext,
     handlePrev,
+    prefillAddresses,
     publish,
     saveDraft,
   } = props;
@@ -104,7 +107,9 @@ export function JobForm(props: JobFormApi) {
             onPhotosChange={handlePhotosChange}
           />
         )}
-        {currentStep === 1 && <WhereStep form={form} />}
+        {currentStep === 1 && (
+          <WhereStep form={form} onAddressesLoaded={prefillAddresses} />
+        )}
         {currentStep === 2 && (
           <WhenStep
             form={form}
@@ -246,12 +251,42 @@ function WhatStep({
   );
 }
 
-function WhereStep({ form }: StepProps) {
+/** The one message the two ends raise together (saved_addresses_spec.md §3.3). */
+const SAME_ADDRESS = "create.validation.sameAddress";
+
+function WhereStep({
+  form,
+  onAddressesLoaded,
+}: StepProps & { onAddressesLoaded: (addresses: Address[]) => void }) {
   const t = useTranslations("create.where");
+  const { data: savedAddresses } = useAddressBook();
+  // A job needs a pin to route and price; the profile lets an address be
+  // saved without one, so only a geocoded saved address is selectable here.
+  const pinnedAddresses = useMemo(
+    () => (savedAddresses ?? []).filter((a) => a.lat != null && a.lng != null),
+    [savedAddresses]
+  );
+
+  // Both ends are filled together, so they can never be filled with the same
+  // address; the hook makes sure it happens once per request.
+  useEffect(() => {
+    if (savedAddresses) onAddressesLoaded(pinnedAddresses);
+  }, [savedAddresses, pinnedAddresses, onAddressesLoaded]);
+
   return (
     <div className="space-y-8">
-      <EndpointFields form={form} side="pickup" title={t("pickup")} />
-      <EndpointFields form={form} side="dropoff" title={t("dropoff")} />
+      <EndpointFields
+        form={form}
+        side="pickup"
+        title={t("pickup")}
+        addresses={pinnedAddresses}
+      />
+      <EndpointFields
+        form={form}
+        side="dropoff"
+        title={t("dropoff")}
+        addresses={pinnedAddresses}
+      />
     </div>
   );
 }
@@ -260,35 +295,15 @@ function EndpointFields({
   form,
   side,
   title,
-}: StepProps & { side: "pickup" | "dropoff"; title: string }) {
+  addresses,
+}: StepProps & { side: Side; title: string; addresses: Address[] }) {
   const t = useTranslations("create.where");
   const tTypes = useTranslations("create.locationTypes");
   const { setValue, watch, formState, clearErrors } = form;
   const endpoint = watch(side);
+  const other = watch(side === "pickup" ? "dropoff" : "pickup");
   const error = formState.errors[side];
   const locationType = endpoint?.locationType;
-
-  const { data: savedAddresses = [] } = useAddressBook();
-  // A job needs a pin to route and price; the profile lets an address be
-  // saved without one, so only a geocoded saved address is selectable here.
-  const pinnedAddresses = useMemo(
-    () => savedAddresses.filter((a) => a.lat != null && a.lng != null),
-    [savedAddresses]
-  );
-
-  const applySavedAddress = useCallback(
-    (address: Address) => {
-      setValue(`${side}.address`, address.street, { shouldValidate: true });
-      setValue(`${side}.city`, address.city);
-      setValue(`${side}.postalCode`, address.zip);
-      setValue(`${side}.lat`, address.lat as number);
-      setValue(`${side}.lng`, address.lng as number);
-      setValue(`${side}.saveAddress`, false);
-      setValue(`${side}.addressLabel`, "");
-      setValue(`${side}.locationEntry`, undefined);
-    },
-    [setValue, side]
-  );
 
   const switchToNewAddress = useCallback(() => {
     setValue(`${side}.address`, "");
@@ -302,27 +317,18 @@ function EndpointFields({
     setValue(`${side}.locationEntry`, undefined);
   }, [setValue, side]);
 
-  // Pre-fill the default saved address the first time the list loads, on a
-  // fresh endpoint only — never overwrites an address already entered,
-  // whether that came from the map or from restoring a draft.
-  useEffect(() => {
-    if (pinnedAddresses.length === 0) return;
-    if (form.getValues(`${side}.address`)) return;
-    applySavedAddress(
-      pinnedAddresses.find((a) => a.isDefault) ?? pinnedAddresses[0]
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pinnedAddresses.length]);
+  const selectedAddress = matchSavedAddress(addresses, endpoint);
+  const usingSavedAddress = selectedAddress !== undefined;
 
-  const selectedAddressId =
-    pinnedAddresses.find(
-      (a) =>
-        a.street === endpoint?.address &&
-        a.zip === endpoint?.postalCode &&
-        a.lat === endpoint?.lat &&
-        a.lng === endpoint?.lng
-    )?.id ?? "custom";
-  const usingSavedAddress = selectedAddressId !== "custom";
+  // Said under the delivery the moment the two ends are the same, not only
+  // after « Suivant »; and a refusal the ends no longer earn is not repeated.
+  let addressError = error?.address?.message;
+  if (side === "dropoff") {
+    const same = sameEndpoint(other, endpoint);
+    if (same) addressError = SAME_ADDRESS;
+    else if (addressError === SAME_ADDRESS) addressError = undefined;
+  }
+
   const linkEntry = endpoint?.locationEntry === "link";
   // Before a link resolves, "address/city/postal required" describe fields
   // this mode has not shown yet; the one thing missing is the link itself.
@@ -332,15 +338,25 @@ function EndpointFields({
     <section className="space-y-4">
       <h2 className="font-semibold">{title}</h2>
 
-      {pinnedAddresses.length > 0 && (
+      {addresses.length > 0 && (
         <SavedAddressPicker
-          addresses={pinnedAddresses}
-          selectedId={selectedAddressId}
+          id={`${side}-saved-address`}
+          side={side}
+          addresses={addresses}
+          selectedId={selectedAddress?.id}
+          otherSideId={matchSavedAddress(addresses, other)?.id}
           onSelect={(address) =>
-            address ? applySavedAddress(address) : switchToNewAddress()
+            address
+              ? applySavedAddress(setValue, side, address)
+              : switchToNewAddress()
           }
         />
       )}
+
+      {/* The delivery's refusal belongs to the address, whichever way it was
+          given — a saved one included, where it was never shown and
+          « Suivant » refused in silence. */}
+      {usingSavedAddress && <FieldError message={addressError} />}
 
       {!usingSavedAddress && (
         <>
@@ -396,7 +412,7 @@ function EndpointFields({
             <FieldError message={error?.lat?.message} />
           ) : (
             <>
-              <FieldError message={error?.address?.message} />
+              <FieldError message={addressError} />
               <FieldError message={error?.city?.message} />
               <FieldError message={error?.postalCode?.message} />
             </>
@@ -418,19 +434,12 @@ function EndpointFields({
             </Label>
           </div>
           {endpoint?.saveAddress && (
-            <div>
-              <Label htmlFor={`${side}-address-label`}>
-                {t("addressLabelField")}
-              </Label>
-              <Input
-                id={`${side}-address-label`}
-                placeholder={t("addressLabelPlaceholder")}
-                value={endpoint?.addressLabel ?? ""}
-                onChange={(e) =>
-                  setValue(`${side}.addressLabel`, e.target.value)
-                }
-              />
-            </div>
+            <AddressLabelField
+              id={`${side}-address-label`}
+              label={t("addressLabelField")}
+              value={endpoint?.addressLabel ?? ""}
+              onChange={(label) => setValue(`${side}.addressLabel`, label)}
+            />
           )}
         </>
       )}

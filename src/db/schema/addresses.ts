@@ -8,6 +8,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { user } from "./users";
+import { ADDRESS_SIDES } from "@/lib/saved-address";
 
 // ========================================
 // Addresses Table
@@ -29,6 +30,9 @@ export const addresses = pgTable(
     lat: doublePrecision("lat"),
     lng: doublePrecision("lng"),
     isDefault: boolean("is_default").default(false).notNull(),
+    // Which end of a transport this address usually is, so `/create` fills
+    // each end with its own (saved_addresses_spec.md §2). Null means either.
+    usedFor: text("used_for", { enum: ADDRESS_SIDES }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()

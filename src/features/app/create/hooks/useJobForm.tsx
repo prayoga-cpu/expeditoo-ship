@@ -8,8 +8,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { ApiError } from "@/lib/fetcher";
-import { createAddress } from "@/features/app/profile/api/addresses.api";
+import {
+  createAddress,
+  type Address,
+} from "@/features/app/profile/api/addresses.api";
 import { addressBookKeys } from "./useAddressBook";
+import { applySavedAddress, autoPickAddresses } from "../address-book";
 import { draftRefusal } from "@/features/app/listing/hooks/useDraftActions";
 import { jobKeys } from "@/features/app/listing/hooks/useJobDetail";
 import type { DraftJob } from "@/features/app/listing/types";
@@ -142,6 +146,11 @@ export function useJobForm(seed: JobFormSeed = {}) {
   // the click and `isPending` lie an async validation and a re-render, and a
   // second click in that gap would post the request twice.
   const inFlight = useRef(false);
+  // Saved addresses fill a fresh request once, when the list first arrives
+  // (saved_addresses_spec.md §3.2) — here rather than on « Où », which
+  // unmounts on every step change and would fill again an end the requester
+  // had cleared. A resumed request is never filled.
+  const addressesPrefilled = useRef(resumed !== null);
 
   const form = useForm<JobFormValues>({
     resolver: zodResolver(jobFormSchema),
@@ -305,6 +314,23 @@ export function useJobForm(seed: JobFormSeed = {}) {
     },
   });
 
+  /** Fill each empty end from the address book, once per form. */
+  const prefillAddresses = useCallback(
+    (addresses: Address[]) => {
+      if (addressesPrefilled.current) return;
+      addressesPrefilled.current = true;
+      const picks = autoPickAddresses(addresses, {
+        pickup: form.getValues("pickup"),
+        dropoff: form.getValues("dropoff"),
+      });
+      for (const side of ["pickup", "dropoff"] as const) {
+        const address = picks[side];
+        if (address) applySavedAddress(form.setValue, side, address);
+      }
+    },
+    [form]
+  );
+
   const handlePhotosChange = useCallback(
     (next: string[]) => {
       setPhotos(next);
@@ -330,13 +356,16 @@ export function useJobForm(seed: JobFormSeed = {}) {
 
       try {
         await createAddress({
-          label: endpoint.addressLabel?.trim() || t(`where.${side}`),
+          // A preset's id or a typed name; unnamed, the town it is in. The end
+          // it was saved from is its own field now (saved_addresses_spec.md §3.4).
+          label: endpoint.addressLabel?.trim() || endpoint.city || t(`where.${side}`),
           street: endpoint.address,
           city: endpoint.city,
           zip: endpoint.postalCode,
           country: "France",
           lat: endpoint.lat,
           lng: endpoint.lng,
+          usedFor: side,
         });
         form.setValue(`${side}.addressLabel`, "");
         queryClient.invalidateQueries({ queryKey: addressBookKeys.all });
@@ -346,6 +375,21 @@ export function useJobForm(seed: JobFormSeed = {}) {
       }
     }
   }, [form, queryClient, t]);
+
+  /**
+   * The one refusal on « Où » that is about both ends at once, said as a
+   * toast too: it is written under the delivery, which may be off screen
+   * while the requester is looking at the pickup (saved_addresses_spec.md
+   * §3.3).
+   */
+  const toastEndpointsRefusal = useCallback(() => {
+    const refusal = form.getFieldState("dropoff.address").error?.message;
+    if (refusal === "create.validation.sameAddress") {
+      toast.error(t("toast.sameAddress"));
+    } else if (refusal === "create.validation.tooClose") {
+      toast.error(t("toast.tooClose"));
+    }
+  }, [form, t]);
 
   /**
    * Only validates the fields on the current step, not the whole form. Not
@@ -360,6 +404,7 @@ export function useJobForm(seed: JobFormSeed = {}) {
     const fields = STEP_FIELDS[currentStep];
     const valid = await form.trigger(fields as never);
     if (!valid) {
+      if (currentStep === WHERE_STEP) toastEndpointsRefusal();
       showStep(currentStep);
       return;
     }
@@ -369,7 +414,15 @@ export function useJobForm(seed: JobFormSeed = {}) {
     const next = Math.min(currentStep + 1, JOB_STEPS.length - 1);
     setCurrentStep(next);
     setFurthestStep((furthest) => Math.max(furthest, next));
-  }, [currentStep, form, saveRequestedAddresses, showStep, syncTiming, timing]);
+  }, [
+    currentStep,
+    form,
+    saveRequestedAddresses,
+    showStep,
+    syncTiming,
+    timing,
+    toastEndpointsRefusal,
+  ]);
 
   const handlePrev = useCallback(
     () => setCurrentStep((step) => Math.max(step - 1, 0)),
@@ -499,6 +552,7 @@ export function useJobForm(seed: JobFormSeed = {}) {
     handlePhotosChange,
     handleNext,
     handlePrev,
+    prefillAddresses,
     goToStep: showStep,
     publish: () => submit(true),
     saveDraft: () => submit(false),

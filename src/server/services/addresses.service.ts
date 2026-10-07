@@ -31,6 +31,7 @@ export const addressesService = {
       lat: data.lat,
       lng: data.lng,
       isDefault: data.isDefault,
+      usedFor: data.usedFor ?? null,
     });
 
     return address;

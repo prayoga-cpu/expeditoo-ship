@@ -63,6 +63,53 @@ describe('addressesService', () => {
         });
     });
 
+    // saved_addresses_spec.md §2 — the end of a transport an address is kept for.
+    describe('usedFor', () => {
+        const input = {
+            label: 'home',
+            street: 'Voie du Loup',
+            city: 'Saleux',
+            zip: '80480',
+            country: 'France',
+        };
+
+        it('writes the end it was saved from', async () => {
+            vi.mocked(addressesDal.create).mockResolvedValue({ id: 'addr-1' } as never);
+
+            await addressesService.create('user-1', { ...input, usedFor: 'dropoff' });
+
+            expect(addressesDal.create).toHaveBeenCalledWith(
+                expect.objectContaining({ usedFor: 'dropoff' })
+            );
+        });
+
+        it('writes null — either end — when none is given', async () => {
+            vi.mocked(addressesDal.create).mockResolvedValue({ id: 'addr-1' } as never);
+
+            await addressesService.create('user-1', input);
+
+            expect(addressesDal.create).toHaveBeenCalledWith(
+                expect.objectContaining({ usedFor: null })
+            );
+        });
+
+        it('refuses any other end', async () => {
+            await expect(
+                addressesService.create('user-1', { ...input, usedFor: 'both' })
+            ).rejects.toThrow();
+            expect(addressesDal.create).not.toHaveBeenCalled();
+        });
+
+        it('clears it on an update that sends null', async () => {
+            vi.mocked(addressesDal.getOwner).mockResolvedValue('user-1');
+            vi.mocked(addressesDal.update).mockResolvedValue({ id: 'addr-1' } as never);
+
+            await addressesService.update('addr-1', 'user-1', { usedFor: null });
+
+            expect(addressesDal.update).toHaveBeenCalledWith('addr-1', { usedFor: null });
+        });
+    });
+
     describe('delete', () => {
         it('should delete own address', async () => {
             vi.mocked(addressesDal.getOwner).mockResolvedValue('user-1');

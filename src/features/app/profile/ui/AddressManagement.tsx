@@ -6,7 +6,7 @@ import {
   Edit2,
   Trash2,
   Home,
-  Briefcase,
+  MapPin,
   Plus,
   Check,
   ArrowLeft,
@@ -20,10 +20,11 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useToast } from "@/hooks/use-toast";
 import { PageLoader } from "@/components/ui/page-loader";
-
-
+import { addressDisplayName, addressLabelPreset } from "@/lib/saved-address";
+import { AddressBadges } from "./SavedAddressesCard";
 
 import {
   fetchAddresses,
@@ -34,8 +35,9 @@ import {
 export function AddressManagement() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const t = useTranslations("profile.address");
 
-  const { data: addresses = [], isLoading } = useQuery({
+  const { data: addresses = [], isLoading, isError, refetch } = useQuery({
     queryKey: ["user-addresses"],
     queryFn: fetchAddresses,
   });
@@ -44,16 +46,15 @@ export function AddressManagement() {
     mutationFn: deleteAddress,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["user-addresses"] });
-      queryClient.invalidateQueries({ queryKey: ["user-default-address"] });
       toast({
-        title: "Address deleted",
-        description: "The address has been removed successfully.",
+        title: t("list.deleted"),
+        description: t("list.deletedDescription"),
       });
     },
     onError: () => {
       toast({
-        title: "Error",
-        description: "Failed to delete address. Please try again.",
+        title: t("list.errorTitle"),
+        description: t("list.deleteFailed"),
         variant: "destructive",
       });
     },
@@ -63,7 +64,6 @@ export function AddressManagement() {
     mutationFn: setDefaultAddress,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["user-addresses"] });
-      queryClient.invalidateQueries({ queryKey: ["user-default-address"] });
     },
   });
 
@@ -81,107 +81,112 @@ export function AddressManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-4">
-          <Link href="/profile">
-            <Button variant="ghost" size="icon" className="rounded-full">
+          <Button variant="ghost" size="icon" className="rounded-full" asChild>
+            <Link href="/profile" aria-label={t("list.back")}>
               <ArrowLeft className="w-5 h-5" />
-            </Button>
-          </Link>
-          <h1 className="text-3xl font-bold tracking-tight">My Addresses</h1>
-        </div>
-        <Link href="/profile/addresses/create">
-          <Button className="rounded-full">
-            <Plus className="w-4 h-4 mr-2" />
-            Add New Address
+            </Link>
           </Button>
-        </Link>
+          <h1 className="text-3xl font-bold tracking-tight">{t("list.title")}</h1>
+        </div>
+        <Button className="rounded-full" asChild>
+          <Link href="/profile/addresses/create">
+            <Plus className="w-4 h-4 mr-2" />
+            {t("addNew")}
+          </Link>
+        </Button>
       </div>
 
-      {addresses.length === 0 ? (
+      {isError ? (
+        <Card>
+          <CardContent className="flex flex-wrap items-center justify-between gap-3 py-6">
+            <p className="text-sm text-destructive">{t("loadError")}</p>
+            <Button variant="outline" onClick={() => refetch()}>
+              {t("retry")}
+            </Button>
+          </CardContent>
+        </Card>
+      ) : addresses.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground mb-4">
-              You haven&apos;t added any addresses yet.
-            </p>
-            <Link href="/profile/addresses/create">
-              <Button>
+            <p className="text-muted-foreground mb-4">{t("list.empty")}</p>
+            <Button asChild>
+              <Link href="/profile/addresses/create">
                 <Plus className="w-4 h-4 mr-2" />
-                Add Your First Address
-              </Button>
-            </Link>
+                {t("list.addFirst")}
+              </Link>
+            </Button>
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
-          {addresses.map((address) => (
-            <Card
-              key={address.id}
-              className={`relative ${address.isDefault ? "border-primary shadow-sm" : ""}`}
-            >
-              <CardHeader className="pb-2">
-                <div className="flex justify-between items-start">
-                  <div className="flex items-center gap-2">
-                    {address.label.toLowerCase() === "home" ? (
-                      <Home className="w-4 h-4 text-primary" />
-                    ) : (
-                      <Briefcase className="w-4 h-4 text-primary" />
-                    )}
-                    <CardTitle className="text-base font-semibold">
-                      {address.label}
-                    </CardTitle>
-                    {address.isDefault && (
-                      <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                        Default
-                      </span>
-                    )}
-                  </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 -mr-2 -mt-2"
-                      >
-                        <MoreVertical className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      {!address.isDefault && (
-                        <DropdownMenuItem
-                          onClick={() => handleSetDefault(address.id)}
-                          disabled={setDefaultMutation.isPending}
+          {addresses.map((address) => {
+            const name = addressDisplayName(address, (p) =>
+              t(`form.labelPresets.${p}`)
+            );
+            const Icon =
+              addressLabelPreset(address.label) === "home" ? Home : MapPin;
+            return (
+              <Card
+                key={address.id}
+                className={`relative ${address.isDefault ? "border-primary shadow-sm" : ""}`}
+              >
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-start gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Icon className="w-4 h-4 text-primary" aria-hidden />
+                      <CardTitle className="text-base font-semibold">{name}</CardTitle>
+                      <AddressBadges address={address} />
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 -mr-2 -mt-2"
+                          aria-label={t("list.actions", { name })}
                         >
-                          <Check className="w-4 h-4 mr-2" /> Set as Default
+                          <MoreVertical className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {!address.isDefault && (
+                          <DropdownMenuItem
+                            onClick={() => handleSetDefault(address.id)}
+                            disabled={setDefaultMutation.isPending}
+                          >
+                            <Check className="w-4 h-4 mr-2" /> {t("list.setDefault")}
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem asChild>
+                          <Link href={`/profile/addresses/${address.id}/edit`}>
+                            <Edit2 className="w-4 h-4 mr-2" /> {t("list.edit")}
+                          </Link>
                         </DropdownMenuItem>
-                      )}
-                      <Link href={`/profile/addresses/${address.id}/edit`}>
-                        <DropdownMenuItem>
-                          <Edit2 className="w-4 h-4 mr-2" /> Edit
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={() => handleDelete(address.id)}
+                          disabled={deleteMutation.isPending}
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" /> {t("list.delete")}
                         </DropdownMenuItem>
-                      </Link>
-                      <DropdownMenuItem
-                        className="text-destructive"
-                        onClick={() => handleDelete(address.id)}
-                        disabled={deleteMutation.isPending}
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" /> Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-sm text-muted-foreground space-y-1">
-                  <p>{address.street}</p>
-                  <p>
-                    {address.city}, {address.zip}
-                  </p>
-                  <p>{address.country}</p>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-sm text-muted-foreground space-y-1">
+                    <p>{address.street}</p>
+                    <p>
+                      {address.zip} {address.city}
+                    </p>
+                    <p>{address.country}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>

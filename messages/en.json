@@ -356,12 +356,38 @@
       }
     },
     "address": {
-      "title": "Address",
-      "noAddress": "No address set. Add an address to receive shipments.",
+      "title": "Addresses",
+      "noAddress": "No saved address yet. Save one to fill in your requests faster.",
       "addAddress": "Add Address",
       "editAddress": "Edit Address",
+      "addNew": "Add a new address",
+      "manage": "Manage my addresses",
+      "showAll": "Show all ({count})",
+      "showLess": "Show less",
+      "loadError": "Couldn't load your addresses.",
+      "retry": "Try again",
+      "default": "Default",
+      "usedFor": {
+        "pickup": "Pickup",
+        "dropoff": "Delivery"
+      },
+      "list": {
+        "title": "My addresses",
+        "back": "Back to profile",
+        "empty": "You haven't saved any address yet.",
+        "addFirst": "Add your first address",
+        "actions": "Actions for {name}",
+        "setDefault": "Set as default",
+        "edit": "Edit",
+        "delete": "Delete",
+        "deleted": "Address deleted",
+        "deletedDescription": "The address has been removed.",
+        "errorTitle": "Error",
+        "deleteFailed": "Couldn't delete the address. Please try again."
+      },
       "form": {
         "labelPresetLabel": "Address type",
+        "labelPresetPlaceholder": "Choose a name",
         "labelPresets": {
           "home": "Home",
           "work": "Work",
@@ -383,6 +409,13 @@
         "detailsPlaceholder": "Floor number, apartment number, building color, gate code, etc.",
         "detailsHelp": "Help the courier find you easily",
         "default": "Set as default address",
+        "usedForLabel": "Use for",
+        "usedForOptions": {
+          "any": "Pickup or delivery",
+          "pickup": "Pickup",
+          "dropoff": "Delivery"
+        },
+        "usedForHint": "Your new requests start with this address already filled in on that side.",
         "save": "Save Address",
         "update": "Update Address",
         "saving": "Saving...",
@@ -900,7 +933,9 @@
       "draftFailed": "Could not save your draft. Please try again.",
       "checkStep": "Check the \"{step}\" step.",
       "finishSteps": "Complete the next steps to save your request.",
-      "addressSaveFailed": "Could not save that address to your profile. Your request itself is unaffected."
+      "addressSaveFailed": "Could not save that address to your profile. Your request itself is unaffected.",
+      "sameAddress": "Pickup and delivery are the same address. Choose a different delivery address to continue.",
+      "tooClose": "Pickup and delivery are too close together. Check both addresses to continue."
     },
     "what": {
       "titleLabel": "What are you moving?",
@@ -1056,10 +1091,14 @@
       "pickup": "Pickup",
       "dropoff": "Delivery",
       "defaultAddress": "Default",
+      "savedAddress": "Saved address",
+      "alreadyAt": {
+        "pickup": "Already your pickup",
+        "dropoff": "Already your delivery"
+      },
       "useNewAddress": "Enter a new address",
       "saveAddress": "Save this address to my profile",
       "addressLabelField": "Label (optional)",
-      "addressLabelPlaceholder": "e.g. Home, Work",
       "locationType": "Location type",
       "select": "Select",
       "floor": "Floor",
@@ -1169,6 +1208,7 @@
       "outsideFrance": "We only carry within France",
       "floorRequired": "Floor is required for an apartment",
       "liftRequired": "Tell carriers whether there is a lift",
+      "sameAddress": "Pickup and delivery are the same address",
       "tooClose": "Pickup and delivery are too close together",
       "dateRequired": "Pick a date and time",
       "pickupWindow": "The pickup window must end after it starts",

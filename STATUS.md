@@ -30,6 +30,13 @@ than leaving it in a chat message.
 - [ ] **Run Actions → "Migrate database" for `0036_listing_published_at`
       before 2.60.0 deploys.** It adds `listings.published_at` and back-fills
       it; the 2.60.0 code reads the column on every listing query.
+- [ ] **Run Actions → "Migrate database" for `0037_address_used_for` before
+      2.62.0 deploys**, from the release branch, after `0036` (one run applies
+      both). It adds the nullable `addresses.used_for` with a check constraint
+      and rewrites saved-address names stored as a translation key's path
+      (`profile.address.labelPresets.home` → `home`). The 2.62.0 code selects
+      the column on every address read, so `/create` and `/profile` fail
+      without it.
 - [ ] **Tell the client now about the listing data exposure — GDPR, 72
       hours.** Until 2.60.0, `GET /api/listings` and `GET /api/listings/:id`
       needed no sign-in and returned, for every request ever published, the
@@ -348,6 +355,175 @@ than leaving it in a chat message.
       after approval (the 2.61.0 entry, "What was wrong" item 4). To restore them, open
       `/admin/users`, then the roles dialog for that account, and add both.
       Until then its application page says driver access is off.
+
+---
+
+## ✅ 2026-10-07 — Saved Addresses: One per End, a Dropdown, Their Real Names, and Every One on the Profile (2.62.0)
+
+The owner, with three screenshots (`/create` « Où » on v2.59.0, and
+`/profile`):
+
+> _- the saved default address auto-pick the same address on the pickup and
+> delivery(make the logic auto save as? pickup/delivery option, also never
+> auto choose it as the same address)_
+> _- throw error/pop up that the address is the same, so that's why the next
+> button doesn't work_
+> _- auto open the new address option if the saved address auto add on one
+> field_
+> _- on the profile, show multiple saved addresses, also when I click can't
+> show the list, give toggle to add, then option to add new one_
+> _- fix the string name address to use from the address/the label (home work,
+> etc.)_
+> _- on the pickup/delivery input, the saved addresses option has to be
+> dropdown toggle to choose_
+
+Contract: `docs/specs/saved_addresses_spec.md`. Plan:
+`docs/plans/plan_saved_addresses.md`.
+
+### What was wrong
+
+1. **Both ends filled with the same address.** Each `EndpointFields` in
+   `JobForm.tsx` ran its own "pre-fill the default" effect on
+   `pinnedAddresses.length`, so both chose `default ?? first`, each unaware of
+   the other.
+2. **« Suivant » refused in silence.** `tooClose` is raised on
+   `dropoff.address`, but that `<FieldError>` was rendered only inside the
+   `!usingSavedAddress` branch. With a saved address at the delivery, the
+   error existed, `scrollToFirstError` found nothing to scroll to, and nothing
+   was said.
+3. **`profile.address.labelPresets.home` as a name.** `AddressForm.handleSave`
+   called ``t(`labelPresets.${id}`)`` under the `profile.address` namespace;
+   the presets live at `profile.address.form.labelPresets`. next-intl answers a
+   missing key with its path, and the path was **stored** as the label. The
+   edit form's preset match used the same wrong path, so it never matched
+   either. (The select rendering the options used the right path, which is why
+   it looked fine while filling the form in.)
+4. **"No address set" with two saved.** The profile card read
+   `/api/user/addresses/default` only, and its button linked to
+   `/profile/addresses/create` unless a default existed, so the list was
+   unreachable from the profile.
+
+### What changed
+
+- **`addresses.used_for`** (`0037_address_used_for`, hand-written):
+  `'pickup' | 'dropoff'`, nullable, check-constrained; `ADDRESS_SIDES` in the
+  new `src/lib/saved-address.ts` is the one list the Drizzle column, the DTO
+  and the client type derive from. The same migration rewrites labels stored
+  as a key's path to the preset id.
+- **Names**: presets are stored as their id (`home`) and translated on
+  display. `addressDisplayName` covers ids, both legacy key shapes, typed
+  names, and an empty label (→ the city), so a row the migration has not
+  reached still shows a name.
+- **Pre-filling** is one pure function, `autoPickAddresses`
+  (`create/address-book.ts`), run once per form from `useJobForm`'s
+  `prefillAddresses` when « Où » first receives the address book. The pickup
+  takes an address kept for pickups, else the default kept for neither, else
+  the first kept for neither. The delivery takes only an address kept for
+  deliveries. An address already at one end is never offered to the other,
+  and an end that holds an address is never overwritten. A resumed draft is
+  never filled.
+- **Same address**: `sameEndpoint` in `schemas.ts` compares address, postal
+  code and city once case, accents and punctuation are stripped, and raises
+  `create.validation.sameAddress` ahead of `tooClose`. One of the two, never
+  both. The delivery shows it live as soon as both ends match, in both
+  branches. A failed « Suivant » also toasts `create.toast.sameAddress` /
+  `create.toast.tooClose` (`toastEndpointsRefusal`), which is the pop-up the
+  owner asked for.
+- **Dropdown**: `SavedAddressPicker` is a Radix `Select` with a two-line
+  trigger. Each option shows its name, its badges and « Déjà le retrait » /
+  « Déjà la livraison » when the other end holds it. « Saisir une nouvelle
+  adresse » is always last. An option that is already at the other end
+  stays selectable, so choosing it is answered with the error in words
+  rather than hidden.
+- **Saving from `/create`** sends `usedFor` = the end it was typed at, and
+  offers the profile's presets through the new shared `AddressLabelField`.
+  Unnamed, it is saved under its city rather than « Retrait » / « Livraison »,
+  since the end is now its own field.
+- **Profile**: `SavedAddressesCard` lists every address from the shared
+  `["user-addresses"]` cache, with three rows then « Tout afficher (n) », and
+  add/edit links that carry `returnUrl=/profile`. It has an `isError` branch
+  (gotcha 9). `useProfile` no longer reads the default address; nothing else
+  used it. `AddressForm` gained « Utiliser pour ». `AddressManagement` was
+  translated (it was hard-coded English), uses the names and badges, wraps
+  its links with `Button asChild` instead of nesting a `<button>` in an
+  `<a>`, and has an error branch.
+
+### Judgment calls
+
+- **"auto save as? pickup/delivery option" became a column, not a guess.**
+  The question mark left it open. Without a stored side, the only safe
+  pre-fill is "pickup only", and a requester who always delivers to the same
+  place would retype it every time. With `used_for`, both ends can be
+  pre-filled with confidence, and the owner's two rules still hold: never the
+  same address, and the other end opens on a new address.
+- **An address kept for neither end fills the pickup only.** Putting the
+  second untagged address at the delivery would be a guess. The owner asked
+  for the delivery to open on a new address instead.
+- **The same-address rule blocks a draft too**, like `tooClose`: A → A is a
+  contradiction in what was typed, not a question of time (gotcha 15 is about
+  the clock).
+- **`addressLabelPlaceholder` was removed** from `create.where`. Its
+  successor is the shared field's `profile.address.form.labelPlaceholder`.
+
+### Found on the way
+
+- The highlighted dropdown option kept its street line in
+  `text-muted-foreground` on the blue `bg-accent`, which was unreadable in
+  Chromium. Secondary text now switches on `group-data-[highlighted]`.
+- `schemas.test.ts`'s "too close" case used the pickup's own street,
+  number included, so under the new rule it is the same address. It now
+  uses another number, and the same-address cases are tested separately.
+
+### Verification
+
+- `npx tsc --noEmit`: 0 errors. `pnpm lint`: 0 errors, 65 warnings, none on a
+  line this release added. The three in `addresses.service.test.ts` are the
+  file's existing `as any`; the new cases use `as never`.
+- `pnpm test`: 193 files, **2,655 tests pass**, measured with 2.61.0's
+  uncommitted work in the same tree. Alone, before 2.61.0 landed in the tree,
+  this release ran 190 files and 2,624 tests: 33 more than 2.60.0's 2,591.
+  New: `saved-address.test.ts` (6), `address-book.test.ts` (8),
+  `schemas.test.ts` (+3), `WhereStep.test.tsx` (+4), `useJobForm.test.tsx`
+  (+4), `addresses.service.test.ts` (+4), `Profile.test.tsx` (+4).
+- Local Postgres: `0037` applied (`drizzle.__drizzle_migrations` id 37); an
+  insert with `used_for = 'both'` was refused by `addresses_used_for_check`.
+  The label rewrite, run in a rolled-back transaction, turned
+  `profile.address.labelPresets.home` and `…form.labelPresets.work` into
+  `home` / `work`, and left `…labelPresets.other` and `Chez maman` alone.
+- Chromium against a dev server on `:3002`, with a throwaway account seeded
+  with the owner's two addresses (one stored as the legacy key), deleted
+  afterwards:
+  - Dark EN and light FR: the pickup filled with « Work » / « Travail », and
+    the delivery on « Enter a new address » with the map and the « save »
+    box open. No `profile.address` text anywhere on the page. The combobox's
+    accessible name is « Saved address » / « Adresse enregistrée ». Options
+    read « Travail Déjà le retrait … ».
+  - Choosing the pickup's address at the delivery showed the error at once,
+    and « Suivant » toasted « Le retrait et la livraison sont à la même
+    adresse. Choisissez une autre adresse de livraison pour continuer. »
+    Choosing the other address cleared the error, and « Suivant » reached
+    step 3.
+  - `/profile` listed both addresses; `/profile/addresses` translated; the
+    edit form opened the legacy-key row as « Domicile ».
+  - End to end: « Utiliser pour → Livraison » on Domicile, then « Mettre à
+    jour », stored `label = home, used_for = dropoff`, and the card showed
+    « Livraison ». A fresh request opened with Travail at the pickup and
+    Domicile at the delivery.
+  - 390 px light FR: no horizontal scroll, and the dropdown and the card fit.
+- `pnpm changelog:check`: ok, 2.62.0 agrees across CHANGELOG.md, STATUS.md
+  (115 entries), package.json and `src/lib/version.ts`.
+- `pnpm build`: compiled, 133 static pages generated (same tree, 2.61.0
+  included).
+
+### Known limits
+
+- **`0037` must run before the deploy** (Operator to-do). Every address read
+  selects `used_for`.
+- A row saved with a translated preset name typed by hand ("Home",
+  "Domicile") is shown as typed. The edit form recognises it in the current
+  language and saves it back as the id. The migration does not guess at it.
+- The side is a preference that fills the form. Any address can still be
+  chosen at either end, and nothing on the server enforces it.
 
 ---
 

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ADDRESS_SIDES } from "@/lib/saved-address";
 
 // ========================================
 // Input Schemas
@@ -14,6 +15,9 @@ export const createAddressSchema = z.object({
   lat: z.number().optional(),
   lng: z.number().optional(),
   isDefault: z.boolean().default(false),
+  // Which end of a transport it usually is; null means either
+  // (saved_addresses_spec.md §2).
+  usedFor: z.enum(ADDRESS_SIDES).nullable().optional(),
 });
 
 export const updateAddressSchema = createAddressSchema.partial();
@@ -34,6 +38,7 @@ export const addressOutputSchema = z.object({
   lat: z.number().nullable(),
   lng: z.number().nullable(),
   isDefault: z.boolean(),
+  usedFor: z.enum(ADDRESS_SIDES).nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),
 });

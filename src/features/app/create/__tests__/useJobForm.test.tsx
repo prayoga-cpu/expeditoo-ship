@@ -409,3 +409,74 @@ describe("useJobForm — finishing a saved request", () => {
   });
 });
 
+
+describe("useJobForm — saved addresses (saved_addresses_spec.md)", () => {
+  const home = {
+    id: "home",
+    label: "home",
+    street: "Voie du Loup",
+    city: "Saleux",
+    zip: "80480",
+    country: "France",
+    isDefault: false,
+    lat: 49.86,
+    lng: 2.24,
+    usedFor: null,
+  };
+
+  beforeEach(() => {
+    toastError.mockClear();
+    createAddress.mockClear();
+  });
+
+  // The owner's report: « Suivant » did nothing and said nothing.
+  it("says why « Suivant » did not move when both ends are the same address", async () => {
+    const { result } = renderHook(() => useJobForm(), { wrapper });
+    await reachWhere(result);
+    act(() => result.current.form.setValue("dropoff", endpoint()));
+
+    await act(() => result.current.handleNext());
+
+    expect(result.current.currentStep).toBe(1);
+    expect(toastError).toHaveBeenCalledWith(tr("create.toast.sameAddress"));
+  });
+
+  it("saves a ticked address for the end it was typed at, under its preset", async () => {
+    const { result } = renderHook(() => useJobForm(), { wrapper });
+    await reachWhere(result, endpoint({ saveAddress: true, addressLabel: "work" }));
+
+    await act(() => result.current.handleNext());
+
+    await waitFor(() => expect(createAddress).toHaveBeenCalledTimes(1));
+    expect(createAddress).toHaveBeenCalledWith(
+      expect.objectContaining({ label: "work", usedFor: "pickup", city: "Lyon" })
+    );
+  });
+
+  it("names an address saved without a name after its town", async () => {
+    const { result } = renderHook(() => useJobForm(), { wrapper });
+    await reachWhere(result, endpoint({ saveAddress: true }));
+
+    await act(() => result.current.handleNext());
+
+    await waitFor(() =>
+      expect(createAddress).toHaveBeenCalledWith(
+        expect.objectContaining({ label: "Lyon", usedFor: "pickup" })
+      )
+    );
+  });
+
+  it("fills a fresh request once, so an end cleared by hand stays clear", async () => {
+    const { result } = renderHook(() => useJobForm(), { wrapper });
+
+    act(() => result.current.prefillAddresses([home]));
+    expect(result.current.form.getValues("pickup.address")).toBe("Voie du Loup");
+    expect(result.current.form.getValues("dropoff.address")).toBe("");
+
+    // « Saisir une nouvelle adresse », then « Où » mounts again.
+    act(() => result.current.form.setValue("pickup.address", ""));
+    act(() => result.current.prefillAddresses([home]));
+
+    expect(result.current.form.getValues("pickup.address")).toBe("");
+  });
+});

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { NextIntlClientProvider } from "next-intl";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -50,10 +50,14 @@ vi.mock("../../hooks/useUserRoles", () => ({
 vi.mock("@/features/app/feedback/ui", () => ({ FeedbackDialog: () => null }));
 vi.mock("@/components/ui/page-loader", () => ({
   PageLoader: () => <div data-testid="loader" />,
+  InlineLoader: () => <div data-testid="inline-loader" />,
 }));
 vi.mock("@/components/ui/lottie-loader", () => ({ LottieLoader: () => null }));
 
 import { Profile } from "../Profile";
+
+/** The saved addresses `GET /api/user/addresses` answers, set per test. */
+let addressBook: unknown[] = [];
 
 /** Every read the profile makes, answered; the URLs are what is asserted. */
 const fetchSpy = vi.fn(async (url: string) => {
@@ -61,11 +65,14 @@ const fetchSpy = vi.fn(async (url: string) => {
     ? { average: 4.5, total: 2, distribution: { 1: 0, 2: 0, 3: 0, 4: 1, 5: 1 } }
     : url.includes("/provider")
       ? { isOAuth: false, provider: null }
-      : null;
+      : url === "/api/user/addresses"
+        ? addressBook
+        : null;
   return new Response(JSON.stringify({ success: true, data }));
 });
 
 beforeEach(() => {
+  addressBook = [];
   nav.pathname = "/profile";
   nav.roles = ["shipper", "carrier"];
   fetchSpy.mockClear();
@@ -151,5 +158,88 @@ describe("Profile — the driver shell's quick links", () => {
 
     await screen.findByRole("link", { name: en.profile.quickLinks.myReviews });
     expect(earnings()).toBeNull();
+  });
+});
+
+// saved_addresses_spec.md §4.1 — the owner's screenshot read "No address set"
+// with two addresses saved, and its button led only to « add ».
+describe("Profile — the saved addresses card", () => {
+  const saved = (id: string, label: string, over = {}) => ({
+    id,
+    label,
+    street: `${id} rue`,
+    city: "Saleux",
+    zip: "80480",
+    country: "France",
+    isDefault: false,
+    lat: 49.86,
+    lng: 2.24,
+    usedFor: null,
+    ...over,
+  });
+  const card = async () => {
+    const title = await screen.findByText(en.profile.address.title);
+    return title.closest("[data-slot=card]") as HTMLElement;
+  };
+
+  it("lists every saved address, none of them the default", async () => {
+    addressBook = [
+      saved("a1", "profile.address.labelPresets.work", { usedFor: "pickup" }),
+      saved("a2", "home"),
+    ];
+    renderProfile();
+
+    const addresses = await card();
+    expect(await within(addresses).findByText("Work")).toBeInTheDocument();
+    expect(within(addresses).getByText("Home")).toBeInTheDocument();
+    expect(within(addresses).getByText(en.profile.address.usedFor.pickup)).toBeInTheDocument();
+    expect(within(addresses).queryByText(en.profile.address.noAddress)).toBeNull();
+    expect(within(addresses).getByRole("link", { name: /Work/ })).toHaveAttribute(
+      "href",
+      "/profile/addresses/a1/edit?returnUrl=/profile"
+    );
+  });
+
+  it("shows three, and the rest behind a toggle", async () => {
+    addressBook = ["a1", "a2", "a3", "a4"].map((id) => saved(id, `Place ${id}`));
+    renderProfile();
+
+    const addresses = await card();
+    await within(addresses).findByText("Place a3");
+    expect(within(addresses).queryByText("Place a4")).toBeNull();
+
+    fireEvent.click(within(addresses).getByRole("button", { name: "Show all (4)" }));
+
+    expect(within(addresses).getByText("Place a4")).toBeInTheDocument();
+    expect(within(addresses).getByRole("button", { name: en.profile.address.showLess })).toHaveAttribute(
+      "aria-expanded",
+      "true"
+    );
+  });
+
+  it("adds a new address and manages the list from the card", async () => {
+    addressBook = [saved("a1", "home")];
+    renderProfile();
+
+    const addresses = await card();
+    await within(addresses).findByText("Home");
+    const adds = within(addresses).getAllByRole("link", { name: en.profile.address.addNew });
+    expect(adds.length).toBeGreaterThan(0);
+    for (const add of adds) {
+      expect(add).toHaveAttribute("href", "/profile/addresses/create?returnUrl=/profile");
+    }
+    expect(
+      within(addresses).getByRole("link", { name: en.profile.address.manage })
+    ).toHaveAttribute("href", "/profile/addresses");
+  });
+
+  it("says there is none, and still offers to add one", async () => {
+    renderProfile();
+
+    const addresses = await card();
+    expect(await within(addresses).findByText(en.profile.address.noAddress)).toBeInTheDocument();
+    expect(
+      within(addresses).getAllByRole("link", { name: en.profile.address.addNew }).length
+    ).toBeGreaterThan(0);
   });
 });

@@ -29,20 +29,19 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getMapStyle } from "@/lib/map-styles";
 import { searchAddress, reverseGeocode } from "@/lib/geocoding";
 import { useTranslations } from "next-intl";
+import {
+  ADDRESS_LABEL_PRESETS,
+  addressLabelPreset,
+  type AddressSide,
+} from "@/lib/saved-address";
+import { AddressLabelField } from "./AddressLabelField";
 
 interface AddressFormProps {
   addressId?: string; // If provided, we're editing
 }
 
-const LABEL_PRESET_IDS = [
-  "home",
-  "work",
-  "storage",
-  "neighbour",
-  "other",
-] as const;
-
-
+/** « Retrait ou livraison », stored as no side at all. */
+const EITHER_SIDE = "any";
 
 // This component uses fetchAddressById from ../api which is already imported
 
@@ -76,23 +75,28 @@ export function AddressForm({ addressId }: AddressFormProps) {
     null
   );
 
-  const [formData, setFormData] = useState({
-    label: "",
+  // `label` holds a preset's id (« home ») or a name typed by hand, and is
+  // stored as such: a preset is translated when it is shown, never when it is
+  // saved (saved_addresses_spec.md §5).
+  const [formData, setFormData] = useState<{
+    label: string;
+    street: string;
+    city: string;
+    zip: string;
+    country: string;
+    details: string;
+    isDefault: boolean;
+    usedFor: AddressSide | null;
+  }>({
+    label: "home",
     street: "",
     city: "",
     zip: "",
     country: "",
     details: "",
     isDefault: false,
+    usedFor: null,
   });
-
-  // "Custom" reveals the free-text `label` above; every other value resolves
-  // to its translated preset at save time rather than being written into
-  // `formData.label` as the user picks, so switching locale mid-edit can't
-  // leave a stale English/French string sitting in a preset's place.
-  const [labelPreset, setLabelPreset] = useState<
-    "home" | "work" | "storage" | "neighbour" | "other"
-  >("home");
 
   // Once the requester edits the address text by hand, the map becomes a
   // pure coordinate picker: reverse-geocoding still moves the pin's lat/lng,
@@ -119,22 +123,25 @@ export function AddressForm({ addressId }: AddressFormProps) {
   // Populate form when editing
   useEffect(() => {
     if (existingAddress) {
+      // A preset is found by its id, by the key once stored in its place, or
+      // by its name in this language — typed by hand before there were
+      // presets.
+      const typed = existingAddress.label.trim().toLowerCase();
+      const preset =
+        addressLabelPreset(existingAddress.label) ??
+        ADDRESS_LABEL_PRESETS.find(
+          (id) => t(`form.labelPresets.${id}`).toLowerCase() === typed
+        );
       setFormData({
-        label: existingAddress.label,
+        label: preset ?? existingAddress.label,
         street: existingAddress.street,
         city: existingAddress.city,
         zip: existingAddress.zip,
         country: existingAddress.country,
         details: existingAddress.details || "",
         isDefault: existingAddress.isDefault,
+        usedFor: existingAddress.usedFor ?? null,
       });
-
-      const matchedPreset = LABEL_PRESET_IDS.filter((id) => id !== "other").find(
-        (id) =>
-          existingAddress.label.trim().toLowerCase() ===
-          t(`labelPresets.${id}`).toLowerCase()
-      );
-      setLabelPreset(matchedPreset ?? "other");
       // Saved data is already a real address; a pin drop from here on refines
       // it rather than filling it in from scratch.
       setAddressTouchedByUser(Boolean(existingAddress.street));
@@ -272,11 +279,10 @@ export function AddressForm({ addressId }: AddressFormProps) {
   const handleSave = async () => {
     if (!canSave) return;
 
-    const label =
-      labelPreset === "other" ? formData.label : t(`labelPresets.${labelPreset}`);
     const payload = {
       ...formData,
-      label,
+      // « Autre » with nothing typed: named after the town, as on `/create`.
+      label: formData.label.trim() || formData.city.trim() || t("form.labelPresets.other"),
       // Every address here is in France; the map (when used) already
       // confirms it, so a skipped map still gets an honest default rather
       // than failing on a field nothing in the UI called out as required.
@@ -294,7 +300,6 @@ export function AddressForm({ addressId }: AddressFormProps) {
 
       // Invalidate queries
       queryClient.invalidateQueries({ queryKey: ["user-addresses"] });
-      queryClient.invalidateQueries({ queryKey: ["user-default-address"] });
 
       router.push(returnUrl);
     } catch (error) {
@@ -418,40 +423,37 @@ export function AddressForm({ addressId }: AddressFormProps) {
         {/* Form Section */}
         <div className="space-y-6 p-1">
           <div className="space-y-4">
+            <AddressLabelField
+              id="labelPreset"
+              label={t("form.labelPresetLabel")}
+              value={formData.label}
+              onChange={(label) => setFormData((data) => ({ ...data, label }))}
+            />
+
             <div className="grid gap-2">
-              <Label htmlFor="labelPreset">{t("form.labelPresetLabel")}</Label>
+              <Label htmlFor="usedFor">{t("form.usedForLabel")}</Label>
               <Select
-                value={labelPreset}
+                value={formData.usedFor ?? EITHER_SIDE}
                 onValueChange={(value) =>
-                  setLabelPreset(value as typeof labelPreset)
+                  setFormData((data) => ({
+                    ...data,
+                    usedFor: value === EITHER_SIDE ? null : (value as AddressSide),
+                  }))
                 }
               >
-                <SelectTrigger id="labelPreset">
+                <SelectTrigger id="usedFor" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {LABEL_PRESET_IDS.map((id) => (
-                    <SelectItem key={id} value={id}>
-                      {t(`form.labelPresets.${id}`)}
+                  {([EITHER_SIDE, "pickup", "dropoff"] as const).map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {t(`form.usedForOptions.${option}`)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground">{t("form.usedForHint")}</p>
             </div>
-
-            {labelPreset === "other" && (
-              <div className="grid gap-2">
-                <Label htmlFor="label">{t("form.label")}</Label>
-                <Input
-                  id="label"
-                  placeholder={t("form.labelPlaceholder")}
-                  value={formData.label}
-                  onChange={(e) =>
-                    setFormData({ ...formData, label: e.target.value })
-                  }
-                />
-              </div>
-            )}
 
             <div className="grid gap-2">
               <Label htmlFor="street">{t("form.street")}</Label>
