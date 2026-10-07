@@ -14,6 +14,23 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.61.0] - 2026-10-07 · ux
+
+- **« Devenir chauffeur » opens, wherever you start from.** The access menu's
+  option to add driver access sent an administrator back to the
+  administration panel the moment the page appeared, and did nothing at all
+  when you were already on your file. It now opens a short explanation first
+  (your details, your documents, our review), and « Commencer ma
+  candidature » takes you to your file and keeps it open.
+- **The sidebar has its own way in.** On a computer, a green « Devenir
+  chauffeur » entry now sits above « Panneau d'administration », as one
+  already did in the phone's bottom bar. Once you have started, it reads
+  « Mon dossier » and shows where your file stands: Brouillon, Envoyé, En
+  examen, Approuvé, Refusé or Suspendu.
+- **An approved file no longer claims access you do not have.** If your file
+  is approved but driver access is switched off on your account, the page
+  says so and what to do, instead of « Vous êtes un chauffeur approuvé ».
+
 ## [2.60.0] - 2026-10-05 · feat
 
 - **Finish a draft from « Mes demandes ».** A saved draft now has its own

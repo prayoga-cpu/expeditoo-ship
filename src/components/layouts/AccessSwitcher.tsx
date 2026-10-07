@@ -1,6 +1,7 @@
 "use client";
 
-import { ChevronDown } from "lucide-react";
+import { useState } from "react";
+import { ChevronDown, Truck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 
@@ -9,8 +10,11 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useCarrierApplication } from "@/features/app/carrier/hooks/useCarrier";
+import { DriverOnboardingDialog } from "@/features/app/carrier/ui/DriverOnboardingDialog";
 import { useAuth } from "@/lib/auth-context";
 import { type AccessMode } from "@/lib/active-access";
 import { useActiveAccessMode } from "@/lib/use-active-access-mode";
@@ -57,18 +61,21 @@ export function AccessSwitcher({
 }) {
   const t = useTranslations("common.roles");
   const tSwitch = useTranslations("common.accessSwitcher");
+  const tStatus = useTranslations("carrier.onboarding.status");
   const router = useRouter();
   const { user, isLoading } = useAuth();
   const { mode, qualifiedModes, setMode } = useActiveAccessMode();
-
-  if (isLoading || !user) return null;
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
 
   // Only a genuinely multi-mode account gets a dropdown at all — an ordinary
-  // single-role account already has "My Application" in the nav for
-  // becoming a carrier, and does not need its badge to turn into a control
-  // just to repeat that link.
+  // single-role account already has « Devenir chauffeur » in the sidebar and
+  // the mobile bar, and does not need its badge to turn into a control just
+  // to repeat that entry.
   const interactive = qualifiedModes.length > 1;
   const canAddCarrier = interactive && !qualifiedModes.includes("carrier");
+  const { data: application } = useCarrierApplication({ enabled: canAddCarrier });
+
+  if (isLoading || !user) return null;
 
   const badge = (
     <Badge
@@ -92,30 +99,49 @@ export function AccessSwitcher({
     router.push(MODE_LANDING[next]);
   };
 
+  // The dialog sits beside the menu, not inside it, and opens from
+  // `onSelect`: the menu closes first, so focus is not handed back to its
+  // trigger out from under the dialog. This row used to push straight to
+  // /carrier/application without leaving Admin mode, and MainLayout bounced
+  // that back to the panel (become_driver_spec.md §1.1).
   return (
-    <DropdownMenu defaultOpen={defaultOpen}>
-      <DropdownMenuTrigger
-        aria-label={tSwitch("srLabel")}
-        className="rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        {badge}
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start">
-        {qualifiedModes.map((candidate) => (
-          <DropdownMenuItem
-            key={candidate}
-            onClick={() => handleSelect(candidate)}
-            className={cn(candidate === mode && "font-semibold")}
-          >
-            {t(candidate)}
-          </DropdownMenuItem>
-        ))}
-        {canAddCarrier && (
-          <DropdownMenuItem onClick={() => router.push("/carrier/application")}>
-            {tSwitch("addCarrierAccess")}
-          </DropdownMenuItem>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      <DropdownMenu defaultOpen={defaultOpen}>
+        <DropdownMenuTrigger
+          aria-label={tSwitch("srLabel")}
+          className="rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {badge}
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start">
+          {qualifiedModes.map((candidate) => (
+            <DropdownMenuItem
+              key={candidate}
+              onClick={() => handleSelect(candidate)}
+              className={cn(candidate === mode && "font-semibold")}
+            >
+              {t(candidate)}
+            </DropdownMenuItem>
+          ))}
+          {canAddCarrier && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={() => setOnboardingOpen(true)}>
+                <Truck className="h-4 w-4 text-success" />
+                {application ? tSwitch("myApplication") : tSwitch("becomeDriver")}
+                {application && (
+                  <span className="ml-auto pl-3 text-xs text-muted-foreground">
+                    {tStatus(application.status)}
+                  </span>
+                )}
+              </DropdownMenuItem>
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+      {canAddCarrier && (
+        <DriverOnboardingDialog open={onboardingOpen} onOpenChange={setOnboardingOpen} />
+      )}
+    </>
   );
 }

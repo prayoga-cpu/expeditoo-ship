@@ -44,6 +44,7 @@
       "myOffers": "Mes offres",
       "deliveries": "Livraisons",
       "myApplication": "Mon dossier",
+      "becomeDriver": "Devenir chauffeur",
       "adminPanel": "Panneau d'administration",
       "requestTransport": "Demander un transport",
       "myRequests": "Mes demandes",
@@ -154,7 +155,8 @@
     },
     "accessSwitcher": {
       "srLabel": "Changer d'accès",
-      "addCarrierAccess": "Ajouter l'accès transporteur"
+      "becomeDriver": "Devenir chauffeur",
+      "myApplication": "Mon dossier chauffeur"
     },
     "header": {
       "profile": "Voir mon profil"
@@ -3098,6 +3100,10 @@
           "title": "Vous êtes un chauffeur approuvé",
           "description": "Vous pouvez répondre aux offres. Gardez vos documents à jour."
         },
+        "approvedInactive": {
+          "title": "Dossier approuvé, mais accès chauffeur inactif",
+          "description": "Votre dossier est approuvé, mais ce compte n'a pas l'accès chauffeur. Si vous venez d'être approuvé, déconnectez-vous puis reconnectez-vous. Sinon, contactez le support."
+        },
         "rejected": {
           "title": "Dossier refusé",
           "description": "Corrigez les points ci-dessous puis renvoyez votre dossier."
@@ -3162,6 +3168,40 @@
         "goToFleet": "Gérer la flotte",
         "submit": "Soumettre pour examen",
         "submitting": "Envoi…"
+      }
+    },
+    "onboarding": {
+      "title": "Devenir chauffeur",
+      "description": "Répondez à des missions de transport et soyez payé pour chaque livraison. La candidature se fait en trois étapes.",
+      "steps": {
+        "details": {
+          "title": "Vos informations",
+          "body": "Votre nom ou raison sociale, SIRET, téléphone et adresse. Le SIRET d'un auto-entrepreneur suffit, pas besoin de Kbis."
+        },
+        "documents": {
+          "title": "Vos documents",
+          "body": "Pièce d'identité, permis de conduire, attestation d'assurance et RIB. Ils restent privés et seule notre équipe les voit."
+        },
+        "review": {
+          "title": "Notre vérification",
+          "body": "Notre équipe vérifie votre dossier. Une fois approuvé, le mode Chauffeur apparaît dans votre menu d'accès et vous pouvez répondre aux missions."
+        }
+      },
+      "keepUser": "Vous gardez votre accès utilisateur : vos demandes de transport restent où elles sont.",
+      "statusTitle": "Votre dossier chauffeur",
+      "statusDescription": "Voici où il en est.",
+      "draftBody": "Votre dossier est enregistré en brouillon. Terminez-le et envoyez-le pour que notre équipe l'examine.",
+      "start": "Commencer ma candidature",
+      "finish": "Terminer mon dossier",
+      "open": "Ouvrir mon dossier",
+      "later": "Plus tard",
+      "status": {
+        "draft": "Brouillon",
+        "submitted": "Envoyé",
+        "under_review": "En examen",
+        "approved": "Approuvé",
+        "rejected": "Refusé",
+        "suspended": "Suspendu"
       }
     },
     "fleet": {

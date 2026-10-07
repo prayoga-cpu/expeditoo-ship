@@ -1,6 +1,7 @@
 export * from "./ApplicationStatusBanner";
 export * from "./CarrierApplicationScreen";
 export * from "./CarrierFleetScreen";
+export * from "./DriverOnboardingDialog";
 export * from "./CarrierProfileForm";
 export * from "./DocumentChecklist";
 export * from "./BankingSection";

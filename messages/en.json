@@ -44,6 +44,7 @@
       "myOffers": "My offers",
       "deliveries": "Deliveries",
       "myApplication": "My application",
+      "becomeDriver": "Become a driver",
       "adminPanel": "Admin Panel",
       "requestTransport": "Request transport",
       "myRequests": "My requests",
@@ -154,7 +155,8 @@
     },
     "accessSwitcher": {
       "srLabel": "Switch access",
-      "addCarrierAccess": "Add carrier access"
+      "becomeDriver": "Become a driver",
+      "myApplication": "My driver application"
     },
     "header": {
       "profile": "View my profile"
@@ -3098,6 +3100,10 @@
           "title": "You are an approved driver",
           "description": "You can bid on jobs. Keep your documents up to date."
         },
+        "approvedInactive": {
+          "title": "Approved, but driver access is off",
+          "description": "Your application is approved, but this account does not have driver access. If you were approved in the last few minutes, sign out and back in. Otherwise, contact support."
+        },
         "rejected": {
           "title": "Application rejected",
           "description": "Fix the points below and submit again."
@@ -3162,6 +3168,40 @@
         "goToFleet": "Manage fleet",
         "submit": "Submit for review",
         "submitting": "Submitting…"
+      }
+    },
+    "onboarding": {
+      "title": "Become a driver",
+      "description": "Bid on transport jobs and get paid for each delivery. Applying takes three steps.",
+      "steps": {
+        "details": {
+          "title": "Your details",
+          "body": "Your name or business name, SIRET, phone and address. A sole trader's SIRET is enough, no Kbis needed."
+        },
+        "documents": {
+          "title": "Your documents",
+          "body": "ID card, driving licence, insurance certificate and RIB. They stay private and only our team sees them."
+        },
+        "review": {
+          "title": "Our review",
+          "body": "Our team checks your file. Once you are approved, Driver mode appears in your access menu and you can bid on jobs."
+        }
+      },
+      "keepUser": "You keep your user access: your transport requests stay where they are.",
+      "statusTitle": "Your driver application",
+      "statusDescription": "Here is where it stands.",
+      "draftBody": "Your application is saved as a draft. Finish it and submit it so our team can review it.",
+      "start": "Start my application",
+      "finish": "Finish my application",
+      "open": "Open my application",
+      "later": "Not now",
+      "status": {
+        "draft": "Draft",
+        "submitted": "Submitted",
+        "under_review": "Under review",
+        "approved": "Approved",
+        "rejected": "Rejected",
+        "suspended": "Suspended"
       }
     },
     "fleet": {

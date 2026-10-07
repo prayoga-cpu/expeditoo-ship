@@ -3,6 +3,8 @@
 import { useTranslations } from "next-intl";
 import { BadgeCheck, Clock, ShieldAlert } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { qualifiedAccessModes } from "@/lib/active-access";
+import { useAuth } from "@/lib/auth-context";
 import type { CarrierApplication } from "../api/carrier.api";
 
 /**
@@ -14,6 +16,13 @@ import type { CarrierApplication } from "../api/carrier.api";
  *
  * A draft renders nothing. It is not a status the applicant is waiting on; it
  * is just an unfinished form, and the form below already says so.
+ *
+ * "Approved" is only claimed while the session can actually drive. An admin
+ * can remove `carrier` and `driver` from an approved account, and production's
+ * own admin was in exactly that state, reading « Vous êtes un chauffeur
+ * approuvé » beside a switcher offering to add the access
+ * (become_driver_spec.md §5). Waits for the session before deciding, so an
+ * approved driver never sees the warning flash while it loads.
  */
 export function ApplicationStatusBanner({
   application,
@@ -21,11 +30,17 @@ export function ApplicationStatusBanner({
   application: CarrierApplication;
 }) {
   const t = useTranslations("carrier.application.banner");
+  const { user } = useAuth();
   const { status } = application;
 
   if (status === "draft") return null;
 
-  const failed = status === "rejected" || status === "suspended";
+  const inactive =
+    status === "approved" &&
+    user !== null &&
+    !qualifiedAccessModes(user.roles ?? []).includes("carrier");
+  const copy = inactive ? "approvedInactive" : status;
+  const failed = inactive || status === "rejected" || status === "suspended";
   const reason =
     status === "rejected"
       ? application.rejectionReason
@@ -35,16 +50,16 @@ export function ApplicationStatusBanner({
 
   return (
     <Alert variant={failed ? "destructive" : "default"}>
-      {status === "approved" ? (
+      {status === "approved" && !inactive ? (
         <BadgeCheck />
       ) : failed ? (
         <ShieldAlert />
       ) : (
         <Clock />
       )}
-      <AlertTitle>{t(`${status}.title`)}</AlertTitle>
+      <AlertTitle>{t(`${copy}.title`)}</AlertTitle>
       <AlertDescription>
-        <p>{t(`${status}.description`)}</p>
+        <p>{t(`${copy}.description`)}</p>
         {reason && (
           <p>
             {t("reasonLabel")}: {reason}

@@ -342,6 +342,154 @@ than leaving it in a chat message.
       treatment, with no code change and nothing backdated
       (`docs/specs/invoice_at_payment_spec.md` §4.1). The variables are listed
       in `.env.example`.
+- [ ] **Decide whether prayogadevelopment@gmail.com should drive again.**
+      Its driver application is `approved` but the account holds only
+      `shipper` and `admin`: the `carrier` and `driver` roles were removed
+      after approval (the 2.61.0 entry, "What was wrong" item 4). To restore them, open
+      `/admin/users`, then the roles dialog for that account, and add both.
+      Until then its application page says driver access is off.
+
+---
+
+## ✅ 2026-10-07 — « Devenir chauffeur » That Opens, a Sidebar Way In, and an Approved Banner That Tells the Truth (2.61.0)
+
+The owner, with two screenshots of production (v2.59.0, an admin + user
+account):
+
+- _"the add carrier redirect doesn't work, and the page also not opened,
+  please debug, and from here to add/register page hasto be have specific
+  onboarding(pop-up to add this role from user role) then redirect redirectly
+  to my application page of driver"_ — the access menu open, showing Admin,
+  User and « Add carrier access ».
+- _"also from the navbar, supposed to has a different togle to triger the
+  application submission or status to apply from user to driver role"_ — the
+  user-mode sidebar, which had no such entry.
+
+Contract: `docs/specs/become_driver_spec.md` (plan:
+`docs/plans/plan_become_driver.md`). It supersedes the UI half of the stale v1
+`driver_onboarding_spec.md`, which describes a `driver_applications` table that
+does not exist.
+
+### What was wrong
+
+1. **The row bounced.** Reproduced in Chromium against HEAD: an admin + user
+   account with nothing stored resolves to Admin (`resolveAccessMode`), and
+   the switcher also sits in the admin sidebar. The row did
+   `router.push("/carrier/application")` without touching the mode; that page
+   renders in `MainLayout`, whose guard `router.replace`s Admin mode to
+   `/admin/expedion`. Navigations recorded: `/admin/expedion →
+   /carrier/application → /admin/expedion`. In User mode the same row did
+   navigate, so the screenshot's "nothing happens" was the second case:
+2. **On the application page the row pushed the URL already shown**, a no-op.
+3. **The desktop sidebar had no way in.** `MainLayout`'s `userNavItems`
+   carried no application entry, while `BottomNav`'s `applicantItems` did,
+   and `AccessSwitcher`'s comment claimed a single-role account "already has
+   My Application in the nav", which was true on a phone only. Nothing
+   anywhere showed where an application stood.
+4. **Production's own admin is approved without the roles.** Read through
+   `mirror_readonly`: `prayogadevelopment@gmail.com` holds `{shipper, admin}`,
+   while its `carriers` row is `approved` (2026-09-23 05:18) and was updated
+   again 2026-09-24 00:44. The `carrier`/`driver` grants were removed after
+   approval. Its application page said « Vous êtes un chauffeur approuvé »
+   beside a switcher offering to add that very access.
+
+### What changed
+
+- **`src/lib/use-application-nav.ts`** is the one way to the application,
+  and now leaves Admin mode before the push: a driver-qualified account goes
+  to `carrier` (unchanged), an Admin-mode account that cannot drive goes to
+  its first non-admin mode (the `AdminLayout.handleBack` shape), and anyone
+  else keeps their mode. It never stores `carrier` for an account that does
+  not qualify: `resolveAccessMode` would discard it and fall back to the
+  strongest mode, Admin for an admin, which bounces exactly as before.
+- **`DriverOnboardingDialog.tsx`** (new, `features/app/carrier/ui`),
+  controlled. With no application: three steps (details, documents, review), a
+  line saying user access stays, and « Commencer ma candidature ». With one:
+  the page's own `ApplicationStatusBanner` (a draft gets its own line, since
+  the banner renders nothing for it) and « Terminer mon dossier » / « Ouvrir
+  mon dossier ». It grants nothing and writes nothing: its only request is the
+  existing `GET /api/carrier/application`.
+- **`AccessSwitcher.tsx`**: the row is « Devenir chauffeur » (or « Mon
+  dossier chauffeur » plus the status), set apart by a separator and a green
+  truck. It opens the dialog from `onSelect`, and the dialog is rendered
+  *beside* the menu, so the menu closes before the dialog takes focus. It is
+  offered on the same rule as before: a multi-mode account without Driver mode.
+- **`MainLayout.tsx`**: user mode gains `driverEntry`, last before « Panneau
+  d'administration ». « Devenir chauffeur » opens the dialog; once an
+  application exists it is « Mon dossier » with a status pill and links to
+  the page. `NavItem.accent` went from a boolean to `"destructive" |
+  "success"`. The active green is tinted, not filled: dark mode's `--success`
+  is a light green and `--success-foreground` stays white, which did not read
+  in the first screenshot.
+- **`BottomNav.tsx`**: the applicant bar's existing slot follows the same rule.
+- **`ApplicationStatusBanner.tsx`**: `approved` on a session holding neither
+  `carrier` nor `driver` uses the destructive variant and the new
+  `approvedInactive` copy. It waits for the session (`user !== null`) so an
+  approved driver never sees it flash.
+- **`useCarrierApplication({ enabled })`** so the shell asks only where an
+  entry is on screen (user mode, the applicant bar, a closed dialog asks
+  nothing).
+- **Copy**, FR/EN at parity by key diff: `common.accessSwitcher.addCarrierAccess`
+  removed (its only reader was the switcher) for `becomeDriver` /
+  `myApplication`; `common.navigation.becomeDriver`; new `carrier.onboarding`;
+  `carrier.application.banner.approvedInactive`. Spliced by exact anchor,
+  not re-serialised.
+
+### Judgment calls
+
+- **The pop-up leads to the role; it does not add it.** `carrier` is granted
+  by an admin approving the file and never self-granted (`roles_spec.md`), so
+  "add this role" became "explain the path, then the form".
+- **The switcher row always opens the dialog; the nav entries only before an
+  application exists.** The switcher is where the owner asked for the pop-up.
+  A nav link that opened a dialog every time someone already mid-application
+  clicked it would be in the way.
+- **Renamed « Ajouter l'accès transporteur » to « Devenir chauffeur ».** The
+  mode it leads to is labelled « Chauffeur » everywhere else
+  (`common.roles.carrier`), and the sidebar entry uses the same words.
+- **A single-mode account's badge stays a badge.** Its way in is now the
+  sidebar and bottom-bar entry, so a dropdown would repeat it.
+- **No "re-approve" button and no automatic re-grant** for an approved row
+  without roles. Removing the roles was an admin's act; undoing it should be
+  one too. The UI now says the access is off rather than claiming it is on.
+
+### Verification
+
+- `npx tsc --noEmit`: 0 errors. `pnpm lint`: 0 errors (65 warnings, none in
+  a touched file; ESLint on the touched files alone: no issues).
+- `pnpm test`: 191 files, **2,622 tests pass**, 31 more than 2.60.0's 2,591:
+  `use-application-nav.test.tsx` (5, the mode in storage *at the moment of
+  the push*), `DriverOnboardingDialog.test.tsx` (13),
+  `ApplicationStatusBanner.test.tsx` (5), `AccessSwitcher.test.tsx` (+2, one
+  case rewritten), `MainLayout.test.tsx` (+3), `BottomNav.test.tsx` (+3).
+- Chromium, on a worktree dev server (`:3001`, local Postgres, a throwaway
+  admin deleted afterwards):
+  - **Before**, at HEAD: Admin mode, the row recorded `/admin/expedion →
+    /carrier/application → /admin/expedion`. User mode navigated.
+  - **After**, light EN, Admin mode from the admin panel: row → dialog (focus
+    inside it) → « Start my application » → `/carrier/application`, still
+    there 6 s later, stored mode `user`, `body` pointer-events `auto`.
+  - Dark FR with an `approved` row and no driver roles: the row read « Mon
+    dossier chauffeur Approuvé », and the dialog and the page both showed the
+    inactive alert.
+  - The sidebar in light and dark with the « Approuvé » pill on one line.
+  - 390 px dark EN, plain account: the bottom bar's « Become a driver » →
+    dialog → page; stored mode untouched.
+- `pnpm changelog:check`: ok, 2.61.0 agrees across CHANGELOG.md, STATUS.md
+  (114 entries), package.json and `src/lib/version.ts`.
+
+### Known limits
+
+- **Production's admin account still cannot drive** until someone re-adds
+  `carrier` and `driver` (Operator to-do). Its page now says so.
+- **Removing `carrier` from an approved account in `/admin/users` still
+  leaves its `carriers` row `approved`**, which is how §4 happened. The
+  mismatch is now visible rather than misleading; making role removal and
+  application status agree is a separate decision (suspend the row? refuse
+  the removal?).
+- The admin application screen offers approval only for `submitted` /
+  `under_review`, so the server-side backfill for approved rows
+  (`carrierService.approve` re-running `enrolAsOwnDriver`) has no button.
 
 ---
 

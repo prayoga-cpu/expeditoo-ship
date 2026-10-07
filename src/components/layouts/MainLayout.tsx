@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { BottomNav } from "../BottomNav";
 import { NotificationBell } from "../NotificationBell";
 import { ThemeToggle } from "../ui/theme-toggle";
@@ -38,6 +38,8 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { useActiveAccessMode } from "@/lib/use-active-access-mode";
 import { useApplicationNav } from "@/lib/use-application-nav";
+import { useCarrierApplication } from "@/features/app/carrier/hooks/useCarrier";
+import { DriverOnboardingDialog } from "@/features/app/carrier/ui/DriverOnboardingDialog";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -48,11 +50,29 @@ interface NavItem {
   label: string;
   icon: LucideIcon;
   badge?: number;
-  /** Marks the one entry that leaves the app for the back office. */
-  accent?: boolean;
-  /** Only "My application" uses this — flips access mode before navigating. */
+  /** Where an application stands, as a pill — the driver entry only. */
+  status?: string;
+  /** Sets an entry apart from the ordinary destinations: `destructive` for
+   * the one that leaves for the back office, `success` (the Driver badge's
+   * colour) for the way into becoming a driver. */
+  accent?: "destructive" | "success";
+  /** Replaces the plain navigation: "My application" flips access mode
+   * first, « Devenir chauffeur » opens the onboarding dialog instead. */
   onSelect?: () => void;
 }
+
+const ACCENT_CLASSES: Record<NonNullable<NavItem["accent"]>, { active: string; idle: string }> = {
+  destructive: {
+    active: "bg-destructive text-destructive-foreground",
+    idle: "text-destructive hover:bg-destructive/10 hover:text-destructive",
+  },
+  // Tinted rather than filled when active: dark mode's `--success` is a light
+  // green and `--success-foreground` stays white, which does not read on it.
+  success: {
+    active: "bg-success/20 text-success",
+    idle: "text-success hover:bg-success/10 hover:text-success",
+  },
+};
 
 export function MainLayout({ children }: MainLayoutProps) {
   const router = useRouter();
@@ -63,6 +83,11 @@ export function MainLayout({ children }: MainLayoutProps) {
   const isAdmin = (user?.roles ?? []).includes("admin");
   const { mode } = useActiveAccessMode();
   const applicationNav = useApplicationNav();
+  const tStatus = useTranslations("carrier.onboarding.status");
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
+  // Only user mode renders the driver entry below; Driver mode reaches its
+  // application through `myApplication`, and Admin mode never gets here.
+  const { data: application } = useCarrierApplication({ enabled: mode === "user" });
 
   // Admin is its own area (`AdminLayout`, a separate route segment) — a
   // MainLayout page (bookmarked, or landed on by a fresh sign-in that
@@ -88,6 +113,29 @@ export function MainLayout({ children }: MainLayoutProps) {
   };
   const profile = { href: "/profile", label: t("profile"), icon: User };
 
+  /** The way into driving, or where the application stands
+   * (become_driver_spec.md §3). Set apart in the Driver badge's green the
+   * way « Panneau d'administration » is set apart in red: this sidebar had
+   * no way in at all, while the mobile bar did. Before an application
+   * exists it explains the path first, in a dialog, rather than dropping
+   * someone into a SIRET form cold. */
+  const driverEntry: NavItem = application
+    ? {
+        href: "/carrier/application",
+        label: t("myApplication"),
+        icon: ClipboardList,
+        accent: "success",
+        status: tStatus(application.status),
+        onSelect: applicationNav,
+      }
+    : {
+        href: "/carrier/application",
+        label: t("becomeDriver"),
+        icon: Truck,
+        accent: "success",
+        onSelect: () => setOnboardingOpen(true),
+      };
+
   /** Someone who has not (yet) moved past posting and applying. */
   const userNavItems: NavItem[] = [
     home,
@@ -102,12 +150,11 @@ export function MainLayout({ children }: MainLayoutProps) {
     { href: "/create", label: t("requestTransport"), icon: PackagePlus },
     messages,
     profile,
+    driverEntry,
   ];
 
-  /** Reaching this for someone not yet qualified for Driver mode happens
-   * through the Home dashboard's own "get started" card
-   * (DriverDashboard.tsx), not this nav — `useApplicationNav` flips to Driver
-   * mode first for anyone who already qualifies. */
+  /** `useApplicationNav` flips to Driver mode first for anyone who already
+   * qualifies; user mode has its own entry, `driverEntry`, above. */
   const myApplication: NavItem = {
     href: "/carrier/application",
     label: t("myApplication"),
@@ -145,7 +192,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   ];
 
   const roles = user?.roles ?? [];
-  const navItems = [
+  const navItems: NavItem[] = [
     ...(mode === "carrier"
       ? roles.includes("carrier")
         ? carrierNavItems
@@ -165,7 +212,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             // Marked out from the ordinary destinations: this one leaves the
             // app for the back office, and it is the only entry most people
             // will never see.
-            accent: true,
+            accent: "destructive" as const,
           },
         ]
       : []),
@@ -205,8 +252,8 @@ export function MainLayout({ children }: MainLayoutProps) {
                   "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors relative", // Added relative
                   item.accent
                     ? isActive
-                      ? "bg-destructive text-destructive-foreground"
-                      : "text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      ? ACCENT_CLASSES[item.accent].active
+                      : ACCENT_CLASSES[item.accent].idle
                     : isActive
                       ? "bg-primary text-primary-foreground"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -217,6 +264,11 @@ export function MainLayout({ children }: MainLayoutProps) {
                 {item.badge && (
                   <span className="ml-auto bg-destructive text-destructive-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full">
                     {item.badge > 99 ? "99+" : item.badge}
+                  </span>
+                )}
+                {item.status && (
+                  <span className="ml-auto shrink-0 whitespace-nowrap rounded-full bg-success/15 px-1.5 py-0.5 text-[10px] font-semibold">
+                    {item.status}
                   </span>
                 )}
               </Link>
@@ -248,6 +300,8 @@ export function MainLayout({ children }: MainLayoutProps) {
         {/* Mobile Bottom Nav - Moved inside flex column */}
         {!hideBottomNav && <BottomNav />}
       </div>
+
+      <DriverOnboardingDialog open={onboardingOpen} onOpenChange={setOnboardingOpen} />
     </div>
   );
 }

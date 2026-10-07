@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -7,6 +7,7 @@ import fr from "../../../messages/fr.json";
 
 import { BottomNav } from "../BottomNav";
 import { AccessModeProvider } from "@/lib/access-mode-context";
+import type { CarrierApplication } from "@/features/app/carrier/api/carrier.api";
 
 /**
  * The mobile bar's job here is one rule, and it is the same rule the header
@@ -21,6 +22,7 @@ import { AccessModeProvider } from "@/lib/access-mode-context";
 
 const auth: { user: { roles: string[] } | null } = { user: null };
 let pathname = "/home";
+let application: CarrierApplication | null = null;
 
 vi.mock("@/lib/auth-context", () => ({ useAuth: () => auth }));
 vi.mock("next/navigation", () => ({
@@ -29,6 +31,9 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("@/features/app/messages/hooks", () => ({
   useUnreadMessages: () => ({ unreadCount: 0 }),
+}));
+vi.mock("@/features/app/carrier/hooks/useCarrier", () => ({
+  useCarrierApplication: () => ({ data: application }),
 }));
 
 function renderWith(locale: "en" | "fr" = "en") {
@@ -59,6 +64,9 @@ describe("BottomNav", () => {
   beforeEach(() => {
     auth.user = { roles: ["shipper"] };
     pathname = "/home";
+    application = null;
+    window.HTMLElement.prototype.hasPointerCapture ??= () => false;
+    window.HTMLElement.prototype.scrollIntoView ??= () => {};
   });
 
   it("gives a plain account the posting form", () => {
@@ -109,5 +117,29 @@ describe("BottomNav", () => {
     expect(applicant).toContain("/create");
     expect(applicant).not.toContain("/expedion");
     expect(driver).toContain("/expedion");
+  });
+
+  // Same rule as the sidebar's driver entry (become_driver_spec.md §3).
+  it.each([
+    ["en", "Become a driver"],
+    ["fr", "Devenir chauffeur"],
+  ] as const)("offers to become a driver before an application exists (%s)", async (locale, label) => {
+    const { onError } = renderWith(locale);
+
+    fireEvent.click(screen.getByRole("link", { name: label }));
+
+    expect(await screen.findByRole("dialog", { name: label })).toBeInTheDocument();
+    expect(onError.mock.calls.map(([e]) => e.message)).toEqual([]);
+  });
+
+  it("goes straight to an existing application", () => {
+    application = { status: "draft" } as CarrierApplication;
+    renderWith();
+
+    expect(screen.getByRole("link", { name: "My application" })).toHaveAttribute(
+      "href",
+      "/carrier/application"
+    );
+    expect(screen.queryByRole("link", { name: "Become a driver" })).not.toBeInTheDocument();
   });
 });

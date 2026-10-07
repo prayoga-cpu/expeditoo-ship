@@ -40,12 +40,17 @@ function describe(
  * A user with no carrier row yet is a normal state, not an error: the REST
  * layer answers with no payload, which React Query would reject as `undefined`,
  * so it is normalised to `null` and the screen renders the apply view.
+ *
+ * `enabled` lets the shell's « Devenir chauffeur » entries ask only when they
+ * are on screen (become_driver_spec.md §3) — a Driver-mode account never
+ * renders them, and a closed onboarding dialog has nothing to show.
  */
-export function useCarrierApplication() {
+export function useCarrierApplication({ enabled = true }: { enabled?: boolean } = {}) {
   return useQuery<CarrierApplication | null>({
     queryKey: carrierKeys.application,
     queryFn: async () => (await carrierApi.getApplication()) ?? null,
     retry: false,
+    enabled,
   });
 }
 

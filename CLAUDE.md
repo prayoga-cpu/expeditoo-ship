@@ -222,7 +222,7 @@ without an `sk_live_` key, so an accept there takes real money.
 Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before shipping.
 
 **Gates — all green.** `npx tsc --noEmit` 0 errors · `pnpm lint` 0 errors ·
-2,591 unit tests pass (2.60.0) · `pnpm build` succeeds.
+2,622 unit tests pass (2.61.0) · `pnpm build` succeeds.
 
 **Done**
 - Schema remodelled to the transport model; one clean initial migration
@@ -609,6 +609,14 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
   decide first (STATUS 2.60.0). `listing_privacy_spec.md`,
   `draft_requests_spec.md`, `numeric_input_spec.md`, `take_job_spec.md`,
   `payout_safety_spec.md`
+- **« Devenir chauffeur » from the shell** (2.61.0). The access switcher's
+  row, a green sidebar entry in user mode and the mobile applicant slot open
+  `DriverOnboardingDialog` before an application exists, then show its
+  status. Every way to `/carrier/application` goes through
+  `useApplicationNav`, which leaves Admin mode **before** the push; the old
+  row did not, and `MainLayout` bounced the page back to the panel. The
+  banner no longer says « approuvé » to an account without driver roles.
+  Nothing here grants a role. `become_driver_spec.md`
 
 **Not done**
 - **`EXPEDION_APP_ORIGINS` is set in Vercel Production but not in `.env.local`**,

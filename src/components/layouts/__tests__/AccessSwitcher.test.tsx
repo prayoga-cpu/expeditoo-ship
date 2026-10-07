@@ -7,6 +7,7 @@ import fr from "../../../../messages/fr.json";
 
 import { AccessSwitcher } from "../AccessSwitcher";
 import { AccessModeProvider } from "@/lib/access-mode-context";
+import type { CarrierApplication } from "@/features/app/carrier/api/carrier.api";
 
 // Radix's menu opens on a pointer sequence jsdom cannot dispatch — clicking
 // the trigger never reaches the portal (see radix-dialogs-in-jsdom in
@@ -30,9 +31,13 @@ const auth: { user: { roles: string[] } | null; isLoading: boolean } = {
 };
 
 const push = vi.fn();
+let application: CarrierApplication | null = null;
 
 vi.mock("@/lib/auth-context", () => ({ useAuth: () => auth }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
+vi.mock("@/features/app/carrier/hooks/useCarrier", () => ({
+  useCarrierApplication: () => ({ data: application }),
+}));
 
 function renderWith(
   opts: { locale?: "en" | "fr"; messages?: typeof en | typeof fr; defaultOpen?: boolean } = {}
@@ -52,6 +57,7 @@ function renderWith(
 describe("AccessSwitcher", () => {
   beforeEach(() => {
     push.mockClear();
+    application = null;
   });
 
   afterEach(() => {
@@ -101,7 +107,8 @@ describe("AccessSwitcher", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("menuitem", { name: "Driver" })).toBeInTheDocument();
     expect(screen.getByRole("menuitem", { name: "User" })).toBeInTheDocument();
-    expect(screen.queryByText("Add carrier access")).not.toBeInTheDocument();
+    expect(screen.queryByText("Become a driver")).not.toBeInTheDocument();
+    expect(screen.queryByText("My driver application")).not.toBeInTheDocument();
   });
 
   it("switching persists the choice and navigates to that mode's landing route", async () => {
@@ -116,17 +123,52 @@ describe("AccessSwitcher", () => {
     expect(push).toHaveBeenCalledWith("/home");
   });
 
-  it("offers to add carrier access when the account does not hold it, and navigates to the application", async () => {
+  // The reported bug: this row pushed to /carrier/application without leaving
+  // Admin mode, and MainLayout bounced it straight back to the panel
+  // (become_driver_spec.md §1.1). It now explains the path first; the
+  // dialog's own button does the navigating (DriverOnboardingDialog.test.tsx,
+  // use-application-nav.test.tsx).
+  it("offers to become a driver when the account cannot drive, and opens the onboarding dialog rather than navigating", async () => {
     auth.user = { roles: ["shipper", "admin"] };
     auth.isLoading = false;
 
     renderWith({ defaultOpen: true });
 
     fireEvent.click(
-      await screen.findByRole("menuitem", { name: "Add carrier access" })
+      await screen.findByRole("menuitem", { name: "Become a driver" })
     );
 
-    expect(push).toHaveBeenCalledWith("/carrier/application");
+    expect(
+      await screen.findByRole("dialog", { name: "Become a driver" })
+    ).toBeInTheDocument();
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it("names the row after the application, with its status, once one exists", async () => {
+    auth.user = { roles: ["shipper", "admin"] };
+    auth.isLoading = false;
+    application = { status: "under_review" } as CarrierApplication;
+
+    renderWith({ defaultOpen: true });
+
+    expect(
+      // jsdom joins the label and the status span with no space; Chromium
+      // reads "My driver application Under review".
+      await screen.findByRole("menuitem", { name: /^My driver application\s*Under review$/ })
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Become a driver")).not.toBeInTheDocument();
+  });
+
+  it("labels the row in French", async () => {
+    auth.user = { roles: ["shipper", "admin"] };
+    auth.isLoading = false;
+
+    const onError = renderWith({ locale: "fr", messages: fr, defaultOpen: true });
+
+    expect(
+      await screen.findByRole("menuitem", { name: "Devenir chauffeur" })
+    ).toBeInTheDocument();
+    expect(onError.mock.calls.map(([e]) => e.message)).toEqual([]);
   });
 
   it("never offers to add admin access", async () => {
