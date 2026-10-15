@@ -384,10 +384,14 @@ describe("jobFormSchema", () => {
     ).toBe(true);
   });
 
-  it("still rejects a description under five characters", () => {
-    expect(messages(form({ description: "Hi" }))).toContain(
-      "create.validation.descriptionShort"
-    );
+  // Optional since 2.63.0 (client_feedback_2026_10_spec.md §8).
+  it("accepts an empty or a short description", () => {
+    expect(messages(form({ description: "" }))).toEqual([]);
+    expect(messages(form({ description: "Hi" }))).toEqual([]);
+  });
+
+  it("still caps a description at 5000 characters", () => {
+    expect(messages(form({ description: "x".repeat(5001) })).length).toBeGreaterThan(0);
   });
 
   it("accepts the 'I'm not sure' weight bracket", () => {

@@ -15,6 +15,8 @@ import {
 import { getProfile, getUserRoles } from "@/server/services/user.service";
 import { impersonation } from "@/lib/auth-impersonation";
 import { originOfRequest } from "@/lib/app-origins";
+import { composeName } from "@/lib/person-name";
+import { USER_ADDITIONAL_FIELDS } from "@/lib/auth-user-fields";
 import type {
   EmailVerificationParams,
   PasswordResetParams,
@@ -110,6 +112,12 @@ const options = {
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID || "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
+      // Google sends the parts the sign-up form now asks for; take them when
+      // it does (client_feedback_2026_10_spec.md §1).
+      mapProfileToUser: (profile) => ({
+        firstName: profile.given_name || undefined,
+        lastName: profile.family_name || undefined,
+      }),
       // Better Auth uses /api/auth/callback/google as the callback path
       // Make sure this matches what you configured in Google Cloud Console
     },
@@ -161,7 +169,17 @@ const options = {
         before: async (user, ctx) => {
           const origin = originOfRequest(ctx?.headers?.get("origin") ?? null);
 
-          return { data: { ...user, origin } };
+          // `name` is composed from the parts whenever both were given, here
+          // rather than trusted from the client, so the display name and the
+          // parts cannot disagree (client_feedback_2026_10_spec.md §1).
+          const { firstName, lastName } = user as {
+            firstName?: string | null;
+            lastName?: string | null;
+          };
+          const name =
+            firstName && lastName ? composeName(firstName, lastName) : user.name;
+
+          return { data: { ...user, name, origin } };
         },
         after: async (user) => {
           try {
@@ -274,30 +292,10 @@ const options = {
     },
   },
 
-  // User Configuration
+  // User Configuration — which extra columns exist, and which of them a
+  // client may set (src/lib/auth-user-fields.ts).
   user: {
-    additionalFields: {
-      isVerified: {
-        type: "boolean",
-        required: false,
-        defaultValue: false,
-      },
-      banned: {
-        type: "boolean",
-        required: false,
-        defaultValue: false,
-      },
-      // Expose Stripe fields to the client
-      stripeAccountId: {
-        type: "string",
-        required: false,
-      },
-      stripeAccountStatus: {
-        type: "string",
-        required: false,
-        defaultValue: "pending",
-      },
-    },
+    additionalFields: USER_ADDITIONAL_FIELDS,
   },
 
   // Advanced Options

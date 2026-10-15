@@ -31,7 +31,10 @@ import { earliestPickupFor } from "@/lib/listing-window";
  * boundary.
  */
 
-export const TIMING_MODES = ["exact", "flexible"] as const;
+// Flexible first, and the default below: the client asked for it on 8 Oct 2026
+// (client_feedback_2026_10_spec.md §3) — most people moving a sofa have a
+// week, not an hour.
+export const TIMING_MODES = ["flexible", "exact"] as const;
 export type TimingMode = (typeof TIMING_MODES)[number];
 
 /** How wide the arrival window is around an exact time. */
@@ -354,13 +357,14 @@ function defaultEndpointTiming(date: string): EndpointTiming {
   };
 }
 
-/** Sensible defaults: pickup tomorrow, delivery the day after. */
+/** Sensible defaults: pickup tomorrow, delivery the day after,
+ * each as a one-day flexible range. */
 export function defaultTimingState(): TimingState {
   const day = 24 * 60 * 60 * 1000;
   const now = Date.now();
 
   return {
-    mode: "exact",
+    mode: "flexible",
     pickup: defaultEndpointTiming(toDayString(new Date(now + day))),
     dropoff: defaultEndpointTiming(toDayString(new Date(now + 2 * day))),
   };

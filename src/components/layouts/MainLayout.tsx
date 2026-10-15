@@ -290,7 +290,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         <main
           className={cn(
             "relative flex-1 min-h-0 overflow-y-auto overflow-x-hidden xl:pb-0",
-            !hideBottomNav && "pb-[88px]"
+            !hideBottomNav && "pb-[calc(88px_+_env(safe-area-inset-bottom))]"
           )}
           style={{ scrollbarGutter: "stable" }}
         >

@@ -2,10 +2,8 @@
 
 import { useRef, useState, useEffect, type ChangeEvent } from "react";
 import { usePathname } from "next/navigation";
-import { Bug } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { FeedbackDialog } from "@/features/app/feedback/ui";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -15,12 +13,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import {
   CreditCard,
   Star,
@@ -41,6 +33,7 @@ import {
 import Link from "next/link";
 import { useProfile } from "../hooks/useProfile";
 import { SavedAddressesCard } from "./SavedAddressesCard";
+import { ContactDetailsCard } from "./ContactDetailsCard";
 import type { LucideIcon } from "lucide-react";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { useUserRoles } from "../hooks/useUserRoles";
@@ -235,6 +228,8 @@ export function Profile() {
 
         {/* Right Column - Details */}
         <div className="lg:col-span-2 space-y-6">
+          <ContactDetailsCard />
+
           <SavedAddressesCard />
 
           {/* Payment Methods (For Buyers) */}
@@ -421,39 +416,9 @@ function QuickLinks({ userRoles }: { userRoles?: string[] }) {
           </Button>
         </Link>
       ))}
-      {/* Not a Link: feedback is a dialog, not a page. It sits beside Help
-          because "get help" and "tell them something" are the two things people
-          come looking for in the same place — the header launcher is always
-          there, but an icon-only button is easy to miss. */}
-      <SendFeedbackQuickLink label={t("sendFeedback")} />
-    </>
-  );
-}
-
-function SendFeedbackQuickLink({ label }: { label: string }) {
-  const t = useTranslations("feedback.trigger");
-  const [open, setOpen] = useState(false);
-
-  return (
-    <>
-      <TooltipProvider delayDuration={300}>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              className="w-full justify-start gap-3 h-12 group"
-              onClick={() => setOpen(true)}
-            >
-              <Bug className="w-5 h-5 text-primary group-hover:text-accent-foreground" />
-              <span>{label}</span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="top">
-            <p>{t("hint")}</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-      <FeedbackDialog open={open} onOpenChange={setOpen} />
+      {/* « J'ai une demande » used to be a link of its own here. The client
+          asked for it under « Contact & Aide » (client_feedback_2026_10_spec.md
+          §6), so it is a card on /help now — the page that link opens. */}
     </>
   );
 }

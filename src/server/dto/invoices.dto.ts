@@ -35,6 +35,56 @@ export const invoiceQuerySchema = z
         message: "INVALID_PERIOD",
     });
 
+// ========================================
+// Output — GET /api/user/invoices
+// ========================================
+
+/**
+ * What the document calls itself on its face: *Facture*, *Reçu de paiement*
+ * or *Avoir* (invoice_at_payment_spec.md §4.1). Decided by
+ * `invoiceDocumentType` in `src/lib/invoice-pdf-props.ts`, the rule the PDF
+ * title follows, so the list and the download cannot disagree.
+ */
+export const invoiceDocumentTypeSchema = z.enum(["invoice", "receipt", "credit_note"]);
+
+/**
+ * One row of the requester's transaction history.
+ *
+ * The DAL row arrives with its payment and that payment's listing joined;
+ * neither leaves the server. Parsing strips them, so a column added to either
+ * table later stays private until it is named here.
+ */
+export const userInvoiceViewSchema = z.object({
+    id: z.string(),
+    invoiceNumber: z.string(),
+    paymentId: z.string(),
+    userId: z.string(),
+    amount: z.number().int(),
+    currency: z.string(),
+    status: invoiceStatusSchema,
+    kind: z.enum(["invoice", "credit_note"]),
+    documentType: invoiceDocumentTypeSchema,
+    relatedInvoiceId: z.string().nullable(),
+    relatedInvoiceNumber: z.string().nullable(),
+    issuedAt: z.date().nullable(),
+    dueAt: z.date().nullable(),
+    paidAt: z.date().nullable(),
+    pdfUrl: z.string().nullable(),
+    createdAt: z.date(),
+    updatedAt: z.date(),
+});
+
+export const userInvoiceListSchema = z.object({
+    items: z.array(userInvoiceViewSchema),
+    total: z.number().int().nonnegative(),
+    page: z.number().int().positive(),
+    limit: z.number().int().positive(),
+    totalPages: z.number().int().nonnegative(),
+});
+
 export type CreateInvoiceInput = z.infer<typeof createInvoiceSchema>;
 export type UpdateInvoiceInput = z.infer<typeof updateInvoiceSchema>;
 export type InvoiceQuery = z.infer<typeof invoiceQuerySchema>;
+export type InvoiceDocumentType = z.infer<typeof invoiceDocumentTypeSchema>;
+export type UserInvoiceView = z.infer<typeof userInvoiceViewSchema>;
+export type UserInvoiceList = z.infer<typeof userInvoiceListSchema>;

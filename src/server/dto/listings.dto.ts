@@ -148,7 +148,9 @@ const AVAILABILITY_FIELDS = [
 
 const baseListingSchema = z.object({
   title: z.string().min(2).max(120),
-  description: z.string().min(5).max(5000),
+  // Optional (client_feedback_2026_10_spec.md §8). The column stays NOT NULL,
+  // so an absent description is stored as "" rather than null.
+  description: z.string().max(5000).default(""),
   /**
    * Optional because a person requesting transport is not asked to file their
    * own belongings into a taxonomy — they describe an object and two addresses.

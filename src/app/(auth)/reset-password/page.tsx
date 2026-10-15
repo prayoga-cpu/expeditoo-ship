@@ -237,7 +237,6 @@ function ResetPasswordContent() {
                   <div className="relative">
                     <Input
                       type={showPassword ? "text" : "password"}
-                      placeholder="••••••••"
                       {...register("password")}
                       disabled={isLoading}
                       className={`bg-background/50 border-border/50 pr-10 ${errors.password ? "border-destructive" : ""}`}
@@ -272,7 +271,6 @@ function ResetPasswordContent() {
                   <div className="relative">
                     <Input
                       type={showConfirmPassword ? "text" : "password"}
-                      placeholder="••••••••"
                       {...register("confirmPassword")}
                       disabled={isLoading}
                       className={`bg-background/50 border-border/50 pr-10 ${errors.confirmPassword ? "border-destructive" : ""}`}

@@ -21,6 +21,7 @@ import { FeedbackError } from "@/server/services/feedback.service";
 import { StorageError } from "@/server/services/storage/storage-error";
 import { MapLinkError } from "@/server/services/map-link.service";
 import { PlatformSettingsError } from "@/server/services/platform-settings.service";
+import { UserContactError } from "@/server/services/user-contact.service";
 
 /**
  * Shared response shape for the REST layer.
@@ -72,7 +73,8 @@ export function handleError(error: unknown, context: string) {
     error instanceof FeedbackError ||
     error instanceof StorageError ||
     error instanceof MapLinkError ||
-    error instanceof PlatformSettingsError
+    error instanceof PlatformSettingsError ||
+    error instanceof UserContactError
   ) {
     return fail(error.code, error.message, error.status);
   }

@@ -242,3 +242,14 @@ No edits at all once `awarded` → `409 LISTING_NOT_EDITABLE`.
 - Who reads what on `browse` and `getListing`, and the `404` on a `draft` or
   `scheduled` request for anyone but its owner: `listing_privacy_spec.md` §5.
 - The draft routes (§3): `draft_requests_spec.md` §7.
+
+
+---
+
+## Amendment — 2.63.0 (2026-10-15)
+
+- `description` is optional (0–5000 characters, stored `""` when absent); the
+  table in §2 said "20–5000, required" and the DTO had required 5
+  (`client_feedback_2026_10_spec.md` §8).
+- A flexible direct request's `expiresAt` is 6 h before `pickupUntil`, not
+  `pickupFrom` (§4 of the same spec).

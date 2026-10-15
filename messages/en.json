@@ -187,7 +187,6 @@
     "register": {
       "title": "Create your account",
       "subtitle": "Join EXPEDITOO to start shipping and bidding",
-      "name": "Full name",
       "email": "Email address",
       "password": "Password",
       "confirmPassword": "Confirm password",
@@ -202,15 +201,24 @@
       "termsOfService": "Terms of Service",
       "and": "and",
       "privacyPolicy": "Privacy Policy",
-      "placeholderName": "John Doe",
       "placeholderEmail": "you@example.com",
       "errors": {
-        "nameRequired": "Full name is required",
         "emailRequired": "Email is required",
         "emailInvalid": "Please enter a valid email",
         "passwordMin": "Password must be at least 8 characters",
-        "passwordMismatch": "Passwords do not match"
-      }
+        "passwordMismatch": "Passwords do not match",
+        "firstNameRequired": "First name is required",
+        "lastNameRequired": "Last name is required",
+        "nameTooLong": "80 characters at most",
+        "aliasTooLong": "40 characters at most"
+      },
+      "firstName": "First name",
+      "lastName": "Last name",
+      "alias": "Alias (optional)",
+      "aliasHint": "The name you'd like to appear under. For now, only you can see it.",
+      "placeholderFirstName": "Jean",
+      "placeholderLastName": "Dupont",
+      "placeholderAlias": "Jeannot"
     },
     "forgotPassword": {
       "title": "Forgot password?",
@@ -291,8 +299,7 @@
       "driverSupport": "Driver Support",
       "driverDashboard": "Driver Dashboard",
       "becomeDriver": "Become a Driver",
-      "myInvoices": "My invoices",
-      "sendFeedback": "I have a request"
+      "myInvoices": "Transaction history"
     },
     "myAuctions": {
       "title": "My Auctions",
@@ -484,7 +491,7 @@
       "recentDeliveries": "Recent Deliveries"
     },
     "invoices": {
-      "title": "Invoices",
+      "title": "Transaction history",
       "description": "View and download your payment invoices",
       "deliveryNotice": "Every receipt is emailed to you as an attachment as soon as payment is taken. Sending by WhatsApp is not available yet — check your inbox, or send the document again below.",
       "empty": "No invoices yet",
@@ -493,11 +500,12 @@
       "error": "Failed to load invoices",
       "errorDesc": "Please try again later or contact support.",
       "columns": {
-        "invoice": "Invoice",
+        "invoice": "Number",
         "date": "Date",
         "amount": "Amount",
         "status": "Status",
-        "actions": "Actions"
+        "actions": "Actions",
+        "type": "Type"
       },
       "status": {
         "draft": "Draft",
@@ -512,19 +520,57 @@
         "all": "All periods",
         "thisMonth": "This month",
         "lastMonth": "Last month",
-        "thisYear": "This year"
+        "thisYear": "This year",
+        "label": "Period"
       },
       "retry": "Try again",
       "sendByEmail": "Send by email",
       "emailSent": "Document sent to {address}",
-      "creditNote": "Credit note",
       "errors": {
         "RATE_LIMITED": "Too many sends for this document. Try again in a moment.",
         "INVOICE_EMAIL_FAILED": "The email could not be sent. The document is still downloadable.",
         "INVOICE_NOT_YOURS": "This document is not yours.",
         "generic": "The email could not be sent. Try again later."
       },
-      "creditNoteFor": "Credit note for {number}"
+      "creditNoteFor": "Credit note for {number}",
+      "tabs": {
+        "requester": "Requester",
+        "carrier": "Carrier"
+      },
+      "documentType": {
+        "invoice": "Invoice",
+        "receipt": "Payment receipt",
+        "credit_note": "Credit note"
+      },
+      "carrier": {
+        "description": "Every delivered transport, with the amount billed, the platform's commission and the net that is yours.",
+        "downloadStatement": "Download the activity statement for the period",
+        "loading": "Loading your statement…",
+        "error": "Failed to load your statement",
+        "errorDesc": "Please try again later or contact support.",
+        "empty": "No delivered transport",
+        "emptyDesc": "Nothing was delivered in this period. As soon as a run is delivered, it appears here with what it earned you.",
+        "untitled": "Transport",
+        "columns": {
+          "date": "Date",
+          "job": "Job",
+          "reference": "Reference",
+          "gross": "Gross",
+          "commission": "Commission",
+          "net": "Net",
+          "payout": "Payout"
+        },
+        "payout": {
+          "scheduled": "Credited to your balance",
+          "processing": "Payout processing",
+          "paid": "Paid",
+          "failed": "Payout failed",
+          "cancelled": "Payout cancelled",
+          "none": "No payout"
+        },
+        "total": "Total — {count, plural, one {# delivery} other {# deliveries}}",
+        "truncated": "Only the {shown} most recent of {total} transports are shown. Choose a shorter period, or download the statement for the period."
+      }
     },
     "reviews": {
       "title": "Reviews & Ratings",
@@ -543,6 +589,37 @@
         "seller": "Seller"
       },
       "empty": "No reviews available for this user"
+    },
+    "contact": {
+      "title": "Personal contact details",
+      "staffTitle": "Personal contact details (visible to staff)",
+      "privacy": "Only you and the Expeditoo team can see these — never a carrier or a requester.",
+      "fullName": "Full name",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "alias": "Alias",
+      "phone": "Phone",
+      "phonePlaceholder": "06 12 34 56 78",
+      "relativeTitle": "Person to contact",
+      "relativeHint": "Someone close the team can call if they cannot reach you. Optional.",
+      "relativeName": "Their name",
+      "relativePhone": "Their phone",
+      "notSet": "Not set",
+      "edit": "Edit my contact details",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving…",
+      "saved": "Contact details saved",
+      "saveFailed": "Could not save your contact details. Try again.",
+      "loadError": "Could not load the contact details.",
+      "retry": "Retry",
+      "errors": {
+        "firstNameRequired": "First name is required",
+        "lastNameRequired": "Last name is required",
+        "nameTooLong": "80 characters at most",
+        "aliasTooLong": "40 characters at most",
+        "invalidPhone": "This phone number is not valid"
+      }
     }
   },
   "settings": {
@@ -901,7 +978,8 @@
         "vsBudget": "{amount} vs budget",
         "accept": "Accept",
         "acceptSlot": "Accept this slot",
-        "accepting": "Accepting…"
+        "accepting": "Accepting…",
+        "slotsPassed": "The proposed slots have passed: this carrier needs to send a new offer."
       }
     }
   },
@@ -1104,8 +1182,8 @@
       "floor": "Floor",
       "lift": "Lift available",
       "liftHint": "Is there a lift to this floor?",
-      "noteLabel": "Note for the carrier (optional)",
-      "notePlaceholder": "e.g. Second floor, past the red door",
+      "noteLabel": "Details – access conditions (optional)",
+      "notePlaceholder": "e.g. 2nd floor, no lift, gate code 1234, hard to park",
       "linkNoteLabel": "Describe the exact spot",
       "linkNotePlaceholder": "e.g. Blue gate on the left, 200 m after the church",
       "contactName": "Contact name (optional)",
@@ -1490,7 +1568,8 @@
       "needsProtection": "Protection required",
       "needsPackaging": "Packaging required",
       "timeline": "History",
-      "cancellationReason": "Cancellation reason"
+      "cancellationReason": "Cancellation reason",
+      "accessConditions": "Access conditions:"
     },
     "actions": {
       "actions": "Actions",
@@ -2197,7 +2276,7 @@
     }
   },
   "help": {
-    "title": "Help & Support",
+    "title": "Contact & Help",
     "subtitle": "Find answers to common questions or contact our support team.",
     "emailSupport": {
       "title": "Email Support",
@@ -3328,7 +3407,7 @@
     },
     "trips": {
       "title": "My trips",
-      "pageSubtitle": "The routes you run, and the transports you have carried out.",
+      "pageSubtitle": "Your routes, your offers awaiting an answer, your runs on the road and the ones you have finished.",
       "subtitle": "Declare the routes you already drive so the board can be filtered down to them.",
       "add": "Add a trip",
       "edit": "Edit",
@@ -3341,7 +3420,9 @@
       "radiusLabel": "Up to {km} km either side of the trip",
       "tabs": {
         "planned": "Planned",
-        "completed": "Carried out"
+        "completed": "Finished",
+        "pending": "Awaiting an answer",
+        "active": "In transit"
       },
       "kinds": {
         "recurring": "Regular",
@@ -3458,7 +3539,49 @@
           "description": "Once you have delivered a job it appears here, with what it paid and the paperwork for it."
         }
       },
-      "runsOn": "Runs on {days}"
+      "runsOn": "Runs on {days}",
+      "untitledJob": "Transport",
+      "loadError": {
+        "title": "Could not load this list",
+        "description": "The list could not be loaded. Try again in a moment.",
+        "retry": "Try again"
+      },
+      "pending": {
+        "intro": "The offers you made that the requester or an operator has not answered yet.",
+        "yourPrice": "Your price",
+        "earliestPickup": "Earliest pickup: {pickup}",
+        "view": "View the job",
+        "withdraw": "Withdraw the offer",
+        "confirm": {
+          "title": "Withdraw this offer?",
+          "description": "It leaves the requester's list at once. You can make a new one while the job is still open.",
+          "cancel": "Cancel",
+          "confirm": "Withdraw"
+        },
+        "toast": {
+          "withdrawn": "Offer withdrawn",
+          "notPending": "This offer has already been answered or has expired.",
+          "withdrawFailed": "Could not withdraw the offer"
+        },
+        "empty": {
+          "title": "No offers awaiting an answer",
+          "description": "Offers you make on a job appear here until the requester or an operator decides.",
+          "browse": "Browse jobs"
+        },
+        "noCarrier": {
+          "title": "Offers are for approved carriers",
+          "description": "Finish your carrier application first — an offer is made from a carrier profile."
+        }
+      },
+      "active": {
+        "intro": "The jobs awarded to you that are not delivered yet.",
+        "agreedPrice": "Agreed price",
+        "pickupOn": "Pickup on {date}",
+        "empty": {
+          "title": "Nothing in transit",
+          "description": "As soon as one of your offers is accepted, the job appears here until it is delivered."
+        }
+      }
     }
   },
   "dashboard": {
@@ -3944,6 +4067,11 @@
       "previous": "Previous",
       "next": "Next",
       "showing": "{shown} of {total} feedback items"
+    },
+    "helpCard": {
+      "title": "I have a request",
+      "description": "A question, an idea, a problem in the app: write to us and your message goes straight to the team.",
+      "button": "Send a request"
     }
   },
   "acceptPayment": {

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 /**
  * Covers docs/specs/invoice_at_payment_spec.md §1, §3, §5 and §7 — what the
@@ -354,5 +354,151 @@ describe("sendDocumentEmail", () => {
     expect(await codeFrom(() => invoicesService.sendDocumentEmail("inv-1"))).toBe(
       "INVOICE_EMAIL_FAILED"
     );
+  });
+});
+
+// ========================================
+// The transaction history
+// ========================================
+
+describe("getUserInvoices", () => {
+  // client_feedback_2026_10_spec.md §7a: each row says what its PDF calls
+  // itself, and nothing the DAL joined to it leaves the server.
+
+  const ISSUER = {
+    INVOICE_ISSUER_LEGAL_FORM: "SAS",
+    INVOICE_ISSUER_ADDRESS: "1 rue de Rivoli, 75001 Paris",
+    INVOICE_ISSUER_SIRET: "12345678900012",
+    INVOICE_ISSUER_RCS: "Paris B 123 456 789",
+    INVOICE_ISSUER_VAT_NUMBER: "FR12345678900",
+    INVOICE_VAT_RATE: "20",
+  };
+
+  const row = (over: Record<string, unknown> = {}) => ({
+    ...created(),
+    status: "paid",
+    relatedInvoiceId: null,
+    relatedInvoiceNumber: null,
+    billingName: "Camille Roux",
+    billingEmail: "camille@example.com",
+    billingAddress: "12 rue de la Paix, 75002 Paris, France",
+    lineDescription: "Transport de marchandises — Palette Lyon → Paris",
+    issuedAt: null,
+    dueAt: null,
+    paidAt: new Date("2026-09-01T10:00:00Z"),
+    pdfUrl: null,
+    createdAt: new Date("2026-09-01T10:00:00Z"),
+    updatedAt: new Date("2026-09-01T10:00:00Z"),
+    // What the DAL joins, and what must not reach the browser.
+    payment: {
+      ...payment(),
+      stripePaymentIntentId: "pi_3RealCharge",
+      listing: { title: "Palette Lyon → Paris", pickupAddress: "3 rue Privée" },
+    },
+    ...over,
+  });
+
+  const givenPage = (items: unknown[]) =>
+    vi.mocked(invoicesDal.getByUserId).mockResolvedValue({
+      items,
+      total: items.length,
+      page: 1,
+      limit: 20,
+      totalPages: 1,
+    } as never);
+
+  const query = { page: 1, limit: 20 };
+
+  afterEach(() => {
+    for (const key of Object.keys(ISSUER)) delete process.env[key];
+  });
+
+  it("calls a document a receipt while the issuer's identity is a placeholder", async () => {
+    givenPage([row()]);
+
+    const page = await invoicesService.getUserInvoices("client-1", query);
+
+    expect(page.items[0].documentType).toBe("receipt");
+  });
+
+  it("calls it an invoice once the identity is configured, as the PDF does", async () => {
+    Object.assign(process.env, ISSUER);
+    givenPage([row()]);
+
+    const page = await invoicesService.getUserInvoices("client-1", query);
+
+    expect(page.items[0].documentType).toBe("invoice");
+  });
+
+  it("calls a correction a credit note in either state", async () => {
+    const avoir = row({
+      id: "cn-1",
+      invoiceNumber: "AV-2026-0001",
+      kind: "credit_note",
+      amount: -18_000,
+      relatedInvoiceId: "inv-1",
+      relatedInvoiceNumber: "INV-2026-0001",
+    });
+    givenPage([avoir]);
+    expect(
+      (await invoicesService.getUserInvoices("client-1", query)).items[0].documentType
+    ).toBe("credit_note");
+
+    Object.assign(process.env, ISSUER);
+    expect(
+      (await invoicesService.getUserInvoices("client-1", query)).items[0].documentType
+    ).toBe("credit_note");
+  });
+
+  it("hands out the document's own columns and nothing it was joined to", async () => {
+    givenPage([row()]);
+
+    const page = await invoicesService.getUserInvoices("client-1", query);
+    const keys = Object.keys(page.items[0]).sort();
+
+    expect(keys).toEqual(
+      [
+        "amount",
+        "createdAt",
+        "currency",
+        "documentType",
+        "dueAt",
+        "id",
+        "invoiceNumber",
+        "issuedAt",
+        "kind",
+        "paidAt",
+        "paymentId",
+        "pdfUrl",
+        "relatedInvoiceId",
+        "relatedInvoiceNumber",
+        "status",
+        "updatedAt",
+        "userId",
+      ].sort()
+    );
+    expect(JSON.stringify(page)).not.toContain("pi_3RealCharge");
+    expect(JSON.stringify(page)).not.toContain("3 rue Privée");
+  });
+
+  it("keeps the paging and passes the period through to the DAL", async () => {
+    givenPage([row()]);
+    const from = new Date("2026-09-01T00:00:00Z");
+    const to = new Date("2026-09-30T23:59:59Z");
+
+    const page = await invoicesService.getUserInvoices("client-1", {
+      ...query,
+      from,
+      to,
+    });
+
+    expect(page).toMatchObject({ total: 1, page: 1, limit: 20, totalPages: 1 });
+    expect(invoicesDal.getByUserId).toHaveBeenCalledWith("client-1", {
+      page: 1,
+      limit: 20,
+      status: undefined,
+      from,
+      to,
+    });
   });
 });

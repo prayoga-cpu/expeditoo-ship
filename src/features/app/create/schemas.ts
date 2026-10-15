@@ -274,10 +274,9 @@ export const endpointSchema = z
 export const jobFormSchema = z
   .object({
     title: z.string().min(2, "create.validation.titleShort").max(120),
-    description: z
-      .string()
-      .min(5, "create.validation.descriptionShort")
-      .max(5000),
+    // Optional since 2.63.0: the client found a mandatory description a hurdle
+    // for a sofa that is just a sofa (client_feedback_2026_10_spec.md §8).
+    description: z.string().max(5000),
 
     /**
      * Weight is picked from a bracket, not typed: a person moving a sofa does

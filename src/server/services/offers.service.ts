@@ -17,7 +17,11 @@ import {
   resolveOfferSlots,
   type ResolvedOfferSlot,
 } from "@/lib/offer-slots";
-import { rearmedExpiry, rearmedWindow } from "@/lib/listing-window";
+import {
+  biddingRunsUntil,
+  rearmedExpiry,
+  rearmedWindow,
+} from "@/lib/listing-window";
 import { PARTY_FIELDS, project, toListingView } from "@/server/services/listing-view";
 import type {
   CreateOfferInput,
@@ -196,26 +200,40 @@ async function requireApprovedCarrier(userId: string) {
 type OfferWithSlots = NonNullable<Awaited<ReturnType<typeof offersDal.getById>>>;
 
 /**
- * Which of the carrier's proposed slots is being booked. Absent means the
- * earliest, which is already the offer's stored pair — so an offer with one
- * slot, and the lanes that propose none, need name nothing.
+ * Which of the carrier's proposed slots is being booked.
+ *
+ * Named, it must be one of the offer's and still ahead. Absent, it is the
+ * earliest slot **still ahead** — not simply the earliest. Until 2.63.0 an
+ * offer was all but always answered before its first slot came round, because
+ * bidding closed six hours before the job's window opened; a flexible direct
+ * request now takes offers until its window *ends* (client_feedback_2026_10_spec.md
+ * §4), so a requester accepting in the chat bubble — which names no slot —
+ * could otherwise book a day already gone, and pay for it. An offer with no
+ * slot left ahead is refused before any card is touched. The lanes that
+ * propose no slot at all (`takeJob`, `assignDirect`) book the job's own window.
  */
 function bookedSlot(offer: OfferWithSlots, slotId?: string) {
-  const booked = slotId
-    ? offer.slots.find((slot) => slot.id === slotId)
-    : undefined;
-  if (slotId && !booked) throw err("SLOT_NOT_ON_OFFER", 400);
+  const now = new Date();
 
-  // `SLOT_IN_PAST` is a submit-time rule (offers.dto.ts), and until bids
-  // could be restored that was enough — an offer was accepted within its own
-  // window or not at all. A withdrawal now puts rejected bids back in play on
-  // a listing whose window may have slid forward, so the slot an operator
-  // picks off the award queue can be behind us; booking it would write a past
-  // `scheduled_pickup` and report a past pickup date to the client.
-  if (booked && booked.startsAt <= new Date()) {
-    throw err("SLOT_IN_PAST", 409);
+  if (slotId) {
+    const booked = offer.slots.find((slot) => slot.id === slotId);
+    if (!booked) throw err("SLOT_NOT_ON_OFFER", 400);
+    // `SLOT_IN_PAST` is a submit-time rule (offers.dto.ts) too, but a restored
+    // bid or a long flexible window can put a proposed slot behind us by the
+    // time anyone answers it; booking it would write a past
+    // `scheduled_pickup` and report a past pickup date to the client.
+    if (booked.startsAt <= now) throw err("SLOT_IN_PAST", 409);
+    return booked;
   }
-  return booked;
+
+  if (!offer.slots?.length) return undefined;
+  const ahead = [...offer.slots]
+    .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())
+    .find((slot) => slot.startsAt > now);
+  if (!ahead) throw err("SLOT_IN_PAST", 409);
+  // The earliest still ahead is usually the earliest, which the offer already
+  // stores as its pair: nothing to rewrite then.
+  return ahead.startsAt.getTime() === offer.estimatedPickup.getTime() ? undefined : ahead;
 }
 
 /**
@@ -940,11 +958,15 @@ function reopenedWindow(
   listing: Listing,
   markReopened: boolean
 ): Partial<InsertListing> {
+  // A flexible direct request takes offers until its window ends, on its
+  // second round as on its first (client_feedback_2026_10_spec.md §4).
+  const runsUntil = biddingRunsUntil(listing, listing.origin === "direct");
   if (markReopened) {
-    return { ...rearmedWindow(listing), reopenedAt: new Date() };
+    const now = new Date();
+    return { ...rearmedWindow(listing, now, runsUntil !== null), reopenedAt: now };
   }
 
-  const expiresAt = rearmedExpiry(listing.pickupFrom);
+  const expiresAt = rearmedExpiry(listing.pickupFrom, new Date(), runsUntil);
   return expiresAt ? { expiresAt } : {};
 }
 

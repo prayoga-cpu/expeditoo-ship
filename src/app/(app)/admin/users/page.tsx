@@ -46,6 +46,7 @@ function UsersPageContent() {
       <PublicProfile
         id={profileUserId}
         onBack={() => setProfileUserId(null)}
+        staffView
       />
     );
   }

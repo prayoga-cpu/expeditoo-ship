@@ -4,6 +4,8 @@ import {
   ANY_PERIOD,
   ISO_WEEKDAYS,
   TIME_SLOTS,
+  TIMING_MODES,
+  defaultTimingState,
   firstUsablePickup,
   forInput,
   resolveTimingWindows,
@@ -312,5 +314,16 @@ describe("resolveTimingWindows — the weekdays stored", () => {
     );
 
     expect(resolved.pickupDays).toEqual([1, 2, 3, 4, 5]);
+  });
+});
+
+// client_feedback_2026_10_spec.md §3 — « Flexible » first, and selected.
+describe("the When step's modes", () => {
+  it("offers Flexible first", () => {
+    expect(TIMING_MODES).toEqual(["flexible", "exact"]);
+  });
+
+  it("starts a new request in Flexible", () => {
+    expect(defaultTimingState().mode).toBe("flexible");
   });
 });

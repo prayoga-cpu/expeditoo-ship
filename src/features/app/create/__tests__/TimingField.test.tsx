@@ -254,3 +254,16 @@ describe("TimingField — publication", () => {
     expect(onError).not.toHaveBeenCalled();
   });
 });
+
+// client_feedback_2026_10_spec.md §3: the client asked for « Flexible » first.
+describe("TimingField — the order of the two modes", () => {
+  it("shows « Flexible » before « Date précise »", () => {
+    renderField();
+
+    const modes = screen
+      .getAllByRole("radio")
+      .map((el) => el.textContent)
+      .filter((text) => text === "Flexible" || text === "Date précise");
+    expect(modes).toEqual(["Flexible", "Date précise"]);
+  });
+});

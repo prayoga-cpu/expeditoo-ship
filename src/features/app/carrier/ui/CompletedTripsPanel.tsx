@@ -21,6 +21,7 @@ import { periodBounds, type PeriodKey } from "@/lib/statement-period";
 import { useCompletedTrips, type CompletedTrip } from "../hooks/useCarrierTrips";
 import { earningsStatementUrl } from "../api/trips.api";
 import { CompletedTripCard } from "./CompletedTripCard";
+import { TripsLoadError } from "./TripsLoadError";
 
 const iso = (date?: Date) => date?.toISOString();
 
@@ -63,10 +64,11 @@ export function CompletedTripsPanel() {
   const [period, setPeriod] = useState<PeriodKey>("all");
 
   const bounds = useMemo(() => periodBounds(period), [period]);
-  const { trips, summary, commissionRetainsAll, isLoading } = useCompletedTrips({
-    from: iso(bounds.from),
-    to: iso(bounds.to),
-  });
+  const { trips, summary, commissionRetainsAll, isLoading, isError, refetch } =
+    useCompletedTrips({
+      from: iso(bounds.from),
+      to: iso(bounds.to),
+    });
 
   const visible = useMemo(
     () =>
@@ -77,6 +79,8 @@ export function CompletedTripsPanel() {
   );
 
   if (isLoading) return <PageLoader className="xl:min-h-[50vh]" />;
+  // Before, a failed run list fell through to « Aucun transport effectué ».
+  if (isError) return <TripsLoadError onRetry={() => void refetch()} />;
 
   return (
     <div className="flex flex-1 flex-col gap-4">

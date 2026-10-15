@@ -222,7 +222,7 @@ without an `sk_live_` key, so an accept there takes real money.
 Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before shipping.
 
 **Gates — all green.** `npx tsc --noEmit` 0 errors · `pnpm lint` 0 errors ·
-2,655 unit tests pass (2.62.0) · `pnpm build` succeeds.
+2,789 unit tests pass (2.63.0) · `pnpm build` succeeds.
 
 **Done**
 - Schema remodelled to the transport model; one clean initial migration
@@ -629,6 +629,20 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
   through `addressDisplayName` (`src/lib/saved-address.ts`), which also reads
   the `profile.address.labelPresets.*` paths the profile form once stored
   by mistake. `/profile` lists every address. `saved_addresses_spec.md`
+- **The client's feedback of 7–8 October** (2.63.0), tracked item by item at
+  the top of `STATUS.md`. A flexible direct request takes offers until 6 h
+  before its pickup window **ends** (`biddingRunsUntil` / `biddingDeadline`,
+  `src/lib/listing-window.ts`); what may be published is still decided on the
+  start, and escalated jobs keep the start-based deadline because their take
+  lane books `pickupFrom`. Sign-up asks Prénom / Nom / Pseudo (`user.first_name`,
+  `last_name`, `alias`, migration `0038`; `name` is composed server-side in the
+  user-create hook). `/profile` has « Coordonnées personnelles » — a phone and a
+  relative's phone in `user_contact_details`, **its own table so no `user: true`
+  join carries them**, read by the owner and staff only. « Mes trajets » has
+  four tabs, « Mes factures » became « Historique des transactions » with a
+  carrier tab, « J'ai une demande » moved to `/help`, « Détails » is optional,
+  the bottom bars are `88px + env(safe-area-inset-bottom)` tall.
+  `client_feedback_2026_10_spec.md`
 
 **Not done**
 - **`EXPEDION_APP_ORIGINS` is set in Vercel Production but not in `.env.local`**,
@@ -769,3 +783,16 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
    or `scheduled` — and published only through the form's Budget step: only
    the browser can re-derive a flexible window from the requester's own clock
    (`draft_requests_spec.md`).
+20. **A Better Auth `additionalFields` entry is client-writable unless it says
+   `input: false`** — on `sign-up/email` *and* `update-user`. Until 2.63.0
+   `isVerified`, `banned`, `stripeAccountId` and `stripeAccountStatus` were
+   not, so any account could give itself the « vérifié » badge or point itself
+   at a Stripe account. The config lives in `src/lib/auth-user-fields.ts` and
+   `auth-user-fields.test.ts` runs it through Better Auth's own parser; a new
+   field the server owns must be `input: false` there.
+21. **Never compute a live listing's `expires_at` with `expiresAtFor` alone.**
+   Go through `resolveExpiresAt(pickupFrom, at, biddingRunsUntil(listing,
+   isDirect))` (or `rearmedWindow(…, toWindowEnd)` on a re-board): a flexible
+   direct request runs to its window's end, and a path that forgets closes it
+   weeks early — exactly the « jusqu'au 8 oct. » the client reported
+   (`client_feedback_2026_10_spec.md` §4).

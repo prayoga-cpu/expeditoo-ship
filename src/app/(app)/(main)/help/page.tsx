@@ -15,6 +15,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import { messagesApi } from "@/features/app/messages/api/messages.api";
+import { FeedbackRequestCard } from "@/features/app/feedback/ui/FeedbackRequestCard";
 
 export default function HelpPage() {
   const t = useTranslations("help");
@@ -53,6 +54,12 @@ export default function HelpPage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
+        {/* « J'ai une demande » moved here from the profile's quick links
+            (client_feedback_2026_10_spec.md §6). */}
+        <div className="md:col-span-2">
+          <FeedbackRequestCard />
+        </div>
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">

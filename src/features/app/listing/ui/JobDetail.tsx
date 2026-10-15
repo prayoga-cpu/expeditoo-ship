@@ -328,9 +328,13 @@ function JobLoad({ job }: { job: Job }) {
           />
         )}
       </dl>
-      <p className="text-sm leading-relaxed text-foreground/80">
-        {job.description}
-      </p>
+      {/* Optional since 2.63.0, so an empty one draws nothing rather than a
+          blank paragraph. */}
+      {job.description.trim() && (
+        <p className="text-sm leading-relaxed text-foreground/80">
+          {job.description}
+        </p>
+      )}
     </Card>
   );
 }

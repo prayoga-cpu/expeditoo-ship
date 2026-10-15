@@ -14,6 +14,45 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.63.0] - 2026-10-15 · feat
+
+- **A flexible request takes offers until its last possible day.** A request
+  collecting « du 8 au 31 octobre » closed to offers on the 8th, and its
+  thank-you page said so: « jusqu'au 8 oct. ». It now stays open until the
+  31st — six hours before the end of the window — and the thank-you page
+  names that date. Requests with a precise date are unchanged.
+- **« Flexible » comes first.** On « Quand », « Vos dates sont-elles fixes ? »
+  now starts on « Flexible », with « Date précise » beside it. A saved draft
+  opens the way you left it.
+- **« Détails » is optional.** You can post a request without describing it
+  beyond what you are moving. The address notes are now called « Détails –
+  conditions d'accès », for the floor, the code and the parking, and the
+  driver sees them under that name on the run.
+- **Sign up with your first and last name.** « Nom complet » is now
+  « Prénom » and « Nom », with an optional « Pseudo ». The password fields no
+  longer show a row of dots before you type.
+- **Your contact details, and someone to call.** Your profile has a
+  « Coordonnées personnelles » card: your name, pseudo and phone, and the name
+  and phone of someone close the team can call if they cannot reach you. Only
+  you and the Expeditoo team see it — never a carrier or a requester.
+- **« Historique des transactions » replaces « Mes factures ».** Your receipts
+  and invoices now say which is which — « Facture », « Reçu de paiement » or
+  « Avoir ». Carriers get a second tab with every delivered run: the price,
+  the platform's commission, what is left for them, whether it has been paid,
+  and the period's activity statement to download.
+- **« Mes trajets » follows your work.** Beside « Prévus », three new tabs:
+  « En attente de réponse » (the offers you sent that nobody has answered
+  yet, with a way to withdraw one), « En transit » (the runs you were given
+  and have not delivered) and « Terminés » (what « Effectués » used to show).
+- **« J'ai une demande » is under « Contact & Aide ».** It left the quick
+  links on your profile and is now a card on the help page — for drivers too.
+- **The bottom bar is no longer cut off on iPad.** The space an iPad keeps at
+  the bottom of the screen ate into the bar, slicing its labels in half. The
+  bar now sits above it, labels whole.
+- **An account can no longer give itself the « vérifié » badge.** Signing up
+  or editing an account could set its verified status or its payment account
+  from outside the app. Only the platform sets them now.
+
 ## [2.62.0] - 2026-10-07 · ux
 
 - **Your saved address no longer fills both ends of a request.** A new request

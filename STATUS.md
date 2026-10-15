@@ -1,6 +1,225 @@
 # STATUS.md
 
-## Current state: user-testing mode — driver-side revamp complete (2.45.0)
+## Client feedback monitor — WhatsApp batch of 7–8 October 2026
+
+_Owner: this section is for you. One row per message the client sent, one
+report per row below it. It is kept current while the work is in progress —
+the status column is the truth at the time of the last commit._
+
+**Legend:** ⬜ not started · 🔧 in progress · ✅ done and tested locally ·
+🚀 live on production · ❓ needs an answer from the client
+
+| # | The client asked | Status | Where to check it on production |
+|---|---|---|---|
+| 1 | Sign-up form: two fields, last name and first name, perhaps an alias | ✅ | `/signup` |
+| 2 | Remove the stars from the password field | ✅ | `/signup`, `/signin`, `/reset-password` |
+| 3 | Put « Flexible » first in « Vos dates sont-elles fixes ? » | ✅ | `/create` → Quand |
+| 4 | After publishing, show the end date (31 Oct) instead of the start date (8 Oct) | ✅ | `/create` → publish → thank-you page |
+| 5 | Mes trajets: sub-tabs « en attente de réponse », « en transit », « terminés » | ✅ | `/carrier/trips` |
+| 6 | Quick links: put « J'ai une demande » under « Contact & Aide » | ✅ | `/profile`, `/help` |
+| 7a | Quick links: « Mes factures » becomes « Historique des transactions », bills and receipts per user type | ✅ | `/profile` → Historique des transactions |
+| 7b | Personal contact details, with a second phone for a relative (requester and carrier) | ✅ | `/profile` → Coordonnées |
+| 8 | `/create`: « Détails » should not be mandatory | ✅ | `/create` → Quoi |
+| 9 | Rename the two « Détails » fields to « Détails – conditions d'accès » | ✅ | `/create` → Où |
+| 10 | Titles of the bottom fields are cut off on iPad | ✅ | any page on an iPad, bottom bar |
+
+### Decisions taken without the client — please confirm or overrule
+
+The client was not asked these; each is the reading I built, and each is
+cheap to flip.
+
+- **A (#3)** Flexible is also the **default** selection, not only the first
+  button. A first option that is not the selected one reads as a mistake.
+- **B (#9)** Only one field on `/create` is titled « Détails »; the fields that
+  come in a pair are the pickup and delivery notes (« Note pour le
+  transporteur »), and they are where floor, gate code and parking go. Those
+  two are renamed. The cargo field on step 1 keeps « Détails » (and becomes
+  optional, #8).
+- **C (#1)** The form the client means is the sign-up form: its translation
+  namespace is `auth.register`, it has the one « Nom complet » field the
+  message asks to split, and #2 (the password stars, sent a minute later) is
+  on the same page. The driver application has no name field to split.
+  The alias is collected and editable, and shown to nobody else yet — where a
+  pseudonym should replace the real name (offers? messages?) is the client's
+  call, so it is asked below rather than guessed.
+- **D (#7b)** The relative's phone is seen by the account holder and by staff
+  (admin / operator — the platform's usual meaning; only admins can open the
+  admin panel today) — never by a carrier or a requester on a job.
+- **E (#4)** Requests already live keep the deadline they were published with;
+  only requests published from this release on get the new one.
+
+### Questions for the client
+
+- Where should a pseudonym (alias) be shown instead of the real name?
+- Is the relative's phone for support to call when the account holder cannot be
+  reached, or should the carrier on the job see it too?
+
+### Item reports
+
+Each report: what the client asked, what was wrong, what changed, how it was
+proved, how to check it on production, and what is still open.
+
+#### 1. Sign-up: last name, first name, perhaps an alias — ✅
+
+- **Asked:** « please create another field to have two fields for name and
+  first name (and perhaps also an alias) ».
+- **Was:** `/signup` had one field, « Nom complet ».
+- **Now:** « Prénom » and « Nom » side by side (required), « Pseudo
+  (facultatif) » below with a line saying only the person sees it for now.
+  Stored in three new `user` columns (`first_name`, `last_name`, `alias`,
+  migration `0038`); `name` is rebuilt from the parts **on the server** so it
+  can never disagree with them. Google sign-up fills the parts from Google.
+  Existing accounts keep their `name`; the profile card (#7b) pre-splits it
+  for them to confirm.
+- **Proved:** sign-up through the real API stored `Camille` / `Martin` and
+  composed `name = "Camille Martin"` while the client sent another name;
+  Chromium shows the three labelled fields. Tests: `signup-schema.test.ts`,
+  `person-name.test.ts`, `auth-user-fields.test.ts`.
+- **Check on prod:** sign out → `/signup` → three fields, Prénom/Nom required.
+- **Open:** where the alias should be shown instead of the real name — asked
+  above.
+
+#### 2. No stars in the password field — ✅
+
+- **Was:** `••••••••` as the placeholder of all five password inputs.
+- **Now:** no placeholder on `/signup` (×2), `/signin`, `/reset-password` (×2).
+- **Proved:** Chromium reads `placeholder = null` on every password input.
+- **Check on prod:** `/signin` and `/signup` — the password boxes are empty.
+
+#### 3. « Flexible » first — ✅
+
+- **Now:** « Flexible » is the first button **and selected by default**
+  (decision A). A saved draft keeps the mode it was saved with.
+- **Proved:** Chromium on two drafts: order `Flexible, Date précise`; the
+  flexible one opens on Flexible, the exact one on Date précise. Tests:
+  `timing.test.ts`, `TimingField.test.tsx`.
+- **Check on prod:** `/create` → Quoi → Où → Quand.
+
+#### 4. After publishing, show the end date — ✅ (behaviour change)
+
+- **Asked:** « please change the beginning date by the end date (here 31
+  october) ».
+- **Was:** the page was *right*: bidding really closed 6 h before the **start**
+  of the window and the 15-minute expiry cron then closed the job. Changing
+  the sentence alone would have made it false.
+- **Now:** a **flexible direct** request takes offers until 6 h before the
+  **end** of its pickup window; the thank-you page prints that date. What may
+  be published is unchanged (still decided on the start). Escalated Expedion
+  jobs and exact-date requests are unchanged. A flexible request whose carrier
+  withdraws mid-window keeps its dates and stays open to its end.
+- **Proved:** a request published locally for 16 → 31 Oct got
+  `expiresAt = 31 Oct 14:00 UTC` (= end − 6 h), and its page read « jusqu'au
+  31 oct., 15:00 » (Paris). 11 rule tests (`bidding-deadline.test.ts`), 6
+  service tests, 2 re-board tests, 2 form tests.
+- **Check on prod:** publish a flexible request over two weeks → the
+  thank-you page names the last week's date, not tomorrow.
+- **Open:** requests already live keep the deadline they were given
+  (decision E).
+
+#### 5. « Mes trajets »: en attente de réponse / en transit / terminés — ✅
+
+- **Now:** four tabs, held in `?tab=`: « Prévus » (declared trajets, as
+  before), « En attente de réponse » (the carrier's unanswered offers — price,
+  earliest slot, « Retirer l'offre » with a confirmation), « En transit »
+  (awarded runs not yet delivered, with the client-vocabulary status pill),
+  « Terminés » (what « Effectués » showed). Old `?tab=completed` links work.
+  Two-by-two on a phone.
+- **Proved:** Chromium as the beta seed carrier: two pending offers with
+  prices and slots, one pending run; every tab, `?tab=completed` and a junk
+  value. 35 new tests.
+- **Check on prod:** sign in as a carrier → `/carrier/trips`, click each tab.
+
+#### 6. « J'ai une demande » under « Contact & Aide » — ✅
+
+- **Now:** gone from the profile's quick links; a « J'ai une demande » card
+  opens the same feedback form on `/help` (now titled « Contact & Aide », the
+  words of the link) and on `/driver/help`.
+- **Proved:** Chromium: no quick link, the card opens the dialog.
+- **Check on prod:** `/profile` → « Contact & Aide » → « Envoyer une demande ».
+
+#### 7a. « Mes factures » → « Historique des transactions » — ✅
+
+- **Now:** renamed (URL kept, emails link to it). Tab « Demandeur »: the
+  documents with a **Type** column — « Facture », « Reçu de paiement » or
+  « Avoir », the words the PDF prints. Tab « Transporteur » (carriers only):
+  every delivered run with price, commission, net, payout status, period
+  filter and the relevé download.
+- **Proved:** Chromium as the beta seed requester: « Reçu de paiement
+  INV-2026-0002 … 189,00 € »; as the seed carrier: the carrier tab. A carrier
+  with no file yet now sees « Aucun transport livré » rather than an error
+  (fixed during the browser pass). 24 UI tests, service and PDF tests.
+- **Check on prod:** `/profile` → « Historique des transactions ».
+- **Open:** while the issuer's identifiers are empty every row reads « Reçu de
+  paiement »; filling `INVOICE_ISSUER_*` turns them into « Facture ».
+
+#### 7b. Personal contact details with a relative's phone — ✅
+
+- **Now:** a « Coordonnées personnelles » card on `/profile` for every
+  account: Prénom, Nom, Pseudo, Téléphone, and « Personne à contacter » (name +
+  phone). Phones are in a new table, `user_contact_details`, **not** on
+  `user`, so no existing join can carry them. Read by the owner and by staff
+  (admin / operator) on « Voir le profil » in `/admin/users` and
+  `/admin/drivers`; refused to everyone else (decision D).
+- **Proved:** Chromium: saved, survived a reload, the header name refreshed;
+  the admin profile shows the card; `GET` another account's details as a
+  non-staff account → 403; signed out → 401. 8 service tests, 4 card tests.
+- **Check on prod:** `/profile` → edit the card → save → reload.
+- **Open:** whether the relative's phone should also reach the carrier on a
+  job — asked above.
+
+#### 8. « Détails » not mandatory — ✅
+
+- **Was:** required, 5 characters minimum, in the form *and* the API (its error
+  key did not even exist in the translations).
+- **Now:** optional everywhere; an empty one is stored as `""` and draws
+  nothing on the job page.
+- **Proved:** a request published through the API with no description was
+  accepted and stored `""`. Form and DTO tests.
+- **Check on prod:** `/create` → Quoi: « Détails » has no asterisk; publish
+  without it.
+
+#### 9. The two « Détails » → « Détails – conditions d'accès » — ✅
+
+- **Now:** the pickup and delivery notes (the two fields that come as a pair,
+  decision B) are « Détails – conditions d'accès (facultatif) », with a
+  placeholder naming the floor, the code and the parking. The driver's run
+  page now labels the same text « Conditions d'accès : ». Beside a pasted map
+  link the note stays « Décrivez l'endroit exact ».
+- **Proved:** Chromium on both drafts: both labels, the saved text intact.
+- **Check on prod:** `/create` → Où.
+
+#### 10. Bottom titles cut on iPad — ✅
+
+- **Cause, reproduced:** the three bottom bars were 88px tall *including* the
+  iPad's home-indicator space. In Chromium with a 20px inset emulated, every
+  label box was squeezed to 7px — the text needs 12.65px — so `line-clamp`
+  sliced each title in half (« Accueil », « Demander un »).
+- **Now:** each bar is `88px + the inset`, and the three shells (and the
+  impersonation banner) are offset by the same amount. Same emulation: labels
+  13px / 25px, whole, « Demander un transport » on two lines.
+- **Check on prod:** on the iPad, any page — the bottom labels are whole.
+
+### Found on the way
+
+- **Fixed — accounts could set their own protected flags.** Better Auth lets a
+  client write every extra user field unless it says `input: false`. Before
+  this release, `POST /api/auth/update-user {"isVerified": true}` (or
+  `stripeAccountId`, `stripeAccountStatus`) was accepted from any signed-in
+  account — proved by running the old config through Better Auth's own parser.
+  Now each is refused (`400 … IS_NOT_ALLOWED_TO_BE_SET`), checked against the
+  running server. See Operator to-do for the production check.
+- **Not fixed — the help pages show placeholder contacts.** `/help` lists
+  `support@expeditoo.com` and `+1 (234) 567-890`; `/driver/help` lists
+  `drivers@expeditoo.com` and `+1 (987) 654-321` — US-format numbers that are
+  not the company's. The driver page is also English-only, and `/help`'s FAQ
+  still explains goods auctions. Needs the real contacts from the client.
+- **Not fixed — the requester's « conditions d'accès » are not on the
+  requester's own delivery page** (`/deliveries/[id]`): the driver's run page
+  shows them, the shared delivery page never did.
+
+---
+
+## Release log
 
 _AI agents: add an entry here every time you finish a task. See AGENTS.md §8._
 
@@ -27,6 +246,25 @@ adversarial verification pass — treat their detail as slightly less certain.
 Work that needs a human hand outside the codebase. Add to this list rather
 than leaving it in a chat message.
 
+- [ ] **Run Actions → "Migrate database" for `0038_user_identity_contact`
+      before 2.63.0 deploys** — from the branch `release/2.63.0`, environment
+      `production`, confirm `migrate` (change « Use workflow from » away from
+      `main`). New columns and a new table only; the 2.63.0 code reads
+      `user.first_name` in every session, so `main` must not move first.
+- [ ] **Check the two Stripe account ids in production.** Before 2.63.0 any
+      signed-in account could write `stripeAccountId` / `stripeAccountStatus` /
+      `isVerified` on itself through `update-user`. A count on 2026-10-15
+      (read-only, no personal data): 11 accounts, **0** verified, **0** banned,
+      **2** with a `stripe_account_id`, **1** `active`. Open Stripe → Connect →
+      Accounts and confirm both ids are accounts the platform created; if one
+      is not, clear it.
+- [ ] **Give the help pages real contacts.** `/help` shows
+      `support@expeditoo.com` and `+1 (234) 567-890`; `/driver/help` shows
+      `drivers@expeditoo.com` and `+1 (987) 654-321`. Neither number is the
+      company's. Send the real ones and they go in.
+- [ ] **Take the two open questions to the client** (top of this file): where
+      the alias should replace the real name, and who may see the relative's
+      phone.
 - [x] ~~Run Actions → "Migrate database" for `0036_listing_published_at`
       before 2.60.0 deploys~~ and
       ~~for `0037_address_used_for` before 2.62.0 deploys~~ — **done
@@ -359,6 +597,156 @@ than leaving it in a chat message.
       after approval (the 2.61.0 entry, "What was wrong" item 4). To restore them, open
       `/admin/users`, then the roles dialog for that account, and add both.
       Until then its application page says driver access is off.
+
+---
+
+## ✅ 2026-10-15 — The Client's Feedback of 7–8 October: Flexible Deadlines, Names in Parts, Contact Details, Four Trip Tabs, a Transaction History, and an iPad Bar That Fits (2.63.0)
+
+_« check these feedbacks, and compile it in a table with the list of changes
+plan » — then: « rewrite the status.md to be monitoring of these feedbacks,
+then start to implement all of these feedbacks … always report for each on the
+status.md … back to me once everything is ready to check on prod »._
+
+The per-item reports, the readings chosen without the client (A–E) and the
+questions still open are in the **Client feedback monitor** at the top of this
+file; this entry is the engineering record. Spec:
+`docs/specs/client_feedback_2026_10_spec.md`; plan:
+`docs/plans/plan_client_feedback_2026_10.md`.
+
+### What changed, by layer
+
+- **Bidding deadline (#4).** `src/lib/listing-window.ts` gained
+  `biddingRunsUntil(listing, isDirect)` and `biddingDeadline(pickupFrom,
+  runsUntil, now)`; `rearmedExpiry` and `rearmedWindow` take the window end as
+  a trailing argument (appended, so every existing call keeps its meaning).
+  `listings.service.ts` passes it from `createListing`, `saveDraft` and the
+  scheduler (`settleScheduled`); `offers.service.ts` from `reopenedWindow`.
+  "Direct" is `!isSystemAccount(shipperId)` at creation and
+  `origin === 'direct'` on a row. The form's warning tier reads the same
+  function (`publication.ts`, `isFlexible` added to `PublicationValues`).
+- **Names in parts (#1) and the account flags (§11).** `user.first_name`,
+  `last_name`, `alias` (migration `0038`). Better Auth's `additionalFields`
+  moved to `src/lib/auth-user-fields.ts`: the name parts with validators from
+  `src/lib/person-name.ts`, the four server-owned flags `input: false`. The
+  user-create hook composes `name`; Google's `mapProfileToUser` fills the
+  parts. The browser client gained `inferAdditionalFields`.
+- **Contact details (#7b).** `user_contact_details` (one row per user, cascade,
+  migration `0038`), `userContactDal`, `userContactService` (`getOwn`,
+  `updateOwn` — one transaction across both tables, `getForStaff` — admin or
+  operator), `GET|PUT /api/users/me/contact`, `GET
+  /api/admin/users/:id/contact`, `ContactDetailsCard` on `/profile`,
+  `StaffContactCard` on `PublicProfile` when mounted with `staffView` (the two
+  admin pages). The session is re-read past its cookie cache after a save so
+  the header shows the new name.
+- **Trips (#5)** and **transaction history (#7a)** were built in parallel
+  worktrees (`feat/2.63-trips-tabs` b876700, `feat/2.63-transactions` 60e1ab5)
+  and carried over as patches; their copy was spliced through the canonical
+  diff so no other line of `messages/*.json` moved. `GET /api/user/invoices`
+  now answers `userInvoiceListSchema` — each row with `documentType`, **without**
+  the joined `payment` and `listing`, which nothing read.
+- **Small ones.** #2 placeholders removed; #3 `TIMING_MODES = ["flexible",
+  "exact"]`, default `flexible`; #6 `FeedbackRequestCard` on both help pages,
+  quick link and `profile.quickLinks.sendFeedback` gone; #8 `description`
+  optional in `jobFormSchema` and `createListingSchema` (`.default("")`); #9
+  copy, plus the driver page's label; #10 three bars, three shells and the
+  impersonation banner.
+
+### Judgment calls
+
+- Escalated jobs keep the start-based deadline: `resolveSchedule`'s slot-less
+  lane (`takeJob`, `assignDirect`) books `estimated_pickup = pickupFrom`, which
+  would be in the past for a take made mid-window.
+- Publishability stays on the start, so the form and the server cannot start
+  disagreeing about `PICKUP_TOO_SOON`; only the deadline moves.
+- Phones in their own table rather than on `user`: `shipments`, `listings`,
+  `payments`, `invoices` and `carriers` all join whole `user` rows, and the
+  projections that strip them are allowlists today but a relative's number
+  should not depend on every future projection staying one.
+- The alias is collected and shown to nobody else; the client said "perhaps".
+- A carrier role with no carrier file reads the transaction tab as empty, as
+  `useCompletedTrips` already did.
+
+### Found on the way
+
+See the monitor's « Found on the way »: the self-settable account flags (fixed),
+the placeholder support contacts on both help pages (not fixed, needs the real
+ones), the access notes absent from `/deliveries/[id]` (not fixed). Also: the
+form's `create.validation.descriptionShort` key never existed in the
+catalogues, so the old 5-character error showed its key path.
+
+### Verification
+
+- **Gates:** `npx tsc --noEmit` 0 errors · `pnpm lint` 0 errors (65
+  warnings; the only one in a touched file, `PublicProfile.tsx:35`, predates
+  this release) · `pnpm test` **2,789 passed, 0 failed** in 208 files ·
+  `pnpm changelog:check` ok · `pnpm build` succeeds on the release tree, built
+  in a detached worktree of `snap/2.63.0-final` (`2029a96`).
+- **Migration `0038`** applied to the local `expeditoo_dev`: 38 journal rows,
+  newest `1788170400000`; `user.first_name` / `last_name` / `alias`,
+  `user_contact_details` and its cascading foreign key present. Production was
+  read (schema only) at 37 rows before the push.
+- **Against the running server (local, :3001):** sign-up stored « Camille » /
+  « Martin » and composed `name` though the client sent another; a
+  `stripeAccountId` at sign-up → 400; `isVerified: true` at sign-up → stored
+  false; `update-user` with each of the four flags → 400, with `alias` → 200.
+  The pre-2.63.0 field config, run through Better Auth's `parseUserInput`,
+  accepts all four — the hole was real.
+- **A flexible request published through the API** (16 → 31 Oct, no
+  description): `201`, `description = ""`, `expiresAt = 2026-10-31T14:00Z`
+  (end − 6 h); its thank-you page reads « jusqu'au 31 oct., 15:00 ».
+- **Chromium (fr-FR), throwaway accounts plus the admin's « Log in as » onto
+  two beta-seed accounts:** every item in the monitor's « Proved » lines —
+  sign-up fields and no password placeholders; Flexible first/selected and an
+  exact draft kept exact; both access-condition labels; « Détails » without an
+  asterisk; the contact card saved, reloaded, shown to an admin, 403 to a
+  non-staff account, 401 signed out; `/help` card opening the dialog; the
+  transaction history's tabs and Type column with real seed rows; the four trip
+  tabs with real seed offers and runs; light and dark; a 375px phone.
+- **iPad:** reproduced with `Emulation.setSafeAreaInsetsOverride` (bottom
+  20px) at 810×1080 and 1024×1366 on the requester's bar: the old height
+  squeezed every label to 7px (text needs 12.65px); the new one gives 13 / 25px.
+- **Review fixes:** offers, thread-offer and cancellation suites 162/162 after
+  the `bookedSlot` change; `OfferCard.test.tsx` 2/2.
+
+### Review
+
+One independent review of the whole change (`snap/2.63.0-wip`) before the
+release commit. What it found, and what was done:
+
+- **Blocker, fixed — an accept could book a pickup day already gone, and take
+  the money.** `bookedSlot` refused `SLOT_IN_PAST` only for a *named* slot; the
+  chat-bubble accept names none, and the award then wrote the offer's stored
+  earliest pickup into the shipment. Harmless while bidding closed before the
+  first slot; with a flexible request open for weeks it became the ordinary
+  case. Now an unnamed accept books the **earliest slot still ahead**, and an
+  offer with none left is refused before any card is authorised. 2 tests.
+- **Should-fix, fixed — the job page pre-selected a passed slot.** `OfferCard`
+  now pre-selects the first slot still ahead, disables passed ones, and, when
+  every slot has passed, disables « Accepter » and says the carrier must send
+  a new offer. 2 tests (the card had none).
+- **Nit, not changed — `updateListing` never re-derives `expires_at`.**
+  Pre-existing and reachable only through `PATCH /api/listings/:id`, which no
+  screen calls; now also true for `pickupUntil` / `isFlexible`. Known limit.
+- **Nit, not changed — `name` can drift from its parts** through Better Auth's
+  own `update-user` (which has always accepted `name`). Only the person's own
+  display name is affected; the contact card always writes both.
+- **Nit, fixed in this file — « staff »** said admin / support in decision D;
+  the code and the platform mean admin / operator.
+- Verified clean by the reviewer: publishability unchanged; escalated jobs on
+  the old deadline (`systemShipperId()` throws when unset, so the system
+  account cannot be mistaken for a requester); the four flags written by no
+  server path through Better Auth; the contact table touched only by its
+  service; `GET /api/user/invoices` has one consumer; nothing else positioned
+  against the old 88px.
+
+### Known limits
+
+- Live requests keep the deadline they were published with (no backfill).
+- `PATCH /api/listings/:id` does not re-derive the deadline when dates change
+  (no screen uses it).
+- Chromium has no iOS: the iPad fix was reproduced with Chromium's
+  `Emulation.setSafeAreaInsetsOverride` (20px), not on the client's iPad.
+- `/driver/help` stays English apart from the new card.
 
 ---
 

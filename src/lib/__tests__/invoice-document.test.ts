@@ -1,6 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 
-import { invoicePdfProps, type InvoiceForPdf } from "@/lib/invoice-pdf-props";
+import {
+  invoiceDocumentType,
+  invoicePdfProps,
+  type InvoiceForPdf,
+} from "@/lib/invoice-pdf-props";
 import { invoiceIssuer, vatMention } from "@/lib/invoice-issuer";
 
 /**
@@ -128,6 +132,65 @@ describe("the document's title", () => {
 
   it("carries no correction reference on an ordinary document", () => {
     expect(invoicePdfProps(invoice()).correctsDocumentNumber).toBeUndefined();
+  });
+});
+
+// ========================================
+// What the transaction history calls it
+// ========================================
+
+describe("invoiceDocumentType", () => {
+  // client_feedback_2026_10_spec.md §7a: the list's Type column reads the
+  // words the PDF prints, so the two must come from one rule.
+
+  it("is a receipt while the issuer's identity is a placeholder", () => {
+    expect(invoiceDocumentType("invoice")).toBe("receipt");
+  });
+
+  it("is an invoice once the identity is configured", () => {
+    givenCompleteIssuer();
+
+    expect(invoiceDocumentType("invoice")).toBe("invoice");
+  });
+
+  it("falls back to a receipt when one identifier goes missing again", () => {
+    givenCompleteIssuer();
+    delete process.env.INVOICE_ISSUER_RCS;
+
+    expect(invoiceDocumentType("invoice")).toBe("receipt");
+  });
+
+  it("is a credit note whatever the issuer's state", () => {
+    expect(invoiceDocumentType("credit_note")).toBe("credit_note");
+
+    givenCompleteIssuer();
+    expect(invoiceDocumentType("credit_note")).toBe("credit_note");
+  });
+
+  it("takes the issuer it is handed, so a page reads the environment once", () => {
+    expect(invoiceDocumentType("invoice", { isComplete: true })).toBe("invoice");
+    expect(invoiceDocumentType("invoice", { isComplete: false })).toBe("receipt");
+  });
+
+  it("agrees with the title on the PDF in every state", () => {
+    // The title rule was moved behind this helper; these four pairs are what
+    // it printed before the move, pinned so the move cannot have changed one.
+    const pairs = () =>
+      (["invoice", "credit_note"] as const).map((kind) => [
+        invoiceDocumentType(kind),
+        invoicePdfProps(invoice({ kind })).documentTitle,
+      ]);
+
+    expect(pairs()).toEqual([
+      ["receipt", "Reçu de paiement"],
+      ["credit_note", "Avoir de paiement"],
+    ]);
+
+    givenCompleteIssuer();
+    expect(pairs()).toEqual([
+      ["invoice", "Facture"],
+      ["credit_note", "Avoir"],
+    ]);
   });
 });
 

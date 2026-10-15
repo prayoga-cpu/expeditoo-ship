@@ -130,6 +130,15 @@ export const user = pgTable(
   {
     id: text("id").primaryKey(),
     name: text("name").notNull(),
+    // The parts of `name`, asked for separately at sign-up since 2.63.0
+    // (client_feedback_2026_10_spec.md §1). `name` stays the display string —
+    // "<first> <last>" — so nothing that reads it had to learn a new shape.
+    // Null on every account created before, until its owner fills them in.
+    firstName: text("first_name"),
+    lastName: text("last_name"),
+    // Collected and editable, shown to nobody else yet: where a pseudonym
+    // should stand in for the real name is the client's call.
+    alias: text("alias"),
     email: text("email").notNull().unique(),
     emailVerified: boolean("email_verified").default(false).notNull(),
     image: text("image"),

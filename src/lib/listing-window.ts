@@ -44,6 +44,52 @@ export function expiresAtFor(pickupFrom: Date, now = new Date()): Date | null {
   return clamped > pickupFrom ? null : clamped;
 }
 
+/** The later of two deadlines, either of which may be missing. */
+function later(a: Date | null, b: Date | null): Date | null {
+  if (!a) return b;
+  if (!b) return a;
+  return b > a ? b : a;
+}
+
+/**
+ * The end of the window a request's bidding runs to, or `null` when it closes
+ * on the window's start.
+ *
+ * A flexible **direct** request runs to the end of its pickup window
+ * (client_feedback_2026_10_spec.md §4): the client publishing 8–31 October was
+ * told « offres jusqu'au 8 oct. » and asked for the 31st. An escalated job
+ * keeps closing on its start: its take and assign lanes book
+ * `estimated_pickup = pickupFrom`, which would be a date already gone if
+ * bidding ran past it. Exact-date requests have no window to run along.
+ */
+export function biddingRunsUntil(
+  listing: { isFlexible: boolean; pickupUntil: Date },
+  isDirect: boolean
+): Date | null {
+  return isDirect && listing.isFlexible ? listing.pickupUntil : null;
+}
+
+/**
+ * When bidding closes for a job going live at `now`, or `null` when it cannot
+ * go live at all.
+ *
+ * Whether it can is still decided on `pickupFrom`, exactly as `expiresAtFor`
+ * decides it — nothing refused before is accepted now, so the form and the
+ * server keep agreeing on `PICKUP_TOO_SOON`. When it can, and `runsUntil` (from
+ * `biddingRunsUntil`) lies beyond the start, bidding closes the same
+ * `BIDDING_LEAD_MS` before `runsUntil` instead — never earlier than it would
+ * have closed on the start.
+ */
+export function biddingDeadline(
+  pickupFrom: Date,
+  runsUntil: Date | null,
+  now = new Date()
+): Date | null {
+  const atStart = expiresAtFor(pickupFrom, now);
+  if (!atStart || !runsUntil || runsUntil <= pickupFrom) return atStart;
+  return later(atStart, expiresAtFor(runsUntil, now));
+}
+
 /** The earliest pickup a job published at `publishAt` can carry. */
 export function earliestPickupFor(publishAt: Date): Date {
   return new Date(publishAt.getTime() + MIN_BIDDING_WINDOW_MS);
@@ -88,9 +134,16 @@ export interface ListingWindow {
  */
 export function rearmedExpiry(
   pickupFrom: Date,
-  now = new Date()
+  now = new Date(),
+  runsUntil: Date | null = null
 ): Date | null {
-  const expiresAt = expiresAtFor(pickupFrom, now);
+  // A job going round again was already live, so a flexible window that has
+  // started but not ended is still a window: only its end counts here, unlike
+  // at publication, where the start decides (`biddingDeadline`).
+  const expiresAt =
+    runsUntil && runsUntil > pickupFrom
+      ? later(expiresAtFor(pickupFrom, now), expiresAtFor(runsUntil, now))
+      : expiresAtFor(pickupFrom, now);
   if (!expiresAt) return null;
 
   return expiresAt.getTime() - now.getTime() >= MIN_BIDDING_WINDOW_MS
@@ -106,10 +159,15 @@ export function rearmedExpiry(
  * convenience. If it does not, the whole window slides forward by
  * `REBOARD_LEAD_MS` with every duration preserved, because a job whose
  * collection date has passed cannot be re-sold at any price.
+ *
+ * `toWindowEnd` is `biddingRunsUntil(...) !== null`: a flexible direct request
+ * measures its room from the end of its pickup window, so one withdrawn half
+ * way through keeps its dates (client_feedback_2026_10_spec.md §4).
  */
 export function rearmedWindow(
   listing: ListingWindow,
-  now = new Date()
+  now = new Date(),
+  toWindowEnd = false
 ): ListingWindow & { expiresAt: Date } {
   // A *usable* window, not merely a future one. `expiresAtFor` happily returns
   // an expiry five minutes out — at posting time that is the poster's own
@@ -117,7 +175,11 @@ export function rearmedWindow(
   // just restored before anybody could bid on either. That is the exact outcome
   // this function exists to prevent, and it is the commonest withdrawal there
   // is: a driver dropping a job the morning it collects.
-  const asIs = rearmedExpiry(listing.pickupFrom, now);
+  const asIs = rearmedExpiry(
+    listing.pickupFrom,
+    now,
+    toWindowEnd ? listing.pickupUntil : null
+  );
   if (asIs) {
     return { ...toWindow(listing), expiresAt: asIs };
   }
@@ -129,7 +191,7 @@ export function rearmedWindow(
   // but reading a non-null assertion off arithmetic is how a job ends up on the
   // board with an expiry in the past.
   const expiresAt =
-    expiresAtFor(slid.pickupFrom, now) ??
+    biddingDeadline(slid.pickupFrom, toWindowEnd ? slid.pickupUntil : null, now) ??
     new Date(now.getTime() + MIN_BIDDING_WINDOW_MS);
 
   return { ...slid, expiresAt };

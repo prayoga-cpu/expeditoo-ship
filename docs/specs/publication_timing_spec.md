@@ -212,3 +212,15 @@ and overflowed by 93 px; it wraps too.
 - `src/features/app/create/__tests__/jobs.api.test.ts`: a draft's payload has no
   `scheduledPublishAt`.
 - Locale parity.
+
+---
+
+## Amendment — 2.63.0 (2026-10-15)
+
+Whether a request may be published is unchanged: `PICKUP_IN_PAST` and
+`PICKUP_TOO_SOON` are still decided on `pickupFrom`. What moved is **when
+bidding closes** for a flexible direct request — 6 h before the end of its
+pickup window instead of its start (`biddingDeadline`,
+`client_feedback_2026_10_spec.md` §4). The form's "under six hours to bid"
+warning (§3.3 above) reads the same function, so it no longer fires for a
+flexible request whose window runs for weeks.

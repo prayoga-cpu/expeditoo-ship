@@ -1120,6 +1120,44 @@ describe("booking a slot on award", () => {
     expect(shipment!.scheduledPickup).toEqual(slotA.startsAt);
   });
 
+  // client_feedback_2026_10_spec.md §4: a flexible request now takes offers
+  // for weeks, so an accept that names no slot (the chat bubble) can come
+  // after the offer's earliest slot has passed.
+  it("books the earliest slot still ahead when none is named", async () => {
+    const stale = { ...slotA, id: "slot-stale", startsAt: soon(-2 * HOUR) };
+    const offer = {
+      ...proposing,
+      estimatedPickup: stale.startsAt,
+      estimatedDelivery: stale.deliveryAt,
+      slots: [stale, slotB],
+    };
+    vi.mocked(offersDal.getById).mockResolvedValue(offer as never);
+    vi.mocked(offersDal.getByIdForUpdate).mockResolvedValue(offer as never);
+
+    const { shipment } = await offersService.acceptOffer("shipper-1", "offer-1");
+
+    expect(shipment!.scheduledPickup).toEqual(slotB.startsAt);
+    expect(offersDal.updateSchedule).toHaveBeenCalledWith(
+      "offer-1",
+      { estimatedPickup: slotB.startsAt, estimatedDelivery: slotB.deliveryAt },
+      expect.anything()
+    );
+  });
+
+  it("refuses an offer with no slot left ahead before any card is charged", async () => {
+    const stale = { ...slotA, id: "slot-stale", startsAt: soon(-2 * HOUR) };
+    vi.mocked(offersDal.getById).mockResolvedValue({
+      ...proposing,
+      estimatedPickup: stale.startsAt,
+      slots: [stale],
+    } as never);
+
+    expect(await codeFrom(() => offersService.acceptOffer("shipper-1", "offer-1"))).toBe(
+      "SLOT_IN_PAST"
+    );
+    expect(paymentsService.chargeForShipment).not.toHaveBeenCalled();
+  });
+
   it("refuses a slot belonging to another offer", async () => {
     expect(
       await codeFrom(() =>
@@ -1319,6 +1357,52 @@ describe("offersService.reopenForRebid", () => {
     );
     expect(capturedUpdate().reopenedAt).toBeUndefined();
     expect(offersDal.incrementListingOffersCount).not.toHaveBeenCalled();
+  });
+
+  // client_feedback_2026_10_spec.md §4: a flexible direct request withdrawn
+  // half way through its window keeps its dates and runs to the window's end.
+  it("keeps a started flexible window's dates and runs it to its end", async () => {
+    const pickupFrom = soon(-5 * 24 * HOUR);
+    const pickupUntil = soon(10 * 24 * HOUR);
+    vi.mocked(listingsDal.getByIdForUpdate).mockResolvedValue(
+      listing({
+        origin: "direct",
+        isFlexible: true,
+        pickupFrom,
+        pickupUntil,
+        dropoffFrom: soon(-4 * 24 * HOUR),
+        dropoffUntil: soon(12 * 24 * HOUR),
+      }) as never
+    );
+
+    await offersService.reopenForRebid("job-1", "offer-1", [], {
+      winnerStatus: "withdrawn",
+      markReopened: true,
+    });
+
+    const patch = capturedUpdate();
+    expect(patch.pickupFrom).toEqual(pickupFrom);
+    expect(patch.pickupUntil).toEqual(pickupUntil);
+    expect(patch.expiresAt).toEqual(new Date(pickupUntil.getTime() - 6 * HOUR));
+  });
+
+  it("slides an escalated flexible job as before", async () => {
+    const pickupFrom = soon(-5 * 24 * HOUR);
+    vi.mocked(listingsDal.getByIdForUpdate).mockResolvedValue(
+      listing({
+        origin: "expedion",
+        isFlexible: true,
+        pickupFrom,
+        pickupUntil: soon(10 * 24 * HOUR),
+      }) as never
+    );
+
+    await offersService.reopenForRebid("job-1", "offer-1", [], {
+      winnerStatus: "withdrawn",
+      markReopened: true,
+    });
+
+    expect((capturedUpdate().pickupFrom as Date).getTime()).toBeGreaterThan(Date.now());
   });
 
   it("compensating a declined card does not move the client's dates", async () => {

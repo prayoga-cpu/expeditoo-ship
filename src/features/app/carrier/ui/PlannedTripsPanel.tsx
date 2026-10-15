@@ -26,7 +26,12 @@ import {
 import { useVehicles } from "../hooks/useCarrier";
 import { TripRouteCard } from "./TripRouteCard";
 import { TripRouteFormDialog } from "./TripRouteFormDialog";
+import { TripsLoadError } from "./TripsLoadError";
+import { ApiError } from "@/lib/fetcher";
 import type { CarrierRoute, CarrierRouteInput } from "../api/trips.api";
+
+const isCarrierMissing = (error: unknown) =>
+  error instanceof ApiError && error.code === "CARRIER_NOT_FOUND";
 
 /**
  * The trips a carrier declares: the routes they already drive, recurring or on
@@ -35,7 +40,7 @@ import type { CarrierRoute, CarrierRouteInput } from "../api/trips.api";
  */
 export function PlannedTripsPanel() {
   const t = useTranslations("carrier.trips");
-  const { data, isLoading, error } = useCarrierRoutes();
+  const { data, isLoading, error, refetch } = useCarrierRoutes();
   const { data: vehicles } = useVehicles();
   const save = useSaveCarrierRoute();
   const remove = useDeleteCarrierRoute();
@@ -77,13 +82,16 @@ export function PlannedTripsPanel() {
 
       {/* A signed-in user with no carrier record reaches this screen through
           the sidebar; the API answers CARRIER_NOT_FOUND rather than an empty
-          list, so it is a state to explain, not a crash. */}
-      {error ? (
+          list, so it is a state to explain, not a crash. Any other failure is
+          a failure, and says so with a way to try again. */}
+      {isCarrierMissing(error) ? (
         <CenteredEmptyState
           icon={Route}
           title={t("noCarrier.title")}
           description={t("noCarrier.description")}
         />
+      ) : error ? (
+        <TripsLoadError onRetry={() => void refetch()} />
       ) : routes.length === 0 ? (
         <CenteredEmptyState
           icon={Route}

@@ -225,3 +225,43 @@ lane, the credit note and the numbering. The earnings half below still stands.
 - [ ] `from` after `to` is rejected on both statement routes
 - [ ] Invoice period filter bounds on `issued_at`
 - [ ] Statement over the row cap answers `STATEMENT_TOO_LARGE`
+
+## 8. Amendment 2.63.0 — « Historique des transactions » (2026-10-15)
+
+`client_feedback_2026_10_spec.md` §7a is the contract; this section records
+what it changes here.
+
+- **One page, two tabs.** `/profile/invoices` (the path stays: every receipt
+  already emailed links to it) is titled « Historique des transactions », and
+  so is its quick link on `/profile`. The tab is URL-held in `?tab=`:
+  `requester` (default, « Demandeur ») is §4's document list; `carrier`
+  (« Transporteur ») is §3's earnings, one line per delivered run (date, job,
+  reference, gross, commission, net, payout status) with the period filter,
+  the period's totals from `summary`, and the §3.3 relevé download for the
+  same period. `/carrier/trips` → Effectués is unchanged.
+- **The carrier tab is shown only to an account holding `carrier`**, read
+  through `useUserRoles` like the profile's quick links. Without the role there
+  is no tab strip at all, and `?tab=carrier` lands on the documents. The route
+  still answers `CARRIER_NOT_FOUND` on its own; the gate only spares a tab that
+  could never load. Each tab has its own loading, empty and error-with-retry
+  state.
+- **Each document row carries `documentType`**: `invoice` | `receipt` |
+  `credit_note`, shown in a **Type** column as *Facture*, *Reçu de paiement* or
+  *Avoir* (EN: *Invoice*, *Payment receipt*, *Credit note*). It comes from
+  `invoiceDocumentType` in `src/lib/invoice-pdf-props.ts`, the same rule the
+  PDF title follows (`invoice_at_payment_spec.md` §4.1), and like the PDF it
+  reads the issuer as configured now. An avoir prints « Avoir de paiement »
+  while the issuer is incomplete; the column says « Avoir » in both states.
+- **`GET /api/user/invoices` stops sending its joins.** Rows used to leave with
+  their `payment` and that payment's `listing` attached, none of which the
+  screen read. They now go through `userInvoiceListSchema`
+  (`src/server/dto/invoices.dto.ts`), which keeps the document's own columns
+  plus `documentType`. The PDF, email and statement routes are unchanged.
+- The carrier tab asks for at most 100 lines, the earnings route's ceiling.
+  When the period holds more, it says so and points at a narrower period or
+  the relevé; the totals row still covers the whole period.
+
+Test coverage: `src/lib/__tests__/invoice-document.test.ts`
+(`invoiceDocumentType`), `src/server/services/__tests__/invoices.service.test.ts`
+(`getUserInvoices`), and
+`src/features/app/profile/ui/invoices/__tests__/TransactionHistory.test.tsx`.

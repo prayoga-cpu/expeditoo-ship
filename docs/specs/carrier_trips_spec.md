@@ -197,7 +197,7 @@ the trip searches its corridor.
 
 `/carrier/trips` renders both tabs; the active one is held in the URL
 (`?tab=planned` / `?tab=completed`) so the state survives a reload and a shared
-link. Default is `planned`.
+link. Default is `planned`. **Four tabs since 2.63.0 — see §12.**
 
 ### 8.2 Planifiés
 
@@ -285,3 +285,47 @@ move into `browseShipments`.
 - [ ] `routeMatchQuery` picks the next matching weekday for a recurring trip
 - [ ] `routeMatchQuery` omits date bounds when every occurrence has elapsed
 - [ ] `routeMatchQuery` omits `maxWeightKg` when `capacityKg` is null
+
+## 12. Amendment — 2.63.0 (2026-10-15): four tabs
+
+The client asked for « in waiting of answer, in transit, finished » below « Mes
+trajets » (`client_feedback_2026_10_spec.md` §5). The screen now holds four
+tabs, in this order, still URL-held in `?tab=`:
+
+| Tab | `?tab=` | Shows | Source |
+|---|---|---|---|
+| **Prévus** | `planned` (default) | Declared trajets — §8.2, unchanged | `GET /api/carrier/routes` |
+| **En attente de réponse** | `pending` | The carrier's offers no requester or operator has answered yet | `GET /api/carrier/offers?status=pending&limit=50` |
+| **En transit** | `active` | Runs awarded to the carrier and not finished: `PENDING`, `ASSIGNED`, `PICKED_UP`, `IN_TRANSIT` | `GET /api/shipments?status=PENDING,ASSIGNED,PICKED_UP,IN_TRANSIT&limit=50` |
+| **Terminés** | `completed` | §8.3 — the tab formerly « Effectués », unchanged | unchanged |
+
+- `?tab=completed` keeps working, so links from before the change still land on
+  the same list. Any other value, an unknown or differently cased one included,
+  falls back to `planned`.
+- **Pending card**: job title and reference, the two cities, the price offered,
+  the earliest proposed slot in `OfferCard`'s words (« jeu. 22 oct. — matin »)
+  plus « +n autres créneaux proposés », « Voir la course » (`/listing/[id]`) and
+  « Retirer l'offre ». Withdrawing asks for confirmation first, as deleting a
+  trajet does, then calls `POST /api/offers/:id/withdraw` and invalidates
+  `["carrier-offers"]` (this list's key lives under that prefix, so bids made or
+  taken elsewhere refresh it too). `OFFER_NOT_PENDING` is said in French and
+  refreshes the list.
+- **In-transit card**: `ShipmentStatusBadge` (the `deliveries.shipmentStatus.*`
+  labels: « En attente », « En préparation », « En retrait », « En cours de
+  livraison »), title and reference, the cities (the run's addresses when the
+  job carries none), the agreed price, the booked pickup; the whole card links
+  to `/deliveries/[id]`.
+- `/api/shipments` answers every run the caller is party to, so « En transit »
+  keeps only the runs where the viewer is the carrier or the driver. A carrier
+  who also posts requests does not see their own deliveries listed as journeys.
+  « Terminés » was not changed and still lists whatever the route returns.
+- **Every tab has its own empty state and an error state with « Réessayer »**
+  (CLAUDE.md gotcha 9). « Prévus » keeps its « réservés aux transporteurs
+  validés » state for `CARRIER_NOT_FOUND` only; any other failure now offers a
+  retry. « En attente de réponse » shows a no-carrier state for
+  `FORBIDDEN_NOT_CARRIER`. « Terminés » no longer falls through to « Aucun
+  transport effectué » when the run list fails.
+- On a phone the four tabs sit two by two; from `md` they are one row.
+
+Tests: `src/features/app/carrier/ui/__tests__/` — `CarrierTripsScreen` (tab
+routing), `PendingOffersPanel`, `ActiveTripsPanel`, `TripsErrorBranches`.

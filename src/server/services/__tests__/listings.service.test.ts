@@ -1311,3 +1311,78 @@ describe("listingsService — what each viewer reads", () => {
   });
 });
 
+
+// ========================================
+// A flexible request takes offers until its window ends —
+// client_feedback_2026_10_spec.md §4
+// ========================================
+
+describe("createListing — bidding runs to a flexible window's end", () => {
+  const flexible = {
+    isFlexible: true,
+    pickupFrom: at(48 * HOUR),
+    pickupUntil: at(23 * 24 * HOUR),
+  };
+
+  it("closes a flexible direct request six hours before its window ends", async () => {
+    await listingsService.createListing("user-1", createInput(flexible));
+
+    const row = vi.mocked(listingsDal.create).mock.calls[0][0];
+    expect(row.expiresAt.getTime()).toBe(flexible.pickupUntil.getTime() - 6 * HOUR);
+  });
+
+  it("keeps an escalated job — the system account's — on its start", async () => {
+    await listingsService.createListing("system-account", createInput(flexible));
+
+    const row = vi.mocked(listingsDal.create).mock.calls[0][0];
+    expect(row.expiresAt.getTime()).toBe(flexible.pickupFrom.getTime() - 6 * HOUR);
+  });
+
+  it("leaves an exact-date request exactly as it was", async () => {
+    await listingsService.createListing("user-1", createInput());
+
+    const row = vi.mocked(listingsDal.create).mock.calls[0][0];
+    expect(row.expiresAt.getTime()).toBe(at(48 * HOUR).getTime() - 6 * HOUR);
+  });
+
+  it("still refuses a flexible request that starts too soon", async () => {
+    expect(
+      await codeFrom(() =>
+        listingsService.createListing(
+          "user-1",
+          createInput({ ...flexible, pickupFrom: at(10 * MINUTE) })
+        )
+      )
+    ).toBe("PICKUP_TOO_SOON");
+  });
+
+  it("gives the scheduler the same deadline for a direct row", async () => {
+    const now = new Date();
+    const row = job({
+      id: "job-scheduled",
+      status: "scheduled",
+      origin: "direct",
+      scheduledPublishAt: now,
+      ...flexible,
+    });
+    vi.mocked(listingsDal.findDueScheduled).mockResolvedValue([row] as never);
+    vi.mocked(listingsDal.lockDueScheduled).mockResolvedValue(row as never);
+
+    await listingsService.publishScheduled(now);
+
+    expect(listingsDal.updateIfStatus).toHaveBeenCalledWith(
+      "job-scheduled",
+      "scheduled",
+      expect.objectContaining({
+        expiresAt: new Date(flexible.pickupUntil.getTime() - 6 * HOUR),
+      }),
+      expect.anything()
+    );
+  });
+
+  it("stores an absent description as an empty string", async () => {
+    await listingsService.createListing("user-1", createInput({ description: "" }));
+
+    expect(vi.mocked(listingsDal.create).mock.calls[0][0].description).toBe("");
+  });
+});

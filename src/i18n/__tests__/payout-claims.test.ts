@@ -1,9 +1,14 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import { createElement } from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import en from "../../../messages/en.json";
 import fr from "../../../messages/fr.json";
+// The request card (client_feedback_2026_10_spec.md §6) needs the app's
+// providers; this suite reads the FAQ's words and nothing else.
+vi.mock("@/features/app/feedback/ui/FeedbackRequestCard", () => ({
+  FeedbackRequestCard: () => null,
+}));
 import DriverHelpPage from "@/app/(app)/driver/help/page";
 import { LandingStats } from "@/features/marketing/ui/LandingStats";
 import { formatCurrency } from "@/lib/currency";

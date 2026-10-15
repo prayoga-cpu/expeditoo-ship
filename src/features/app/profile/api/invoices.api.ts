@@ -1,7 +1,9 @@
 import { api, toQuery } from "@/lib/fetcher";
+import type { InvoiceDocumentType } from "@/server/dto/invoices.dto";
 
 export type InvoiceStatus = "draft" | "issued" | "paid" | "void";
 export type InvoiceKind = "invoice" | "credit_note";
+export type { InvoiceDocumentType };
 
 export interface Invoice {
     id: string;
@@ -12,6 +14,8 @@ export interface Invoice {
     currency: string;
     status: InvoiceStatus;
     kind: InvoiceKind;
+    /** What the PDF calls itself — decided by the server, never re-derived here. */
+    documentType: InvoiceDocumentType;
     relatedInvoiceId: string | null;
     relatedInvoiceNumber: string | null;
     issuedAt: string | null;

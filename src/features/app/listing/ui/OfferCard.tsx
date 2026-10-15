@@ -41,9 +41,15 @@ export function OfferCard({
   const locale = useLocale();
   const dateLocale = locale === "fr" ? fr : enUS;
 
-  // The earliest is pre-selected because it is what the offer already promises:
-  // `estimatedPickup` holds it, and accepting without naming a slot books it.
-  const [slotId, setSlotId] = useState(offer.slots[0]?.id ?? "");
+  // A slot that has started cannot be booked (`SLOT_IN_PAST`). Since a flexible
+  // request takes offers until its window ends (client_feedback_2026_10_spec.md
+  // §4), an offer can outlive its earliest slots, so the first one still ahead
+  // is pre-selected and the passed ones are shown but not choosable.
+  const isAhead = (slot: OfferSlot) => new Date(slot.startsAt) > new Date();
+  const [slotId, setSlotId] = useState(
+    (offer.slots.find(isAhead) ?? offer.slots[0])?.id ?? ""
+  );
+  const allPassed = offer.slots.length > 0 && !offer.slots.some(isAhead);
 
   // The budget is an expectation, not a cap, so bidding over it is normal and
   // is surfaced rather than treated as an error.
@@ -166,7 +172,7 @@ export function OfferCard({
                       <RadioGroupItem
                         value={slot.id}
                         id={`slot-${slot.id}`}
-                        disabled={isAccepting}
+                        disabled={isAccepting || !isAhead(slot)}
                       />
                       <Label
                         htmlFor={`slot-${slot.id}`}
@@ -204,10 +210,15 @@ export function OfferCard({
             </p>
           </div>
 
+          {canAccept && pending && allPassed && (
+            <p className="max-w-48 text-right text-xs text-muted-foreground">
+              {t("slotsPassed")}
+            </p>
+          )}
           {canAccept && pending && (
             <Button
               onClick={() => onAccept(offer.id, slotId || undefined)}
-              disabled={isAccepting}
+              disabled={isAccepting || allPassed}
               className="shrink-0"
             >
               {isAccepting

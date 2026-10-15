@@ -520,6 +520,7 @@ export function useJobForm(seed: JobFormSeed = {}) {
     {
       pickupFrom: live.pickupFrom,
       pickupUntil: live.pickupUntil,
+      isFlexible: live.isFlexible,
       publishMode,
       scheduledPublishAt,
     },

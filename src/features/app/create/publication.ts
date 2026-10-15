@@ -1,6 +1,7 @@
 import {
   BIDDING_LEAD_MS,
   MIN_BIDDING_WINDOW_MS,
+  biddingDeadline,
   expiresAtFor,
   publicationProblem,
 } from "@/lib/listing-window";
@@ -43,6 +44,8 @@ export interface PublicationIssues {
 interface PublicationValues {
   pickupFrom?: unknown;
   pickupUntil?: unknown;
+  /** A request from this form is always direct, so flexible is the whole test. */
+  isFlexible?: unknown;
   publishMode?: unknown;
   scheduledPublishAt?: unknown;
 }
@@ -140,7 +143,11 @@ export function publicationIssues(
   if (pickup || schedule) return { pickup, schedule, biddingClosesAt: null };
 
   const publishAt = scheduling && scheduledAt ? scheduledAt : now;
-  const closesAt = expiresAtFor(pickupFrom, publishAt);
+  // The server's deadline, window end included (client_feedback_2026_10_spec.md
+  // §4) — a flexible request open for three weeks is not "closing soon".
+  const pickupUntil = toDate(values.pickupUntil);
+  const runsUntil = values.isFlexible === true ? pickupUntil : null;
+  const closesAt = biddingDeadline(pickupFrom, runsUntil, publishAt);
   const short =
     closesAt !== null &&
     closesAt.getTime() - publishAt.getTime() < BIDDING_LEAD_MS;

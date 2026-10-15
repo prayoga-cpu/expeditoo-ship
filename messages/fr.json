@@ -187,7 +187,6 @@
     "register": {
       "title": "Créer votre compte",
       "subtitle": "Rejoignez EXPEDITOO pour expédier et enchérir",
-      "name": "Nom complet",
       "email": "Adresse e-mail",
       "password": "Mot de passe",
       "confirmPassword": "Confirmer le mot de passe",
@@ -202,15 +201,24 @@
       "termsOfService": "Conditions d'utilisation",
       "and": "et notre",
       "privacyPolicy": "Politique de confidentialité",
-      "placeholderName": "Jean Dupont",
       "placeholderEmail": "vous@exemple.com",
       "errors": {
-        "nameRequired": "Le nom complet est requis",
         "emailRequired": "L'email est requis",
         "emailInvalid": "Veuillez entrer un email valide",
         "passwordMin": "Le mot de passe doit contenir au moins 8 caractères",
-        "passwordMismatch": "Les mots de passe ne correspondent pas"
-      }
+        "passwordMismatch": "Les mots de passe ne correspondent pas",
+        "firstNameRequired": "Le prénom est requis",
+        "lastNameRequired": "Le nom est requis",
+        "nameTooLong": "80 caractères au maximum",
+        "aliasTooLong": "40 caractères au maximum"
+      },
+      "firstName": "Prénom",
+      "lastName": "Nom",
+      "alias": "Pseudo (facultatif)",
+      "aliasHint": "Le nom sous lequel vous aimeriez apparaître. Pour l'instant, vous seul le voyez.",
+      "placeholderFirstName": "Jean",
+      "placeholderLastName": "Dupont",
+      "placeholderAlias": "Jeannot"
     },
     "forgotPassword": {
       "title": "Mot de passe oublié ?",
@@ -291,8 +299,7 @@
       "driverSupport": "Support Chauffeur",
       "driverDashboard": "Tableau de bord chauffeur",
       "becomeDriver": "Devenir chauffeur",
-      "myInvoices": "Mes factures",
-      "sendFeedback": "J'ai une demande"
+      "myInvoices": "Historique des transactions"
     },
     "myAuctions": {
       "title": "Mes enchères",
@@ -506,8 +513,9 @@
         "actions": "Actions",
         "amount": "Montant",
         "date": "Date",
-        "invoice": "Facture",
-        "status": "Statut"
+        "invoice": "Numéro",
+        "status": "Statut",
+        "type": "Type"
       },
       "description": "Consultez et téléchargez vos factures de paiement",
       "deliveryNotice": "Chaque reçu vous est envoyé par e-mail dès le paiement, en pièce jointe. L'envoi par WhatsApp n'est pas encore disponible : consultez votre boîte mail, ou renvoyez le document ci-dessous.",
@@ -523,26 +531,95 @@
         "paid": "Payée",
         "void": "Annulée"
       },
-      "title": "Factures",
+      "title": "Historique des transactions",
       "view": "Voir",
       "downloadPeriod": "Télécharger toutes les factures de la période",
       "periods": {
         "all": "Toutes périodes",
         "thisMonth": "Ce mois-ci",
         "lastMonth": "Le mois dernier",
-        "thisYear": "Cette année"
+        "thisYear": "Cette année",
+        "label": "Période"
       },
       "retry": "Réessayer",
       "sendByEmail": "Envoyer par e-mail",
       "emailSent": "Document envoyé à {address}",
-      "creditNote": "Avoir",
       "errors": {
         "RATE_LIMITED": "Trop d'envois pour ce document. Réessayez dans un moment.",
         "INVOICE_EMAIL_FAILED": "L'envoi a échoué. Le document reste téléchargeable.",
         "INVOICE_NOT_YOURS": "Ce document n'est pas le vôtre.",
         "generic": "L'envoi a échoué. Réessayez plus tard."
       },
-      "creditNoteFor": "Avoir sur {number}"
+      "creditNoteFor": "Avoir sur {number}",
+      "tabs": {
+        "requester": "Demandeur",
+        "carrier": "Transporteur"
+      },
+      "documentType": {
+        "invoice": "Facture",
+        "receipt": "Reçu de paiement",
+        "credit_note": "Avoir"
+      },
+      "carrier": {
+        "description": "Chaque transport livré, avec le montant facturé, la commission de la plateforme et le net qui vous revient.",
+        "downloadStatement": "Télécharger le relevé d'activité de la période",
+        "loading": "Chargement du relevé…",
+        "error": "Échec du chargement du relevé",
+        "errorDesc": "Réessayez plus tard ou contactez le support.",
+        "empty": "Aucun transport livré",
+        "emptyDesc": "Rien n'a été livré sur cette période. Dès qu'une course est livrée, elle apparaît ici avec ce qu'elle vous a rapporté.",
+        "untitled": "Transport",
+        "columns": {
+          "date": "Date",
+          "job": "Transport",
+          "reference": "Référence",
+          "gross": "Montant",
+          "commission": "Commission",
+          "net": "Net",
+          "payout": "Versement"
+        },
+        "payout": {
+          "scheduled": "Crédité sur votre solde",
+          "processing": "Versement en cours",
+          "paid": "Versé",
+          "failed": "Versement échoué",
+          "cancelled": "Versement annulé",
+          "none": "Aucun versement"
+        },
+        "total": "Total — {count, plural, one {# livraison} other {# livraisons}}",
+        "truncated": "Seuls les {shown} transports les plus récents sur {total} sont affichés. Choisissez une période plus courte, ou téléchargez le relevé de la période."
+      }
+    },
+    "contact": {
+      "title": "Coordonnées personnelles",
+      "staffTitle": "Coordonnées personnelles (visibles par l'équipe)",
+      "privacy": "Visibles uniquement par vous et par l'équipe Expeditoo — jamais par un transporteur ni par un demandeur.",
+      "fullName": "Nom et prénom",
+      "firstName": "Prénom",
+      "lastName": "Nom",
+      "alias": "Pseudo",
+      "phone": "Téléphone",
+      "phonePlaceholder": "06 12 34 56 78",
+      "relativeTitle": "Personne à contacter",
+      "relativeHint": "Un proche que l'équipe peut appeler si elle ne parvient pas à vous joindre. Facultatif.",
+      "relativeName": "Nom du proche",
+      "relativePhone": "Téléphone du proche",
+      "notSet": "Non renseigné",
+      "edit": "Modifier mes coordonnées",
+      "cancel": "Annuler",
+      "save": "Enregistrer",
+      "saving": "Enregistrement…",
+      "saved": "Coordonnées enregistrées",
+      "saveFailed": "Impossible d'enregistrer vos coordonnées. Réessayez.",
+      "loadError": "Impossible de charger les coordonnées.",
+      "retry": "Réessayer",
+      "errors": {
+        "firstNameRequired": "Le prénom est requis",
+        "lastNameRequired": "Le nom est requis",
+        "nameTooLong": "80 caractères au maximum",
+        "aliasTooLong": "40 caractères au maximum",
+        "invalidPhone": "Ce numéro de téléphone n'est pas valide"
+      }
     }
   },
   "settings": {
@@ -901,7 +978,8 @@
         "vsBudget": "{amount} vs budget",
         "accept": "Accepter",
         "acceptSlot": "Accepter ce créneau",
-        "accepting": "Acceptation…"
+        "accepting": "Acceptation…",
+        "slotsPassed": "Les créneaux proposés sont passés : ce transporteur doit faire une nouvelle offre."
       }
     }
   },
@@ -1104,8 +1182,8 @@
       "floor": "Étage",
       "lift": "Ascenseur disponible",
       "liftHint": "Y a-t-il un ascenseur jusqu'à cet étage ?",
-      "noteLabel": "Note pour le transporteur (facultatif)",
-      "notePlaceholder": "Ex : 2ème étage, après la porte rouge",
+      "noteLabel": "Détails – conditions d'accès (facultatif)",
+      "notePlaceholder": "Ex : 2ᵉ étage sans ascenseur, code portail 1234, stationnement difficile",
       "linkNoteLabel": "Décrivez l'endroit exact",
       "linkNotePlaceholder": "Ex : portail bleu à gauche, 200 m après l'église",
       "contactName": "Nom du contact (facultatif)",
@@ -1490,7 +1568,8 @@
       "needsProtection": "Protection requise",
       "needsPackaging": "Emballage requis",
       "timeline": "Historique",
-      "cancellationReason": "Motif d'annulation"
+      "cancellationReason": "Motif d'annulation",
+      "accessConditions": "Conditions d'accès :"
     },
     "actions": {
       "actions": "Actions",
@@ -2218,7 +2297,7 @@
     }
   },
   "help": {
-    "title": "Aide & Support",
+    "title": "Contact & Aide",
     "subtitle": "Trouvez des réponses aux questions courantes ou contactez notre équipe support.",
     "emailSupport": {
       "title": "Support par email",
@@ -3328,7 +3407,7 @@
     },
     "trips": {
       "title": "Mes trajets",
-      "pageSubtitle": "Les trajets que vous effectuez, et les transports que vous avez réalisés.",
+      "pageSubtitle": "Vos trajets, vos offres en attente, vos courses en cours et celles que vous avez terminées.",
       "subtitle": "Déclarez les trajets que vous faites déjà pour filtrer les annonces dessus.",
       "add": "Ajouter un trajet",
       "edit": "Modifier",
@@ -3341,7 +3420,9 @@
       "radiusLabel": "Jusqu'à {km} km de part et d'autre du trajet",
       "tabs": {
         "planned": "Prévus",
-        "completed": "Effectués"
+        "completed": "Terminés",
+        "pending": "En attente de réponse",
+        "active": "En transit"
       },
       "kinds": {
         "recurring": "Régulier",
@@ -3458,7 +3539,49 @@
           "description": "Dès qu'une course est livrée, elle apparaît ici avec ce qu'elle a rapporté et les documents correspondants."
         }
       },
-      "runsOn": "Jours de circulation : {days}"
+      "runsOn": "Jours de circulation : {days}",
+      "untitledJob": "Transport",
+      "loadError": {
+        "title": "Impossible de charger cette liste",
+        "description": "La liste n'a pas pu être chargée. Réessayez dans un instant.",
+        "retry": "Réessayer"
+      },
+      "pending": {
+        "intro": "Les offres que vous avez faites et auxquelles le demandeur ou un opérateur n'a pas encore répondu.",
+        "yourPrice": "Votre prix",
+        "earliestPickup": "Enlèvement au plus tôt : {pickup}",
+        "view": "Voir la course",
+        "withdraw": "Retirer l'offre",
+        "confirm": {
+          "title": "Retirer cette offre ?",
+          "description": "Elle disparaît aussitôt de la liste du demandeur. Vous pourrez en faire une nouvelle tant que la course est ouverte.",
+          "cancel": "Annuler",
+          "confirm": "Retirer"
+        },
+        "toast": {
+          "withdrawn": "Offre retirée",
+          "notPending": "Cette offre a déjà reçu une réponse ou a expiré.",
+          "withdrawFailed": "Impossible de retirer l'offre"
+        },
+        "empty": {
+          "title": "Aucune offre en attente",
+          "description": "Les offres que vous faites sur une course apparaissent ici jusqu'à ce que le demandeur ou un opérateur choisisse.",
+          "browse": "Voir les courses"
+        },
+        "noCarrier": {
+          "title": "Les offres sont réservées aux transporteurs validés",
+          "description": "Terminez d'abord votre dossier transporteur : une offre se fait depuis un profil transporteur."
+        }
+      },
+      "active": {
+        "intro": "Les courses qui vous ont été attribuées et qui ne sont pas encore livrées.",
+        "agreedPrice": "Prix convenu",
+        "pickupOn": "Enlèvement prévu le {date}",
+        "empty": {
+          "title": "Aucune course en transit",
+          "description": "Dès qu'une de vos offres est retenue, la course apparaît ici jusqu'à sa livraison."
+        }
+      }
     }
   },
   "dashboard": {
@@ -3944,6 +4067,11 @@
       "previous": "Précédent",
       "next": "Suivant",
       "showing": "{shown} sur {total} retours"
+    },
+    "helpCard": {
+      "title": "J'ai une demande",
+      "description": "Une question, une idée, un problème dans l'application : écrivez-nous, votre message arrive directement à l'équipe.",
+      "button": "Envoyer une demande"
     }
   },
   "acceptPayment": {

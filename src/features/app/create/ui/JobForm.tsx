@@ -194,7 +194,7 @@ function WhatStep({
       <ItemField form={form} />
 
       <div>
-        <Label htmlFor="description" required>
+        <Label htmlFor="description">
           {t("descriptionLabel")}
         </Label>
         <Textarea

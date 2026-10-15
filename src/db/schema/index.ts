@@ -1,4 +1,5 @@
 export * from "./users";
+export * from "./user-contact-details";
 export * from "./carriers";
 export * from "./listings";
 export * from "./offers";

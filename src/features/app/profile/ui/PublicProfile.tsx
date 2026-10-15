@@ -19,6 +19,7 @@ import { LottieLoader } from "@/components/ui/lottie-loader";
 import { useTranslations } from "next-intl";
 import { Reviews } from "./Reviews";
 import { startConversation } from "@/features/app/messages/api/conversations.api";
+import { StaffContactCard } from "./StaffContactCard";
 
 interface PublicUser {
   id: string;
@@ -88,9 +89,12 @@ async function fetchUserListings(id: string): Promise<BoardJob[]> {
 export function PublicProfile({
   id,
   onBack,
+  staffView = false,
 }: {
   id: string;
   onBack?: () => void;
+  /** Mounted from the admin panel: also shows the account's contact details. */
+  staffView?: boolean;
 }) {
   const router = useRouter();
   const t = useTranslations("profile.public");
@@ -237,6 +241,8 @@ export function PublicProfile({
           </div>
         </CardContent>
       </Card>
+
+      {staffView && <StaffContactCard userId={id} />}
 
       {/* Listings Grid */}
       <div>

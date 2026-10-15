@@ -1,9 +1,15 @@
 import type { Invoice } from "@/db/schema/invoices";
+import { invoiceIssuer } from "@/lib/invoice-issuer";
+import { invoiceDocumentType } from "@/lib/invoice-pdf-props";
 import { addressesDal } from "@/server/dal/addresses.dal";
 import { invoicesDal } from "@/server/dal/invoices.dal";
 import { paymentsDal } from "@/server/dal/payments.dal";
 import { getUserById } from "@/server/dal/users.dal";
-import { type InvoiceQuery } from "@/server/dto/invoices.dto";
+import {
+    userInvoiceListSchema,
+    type InvoiceQuery,
+    type UserInvoiceList,
+} from "@/server/dto/invoices.dto";
 import { notificationsService } from "@/server/services/notifications.service";
 import { invoiceDocumentEmail } from "@/server/services/invoice-email.service";
 
@@ -208,15 +214,28 @@ export const invoicesService = {
     },
 
     /**
-     * Get all invoices for a user
+     * The caller's documents, each labelled with what its PDF calls itself.
+     *
+     * The issuer is read once for the page rather than per row, and the rows
+     * leave through `userInvoiceListSchema`, which drops the payment and
+     * listing the DAL joins (billing_documents_spec.md §8, 2.63.0).
      */
-    async getUserInvoices(userId: string, query: InvoiceQuery) {
-        return invoicesDal.getByUserId(userId, {
+    async getUserInvoices(userId: string, query: InvoiceQuery): Promise<UserInvoiceList> {
+        const page = await invoicesDal.getByUserId(userId, {
             page: query.page,
             limit: query.limit,
             status: query.status,
             from: query.from,
             to: query.to,
+        });
+        const issuer = invoiceIssuer();
+
+        return userInvoiceListSchema.parse({
+            ...page,
+            items: page.items.map((row) => ({
+                ...row,
+                documentType: invoiceDocumentType(row.kind, issuer),
+            })),
         });
     },
 

@@ -133,6 +133,22 @@ describe("Profile", () => {
   });
 });
 
+// client_feedback_2026_10_spec.md §6 — « J'ai une demande » moved under
+// « Contact & Aide », i.e. onto /help; the quick links keep the way there.
+describe("Profile — « J'ai une demande » lives on the help page", () => {
+  it("is no longer a quick link of its own", async () => {
+    renderProfile();
+    await screen.findByRole("heading", { name: /Jean Dupont/ });
+
+    expect(
+      screen.queryByRole("button", { name: /I have a request/i })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: en.profile.quickLinks.contactHelp })
+    ).toHaveAttribute("href", "/help?from=profile");
+  });
+});
+
 describe("Profile — the driver shell's quick links", () => {
   const earnings = () =>
     screen.queryByRole("link", { name: en.profile.quickLinks.earnings });

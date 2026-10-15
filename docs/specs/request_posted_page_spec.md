@@ -131,3 +131,13 @@ Dates through `useFormatter` (day, short month, hour, minute).
   published with PUT lands on `/create/success/{id}` for the same id
   (`draft_requests_spec.md` §7).
 - Locale parity.
+
+---
+
+## Amendment — 2.63.0 (2026-10-15)
+
+« Les transporteurs vous envoient leurs offres jusqu'au {date} » still prints
+`expiresAt`. For a flexible request that is now 6 h before the end of the
+pickup window, not its start — « jusqu'au 31 oct. » for a request collecting
+8–31 October, which is what the client asked for
+(`client_feedback_2026_10_spec.md` §4).

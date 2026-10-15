@@ -1,5 +1,6 @@
 import { isMockIntent } from "@/lib/stripe/mock-payments";
 import { invoiceIssuer, vatMention, type InvoiceIssuer } from "@/lib/invoice-issuer";
+import type { InvoiceDocumentType } from "@/server/dto/invoices.dto";
 import type { InvoicePDFProps } from "@/server/pdf/InvoicePDF";
 
 /**
@@ -105,6 +106,37 @@ function issuerFooter(issuer: InvoiceIssuer, isCreditNote: boolean): string {
 }
 
 /**
+ * What a stored document is, by the rule its title follows (§4.1): a
+ * correction is an avoir; anything else is a facture when the issuer's
+ * identity is complete, and a reçu de paiement otherwise.
+ *
+ * Exported so the transaction history labels each row with the same answer
+ * the PDF prints, rather than a second copy of the rule that could drift.
+ * Like the PDF, it reads the issuer as it stands now, not as it stood at
+ * issue.
+ */
+export function invoiceDocumentType(
+  kind: string | null | undefined,
+  issuer: Pick<InvoiceIssuer, "isComplete"> = invoiceIssuer()
+): InvoiceDocumentType {
+  if (kind === "credit_note") return "credit_note";
+
+  return issuer.isComplete ? "invoice" : "receipt";
+}
+
+/** The words printed at the head of the document. */
+function documentTitle(type: InvoiceDocumentType, issuer: InvoiceIssuer): string {
+  switch (type) {
+    case "credit_note":
+      return issuer.isComplete ? "Avoir" : "Avoir de paiement";
+    case "invoice":
+      return "Facture";
+    case "receipt":
+      return "Reçu de paiement";
+  }
+}
+
+/**
  * What an avoir corrects, printed on its face.
  *
  * The footer says "la facture référencée ci-dessus", so there has to *be* a
@@ -151,13 +183,7 @@ export function invoicePdfProps(
   const baseNet = net - feeNet;
 
   return {
-    documentTitle: isCreditNote
-      ? issuer.isComplete
-        ? "Avoir"
-        : "Avoir de paiement"
-      : issuer.isComplete
-        ? "Facture"
-        : "Reçu de paiement",
+    documentTitle: documentTitle(invoiceDocumentType(invoice.kind, issuer), issuer),
     documentNumber: invoice.invoiceNumber,
     correctsDocumentNumber: correctsLabel(invoice),
     issueDate: fr(invoice.issuedAt) ?? fr(invoice.createdAt) ?? "",

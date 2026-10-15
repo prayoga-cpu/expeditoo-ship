@@ -15,7 +15,11 @@ import {
 } from "@/server/services/listing-view";
 import { getUserById } from "@/server/dal/users.dal";
 import { formatCurrency } from "@/lib/currency";
-import { expiresAtFor } from "@/lib/listing-window";
+import {
+  biddingDeadline,
+  biddingRunsUntil,
+  expiresAtFor,
+} from "@/lib/listing-window";
 import { ISO_WEEKDAYS, TIME_SLOTS } from "@/lib/availability-window";
 import {
   MATERIAL_FIELDS,
@@ -50,9 +54,16 @@ const err = (code: string, status: number) => new ListingError(code, status);
  * The arithmetic moved to `src/lib/listing-window.ts` when re-boarding arrived:
  * `offers.service.ts` has to compute the same window and cannot import this
  * module, which imports it. This is the throwing wrapper; the lib returns null.
+ *
+ * `runsUntil` is a flexible direct request's window end (`biddingRunsUntil`):
+ * it moves the deadline, never whether the job may go live.
  */
-export function resolveExpiresAt(pickupFrom: Date, now = new Date()): Date {
-  const expiresAt = expiresAtFor(pickupFrom, now);
+export function resolveExpiresAt(
+  pickupFrom: Date,
+  now = new Date(),
+  runsUntil: Date | null = null
+): Date {
+  const expiresAt = biddingDeadline(pickupFrom, runsUntil, now);
   if (!expiresAt) throw err("PICKUP_TOO_SOON", 400);
   return expiresAt;
 }
@@ -61,7 +72,11 @@ export function resolveExpiresAt(pickupFrom: Date, now = new Date()): Date {
  * The publication rules, for a job that is actually going live — now, or at
  * its scheduled instant. Returns the bidding deadline.
  */
-function assertPublishable(data: CreateListingInput, now: Date): Date {
+function assertPublishable(
+  data: CreateListingInput,
+  now: Date,
+  runsUntil: Date | null
+): Date {
   if (data.pickupFrom <= now) throw err("PICKUP_IN_PAST", 400);
 
   // A schedule is a promise to go live later; the promise itself has to be
@@ -75,7 +90,11 @@ function assertPublishable(data: CreateListingInput, now: Date): Date {
   // otherwise. A schedule whose own instant leaves no usable window (e.g. at
   // or after `pickupFrom`) fails here with the same `PICKUP_TOO_SOON` a normal
   // too-soon pickup already gets.
-  return resolveExpiresAt(data.pickupFrom, data.scheduledPublishAt ?? now);
+  return resolveExpiresAt(
+    data.pickupFrom,
+    data.scheduledPublishAt ?? now,
+    runsUntil
+  );
 }
 
 /**
@@ -209,7 +228,11 @@ function settleScheduled(id: string, now: Date) {
 
     let expiresAt: Date;
     try {
-      expiresAt = resolveExpiresAt(listing.pickupFrom, now);
+      expiresAt = resolveExpiresAt(
+        listing.pickupFrom,
+        now,
+        biddingRunsUntil(listing, listing.origin === "direct")
+      );
     } catch {
       // Never opened, so it never took an offer — nothing for
       // `expirePendingOffers` to do here, unlike `expireDueListings`.
@@ -293,8 +316,11 @@ export const listingsService = {
     options: { notifyRouteMatches?: boolean } = {}
   ) {
     const now = new Date();
+    // The system account owns every escalated job; anyone else is a requester
+    // posting directly (client_feedback_2026_10_spec.md §4).
+    const runsUntil = biddingRunsUntil(data, !isSystemAccount(shipperId));
     const expiresAt = data.publish
-      ? assertPublishable(data, now)
+      ? assertPublishable(data, now, runsUntil)
       : draftExpiresAt(data.pickupFrom, now);
     // A requester describes an object, not a taxonomy node, so the category is
     // resolved here when the caller did not name one.
@@ -335,8 +361,9 @@ export const listingsService = {
    */
   async saveDraft(shipperId: string, listingId: string, data: CreateListingInput) {
     const now = new Date();
+    const runsUntil = biddingRunsUntil(data, !isSystemAccount(shipperId));
     const expiresAt = data.publish
-      ? assertPublishable(data, now)
+      ? assertPublishable(data, now, runsUntil)
       : draftExpiresAt(data.pickupFrom, now);
 
     const listing = await db.transaction(async (tx) => {

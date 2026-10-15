@@ -159,7 +159,6 @@ function SignInContent() {
               <div className="relative">
                 <Input
                   type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
                   {...register("password")}
                   disabled={isLoading}
                   className={`bg-background/50 border-border/50 pr-10 ${errors.password ? "border-destructive" : ""}`}

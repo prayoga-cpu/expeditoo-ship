@@ -690,3 +690,16 @@ with a strictly increasing `when`) and `src/i18n/__tests__/locale-parity.test.ts
 **Deploy order.** A Vercel deploy never migrates. **Actions → Migrate database**
 must run *before* the deploy, or `cancelled_by_side` does not exist and every
 cancellation 500s.
+
+
+---
+
+## Amendment — 2.63.0 (2026-10-15)
+
+§4.3's re-board window: a flexible **direct** request measures its room from
+the end of its pickup window (`rearmedWindow(listing, now, true)`,
+`rearmedExpiry(…, runsUntil)`), so one withdrawn half way through its window
+keeps its dates and takes offers until 6 h before the window ends. It slides
+forward only when even that leaves less than `MIN_BIDDING_WINDOW_MS`.
+Escalated jobs and exact-date requests re-board exactly as before
+(`client_feedback_2026_10_spec.md` §4).

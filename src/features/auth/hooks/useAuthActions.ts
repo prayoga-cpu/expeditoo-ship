@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 import { useQueryClient } from "@tanstack/react-query";
+import { composeName } from "@/lib/person-name";
 
 /**
  * Hook for authentication actions (signin, signup, signout, etc.)
@@ -55,15 +56,27 @@ export function useAuthActions() {
   /**
    * Sign up with email and password
    */
-  const signUp = async (email: string, password: string, name: string) => {
+  const signUp = async (
+    email: string,
+    password: string,
+    person: { firstName: string; lastName: string; alias?: string }
+  ) => {
     setIsLoading(true);
     setError(null);
 
     try {
+      // `name` is the display string; the server re-composes it from the
+      // parts in the user-create hook (client_feedback_2026_10_spec.md §1).
+      const firstName = person.firstName.trim();
+      const lastName = person.lastName.trim();
+      const alias = person.alias?.trim();
       const result = await authClient.signUp.email({
         email,
         password,
-        name,
+        name: composeName(firstName, lastName),
+        firstName,
+        lastName,
+        ...(alias ? { alias } : {}),
       });
 
       if (result.error) {

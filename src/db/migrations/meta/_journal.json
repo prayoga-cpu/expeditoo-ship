@@ -260,6 +260,13 @@
       "when": 1788163200000,
       "tag": "0037_address_used_for",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1788170400000,
+      "tag": "0038_user_identity_contact",
+      "breakpoints": true
     }
   ]
 }

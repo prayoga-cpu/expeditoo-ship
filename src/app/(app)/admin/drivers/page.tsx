@@ -41,6 +41,7 @@ export default function DriversPage() {
       <PublicProfile
         id={selectedDriverId}
         onBack={() => setSelectedDriverId(null)}
+        staffView
       />
     );
   }

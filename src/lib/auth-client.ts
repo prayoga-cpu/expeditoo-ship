@@ -1,7 +1,10 @@
 "use client";
 
 import { createAuthClient } from "better-auth/react";
-import { customSessionClient } from "better-auth/client/plugins";
+import {
+  customSessionClient,
+  inferAdditionalFields,
+} from "better-auth/client/plugins";
 import type { auth, Session, User } from "./auth";
 
 export const authClient = createAuthClient({
@@ -24,7 +27,8 @@ export const authClient = createAuthClient({
       : window.location.origin,
   // Type-level mirror of the server's `customSession` plugin, so the data
   // returned by `useSession()` carries `user.roles` (see src/lib/auth.ts).
-  plugins: [customSessionClient<typeof auth>()],
+  // `inferAdditionalFields` types the name parts sign-up sends.
+  plugins: [customSessionClient<typeof auth>(), inferAdditionalFields<typeof auth>()],
 });
 
 // Export commonly used methods for convenience

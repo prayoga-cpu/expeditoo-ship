@@ -165,3 +165,27 @@ describe("publicationIssues — a schedule", () => {
     expect(issues.schedule).toBeNull();
   });
 });
+
+// client_feedback_2026_10_spec.md §4 — the form reads the server's deadline.
+describe("publicationIssues — a flexible window", () => {
+  it("does not warn about a request that takes offers for weeks", () => {
+    // Collecting from 15:00 today, as late as the 20th: bidding runs to the
+    // 20th, so « under six hours to bid » would be false.
+    const issues = publicationIssues(
+      { pickupFrom: field(at(2, 15)), pickupUntil: field(at(20, 18)), isFlexible: true },
+      NOW
+    );
+
+    expect(issues.pickup).toBeNull();
+    expect(issues.biddingClosesAt).toBeNull();
+  });
+
+  it("still warns an exact request with the same start", () => {
+    const issues = publicationIssues(
+      { pickupFrom: field(at(2, 15)), pickupUntil: field(at(2, 16)), isFlexible: false },
+      NOW
+    );
+
+    expect(issues.biddingClosesAt).toEqual(at(2, 14, 17));
+  });
+});

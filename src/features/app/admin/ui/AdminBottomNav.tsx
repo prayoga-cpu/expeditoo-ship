@@ -128,7 +128,7 @@ export function AdminBottomNav() {
   return (
     <nav 
       aria-label="Admin navigation"
-      className="fixed bottom-0 left-0 right-0 bg-background border-t border-border/50 xl:hidden safe-area-inset shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-50 h-[88px]"
+      className="fixed bottom-0 left-0 right-0 bg-background border-t border-border/50 xl:hidden pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-50 h-[calc(88px_+_env(safe-area-inset-bottom))]"
     >
       <div 
         ref={scrollRef}

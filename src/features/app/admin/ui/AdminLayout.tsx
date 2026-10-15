@@ -269,7 +269,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             keeps absolutely positioned descendants inside this scroller — see
             MainLayout, where their escape showed up as a second scrollbar. */}
         <main
-          className="relative flex-1 min-h-0 overflow-y-auto overflow-x-hidden pb-[88px] xl:pb-0 overscroll-contain"
+          className="relative flex-1 min-h-0 overflow-y-auto overflow-x-hidden pb-[calc(88px_+_env(safe-area-inset-bottom))] xl:pb-0 overscroll-contain"
           style={{ scrollbarGutter: "stable" }}
         >
           <div className="p-4 md:p-6">{children}</div>

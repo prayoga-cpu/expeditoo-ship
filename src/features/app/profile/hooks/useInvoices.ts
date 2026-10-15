@@ -6,6 +6,13 @@ import { toast } from "sonner";
 
 import { ApiError } from "@/lib/fetcher";
 import {
+    tripsApi,
+    earningsStatementUrl,
+    type EarningsFilters,
+    type EarningsItem,
+    type EarningsResponse,
+} from "@/features/app/carrier/api/trips.api";
+import {
     invoicesApi,
     getInvoicePdfUrl,
     getInvoiceStatementUrl,
@@ -15,7 +22,15 @@ import {
 } from "../api/invoices.api";
 
 export type { Invoice, InvoiceQueryParams, InvoicesResponse };
-export { getInvoicePdfUrl, getInvoiceStatementUrl };
+export type { EarningsItem, EarningsResponse };
+export { getInvoicePdfUrl, getInvoiceStatementUrl, earningsStatementUrl };
+
+/**
+ * The most rows the carrier tab asks for — the earnings route's own ceiling.
+ * Past it the screen says so rather than silently dropping the oldest runs,
+ * and points at a narrower period or the period's relevé.
+ */
+export const CARRIER_STATEMENT_LIMIT = 100;
 
 /**
  * Hook to fetch user invoices with pagination
@@ -25,6 +40,21 @@ export function useInvoices(params: InvoiceQueryParams = {}) {
         queryKey: ["invoices", params],
         queryFn: () => invoicesApi.list(params),
         staleTime: 60 * 1000, // 1 minute
+    });
+}
+
+/**
+ * The carrier's statement lines for a period: one per delivered run, from the
+ * same ledger the relevé d'activité is printed from.
+ */
+export function useCarrierStatement(filters: Pick<EarningsFilters, "from" | "to">) {
+    return useQuery({
+        queryKey: ["transactions", "carrier", filters],
+        queryFn: () =>
+            tripsApi.earnings({ ...filters, limit: CARRIER_STATEMENT_LIMIT }),
+        staleTime: 60 * 1000,
+        // The tab's own error state carries the retry.
+        retry: false,
     });
 }
 

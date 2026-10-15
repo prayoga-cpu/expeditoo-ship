@@ -66,7 +66,7 @@ export function ImpersonationBanner() {
   // Anchoring it to the top would have hidden the app's sticky header, which
   // is the one piece of chrome an admin needs to get back out.
   return (
-    <div className="fixed inset-x-0 bottom-[88px] xl:bottom-0 z-[60] flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-t border-amber-500 bg-amber-400 px-4 py-2 text-sm text-amber-950 shadow-lg xl:pb-[calc(0.5rem+env(safe-area-inset-bottom))] dark:bg-amber-500">
+    <div className="fixed inset-x-0 bottom-[calc(88px_+_env(safe-area-inset-bottom))] xl:bottom-0 z-[60] flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-t border-amber-500 bg-amber-400 px-4 py-2 text-sm text-amber-950 shadow-lg xl:pb-[calc(0.5rem+env(safe-area-inset-bottom))] dark:bg-amber-500">
       <Eye className="h-4 w-4 shrink-0" />
       <span className="font-semibold">{t("viewingAs")}</span>
       <span className="truncate max-w-[40vw]">{user?.name || user?.email}</span>

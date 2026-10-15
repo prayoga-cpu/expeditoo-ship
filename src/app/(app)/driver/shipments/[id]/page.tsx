@@ -212,7 +212,14 @@ function RouteStop({
         {note ? (
           <p className="flex items-start gap-1 text-xs text-muted-foreground mt-1">
             <Info className="w-3 h-3 mt-0.5 shrink-0" />
-            <span>{note}</span>
+            {/* The requester types this under « Détails – conditions d'accès »
+                (client_feedback_2026_10_spec.md §9); named the same here. */}
+            <span>
+              <span className="font-medium text-foreground">
+                {t("accessConditions")}
+              </span>{" "}
+              {note}
+            </span>
           </p>
         ) : null}
         {contactPhone ? (

@@ -7,20 +7,15 @@ import { Eye, EyeOff } from "lucide-react";
 import { BrandMark } from "@/components/ui/brand-mark";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { useAuthActions } from "@/features/auth/hooks/useAuthActions";
+import {
+  EMPTY_SIGNUP,
+  buildSignupSchema,
+  type SignupFormData,
+} from "@/features/auth/lib/signup-schema";
 import { AuthIntentNote, AuthSwitchLink } from "@/features/auth/ui";
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
-
-// Schema moved inside component to access translations
-
-type SignupFormData = {
-  fullName: string;
-  email: string;
-  password: string;
-  confirmPassword: string;
-};
 
 export default function SignupPage() {
   const {
@@ -34,20 +29,9 @@ export default function SignupPage() {
   const [serverError, setServerError] = useState<string | null>(null);
   const t = useTranslations("auth.register");
 
-  const signupSchema = z
-    .object({
-      fullName: z.string().min(1, t("errors.nameRequired")),
-      email: z
-        .string()
-        .min(1, t("errors.emailRequired"))
-        .email(t("errors.emailInvalid")),
-      password: z.string().min(8, t("errors.passwordMin")),
-      confirmPassword: z.string(),
-    })
-    .refine((data) => data.password === data.confirmPassword, {
-      message: t("errors.passwordMismatch"),
-      path: ["confirmPassword"],
-    });
+  // First and last name asked separately, and an optional alias
+  // (client_feedback_2026_10_spec.md §1).
+  const signupSchema = buildSignupSchema(t);
 
   const {
     register,
@@ -55,17 +39,16 @@ export default function SignupPage() {
     formState: { errors },
   } = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
-    defaultValues: {
-      fullName: "",
-      email: "",
-      password: "",
-      confirmPassword: "",
-    },
+    defaultValues: EMPTY_SIGNUP,
   });
 
   const onSubmit = async (data: SignupFormData) => {
     setServerError(null);
-    const result = await signUp(data.email, data.password, data.fullName);
+    const result = await signUp(data.email, data.password, {
+      firstName: data.firstName,
+      lastName: data.lastName,
+      alias: data.alias,
+    });
 
     if (!result.success && result.error) {
       setServerError(result.error);
@@ -125,20 +108,76 @@ export default function SignupPage() {
           )}
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label
+                  htmlFor="signup-first-name"
+                  className="block text-sm font-medium text-foreground mb-2"
+                >
+                  {t("firstName")}
+                </label>
+                <Input
+                  id="signup-first-name"
+                  type="text"
+                  autoComplete="given-name"
+                  placeholder={t("placeholderFirstName")}
+                  {...register("firstName")}
+                  disabled={isLoading}
+                  className={`bg-background/50 border-border/50 ${errors.firstName ? "border-destructive" : ""}`}
+                />
+                {errors.firstName && (
+                  <p className="text-destructive text-sm mt-1">
+                    {errors.firstName.message}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label
+                  htmlFor="signup-last-name"
+                  className="block text-sm font-medium text-foreground mb-2"
+                >
+                  {t("lastName")}
+                </label>
+                <Input
+                  id="signup-last-name"
+                  type="text"
+                  autoComplete="family-name"
+                  placeholder={t("placeholderLastName")}
+                  {...register("lastName")}
+                  disabled={isLoading}
+                  className={`bg-background/50 border-border/50 ${errors.lastName ? "border-destructive" : ""}`}
+                />
+                {errors.lastName && (
+                  <p className="text-destructive text-sm mt-1">
+                    {errors.lastName.message}
+                  </p>
+                )}
+              </div>
+            </div>
+
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                {t("name")}
+              <label
+                htmlFor="signup-alias"
+                className="block text-sm font-medium text-foreground mb-2"
+              >
+                {t("alias")}
               </label>
               <Input
+                id="signup-alias"
                 type="text"
-                placeholder={t("placeholderName")}
-                {...register("fullName")}
+                autoComplete="nickname"
+                placeholder={t("placeholderAlias")}
+                {...register("alias")}
                 disabled={isLoading}
-                className={`bg-background/50 border-border/50 ${errors.fullName ? "border-destructive" : ""}`}
+                aria-describedby="signup-alias-hint"
+                className={`bg-background/50 border-border/50 ${errors.alias ? "border-destructive" : ""}`}
               />
-              {errors.fullName && (
+              <p id="signup-alias-hint" className="text-muted-foreground text-xs mt-1">
+                {t("aliasHint")}
+              </p>
+              {errors.alias && (
                 <p className="text-destructive text-sm mt-1">
-                  {errors.fullName.message}
+                  {errors.alias.message}
                 </p>
               )}
             </div>
@@ -168,7 +207,6 @@ export default function SignupPage() {
               <div className="relative">
                 <Input
                   type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
                   {...register("password")}
                   disabled={isLoading}
                   className={`bg-background/50 border-border/50 pr-10 ${errors.password ? "border-destructive" : ""}`}
@@ -203,7 +241,6 @@ export default function SignupPage() {
               <div className="relative">
                 <Input
                   type={showConfirmPassword ? "text" : "password"}
-                  placeholder="••••••••"
                   {...register("confirmPassword")}
                   disabled={isLoading}
                   className={`bg-background/50 border-border/50 pr-10 ${errors.confirmPassword ? "border-destructive" : ""}`}
