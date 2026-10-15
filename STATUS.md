@@ -9,19 +9,25 @@ the status column is the truth at the time of the last commit._
 **Legend:** ⬜ not started · 🔧 in progress · ✅ done and tested locally ·
 🚀 live on production · ❓ needs an answer from the client
 
+**State on 2026-10-15:** all eleven rows are 🚀 — 2.63.0 is live (commit
+`e9550c6`, migration `0038` applied first). Checked on production by me,
+signed out and read-only: #1 and #2 (sign-up shows Prénom / Nom / Pseudo, no
+password placeholder). The rest need a signed-in look — the « Check on prod »
+line of each report says where.
+
 | # | The client asked | Status | Where to check it on production |
 |---|---|---|---|
-| 1 | Sign-up form: two fields, last name and first name, perhaps an alias | ✅ | `/signup` |
-| 2 | Remove the stars from the password field | ✅ | `/signup`, `/signin`, `/reset-password` |
-| 3 | Put « Flexible » first in « Vos dates sont-elles fixes ? » | ✅ | `/create` → Quand |
-| 4 | After publishing, show the end date (31 Oct) instead of the start date (8 Oct) | ✅ | `/create` → publish → thank-you page |
-| 5 | Mes trajets: sub-tabs « en attente de réponse », « en transit », « terminés » | ✅ | `/carrier/trips` |
-| 6 | Quick links: put « J'ai une demande » under « Contact & Aide » | ✅ | `/profile`, `/help` |
-| 7a | Quick links: « Mes factures » becomes « Historique des transactions », bills and receipts per user type | ✅ | `/profile` → Historique des transactions |
-| 7b | Personal contact details, with a second phone for a relative (requester and carrier) | ✅ | `/profile` → Coordonnées |
-| 8 | `/create`: « Détails » should not be mandatory | ✅ | `/create` → Quoi |
-| 9 | Rename the two « Détails » fields to « Détails – conditions d'accès » | ✅ | `/create` → Où |
-| 10 | Titles of the bottom fields are cut off on iPad | ✅ | any page on an iPad, bottom bar |
+| 1 | Sign-up form: two fields, last name and first name, perhaps an alias | 🚀 | `/signup` |
+| 2 | Remove the stars from the password field | 🚀 | `/signup`, `/signin`, `/reset-password` |
+| 3 | Put « Flexible » first in « Vos dates sont-elles fixes ? » | 🚀 | `/create` → Quand |
+| 4 | After publishing, show the end date (31 Oct) instead of the start date (8 Oct) | 🚀 | `/create` → publish → thank-you page |
+| 5 | Mes trajets: sub-tabs « en attente de réponse », « en transit », « terminés » | 🚀 | `/carrier/trips` |
+| 6 | Quick links: put « J'ai une demande » under « Contact & Aide » | 🚀 | `/profile`, `/help` |
+| 7a | Quick links: « Mes factures » becomes « Historique des transactions », bills and receipts per user type | 🚀 | `/profile` → Historique des transactions |
+| 7b | Personal contact details, with a second phone for a relative (requester and carrier) | 🚀 | `/profile` → Coordonnées |
+| 8 | `/create`: « Détails » should not be mandatory | 🚀 | `/create` → Quoi |
+| 9 | Rename the two « Détails » fields to « Détails – conditions d'accès » | 🚀 | `/create` → Où |
+| 10 | Titles of the bottom fields are cut off on iPad | 🚀 | any page on an iPad, bottom bar |
 
 ### Decisions taken without the client — please confirm or overrule
 
@@ -59,7 +65,7 @@ cheap to flip.
 Each report: what the client asked, what was wrong, what changed, how it was
 proved, how to check it on production, and what is still open.
 
-#### 1. Sign-up: last name, first name, perhaps an alias — ✅
+#### 1. Sign-up: last name, first name, perhaps an alias — 🚀
 
 - **Asked:** « please create another field to have two fields for name and
   first name (and perhaps also an alias) ».
@@ -79,14 +85,14 @@ proved, how to check it on production, and what is still open.
 - **Open:** where the alias should be shown instead of the real name — asked
   above.
 
-#### 2. No stars in the password field — ✅
+#### 2. No stars in the password field — 🚀
 
 - **Was:** `••••••••` as the placeholder of all five password inputs.
 - **Now:** no placeholder on `/signup` (×2), `/signin`, `/reset-password` (×2).
 - **Proved:** Chromium reads `placeholder = null` on every password input.
 - **Check on prod:** `/signin` and `/signup` — the password boxes are empty.
 
-#### 3. « Flexible » first — ✅
+#### 3. « Flexible » first — 🚀
 
 - **Now:** « Flexible » is the first button **and selected by default**
   (decision A). A saved draft keeps the mode it was saved with.
@@ -95,7 +101,7 @@ proved, how to check it on production, and what is still open.
   `timing.test.ts`, `TimingField.test.tsx`.
 - **Check on prod:** `/create` → Quoi → Où → Quand.
 
-#### 4. After publishing, show the end date — ✅ (behaviour change)
+#### 4. After publishing, show the end date — 🚀 (behaviour change)
 
 - **Asked:** « please change the beginning date by the end date (here 31
   october) ».
@@ -116,7 +122,7 @@ proved, how to check it on production, and what is still open.
 - **Open:** requests already live keep the deadline they were given
   (decision E).
 
-#### 5. « Mes trajets »: en attente de réponse / en transit / terminés — ✅
+#### 5. « Mes trajets »: en attente de réponse / en transit / terminés — 🚀
 
 - **Now:** four tabs, held in `?tab=`: « Prévus » (declared trajets, as
   before), « En attente de réponse » (the carrier's unanswered offers — price,
@@ -129,7 +135,7 @@ proved, how to check it on production, and what is still open.
   value. 35 new tests.
 - **Check on prod:** sign in as a carrier → `/carrier/trips`, click each tab.
 
-#### 6. « J'ai une demande » under « Contact & Aide » — ✅
+#### 6. « J'ai une demande » under « Contact & Aide » — 🚀
 
 - **Now:** gone from the profile's quick links; a « J'ai une demande » card
   opens the same feedback form on `/help` (now titled « Contact & Aide », the
@@ -137,7 +143,7 @@ proved, how to check it on production, and what is still open.
 - **Proved:** Chromium: no quick link, the card opens the dialog.
 - **Check on prod:** `/profile` → « Contact & Aide » → « Envoyer une demande ».
 
-#### 7a. « Mes factures » → « Historique des transactions » — ✅
+#### 7a. « Mes factures » → « Historique des transactions » — 🚀
 
 - **Now:** renamed (URL kept, emails link to it). Tab « Demandeur »: the
   documents with a **Type** column — « Facture », « Reçu de paiement » or
@@ -152,7 +158,7 @@ proved, how to check it on production, and what is still open.
 - **Open:** while the issuer's identifiers are empty every row reads « Reçu de
   paiement »; filling `INVOICE_ISSUER_*` turns them into « Facture ».
 
-#### 7b. Personal contact details with a relative's phone — ✅
+#### 7b. Personal contact details with a relative's phone — 🚀
 
 - **Now:** a « Coordonnées personnelles » card on `/profile` for every
   account: Prénom, Nom, Pseudo, Téléphone, and « Personne à contacter » (name +
@@ -167,7 +173,7 @@ proved, how to check it on production, and what is still open.
 - **Open:** whether the relative's phone should also reach the carrier on a
   job — asked above.
 
-#### 8. « Détails » not mandatory — ✅
+#### 8. « Détails » not mandatory — 🚀
 
 - **Was:** required, 5 characters minimum, in the form *and* the API (its error
   key did not even exist in the translations).
@@ -178,7 +184,7 @@ proved, how to check it on production, and what is still open.
 - **Check on prod:** `/create` → Quoi: « Détails » has no asterisk; publish
   without it.
 
-#### 9. The two « Détails » → « Détails – conditions d'accès » — ✅
+#### 9. The two « Détails » → « Détails – conditions d'accès » — 🚀
 
 - **Now:** the pickup and delivery notes (the two fields that come as a pair,
   decision B) are « Détails – conditions d'accès (facultatif) », with a
@@ -188,7 +194,7 @@ proved, how to check it on production, and what is still open.
 - **Proved:** Chromium on both drafts: both labels, the saved text intact.
 - **Check on prod:** `/create` → Où.
 
-#### 10. Bottom titles cut on iPad — ✅
+#### 10. Bottom titles cut on iPad — 🚀
 
 - **Cause, reproduced:** the three bottom bars were 88px tall *including* the
   iPad's home-indicator space. In Chromium with a 20px inset emulated, every
@@ -246,11 +252,16 @@ adversarial verification pass — treat their detail as slightly less certain.
 Work that needs a human hand outside the codebase. Add to this list rather
 than leaving it in a chat message.
 
-- [ ] **Run Actions → "Migrate database" for `0038_user_identity_contact`
-      before 2.63.0 deploys** — from the branch `release/2.63.0`, environment
-      `production`, confirm `migrate` (change « Use workflow from » away from
-      `main`). New columns and a new table only; the 2.63.0 code reads
-      `user.first_name` in every session, so `main` must not move first.
+- [x] ~~Run Actions → "Migrate database" for `0038_user_identity_contact`
+      before 2.63.0 deploys~~ — **done 2026-10-15**, run `38762150901`,
+      dispatched on `release/2.63.0` (commit `e9550c6`) before `main` moved.
+      Confirmed read-only through `mirror_readonly`: 38 journal rows, newest
+      `1788170400000` (`0038`); `user.first_name` / `last_name` / `alias`,
+      `user_contact_details` and its foreign key exist. `main` was then
+      fast-forwarded to `e9550c6`; the production deploy went Ready and
+      `/api/public/changelog` reads 2.63.0. (The release branch's *preview*
+      deploy failed on the repo's own "preview must not reach the production
+      database" guard, exactly as 2.62.0's did — not a code failure.)
 - [ ] **Check the two Stripe account ids in production.** Before 2.63.0 any
       signed-in account could write `stripeAccountId` / `stripeAccountStatus` /
       `isVerified` on itself through `update-user`. A count on 2026-10-15
