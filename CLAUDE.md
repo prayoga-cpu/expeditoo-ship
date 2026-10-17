@@ -222,7 +222,7 @@ without an `sk_live_` key, so an accept there takes real money.
 Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before shipping.
 
 **Gates — all green.** `npx tsc --noEmit` 0 errors · `pnpm lint` 0 errors ·
-2,855 unit tests pass (2.64.0) · `pnpm build` succeeds.
+2,864 unit tests pass (2.64.1) · `pnpm build` succeeds.
 
 **Done**
 - Schema remodelled to the transport model; one clean initial migration
@@ -658,6 +658,10 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
   /api/expedion/me/profile`** is where the Flutter app keeps names, phone and
   address instead of Airtable USERS. Airtable and n8n still run the client's
   *current* Expedion app — do not switch them off before the new one ships.
+  Since 2.64.1 the webhook also marks an Expedion quote paid from
+  `payment_intent.succeeded` (`metadata.recordID`, exact accepted price), so
+  the new app needs neither n8n nor the browser redirect — provided its own
+  Stripe key is this account's live one (STATUS → Operator to-do).
   `launch_readiness_spec.md`
 
 **Not done**

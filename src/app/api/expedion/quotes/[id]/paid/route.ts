@@ -9,11 +9,12 @@
  * no caller at all, so the column was never written, the auto-escalation cron
  * swept nothing on real data, and only admin-forced escalation worked.
  *
- * Payment is reported rather than observed because EXPEDITOO does not take
- * the client's money — `expedion_quotes` carries no Stripe payment intent or
- * session, so the Stripe webhook has no way to recognise a quote. Expedion
- * settles on its own side and tells us. If EXPEDITOO ever takes the payment
- * directly, this becomes a webhook branch and the route can go.
+ * Expedion takes the client's money on its own side and reports it here when
+ * the client's browser comes back from Checkout. Since 2.64.1 the Stripe
+ * webhook also observes it — the intent carries the quote id as `recordID` —
+ * so a client who closes the tab before the redirect is still recorded paid
+ * (`expedionService.recordStripePayment`, launch_readiness_spec.md §F). Both
+ * paths reach `markPaid`, which is idempotent.
  *
  * Admin-guarded: "this has been paid" is a privileged assertion, and a client
  * must not be able to declare their own quote paid and pull a driver onto an

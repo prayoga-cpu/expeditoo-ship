@@ -260,10 +260,31 @@ than leaving it in a chat message.
       `stripe_webhook_heartbeat` exist. `main` was then fast-forwarded to
       `53031e9`; the production deploy went Ready and `/api/public/changelog`
       reads 2.64.0.
-- [ ] **Push the Expedion app** — two commits sit on `main` in
-      `expedion_encheres`, not yet on GitHub (`git push origin main` there;
-      its Vercel project deploys on push). The harness refused the push as a
-      production deploy.
+- [x] ~~Push the Expedion app~~ — **done 2026-10-17** by the
+      `expedion_encheres` session: `40534e7` and `91da1a6` on GitHub, then
+      `016bbcc` (tests only; the Flutter suite is 202/202), and the
+      expedion-encheres production deploy went Ready. Checked signed out: the
+      live `main.dart.js` calls `/api/expedion/me/profile`, `/photos` and
+      `/confirm` and names no Airtable host; every `/api/expedion/*` and
+      `/api/auth/*` route it calls answers a preflight from
+      `https://expedion-encheres.vercel.app` and 401s signed out; the payment
+      functions reach this app with their admin key.
+- [ ] **Push `09129fd` in `expedion_encheres`** (the last Airtable code,
+      2.64.1). Committed on `main` and verified by both sessions (analyze 0
+      errors, tests 202/202, `node --check` on the functions), but not pushed:
+      both harnesses refuse it as a production deploy. Note that its Firebase
+      `stripeWebhook` edit reaches Firebase only with `firebase deploy --only
+      functions` — a git push does not deploy it, and since no Stripe
+      destination points at that function it can also simply stay as it is.
+- [ ] **Confirm the Expedion app's Stripe key is this account's live key.**
+      `STRIPE_SECRET_KEY` on the expedion-encheres Vercel project was set on
+      2026-08-21 and never changed; the only key an agent could copy then was
+      the `sk_test_` one. If it is a test key — or another account's — Expedion
+      clients are not charged real money, and their `payment_intent.succeeded`
+      never reaches the `expeditoo-ship-five` webhook, so 2.64.1's webhook path
+      never fires. Nobody here can read the value: re-set it in Vercel
+      (Sensitive) to the same `sk_live_` this project uses, then redeploy
+      expedion-encheres.
 - [ ] **Complete Admin → Paramètres → « Informations de l'entreprise »**:
       production's variables already supply the legal name, form, office,
       SIRET, RCS and VAT number (read live from `/api/public/company` after
@@ -570,8 +591,10 @@ than leaving it in a chat message.
 - [ ] **Create the local dev bucket** `expeditoo-dev` in R2, or point
       `R2_BUCKET_NAME` in `.env.local` at a bucket that exists — uploads fail
       locally until then.
-- [x] ~~Set `INVOICE_VAT_RATE`~~ — **set to `0` on 2026-09-13 (2.40.3), provisional**,
-      on the client's instruction. Revisit if the company is VAT-liable (`20`).
+- [x] ~~Set `INVOICE_VAT_RATE`~~ — **set to `0` on 2026-09-13 (2.40.3), and
+      confirmed by the owner on 2026-10-17** (« keep it 0 %, good to go for
+      now »): documents print « TVA non applicable, art. 293 B du CGI ».
+      Revisit only if the company becomes VAT-liable (`20`).
       Still empty: `INVOICE_ISSUER_CAPITAL`, from the Kbis.
 - [ ] **URGENT — roll the live Stripe secret key.** An `sk_live_…` key was pasted
       into a chat transcript on 2026-09-10 and must be treated as compromised: it
@@ -641,6 +664,77 @@ than leaving it in a chat message.
       after approval (the 2.61.0 entry, "What was wrong" item 4). To restore them, open
       `/admin/users`, then the roles dialog for that account, and add both.
       Until then its application page says driver access is off.
+
+---
+
+## ✅ 2026-10-17 — Expedion Payments Recorded by the Webhook, and No Airtable or n8n Left in the New App (2.64.1)
+
+_« 1. the vat keep it 0%, confirm and good to go for now 2. everything on the
+expedion side is on progress 3. for expedion make sure everything is connected
+and remove dependant on the airtable/n8n »_
+
+Spec: `docs/specs/launch_readiness_spec.md` §F.
+
+### What the audit found
+
+- **Every path the Expedion app calls exists here.** All 17 API paths in
+  `expedion_encheres` (`lib/`, `api/`, `tools/`) were matched against
+  `src/app/api` routes; the two that did not match literally are prefixes the
+  app appends an id to (`/api/expedion/files/<id>`). Production's CORS answers
+  a preflight from `https://expedion-encheres.vercel.app` with a matching
+  allow-origin.
+- **One flow still leaned on n8n.** Expedion's Checkout stamps the quote id on
+  the payment intent (`metadata.recordID`/`devisId`), but this app's webhook
+  handled `payment_intent.succeeded` only for its own charges
+  (`transfer_group` set) and ignored the rest. So a quote was recorded paid
+  only if the client's browser returned to `/success` and `confirm-payment`
+  posted `/paid`; a closed tab was caught only by the n8n automations of the
+  client's current app.
+- **Airtable remnants in the Expedion repo:** the Firebase `stripeWebhook`
+  still PATCHed Airtable (dead: no Stripe destination points at it — the
+  account's others are n8n), and the generated `UsersRecord` still carried
+  `AirtableUserID`.
+
+### What changed
+
+- `stripeService.handleWebhook`: an intent without `transfer_group` that names
+  a quote goes to `expedionService.recordStripePayment`, which marks the quote
+  paid through `markPaid` (idempotent with the browser's report) only when
+  `amount_received` equals `acceptedPriceCents`; an unknown id, a different
+  amount (recorded as a quote event) and an unpayable quote return an outcome
+  and never throw, so Stripe does not retry them. Imported quotes have random
+  ids (`nanoid`), so a payment from the client's current app — which names an
+  Airtable or Firestore id — cannot match one and pull an old-app job onto the
+  board. The `/paid` route's header, which said the webhook could not
+  recognise a quote, is corrected.
+- `expedion_encheres` `09129fd` (committed, awaiting the owner's push): the
+  Airtable step of the Firebase webhook and the `AirtableUserID` field
+  removed; `INTEGRATION.md` §13 maps every flow to its endpoint. `flutter
+  analyze` 0 errors, `flutter test` 202/202, re-checked by the
+  `expedion_encheres` session.
+- VAT 0 % confirmed by the owner (Operator to-do updated).
+- The Expedion push recorded as done by the `expedion_encheres` session, with
+  its checks (Operator to-do).
+
+### Verification
+
+- `npx tsc --noEmit` 0 errors · `pnpm lint` 0 errors · `pnpm test`
+  2,864 passed in 215 files · `pnpm changelog:check` ✓.
+- New tests: `recordStripePayment` 5 (exact price marks with the intent as
+  reference; unknown id writes nothing; different amount writes an event and
+  does not settle; unpayable left alone; already paid is a no-op), webhook
+  routing 4 (quote id → Expedion, not payments; `devisId` fallback;
+  `transfer_group` wins; neither → nothing).
+
+### Known limits
+
+- **Only as good as the Expedion app's Stripe key.** If expedion-encheres
+  still holds the `sk_test_` key it was given on 2026-08-21 (or another
+  account's), its intents never reach this live webhook and the new path
+  never fires — nor are its clients charged real money. Raised by the
+  `expedion_encheres` session; Operator to-do.
+- Not exercised against a real Expedion payment: the branch is proven by unit
+  tests and by reading `api/_payment_core.js`, whose metadata it reads.
 
 ---
 

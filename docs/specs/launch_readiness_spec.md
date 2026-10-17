@@ -1,6 +1,6 @@
 # Launch readiness — spec
 
-Status: **current** (2.64.0). Plan: `docs/plans/plan_launch_readiness.md`.
+Status: **current** (2.64.0, §F 2.64.1). Plan: `docs/plans/plan_launch_readiness.md`.
 
 Four things the client needs before real money moves: documents that can be
 factures, proof that Stripe is wired, a way to pay drivers they can follow, and
@@ -186,6 +186,39 @@ file.
 
 ---
 
+## F. Expedion payments observed by the webhook (2.64.1)
+
+The Expedion app takes the client's money through its own Stripe Checkout
+(`expedion_encheres/api/_payment_core.js`), which stamps the quote id on the
+payment intent as `metadata.recordID` and `metadata.devisId`. It reports the
+payment through `POST /api/expedion/quotes/:id/paid` when the browser returns
+to `/success`. A client who closed the tab first was recorded only by the n8n
+automations of the client's current app.
+
+`stripeService.handleWebhook`, on `payment_intent.succeeded`:
+
+1. `transfer_group` set → this platform's own charge →
+   `paymentsService.captureByIntent`, unchanged.
+2. Otherwise, `metadata.recordID` (else `devisId`) present →
+   `expedionService.recordStripePayment({ quoteId, intentId, amountCents:
+   amount_received })`:
+   - no quote with that id → `unknown_quote`, nothing written (payments of the
+     client's current app carry Airtable/Firestore ids; imported quotes have
+     random ids, so they cannot match);
+   - `amountCents !== quote.acceptedPriceCents` → `amount_mismatch`: an event
+     on the quote for an operator, the quote is **not** settled;
+   - otherwise `markPaid(id, { reference: intentId, method:
+     'stripe_webhook', via: 'stripe-webhook' })` → `marked` (idempotent with
+     the browser's report);
+   - `INVALID_TRANSITION` (a reopened or cancelled quote) → `not_payable`,
+     nothing written.
+   None of these throws, so Stripe does not retry them; a database failure
+   still throws and is retried.
+3. Neither → nothing.
+
+No Stripe setting changes: the endpoint already receives
+`payment_intent.succeeded`.
+
 ## Test coverage required
 
 - Company identity service: permissions (admin, finance, refused before I/O);
@@ -209,3 +242,8 @@ file.
 - Panels: every key resolves in FR and EN; missing list; host default; field
   error under the field; error states; old-address label.
 - Withdrawal queue: destination shown; warning without an IBAN.
+- Expedion payment via webhook (§F): marked on the exact price, with the
+  intent as reference; unknown quote writes nothing; a different amount writes
+  an event and does not settle; an unpayable quote is left alone without
+  throwing; already paid is a no-op; the webhook routes by `transfer_group`
+  first, reads `recordID` then `devisId`, and ignores an intent with neither.

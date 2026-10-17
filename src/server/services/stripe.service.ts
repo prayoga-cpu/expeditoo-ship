@@ -1,5 +1,6 @@
 import { db } from "@/db";
 import { paymentsService } from "@/server/services/payments.service";
+import { expedionService } from "@/server/services/expedion.service";
 import { user } from "@/db/schema/users";
 import { stripe } from "@/lib/stripe";
 import { stripeWebhookHeartbeatDal } from "@/server/dal/stripe-webhook-heartbeat.dal";
@@ -284,6 +285,24 @@ export const stripeService = {
           // at delivery, and `settleDelivery` is the only writer
           // (payout_safety_spec.md §1).
           await paymentsService.captureByIntent(paymentIntent.id);
+          break;
+        }
+
+        // A charge the Expedion app took for a quote: its Checkout session
+        // stamps the quote id on the intent (`recordID`, `devisId`).
+        const quoteId =
+          paymentIntent.metadata?.recordID || paymentIntent.metadata?.devisId;
+        if (quoteId) {
+          const outcome = await expedionService.recordStripePayment({
+            quoteId,
+            intentId: paymentIntent.id,
+            amountCents: paymentIntent.amount_received,
+          });
+          if (outcome !== "marked") {
+            console.log(
+              JSON.stringify({ tag: "stripe-webhook", expedion: outcome, intent: paymentIntent.id })
+            );
+          }
         }
         break;
       }

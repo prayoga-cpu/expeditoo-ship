@@ -905,6 +905,60 @@ export const expedionService = {
     return updated;
   },
 
+  /**
+   * A Stripe payment the Expedion app took for a quote, as the webhook sees it
+   * (launch_readiness_spec.md §F).
+   *
+   * The app also reports it through `POST /quotes/:id/paid` when the client's
+   * browser comes back from Checkout; this is the path that does not depend on
+   * the browser — or on the n8n automations the client's current app uses.
+   * Both land on `markPaid`, which is idempotent.
+   *
+   * Never throws for an event it should not act on, so Stripe does not retry
+   * it for days: a payment from the client's current app names an Airtable or
+   * Firestore id no quote here has; a different amount is recorded on the quote
+   * for an operator rather than settled; a quote that can no longer be paid
+   * (reopened, cancelled) is left as it is.
+   */
+  async recordStripePayment(input: {
+    quoteId: string;
+    intentId: string;
+    amountCents: number;
+  }): Promise<"marked" | "unknown_quote" | "amount_mismatch" | "not_payable"> {
+    const quote = await expedionDal.getById(input.quoteId);
+    if (!quote) return "unknown_quote";
+
+    if (quote.acceptedPriceCents !== input.amountCents) {
+      await expedionDal.addEvent({
+        id: nanoid(),
+        quoteId: quote.id,
+        status: quote.status,
+        actor: "system",
+        message: "Paiement Stripe reçu pour un montant différent du prix accepté — à vérifier",
+        metadata: {
+          intentId: input.intentId,
+          amountCents: input.amountCents,
+          acceptedPriceCents: quote.acceptedPriceCents,
+        },
+      });
+      return "amount_mismatch";
+    }
+
+    try {
+      await this.markPaid(quote.id, {
+        reference: input.intentId,
+        method: "stripe_webhook",
+        via: "stripe-webhook",
+      });
+      return "marked";
+    } catch (error) {
+      if (error instanceof ExpedionError && error.code === "INVALID_TRANSITION") {
+        return "not_payable";
+      }
+      throw error;
+    }
+  },
+
   async adminUpdate(id: string, input: AdminUpdateExpedionQuoteInput) {
     const quote = await expedionDal.getById(id);
     if (!quote) throw err("QUOTE_NOT_FOUND", 404);

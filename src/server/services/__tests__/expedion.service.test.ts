@@ -546,6 +546,94 @@ describe('expedionService.markPaid — a payment is recorded whole or not at all
     });
 });
 
+describe('expedionService.recordStripePayment — the webhook settles what the browser may not report', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        updateMock.mockImplementation(
+            async (_id, patch) => ({ ...paidQuote(), ...patch }) as never
+        );
+    });
+
+    const accepted = () =>
+        paidQuote({ status: 'accepted', paymentStatus: 'unpaid' }) as never;
+
+    it('marks an accepted quote paid when Stripe took exactly its accepted price', async () => {
+        getByIdMock.mockResolvedValue(accepted());
+
+        const outcome = await expedionService.recordStripePayment({
+            quoteId: 'q_1',
+            intentId: 'pi_1',
+            amountCents: 10_000,
+        });
+
+        expect(outcome).toBe('marked');
+        expect(lastPatch()).toMatchObject({ paymentStatus: 'paid', status: 'paid' });
+        expect(vi.mocked(expedionDal.addEvent).mock.calls.at(-1)![0].metadata).toMatchObject({
+            reference: 'pi_1',
+            method: 'stripe_webhook',
+        });
+    });
+
+    it('ignores a payment naming no quote here — the client\'s current app uses Airtable ids', async () => {
+        getByIdMock.mockResolvedValue(undefined as never);
+
+        expect(
+            await expedionService.recordStripePayment({
+                quoteId: 'recAbc123',
+                intentId: 'pi_1',
+                amountCents: 10_000,
+            })
+        ).toBe('unknown_quote');
+        expect(updateMock).not.toHaveBeenCalled();
+        expect(expedionDal.addEvent).not.toHaveBeenCalled();
+    });
+
+    it('records a different amount for an operator instead of settling it', async () => {
+        getByIdMock.mockResolvedValue(accepted());
+
+        expect(
+            await expedionService.recordStripePayment({
+                quoteId: 'q_1',
+                intentId: 'pi_1',
+                amountCents: 9_000,
+            })
+        ).toBe('amount_mismatch');
+        expect(updateMock).not.toHaveBeenCalled();
+        expect(vi.mocked(expedionDal.addEvent).mock.calls.at(-1)![0].metadata).toMatchObject({
+            amountCents: 9_000,
+            acceptedPriceCents: 10_000,
+        });
+    });
+
+    it('leaves a quote that can no longer be paid as it is, without throwing', async () => {
+        getByIdMock.mockResolvedValue(
+            paidQuote({ status: 'quoted', paymentStatus: 'unpaid' }) as never
+        );
+
+        expect(
+            await expedionService.recordStripePayment({
+                quoteId: 'q_1',
+                intentId: 'pi_1',
+                amountCents: 10_000,
+            })
+        ).toBe('not_payable');
+        expect(updateMock).not.toHaveBeenCalled();
+    });
+
+    it('is a no-op on a quote the browser already reported paid', async () => {
+        getByIdMock.mockResolvedValue(paidQuote() as never);
+
+        expect(
+            await expedionService.recordStripePayment({
+                quoteId: 'q_1',
+                intentId: 'pi_1',
+                amountCents: 10_000,
+            })
+        ).toBe('marked');
+        expect(updateMock).not.toHaveBeenCalled();
+    });
+});
+
 describe('expedionService.autoPrice — a settled price is not the engine\'s to revise', () => {
     beforeEach(() => {
         vi.clearAllMocks();

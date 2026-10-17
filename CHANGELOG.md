@@ -14,6 +14,19 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.64.1] - 2026-10-17 · fix
+
+- **An Expedion client who pays and closes the page is still recorded as
+  paid.** The payment used to count only once the client's browser came back
+  to the confirmation page; a client who closed the tab first stayed « en
+  attente de paiement » here. Stripe now tells this platform directly, and the
+  quote moves to paid as long as the amount is exactly the accepted price. A
+  different amount is flagged on the quote for an operator to check.
+- **The new Expedion app no longer depends on Airtable or n8n** for anything:
+  sign-up, profile, quotes, tracking, support and payment all go through this
+  platform. The client's current Expedion app keeps using them until the new
+  one replaces it.
+
 ## [2.64.0] - 2026-10-17 · feat
 
 - **Your company details, typed once, in the admin.** Admin → Paramètres has
