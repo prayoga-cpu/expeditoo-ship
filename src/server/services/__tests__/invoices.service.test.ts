@@ -26,6 +26,10 @@ vi.mock("@/server/dal/addresses.dal", () => ({
   addressesDal: { getDefaultByUserId: vi.fn() },
 }));
 vi.mock("@/server/dal/users.dal", () => ({ getUserById: vi.fn() }));
+// No saved identity: these cases configure the issuer through the variables.
+vi.mock("@/server/dal/company-identity.dal", () => ({
+  companyIdentityDal: { get: vi.fn().mockResolvedValue(undefined) },
+}));
 vi.mock("@/server/services/notifications.service", () => ({
   notificationsService: { createNotification: vi.fn().mockResolvedValue({}) },
 }));
@@ -366,6 +370,8 @@ describe("getUserInvoices", () => {
   // itself, and nothing the DAL joined to it leaves the server.
 
   const ISSUER = {
+    // A facture names the legal entity, not the brand (launch_readiness_spec.md §A.3).
+    INVOICE_ISSUER_NAME: "Atout Global Services",
     INVOICE_ISSUER_LEGAL_FORM: "SAS",
     INVOICE_ISSUER_ADDRESS: "1 rue de Rivoli, 75001 Paris",
     INVOICE_ISSUER_SIRET: "12345678900012",

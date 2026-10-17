@@ -2,6 +2,7 @@ import { db } from "@/db";
 import { paymentsService } from "@/server/services/payments.service";
 import { user } from "@/db/schema/users";
 import { stripe } from "@/lib/stripe";
+import { stripeWebhookHeartbeatDal } from "@/server/dal/stripe-webhook-heartbeat.dal";
 import { eq } from "drizzle-orm";
 import type { Stripe } from "stripe";
 
@@ -75,6 +76,33 @@ async function throughStripe<T>(
     }
 
     throw error;
+  }
+}
+
+/**
+ * The events `handleWebhook` acts on. The admin's Stripe check reads this to
+ * say whether the endpoint in Stripe is subscribed to them
+ * (launch_readiness_spec.md §B.2), so a new `case` below belongs here too.
+ */
+export const HANDLED_STRIPE_EVENTS = [
+  "account.updated",
+  "payment_intent.succeeded",
+] as const;
+
+/**
+ * Stamps the last verified event so the admin can see Stripe reaching this
+ * deployment (§B.4). Best effort: a failed stamp must never make Stripe retry
+ * an event that was handled.
+ */
+async function recordHeartbeat(event: Stripe.Event) {
+  try {
+    await stripeWebhookHeartbeatDal.record({
+      type: event.type,
+      livemode: event.livemode,
+      at: new Date(),
+    });
+  } catch (error) {
+    console.error("[stripe-webhook] heartbeat not recorded", error);
   }
 }
 
@@ -219,6 +247,8 @@ export const stripeService = {
         failure instanceof Error ? failure.message : String(failure);
       throw new Error(`Webhook signature verification failed: ${reason}`);
     }
+
+    await recordHeartbeat(event);
 
     switch (event.type) {
       // 1. Account Updated (Onboarding status)

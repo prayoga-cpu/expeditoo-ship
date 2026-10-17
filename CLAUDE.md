@@ -222,7 +222,7 @@ without an `sk_live_` key, so an accept there takes real money.
 Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before shipping.
 
 **Gates — all green.** `npx tsc --noEmit` 0 errors · `pnpm lint` 0 errors ·
-2,789 unit tests pass (2.63.0) · `pnpm build` succeeds.
+2,855 unit tests pass (2.64.0) · `pnpm build` succeeds.
 
 **Done**
 - Schema remodelled to the transport model; one clean initial migration
@@ -643,6 +643,22 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
   carrier tab, « J'ai une demande » moved to `/help`, « Détails » is optional,
   the bottom bars are `88px + env(safe-area-inset-bottom)` tall.
   `client_feedback_2026_10_spec.md`
+- **Launch readiness** (2.64.0, the client's « Stripe and informations of
+  payment (Airtable or other)? »). `/admin/settings` now carries three cards.
+  **Company details** live in `company_identity` (one row, admin/finance) and
+  `invoiceIssuer(stored)` reads them over the `INVOICE_ISSUER_*` variables
+  field by field — a document is a *Facture* only with a **stated** legal name
+  plus form, office, SIRET, RCS and a VAT position; `/legal-notice` fills from
+  `GET /api/public/company`. The **Stripe check** (`GET
+  /api/admin/stripe-status`) reports key modes (never keys), the account, the
+  webhook endpoints by kind, the last verified event
+  (`stripe_webhook_heartbeat`, stamped by `handleWebhook`) and the first
+  non-`pi_mock_` charge. **Payouts** stay request → approve → paid by hand,
+  and the queue now shows IBAN/BIC last four. **`GET|PUT
+  /api/expedion/me/profile`** is where the Flutter app keeps names, phone and
+  address instead of Airtable USERS. Airtable and n8n still run the client's
+  *current* Expedion app — do not switch them off before the new one ships.
+  `launch_readiness_spec.md`
 
 **Not done**
 - **`EXPEDION_APP_ORIGINS` is set in Vercel Production but not in `.env.local`**,
@@ -660,7 +676,8 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
   photo, so a fontless deployment loses the convenience, not the evidence.
   `TODO(EXPEDITOO-TESTING)` in `photo-stamp.service.ts`.
 - **Real Stripe charging is live in production and has never been exercised
-  there.** `MOCK_PAYMENTS` is unset in Vercel, so an accept takes real money
+  there** — Admin → Paramètres → « Paiements Stripe » now says so from inside
+  production, and turns green after the first real charge. `MOCK_PAYMENTS` is unset in Vercel, so an accept takes real money
   through the accept dialog — verified against Stripe **test** mode only (3-D
   Secure included). As of 2026-10-01 production's only payment rows are
   beta-seed mocks, so the first real accept is the first live charge (STATUS →

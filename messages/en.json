@@ -1977,42 +1977,50 @@
         {
           "label": "Publisher",
           "value": "TO BE SUPPLIED — registered company name",
-          "pending": true
+          "pending": true,
+          "field": "legalName"
         },
         {
           "label": "Legal form",
           "value": "TO BE SUPPLIED — e.g. SAS",
-          "pending": true
+          "pending": true,
+          "field": "legalForm"
         },
         {
           "label": "Share capital",
           "value": "TO BE SUPPLIED",
-          "pending": true
+          "pending": true,
+          "field": "capital"
         },
         {
           "label": "Registered office",
           "value": "TO BE SUPPLIED — full postal address",
-          "pending": true
+          "pending": true,
+          "field": "address"
         },
         {
           "label": "RCS registration",
           "value": "TO BE SUPPLIED — city and number",
-          "pending": true
+          "pending": true,
+          "field": "rcs"
         },
         {
           "label": "SIRET",
           "value": "TO BE SUPPLIED",
-          "pending": true
+          "pending": true,
+          "field": "siret"
         },
         {
           "label": "VAT number",
           "value": "TO BE SUPPLIED",
-          "pending": true
+          "pending": true,
+          "field": "vatNumber"
         },
         {
           "label": "Publication director",
           "value": "TO BE SUPPLIED — name and role",
-          "pending": true
+          "pending": true,
+          "field": "publicationDirector"
         },
         {
           "label": "Contact",
@@ -2021,7 +2029,8 @@
         {
           "label": "Host",
           "value": "TO BE SUPPLIED — host name and postal address",
-          "pending": true
+          "pending": true,
+          "field": "host"
         }
       ],
       "sections": [
@@ -3780,7 +3789,9 @@
       "description": "The {amount} goes back to {name}'s balance, except for any job refunded or cancelled since, and can be requested again. Only refuse if the transfer was never sent: otherwise the same deliveries would be paid twice.",
       "keep": "Keep it approved",
       "confirm": "Refuse — transfer not sent"
-    }
+    },
+    "payTo": "Transfer to IBAN •••• {iban} · BIC •••• {bic} — check it against the RIB in the driver’s file.",
+    "payToMissing": "No IBAN on file: ask the driver for it before any transfer."
   },
   "platformSettings": {
     "title": "Settings",
@@ -3791,7 +3802,124 @@
     "saving": "Saving…",
     "saved": "Settings saved",
     "saveFailed": "Could not save. Please try again.",
-    "lastChanged": "Last changed {date}"
+    "lastChanged": "Last changed {date}",
+    "loadFailed": "Could not load the fee.",
+    "retry": "Retry",
+    "company": {
+      "title": "Company details",
+      "subtitle": "Printed on every payment document and on the Legal notice page.",
+      "status": {
+        "invoice": "Complete: your payment documents are invoices.",
+        "receipt": "Incomplete: your payment documents stay payment receipts (“not an invoice”).",
+        "missing": "Missing: {fields}."
+      },
+      "save": "Save",
+      "saving": "Saving…",
+      "saved": "Company details saved",
+      "saveFailed": "Could not save. Check the highlighted fields.",
+      "lastChanged": "Last changed {date}",
+      "loadFailed": "Could not load the company details.",
+      "loadFailedHint": "The server did not answer. Try again in a moment.",
+      "retry": "Retry",
+      "errors": {
+        "SIRET_14_DIGITS": "A SIRET has 14 digits.",
+        "VAT_NUMBER_FORMAT": "Expected two letters then digits, e.g. FR12345678901.",
+        "VAT_RATE_RANGE": "A percentage between 0 and 100.",
+        "EMAIL_FORMAT": "Invalid email address.",
+        "invalid": "Invalid value."
+      },
+      "fields": {
+        "legalName": {
+          "label": "Legal name",
+          "placeholder": "e.g. Expeditoo SAS"
+        },
+        "legalForm": {
+          "label": "Legal form",
+          "placeholder": "e.g. SAS, SARL, EI"
+        },
+        "capital": {
+          "label": "Share capital",
+          "placeholder": "e.g. €1,000",
+          "hint": "Leave empty for a sole trader."
+        },
+        "address": {
+          "label": "Registered office",
+          "placeholder": "Number, street, postcode, city"
+        },
+        "siret": {
+          "label": "SIRET",
+          "placeholder": "14 digits"
+        },
+        "rcs": {
+          "label": "RCS registration",
+          "placeholder": "e.g. RCS Nanterre 123 456 789"
+        },
+        "vatNumber": {
+          "label": "EU VAT number",
+          "placeholder": "e.g. FR12345678901",
+          "hint": "Required only if you charge VAT."
+        },
+        "vatRate": {
+          "label": "VAT rate (%)",
+          "placeholder": "20",
+          "hint": "0 = VAT not applicable, art. 293 B of the CGI."
+        },
+        "billingEmail": {
+          "label": "Billing email",
+          "placeholder": "billing@example.com",
+          "hint": "Printed on receipts so a client can ask for an invoice."
+        },
+        "publicationDirector": {
+          "label": "Publication director",
+          "placeholder": "First Last, President",
+          "hint": "Shown on the Legal notice page."
+        },
+        "host": {
+          "label": "Hosting provider",
+          "placeholder": "Company name and postal address",
+          "hint": "Shown on the Legal notice page."
+        }
+      }
+    },
+    "stripe": {
+      "title": "Stripe payments",
+      "subtitle": "Checked live from this server. Nothing is changed.",
+      "refresh": "Refresh",
+      "loadFailed": "Could not check Stripe.",
+      "loadFailedHint": "The server did not answer. Try again in a moment.",
+      "checks": {
+        "liveKeys": "Live-mode keys",
+        "mockOff": "Real payments switched on",
+        "chargesEnabled": "Stripe account can take payments",
+        "webhookEndpoint": "Stripe webhook to this app",
+        "webhookReceived": "Stripe event received",
+        "firstRealPayment": "First real payment"
+      },
+      "mode": {
+        "live": "live",
+        "test": "test",
+        "missing": "missing",
+        "unknown": "unknown"
+      },
+      "detail": {
+        "keys": "Secret key: {secret} · publishable key: {publishable}",
+        "mockOn": "MOCK_PAYMENTS is on: no card is charged.",
+        "mockOff": "Cards are charged for real.",
+        "account": "{name}",
+        "unreachable": "Stripe did not answer: {error}",
+        "endpoint": "{url} ({status})",
+        "noEndpoint": "No enabled webhook points at this app with the events it needs.",
+        "lastEvent": "{type}, {date} ({mode} mode)",
+        "noEvent": "None yet. In Stripe → Developers → Webhooks, send a test event.",
+        "payments": "{count, plural, one {# real payment} other {# real payments}}, the first on {date}",
+        "noPayment": "None yet. Accept an offer with a real card, then cancel the job to be refunded."
+      },
+      "others": {
+        "title": "Other webhooks on this Stripe account",
+        "hint": "They do not belong to this app, e.g. the n8n automations of the current Expedion app. Do not disable them while it still uses them.",
+        "otherHost": "This app’s path on another address: an old URL?"
+      }
+    }
   },
   "confirm": {
     "title": {

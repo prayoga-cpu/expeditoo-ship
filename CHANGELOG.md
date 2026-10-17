@@ -14,6 +14,30 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.64.0] - 2026-10-17 · feat
+
+- **Your company details, typed once, in the admin.** Admin → Paramètres has
+  a new « Informations de l'entreprise » card: legal name, legal form,
+  capital, registered office, SIRET, RCS, VAT number and rate, billing email,
+  publication director and host. Once the legal fields are filled, every
+  payment document becomes a **Facture** instead of a « reçu de paiement »,
+  and the card says exactly which fields are still missing until then. The
+  Mentions légales page fills itself from the same details.
+- **A Stripe check you can read without a developer.** The same page shows
+  whether payments are ready to take real money: live keys, the Stripe
+  account allowed to collect, the webhook pointed at this app, the last
+  event Stripe sent, and the first real payment. It also lists the other
+  webhooks on the Stripe account, such as the current Expedion app's
+  automations, so nobody switches them off by mistake.
+- **Paying drivers: where the money goes.** Each payout request in Admin →
+  Retraits now shows the last digits of the driver's IBAN and BIC to check
+  against their RIB, or warns that they have not given one. Drivers still
+  ask for their balance from « Mes gains » and follow it from « Demandé » to
+  « Payé ».
+- **The Expedion app can keep its clients' details here.** Name, phone and
+  postal address now have a home in this platform, ready for the new
+  Expedion app to stop sending them to Airtable.
+
 ## [2.63.0] - 2026-10-15 · feat
 
 - **A flexible request takes offers until its last possible day.** A request

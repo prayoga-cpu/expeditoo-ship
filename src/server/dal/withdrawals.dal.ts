@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { payments, payouts } from "@/db/schema/payments";
 import { shipments } from "@/db/schema/shipments";
 import { user } from "@/db/schema/users";
+import { carriers } from "@/db/schema/carriers";
 import {
   withdrawals,
   type InsertWithdrawal,
@@ -139,6 +140,10 @@ export const withdrawalsDal = {
         carrierId: withdrawals.carrierId,
         carrierName: user.name,
         carrierEmail: user.email,
+        // Where the transfer goes: the last characters a driver typed, to
+        // check against the RIB in their file — never the full account.
+        ibanLast4: carriers.ibanLast4,
+        bicLast4: carriers.bicLast4,
         amountCents: withdrawals.amountCents,
         currency: withdrawals.currency,
         status: withdrawals.status,
@@ -150,6 +155,7 @@ export const withdrawalsDal = {
       })
       .from(withdrawals)
       .innerJoin(user, eq(user.id, withdrawals.carrierId))
+      .leftJoin(carriers, eq(carriers.userId, withdrawals.carrierId))
       .where(status ? eq(withdrawals.status, status) : undefined)
       .orderBy(withdrawals.createdAt);
   },

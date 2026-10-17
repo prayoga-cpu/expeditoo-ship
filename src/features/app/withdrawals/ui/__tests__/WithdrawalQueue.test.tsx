@@ -79,6 +79,8 @@ const row = (over: Partial<ReviewRow> = {}): ReviewRow => ({
   paidAt: null,
   carrierName: "Jean Dupont",
   carrierEmail: "jean@example.com",
+  ibanLast4: "0189",
+  bicLast4: "PPXXX",
   ...over,
 });
 
@@ -190,6 +192,19 @@ describe("WithdrawalQueue", () => {
     expect(
       screen.getByRole("button", { name: en.withdrawals.reject })
     ).toBeInTheDocument();
+  });
+
+  it("says where the transfer goes, and warns when the driver gave no account", async () => {
+    vi.mocked(withdrawalsApi.review).mockResolvedValue([
+      row(),
+      row({ id: "wd-2", ibanLast4: null, bicLast4: null }),
+    ]);
+    renderQueue();
+
+    expect(
+      await screen.findByText(/Transfer to IBAN •••• 0189 · BIC •••• PPXXX/)
+    ).toBeInTheDocument();
+    expect(screen.getByText(/No IBAN on file/)).toBeInTheDocument();
   });
 
   it("refuses a requested row at once — no transfer is made before approval", async () => {

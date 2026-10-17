@@ -15,8 +15,9 @@
  * exactly this reason. Filling the mentions légales promotes every document
  * issued from that moment, with no code change and nothing backdated.
  *
- * TODO(EXPEDITOO-LEGAL): set these in the deployment once the company's
- * registration and VAT position are known. See docs/specs/invoice_at_payment_spec.md §4.1.
+ * The identity is entered by an admin at /admin/settings and stored in
+ * `company_identity` (launch_readiness_spec.md §A); the `INVOICE_ISSUER_*`
+ * variables remain a per-field fallback. See docs/specs/invoice_at_payment_spec.md §4.1.
  */
 
 export interface InvoiceIssuer {
@@ -40,7 +41,7 @@ const trimmed = (value: string | undefined) => {
 };
 
 /** A rate only counts as stated when it parses; `""` is unset, `"0"` is exempt. */
-function readVatRate(raw: string | undefined): number | undefined {
+export function readVatRate(raw: string | undefined): number | undefined {
   const value = trimmed(raw);
   if (value === undefined) return undefined;
 
@@ -48,24 +49,50 @@ function readVatRate(raw: string | undefined): number | undefined {
   return Number.isFinite(rate) && rate >= 0 && rate <= 100 ? rate : undefined;
 }
 
+/** What an admin saved at /admin/settings — any field may be missing. */
+export interface StoredIssuer {
+  legalName?: string | null;
+  legalForm?: string | null;
+  capital?: string | null;
+  address?: string | null;
+  siret?: string | null;
+  rcs?: string | null;
+  vatNumber?: string | null;
+  vatRate?: string | null;
+  billingEmail?: string | null;
+}
+
+/** The saved value when there is one, else the deployment's variable. */
+const either = (saved: string | null | undefined, env: string | undefined) =>
+  trimmed(saved ?? undefined) ?? trimmed(env);
+
 /**
  * Read at call time, never at import time, so a test can set the identity and
  * the deployment can change it without a rebuild.
+ *
+ * `stored` is the `company_identity` row; each of its fields wins over the
+ * matching variable, and an empty one falls back to it. Without a row this is
+ * the environment alone, as it always was.
  */
-export function invoiceIssuer(): InvoiceIssuer {
-  const name = trimmed(process.env.INVOICE_ISSUER_NAME) ?? "Expeditoo";
-  const legalForm = trimmed(process.env.INVOICE_ISSUER_LEGAL_FORM);
-  const address = trimmed(process.env.INVOICE_ISSUER_ADDRESS);
-  const siret = trimmed(process.env.INVOICE_ISSUER_SIRET);
-  const rcs = trimmed(process.env.INVOICE_ISSUER_RCS);
-  const vatNumber = trimmed(process.env.INVOICE_ISSUER_VAT_NUMBER);
-  const vatRate = readVatRate(process.env.INVOICE_VAT_RATE);
+export function invoiceIssuer(stored?: StoredIssuer | null): InvoiceIssuer {
+  const env = process.env;
+  // The brand stands in for display, but a facture names the legal entity, so
+  // only a stated name counts toward completeness.
+  const statedName = either(stored?.legalName, env.INVOICE_ISSUER_NAME);
+  const name = statedName ?? "Expeditoo";
+  const legalForm = either(stored?.legalForm, env.INVOICE_ISSUER_LEGAL_FORM);
+  const address = either(stored?.address, env.INVOICE_ISSUER_ADDRESS);
+  const siret = either(stored?.siret, env.INVOICE_ISSUER_SIRET);
+  const rcs = either(stored?.rcs, env.INVOICE_ISSUER_RCS);
+  const vatNumber = either(stored?.vatNumber, env.INVOICE_ISSUER_VAT_NUMBER);
+  const vatRate = readVatRate(either(stored?.vatRate, env.INVOICE_VAT_RATE));
 
   // A business under the franchise en base has no VAT number, so requiring one
   // unconditionally would lock out precisely the issuers that are exempt. The
   // number is required only where VAT is actually charged.
   const isComplete = Boolean(
-    legalForm &&
+    statedName &&
+      legalForm &&
       address &&
       siret &&
       rcs &&
@@ -77,11 +104,13 @@ export function invoiceIssuer(): InvoiceIssuer {
     name,
     legalForm,
     address,
-    capital: trimmed(process.env.INVOICE_ISSUER_CAPITAL),
+    capital: either(stored?.capital, env.INVOICE_ISSUER_CAPITAL),
     siret,
     rcs,
     vatNumber,
-    email: trimmed(process.env.INVOICE_ISSUER_EMAIL) ?? "facturation@expeditoo.com",
+    email:
+      either(stored?.billingEmail, env.INVOICE_ISSUER_EMAIL) ??
+      "facturation@expeditoo.com",
     vatRate,
     isComplete,
   };

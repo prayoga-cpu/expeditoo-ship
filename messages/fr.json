@@ -1998,42 +1998,50 @@
         {
           "label": "Éditeur",
           "value": "À COMPLÉTER — dénomination sociale",
-          "pending": true
+          "pending": true,
+          "field": "legalName"
         },
         {
           "label": "Forme juridique",
           "value": "À COMPLÉTER — par ex. SAS",
-          "pending": true
+          "pending": true,
+          "field": "legalForm"
         },
         {
           "label": "Capital social",
           "value": "À COMPLÉTER",
-          "pending": true
+          "pending": true,
+          "field": "capital"
         },
         {
           "label": "Siège social",
           "value": "À COMPLÉTER — adresse postale complète",
-          "pending": true
+          "pending": true,
+          "field": "address"
         },
         {
           "label": "Immatriculation RCS",
           "value": "À COMPLÉTER — ville et numéro",
-          "pending": true
+          "pending": true,
+          "field": "rcs"
         },
         {
           "label": "SIRET",
           "value": "À COMPLÉTER",
-          "pending": true
+          "pending": true,
+          "field": "siret"
         },
         {
           "label": "Numéro de TVA",
           "value": "À COMPLÉTER",
-          "pending": true
+          "pending": true,
+          "field": "vatNumber"
         },
         {
           "label": "Directeur de la publication",
           "value": "À COMPLÉTER — nom et qualité",
-          "pending": true
+          "pending": true,
+          "field": "publicationDirector"
         },
         {
           "label": "Contact",
@@ -2042,7 +2050,8 @@
         {
           "label": "Hébergeur",
           "value": "À COMPLÉTER — raison sociale et adresse postale",
-          "pending": true
+          "pending": true,
+          "field": "host"
         }
       ],
       "sections": [
@@ -3780,7 +3789,9 @@
       "description": "Le montant de {amount} retourne dans le solde de {name}, hors courses remboursées ou annulées depuis, et pourra être redemandé. Ne refusez que si le virement n’a jamais été envoyé : sinon, les mêmes livraisons seraient payées deux fois.",
       "keep": "Laisser approuvé",
       "confirm": "Refuser — virement non envoyé"
-    }
+    },
+    "payTo": "Virement vers l’IBAN •••• {iban} · BIC •••• {bic} — vérifiez-le sur le RIB du dossier du chauffeur.",
+    "payToMissing": "Aucun IBAN renseigné : demandez-le au chauffeur avant tout virement."
   },
   "platformSettings": {
     "title": "Paramètres",
@@ -3791,7 +3802,124 @@
     "saving": "Enregistrement…",
     "saved": "Paramètres enregistrés",
     "saveFailed": "Impossible d'enregistrer. Veuillez réessayer.",
-    "lastChanged": "Dernière modification {date}"
+    "lastChanged": "Dernière modification {date}",
+    "loadFailed": "Impossible de charger les frais.",
+    "retry": "Réessayer",
+    "company": {
+      "title": "Informations de l'entreprise",
+      "subtitle": "Imprimées sur chaque document de paiement et sur la page Mentions légales.",
+      "status": {
+        "invoice": "Complet : vos documents de paiement sont des factures.",
+        "receipt": "Incomplet : vos documents de paiement restent des reçus de paiement (« ne vaut pas facture »).",
+        "missing": "Il manque : {fields}."
+      },
+      "save": "Enregistrer",
+      "saving": "Enregistrement…",
+      "saved": "Informations de l'entreprise enregistrées",
+      "saveFailed": "Impossible d'enregistrer. Vérifiez les champs signalés.",
+      "lastChanged": "Dernière modification {date}",
+      "loadFailed": "Impossible de charger les informations de l'entreprise.",
+      "loadFailedHint": "Le serveur n’a pas répondu. Réessayez dans un instant.",
+      "retry": "Réessayer",
+      "errors": {
+        "SIRET_14_DIGITS": "Un SIRET compte 14 chiffres.",
+        "VAT_NUMBER_FORMAT": "Format attendu : deux lettres puis des chiffres, par ex. FR12345678901.",
+        "VAT_RATE_RANGE": "Un pourcentage entre 0 et 100.",
+        "EMAIL_FORMAT": "Adresse e-mail invalide.",
+        "invalid": "Valeur invalide."
+      },
+      "fields": {
+        "legalName": {
+          "label": "Dénomination sociale",
+          "placeholder": "Ex. : Expeditoo SAS"
+        },
+        "legalForm": {
+          "label": "Forme juridique",
+          "placeholder": "Ex. : SAS, SARL, EI"
+        },
+        "capital": {
+          "label": "Capital social",
+          "placeholder": "Ex. : 1 000 €",
+          "hint": "Laisser vide pour une entreprise individuelle."
+        },
+        "address": {
+          "label": "Siège social",
+          "placeholder": "Numéro, rue, code postal, ville"
+        },
+        "siret": {
+          "label": "SIRET",
+          "placeholder": "14 chiffres"
+        },
+        "rcs": {
+          "label": "Immatriculation RCS",
+          "placeholder": "Ex. : RCS Nanterre 123 456 789"
+        },
+        "vatNumber": {
+          "label": "Numéro de TVA intracommunautaire",
+          "placeholder": "Ex. : FR12345678901",
+          "hint": "Obligatoire seulement si vous facturez la TVA."
+        },
+        "vatRate": {
+          "label": "Taux de TVA (%)",
+          "placeholder": "20",
+          "hint": "0 = TVA non applicable, art. 293 B du CGI."
+        },
+        "billingEmail": {
+          "label": "E-mail de facturation",
+          "placeholder": "facturation@exemple.fr",
+          "hint": "Imprimé sur les reçus pour demander une facture."
+        },
+        "publicationDirector": {
+          "label": "Directeur de la publication",
+          "placeholder": "Prénom Nom, Président",
+          "hint": "Affiché sur la page Mentions légales."
+        },
+        "host": {
+          "label": "Hébergeur",
+          "placeholder": "Raison sociale et adresse postale",
+          "hint": "Affiché sur la page Mentions légales."
+        }
+      }
+    },
+    "stripe": {
+      "title": "Paiements Stripe",
+      "subtitle": "Vérifié en direct depuis ce serveur. Rien n’est modifié.",
+      "refresh": "Actualiser",
+      "loadFailed": "Impossible de vérifier Stripe.",
+      "loadFailedHint": "Le serveur n’a pas répondu. Réessayez dans un instant.",
+      "checks": {
+        "liveKeys": "Clés en mode réel",
+        "mockOff": "Paiements réels activés",
+        "chargesEnabled": "Compte Stripe autorisé à encaisser",
+        "webhookEndpoint": "Webhook Stripe vers cette application",
+        "webhookReceived": "Événement Stripe reçu",
+        "firstRealPayment": "Premier paiement réel"
+      },
+      "mode": {
+        "live": "réel",
+        "test": "test",
+        "missing": "absente",
+        "unknown": "inconnue"
+      },
+      "detail": {
+        "keys": "Clé secrète : {secret} · clé publique : {publishable}",
+        "mockOn": "MOCK_PAYMENTS est activé : aucune carte n’est débitée.",
+        "mockOff": "Les cartes sont réellement débitées.",
+        "account": "{name}",
+        "unreachable": "Stripe n’a pas répondu : {error}",
+        "endpoint": "{url} ({status})",
+        "noEndpoint": "Aucun webhook actif vers cette application et abonné aux événements nécessaires.",
+        "lastEvent": "{type}, le {date} (mode {mode})",
+        "noEvent": "Aucun pour l’instant. Dans Stripe → Développeurs → Webhooks, envoyez un événement de test.",
+        "payments": "{count, plural, one {# paiement réel} other {# paiements réels}}, le premier le {date}",
+        "noPayment": "Aucun pour l’instant. Acceptez une offre avec une vraie carte, puis annulez la course pour être remboursé."
+      },
+      "others": {
+        "title": "Autres webhooks sur ce compte Stripe",
+        "hint": "Ils n’appartiennent pas à cette application, par ex. les automatisations n8n de l’application Expedion actuelle. Ne les désactivez pas tant qu’elle s’en sert.",
+        "otherHost": "Le chemin de cette application sur une autre adresse : une ancienne URL ?"
+      }
+    }
   },
   "confirm": {
     "title": {

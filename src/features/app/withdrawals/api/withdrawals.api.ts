@@ -34,6 +34,8 @@ export interface WithdrawalBalance {
 export interface ReviewRow extends Withdrawal {
   carrierName: string | null;
   carrierEmail: string;
+  ibanLast4: string | null;
+  bicLast4: string | null;
 }
 
 export interface DecideInput {

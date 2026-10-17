@@ -1,5 +1,5 @@
 import type { Invoice } from "@/db/schema/invoices";
-import { invoiceIssuer } from "@/lib/invoice-issuer";
+import { companyIdentityService } from "@/server/services/company-identity.service";
 import { invoiceDocumentType } from "@/lib/invoice-pdf-props";
 import { addressesDal } from "@/server/dal/addresses.dal";
 import { invoicesDal } from "@/server/dal/invoices.dal";
@@ -228,7 +228,7 @@ export const invoicesService = {
             from: query.from,
             to: query.to,
         });
-        const issuer = invoiceIssuer();
+        const issuer = await companyIdentityService.issuer();
 
         return userInvoiceListSchema.parse({
             ...page,

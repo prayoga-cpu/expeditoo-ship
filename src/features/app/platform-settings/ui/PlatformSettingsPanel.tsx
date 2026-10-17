@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PageLoader } from "@/components/ui/page-loader";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   usePlatformSettings,
   useUpdatePlatformSettings,
@@ -24,7 +24,7 @@ const toBasisPoints = (percent: number) => Math.round(percent * 100);
 export function PlatformSettingsPanel() {
   const t = useTranslations("platformSettings");
   const format = useFormatter();
-  const { data, isLoading } = usePlatformSettings();
+  const { data, isLoading, isError, refetch } = usePlatformSettings();
   const update = useUpdatePlatformSettings();
   const [percent, setPercent] = useState("0");
 
@@ -32,7 +32,7 @@ export function PlatformSettingsPanel() {
     if (data) setPercent(String(toPercent(data.feeBasisPoints)));
   }, [data]);
 
-  if (isLoading) return <PageLoader />;
+  if (isLoading) return <Skeleton className="h-56 w-full rounded-xl" />;
 
   const handleSave = () => {
     const parsed = Number(percent);
@@ -41,7 +41,7 @@ export function PlatformSettingsPanel() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-xl space-y-5 p-4 sm:p-6">
+    <div className="space-y-5">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
         <p className="mt-1 text-sm text-muted-foreground">{t("subtitle")}</p>
@@ -66,11 +66,21 @@ export function PlatformSettingsPanel() {
         </div>
         <p className="mt-2 text-sm text-muted-foreground">{t("feeHint")}</p>
 
+        {/* A failed read must not pass for a 0 % fee (CLAUDE.md gotcha 9). */}
+        {isError && (
+          <p className="mt-2 text-sm text-destructive">
+            {t("loadFailed")}{" "}
+            <button type="button" className="underline" onClick={() => refetch()}>
+              {t("retry")}
+            </button>
+          </p>
+        )}
+
         <Button
           type="button"
           className="mt-4"
           onClick={handleSave}
-          disabled={update.isPending}
+          disabled={update.isPending || isError}
         >
           {update.isPending ? t("saving") : t("save")}
         </Button>

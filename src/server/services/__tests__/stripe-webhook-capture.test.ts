@@ -31,6 +31,10 @@ vi.mock("@/server/dal/shipments.dal", () => ({
     getOwnership: vi.fn().mockResolvedValue({ carrierId: "carrier-1" }),
   },
 }));
+// The heartbeat is covered in stripe-webhook-heartbeat.test.ts.
+vi.mock("@/server/dal/stripe-webhook-heartbeat.dal", () => ({
+  stripeWebhookHeartbeatDal: { record: vi.fn() },
+}));
 vi.mock("@/lib/stripe", () => ({
   stripe: {
     webhooks: { constructEvent: vi.fn() },

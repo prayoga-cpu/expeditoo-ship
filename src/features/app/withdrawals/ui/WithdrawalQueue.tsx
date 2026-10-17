@@ -100,6 +100,14 @@ export function WithdrawalQueue() {
                       dateStyle: "medium",
                     })}
                   </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {row.ibanLast4
+                      ? t("payTo", {
+                          iban: row.ibanLast4,
+                          bic: row.bicLast4 ?? "—",
+                        })
+                      : t("payToMissing")}
+                  </p>
                   {row.reference && (
                     <p className="mt-1 font-mono text-xs text-muted-foreground">
                       {row.reference}

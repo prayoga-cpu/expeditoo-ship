@@ -149,11 +149,16 @@ function correctsLabel(invoice: InvoiceForPdf): string | undefined {
   return invoice.relatedInvoiceNumber ?? undefined;
 }
 
+/**
+ * `issuer` is the company as it stands now — callers on a server path pass
+ * `companyIdentityService.issuer()`, which reads what an admin saved; the
+ * default is the deployment's variables alone, for tests and scripts.
+ */
 export function invoicePdfProps(
   invoice: InvoiceForPdf,
-  fallbackDescription = "Transport de marchandises"
+  fallbackDescription = "Transport de marchandises",
+  issuer: InvoiceIssuer = invoiceIssuer()
 ): InvoicePDFProps {
-  const issuer = invoiceIssuer();
   const isCreditNote = invoice.kind === "credit_note";
   const paid = moneyReallyMoved(invoice) && invoice.status === "paid";
 

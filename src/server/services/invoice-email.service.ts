@@ -1,6 +1,8 @@
 import { render } from "@react-email/components";
 
+import type { InvoiceIssuer } from "@/lib/invoice-issuer";
 import { invoicePdfProps, type InvoiceForPdf } from "@/lib/invoice-pdf-props";
+import { companyIdentityService } from "@/server/services/company-identity.service";
 import { InvoiceDocumentEmail } from "@/server/emails/InvoiceDocumentEmail";
 import { emailService } from "@/server/services/email.service";
 
@@ -19,21 +21,25 @@ import { emailService } from "@/server/services/email.service";
 /** What a document costs to attach; anything larger is a bug, not a big PDF. */
 const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
 
-async function renderDocument(invoice: InvoiceForPdf): Promise<Buffer> {
+async function renderDocument(
+  invoice: InvoiceForPdf,
+  issuer: InvoiceIssuer
+): Promise<Buffer> {
   const [{ renderToBuffer }, { InvoicePDF }] = await Promise.all([
     import("@react-pdf/renderer"),
     import("@/server/pdf/InvoicePDF"),
   ]);
 
-  return renderToBuffer(InvoicePDF(invoicePdfProps(invoice)));
+  return renderToBuffer(InvoicePDF(invoicePdfProps(invoice, undefined, issuer)));
 }
 
 export async function invoiceDocumentEmail(
   invoice: InvoiceForPdf & { user?: { name?: string | null } | null },
   to: string
 ) {
-  const props = invoicePdfProps(invoice);
-  const pdf = await renderDocument(invoice);
+  const issuer = await companyIdentityService.issuer();
+  const props = invoicePdfProps(invoice, undefined, issuer);
+  const pdf = await renderDocument(invoice, issuer);
 
   if (pdf.length > MAX_ATTACHMENT_BYTES) {
     throw new Error(

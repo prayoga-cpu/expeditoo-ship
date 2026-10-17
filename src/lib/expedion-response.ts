@@ -4,6 +4,8 @@ import { ExpedionAuthError } from "@/lib/expedion-auth";
 import { ExpedionError } from "@/server/services/expedion.service";
 import { ConfirmationError } from "@/server/services/shipment-confirmations.service";
 import { ShipmentError } from "@/server/services/shipment-access";
+import { ExpedionProfileError } from "@/server/services/expedion-profile.service";
+import { UserContactError } from "@/server/services/user-contact.service";
 
 /**
  * Maps the Expedion bridge's error types onto the platform's response
@@ -17,7 +19,11 @@ export function expedionErrorResponse(error: unknown) {
     error instanceof ConfirmationError ||
     // Shipment photos are read over this bridge too (§7.3), so a
     // `PHOTO_NOT_FOUND` must not surface to the Flutter client as a 500.
-    error instanceof ShipmentError
+    error instanceof ShipmentError ||
+    error instanceof ExpedionProfileError ||
+    // The profile reads through the contact service, whose USER_NOT_FOUND
+    // is a 404, not a server fault.
+    error instanceof UserContactError
   ) {
     return NextResponse.json(
       { success: false, error: { code: error.code, message: error.message } },

@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { invoicesService } from "@/server/services/invoices.service";
+import { companyIdentityService } from "@/server/services/company-identity.service";
 import { InvoicePDF } from "@/server/pdf/InvoicePDF";
 import { invoicePdfProps } from "@/lib/invoice-pdf-props";
 import { unauthorised, handleError } from "@/lib/api-response";
@@ -29,7 +30,10 @@ export async function GET(request: Request, { params }: RouteParams) {
         const { id } = await params;
         const invoice = await invoicesService.getOwnedInvoice(id, session.user.id);
 
-        const pdfBuffer = await renderToBuffer(InvoicePDF(invoicePdfProps(invoice)));
+        const issuer = await companyIdentityService.issuer();
+        const pdfBuffer = await renderToBuffer(
+            InvoicePDF(invoicePdfProps(invoice, undefined, issuer))
+        );
 
         // Convert Buffer to Uint8Array for NextResponse compatibility
         const uint8Array = new Uint8Array(pdfBuffer);

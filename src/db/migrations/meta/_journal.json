@@ -267,6 +267,13 @@
       "when": 1788170400000,
       "tag": "0038_user_identity_contact",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1788174000000,
+      "tag": "0039_company_identity_stripe_heartbeat",
+      "breakpoints": true
     }
   ]
 }

@@ -1,12 +1,40 @@
 import { db } from "@/db";
 import { payments, type InsertPayment } from "@/db/schema/payments";
-import { eq, desc, and, sql } from "drizzle-orm";
+import { eq, desc, and, sql, inArray } from "drizzle-orm";
 
 // ========================================
 // Payment DAL Functions
 // ========================================
 
 export const paymentsDal = {
+    /**
+     * Card charges where money really moved, for the admin's Stripe check
+     * (launch_readiness_spec.md §B.3). A `pi_mock_` row is a captured
+     * payment with no money behind it, so it is counted apart.
+     */
+    async realChargeSummary() {
+        const real = sql`${payments.stripePaymentIntentId} not like 'pi_mock_%'`;
+        const [row] = await db
+            .select({
+                realCount: sql<number>`count(*) filter (where ${real})`.mapWith(Number),
+                firstRealAt: sql<Date | null>`min(${payments.createdAt}) filter (where ${real})`.mapWith(
+                    (v) => (v ? new Date(v) : null)
+                ),
+                lastRealAt: sql<Date | null>`max(${payments.createdAt}) filter (where ${real})`.mapWith(
+                    (v) => (v ? new Date(v) : null)
+                ),
+                mockCount: sql<number>`count(*) filter (where not ${real})`.mapWith(Number),
+            })
+            .from(payments)
+            .where(
+                and(
+                    eq(payments.source, "stripe"),
+                    inArray(payments.status, ["captured", "refunded"])
+                )
+            );
+        return row;
+    },
+
     /**
      * Get payment by ID
      */

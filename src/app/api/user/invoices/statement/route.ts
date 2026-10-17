@@ -3,6 +3,7 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { invoicesService } from "@/server/services/invoices.service";
+import { companyIdentityService } from "@/server/services/company-identity.service";
 import { InvoiceBatchPDF } from "@/server/pdf/InvoicePDF";
 import { invoicePdfProps } from "@/lib/invoice-pdf-props";
 import {
@@ -31,11 +32,12 @@ export async function GET(req: Request) {
       period
     );
 
+    const issuer = await companyIdentityService.issuer();
     const buffer = await renderToBuffer(
       InvoiceBatchPDF({
         invoices: invoices.map((invoice) => ({
           key: invoice.id,
-          ...invoicePdfProps({ ...invoice, user: session.user }),
+          ...invoicePdfProps({ ...invoice, user: session.user }, undefined, issuer),
         })),
         periodLabel: periodLabel(period, "Toutes périodes"),
         emptyLabel: "Aucune facture sur cette période.",

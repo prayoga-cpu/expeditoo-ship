@@ -252,6 +252,30 @@ adversarial verification pass — treat their detail as slightly less certain.
 Work that needs a human hand outside the codebase. Add to this list rather
 than leaving it in a chat message.
 
+- [ ] **Run Actions → "Migrate database" for `0039_company_identity_stripe_heartbeat`
+      before 2.64.0 deploys** (branch `release/2.64.0`, environment
+      `production`, confirm `migrate` — change « Use workflow from » off
+      `main`). Additive only: two new tables. Deployed without it, invoices
+      and the legal notice fall back to the variables and keep working, but
+      the company form cannot save and no webhook heartbeat is kept.
+- [ ] **Fill Admin → Paramètres → « Informations de l'entreprise »** with the
+      client's Kbis details (legal name, form, capital, office, SIRET, RCS,
+      VAT number/rate, publication director). Until then every document stays
+      a « reçu de paiement ». Nothing there may be guessed.
+- [ ] **Read the Stripe card on production** (Admin → Paramètres). Expected
+      green: live keys, real payments on, account can collect, webhook to this
+      app. If « Événement Stripe reçu » is not green, send a test event from
+      Stripe → Developers → Webhooks → the `expeditoo-ship-five` endpoint.
+- [ ] **Make the first real payment and refund it**: post a small direct
+      request from one account, bid from an approved driver, accept with a
+      real card, then cancel the job (the refund is automatic and raises an
+      avoir). « Premier paiement réel » turns green. This replaces the older
+      "one real accept-and-cancel" item.
+- [ ] **Do not disable the n8n webhook destinations in Stripe yet.** They feed
+      the client's current Expedion app (Airtable). Switch them off, and
+      archive Airtable, on the day the new Expedion app is deployed in its
+      place.
+
 - [x] ~~Run Actions → "Migrate database" for `0038_user_identity_contact`
       before 2.63.0 deploys~~ — **done 2026-10-15**, run `38762150901`,
       dispatched on `release/2.63.0` (commit `e9550c6`) before `main` moved.
@@ -608,6 +632,157 @@ than leaving it in a chat message.
       after approval (the 2.61.0 entry, "What was wrong" item 4). To restore them, open
       `/admin/users`, then the roles dialog for that account, and add both.
       Until then its application page says driver access is off.
+
+---
+
+## ✅ 2026-10-17 — Launch Readiness: Company Details in the Admin, a Stripe Check, Where Payouts Go, and a Profile Home for the Expedion App (2.64.0)
+
+_The client on WhatsApp: « What about Stripe and informations of payment
+(Airtable or other)? » — the owner: « give me the quick and short answer about
+this question with table status … but you know better please do the checking
+» — then: « implement everything goes with your suggestion, for the going
+public its good with current secret key. for driver payouts you decide the
+alternative either contact us or if possible with stripe or submission for
+them to input and ask for payouts with status that can check on their side. I
+expect all is checked on the table status »._
+
+Spec: `docs/specs/launch_readiness_spec.md`; plan:
+`docs/plans/plan_launch_readiness.md`.
+
+### What the checking found first
+
+- **Production has never taken a real payment.** Read-only through
+  `mirror_readonly` on 2026-10-17: `payments` holds 3 rows, all `source =
+  stripe`, `captured`, `pi_mock_` — the beta seed. Nothing on a laptop could
+  say whether production's keys are live: they are Sensitive in Vercel.
+- **There is no custom domain.** `vercel domains ls` lists none for this
+  project; production is `expeditoo-ship-five.vercel.app`, which is where the
+  Stripe webhook already points. Attaching a domain later does not move the
+  webhook (the `.vercel.app` address keeps serving), unless someone adds a
+  redirect from it — Stripe does not follow redirects (spec §B.2).
+- **Airtable is still the live Expedion system.** `expedion_quotes`: 4,656
+  rows from the Airtable import (newest 2026-09-13) and 2 created natively
+  (newest 2026-09-24, beta data). Airtable held 65 more records on 09-13 than
+  the August import brought, so the client's *current* Expedion app — not the
+  one in `expedion_encheres`, last deployed 52 days ago and not committed to
+  since 2026-08-26 — keeps writing there, with Stripe events going to n8n.
+  **The n8n destinations must not be switched off** until the new app
+  replaces it. The answer sent to the client earlier ("the app no longer reads
+  or writes Airtable") is true of Expeditoo only.
+- **Every payment document is a « reçu »** because the issuer identity lives
+  in `INVOICE_ISSUER_*` variables nobody has set (only `INVOICE_VAT_RATE=0`).
+- **Driver payouts were already built** (`withdrawals`, 2.37–2.60): request →
+  approve → paid / refused, with reference, notifications and history. The
+  operator queue did not say where to send the money.
+
+### What changed
+
+- **§A Company identity.** `company_identity` (one row, every column nullable,
+  migration `0039`), `companyIdentityDal`/`Service`, `GET|PUT
+  /api/admin/company` (admin or finance), `GET /api/public/company`.
+  `invoiceIssuer(stored?)` takes the row and falls back field by field to the
+  variables; **a stated legal name is now required for a facture** — the
+  "Expeditoo" display fallback used to count, so a deployment with every other
+  field set would have printed factures in the brand's name rather than the
+  legal entity's. `invoicePdfProps` gained a third `issuer` argument; the PDF
+  route, the statement route, the e-mailed document and the list labels pass
+  `companyIdentityService.issuer()`, which logs and falls back on a read
+  failure so a missing table degrades to a receipt. `CompanyIdentityPanel` on
+  `/admin/settings` lists what still keeps documents receipts and shows server
+  refusals under their field. The mentions légales rows carry a `field` and
+  fill from `/api/public/company`; the "à compléter" note shows only while a
+  row is still pending.
+- **§B Stripe check.** `stripe_webhook_heartbeat` (one row, migration `0039`)
+  stamped by `handleWebhook` after the signature verifies, best effort. Its
+  own table: on `platform_settings` it would have bumped the `updated_at` the
+  fee panel prints as « last changed ». `stripeStatusService` +
+  `GET /api/admin/stripe-status`: key modes from prefixes (never the key),
+  `accounts.retrieveCurrent`, `webhookEndpoints.list` classified as this app /
+  this path on another host / other, the heartbeat, and
+  `paymentsDal.realChargeSummary` (non-`pi_mock_` captured/refunded). Six
+  checks; a Stripe failure is a failed check, not a 500. `HANDLED_STRIPE_EVENTS`
+  is exported from `stripe.service.ts` beside the `switch` it describes.
+- **§C Expedion profile.** `GET|PUT /api/expedion/me/profile` over
+  `userContactService` and the default `addresses` row; session callers only
+  (`PROFILE_NEEDS_ACCOUNT` otherwise); phones normalised to E.164; whole body
+  validated before any write. `expedionErrorResponse` now maps
+  `ExpedionProfileError` and `UserContactError`.
+- **§D Payout queue.** `withdrawalsDal.listForReview` left-joins `carriers`
+  for `iban_last4`/`bic_last4`; `WithdrawalQueue` prints them or warns that
+  none is on file.
+- The fee panel gained the `isError` branch gotcha 9 asks for, and the
+  settings page composes the three cards.
+
+### The Expedion app (`expedion_encheres`)
+
+Done by a delegated agent against the §C contract and reviewed here; pushed
+to that repo's `main` after this release went live (its Vercel project builds
+from git, to its own `.vercel.app` — not the client's current app).
+
+- **No Airtable left in the app.** Sign-up no longer posts names, address and
+  phone to Airtable USERS; the personal space and the profile edit read and
+  write `/api/expedion/me/profile`. Every Airtable call class, the
+  Airtable-only body rewrite in `api_manager.dart` and `--dart-define=AIRTABLE_PAT`
+  are gone. `grep -rn "api.airtable.com" lib` is empty and the release web
+  bundle carries no Airtable host, base id or token.
+- **Names ride on the sign-up itself** (`firstName`/`lastName` in
+  `sign-up/email`, Better Auth additional fields here); before, `name` was the
+  e-mail handle.
+- **Address and phone wait for a session** (`lib/backend/pending_profile.dart`):
+  an e-mail sign-up has none until the link is opened, so they are kept on
+  the device for 7 days keyed by the e-mail, and flushed on the first auth
+  change whose session has that e-mail. A refused field is dropped and the
+  rest retried once; a network failure keeps everything for the next auth
+  change.
+- **Four unreachable screens deleted** (`/formDevisPaiementDirecte`,
+  `/wEBFormDDevis`, `/wEBFormDDpayDirect`, `/wEBHomepageLogedin`) — routed in
+  `nav.dart`, linked from nowhere a Better Auth session can reach.
+- **Committed separately first:** the confirmation card and shipment photos on
+  `suivi_de_livraison` (`confirmMilestone`, `listShipmentPhotos`), written on
+  2026-08-29 for 2.47–2.49 and never committed in that repo.
+- Verification there: `flutter analyze` 0 errors (76 → 60 warnings, no new
+  finding); `flutter test` 194 passed, the same 8 `PaiementSuccessWidget`
+  failures as before (no `FFLocalizations` in the harness); `flutter build web
+  --release` succeeds. **The screens have not been driven against a running
+  Expeditoo**; the endpoint was exercised here with real HTTP instead.
+- Left: the sign-up's *delivery* address has nowhere to go (the profile holds
+  one address); `AIRTABLE_PAT` can be deleted from the expedion-encheres
+  Vercel env; the personal space still shows a hard-coded date of birth.
+
+
+### Verification
+
+- `npx tsc --noEmit` 0 errors · `pnpm lint` 0 errors (64 warnings, all
+  pre-existing) · `pnpm test` 2,855 passed in 215 files · `pnpm build` succeeds · `pnpm changelog:check` ✓.
+- New tests: company identity service 15, stored issuer 4, Stripe status 19
+  (8 of them the key-mode table), webhook heartbeat 3, Expedion profile 10, legal
+  notice rows 4, admin panels 10, payout destination 1 — 66 in all.
+- `0039` applied to the local `expeditoo_dev`: 39 journal rows, newest
+  `1788174000000`; both tables and the FK present.
+- Chromium against a dev server on :3104 (FR light, EN dark), throwaway
+  admin: the settings page renders all three cards with no console error; a
+  4-digit SIRET is refused under its field; saving name, form, office, SIRET
+  (typed with spaces, stored without), RCS and a 0 % rate flips the card to
+  « Complet : … factures »; `/legal-notice` then shows the saved name;
+  `/api/public/company` answers the nine public fields; `GET
+  /api/expedion/me/profile` answers the sign-up names, `PUT` with « 06 12 34
+  56 78 » stores `+33612345678` and creates the address, `PUT {phone:"12"}` →
+  400. Locally the Stripe card reads test keys, `MOCK_PAYMENTS` on (fail), and
+  the test account's endpoint at `expeditoo-rho.vercel.app` — an old address,
+  now labelled as such. Throwaway account, its address and the company row
+  deleted afterwards; the dev server stopped; Postgres left running as found.
+
+### Known limits
+
+- **The first real payment is a human step** (Operator to-do). Nothing here
+  charges a card.
+- **Not checked against production Stripe.** The card has only been seen
+  with test keys; its first live reading is the owner's.
+- The legal notice's VAT-number row stays pending for a business under the
+  franchise en base unless a number is typed; the invoice already prints the
+  art. 293 B mention in that case.
+- `PUT /api/expedion/me/profile` writes names/phone and the address in two
+  steps; validated whole first, but not one transaction.
 
 ---
 

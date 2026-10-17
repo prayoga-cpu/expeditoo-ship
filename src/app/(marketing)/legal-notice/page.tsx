@@ -2,6 +2,11 @@
 
 import { useTranslations } from "next-intl";
 import {
+  resolveIdentityRows,
+  usePublicCompany,
+  type IdentityRow,
+} from "@/features/marketing/hooks/useLegalIdentity";
+import {
   LegalDocument,
   LP_H3,
   LP_PROSE_CONTAINER,
@@ -17,17 +22,11 @@ import {
  * registration number is not something to invent: a wrong one on a public
  * legal page is worse than a visibly missing one.
  *
- * TODO(EXPEDITOO-LEGAL): supply the real values for every row marked pending
- * in `marketing.legalNotice.identity` (messages/fr.json and messages/en.json)
- * before this page goes to production. The page renders them as unmistakable
- * placeholders so it cannot be shipped half-filled unnoticed.
+ * The values come from the company details an admin saves at /admin/settings
+ * (`GET /api/public/company`, launch_readiness_spec.md §A.4). A row whose
+ * value has not been saved keeps its unmistakable placeholder, so the page
+ * cannot look complete while it is not.
  */
-
-interface IdentityRow {
-  label: string;
-  value: string;
-  pending?: boolean;
-}
 
 function isIdentityRow(value: unknown): value is IdentityRow {
   if (typeof value !== "object" || value === null) return false;
@@ -35,11 +34,7 @@ function isIdentityRow(value: unknown): value is IdentityRow {
   return typeof row.label === "string" && typeof row.value === "string";
 }
 
-function IdentityTable() {
-  const t = useTranslations("marketing.legalNotice");
-  const raw = t.raw("identity");
-  const rows = Array.isArray(raw) ? raw.filter(isIdentityRow) : [];
-
+function IdentityTable({ rows }: { rows: IdentityRow[] }) {
   return (
     <dl className="m-0 flex flex-col divide-y divide-[var(--lp-line)] rounded-[20px] border border-[var(--lp-line)] bg-[var(--lp-bg2)]">
       {rows.map((row, index) => (
@@ -67,6 +62,12 @@ function IdentityTable() {
 
 export default function LegalNoticePage() {
   const t = useTranslations("marketing.legalNotice");
+  const company = usePublicCompany();
+  const raw = t.raw("identity");
+  const rows = resolveIdentityRows(
+    Array.isArray(raw) ? raw.filter(isIdentityRow) : [],
+    company
+  );
 
   return (
     <MarketingPageShell
@@ -77,10 +78,12 @@ export default function LegalNoticePage() {
       <div className={`${LP_PROSE_CONTAINER} flex flex-col gap-9 pb-4`}>
         <section className="flex flex-col gap-4">
           <h2 className={LP_H3}>{t("identityTitle")}</h2>
-          <IdentityTable />
-          <p className="m-0 text-[13px] leading-[1.6] text-[var(--lp-ambersub)]">
-            {t("pendingNote")}
-          </p>
+          <IdentityTable rows={rows} />
+          {rows.some((row) => row.pending) && (
+            <p className="m-0 text-[13px] leading-[1.6] text-[var(--lp-ambersub)]">
+              {t("pendingNote")}
+            </p>
+          )}
         </section>
       </div>
 
