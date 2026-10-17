@@ -278,13 +278,19 @@ than leaving it in a chat message.
       `stripeWebhook` edit reaches Firebase only with `firebase deploy --only
       functions` — a git push does not deploy it, and since no Stripe
       destination points at that function it can also simply stay as it is.
-- [ ] **Confirm the Expedion app's Stripe key is this account's live key.**
+- [ ] **Set the Expedion app's Stripe key to this account's live key — it is
+      a TEST key (confirmed 2026-10-17).** `GET
+      https://expedion-encheres.vercel.app/api/payment-health` (added in
+      `expedion_encheres` b822fbf; mode from the key's prefix, the key checked
+      with a read, cached 60 s) answers `{"stripe":{"mode":"test","keyWorks":true},
+      "expeditoo":{"reachable":true,"adminKeyAccepted":true},
+      "email":{"sender":"sandbox"},"ready":false}` — read independently by
+      both sessions. So real cards cannot pay on the new Expedion app, and
+      2.64.1's webhook path cannot fire for its payments until this changes.
       `STRIPE_SECRET_KEY` on the expedion-encheres Vercel project was set on
-      2026-08-21 and never changed; the only key an agent could copy then was
-      the `sk_test_` one. If it is a test key — or another account's — Expedion
-      clients are not charged real money, and their `payment_intent.succeeded`
-      never reaches the `expeditoo-ship-five` webhook, so 2.64.1's webhook path
-      never fires. Nobody here can read the value: re-set it in Vercel
+      2026-08-21 and never changed. Also unset there: `RESEND_FROM`, so its
+      payment-link e-mail goes out from `onboarding@resend.dev`. When `ready`
+      reads true, this item is done. Nobody here can read the value: re-set it in Vercel
       (Sensitive) to the same `sk_live_` this project uses, then redeploy
       expedion-encheres. Supporting evidence (publishable prefixes only, which
       are public): this repo's local test key is account `51Sgef…`, while the
