@@ -252,16 +252,25 @@ adversarial verification pass — treat their detail as slightly less certain.
 Work that needs a human hand outside the codebase. Add to this list rather
 than leaving it in a chat message.
 
-- [ ] **Run Actions → "Migrate database" for `0039_company_identity_stripe_heartbeat`
-      before 2.64.0 deploys** (branch `release/2.64.0`, environment
-      `production`, confirm `migrate` — change « Use workflow from » off
-      `main`). Additive only: two new tables. Deployed without it, invoices
-      and the legal notice fall back to the variables and keep working, but
-      the company form cannot save and no webhook heartbeat is kept.
-- [ ] **Fill Admin → Paramètres → « Informations de l'entreprise »** with the
-      client's Kbis details (legal name, form, capital, office, SIRET, RCS,
-      VAT number/rate, publication director). Until then every document stays
-      a « reçu de paiement ». Nothing there may be guessed.
+- [x] ~~Run Actions → "Migrate database" for `0039_company_identity_stripe_heartbeat`
+      before 2.64.0 deploys~~ — **done 2026-10-17**, run #15 dispatched by the
+      owner on `release/2.64.0` (commit `53031e9`). Confirmed read-only through
+      `mirror_readonly`: 39 journal rows, newest `1788174000000`;
+      `company_identity` (15 columns, FK to `user`) and
+      `stripe_webhook_heartbeat` exist. `main` was then fast-forwarded to
+      `53031e9`; the production deploy went Ready and `/api/public/changelog`
+      reads 2.64.0.
+- [ ] **Push the Expedion app** — two commits sit on `main` in
+      `expedion_encheres`, not yet on GitHub (`git push origin main` there;
+      its Vercel project deploys on push). The harness refused the push as a
+      production deploy.
+- [ ] **Complete Admin → Paramètres → « Informations de l'entreprise »**:
+      production's variables already supply the legal name, form, office,
+      SIRET, RCS and VAT number (read live from `/api/public/company` after
+      the deploy), so the card opens pre-filled. Still missing for the
+      mentions légales: share capital, publication director, host. Check the
+      prefilled values against the Kbis and save once, so they live in the
+      table rather than only in deployment variables.
 - [ ] **Read the Stripe card on production** (Admin → Paramètres). Expected
       green: live keys, real payments on, account can collect, webhook to this
       app. If « Événement Stripe reçu » is not green, send a test event from
@@ -669,8 +678,12 @@ Spec: `docs/specs/launch_readiness_spec.md`; plan:
   **The n8n destinations must not be switched off** until the new app
   replaces it. The answer sent to the client earlier ("the app no longer reads
   or writes Airtable") is true of Expeditoo only.
-- **Every payment document is a « reçu »** because the issuer identity lives
-  in `INVOICE_ISSUER_*` variables nobody has set (only `INVOICE_VAT_RATE=0`).
+- **The issuer identity lives only in deployment variables.** Until this
+  release the `INVOICE_ISSUER_*` values could be changed by a developer
+  alone. (Corrected after the deploy: production's variables turned out to
+  carry the legal name, form, office, SIRET, RCS and VAT number already —
+  `/api/public/company` returned them before any row was saved — so the form
+  opens pre-filled there; the 2.40.3 note that they were empty is stale.)
 - **Driver payouts were already built** (`withdrawals`, 2.37–2.60): request →
   approve → paid / refused, with reference, notifications and history. The
   operator queue did not say where to send the money.
@@ -715,9 +728,11 @@ Spec: `docs/specs/launch_readiness_spec.md`; plan:
 
 ### The Expedion app (`expedion_encheres`)
 
-Done by a delegated agent against the §C contract and reviewed here; pushed
-to that repo's `main` after this release went live (its Vercel project builds
-from git, to its own `.vercel.app` — not the client's current app).
+Done by a delegated agent against the §C contract and reviewed here;
+committed on that repo's `main` (`40534e7`, `91da1a6`) but **not pushed**: its
+Vercel project builds from git to its own `.vercel.app` (not the client's
+current app), and the push was refused as a production deploy — Operator
+to-do.
 
 - **No Airtable left in the app.** Sign-up no longer posts names, address and
   phone to Airtable USERS; the personal space and the profile edit read and
