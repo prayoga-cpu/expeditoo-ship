@@ -269,10 +269,12 @@ than leaving it in a chat message.
       `/api/auth/*` route it calls answers a preflight from
       `https://expedion-encheres.vercel.app` and 401s signed out; the payment
       functions reach this app with their admin key.
-- [ ] **Push `09129fd` in `expedion_encheres`** (the last Airtable code,
-      2.64.1). Committed on `main` and verified by both sessions (analyze 0
-      errors, tests 202/202, `node --check` on the functions), but not pushed:
-      both harnesses refuse it as a production deploy. Note that its Firebase
+- [x] ~~Push `09129fd` in `expedion_encheres`~~ — **done 2026-10-17** by the
+      owner; the expedion-encheres production deploy built from it went Ready
+      at 16:03 (+08). Checked live: `main.dart.js` (8.7 MB) names no Airtable
+      or n8n host, calls `/api/expedion/me/profile`, `/quotes`, `/photos`,
+      `/confirm`, `/support` and `/api/auth`, and its API base is
+      `https://expeditoo-ship-five.vercel.app`. Note that its Firebase
       `stripeWebhook` edit reaches Firebase only with `firebase deploy --only
       functions` — a git push does not deploy it, and since no Stripe
       destination points at that function it can also simply stay as it is.
@@ -284,7 +286,13 @@ than leaving it in a chat message.
       never reaches the `expeditoo-ship-five` webhook, so 2.64.1's webhook path
       never fires. Nobody here can read the value: re-set it in Vercel
       (Sensitive) to the same `sk_live_` this project uses, then redeploy
-      expedion-encheres.
+      expedion-encheres. Supporting evidence (publishable prefixes only, which
+      are public): this repo's local test key is account `51Sgef…`, while the
+      Expedion app's FlutterFlow leftovers name `51Pdbk…` (test) and
+      `51R10Z…` (live) — three accounts in play. The live bundle ships the
+      `pk_test_` one because `payment_manager.dart` hard-codes `_isProd =
+      false`, but nothing calls its payment sheet (payments go through
+      Checkout with the server key), so that key decides nothing.
 - [ ] **Complete Admin → Paramètres → « Informations de l'entreprise »**:
       production's variables already supply the legal name, form, office,
       SIRET, RCS and VAT number (read live from `/api/public/company` after
