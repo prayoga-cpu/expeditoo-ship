@@ -32,3 +32,23 @@ export function featuredRequest(jobs: Job[]): Job | null {
     postedAt(job) > postedAt(latest) ? job : latest
   );
 }
+
+/**
+ * Every request worth a line on the dashboard, most recently published first
+ * (client feedback 2026-10-21, §D1: « afficher les demandes dans un cadre
+ * condensé »). The dashboard used to give the single featured request a whole
+ * summary card, so a person with three live requests saw one. An open request
+ * past its bidding deadline is left out, as the board leaves it out: it is
+ * expired, whether or not the sweep has written that yet.
+ */
+export function activeRequests(jobs: Job[], now: Date = new Date()): Job[] {
+  return jobs
+    .filter((job) => FEATURED_STATUSES.includes(job.status))
+    .filter(
+      (job) =>
+        job.status !== "open" ||
+        !job.expiresAt ||
+        new Date(job.expiresAt).getTime() >= now.getTime()
+    )
+    .sort((a, b) => postedAt(b).getTime() - postedAt(a).getTime());
+}

@@ -48,6 +48,23 @@ interface ThreadOfferBubbleProps {
   readByOther?: boolean;
   /** Whether this viewer is who awards the underlying job. */
   viewerCanAward: boolean;
+  /**
+   * The job's budget, when the thread is about one — shown beside the price
+   * so both sides read the two figures together (§B6).
+   */
+  budgetCents?: number | null;
+}
+
+/**
+ * The offered price against the job's budget, as a signed whole percentage:
+ * -15 for 85 € on a 100 € budget. Null when there is no budget to compare.
+ */
+export function priceGap(
+  priceCents: number,
+  budgetCents: number | null | undefined
+): number | null {
+  if (!budgetCents || budgetCents <= 0) return null;
+  return Math.round(((priceCents - budgetCents) / budgetCents) * 100);
 }
 
 /**
@@ -67,6 +84,7 @@ export function ThreadOfferBubble({
   avatar,
   readByOther,
   viewerCanAward,
+  budgetCents,
 }: ThreadOfferBubbleProps) {
   const t = useTranslations("messages.offer");
   const tSlots = useTranslations("listing.bid.slots");
@@ -133,6 +151,10 @@ export function ThreadOfferBubble({
           >
             {formatCurrency(offer.priceCents)}
           </p>
+          <BudgetComparison
+            priceCents={offer.priceCents}
+            budgetCents={budgetCents}
+          />
 
           <dl className="space-y-1 text-sm">
             <div className="flex justify-between gap-3">
@@ -258,5 +280,42 @@ export function ThreadOfferBubble({
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * « Budget du demandeur : 100 € · 15 % en dessous » under the offered price.
+ * The client asked to see « l'autre prix » in the thread (client feedback
+ * 2026-10-21, §B6): until now the card showed the driver's figure alone, and
+ * the requester had to leave the conversation to remember what they had asked.
+ */
+function BudgetComparison({
+  priceCents,
+  budgetCents,
+}: {
+  priceCents: number;
+  budgetCents?: number | null;
+}) {
+  const t = useTranslations("messages.offer.card");
+  const gap = priceGap(priceCents, budgetCents);
+  if (gap === null || !budgetCents) return null;
+
+  return (
+    <p className="-mt-2 text-xs text-muted-foreground">
+      {t("budget", { amount: formatCurrency(budgetCents) })}
+      {" · "}
+      <span
+        className={cn(
+          gap < 0 && "text-success",
+          gap > 0 && "text-warning"
+        )}
+      >
+        {gap === 0
+          ? t("gapEqual")
+          : gap < 0
+            ? t("gapBelow", { percent: Math.abs(gap) })
+            : t("gapAbove", { percent: gap })}
+      </span>
+    </p>
   );
 }

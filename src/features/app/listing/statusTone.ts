@@ -17,3 +17,28 @@ export const STATUS_TONE: Record<ListingStatus, string> = {
   expired: "bg-warning/15 text-warning border-warning/30",
   scheduled: "bg-primary/15 text-primary border-primary/30",
 };
+
+/**
+ * The status to *show*: an open request whose bidding deadline has passed
+ * reads « Expirée », whether or not the expiry sweep has reached it yet.
+ *
+ * The sweep is the writer and stays the only one; this is display only. It
+ * exists because the sweep had never run in production (the scheduled-jobs
+ * workflow was missing its URL and secret), and requests from September went
+ * on reading « Ouverte » on « Mes demandes » and in the admin, while the board
+ * — which filters on `expires_at` itself — had long stopped showing them
+ * (client_feedback_2026_10_21_spec.md §X1).
+ */
+export function displayStatus(
+  job: { status: ListingStatus; expiresAt?: string | null },
+  now: Date = new Date()
+): ListingStatus {
+  if (
+    job.status === "open" &&
+    job.expiresAt &&
+    new Date(job.expiresAt).getTime() < now.getTime()
+  ) {
+    return "expired";
+  }
+  return job.status;
+}

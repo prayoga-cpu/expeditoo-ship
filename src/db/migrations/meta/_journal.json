@@ -274,6 +274,20 @@
       "when": 1788174000000,
       "tag": "0039_company_identity_stripe_heartbeat",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1788260400000,
+      "tag": "0040_expedion_quote_reference",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1788346800000,
+      "tag": "0041_cron_heartbeat",
+      "breakpoints": true
     }
   ]
 }

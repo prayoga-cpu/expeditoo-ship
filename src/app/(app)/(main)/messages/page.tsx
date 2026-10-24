@@ -14,6 +14,9 @@ export default function MessagesPage() {
     setSearchQuery,
     deleteConversation,
     isLoading,
+    listingChips,
+    listingFilter,
+    setListingFilter,
   } = useMessages();
 
   return (
@@ -23,6 +26,9 @@ export default function MessagesPage() {
       isLoading={isLoading}
       onSearchChange={setSearchQuery}
       onDeleteConversation={deleteConversation}
+      listingChips={listingChips}
+      listingFilter={listingFilter}
+      onListingFilterChange={setListingFilter}
     />
   );
 }

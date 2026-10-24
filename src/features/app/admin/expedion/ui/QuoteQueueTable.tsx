@@ -20,6 +20,8 @@ import {
 import { formatCurrency } from "@/lib/currency";
 import type { QuoteRow } from "@/server/dal/expedion-report.dal";
 
+import { QuoteReferenceCell, quoteSearchText } from "./QuoteReferenceCell";
+
 import { quoteCapabilities } from "../lib/quote-action";
 
 import { AssignDriverDialog } from "./AssignDriverDialog";
@@ -90,21 +92,19 @@ export function QuoteQueueTable({
   const columns = useMemo<ColumnDef<QuoteRow>[]>(() => {
     const base: ColumnDef<QuoteRow>[] = [
       {
-        accessorKey: "reference",
+        id: "reference",
+        // Sorts on our number (§A3); every quote has one.
+        accessorFn: (row) => row.quoteRef ?? 0,
         header: ({ column }) => (
           <DataTableColumnHeader column={column} title={t("table.reference")} />
         ),
-        cell: ({ row }) => (
-          <span className="font-mono text-xs">
-            {row.original.reference ?? row.original.id.slice(0, 8)}
-          </span>
-        ),
+        cell: ({ row }) => <QuoteReferenceCell quote={row.original} />,
         // Searching a queue means searching everything visible on the row, not
         // just the reference column the toolbar is pointed at.
         filterFn: (row, _id, value) => {
           const q = String(value).toLowerCase();
           return [
-            row.original.reference,
+            ...quoteSearchText(row.original),
             row.original.auctionHouseName,
             row.original.deliveryCity,
             row.original.clientName,

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cronHealthService } from "@/server/services/cron-health.service";
 import { listingsService } from "@/server/services/listings.service";
 import { isAuthorisedCron } from "@/lib/cron-auth";
 
@@ -21,8 +22,10 @@ export async function GET(req: NextRequest) {
 
   try {
     const published = await listingsService.publishScheduled();
+    await cronHealthService.record("publish-scheduled-listings", true);
     return NextResponse.json({ success: true, published });
   } catch (error) {
+    await cronHealthService.record("publish-scheduled-listings", false, error);
     console.error("Publish scheduled listings job failed:", error);
     return NextResponse.json(
       {

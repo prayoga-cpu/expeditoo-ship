@@ -14,6 +14,9 @@ export default function DriverMessagesPage() {
     setSearchQuery,
     deleteConversation,
     isLoading,
+    listingChips,
+    listingFilter,
+    setListingFilter,
   } = useMessages();
 
   return (
@@ -22,6 +25,9 @@ export default function DriverMessagesPage() {
       searchQuery={searchQuery}
       onSearchChange={setSearchQuery}
       onDeleteConversation={deleteConversation}
+      listingChips={listingChips}
+      listingFilter={listingFilter}
+      onListingFilterChange={setListingFilter}
       basePath="/driver/messages"
       isLoading={isLoading}
     />

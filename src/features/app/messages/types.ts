@@ -12,6 +12,21 @@ export interface Message {
   timestamp: string;
   unread: boolean;
   type?: "LISTING" | "SUPPORT"; // Chat type for badge display
+  /** The job the thread is about, when it is about one. */
+  listingId?: string;
+}
+
+/**
+ * A job the Messages search offers as a one-tap filter (§D5): one the viewer
+ * has a thread about, or one of their own live requests.
+ */
+export interface ListingChip {
+  id: string;
+  /** « Paris → Clamart ». */
+  route: string;
+  title: string;
+  /** Whether it is the viewer's own request — they can go and find carriers. */
+  own: boolean;
 }
 
 

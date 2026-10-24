@@ -80,7 +80,7 @@ describe("RequestPostedScreen", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: fr.create.success.open.title })
     ).toBeInTheDocument();
-    expect(screen.getByText("Réf. 100042")).toBeInTheDocument();
+    expect(screen.getByText("Réf. LYO-PAR-100042")).toBeInTheDocument();
     expect(screen.getByText(/jusqu'au 3 oct\./)).toBeInTheDocument();
     expect(screen.getByText(fr.create.success.next.notify)).toBeInTheDocument();
     expect(screen.getByText(fr.create.success.next.choose)).toBeInTheDocument();

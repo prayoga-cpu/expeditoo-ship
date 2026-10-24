@@ -20,6 +20,7 @@ import { useTranslations } from "next-intl";
 import { Reviews } from "./Reviews";
 import { startConversation } from "@/features/app/messages/api/conversations.api";
 import { StaffContactCard } from "./StaffContactCard";
+import { RequestActivityCard } from "./RequestActivityCard";
 
 interface PublicUser {
   id: string;
@@ -243,6 +244,7 @@ export function PublicProfile({
       </Card>
 
       {staffView && <StaffContactCard userId={id} />}
+      {staffView && <RequestActivityCard userId={id} />}
 
       {/* Listings Grid */}
       <div>

@@ -32,9 +32,10 @@ import {
 import { useTranslations } from "next-intl";
 import { DataTable, DataTableColumnHeader, dateRangeFilterFn } from "./data-table";
 import { formatCurrency } from "@/lib/currency";
-import { STATUS_TONE } from "@/features/app/listing/statusTone";
+import { STATUS_TONE, displayStatus } from "@/features/app/listing/statusTone";
 import type { AdminListing } from "../hooks/useAdminListings";
 import { ListingReference } from "@/features/app/listing/ui/ListingReference";
+import { UrgentBadge } from "@/features/app/listing/ui/UrgentBadge";
 import { parseListingReference } from "@/lib/listing-reference";
 
 type Listing = AdminListing;
@@ -62,10 +63,17 @@ function ListingStatusBadge({ status }: { status: Listing["status"] }) {
 // escalated from Expedion looked identical here, although different people
 // award them: the requester for the first, an operator for the second
 // (request_summary_spec.md §3.3).
+//
+// The tag carries its meaning as a tooltip: « Directe » was read as a box
+// someone had ticked (client feedback 2026-10-21, §B3).
 function ListingOriginBadge({ origin }: { origin: Listing["origin"] }) {
   const t = useTranslations("admin.listings.table.origin");
   return (
-    <Badge variant={origin === "direct" ? "outline" : "secondary"}>
+    <Badge
+      variant={origin === "direct" ? "outline" : "secondary"}
+      title={t(`${origin}Hint`)}
+      className="cursor-help"
+    >
       {t(origin)}
     </Badge>
   );
@@ -146,11 +154,16 @@ export function ListingsTable({
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-medium">{row.original.title}</span>
               <ListingOriginBadge origin={row.original.origin} />
+              <UrgentBadge job={row.original} />
             </div>
             <span className="text-xs text-muted-foreground">
               {row.original.pickupCity} → {row.original.dropoffCity}
             </span>
-            <ListingReference reference={row.original.reference} />
+            <ListingReference
+              reference={row.original.reference}
+              from={row.original.pickupCity}
+              to={row.original.dropoffCity}
+            />
           </div>
         ),
         filterFn: (row, id, filterValue) => {
@@ -202,7 +215,9 @@ export function ListingsTable({
         header: ({ column }) => (
           <DataTableColumnHeader column={column} title={t("status")} />
         ),
-        cell: ({ row }) => <ListingStatusBadge status={row.original.status} />,
+        cell: ({ row }) => (
+          <ListingStatusBadge status={displayStatus(row.original)} />
+        ),
       },
       {
         accessorKey: "views",

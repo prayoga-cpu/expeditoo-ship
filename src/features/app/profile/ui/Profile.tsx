@@ -34,6 +34,7 @@ import Link from "next/link";
 import { useProfile } from "../hooks/useProfile";
 import { SavedAddressesCard } from "./SavedAddressesCard";
 import { ContactDetailsCard } from "./ContactDetailsCard";
+import { RequestActivityCard } from "./RequestActivityCard";
 import type { LucideIcon } from "lucide-react";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { useUserRoles } from "../hooks/useUserRoles";
@@ -41,6 +42,7 @@ import { PageLoader } from "@/components/ui/page-loader";
 import { PageWrapper } from "@/components/ui/page-wrapper";
 import { LottieLoader } from "@/components/ui/lottie-loader";
 import { useTranslations } from "next-intl";
+import { useAuth } from "@/lib/auth-context";
 
 export function Profile() {
   const {
@@ -53,6 +55,7 @@ export function Profile() {
   } = useProfile();
 
   const { data: userRoles, isLoading: isRolesLoading } = useUserRoles();
+  const { user: authUser } = useAuth();
 
   const t = useTranslations("profile");
 
@@ -228,6 +231,8 @@ export function Profile() {
 
         {/* Right Column - Details */}
         <div className="lg:col-span-2 space-y-6">
+          {authUser?.id ? <RequestActivityCard userId={authUser.id} /> : null}
+
           <ContactDetailsCard />
 
           <SavedAddressesCard />

@@ -250,3 +250,66 @@ describe("« Mes demandes » cards", () => {
     expect(screen.getByText(D.datesPassed)).toBeInTheDocument();
   });
 });
+
+/** client_feedback_2026_10_21_spec.md §D2 — « liste, carte ou gros plan ». */
+describe("MyRequestsPanel views", () => {
+  const live = (id: string, title: string): Job =>
+    ({
+      id,
+      reference: 100010,
+      status: "open",
+      title,
+      pickupCity: "Paris",
+      dropoffCity: "Clamart",
+      pickupFrom: "2026-11-08T06:00:00.000Z",
+      pickupUntil: "2026-11-30T21:00:00.000Z",
+      dropoffFrom: "2026-11-09T11:00:00.000Z",
+      dropoffUntil: "2026-11-30T17:00:00.000Z",
+      updatedAt: "2026-10-07T00:00:00.000Z",
+      isFlexible: true,
+      budgetCents: 10_000,
+      offersCount: 0,
+      expiresAt: "2099-01-01T00:00:00.000Z",
+      createdAt: "2026-10-07T00:00:00.000Z",
+      publishedAt: "2026-10-07T00:00:00.000Z",
+      origin: "direct",
+    }) as unknown as Job;
+
+  beforeEach(() => {
+    rows = [live("j1", "Sofa"), live("j2", "Fauteuil")];
+    try {
+      window.localStorage.clear();
+    } catch {
+      // jsdom always has storage; the guard mirrors the component's.
+    }
+  });
+
+  it("switches to one line per request, and remembers it", () => {
+    wrap(<MyRequestsPanel />);
+
+    fireEvent.click(screen.getByRole("button", { name: tr("myJobs.views.list") }));
+
+    expect(screen.getAllByTestId("request-compact-row")).toHaveLength(2);
+    expect(window.localStorage.getItem("expeditoo.myRequests.view")).toBe("list");
+    expect(
+      screen.getByRole("button", { name: tr("myJobs.views.list") })
+    ).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("switches to cards, each a link to its request", () => {
+    wrap(<MyRequestsPanel />);
+
+    fireEvent.click(screen.getByRole("button", { name: tr("myJobs.views.cards") }));
+
+    const links = screen.getAllByRole("link").filter((a) => a.getAttribute("href")?.startsWith("/listing/"));
+    expect(links.map((a) => a.getAttribute("href"))).toEqual(["/listing/j1", "/listing/j2"]);
+    expect(screen.queryAllByTestId("request-compact-row")).toHaveLength(0);
+  });
+
+  it("opens on the view chosen last time", () => {
+    window.localStorage.setItem("expeditoo.myRequests.view", "list");
+    wrap(<MyRequestsPanel />);
+
+    expect(screen.getAllByTestId("request-compact-row")).toHaveLength(2);
+  });
+});

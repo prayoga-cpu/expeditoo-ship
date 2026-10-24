@@ -152,6 +152,7 @@ export const expedionClientsDal = {
     return await tx
       .select({
         id: expedionQuotes.id,
+        reference: expedionQuotes.reference,
         quoteNumber: expedionQuotes.quoteNumber,
         bordereauNumber: expedionQuotes.bordereauNumber,
         status: expedionQuotes.status,

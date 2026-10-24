@@ -528,6 +528,17 @@ export const listingsService = {
     return await listingsDal.adminList(filters);
   },
 
+  /**
+   * « Demandes publiées / prises en charge » for one person (§D6). Their own,
+   * or anyone's for staff — the admin's user view shows the same two figures.
+   */
+  async activityFor(viewer: Viewer, userId: string) {
+    if (viewer.userId !== userId && !viewer.isAdmin && !viewer.isOperator) {
+      throw err("FORBIDDEN", 403);
+    }
+    return await listingsDal.activityCounts(userId);
+  },
+
   async getListing(listingId: string, viewerId: string | null) {
     const listing = await listingsDal.getById(listingId);
     if (!listing) throw err("LISTING_NOT_FOUND", 404);

@@ -38,6 +38,7 @@ import { QuoteDetailDialog } from "./QuoteDetailDialog";
 import { RepriceDialog } from "./RepriceDialog";
 import { RequoteDialog } from "./RequoteDialog";
 import { StorageDialog } from "./StorageDialog";
+import { QuoteReferenceCell, quoteSearchText } from "./QuoteReferenceCell";
 import {
   escalationHoursLeft,
   isNewQuote,
@@ -56,8 +57,12 @@ import {
  * answers "has anything arrived, and does it need me?" — the KPIs below say how
  * the business is doing, which is a different question and a slower one.
  *
- * Two views over the same rows, both newest-first: **To handle** (default
- * when there is any) is just the actionable subset; **All** is the full feed.
+ * Two views: **To handle** (default when there is any) is every quote in an
+ * operator queue, of any age, oldest request first — the sidebar badge counts
+ * the same work, so the two agree; **Recent** is the latest arrivals, newest
+ * first. To handle used to be the actionable subset of the twenty-five recent
+ * rows only, so the badge said 48 while the tab said 1
+ * (client_feedback_2026_10_21_spec.md §A1–A2).
  * Every row states what it is waiting for and offers exactly that action as
  * its button, so an operator never has to open a dropdown to find out
  * whether there is anything to do.
@@ -110,6 +115,32 @@ function ago(date: Date | null, locale: string, now: Date): string {
   return rtf.format(Math.round(hours / 24), "day");
 }
 
+/** The day itself, under the relative label, so the order can be read. */
+function day(date: Date | null, locale: string): string | undefined {
+  if (!date) return undefined;
+  return new Intl.DateTimeFormat(locale, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
+
+/**
+ * Every queued quote once, oldest request first.
+ *
+ * A quote can sit in two queues at once (paid with no driver *and* past its
+ * deadline), and the report sends each queue whole.
+ */
+export function worklist(queued: QuoteRow[]): QuoteRow[] {
+  const seen = new Map<string, QuoteRow>();
+  for (const row of queued) {
+    if (!seen.has(row.id) && nextAction(row).actionable) seen.set(row.id, row);
+  }
+  const time = (row: QuoteRow) =>
+    row.requestedAt ? row.requestedAt.getTime() : Number.POSITIVE_INFINITY;
+  return [...seen.values()].sort((a, b) => time(a) - time(b));
+}
+
 /** The same instant spelled out, for the title on the relative label. */
 function exact(date: Date | null, locale: string): string | undefined {
   if (!date) return undefined;
@@ -120,13 +151,20 @@ function exact(date: Date | null, locale: string): string | undefined {
 }
 
 export interface RecentQuotesPanelProps {
+  /** The latest arrivals, newest first. */
   rows: QuoteRow[];
+  /**
+   * Every row of the operator queues, any age. Omitted, the worklist falls
+   * back to the actionable subset of `rows`.
+   */
+  queued?: QuoteRow[];
   /** Title-only empty state, for when the section could not be read at all. */
   unavailable?: boolean;
 }
 
 export function RecentQuotesPanel({
   rows,
+  queued,
   unavailable = false,
 }: RecentQuotesPanelProps) {
   const t = useTranslations("admin.expedion");
@@ -148,18 +186,17 @@ export function RecentQuotesPanel({
   // sort cannot each be computed against a slightly different clock.
   const now = useMemo(() => new Date(), [rows]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // `rows` arrives newest-first (the report's `getRecentQuotes` query orders
-  // by `requested_at desc`); filtering to the actionable subset preserves
-  // that order rather than re-ranking by urgency, so a quote that just came
-  // in surfaces immediately instead of waiting behind older backlog.
-  const { todo, all, newCount } = useMemo(() => {
-    const decorated = rows.map((row) => ({ row, action: nextAction(row) }));
-    return {
-      todo: decorated.filter((d) => d.action.actionable).map((d) => d.row),
+  // The worklist is first come, first served: the request that has waited
+  // longest is at the top. The recent feed stays newest-first, as the report
+  // sends it (`requested_at desc`).
+  const { todo, all, newCount } = useMemo(
+    () => ({
+      todo: worklist(queued ?? rows),
       all: rows,
       newCount: rows.filter((row) => isNewQuote(row, now)).length,
-    };
-  }, [rows, now]);
+    }),
+    [rows, queued, now]
+  );
 
   // Default to the work when there is any, and to the feed when there is not —
   // an empty "to handle" tab as the landing view reads as a broken page.
@@ -186,7 +223,8 @@ export function RecentQuotesPanel({
   const columns = useMemo<ColumnDef<QuoteRow>[]>(
     () => [
       {
-        accessorKey: "reference",
+        id: "reference",
+        accessorFn: (row) => row.quoteRef ?? 0,
         header: ({ column }) => (
           <DataTableColumnHeader column={column} title={t("table.reference")} />
         ),
@@ -202,21 +240,10 @@ export function RecentQuotesPanel({
               <span className="mt-1.5 h-2 w-2 shrink-0" />
             )}
             <div className="min-w-0">
-              {/* The id is what the client's own screen shows, so an operator
-                  reading a row and a client reading their quote are naming the
-                  same string. The quote number leads when there is one — it is
-                  what Expedion prints — and the id sits under it either way. */}
-              <div className="font-mono text-xs">
-                {row.original.reference ?? row.original.id}
-              </div>
-              {row.original.reference ? (
-                <div
-                  className="text-muted-foreground/70 truncate font-mono text-[10px]"
-                  title={row.original.id}
-                >
-                  {row.original.id}
-                </div>
-              ) : null}
+              {/* Our number leads (« DEV-04659 », §A3), the Airtable or
+                  bordereau number under it; the id the client's own screen
+                  shows is in the tooltip. */}
+              <QuoteReferenceCell quote={row.original} />
               <div className="text-muted-foreground flex items-center gap-1 truncate text-xs">
                 <span className="truncate">
                   {row.original.auctionHouseName ?? "—"}
@@ -234,7 +261,7 @@ export function RecentQuotesPanel({
         filterFn: (row, _id, value) => {
           const q = String(value).toLowerCase();
           return [
-            row.original.reference,
+            ...quoteSearchText(row.original),
             row.original.auctionHouseName,
             row.original.deliveryCity,
             row.original.clientName,
@@ -310,6 +337,9 @@ export function RecentQuotesPanel({
                 title={exact(row.original.requestedAt, locale)}
               >
                 {ago(row.original.requestedAt, locale, now)}
+              </span>
+              <span className="text-muted-foreground/70 text-[10px]">
+                {day(row.original.requestedAt, locale)}
               </span>
               {atRisk ? (
                 <Badge
@@ -407,8 +437,13 @@ export function RecentQuotesPanel({
             {t("recent.subtitle", { count: newCount, total: all.length })} ·{" "}
             {t("recent.openHint")}
           </p>
+          {/* What the active tab holds and in which order, in words: the two
+              tabs were read as two filters on one list (§A1). */}
+          <p className="text-muted-foreground mt-1 text-xs">
+            {active === "todo" ? t("recent.todoHint") : t("recent.allHint")}
+          </p>
         </div>
-        <div className="bg-muted flex w-fit items-center rounded-lg p-1">
+        <div className="bg-muted flex w-fit shrink-0 items-center rounded-lg p-1 whitespace-nowrap">
           <TabButton
             active={active === "todo"}
             onClick={() => setTab("todo")}
@@ -445,6 +480,9 @@ export function RecentQuotesPanel({
           </div>
         ) : (
           <DataTable
+            // Keyed so switching tabs resets the order to that tab's own.
+            key={active}
+            initialSorting={[{ id: "waiting", desc: active === "all" }]}
             columns={columns}
             data={data}
             searchKey="reference"

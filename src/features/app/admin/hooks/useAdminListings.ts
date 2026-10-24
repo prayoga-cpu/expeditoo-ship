@@ -26,6 +26,10 @@ export interface AdminListing {
   dropoffCity: string;
   createdAt: string;
   views: number;
+  pickupFrom: string;
+  pickupUntil: string;
+  isFlexible: boolean;
+  expiresAt: string;
 }
 
 export const adminListingKeys = {
@@ -51,6 +55,10 @@ export function toAdminListing(row: AdminListingRow): AdminListing {
     dropoffCity: row.dropoffCity,
     createdAt: row.createdAt,
     views: row.views,
+    pickupFrom: row.pickupFrom,
+    pickupUntil: row.pickupUntil,
+    isFlexible: row.isFlexible,
+    expiresAt: row.expiresAt,
   };
 }
 

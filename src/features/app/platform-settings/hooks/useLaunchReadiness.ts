@@ -26,6 +26,15 @@ export function useUpdateCompanyIdentity() {
   });
 }
 
+/** The scheduled jobs' last runs (§X1). */
+export function useCronStatus() {
+  return useQuery({
+    queryKey: ["admin", "cron-status"],
+    queryFn: platformSettingsApi.getCronStatus,
+    refetchOnWindowFocus: false,
+  });
+}
+
 export function useStripeStatus() {
   return useQuery({
     queryKey: launchReadinessKeys.stripe,

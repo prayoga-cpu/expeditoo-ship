@@ -59,6 +59,7 @@ import {
   type NumericRules,
 } from "@/lib/numeric-input";
 import { cn } from "@/lib/utils";
+import { formatQuoteReference } from "@/lib/quote-reference";
 import {
   canRepriceQuote,
   canSupplyMissingPrice,
@@ -384,7 +385,11 @@ export function QuoteDetailDialog({
               <div>
                 <DialogTitle className="flex flex-wrap items-center gap-2">
                   {t("title", {
-                    reference: data?.quoteNumber ?? data?.bordereauNumber ?? "—",
+                    // Ours first (§A3); Airtable's or the bordereau's when a
+                    // report predates the migration.
+                    reference: data?.reference
+                      ? formatQuoteReference(data.reference)
+                      : (data?.quoteNumber ?? data?.bordereauNumber ?? "—"),
                   })}
                   {data ? (
                     <>
@@ -1021,7 +1026,9 @@ export function QuoteDetailDialog({
             <AlertDialogTitle>{ta("escalateTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
               {ta("escalateBody", {
-                reference: data?.quoteNumber ?? data?.bordereauNumber ?? "",
+                reference: data?.reference
+                    ? formatQuoteReference(data.reference)
+                    : (data?.quoteNumber ?? data?.bordereauNumber ?? ""),
               })}
             </AlertDialogDescription>
           </AlertDialogHeader>

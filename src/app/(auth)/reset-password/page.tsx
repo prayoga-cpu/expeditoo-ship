@@ -11,24 +11,31 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuthActions } from "@/features/auth/hooks/useAuthActions";
 import { motion } from "framer-motion";
+import { useTranslations } from "next-intl";
 
-const resetPasswordSchema = z
-  .object({
-    password: z.string().min(8, "Password must be at least 8 characters"),
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords do not match",
-    path: ["confirmPassword"],
-  });
+// French first, like every other page a client reaches (client feedback
+// 2026-10-21, §C4): this page was the one English screen on the way back into
+// an account.
+function resetPasswordSchema(t: (key: string) => string) {
+  return z
+    .object({
+      password: z.string().min(8, t("passwordMin")),
+      confirmPassword: z.string(),
+    })
+    .refine((data) => data.password === data.confirmPassword, {
+      message: t("mismatch"),
+      path: ["confirmPassword"],
+    });
+}
 
-type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
+type ResetPasswordFormData = z.infer<ReturnType<typeof resetPasswordSchema>>;
 
 type ResetState = "idle" | "success" | "error" | "no-token";
 
 function ResetPasswordContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const t = useTranslations("auth.resetPassword");
   const { resetPassword, isLoading, error: authError } = useAuthActions();
 
   const [showPassword, setShowPassword] = useState(false);
@@ -49,7 +56,7 @@ function ResetPasswordContent() {
     handleSubmit,
     formState: { errors },
   } = useForm<ResetPasswordFormData>({
-    resolver: zodResolver(resetPasswordSchema),
+    resolver: zodResolver(resetPasswordSchema(t)),
     defaultValues: {
       password: "",
       confirmPassword: "",
@@ -58,7 +65,7 @@ function ResetPasswordContent() {
 
   const onSubmit = async (data: ResetPasswordFormData) => {
     if (!token) {
-      setServerError("Invalid or missing reset token");
+      setServerError(t("missingToken"));
       setResetState("error");
       return;
     }
@@ -74,7 +81,7 @@ function ResetPasswordContent() {
       }, 3000);
     } else {
       setResetState("error");
-      setServerError(result.error || "Failed to reset password");
+      setServerError(result.error || t("failedFallback"));
     }
   };
 
@@ -108,11 +115,10 @@ function ResetPasswordContent() {
               </div>
 
               <h1 className="text-2xl font-bold text-foreground mb-2 text-center">
-                Invalid Reset Link
+                {t("invalidTitle")}
               </h1>
               <p className="text-muted-foreground mb-6 text-center">
-                This password reset link is invalid or has expired. Please
-                request a new password reset link.
+                {t("invalidBody")}
               </p>
 
               <div className="space-y-3">
@@ -120,7 +126,7 @@ function ResetPasswordContent() {
                   onClick={() => router.push("/forgot-password")}
                   className="w-full rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground py-6 font-semibold transition-colors"
                 >
-                  Request New Link
+                  {t("requestNew")}
                 </Button>
 
                 <Button
@@ -128,7 +134,7 @@ function ResetPasswordContent() {
                   variant="outline"
                   className="w-full rounded-xl border-border/50 hover:bg-muted/50 text-foreground py-6 font-semibold transition-colors"
                 >
-                  Back to Sign In
+                  {t("backToSignIn")}
                 </Button>
               </div>
             </>
@@ -144,16 +150,15 @@ function ResetPasswordContent() {
               </div>
 
               <h1 className="text-2xl font-bold text-foreground mb-2 text-center">
-                Password Reset Successfully!
+                {t("success")}
               </h1>
               <p className="text-muted-foreground mb-6 text-center">
-                Your password has been reset. You can now sign in with your new
-                password.
+                {t("successBody")}
               </p>
 
               <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 mb-6">
                 <p className="text-primary text-sm text-center">
-                  Redirecting to sign in page in 3 seconds...
+                  {t("redirecting")}
                 </p>
               </div>
 
@@ -161,7 +166,7 @@ function ResetPasswordContent() {
                 onClick={() => router.push("/signin")}
                 className="w-full rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground py-6 font-semibold transition-colors"
               >
-                Sign In Now
+                {t("signInNow")}
               </Button>
             </>
           )}
@@ -176,11 +181,10 @@ function ResetPasswordContent() {
               </div>
 
               <h1 className="text-2xl font-bold text-foreground mb-2 text-center">
-                Reset Failed
+                {t("failedTitle")}
               </h1>
               <p className="text-muted-foreground mb-6 text-center">
-                We couldn't reset your password. The link may have expired or is
-                invalid.
+                {t("failedBody")}
               </p>
 
               {serverError && (
@@ -196,7 +200,7 @@ function ResetPasswordContent() {
                   onClick={() => router.push("/forgot-password")}
                   className="w-full rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground py-6 font-semibold transition-colors"
                 >
-                  Request New Link
+                  {t("requestNew")}
                 </Button>
 
                 <Button
@@ -204,7 +208,7 @@ function ResetPasswordContent() {
                   variant="outline"
                   className="w-full rounded-xl border-border/50 hover:bg-muted/50 text-foreground py-6 font-semibold transition-colors"
                 >
-                  Back to Sign In
+                  {t("backToSignIn")}
                 </Button>
               </div>
             </>
@@ -214,10 +218,10 @@ function ResetPasswordContent() {
           {resetState === "idle" && (
             <>
               <h1 className="text-2xl font-bold text-foreground mb-2">
-                Reset Your Password
+                {t("title")}
               </h1>
               <p className="text-muted-foreground mb-6">
-                Enter your new password below.
+                {t("subtitle")}
               </p>
 
               {/* Error Display */}
@@ -232,7 +236,7 @@ function ResetPasswordContent() {
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
-                    New Password
+                    {t("password")}
                   </label>
                   <div className="relative">
                     <Input
@@ -260,13 +264,13 @@ function ResetPasswordContent() {
                     </p>
                   )}
                   <p className="text-muted-foreground text-xs mt-1">
-                    Must be at least 8 characters
+                    {t("passwordHint")}
                   </p>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
-                    Confirm New Password
+                    {t("confirmPassword")}
                   </label>
                   <div className="relative">
                     <Input
@@ -302,7 +306,7 @@ function ResetPasswordContent() {
                   disabled={isLoading}
                   className="w-full rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground py-6 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isLoading ? "Resetting..." : "Reset Password"}
+                  {isLoading ? t("submitting") : t("submit")}
                 </Button>
               </form>
 
@@ -311,7 +315,7 @@ function ResetPasswordContent() {
                 variant="outline"
                 className="w-full mt-4 rounded-xl border-border/50 hover:bg-muted/50 text-foreground py-6 font-semibold transition-colors"
               >
-                Back to Sign In
+                {t("backToSignIn")}
               </Button>
             </>
           )}
@@ -319,12 +323,12 @@ function ResetPasswordContent() {
 
         {/* Help Text */}
         <p className="text-center text-muted-foreground text-sm mt-6">
-          Need help?{" "}
+          {t("needHelp")}{" "}
           <a
             href="mailto:support@expeditoo.fr"
             className="text-primary hover:text-primary/80 font-medium"
           >
-            Contact Support
+            {t("contactSupport")}
           </a>
         </p>
       </motion.div>
@@ -334,7 +338,7 @@ function ResetPasswordContent() {
 
 export default function ResetPasswordPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={null}>
       <ResetPasswordContent />
     </Suspense>
   );

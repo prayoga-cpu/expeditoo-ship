@@ -1,5 +1,56 @@
 # STATUS.md
 
+## Client feedback monitor — Nicolas's review of 21 October 2026
+
+_Owner: this section is for you. One row per point in Evan's write-up
+(`Expeditoo_retours_Nicolas_21-10-2026.pdf`). Spec:
+`docs/specs/client_feedback_2026_10_21_spec.md`._
+
+**Legend:** ⬜ not started · 🔧 in progress · ✅ done and tested locally ·
+🚀 live on production · ❓ needs an answer · 🔑 needs the owner's hand
+
+**State on 2026-10-24:** 2.65.0 is in the working tree, gates green, not
+committed. To go live: migrate `0040`/`0041`, then deploy, then set the two
+GitHub values (Operator to-do).
+
+| # | Nicolas asked | Status | What was wrong, what changed | Check on prod |
+|---|---|---|---|---|
+| A1 | « À traiter » vs « Tous » unclear | ✅ | Badge counted all quotes (48, some twice), tab only the 25 newest (1). Now one worklist of every quote needing action, oldest first, with a line saying what counts; « Tous » → « Récents » | `/admin/expedion`: tab count = sidebar badge |
+| A2 | Sort « En attente » by request date | ✅ ❓ | Column → « Reçu » with the date and the sort arrow; worklist oldest first, recent newest first. Direction to confirm | same page |
+| A3 | Number site requests + Airtable ref | ✅ | Site quotes had no number of ours. Every quote now « DEV-NNNNN » (migration 0040), Airtable number under it | quote rows and dialog |
+| A4 | Uniform reference (initials + cities) | ✅ ❓ | « PAR-CLA-100018 » everywhere; **no initials** (on the drivers' board). Format to confirm | any job, `/admin/listings` |
+| A5 | Show the selected driver | ✅ | Driver was fetched and dropped; « Propositions » hard-coded 0. Driver column, real reference, French statuses | `/admin/shipments` |
+| A6 | Switch roles from one account | 🚀 | Already built (2.61.0), sidebar badge « UTILISATEUR ⌄ » | — |
+| B1 | Award queue should show requests without a driver | ✅ ❓ | Only escalated jobs with bids, badge counted an expired one. Second read-only section for every other open request; operators still cannot award a direct one (requester's card) | `/admin/awards` |
+| B2 | Driver cancels → listing back on the board | 🚀 | Already built (« Me désister ») | — |
+| B3 | « Annonce directe » box unclear | 🔧 ❓ | It is the origin tag; it now explains itself on hover. Label waits for Léa's question | `/admin/listings`, hover « Directe » |
+| B4 | Sticky title / requester / price | ✅ | Pinned bar on the job page, both tabs | any job, scroll |
+| B5 | Urgent banner | ✅ ❓ | « Urgent » when open and pickup < 48 h (rule to confirm) | board, job page, lists |
+| B6 | Messaging: the other price | ✅ ❓ | Budget and % gap under every offer in a thread. A requester counter-offer is not built — asked | a job thread |
+| C1 | Driver transfers are manual | ❓ | Unchanged — waits on the client and their lawyer | — |
+| C2 | Pay drivers by Stripe to their IBAN | ❓ | Connect onboarding and transfer code exist, not wired — waits on the commission split and the lawyer | — |
+| C3 | PayPal + Apple Pay | ⬜ 🔑 | Léa's action; Stripe setup first (Operator to-do) | — |
+| C4 | Forgot password does not work | ✅ 🔑 | Resend's sandbox sender refuses his address. Refusal now logged; email and page in French. **Owner: verify a Resend domain** | `/forgot-password` with a non-owner address |
+| D1 | Condensed dashboard | ✅ | One line per live request, up to 4, « Tout voir » | `/home` |
+| D2 | List / card / close-up | ✅ ❓ | Liste / Cartes / Détaillé on « Mes demandes », remembered. « Carte » read as card, not map — asked | `/listings/me` |
+| D3 | Readable on mobile, swipeable cards | ✅ | Pickup / delivery swipe on a phone; pinned bar | a job at phone width |
+| D4 | Confirmation + redirect after each action | ✅ | Audit: offer toasts and refusals were English, delete-conversation silent — fixed. The rest already confirmed | submit / withdraw an offer |
+| D5 | Message search by listing | ✅ | Search by town, route, reference; live listings as chips; a listing with no thread points to its carriers | `/messages` |
+| D6 | Profile: posted / taken | ✅ | Two counters on `/profile` and the admin's « Voir le profil » | `/profile` |
+| X1 | _(found)_ Scheduled jobs never ran | ✅ 🔑 | GitHub `APP_URL` / `CRON_SECRET` unset since forever. « Tâches planifiées » card on Paramètres; past-deadline requests read « Expirée ». **Owner: set the two values** | Paramètres → « Tâches planifiées » |
+
+### Questions for Nicolas
+
+- **A2** — « À traiter » oldest first and « Récents » newest first: right way round?
+- **A4** — « PAR-CLA-100018 » without initials: enough, or initials on the admin screens only?
+- **B1** — should an operator ever award a *direct* request? It would mean charging the requester without them at the keyboard.
+- **B5** — urgent = less than 48 h before the pickup must happen: the right threshold?
+- **B6** — is « l'autre prix » the budget beside the offer (built), or a counter-offer the requester sends back?
+- **D2** — « carte » as card (built) or as map?
+- **B3** — waiting for Léa's question.
+
+---
+
 ## Client feedback monitor — WhatsApp batch of 7–8 October 2026
 
 _Owner: this section is for you. One row per message the client sent, one
@@ -252,6 +303,36 @@ adversarial verification pass — treat their detail as slightly less certain.
 Work that needs a human hand outside the codebase. Add to this list rather
 than leaving it in a chat message.
 
+- [ ] **Run Actions → "Migrate database" for `0040_expedion_quote_reference`
+      and `0041_cron_heartbeat` before 2.65.0 deploys.** Both additive: 0040
+      numbers the ~4,658 existing quotes oldest-first and adds the default,
+      0041 adds a table. New code on an unmigrated database 500s Supervision,
+      which selects `expedion_quotes.reference`. Proved on a scratch database
+      holding quotes: numbered by request date, a new quote takes the next
+      number, a re-run renumbers nothing.
+- [ ] **Set the GitHub repo variable `APP_URL` and secret `CRON_SECRET` — the
+      scheduled jobs have never run in production.** Every run of
+      `.github/workflows/scheduled-jobs.yml` on record failed (1,000 checked
+      on 2026-10-24) with « Repo variable APP_URL is unset »; `gh variable
+      list` is empty and the only repo secret is `POSTGRES_URL_PRODUCTION`.
+      Settings → Secrets and variables → Actions: variable `APP_URL` =
+      `https://expeditoo-ship-five.vercel.app`; secret `CRON_SECRET` = the
+      **same** value as Vercel's (it is set there, Sensitive, so it can only
+      be re-typed — or set a new value in both and redeploy). **What the
+      first run does:** expires the 7 `open` listings already past
+      `expires_at` (oldest 24 Sept; 6 direct, 1 BETA escalated) and tells
+      their owners; auto-publishes any paid quote past its deadline — today
+      `a-111-02`, a 1 € test quote by « denis nicolas »: cancel it first if it
+      should not reach the board. Check: Admin → Paramètres → « Tâches
+      planifiées » turns green within ~15 minutes.
+- [ ] **Apple Pay / PayPal for the client (Léa's action, 2.65.0 item C3).**
+      Nothing in the code yet, on purpose — payment code is live-money code.
+      Apple Pay: register `expeditoo-ship-five.vercel.app` (and any custom
+      domain) under Stripe → Settings → Payment method domains, then the
+      accept dialog's wallet setting can change from `never`. PayPal: enable
+      it on the Stripe account, then check it supports an award captured
+      after authorisation and a saved method before building it.
+
 - [x] ~~Run Actions → "Migrate database" for `0039_company_identity_stripe_heartbeat`
       before 2.64.0 deploys~~ — **done 2026-10-17**, run #15 dispatched by the
       owner on `release/2.64.0` (commit `53031e9`). Confirmed read-only through
@@ -450,7 +531,12 @@ than leaving it in a chat message.
       in-house driver" never gets the set-password link** — their account
       exists with a random password nobody knows. Until the domain is
       verified, the only way into such an account is admin impersonation
-      ("Log in as"), which skips email entirely.
+      ("Log in as"), which skips email entirely. **This is also why Nicolas's
+      « mot de passe oublié » did nothing on 21 October (2.65.0, item C4)**:
+      the reset email to his address was refused. Since 2.65.0 the refusal is
+      written to the server log (« Resend refused the password reset email »);
+      the Vercel `EMAIL_FROM` variable *is* set, so it holds a sender whose
+      domain is not verified, or the sandbox one.
 - [ ] **Run Actions → "Seed beta data" (type `seed` to confirm) once this
       deploy is out.** Needs migrations through `0031` (done, below) and the
       three accounts to exist (they do: the owner, `…+expeditootest`,
@@ -678,6 +764,125 @@ than leaving it in a chat message.
       after approval (the 2.61.0 entry, "What was wrong" item 4). To restore them, open
       `/admin/users`, then the roles dialog for that account, and add both.
       Until then its application page says driver access is off.
+
+---
+
+## ✅ 2026-10-24 — Nicolas's Review of 21 October: One Worklist, One Reference, Urgency, Condensed Requests, and Scheduled Jobs That Never Ran (2.65.0)
+
+_The owner, with Evan's write-up of Nicolas's 49-minute review
+(`Expeditoo_retours_Nicolas_21-10-2026.pdf`, 19 points and 4 actions): « analyze
+this feedback, validate the root causes and implementation plan » — then
+« implement everything you can handle from your side, and keep going everything
+that you can suggest »._
+
+Spec: `docs/specs/client_feedback_2026_10_21_spec.md`. Plan:
+`docs/plans/plan_client_feedback_2026_10_21.md`. Item-by-item monitor at the
+top of this file.
+
+### What the checking found first
+
+- **The scheduled jobs have never run in production** (spec §X1). Not one of
+  Nicolas's points, but behind several: the « Ouverte » requests from September
+  in his screenshots, the « Escalade due » row, the award badge over an empty
+  page. Read-only through `mirror_readonly`: 7 `open` listings past
+  `expires_at`, no listing ever `expired`, one paid quote past
+  `escalate_after` never escalated. `gh run list` on the workflow: 1,000 runs,
+  1,000 failures, « Repo variable APP_URL is unset ».
+- **A1 was a scope bug, not a label.** The sidebar summed three queue counts
+  over all quotes (and counted a paid quote past its deadline twice — it is in
+  two queues); the tab filtered the 25 newest. Production: 48 vs 1.
+- **A3:** `createQuote` never writes `quote_number` — only the Airtable import
+  does — so the one site quote showed its client-typed bordereau, « a-111-02 ».
+- **A5:** the driver was fetched by `/api/admin/shipments` and dropped by the
+  hook; « Propositions » was a hard-coded `0`; the route read the DAL itself
+  with an inline role check.
+- **B1:** the queue was `origin='expedion' AND offersCount > 0` by design, and
+  its badge lacked the board's `expires_at` predicate — hence « 1 » over
+  « Rien en attente » (the stale BETA job above).
+- **C4:** the reset code path works; the mail is refused by Resend's sandbox
+  sender (Operator to-do since 2026-09-23). The refusal left no trace because
+  the SDK returns `{ error }` and nobody read it.
+- **D4:** the audit found the offer submit/withdraw toasts and all 15 offer
+  refusal messages hard-coded in English, and no confirmation on deleting a
+  conversation. `/reset-password` was entirely English too.
+
+### What changed, by layer
+
+- **Schema** — `0040_expedion_quote_reference` (sequence + column + unique,
+  backfilled by `requested_at`), `0041_cron_heartbeat` (new table). Journal
+  `idx` 39/40, `when` +1 day each.
+- **DAL** — `ACTIONABLE` and `ExpedionTotals.actionable`
+  (`expedion-report.dal.ts`); `quote_ref` / `reference_is_airtable` on the
+  quote projection; nav badges (`admin-nav.dal.ts`); `shipmentsDal.adminOverview`
+  (named columns only); `listingsDal.activityCounts`; conversation listing
+  cities; `cronHeartbeatDal`.
+- **Services** — `shipmentService.adminOverview` (admin/operator),
+  `listingsService.activityFor` (self/admin/operator), `cronHealthService`
+  (`record` never throws; `getForAdmin` admin/finance), `CronHealthError` in
+  `handleError`; `assertSent` in the two auth mail paths.
+- **Routes** — `/api/admin/shipments` rewritten thin; new
+  `/api/users/[id]/activity`, `/api/admin/cron-status`; the five
+  `/api/cron/*` routes stamp a heartbeat only after authorising.
+- **Pure helpers** — `src/lib/urgency.ts`, `quote-reference.ts`,
+  `conversation-search.ts`; `cityCode` / `formatListingReference` in
+  `listing-reference.ts`; `displayStatus` in `statusTone.ts`.
+- **UI** — Supervision worklist (`worklist()`, `QuoteReferenceCell`,
+  `DataTable.initialSorting`); `DeliveriesTable` rewritten; `AwardQueue` two
+  sections (`splitAwardQueue`); `UrgentBadge`; `JobIdentityBar` and the swipe
+  slides in `JobDetail`; `RequestViews.tsx` (switcher, compact row, tile,
+  dashboard digest); Messages chips; `RequestActivityCard`; `CronStatusPanel`;
+  French reset email and page. 116 FR/EN keys set and 7 removed through the
+  splice tool; parity exact.
+
+### Judgment calls
+
+The eight readings in spec §0. The two worth a second look: **no client
+initials in the reference** (A4 — it is on the drivers' board) and **no
+operator award on direct requests** (B1 — the requester's card and 3-D Secure
+are the money path). Also: the stale-listing fix is display-only
+(`displayStatus`); the sweep remains the one writer, so the database still says
+`open` until the owner sets the GitHub values.
+
+### Verification
+
+- `npx tsc --noEmit` 0 errors · `pnpm lint` 0 errors (61 warnings, none new) ·
+  `pnpm test` **2,968 passed in 228 files** (104 new) · `pnpm build` ✓ ·
+  `pnpm changelog:check` ✓.
+- Migrations: all 41 applied with `psql` to a scratch database; 0040 run over
+  three quotes inserted first → numbered 1/2/3 by request date, the next insert
+  4, a re-run of 0040 renumbered nothing and the next insert took 5. Every new
+  DAL query (report row sets and scalars, nav counts, shipments overview,
+  activity, heartbeat upsert, conversation search) executed against it.
+  Database dropped.
+- **Chromium**, production build on :3005 against a second scratch database
+  (two throwaway accounts, four listings, 28 quotes; all dropped after):
+  **21/21 checks** — urgent badge; route cards scroll sideways on a 390 px
+  phone and sit in two columns at 1366 px; the identity bar stays at the top of
+  `<main>` after a 437 px scroll; list view, « Expirée », dashboard digest,
+  message chips and the carriers link, profile counters; Supervision reaching a
+  40-day-old quote outside the 25 recent, « DEV-00001 / Airtable 11119 »;
+  award queue sections and who-decides labels; « Tâches planifiées » with the
+  fix spelled out; « Directe » tooltip; « PAR-CLA-100001 »; the shipments
+  columns. Dark mode looked at on the job page. The pass caught four layout
+  faults jsdom could not, all fixed and re-checked: a translucent sticky bar,
+  the « Urgent » badge squeezing a dashboard title to one letter, the card
+  heading gap, and « À traiter » wrapping onto two lines.
+
+### Known limits
+
+- **Not on production.** Nothing is committed or pushed; the deploy needs the
+  migration first (Operator to-do).
+- **The two root causes behind C4 and X1 are settings only the owner can
+  change** (Resend domain, GitHub `APP_URL` / `CRON_SECRET`). Until then the
+  app now *says* so — in the log for mail, on Admin → Paramètres for the jobs.
+- Not built: C1/C2 (payouts — client and lawyer), C3 (Apple Pay / PayPal —
+  Léa, live-money code), B6's requester counter-offer, D2's map view. Asked in
+  the monitor.
+- Each Supervision queue is still capped at 50 rows by the report, so a
+  backlog over 50 in one queue shows its oldest 50.
+- The chat budget line and the award queue's direct section were checked in
+  unit tests and (the queue) in Chromium; no thread offer was seeded for a
+  browser look at the budget line.
 
 ---
 

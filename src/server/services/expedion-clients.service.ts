@@ -66,6 +66,8 @@ export interface ExpedionClientDto {
 
 export interface ExpedionClientQuoteDto {
   id: string;
+  /** Our number, « DEV-04659 » (0040). */
+  reference: number;
   quoteNumber: string | null;
   bordereauNumber: string | null;
   status: string;
@@ -135,6 +137,7 @@ export const expedionClientsService = {
       quotes: quotes.map(
         (q): ExpedionClientQuoteDto => ({
           id: q.id,
+          reference: q.reference,
           quoteNumber: q.quoteNumber,
           bordereauNumber: q.bordereauNumber,
           status: q.status,

@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   FIRST_LISTING_REFERENCE,
+  cityCode,
+  formatListingReference,
   parseListingReference,
 } from "../listing-reference";
 
@@ -58,4 +60,40 @@ describe("parseListingReference", () => {
     expect(parseListingReference("nord 100042")).toBeNull();
     expect(parseListingReference("refrigerateur")).toBeNull();
   });
+});
+
+/** client_feedback_2026_10_21_spec.md §A4 — « PAR-CLA-100018 ». */
+describe("cityCode / formatListingReference", () => {
+  it.each([
+    ["Paris", "PAR"],
+    ["Clamart", "CLA"],
+    ["Évry", "EVR"],
+    ["Le Havre", "LEH"],
+    ["Saint-Étienne", "SAI"],
+    ["  bruxelles ", "BRU"],
+  ])("codes %j as %s", (city, code) => {
+    expect(cityCode(city)).toBe(code);
+  });
+
+  it("gives no code for nothing", () => {
+    expect(cityCode(null)).toBeNull();
+    expect(cityCode("")).toBeNull();
+    expect(cityCode("12")).toBeNull();
+  });
+
+  it("puts departure and arrival letters in front of the number", () => {
+    expect(formatListingReference(100018, "Paris", "Clamart")).toBe("PAR-CLA-100018");
+  });
+
+  it("falls back to the bare number without both cities", () => {
+    expect(formatListingReference(100018)).toBe("100018");
+    expect(formatListingReference(100018, "Paris", null)).toBe("100018");
+  });
+
+  it.each(["PAR-CLA-100018", "par-cla-100018", "Réf. PAR-CLA-100018", "PAR - CLA - 100018"])(
+    "reads %j back to its number",
+    (input) => {
+      expect(parseListingReference(input)).toBe(100018);
+    }
+  );
 });

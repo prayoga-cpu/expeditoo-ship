@@ -115,7 +115,7 @@ describe("JobDetail header", () => {
   it("names the job by its reference, with a way to copy it", () => {
     render();
 
-    expect(screen.getByText("Réf. 100042")).toBeInTheDocument();
+    expect(screen.getByText("Réf. CAE-REN-100042")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Copier la référence" })
     ).toBeInTheDocument();
@@ -127,7 +127,7 @@ describe("JobDetail header", () => {
 
     expect(container.textContent).not.toMatch(/expedion/i);
     // The reference is the same kind of number on both inlets.
-    expect(screen.getByText("Réf. 100042")).toBeInTheDocument();
+    expect(screen.getByText("Réf. CAE-REN-100042")).toBeInTheDocument();
   });
 });
 
@@ -202,3 +202,78 @@ describe("JobDetail, for the author of a request not yet live", () => {
   });
 });
 
+
+// client_feedback_2026_10_21_spec.md §B4, §B5, §D3
+describe("JobDetail, as the client asked on 21 October", () => {
+  it("pins the title, reference and price in one sticky bar", () => {
+    render();
+
+    const bar = screen.getByTestId("job-identity-bar");
+    expect(bar.className).toContain("sticky");
+    expect(bar.textContent).toContain("Armoire normande");
+    expect(bar.textContent).toContain("Réf. CAE-REN-100042");
+    expect(bar.textContent).toContain("250,00");
+  });
+
+  it("names the requester of a direct request in the bar", () => {
+    hooks.job = {
+      ...JOB,
+      shipper: { id: "user_1", name: "Nicolas Denis", image: null, rating: 0 },
+    };
+    render();
+
+    expect(screen.getByTestId("job-identity-bar").textContent).toContain(
+      tr("myJobs.detail.requester", { name: "Nicolas Denis" })
+    );
+  });
+
+  it("names nobody on an escalated job, whose owner is the system account", () => {
+    hooks.job = {
+      ...JOB,
+      origin: "expedion",
+      shipper: { id: "sys", name: "Expedion System", image: null, rating: 0 },
+    };
+    render();
+
+    expect(screen.getByTestId("job-identity-bar").textContent).not.toContain(
+      "Expedion System"
+    );
+  });
+
+  it("marks an open request whose pickup is within 48 hours as urgent", () => {
+    const soon = new Date(Date.now() + 20 * 3_600_000).toISOString();
+    hooks.job = {
+      ...JOB,
+      pickupFrom: soon,
+      pickupUntil: soon,
+      expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+    };
+    render();
+
+    expect(screen.getByText(tr("listingUrgency.label"))).toBeInTheDocument();
+  });
+
+  it("does not mark a request whose pickup is a week away", () => {
+    const later = new Date(Date.now() + 7 * 24 * 3_600_000).toISOString();
+    hooks.job = { ...JOB, pickupFrom: later, pickupUntil: later };
+    render();
+
+    expect(screen.queryByText(tr("listingUrgency.label"))).not.toBeInTheDocument();
+  });
+
+  it("reads « Expirée » on an open request past its bidding deadline", () => {
+    hooks.job = { ...JOB, status: "open", expiresAt: "2026-01-01T00:00:00.000Z" };
+    render();
+
+    expect(screen.getByText(tr("myJobs.status.expired"))).toBeInTheDocument();
+  });
+
+  it("lays the two ends out as swipeable cards on a phone", () => {
+    render();
+
+    const ends = screen.getByTestId("route-endpoints");
+    expect(ends.className).toContain("snap-x");
+    expect(ends.className).toContain("sm:grid-cols-2");
+    expect(ends.children).toHaveLength(2);
+  });
+});

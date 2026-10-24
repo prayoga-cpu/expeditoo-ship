@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cronHealthService } from "@/server/services/cron-health.service";
 import { carrierService } from "@/server/services/carrier.service";
 import { isAuthorisedCron } from "@/lib/cron-auth";
 
@@ -19,8 +20,10 @@ export async function GET(req: NextRequest) {
 
   try {
     const result = await carrierService.processDocumentExpiry();
+    await cronHealthService.record("carrier-documents", true);
     return NextResponse.json({ success: true, ...result });
   } catch (error) {
+    await cronHealthService.record("carrier-documents", false, error);
     console.error("Carrier document expiry job failed:", error);
     return NextResponse.json(
       {

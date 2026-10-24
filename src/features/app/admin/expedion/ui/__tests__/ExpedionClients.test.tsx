@@ -72,6 +72,7 @@ const QUOTES: ExpedionClientQuote[] = (
   ] as const
 ).map((status, index) => ({
   id: `q-${index}`,
+  reference: index + 1,
   quoteNumber: `D-${index}`,
   bordereauNumber: index % 2 === 0 ? `BX-${index}` : null,
   status,

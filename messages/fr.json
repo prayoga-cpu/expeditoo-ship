@@ -230,11 +230,28 @@
     },
     "resetPassword": {
       "title": "Réinitialiser le mot de passe",
-      "subtitle": "Entrez votre nouveau mot de passe",
+      "subtitle": "Choisissez votre nouveau mot de passe.",
       "password": "Nouveau mot de passe",
       "confirmPassword": "Confirmer le nouveau mot de passe",
       "submit": "Réinitialiser",
-      "success": "Mot de passe réinitialisé avec succès"
+      "success": "Mot de passe réinitialisé avec succès",
+      "submitting": "Réinitialisation…",
+      "successBody": "Votre mot de passe a été changé. Vous pouvez vous connecter avec le nouveau.",
+      "redirecting": "Redirection vers la connexion dans 3 secondes…",
+      "signInNow": "Se connecter",
+      "invalidTitle": "Lien invalide",
+      "invalidBody": "Ce lien de réinitialisation est invalide ou a expiré. Demandez-en un nouveau.",
+      "requestNew": "Recevoir un nouveau lien",
+      "backToSignIn": "Retour à la connexion",
+      "failedTitle": "Réinitialisation impossible",
+      "failedBody": "Le lien a peut-être expiré ou a déjà servi.",
+      "failedFallback": "La réinitialisation a échoué.",
+      "missingToken": "Lien de réinitialisation incomplet.",
+      "passwordMin": "8 caractères minimum",
+      "passwordHint": "8 caractères minimum",
+      "mismatch": "Les deux mots de passe ne correspondent pas",
+      "needHelp": "Besoin d'aide ?",
+      "contactSupport": "Contacter le support"
     },
     "verifyEmail": {
       "title": "Vérifiez votre email",
@@ -620,6 +637,10 @@
         "aliasTooLong": "40 caractères au maximum",
         "invalidPhone": "Ce numéro de téléphone n'est pas valide"
       }
+    },
+    "activity": {
+      "posted": "Demandes publiées",
+      "taken": "Prises en charge par un transporteur"
     }
   },
   "settings": {
@@ -680,7 +701,7 @@
       "unread": "Non lus",
       "inbox": "Boîte de réception"
     },
-    "search": "Rechercher des messages...",
+    "search": "Rechercher : nom, ville, trajet (Paris → Lyon), référence…",
     "empty": {
       "title": "Aucun message",
       "description": "Lorsque vous contactez un utilisateur, votre conversation apparaîtra ici."
@@ -731,7 +752,11 @@
           "rejected": "Non retenue",
           "withdrawn": "Retirée",
           "expired": "Expirée"
-        }
+        },
+        "budget": "Budget du demandeur : {amount}",
+        "gapBelow": "{percent} % en dessous",
+        "gapAbove": "{percent} % au-dessus",
+        "gapEqual": "au même prix"
       },
       "errors": {
         "CONVERSATION_HAS_NO_LISTING": "Cette conversation ne porte pas sur une annonce.",
@@ -759,7 +784,17 @@
     },
     "input": {
       "placeholder": "Tapez un message..."
-    }
+    },
+    "chips": {
+      "label": "Vos annonces en cours",
+      "emptyTitle": "Pas encore de conversation sur {route}",
+      "emptyOwn": "Contactez un transporteur qui fait déjà ce trajet, ou attendez les offres.",
+      "emptyOther": "Ouvrez l'annonce pour écrire au demandeur ou faire une offre.",
+      "findCarriers": "Voir les transporteurs sur ce trajet",
+      "openListing": "Ouvrir l'annonce"
+    },
+    "deleted": "Conversation supprimée",
+    "deleteFailed": "Impossible de supprimer la conversation. Réessayez."
   },
   "deliveries": {
     "title": "Expéditions",
@@ -980,6 +1015,30 @@
         "acceptSlot": "Accepter ce créneau",
         "accepting": "Acceptation…",
         "slotsPassed": "Les créneaux proposés sont passés : ce transporteur doit faire une nouvelle offre."
+      },
+      "toast": {
+        "submitted": "Offre envoyée",
+        "submittedDescription": "Le demandeur est prévenu. Vous la retrouvez dans « Mes trajets ».",
+        "submitFailed": "Impossible d'envoyer l'offre. Réessayez.",
+        "withdrawn": "Offre retirée",
+        "withdrawFailed": "Impossible de retirer l'offre. Réessayez."
+      },
+      "submitErrors": {
+        "SLOTS_REQUIRED": "Ajoutez au moins un jour où vous pouvez faire ce transport.",
+        "SLOT_IN_PAST": "Un de vos créneaux est déjà passé.",
+        "SLOT_DUPLICATE": "Vous avez proposé deux fois le même créneau.",
+        "SLOT_DAY_INVALID": "Un des jours choisis n'est pas une date valide.",
+        "TOO_MANY_SLOTS": "Une offre ne peut pas porter autant de créneaux.",
+        "TOO_MANY_SLOT_DAYS": "Une offre couvre quatre jours au plus.",
+        "DELIVERY_LEAD_OUT_OF_RANGE": "La livraison ne peut pas avoir lieu plus d'une semaine après le retrait.",
+        "CARRIER_NOT_APPROVED": "Votre dossier de transporteur n'est pas encore validé.",
+        "LISTING_NOT_OPEN": "Cette demande n'accepte plus d'offres.",
+        "LISTING_EXPIRED": "Le délai pour faire une offre sur cette demande est écoulé.",
+        "OFFER_ALREADY_EXISTS": "Vous avez déjà une offre en cours sur cette demande.",
+        "CANNOT_BID_OWN_LISTING": "Vous ne pouvez pas faire d'offre sur votre propre demande.",
+        "VEHICLE_CAPACITY_WEIGHT": "Ce véhicule ne peut pas transporter ce chargement.",
+        "VEHICLE_CAPACITY_DIMENSIONS": "Ce véhicule est trop petit pour ce chargement.",
+        "PICKUP_OUTSIDE_WINDOW": "Votre horaire de retrait sort du créneau du demandeur."
       }
     }
   },
@@ -1398,7 +1457,6 @@
       },
       "needsProtection": "À protéger",
       "needsPackaging": "À emballer",
-      "budget": "Budget {amount}",
       "load": "Marchandise",
       "weight": "Poids",
       "quantity": "Quantité",
@@ -1436,7 +1494,10 @@
         "title": "Impossible de charger cette demande",
         "description": "La demande n'a pas pu être chargée. Réessayez dans un instant.",
         "retry": "Réessayer"
-      }
+      },
+      "requester": "Demandeur : {name}",
+      "budgetLabel": "Budget",
+      "swipeHint": "Faites glisser pour voir la livraison →"
     },
     "carriers": {
       "tab": "Transporteurs disponibles",
@@ -1499,7 +1560,13 @@
       "noLongerEditable": "Cette demande a été publiée ou fermée entre-temps : elle ne peut plus être modifiée ici.",
       "notFound": "Cette demande est introuvable : elle a peut-être été supprimée entre-temps."
     },
-    "created": "Créée le {date}"
+    "created": "Créée le {date}",
+    "views": {
+      "label": "Affichage des demandes",
+      "list": "Liste",
+      "cards": "Cartes",
+      "detailed": "Détaillé"
+    }
   },
   "driver": {
     "title": "Chauffeur",
@@ -2520,7 +2587,9 @@
         "delete": "Supprimer",
         "origin": {
           "direct": "Directe",
-          "expedion": "via Expedion"
+          "expedion": "via Expedion",
+          "directHint": "Demande publiée sur Expeditoo par son demandeur. C'est lui qui choisit le transporteur et paie avec sa carte.",
+          "expedionHint": "Devis Expedion payé et publié faute de chauffeur. Un opérateur choisit le transporteur à la place du client."
         }
       },
       "dialogs": {
@@ -2809,7 +2878,9 @@
         "ready": "prête",
         "missingCoords": "coordonnées manquantes",
         "airtableImport": "import Airtable",
-        "notEscalatable": "non prête"
+        "notEscalatable": "non prête",
+        "airtableNumber": "Airtable {number}",
+        "bordereauNumber": "Bordereau {number}"
       },
       "blockers": {
         "pickupCoords": "Coordonnées d'enlèvement",
@@ -2890,13 +2961,13 @@
       "recent": {
         "title": "Devis récents",
         "subtitle": "{total} plus récents · {count, plural, =0 {rien de nouveau en 24 h} one {# nouveau en 24 h} other {# nouveaux en 24 h}}",
-        "waiting": "En attente",
+        "waiting": "Reçu",
         "nextStep": "Prochaine étape",
         "new": "Nouveau",
         "storageIn": "stockage J-{count}",
         "tabs": {
           "todo": "À traiter",
-          "all": "Tous"
+          "all": "Récents"
         },
         "todoEmpty": "Rien ne vous attend",
         "todoEmptyBody": "Chaque devis récent est chez le client ou déjà en route.",
@@ -2922,7 +2993,9 @@
           "storage": "Gardiennage"
         },
         "openHint": "cliquez sur une ligne pour le devis complet et son bordereau",
-        "autoPublishIn": "publication auto dans {count} h"
+        "autoPublishIn": "publication auto dans {count} h",
+        "todoHint": "Tout ce qui attend une action, quel que soit l'âge du devis : à chiffrer, payé sans chauffeur, publication automatique dépassée, stockage bientôt facturé. Le plus ancien en premier.",
+        "allHint": "Les derniers devis reçus, qu'il y ait quelque chose à faire ou non. Le plus récent en premier."
       },
       "detail": {
         "title": "Devis {reference}",
@@ -3010,17 +3083,34 @@
     },
     "awards": {
       "title": "File d'attribution",
-      "subtitle": "{count} missions escaladées en attente d'une décision.",
       "bidCount": "{count} offres",
       "clientPaid": "Payé par le client",
       "empty": {
         "title": "Rien en attente",
-        "description": "Les missions escaladées apparaissent ici dès qu'un chauffeur a répondu."
+        "description": "Les demandes publiées apparaissent ici tant qu'aucun chauffeur n'est retenu."
       },
       "error": {
         "title": "Impossible de charger la file",
         "description": "Réessayez dans un instant."
-      }
+      },
+      "intro": "Toutes les demandes ouvertes qui n'ont pas encore de chauffeur. En haut, celles que vous attribuez ; en dessous, celles que l'on suit.",
+      "toAward": {
+        "title": "À attribuer ({count})",
+        "description": "Missions Expedion qui ont reçu au moins une offre : c'est vous qui choisissez le chauffeur, à la place du client.",
+        "empty": "Aucune mission Expedion n'attend votre choix."
+      },
+      "waiting": {
+        "title": "En attente d'un chauffeur ({count})",
+        "description": "Les autres demandes publiées. Sur une demande directe, c'est le demandeur qui choisit et paie avec sa carte : suivez-la et relancez-le si des offres l'attendent.",
+        "empty": "Aucune autre demande ouverte."
+      },
+      "decider": {
+        "operator": "Vous choisissez",
+        "requester": "Le demandeur choisit"
+      },
+      "noBids": "Aucune offre",
+      "pickup": "Retrait à partir du {date}",
+      "budget": "Budget du demandeur"
     },
     "expedionClients": {
       "title": "Clients Expedion",
@@ -3112,18 +3202,17 @@
   },
   "shipments": {
     "title": "Gestion des expéditions",
-    "subtitle": "Gérer et assigner les expéditions en attente",
+    "subtitle": "Les transports en cours, avec le chauffeur retenu pour chacun.",
     "table": {
-      "id": "ID",
       "title": "Titre",
       "route": "Itinéraire",
       "status": "Statut",
-      "proposals": "Propositions",
       "price": "Prix",
       "created": "Créé",
-      "actions": "Actions",
-      "assign": "Assigner",
-      "searchPlaceholder": "Rechercher des expéditions..."
+      "searchPlaceholder": "Rechercher des expéditions...",
+      "reference": "Réf.",
+      "driver": "Chauffeur",
+      "noDriver": "Pas encore de chauffeur"
     },
     "proposalsDialog": {
       "title": "Propositions des chauffeurs",
@@ -3180,7 +3269,8 @@
         "support_resolution": "Décision du support",
         "other": "Autre"
       }
-    }
+    },
+    "loadFailed": "Impossible de charger les expéditions"
   },
   "carrier": {
     "application": {
@@ -3606,10 +3696,6 @@
       "untitled": "Mission de transport",
       "action": "Ouvrir la course"
     },
-    "myRequest": {
-      "title": "Votre demande",
-      "action": "Voir ma demande"
-    },
     "cardNudge": {
       "title": "Enregistrez une carte pour aller plus vite",
       "description": "Vous paierez au moment d'accepter une offre, en saisissant votre carte. Une carte enregistrée vous permet de le faire en un clic.",
@@ -3619,6 +3705,11 @@
       "openJobs": "Missions ouvertes aux offres",
       "activeRuns": "Courses en cours",
       "liveOffers": "Offres en attente de décision"
+    },
+    "myRequests": {
+      "title": "{count, plural, one {Votre demande en cours} other {Vos # demandes en cours}}",
+      "all": "Tout voir",
+      "more": "{count, plural, one {Et # autre dans « Mes demandes »} other {Et # autres dans « Mes demandes »}}"
     }
   },
   "listingReference": {
@@ -3696,7 +3787,7 @@
       "offersOne": "{count} offre",
       "budget": "budget",
       "youBid": "Vous avez enchéri",
-      "urgent": "URGENT",
+      "urgent": "CLÔTURE BIENTÔT",
       "fragile": "Fragile",
       "needsHelp": "Aide au chargement",
       "needsProtection": "À protéger",
@@ -3918,6 +4009,37 @@
         "title": "Autres webhooks sur ce compte Stripe",
         "hint": "Ils n’appartiennent pas à cette application, par ex. les automatisations n8n de l’application Expedion actuelle. Ne les désactivez pas tant qu’elle s’en sert.",
         "otherHost": "Le chemin de cette application sur une autre adresse : une ancienne URL ?"
+      }
+    },
+    "cron": {
+      "title": "Tâches planifiées",
+      "subtitle": "Ce qui ferme les demandes expirées, publie les devis payés et les demandes programmées, et surveille les documents des chauffeurs.",
+      "refresh": "Actualiser",
+      "error": "Impossible de lire l'état des tâches",
+      "errorBody": "Réessayez dans un instant.",
+      "neverTitle": "Des tâches n'ont jamais tourné",
+      "neverBody": "Elles sont lancées par GitHub (workflow « Scheduled jobs »). Dans le dépôt, Settings → Secrets and variables → Actions : créez la variable APP_URL (l'adresse de production) et le secret CRON_SECRET (la même valeur que dans Vercel). Tant que ce n'est pas fait, les demandes n'expirent jamais et les devis payés ne sont jamais publiés automatiquement.",
+      "lastRun": "Dernière exécution : {date}",
+      "neverRun": "Jamais exécutée",
+      "state": {
+        "ok": "À l'heure",
+        "late": "En retard",
+        "failing": "En échec",
+        "never": "Jamais"
+      },
+      "jobs": {
+        "publish-scheduled-listings": "Publication des demandes programmées",
+        "expedion-escalate": "Publication automatique des devis payés",
+        "expire-listings": "Expiration des demandes",
+        "carrier-documents": "Documents des chauffeurs",
+        "cleanup-images": "Nettoyage des images"
+      },
+      "every": {
+        "publish-scheduled-listings": "toutes les 5 min",
+        "expedion-escalate": "toutes les 10 min",
+        "expire-listings": "toutes les 15 min",
+        "carrier-documents": "chaque jour",
+        "cleanup-images": "chaque semaine"
       }
     }
   },
@@ -4247,5 +4369,10 @@
       "FORBIDDEN_NOT_SHIPPER": "Seul l'auteur de la demande peut accepter une offre.",
       "FORBIDDEN_NOT_OPERATOR": "Seul un opérateur peut attribuer cette mission."
     }
+  },
+  "listingUrgency": {
+    "label": "Urgent",
+    "hint": "Pas encore de chauffeur, et le retrait doit avoir lieu dans moins de {hours} h.",
+    "banner": "Demande urgente : le retrait doit avoir lieu dans moins de {hours} h et aucun chauffeur n'est encore retenu."
   }
 }

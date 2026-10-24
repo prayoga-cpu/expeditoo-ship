@@ -122,8 +122,9 @@ export function ExpedionDashboard() {
     missing.has(section) ? "—" : value;
 
   const byStatus = new Map(statuses.map((s) => [s.status, s.count]));
-  const actionable =
-    quotes.awaitingPricing + quotes.needsDriver + quotes.escalationDue;
+  // Counted once per quote on the server; the old sum of three queues counted a
+  // paid quote past its deadline twice.
+  const actionable = quotes.actionable;
 
   // Cents on the wire; recharts wants a plain number, so divide once here.
   const chartData = series.map((point) => ({
@@ -145,7 +146,11 @@ export function ExpedionDashboard() {
       </div>
 
       {/* ---- What arrived and what needs doing, before any figure ---- */}
-      <RecentQuotesPanel rows={data.recent} unavailable={missing.has("recent")} />
+      <RecentQuotesPanel
+        rows={data.recent}
+        queued={QUEUES.flatMap((queue) => queues[queue.key])}
+        unavailable={missing.has("recent")}
+      />
 
       {/* Requests posted on Expeditoo itself. The panel above reads Expedion
           quotes only — the Airtable import and the Expedion app — so without

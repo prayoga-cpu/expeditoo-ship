@@ -23,6 +23,10 @@ export interface AdminListingRow {
   dropoffCity: string;
   views: number;
   createdAt: string;
+  pickupFrom: string;
+  pickupUntil: string;
+  isFlexible: boolean;
+  expiresAt: string;
   shipper?: { name?: string | null; email?: string | null } | null;
 }
 

@@ -14,6 +14,7 @@ import {
 import { PageLoader } from "@/components/ui/page-loader";
 import { formatCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
+import { formatQuoteReference } from "@/lib/quote-reference";
 
 import type { ExpedionClientQuote } from "../api/clients.api";
 import { useExpedionClient } from "../hooks/useExpedionClients";
@@ -174,7 +175,7 @@ function QuoteLine({ quote }: { quote: ExpedionClientQuote }) {
     <li className="flex flex-wrap items-center justify-between gap-3 p-3 text-sm">
       <div className="min-w-0">
         <p className="font-medium text-foreground">
-          {quote.bordereauNumber ?? quote.quoteNumber ?? quote.id}
+          {quote.reference ? formatQuoteReference(quote.reference) : (quote.bordereauNumber ?? quote.quoteNumber ?? quote.id)}
         </p>
         <p className="text-xs text-muted-foreground">
           {[quote.pickupCity, quote.deliveryCity].filter(Boolean).join(" → ") ||

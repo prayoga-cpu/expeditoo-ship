@@ -10,11 +10,14 @@ const mocks = vi.hoisted(() => {
 })
 
 // Mock dependencies
-vi.mock('@/lib/email', () => ({
+vi.mock('@/lib/email', async () => ({
   // sendViaResend normally redirects outside production; the mock bypasses
   // that so this file can test authService's own subject/template logic.
   sendViaResend: mocks.send,
   EMAIL_FROM: 'test@example.com',
+  // The real check: a refusal Resend *returns* must reach the log (§C4).
+  assertSent: (await vi.importActual<typeof import('@/lib/email')>('@/lib/email'))
+    .assertSent,
 }));
 
 vi.mock('@/server/dal/users.dal', () => ({
@@ -287,8 +290,8 @@ describe('authService', () => {
             await authService.sendPasswordResetEmail('test@mail.com', resetUrl);
 
             const sent = sentEmail();
-            expect(sent.subject).toBe('Reset your EXPEDITOO password');
-            expect(textOf(sent.react)).toContain('Test');
+            expect(sent.subject).toBe('Réinitialisez votre mot de passe EXPEDITOO');
+            expect(textOf(sent.react).join(' ')).toContain('Bonjour Test,');
             expect(textOf(sent.react).join(' ')).not.toContain('verify');
         });
 
@@ -315,7 +318,7 @@ describe('authService', () => {
             await authService.sendPasswordResetEmail('test@mail.com', resetUrl);
 
             const sent = sentEmail();
-            expect(sent.subject).toBe('Reset your Expedion password');
+            expect(sent.subject).toBe('Réinitialisez votre mot de passe Expedion');
             const strings = textOf(sent.react);
             expect(strings).toContain(resetUrl);
             expect(strings.join(' ')).not.toContain('EXPEDITOO');
@@ -323,3 +326,38 @@ describe('authService', () => {
     });
 });
 
+describe('a send Resend refuses (client_feedback_2026_10_21_spec.md §C4)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('logs the refusal instead of treating it as sent', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    mocks.send.mockResolvedValueOnce({
+      data: null,
+      error: {
+        name: 'validation_error',
+        message:
+          'You can only send testing emails to your own email address (owner@example.com).',
+      },
+    });
+
+    await authService.sendPasswordResetEmail('client@example.com', 'https://x/reset');
+
+    expect(consoleError).toHaveBeenCalledTimes(1);
+    const logged = String(consoleError.mock.calls[0][1]);
+    expect(logged).toContain('Resend refused the password reset email');
+    expect(logged).toContain('verify one in Resend and set EMAIL_FROM');
+    consoleError.mockRestore();
+  });
+
+  it('logs nothing when the send went through', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    mocks.send.mockResolvedValueOnce({ data: { id: 'e1' }, error: null });
+
+    await authService.sendPasswordResetEmail('client@example.com', 'https://x/reset');
+
+    expect(consoleError).not.toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
+});

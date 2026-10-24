@@ -1,4 +1,5 @@
 import { db } from "@/db";
+import { matchesConversationSearch } from "@/lib/conversation-search";
 import {
   conversations,
   conversationParticipants,
@@ -139,6 +140,9 @@ export const messagesDAL = {
                 id: true,
                 title: true,
                 reference: true,
+                // Searched, and shown as the thread's route (§D5).
+                pickupCity: true,
+                dropoffCity: true,
               },
               with: {
                 photos: {
@@ -174,24 +178,21 @@ export const messagesDAL = {
         return dateB - dateA;
       });
 
-    // Apply search filter if provided
+    // Apply search filter if provided: the other person's name, the job's
+    // title, either of its towns, a typed route or its reference
+    // (conversation-search.ts, client_feedback_2026_10_21_spec.md §D5).
     if (search) {
-      const searchLower = search.toLowerCase();
-      conversations = conversations.filter((conv) => {
-        // Search in participant names (excluding current user)
-        const participantMatch = conv.participants.some(
-          (p) =>
-            p.user.id !== userId &&
-            p.user.name?.toLowerCase().includes(searchLower)
-        );
-
-        // Search in listing title
-        const listingMatch = conv.listing?.title
-          ?.toLowerCase()
-          .includes(searchLower);
-
-        return participantMatch || listingMatch;
-      });
+      conversations = conversations.filter((conv) =>
+        matchesConversationSearch(
+          {
+            participantNames: conv.participants
+              .filter((p) => p.user.id !== userId)
+              .map((p) => p.user.name),
+            listing: conv.listing,
+          },
+          search
+        )
+      );
     }
 
     // Apply pagination after filtering

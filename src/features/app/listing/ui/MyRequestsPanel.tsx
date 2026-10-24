@@ -20,8 +20,15 @@ import { formatCurrency } from "@/lib/currency";
 import { useMyRequests } from "../hooks/useMyRequests";
 import { RequestSummary } from "./RequestSummary";
 import { ListingReference } from "./ListingReference";
+import { UrgentBadge } from "./UrgentBadge";
 import { DraftActions } from "./DraftActions";
-import { STATUS_TONE } from "../statusTone";
+import {
+  RequestCompactRow,
+  RequestTile,
+  RequestViewSwitcher,
+  useRequestView,
+} from "./RequestViews";
+import { STATUS_TONE, displayStatus } from "../statusTone";
 import type { Job, ListingStatus } from "../types";
 
 const STATUSES: ListingStatus[] = [
@@ -44,10 +51,12 @@ export function MyRequestsPanel() {
     isLoading,
     isError,
   } = useMyRequests(status === "all" ? undefined : status);
+  const { view, setView } = useRequestView();
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-end gap-2">
+        <RequestViewSwitcher view={view} onChange={setView} />
         <Select
           value={status}
           onValueChange={(value) => setStatus(value as ListingStatus | "all")}
@@ -95,6 +104,18 @@ export function MyRequestsPanel() {
             </Button>
           )}
         </CenteredEmptyState>
+      ) : view === "list" ? (
+        <div className="space-y-2">
+          {jobs.map((job) => (
+            <RequestCompactRow key={job.id} job={job} />
+          ))}
+        </div>
+      ) : view === "cards" ? (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {jobs.map((job) => (
+            <RequestTile key={job.id} job={job} />
+          ))}
+        </div>
       ) : (
         <div className="space-y-3">
           {jobs.map((job) => (
@@ -120,10 +141,11 @@ function JobRow({ job }: { job: Job }) {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge className={STATUS_TONE[job.status]}>
-                {t(`status.${job.status}`)}
+              <Badge className={STATUS_TONE[displayStatus(job)]}>
+                {t(`status.${displayStatus(job)}`)}
               </Badge>
-              <ListingReference reference={job.reference} />
+              <ListingReference reference={job.reference} from={job.pickupCity} to={job.dropoffCity} />
+              <UrgentBadge job={job} />
             </div>
             <div className="mt-2">
               <RequestSummary

@@ -20,3 +20,4 @@ export * from "./feedback";
 export * from "./platform-settings";
 export * from "./company-identity";
 export * from "./stripe-webhook-heartbeat";
+export * from "./cron-heartbeat";

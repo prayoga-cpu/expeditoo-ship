@@ -15,7 +15,10 @@ job.
 - Six digits from the start: the first reference is **100001**. It grows to
   seven digits after 899 999 jobs; nothing assumes a width.
 - Digits only. No prefix, no letters, no check digit: it is read aloud and
-  typed on a phone keypad.
+  typed on a phone keypad. **Amended 2.65.0:** screens now print three letters
+  per city in front of it (« PAR-CLA-100018 »); the number is still the
+  identity, what is copied, and what the search needs
+  (client_feedback_2026_10_21_spec.md §A4).
 - **Both inlets get one**, from the same sequence. A direct request and an
   escalated Expedion job are numbered alike; the reference says nothing about
   origin.

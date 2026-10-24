@@ -1,4 +1,5 @@
 import { api } from "@/lib/fetcher";
+import type { CronJobStatus } from "@/server/services/cron-health.service";
 
 export interface PlatformSettings {
   feeBasisPoints: number;
@@ -78,6 +79,9 @@ export interface StripeStatus {
   checks: { key: StripeCheckKey; state: "ok" | "todo" | "fail" }[];
 }
 
+/** One scheduled job's last run (client_feedback_2026_10_21_spec.md §X1). */
+export type { CronJobStatus };
+
 export const platformSettingsApi = {
   get: () => api.get<PlatformSettings>("/api/admin/settings"),
   update: (input: UpdatePlatformSettingsInput) =>
@@ -86,4 +90,5 @@ export const platformSettingsApi = {
   updateCompany: (input: UpdateCompanyIdentityInput) =>
     api.put<CompanyIdentity>("/api/admin/company", input),
   getStripeStatus: () => api.get<StripeStatus>("/api/admin/stripe-status"),
+  getCronStatus: () => api.get<CronJobStatus[]>("/api/admin/cron-status"),
 };

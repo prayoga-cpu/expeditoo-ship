@@ -110,7 +110,7 @@ describe("PendingOffersPanel", () => {
     const onError = renderPanel();
 
     expect(await screen.findByText("Armoire normande")).toBeInTheDocument();
-    expect(screen.getByText("Réf. 100042")).toBeInTheDocument();
+    expect(screen.getByText("Réf. CAE-REN-100042")).toBeInTheDocument();
     expect(screen.getByText("Caen")).toBeInTheDocument();
     expect(screen.getByText("Rennes")).toBeInTheDocument();
     expect(screen.getByText(euros(18_000))).toBeInTheDocument();

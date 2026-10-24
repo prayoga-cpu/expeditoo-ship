@@ -44,7 +44,8 @@ import { AvailableCarriersPanel } from "./AvailableCarriersPanel";
 import { AvailabilityLine } from "./AvailabilityLine";
 import { OfferCard } from "./OfferCard";
 import { DraftActions } from "./DraftActions";
-import { STATUS_TONE } from "../statusTone";
+import { STATUS_TONE, displayStatus } from "../statusTone";
+import { UrgentBadge } from "./UrgentBadge";
 import type { Job } from "../types";
 
 interface JobDetailProps {
@@ -125,13 +126,18 @@ export function JobDetail({
 
   return (
     <div className="mx-auto w-full max-w-3xl p-4 sm:p-6">
-      {canAct ? (
-        <JobTabs listingId={listingId} total={carriers?.total ?? 0}>
-          {details}
-        </JobTabs>
-      ) : (
-        details
-      )}
+      {/* A direct child of the page, not of a tab: a sticky element only
+          sticks while its parent is on screen. */}
+      <JobIdentityBar job={job} />
+      <div className="pt-4">
+        {canAct ? (
+          <JobTabs listingId={listingId} total={carriers?.total ?? 0}>
+            {details}
+          </JobTabs>
+        ) : (
+          details
+        )}
+      </div>
     </div>
   );
 }
@@ -253,7 +259,10 @@ function JobHeader({ job }: { job: Job }) {
   return (
     <header className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <Badge className={STATUS_TONE[job.status]}>{tStatus(job.status)}</Badge>
+        <Badge className={STATUS_TONE[displayStatus(job)]}>
+          {tStatus(displayStatus(job))}
+        </Badge>
+        <UrgentBadge job={job} />
         {job.reopenedAt && (
           <Badge variant="outline" className="border-warning/40 text-warning">
             <RotateCcw className="mr-1 h-3 w-3" />
@@ -294,17 +303,57 @@ function JobHeader({ job }: { job: Job }) {
         )}
       </div>
 
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight text-balance">
-          {job.title}
-        </h1>
-        <ListingReference reference={job.reference} copyable />
-      </div>
-
-      <p className="font-mono text-lg text-muted-foreground">
-        {t("budget", { amount: euros(job.budgetCents) })}
-      </p>
     </header>
+  );
+}
+
+/**
+ * Title, reference, requester and price, pinned to the top of the scrolling
+ * page (client feedback 2026-10-21, §B4): the offers and the route are long,
+ * and the operator comparing bids lost sight of what the job was and what it
+ * pays. `sticky` against the shell's scrolling `<main>`; the negative margins
+ * let its background run edge to edge over the page padding.
+ *
+ * The requester is named on a direct request only: an escalated job's owner
+ * is the Expedion system account, which is nobody's name. The name is the
+ * `shipper` party every audience of the view already receives.
+ */
+function JobIdentityBar({ job }: { job: Job }) {
+  const t = useTranslations("myJobs.detail");
+  const requester = job.origin === "direct" ? job.shipper?.name : null;
+
+  return (
+    <div
+      data-testid="job-identity-bar"
+      className="sticky top-0 z-20 -mx-4 border-b bg-background px-4 py-2.5 sm:-mx-6 sm:px-6"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 space-y-0.5">
+          <h1 className="truncate text-xl font-semibold tracking-tight sm:text-2xl">
+            {job.title}
+          </h1>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
+            <ListingReference
+              reference={job.reference}
+              from={job.pickupCity}
+              to={job.dropoffCity}
+              copyable
+            />
+            {requester ? (
+              <span className="text-xs text-muted-foreground">
+                {t("requester", { name: requester })}
+              </span>
+            ) : null}
+          </div>
+        </div>
+        <p className="shrink-0 pt-0.5 text-right font-mono text-lg font-semibold tabular-nums">
+          {euros(job.budgetCents)}
+          <span className="block text-[11px] font-normal text-muted-foreground">
+            {t("budgetLabel")}
+          </span>
+        </p>
+      </div>
+    </div>
   );
 }
 
@@ -442,33 +491,54 @@ function JobRoute({ job }: { job: Job }) {
       </h2>
       <Separator />
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Endpoint
-          title={t("pickup")}
-          address={job.pickupAddress}
-          city={`${job.pickupPostalCode} ${job.pickupCity}`}
-          locationType={job.pickupLocationType}
-          from={job.pickupFrom}
-          until={job.pickupUntil}
-          days={job.pickupDays}
-          periods={job.pickupPeriods}
-        />
-        <Endpoint
-          title={t("dropoff")}
-          address={job.dropoffAddress}
-          city={`${job.dropoffPostalCode} ${job.dropoffCity}`}
-          locationType={job.dropoffLocationType}
-          from={job.dropoffFrom}
-          until={job.dropoffUntil}
-          days={job.dropoffDays}
-          periods={job.dropoffPeriods}
-        />
+      {/* On a phone the two ends are cards side by side that scroll
+          sideways, each almost a screen wide, rather than one long column
+          (client feedback 2026-10-21, §D3: « des cartes qu'on fait défiler »).
+          From `sm` up they sit in two columns, as before. */}
+      <p className="text-xs text-muted-foreground sm:hidden">{t("swipeHint")}</p>
+      <div
+        data-testid="route-endpoints"
+        className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0"
+      >
+        <EndpointSlide>
+          <Endpoint
+            title={t("pickup")}
+            address={job.pickupAddress}
+            city={`${job.pickupPostalCode} ${job.pickupCity}`}
+            locationType={job.pickupLocationType}
+            from={job.pickupFrom}
+            until={job.pickupUntil}
+            days={job.pickupDays}
+            periods={job.pickupPeriods}
+          />
+        </EndpointSlide>
+        <EndpointSlide>
+          <Endpoint
+            title={t("dropoff")}
+            address={job.dropoffAddress}
+            city={`${job.dropoffPostalCode} ${job.dropoffCity}`}
+            locationType={job.dropoffLocationType}
+            from={job.dropoffFrom}
+            until={job.dropoffUntil}
+            days={job.dropoffDays}
+            periods={job.dropoffPeriods}
+          />
+        </EndpointSlide>
       </div>
 
       {job.isFlexible && (
         <p className="text-sm text-muted-foreground">{t("flexibleDates")}</p>
       )}
     </Card>
+  );
+}
+
+/** One end of the route: a swipeable card on a phone, a plain column above. */
+function EndpointSlide({ children }: { children: ReactNode }) {
+  return (
+    <div className="w-[85%] shrink-0 snap-start rounded-lg border bg-muted/30 p-3 sm:w-auto sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0">
+      {children}
+    </div>
   );
 }
 

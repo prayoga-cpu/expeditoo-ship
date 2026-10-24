@@ -60,7 +60,7 @@ export function DeliveredRequestCard({ job, delivery }: DeliveredRequest) {
               {job.title}
             </Link>
             <div>
-              <ListingReference reference={job.reference} />
+              <ListingReference reference={job.reference} from={job.pickupCity} to={job.dropoffCity} />
             </div>
             {delivery.deliveredAt && (
               <p className="mt-0.5 text-xs text-muted-foreground">

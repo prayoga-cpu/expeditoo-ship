@@ -109,7 +109,7 @@ describe("ActiveTripsPanel", () => {
 
     const title = await screen.findByText("Armoire normande");
     expect(screen.getByText("En retrait")).toBeInTheDocument();
-    expect(screen.getByText("Réf. 100042")).toBeInTheDocument();
+    expect(screen.getByText("Réf. CAE-REN-100042")).toBeInTheDocument();
     expect(screen.getByText("Caen")).toBeInTheDocument();
     expect(screen.getByText("Rennes")).toBeInTheDocument();
     expect(screen.getByText("Prix convenu")).toBeInTheDocument();

@@ -10,24 +10,32 @@ import {
 } from "../api/offers.api";
 import { ApiError } from "@/lib/fetcher";
 
-/** Maps the service's error codes to something a carrier can act on. */
-const SUBMIT_MESSAGES: Record<string, string> = {
-  SLOTS_REQUIRED: "Add at least one day you could do this job",
-  SLOT_IN_PAST: "One of your time slots has already passed",
-  SLOT_DUPLICATE: "You proposed the same slot twice",
-  SLOT_DAY_INVALID: "One of the days you picked is not a real date",
-  TOO_MANY_SLOTS: "That is more time slots than an offer can carry",
-  TOO_MANY_SLOT_DAYS: "An offer can cover at most four days",
-  DELIVERY_LEAD_OUT_OF_RANGE: "Delivery cannot be more than a week after collection",
-  CARRIER_NOT_APPROVED: "Your carrier application is not approved yet",
-  LISTING_NOT_OPEN: "This job is no longer accepting offers",
-  LISTING_EXPIRED: "The bidding window for this job has closed",
-  OFFER_ALREADY_EXISTS: "You already have a live offer on this job",
-  CANNOT_BID_OWN_LISTING: "You cannot bid on your own job",
-  VEHICLE_CAPACITY_WEIGHT: "That vehicle cannot carry this load",
-  VEHICLE_CAPACITY_DIMENSIONS: "That vehicle is too small for this load",
-  PICKUP_OUTSIDE_WINDOW: "Your pickup time is outside the shipper's window",
-};
+/**
+ * The service's error codes a carrier can act on, each with a message under
+ * `listing.bid.submitErrors`. They were an English map until 2.65.0, so a
+ * French driver read « The bidding window for this job has closed » (client
+ * feedback 2026-10-21, §D4).
+ */
+const SUBMIT_CODES = [
+  "SLOTS_REQUIRED",
+  "SLOT_IN_PAST",
+  "SLOT_DUPLICATE",
+  "SLOT_DAY_INVALID",
+  "TOO_MANY_SLOTS",
+  "TOO_MANY_SLOT_DAYS",
+  "DELIVERY_LEAD_OUT_OF_RANGE",
+  "CARRIER_NOT_APPROVED",
+  "LISTING_NOT_OPEN",
+  "LISTING_EXPIRED",
+  "OFFER_ALREADY_EXISTS",
+  "CANNOT_BID_OWN_LISTING",
+  "VEHICLE_CAPACITY_WEIGHT",
+  "VEHICLE_CAPACITY_DIMENSIONS",
+  "PICKUP_OUTSIDE_WINDOW",
+] as const;
+
+const isSubmitCode = (code: string): code is (typeof SUBMIT_CODES)[number] =>
+  (SUBMIT_CODES as readonly string[]).includes(code);
 
 export function useMyOffers(status?: string) {
   return useQuery({
@@ -38,11 +46,14 @@ export function useMyOffers(status?: string) {
 
 export function useSubmitOffer(listingId: string) {
   const queryClient = useQueryClient();
+  const t = useTranslations("listing.bid");
 
   return useMutation({
     mutationFn: (input: SubmitOfferInput) => offersApi.submit(listingId, input),
     onSuccess: () => {
-      toast.success("Offer submitted");
+      toast.success(t("toast.submitted"), {
+        description: t("toast.submittedDescription"),
+      });
       queryClient.invalidateQueries({ queryKey: ["job", listingId] });
       queryClient.invalidateQueries({ queryKey: ["carrier-offers"] });
     },
@@ -55,11 +66,10 @@ export function useSubmitOffer(listingId: string) {
           ? [error.code, ...(error.issues ?? []).map((issue) => issue.message)]
           : [];
 
-      const known = coded.find((code) => code in SUBMIT_MESSAGES);
+      const known = coded.find(isSubmitCode);
 
       toast.error(
-        (known && SUBMIT_MESSAGES[known]) ??
-          (error instanceof Error ? error.message : "Could not submit offer")
+        known ? t(`submitErrors.${known}`) : t("toast.submitFailed")
       );
     },
   });
@@ -67,15 +77,15 @@ export function useSubmitOffer(listingId: string) {
 
 export function useWithdrawOffer() {
   const queryClient = useQueryClient();
+  const t = useTranslations("listing.bid");
 
   return useMutation({
     mutationFn: (offerId: string) => offersApi.withdraw(offerId),
     onSuccess: () => {
-      toast.success("Offer withdrawn");
+      toast.success(t("toast.withdrawn"));
       queryClient.invalidateQueries({ queryKey: ["carrier-offers"] });
     },
-    onError: (error) =>
-      toast.error(error instanceof Error ? error.message : "Could not withdraw"),
+    onError: () => toast.error(t("toast.withdrawFailed")),
   });
 }
 

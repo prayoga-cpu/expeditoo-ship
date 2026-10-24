@@ -317,6 +317,24 @@ export const listingsDal = {
     return result;
   },
 
+  /**
+   * How many requests a person has put on the board, and how many of those a
+   * transporter took (client_feedback_2026_10_21_spec.md §D6). « Posted » is
+   * every request that went live — drafts and scheduled ones have not; « taken »
+   * is every one with an award standing, carried or delivered. A job
+   * re-boarded after a withdrawal is open again and counts as posted only.
+   */
+  async activityCounts(shipperId: string, tx: Executor = db) {
+    const [row] = await tx
+      .select({
+        posted: sql<number>`count(*) filter (where ${listings.status} not in ('draft', 'scheduled'))::int`,
+        taken: sql<number>`count(*) filter (where ${listings.status} in ('awarded', 'in_progress', 'completed'))::int`,
+      })
+      .from(listings)
+      .where(eq(listings.shipperId, shipperId));
+    return { posted: Number(row?.posted ?? 0), taken: Number(row?.taken ?? 0) };
+  },
+
   async getByShipperId(
     shipperId: string,
     status?: ListingStatus,

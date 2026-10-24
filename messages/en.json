@@ -230,11 +230,28 @@
     },
     "resetPassword": {
       "title": "Reset password",
-      "subtitle": "Enter your new password",
+      "subtitle": "Choose your new password.",
       "password": "New password",
       "confirmPassword": "Confirm new password",
       "submit": "Reset password",
-      "success": "Password reset successfully"
+      "success": "Password reset successfully",
+      "submitting": "Resetting…",
+      "successBody": "Your password has been changed. You can sign in with the new one.",
+      "redirecting": "Taking you to sign-in in 3 seconds…",
+      "signInNow": "Sign in now",
+      "invalidTitle": "Invalid link",
+      "invalidBody": "This reset link is invalid or has expired. Ask for a new one.",
+      "requestNew": "Send me a new link",
+      "backToSignIn": "Back to sign-in",
+      "failedTitle": "Reset failed",
+      "failedBody": "The link may have expired or already been used.",
+      "failedFallback": "The reset failed.",
+      "missingToken": "The reset link is incomplete.",
+      "passwordMin": "At least 8 characters",
+      "passwordHint": "At least 8 characters",
+      "mismatch": "The two passwords do not match",
+      "needHelp": "Need help?",
+      "contactSupport": "Contact support"
     },
     "verifyEmail": {
       "title": "Verify your email",
@@ -620,6 +637,10 @@
         "aliasTooLong": "40 characters at most",
         "invalidPhone": "This phone number is not valid"
       }
+    },
+    "activity": {
+      "posted": "Requests published",
+      "taken": "Taken by a transporter"
     }
   },
   "settings": {
@@ -675,7 +696,7 @@
   },
   "messages": {
     "title": "Messages",
-    "search": "Search messages...",
+    "search": "Search: name, town, route (Paris → Lyon), reference…",
     "tabs": {
       "all": "All",
       "unread": "Unread",
@@ -731,7 +752,11 @@
           "rejected": "Not selected",
           "withdrawn": "Withdrawn",
           "expired": "Expired"
-        }
+        },
+        "budget": "Requester's budget: {amount}",
+        "gapBelow": "{percent}% below",
+        "gapAbove": "{percent}% above",
+        "gapEqual": "same price"
       },
       "errors": {
         "CONVERSATION_HAS_NO_LISTING": "This conversation is not about a job.",
@@ -759,7 +784,17 @@
     },
     "input": {
       "placeholder": "Type a message..."
-    }
+    },
+    "chips": {
+      "label": "Your live listings",
+      "emptyTitle": "No conversation yet on {route}",
+      "emptyOwn": "Contact a transporter who already drives this route, or wait for offers.",
+      "emptyOther": "Open the listing to write to the requester or make an offer.",
+      "findCarriers": "See transporters on this route",
+      "openListing": "Open the listing"
+    },
+    "deleted": "Conversation deleted",
+    "deleteFailed": "Could not delete the conversation. Try again."
   },
   "deliveries": {
     "title": "Shipments",
@@ -980,6 +1015,30 @@
         "acceptSlot": "Accept this slot",
         "accepting": "Accepting…",
         "slotsPassed": "The proposed slots have passed: this carrier needs to send a new offer."
+      },
+      "toast": {
+        "submitted": "Offer sent",
+        "submittedDescription": "The requester has been told. You will find it under « My trips ».",
+        "submitFailed": "Could not send the offer. Try again.",
+        "withdrawn": "Offer withdrawn",
+        "withdrawFailed": "Could not withdraw the offer. Try again."
+      },
+      "submitErrors": {
+        "SLOTS_REQUIRED": "Add at least one day you could do this job.",
+        "SLOT_IN_PAST": "One of your time slots has already passed.",
+        "SLOT_DUPLICATE": "You proposed the same slot twice.",
+        "SLOT_DAY_INVALID": "One of the days you picked is not a real date.",
+        "TOO_MANY_SLOTS": "That is more time slots than an offer can carry.",
+        "TOO_MANY_SLOT_DAYS": "An offer can cover at most four days.",
+        "DELIVERY_LEAD_OUT_OF_RANGE": "Delivery cannot be more than a week after collection.",
+        "CARRIER_NOT_APPROVED": "Your carrier application is not approved yet.",
+        "LISTING_NOT_OPEN": "This job is no longer accepting offers.",
+        "LISTING_EXPIRED": "The bidding window for this job has closed.",
+        "OFFER_ALREADY_EXISTS": "You already have a live offer on this job.",
+        "CANNOT_BID_OWN_LISTING": "You cannot bid on your own job.",
+        "VEHICLE_CAPACITY_WEIGHT": "That vehicle cannot carry this load.",
+        "VEHICLE_CAPACITY_DIMENSIONS": "That vehicle is too small for this load.",
+        "PICKUP_OUTSIDE_WINDOW": "Your pickup time is outside the requester's window."
       }
     }
   },
@@ -1398,7 +1457,6 @@
       },
       "needsProtection": "Needs protection",
       "needsPackaging": "Needs packaging",
-      "budget": "Budget {amount}",
       "load": "Load",
       "weight": "Weight",
       "quantity": "Quantity",
@@ -1436,7 +1494,10 @@
         "title": "Could not load this request",
         "description": "The request could not be loaded. Try again in a moment.",
         "retry": "Try again"
-      }
+      },
+      "requester": "Requester: {name}",
+      "budgetLabel": "Budget",
+      "swipeHint": "Swipe to see the delivery →"
     },
     "carriers": {
       "tab": "Available carriers",
@@ -1499,7 +1560,13 @@
       "noLongerEditable": "This request was published or closed in the meantime: it can no longer be changed here.",
       "notFound": "This request can't be found: it may have been deleted in the meantime."
     },
-    "created": "Created {date}"
+    "created": "Created {date}",
+    "views": {
+      "label": "How requests are shown",
+      "list": "List",
+      "cards": "Cards",
+      "detailed": "Detailed"
+    }
   },
   "driver": {
     "title": "Driver",
@@ -2520,7 +2587,9 @@
         "delete": "Delete",
         "origin": {
           "direct": "Direct",
-          "expedion": "via Expedion"
+          "expedion": "via Expedion",
+          "directHint": "Request posted on Expeditoo by its requester. They choose the transporter and pay with their own card.",
+          "expedionHint": "A paid Expedion quote published because no driver took it. An operator chooses the transporter in the client's place."
         }
       },
       "dialogs": {
@@ -2809,7 +2878,9 @@
         "ready": "ready",
         "missingCoords": "missing coordinates",
         "airtableImport": "Airtable import",
-        "notEscalatable": "not ready"
+        "notEscalatable": "not ready",
+        "airtableNumber": "Airtable {number}",
+        "bordereauNumber": "Slip {number}"
       },
       "blockers": {
         "pickupCoords": "Pickup coordinates",
@@ -2890,13 +2961,13 @@
       "recent": {
         "title": "Recent quotes",
         "subtitle": "{total} most recent · {count, plural, =0 {nothing new in 24 h} one {# new in 24 h} other {# new in 24 h}}",
-        "waiting": "Waiting",
+        "waiting": "Received",
         "nextStep": "Next step",
         "new": "New",
         "storageIn": "storage in {count} d",
         "tabs": {
           "todo": "To handle",
-          "all": "All"
+          "all": "Recent"
         },
         "todoEmpty": "Nothing waiting on you",
         "todoEmptyBody": "Every recent quote is with the client or already moving.",
@@ -2922,7 +2993,9 @@
           "storage": "Storage"
         },
         "openHint": "click a row for the full quote and its bordereau",
-        "autoPublishIn": "auto-publishes in {count} h"
+        "autoPublishIn": "auto-publishes in {count} h",
+        "todoHint": "Everything waiting for an action, however old the quote: to price, paid with no driver, auto-publish deadline passed, storage about to be billed. Oldest first.",
+        "allHint": "The latest quotes received, whether or not there is anything to do. Newest first."
       },
       "detail": {
         "title": "Quote {reference}",
@@ -3010,17 +3083,34 @@
     },
     "awards": {
       "title": "Award queue",
-      "subtitle": "{count} escalated jobs waiting for a decision.",
       "bidCount": "{count} bids",
       "clientPaid": "Client paid",
       "empty": {
         "title": "Nothing waiting",
-        "description": "Escalated jobs appear here once drivers have bid on them."
+        "description": "Published requests appear here until a driver is chosen."
       },
       "error": {
         "title": "Could not load the queue",
         "description": "Try again in a moment."
-      }
+      },
+      "intro": "Every open request that has no driver yet. At the top, the ones you award; below, the ones to keep an eye on.",
+      "toAward": {
+        "title": "To award ({count})",
+        "description": "Expedion jobs with at least one offer: you choose the driver, in the client's place.",
+        "empty": "No Expedion job is waiting for your choice."
+      },
+      "waiting": {
+        "title": "Waiting for a driver ({count})",
+        "description": "Every other published request. On a direct request the requester chooses and pays with their own card: follow it, and nudge them if offers are waiting.",
+        "empty": "No other open request."
+      },
+      "decider": {
+        "operator": "You choose",
+        "requester": "The requester chooses"
+      },
+      "noBids": "No offers",
+      "pickup": "Pickup from {date}",
+      "budget": "Requester's budget"
     },
     "expedionClients": {
       "title": "Expedion clients",
@@ -3091,18 +3181,17 @@
   },
   "shipments": {
     "title": "Shipments Management",
-    "subtitle": "Manage and assign pending shipments",
+    "subtitle": "Transports under way, with the driver chosen for each.",
     "table": {
-      "id": "ID",
       "title": "Title",
       "route": "Route",
       "status": "Status",
-      "proposals": "Proposals",
       "price": "Price",
       "created": "Created",
-      "actions": "Actions",
-      "assign": "Assign",
-      "searchPlaceholder": "Search shipments..."
+      "searchPlaceholder": "Search shipments...",
+      "reference": "Ref.",
+      "driver": "Driver",
+      "noDriver": "No driver yet"
     },
     "proposalsDialog": {
       "title": "Driver Proposals",
@@ -3159,7 +3248,8 @@
         "support_resolution": "Support decision",
         "other": "Other"
       }
-    }
+    },
+    "loadFailed": "Could not load shipments"
   },
   "reviews": {
     "title": "Reviews",
@@ -3606,10 +3696,6 @@
       "untitled": "Transport job",
       "action": "Open this run"
     },
-    "myRequest": {
-      "title": "Your request",
-      "action": "View my request"
-    },
     "cardNudge": {
       "title": "Save a card to go faster",
       "description": "You pay when you accept an offer, by entering your card. A saved card lets you do it in one tap.",
@@ -3619,6 +3705,11 @@
       "openJobs": "Jobs open for bids",
       "activeRuns": "Active runs",
       "liveOffers": "Bids awaiting a decision"
+    },
+    "myRequests": {
+      "title": "{count, plural, one {Your live request} other {Your # live requests}}",
+      "all": "See all",
+      "more": "{count, plural, one {And # more in « My requests »} other {And # more in « My requests »}}"
     }
   },
   "listingReference": {
@@ -3696,7 +3787,7 @@
       "offersOne": "{count} offer",
       "budget": "budget",
       "youBid": "You bid",
-      "urgent": "URGENT",
+      "urgent": "CLOSING SOON",
       "fragile": "Fragile",
       "needsHelp": "Help loading",
       "needsProtection": "Needs protection",
@@ -3918,6 +4009,37 @@
         "title": "Other webhooks on this Stripe account",
         "hint": "They do not belong to this app, e.g. the n8n automations of the current Expedion app. Do not disable them while it still uses them.",
         "otherHost": "This app’s path on another address: an old URL?"
+      }
+    },
+    "cron": {
+      "title": "Scheduled jobs",
+      "subtitle": "What closes expired requests, publishes paid quotes and scheduled requests, and watches drivers' documents.",
+      "refresh": "Refresh",
+      "error": "Could not read the jobs' status",
+      "errorBody": "Try again in a moment.",
+      "neverTitle": "Some jobs have never run",
+      "neverBody": "They are started by GitHub (the « Scheduled jobs » workflow). In the repository, Settings → Secrets and variables → Actions: create the variable APP_URL (the production address) and the secret CRON_SECRET (the same value as in Vercel). Until then requests never expire and paid quotes are never published automatically.",
+      "lastRun": "Last run: {date}",
+      "neverRun": "Never run",
+      "state": {
+        "ok": "On time",
+        "late": "Late",
+        "failing": "Failing",
+        "never": "Never"
+      },
+      "jobs": {
+        "publish-scheduled-listings": "Publishing scheduled requests",
+        "expedion-escalate": "Auto-publishing paid quotes",
+        "expire-listings": "Expiring requests",
+        "carrier-documents": "Drivers' documents",
+        "cleanup-images": "Image clean-up"
+      },
+      "every": {
+        "publish-scheduled-listings": "every 5 min",
+        "expedion-escalate": "every 10 min",
+        "expire-listings": "every 15 min",
+        "carrier-documents": "daily",
+        "cleanup-images": "weekly"
       }
     }
   },
@@ -4247,5 +4369,10 @@
       "FORBIDDEN_NOT_SHIPPER": "Only the person who posted the request can accept an offer.",
       "FORBIDDEN_NOT_OPERATOR": "Only an operator can award this job."
     }
+  },
+  "listingUrgency": {
+    "label": "Urgent",
+    "hint": "No driver yet, and the pickup must happen within {hours} h.",
+    "banner": "Urgent request: the pickup must happen within {hours} h and no driver has been chosen yet."
   }
 }

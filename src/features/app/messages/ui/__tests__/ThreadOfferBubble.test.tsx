@@ -241,3 +241,21 @@ describe("ThreadOfferBubble — after the recipient declined here", () => {
     expect(container.textContent).toContain(fr.messages.offer.card.status.accepted);
   });
 });
+
+/** client_feedback_2026_10_21_spec.md §B6 — the other price, beside the offer. */
+describe("ThreadOfferBubble, against the job's budget", () => {
+  it("shows the requester's budget and how far the offer is from it", () => {
+    const { container } = renderBubble({ budgetCents: 20_000 });
+
+    expect(container.textContent).toContain("Budget du demandeur");
+    expect(container.textContent).toContain("200,00");
+    expect(container.textContent).toContain("10 % en dessous");
+    expect(onError).not.toHaveBeenCalled();
+  });
+
+  it("says nothing about a budget on a thread with no job", () => {
+    const { container } = renderBubble({ budgetCents: null });
+
+    expect(container.textContent).not.toContain("Budget du demandeur");
+  });
+});

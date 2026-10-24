@@ -108,6 +108,12 @@ export interface ExpedionTotals {
   cancelled: number;
   storageAtRisk: number;
   escalationDue: number;
+  /**
+   * Quotes in *any* of the three queues the sidebar badge counts, each counted
+   * once. `awaitingPricing + needsDriver + escalationDue` double-counted every
+   * paid quote past its deadline, which sits in both of the last two.
+   */
+  actionable: number;
   acceptedValueCents: number;
   paidValueCents: number;
   insuredShare: number;
@@ -160,6 +166,7 @@ export async function getExpedionTotals(): Promise<ExpedionTotals> {
                          and storage_free_until <= now() + interval '4 days'
                          and ${LIVE})::int                        as storage_at_risk,
       count(*) filter (where ${ESCALATION_DUE})::int              as escalation_due,
+      count(*) filter (where ${ACTIONABLE})::int                  as actionable,
       coalesce(sum(accepted_price_cents), 0)::bigint              as accepted_value,
       coalesce(sum(accepted_price_cents)
                filter (where payment_status = 'paid'), 0)::bigint as paid_value,
@@ -185,6 +192,7 @@ export async function getExpedionTotals(): Promise<ExpedionTotals> {
     cancelled: n("cancelled"),
     storageAtRisk: n("storage_at_risk"),
     escalationDue: n("escalation_due"),
+    actionable: n("actionable"),
     acceptedValueCents: n("accepted_value"),
     paidValueCents: n("paid_value"),
     // Share of accepted quotes that took ad valorem cover. Zero accepted
@@ -239,9 +247,29 @@ export const QUEUE_WHERE: Record<QueueKind, ReturnType<typeof sql>> = {
   escalationDue: ESCALATION_DUE,
 };
 
+/**
+ * The work the sidebar badge and the « À traiter » figure count: a quote to
+ * price, a paid quote with no driver, or one whose auto-publish deadline has
+ * passed. One OR rather than a sum of three counts, because a paid quote past
+ * its deadline is in both of the last two and was counted twice
+ * (client_feedback_2026_10_21_spec.md §A1). Storage is not in it: a storage
+ * countdown is a warning on a row, not a job of its own.
+ */
+export const ACTIONABLE = sql`((${QUEUE_WHERE.toPrice})
+  or (${QUEUE_WHERE.needsDriver})
+  or (${QUEUE_WHERE.escalationDue}))`;
+
 export interface QuoteRow {
   id: string;
+  /**
+   * Our number for the quote, « DEV-04659 » (0040). Every quote has one;
+   * null only on a fixture or a report read before the migration.
+   */
+  quoteRef?: number | null;
+  /** The Airtable « Numéro Devis », or failing that the bordereau number. */
   reference: string | null;
+  /** Whether `reference` is the Airtable number rather than the bordereau. */
+  referenceIsAirtable?: boolean;
   status: string;
   paymentStatus: string;
   auctionHouseName: string | null;
@@ -290,7 +318,9 @@ export interface QuoteRow {
 /** The projection every queue and the recent list share. */
 const QUOTE_COLUMNS = sql`
   id,
+  reference                                             as quote_ref,
   coalesce(quote_number, bordereau_number)              as reference,
+  quote_number is not null                              as reference_is_airtable,
   status::text                                          as status,
   payment_status::text                                  as payment_status,
   auction_house_name,
@@ -344,7 +374,9 @@ function toQuoteRow(r: Record<string, unknown>): QuoteRow {
   const date = (v: unknown) => (v ? new Date(v as string) : null);
   return {
     id: String(r.id),
+    quoteRef: num(r.quote_ref),
     reference: (r.reference as string) ?? null,
+    referenceIsAirtable: r.reference_is_airtable === true,
     status: String(r.status),
     paymentStatus: String(r.payment_status),
     auctionHouseName: (r.auction_house_name as string) ?? null,
@@ -593,7 +625,7 @@ export async function getMonthlySeries(months = 6): Promise<MonthPoint[]> {
  * on the server.
  */
 const QUOTE_FIELDS = sql`
-  id, reference, status, payment_status, auction_house_name, delivery_city,
+  id, quote_ref, reference, reference_is_airtable, status, payment_status, auction_house_name, delivery_city,
   client_name, client_email, price_cents, standard_cents, insured_cents, owned,
   has_pickup_coords, has_delivery_coords, has_pickup_address, has_pickup_city,
   has_pickup_postal, has_delivery_address, has_delivery_city,
@@ -647,6 +679,7 @@ export async function getReportScalars(): Promise<ReportScalars> {
                            and storage_free_until <= now() + interval '4 days'
                            and ${LIVE})::int                        as storage_at_risk,
         count(*) filter (where ${ESCALATION_DUE})::int              as escalation_due,
+        count(*) filter (where ${ACTIONABLE})::int                  as actionable,
         coalesce(sum(accepted_price_cents), 0)::bigint              as accepted_value,
         coalesce(sum(accepted_price_cents)
                  filter (where payment_status = 'paid'), 0)::bigint as paid_value,
@@ -685,6 +718,7 @@ export async function getReportScalars(): Promise<ReportScalars> {
       cancelled: n("cancelled"),
       storageAtRisk: n("storage_at_risk"),
       escalationDue: n("escalation_due"),
+      actionable: n("actionable"),
       acceptedValueCents: n("accepted_value"),
       paidValueCents: n("paid_value"),
       insuredShare:

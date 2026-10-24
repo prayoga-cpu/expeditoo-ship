@@ -3,20 +3,21 @@
  * Following SOLID principle - centralized type definitions
  */
 
+/** A run on the admin « Expéditions » table (client_feedback_2026_10_21_spec.md §A5). */
 export interface PendingDelivery {
   id: string;
   title: string;
+  /** The job's « Réf. », null for a run with no job behind it. */
+  reference: number | null;
+  /** Departure and arrival towns. */
   origin: string;
   destination: string;
+  /** `shipment_status`, uppercase, as stored. */
   status: string;
   price: number;
   createdDate: string;
-  assignedDriver?: string;
-  proposalCount: number;
-  // UI helper props
-  pickup?: string;
-  dropoff?: string;
-  date?: string;
+  /** Who is driving it, or null while nobody is. */
+  driverName: string | null;
 }
 
 export interface User {

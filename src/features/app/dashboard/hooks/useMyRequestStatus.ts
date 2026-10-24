@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { listingsApi } from "@/features/app/listing/api/listings.api";
 import { myRequestKeys } from "@/features/app/listing/hooks/useMyRequests";
-import { featuredRequest } from "../myRequestStatus";
+import { activeRequests, featuredRequest } from "../myRequestStatus";
 
 /**
  * The caller's own most relevant request, if they have one.
@@ -20,6 +20,7 @@ export function useMyRequestStatus() {
 
   return {
     featured: featuredRequest(query.data ?? []),
+    active: activeRequests(query.data ?? []),
     isLoading: query.isLoading,
   };
 }

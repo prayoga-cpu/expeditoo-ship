@@ -98,7 +98,7 @@ export function RequestPostedScreen({ listingId, viewerId }: RequestPostedScreen
               : t("open.lead")}
           </p>
           <div className="mt-3">
-            <ListingReference reference={job.reference} copyable />
+            <ListingReference reference={job.reference} from={job.pickupCity} to={job.dropoffCity} copyable />
           </div>
         </div>
 

@@ -24,6 +24,7 @@ import { PlatformSettingsError } from "@/server/services/platform-settings.servi
 import { UserContactError } from "@/server/services/user-contact.service";
 import { CompanyIdentityError } from "@/server/services/company-identity.service";
 import { StripeStatusError } from "@/server/services/stripe-status.service";
+import { CronHealthError } from "@/server/services/cron-health.service";
 
 /**
  * Shared response shape for the REST layer.
@@ -78,7 +79,8 @@ export function handleError(error: unknown, context: string) {
     error instanceof PlatformSettingsError ||
     error instanceof UserContactError ||
     error instanceof CompanyIdentityError ||
-    error instanceof StripeStatusError
+    error instanceof StripeStatusError ||
+    error instanceof CronHealthError
   ) {
     return fail(error.code, error.message, error.status);
   }

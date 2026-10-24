@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cronHealthService } from "@/server/services/cron-health.service";
 import { listingsService } from "@/server/services/listings.service";
 import { isAuthorisedCron } from "@/lib/cron-auth";
 
@@ -20,8 +21,10 @@ export async function GET(req: NextRequest) {
 
   try {
     const expired = await listingsService.expireDueListings();
+    await cronHealthService.record("expire-listings", true);
     return NextResponse.json({ success: true, expired });
   } catch (error) {
+    await cronHealthService.record("expire-listings", false, error);
     console.error("Expire listings job failed:", error);
     return NextResponse.json(
       {

@@ -4,10 +4,15 @@ import { Copy } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { formatListingReference } from "@/lib/listing-reference";
 import { cn } from "@/lib/utils";
 
 interface ListingReferenceProps {
   reference: number;
+  /** Departure city. With `to`, the label reads « Réf. PAR-CLA-100018 ». */
+  from?: string | null;
+  /** Arrival city. */
+  to?: string | null;
   /**
    * Adds a button that copies the bare number. Detail pages only: on a list
    * the whole card is a link, and a button inside a link is not a button.
@@ -26,6 +31,8 @@ interface ListingReferenceProps {
  */
 export function ListingReference({
   reference,
+  from,
+  to,
   copyable = false,
   className,
 }: ListingReferenceProps) {
@@ -50,7 +57,7 @@ export function ListingReference({
         className
       )}
     >
-      {t("label", { reference: value })}
+      {t("label", { reference: formatListingReference(reference, from, to) })}
       {copyable && (
         <Button
           type="button"

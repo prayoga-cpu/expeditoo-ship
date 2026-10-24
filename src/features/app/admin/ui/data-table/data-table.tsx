@@ -50,6 +50,13 @@ interface DataTableProps<TData, TValue> {
    * a starting point, not a controlled prop.
    */
   initialSearch?: string;
+  /**
+   * The order the table opens in, shown as the header's sort arrow. Without
+   * it a table already ordered by its data reads as unsorted, and the header
+   * offers to sort what is sorted (client_feedback_2026_10_21_spec.md §A2).
+   * A starting point, like `initialSearch`: key the table to reset it.
+   */
+  initialSorting?: SortingState;
 }
 
 export function DataTable<TData, TValue>({
@@ -63,9 +70,10 @@ export function DataTable<TData, TValue>({
   dateFilterKey,
   sortFields,
   initialSearch = "",
+  initialSorting = [],
 }: DataTableProps<TData, TValue>) {
   // Simple local state - no URL sync to avoid re-render issues
-  const [sorting, setSorting] = useState<SortingState>([]);
+  const [sorting, setSorting] = useState<SortingState>(initialSorting);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});

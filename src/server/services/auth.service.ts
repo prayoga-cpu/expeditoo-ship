@@ -3,7 +3,7 @@ import { sql } from "drizzle-orm";
 import { db } from "@/db";
 import * as usersDAL from "@/server/dal/users.dal";
 import * as sessionsDAL from "@/server/dal/sessions.dal";
-import { sendViaResend, EMAIL_FROM } from "@/lib/email";
+import { sendViaResend, EMAIL_FROM, assertSent } from "@/lib/email";
 import { expedionOrigins, type AppOrigin } from "@/lib/app-origins";
 
 import { VerificationEmail } from "@/server/emails/VerificationEmail";
@@ -236,7 +236,7 @@ export async function sendVerificationEmail(
       finalVerificationUrl = url.toString();
     }
 
-    await sendViaResend({
+    const sent = await sendViaResend({
       from: EMAIL_FROM,
       to: email,
       subject: `Verify your ${brand.productName} account`,
@@ -246,6 +246,7 @@ export async function sendVerificationEmail(
         productName: brand.productName,
       }),
     });
+    assertSent(sent, "verification email");
   } catch (error) {
     console.error("[Auth Service] Failed to send verification email:", error);
     // Don't throw - email failure shouldn't block account creation
@@ -314,19 +315,20 @@ export async function sendPasswordResetEmail(email: string, resetUrl: string) {
   try {
     // Get user name for personalization, plus the product to brand this as.
     const user = await usersDAL.getUserByEmail(email);
-    const userName = user?.name?.split(" ")[0] || "there";
+    const userName = user?.name?.split(" ")[0] || undefined;
     const brand = brandingFor(user?.origin);
 
-    await sendViaResend({
+    const sent = await sendViaResend({
       from: EMAIL_FROM,
       to: email,
-      subject: `Reset your ${brand.productName} password`,
+      subject: `Réinitialisez votre mot de passe ${brand.productName}`,
       react: PasswordResetEmail({
         resetUrl,
         userName,
         productName: brand.productName,
       }),
     });
+    assertSent(sent, "password reset email");
   } catch (error) {
     console.error("[Auth Service] Failed to send password reset email:", error);
     // Don't throw - a mail failure must not surface whether the account exists

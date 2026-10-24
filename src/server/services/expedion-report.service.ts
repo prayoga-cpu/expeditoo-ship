@@ -110,6 +110,7 @@ const NO_QUOTES: reportDal.ExpedionTotals = {
   cancelled: 0,
   storageAtRisk: 0,
   escalationDue: 0,
+  actionable: 0,
   acceptedValueCents: 0,
   paidValueCents: 0,
   insuredShare: 0,

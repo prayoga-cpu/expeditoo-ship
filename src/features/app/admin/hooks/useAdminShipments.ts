@@ -1,71 +1,42 @@
 import { useQuery } from "@tanstack/react-query";
+import type { AdminShipmentRow } from "@/server/services/shipment.service";
 import type { PendingDelivery } from "../types";
 
-// ========================================
-// Types
-// ========================================
-
-interface ShipmentDriver {
-  id: string;
-  name: string;
-  email: string;
-}
+type Wire<T> = { [K in keyof T]: T[K] extends Date ? string : T[K] };
 
 interface ShipmentsApiResponse {
   success: boolean;
-  data?: Array<{
-    id: string;
-    shipperId: string;
-    listingId?: string | null;
-    driverId?: string | null;
-    status: string;
-    pickupAddress: string;
-    dropoffAddress: string;
-    priceCents: number;
-    createdAt: string;
-    driver?: ShipmentDriver | null;
-    listing?: {
-      title: string;
-    } | null;
-  }>;
-  error?: {
-    code: string;
-    message: string;
+  data?: Wire<AdminShipmentRow>[];
+  error?: { code: string; message: string };
+}
+
+/** First segment of an address, for a route line when a run has no job. */
+const town = (address: string) => address.split(",")[0] || address;
+
+export function toPendingDelivery(item: Wire<AdminShipmentRow>): PendingDelivery {
+  return {
+    id: item.id,
+    title: item.listing?.title ?? "—",
+    reference: item.listing?.reference ?? null,
+    origin: item.listing?.pickupCity ?? town(item.pickupAddress),
+    destination: item.listing?.dropoffCity ?? town(item.dropoffAddress),
+    status: item.status,
+    price: item.priceCents,
+    createdDate: item.createdAt,
+    driverName: item.driverName,
   };
 }
 
-// ========================================
-// Fetch Function
-// ========================================
-
 async function fetchAdminShipments(): Promise<PendingDelivery[]> {
-  const response = await fetch("/api/admin/shipments"); // ✅ Changed to admin endpoint
+  const response = await fetch("/api/admin/shipments");
   const json: ShipmentsApiResponse = await response.json();
 
   if (!response.ok || !json.success) {
     throw new Error(json.error?.message || "Failed to fetch shipments");
   }
 
-  // Map API response to PendingDelivery format
-  return (json.data || []).map((item) => ({
-    id: item.id,
-    title: item.listing?.title || "Shipment",
-    origin: item.pickupAddress.split(",")[0] || item.pickupAddress,
-    destination: item.dropoffAddress.split(",")[0] || item.dropoffAddress,
-    status: item.status.toLowerCase(),
-    price: item.priceCents || 0,
-    createdDate: item.createdAt,
-    pickup: item.pickupAddress,
-    dropoff: item.dropoffAddress,
-    date: item.createdAt,
-    assignedDriver: item.driverId || undefined,
-    proposalCount: 0,
-  }));
+  return (json.data ?? []).map(toPendingDelivery);
 }
-
-// ========================================
-// Hook
-// ========================================
 
 export function useAdminShipments() {
   return useQuery({
@@ -78,14 +49,12 @@ export function useAdminShipments() {
   });
 }
 
-/**
- * Hook to get only pending shipments (not delivered or cancelled)
- */
+/** Runs still under way — not delivered, not cancelled. */
 export function usePendingShipments() {
   const query = useAdminShipments();
 
   const pendingShipments = (query.data || []).filter(
-    (s) => s.status !== "delivered" && s.status !== "cancelled"
+    (s) => s.status !== "DELIVERED" && s.status !== "CANCELLED"
   );
 
   return {

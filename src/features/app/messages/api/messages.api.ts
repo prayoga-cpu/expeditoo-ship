@@ -51,6 +51,8 @@ export interface ConversationResponse {
     id: string;
     title: string;
     reference: number;
+    pickupCity?: string | null;
+    dropoffCity?: string | null;
   } | null;
   lastMessageAt: string | null;
   lastMessage: string | null;

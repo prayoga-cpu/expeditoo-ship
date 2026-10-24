@@ -202,6 +202,7 @@ export function MessageDetail({
               avatar={conversation.recipient.avatar}
               readByOther={message.readByOther}
               viewerCanAward={conversation.offerContext?.viewerCanAward ?? false}
+              budgetCents={conversation.offerContext?.job?.budgetCents ?? null}
             />
           ) : (
             <ChatBubble

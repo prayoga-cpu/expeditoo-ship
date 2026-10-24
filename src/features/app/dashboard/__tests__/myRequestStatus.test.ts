@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { featuredRequest } from "../myRequestStatus";
+import { activeRequests, featuredRequest } from "../myRequestStatus";
 import type { Job, ListingStatus } from "@/features/app/listing/types";
 
 const job = (
@@ -59,3 +59,38 @@ describe("featuredRequest — published, not written", () => {
   });
 });
 
+
+/** client_feedback_2026_10_21_spec.md §D1 */
+describe("activeRequests", () => {
+  const NOW = new Date("2026-10-24T12:00:00.000Z");
+  const live = (
+    id: string,
+    status: ListingStatus,
+    publishedAt: string,
+    expiresAt = "2026-11-01T00:00:00.000Z"
+  ) => ({ id, status, publishedAt, createdAt: publishedAt, expiresAt }) as unknown as Job;
+
+  it("keeps every live request, newest published first", () => {
+    const jobs = activeRequests(
+      [
+        live("a", "open", "2026-10-01T00:00:00.000Z"),
+        live("b", "awarded", "2026-10-20T00:00:00.000Z"),
+        live("c", "in_progress", "2026-10-10T00:00:00.000Z"),
+        live("d", "completed", "2026-10-22T00:00:00.000Z"),
+        live("e", "draft", "2026-10-23T00:00:00.000Z"),
+      ],
+      NOW
+    );
+
+    expect(jobs.map((j) => j.id)).toEqual(["b", "c", "a"]);
+  });
+
+  it("leaves out an open request past its bidding deadline", () => {
+    const jobs = activeRequests(
+      [live("stale", "open", "2026-09-24T00:00:00.000Z", "2026-09-27T12:00:00.000Z")],
+      NOW
+    );
+
+    expect(jobs).toEqual([]);
+  });
+});

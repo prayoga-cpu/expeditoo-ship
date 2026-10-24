@@ -10,6 +10,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { cronHealthService } from "@/server/services/cron-health.service";
 import { expedionEscalationService } from "@/server/services/expedion-escalation.service";
 
 export const dynamic = "force-dynamic";
@@ -35,8 +36,11 @@ export async function GET(req: NextRequest) {
       Number.isFinite(limit) && limit > 0 ? Math.min(limit, 200) : 50
     );
 
+    await cronHealthService.record("expedion-escalate", true);
+
     return NextResponse.json({ success: true, ...summary });
   } catch (error) {
+    await cronHealthService.record("expedion-escalate", false, error);
     console.error("[expedion] auto-escalation sweep failed", error);
     return NextResponse.json(
       {

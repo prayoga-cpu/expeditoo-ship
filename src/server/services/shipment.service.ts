@@ -245,7 +245,66 @@ function viewOf<T extends Record<string, unknown>>(shipment: T, party: Party) {
 // Service
 // ========================================
 
+/** One row of the admin « Expéditions » table (§A5). */
+export interface AdminShipmentRow {
+  id: string;
+  status: ShipmentStatusType;
+  priceCents: number;
+  createdAt: Date;
+  pickupAddress: string;
+  dropoffAddress: string;
+  listing: {
+    id: string;
+    title: string;
+    reference: number;
+    pickupCity: string | null;
+    dropoffCity: string | null;
+  } | null;
+  /**
+   * Who is doing the run: the assigned driver, or the transporter who won it
+   * while no separate driver is named — for an individual driver, the same
+   * person.
+   */
+  driverName: string | null;
+}
+
+type AdminOverviewRecord = Awaited<
+  ReturnType<typeof shipmentsDal.adminOverview>
+>[number];
+
+function toAdminShipmentRow(row: AdminOverviewRecord): AdminShipmentRow {
+  return {
+    id: row.id,
+    status: row.status,
+    priceCents: row.priceCents,
+    createdAt: row.createdAt,
+    pickupAddress: row.pickupAddress,
+    dropoffAddress: row.dropoffAddress,
+    listing: row.listing
+      ? {
+          id: row.listing.id,
+          title: row.listing.title,
+          reference: row.listing.reference,
+          pickupCity: row.listing.pickupCity ?? null,
+          dropoffCity: row.listing.dropoffCity ?? null,
+        }
+      : null,
+    driverName: row.driver?.name ?? row.carrier?.name ?? null,
+  };
+}
+
 export const shipmentService = {
+  /**
+   * Every run, newest first, for staff. The permission lives here rather than
+   * in the route, which used to check `admin` itself and read the table
+   * straight from the database.
+   */
+  async adminOverview(viewer: Viewer): Promise<AdminShipmentRow[]> {
+    if (!viewer.isAdmin && !viewer.isOperator) throw err("FORBIDDEN", 403);
+    const rows = await shipmentsDal.adminOverview();
+    return rows.map(toAdminShipmentRow);
+  },
+
   async getShipmentDetail(shipmentId: string, viewer: Viewer) {
     const shipment = await shipmentsDal.getById(shipmentId);
     if (!shipment) throw err("SHIPMENT_NOT_FOUND", 404);

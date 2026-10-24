@@ -50,3 +50,30 @@ export async function sendViaResend(payload: ResendSendPayload) {
   );
   return resend.emails.send({ ...payload, to: devRecipient });
 }
+
+/**
+ * Throws when Resend answered a send with an error.
+ *
+ * The SDK *returns* `{ data, error }` rather than throwing, so a caller that
+ * only awaits the call treats a refusal as a success. That is how password
+ * reset mail went missing with nothing in any log: production sends from
+ * Resend's sandbox sender, which refuses every address but the account
+ * owner's (client feedback 2026-10-21, §C4). Callers already wrap the send in
+ * a try that logs, so throwing here is what puts the refusal in that log.
+ */
+export function assertSent(
+  result: { error: { message: string; name?: string } | null } | null | undefined,
+  what: string
+): void {
+  const error = result?.error;
+  if (!error) return;
+  const sandbox = /testing emails|verify a domain|own email address/i.test(
+    error.message
+  );
+  throw new Error(
+    `[email] Resend refused the ${what}: ${error.message}` +
+      (sandbox
+        ? " — the sender is not on a verified domain; verify one in Resend and set EMAIL_FROM (STATUS.md → Operator to-do)."
+        : "")
+  );
+}

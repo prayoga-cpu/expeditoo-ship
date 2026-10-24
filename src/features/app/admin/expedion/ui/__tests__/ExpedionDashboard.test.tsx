@@ -92,6 +92,7 @@ const REPORT: ExpedionReport = {
     cancelled: 4,
     storageAtRisk: 2,
     escalationDue: 1,
+    actionable: 4,
     acceptedValueCents: 980_000,
     paidValueCents: 640_000,
     insuredShare: 0.32,

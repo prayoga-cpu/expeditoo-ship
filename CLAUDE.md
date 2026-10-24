@@ -222,7 +222,7 @@ without an `sk_live_` key, so an accept there takes real money.
 Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before shipping.
 
 **Gates — all green.** `npx tsc --noEmit` 0 errors · `pnpm lint` 0 errors ·
-2,864 unit tests pass (2.64.1) · `pnpm build` succeeds.
+2,968 unit tests pass (2.65.0) · `pnpm build` succeeds.
 
 **Done**
 - Schema remodelled to the transport model; one clean initial migration
@@ -664,7 +664,27 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
   Stripe key is this account's live one (STATUS → Operator to-do).
   `launch_readiness_spec.md`
 
+- **Nicolas's review of 21 October** (2.65.0), point by point in the monitor
+  at the top of `STATUS.md`. Supervision's « À traiter » is the whole worklist
+  (`ACTIONABLE`, counted once; the badge used to sum three queues over all
+  quotes while the tab filtered the 25 newest). Every quote has our number,
+  « DEV-NNNNN » (`expedion_quotes.reference`, `0040`). Jobs read
+  « PAR-CLA-100018 » (`formatListingReference`; the number is still the
+  identity). Shipments name the driver through `shipmentService.adminOverview`.
+  The award queue adds a read-only « En attente d'un chauffeur » section.
+  « Urgent » is derived (`src/lib/urgency.ts`, open and < 48 h). The job page
+  pins its identity bar and swipes its two ends on a phone. Requests show as
+  list / cards / detailed (`RequestViews.tsx`). Message search reads towns,
+  routes and references. Auth mail calls `assertSent`, so a Resend refusal is
+  logged. `client_feedback_2026_10_21_spec.md`
+
 **Not done**
+- **The scheduled jobs have never run in production.** `scheduled-jobs.yml`
+  has failed every run: the repo has no `APP_URL` variable and no
+  `CRON_SECRET` secret (STATUS → Operator to-do). Admin → Paramètres →
+  « Tâches planifiées » reads each job's heartbeat (`cron_heartbeat`, `0041`).
+  Until then no listing expires and no paid quote auto-publishes;
+  `displayStatus` only makes a past-deadline request *read* « Expirée ».
 - **`EXPEDION_APP_ORIGINS` is set in Vercel Production but not in `.env.local`**,
   so `user.origin` reads `expedion` on the deployment and never locally — an
   account created since it was set wears the right badge in `/admin/users`, one
@@ -817,3 +837,9 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
    direct request runs to its window's end, and a path that forgets closes it
    weeks early — exactly the « jusqu'au 8 oct. » the client reported
    (`client_feedback_2026_10_spec.md` §4).
+22. **Anything time-driven on production depends on GitHub, not Vercel.**
+   Expiry, auto-escalation, scheduled publishing and document checks run only
+   when `.github/workflows/scheduled-jobs.yml` reaches `/api/cron/*`. Before
+   debugging one of them, look at Admin → Paramètres → « Tâches planifiées »;
+   a new cron route must call `cronHealthService.record` after it authorises,
+   and add itself to `CRON_JOBS`.

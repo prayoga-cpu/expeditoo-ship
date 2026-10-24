@@ -1,12 +1,14 @@
 "use client";
 
-import { Search, MessageSquare } from "lucide-react";
+import Link from "next/link";
+import { Search, MessageSquare, MapPin, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 import { MessageRow } from "./MessageRow";
 import { PageLoader } from "@/components/ui/page-loader";
 import { CenteredEmptyState } from "@/components/ui/centered-empty-state";
-import type { Message } from "../types";
+import type { ListingChip, Message } from "../types";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
@@ -22,6 +24,10 @@ interface MessagesProps {
   onDeleteConversation?: (id: string) => void;
   isLoading?: boolean;
   basePath?: string;
+  /** Jobs offered as one-tap filters under the search box (§D5). */
+  listingChips?: ListingChip[];
+  listingFilter?: string | null;
+  onListingFilterChange?: (listingId: string | null) => void;
 }
 
 export function Messages({
@@ -31,8 +37,12 @@ export function Messages({
   onDeleteConversation,
   isLoading = false,
   basePath = "/messages",
+  listingChips = [],
+  listingFilter = null,
+  onListingFilterChange,
 }: MessagesProps) {
   const t = useTranslations("messages");
+  const picked = listingChips.find((chip) => chip.id === listingFilter) ?? null;
 
   if (isLoading) {
     const isDriver = basePath.includes("/driver");
@@ -62,6 +72,35 @@ export function Messages({
             onChange={(e) => onSearchChange(e.target.value)}
           />
         </div>
+        {listingChips.length > 0 && onListingFilterChange ? (
+          <div className="mt-3 space-y-1.5">
+            <p className="text-xs text-muted-foreground">{t("chips.label")}</p>
+            <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
+              {listingChips.map((chip) => {
+                const active = chip.id === listingFilter;
+                return (
+                  <button
+                    key={chip.id}
+                    type="button"
+                    aria-pressed={active}
+                    title={chip.title}
+                    onClick={() => onListingFilterChange(active ? null : chip.id)}
+                    className={cn(
+                      "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                      active
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "bg-card text-foreground hover:border-primary/40"
+                    )}
+                  >
+                    <MapPin className="h-3 w-3" aria-hidden />
+                    {chip.route}
+                    {active ? <X className="h-3 w-3" aria-hidden /> : null}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
       </div>
 
       {/* Tabs */}
@@ -79,6 +118,29 @@ export function Messages({
               />
             ))}
           </div>
+        ) : picked ? (
+          // A job picked from the chips with no thread yet: say so, and on the
+          // viewer's own request offer the carriers already on that route.
+          <CenteredEmptyState
+            variant="page"
+            icon={MapPin}
+            title={t("chips.emptyTitle", { route: picked.route })}
+            description={
+              picked.own ? t("chips.emptyOwn") : t("chips.emptyOther")
+            }
+          >
+            <Button asChild variant="outline">
+              <Link
+                href={
+                  picked.own
+                    ? `/listing/${picked.id}?tab=carriers`
+                    : `/listing/${picked.id}`
+                }
+              >
+                {picked.own ? t("chips.findCarriers") : t("chips.openListing")}
+              </Link>
+            </Button>
+          </CenteredEmptyState>
         ) : (
           <CenteredEmptyState
             variant="page"

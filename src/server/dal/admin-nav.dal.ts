@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { db } from "@/db";
 
-import { QUEUE_WHERE } from "./expedion-report.dal";
+import { ACTIONABLE } from "./expedion-report.dal";
 
 /**
  * The counts behind the admin sidebar badges.
@@ -57,21 +57,24 @@ export async function getAdminNavCounts(
 ): Promise<AdminNavCounts> {
   const rows = await db.execute<Record<string, string | number | null>>(sql`
     select
+      -- Each quote once, whichever of the three queues it is in: a paid quote
+      -- past its deadline is in two of them, and summing three counts showed
+      -- it twice (client_feedback_2026_10_21_spec.md §A1).
       (select count(*)::int from expedion_quotes
-        where ${QUEUE_WHERE.toPrice})                     as quotes_to_price,
-      (select count(*)::int from expedion_quotes
-        where ${QUEUE_WHERE.needsDriver})                 as quotes_needs_driver,
-      (select count(*)::int from expedion_quotes
-        where ${QUEUE_WHERE.escalationDue})               as quotes_escalation_due,
+        where ${ACTIONABLE})                              as quotes_actionable,
 
       (select count(*)::int from "user"
         where created_at >= now() - interval '7 days')    as new_users,
 
       -- An escalated job nobody has bid on is not a decision waiting to be
       -- made, so the badge counts jobs with a live offer rather than jobs.
+      -- expires_at is the board's own predicate (listingsDal.browse): a job
+      -- past it cannot be awarded from the queue page, and counting it showed
+      -- a « 1 » over a page that said « Rien en attente ».
       (select count(*)::int from listings l
         where l.status = 'open'
           and l.origin = 'expedion'
+          and l.expires_at >= now()
           and exists (select 1 from offers o
                        where o.listing_id = l.id
                          and o.status = 'pending'))       as awards_pending,
@@ -118,10 +121,7 @@ export async function getAdminNavCounts(
   const n = (key: string) => Number(r[key] ?? 0);
 
   return {
-    expedion:
-      n("quotes_to_price") +
-      n("quotes_needs_driver") +
-      n("quotes_escalation_due"),
+    expedion: n("quotes_actionable"),
     users: n("new_users"),
     awards: n("awards_pending"),
     listings: n("open_listings"),

@@ -1,5 +1,6 @@
 import {
   CompanyIdentityPanel,
+  CronStatusPanel,
   PlatformSettingsPanel,
   StripeStatusPanel,
 } from "@/features/app/platform-settings/ui";
@@ -14,6 +15,7 @@ export default function AdminSettingsPage() {
     <div className="mx-auto w-full max-w-2xl space-y-6 p-4 sm:p-6">
       <PlatformSettingsPanel />
       <StripeStatusPanel />
+      <CronStatusPanel />
       <CompanyIdentityPanel />
     </div>
   );

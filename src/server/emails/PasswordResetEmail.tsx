@@ -29,32 +29,34 @@ interface PasswordResetEmailProps {
 
 export function PasswordResetEmail({
   resetUrl,
-  userName = "there",
+  userName,
   productName = "EXPEDITOO",
 }: PasswordResetEmailProps) {
   return (
     <Html>
       <Head />
-      <Preview>Reset your {productName} password</Preview>
+      <Preview>Réinitialisez votre mot de passe {productName}</Preview>
       <Body style={main}>
         <Container style={container}>
-          <Heading style={h1}>Password Reset Request</Heading>
-          <Text style={text}>Hi {userName},</Text>
+          {/* French: the people who reset a password here are French clients
+              and drivers (client feedback 2026-10-21, §C4). */}
+          <Heading style={h1}>Réinitialisation de votre mot de passe</Heading>
+          <Text style={text}>{userName ? `Bonjour ${userName},` : "Bonjour,"}</Text>
           <Text style={text}>
-            We received a request to reset your password for your {productName}{" "}
-            account.
+            Nous avons reçu une demande de réinitialisation du mot de passe de
+            votre compte {productName}.
           </Text>
           <Section style={buttonContainer}>
             <Button style={button} href={resetUrl}>
-              Reset Password
+              Choisir un nouveau mot de passe
             </Button>
           </Section>
-          <Text style={warning}>This link will expire in 1 hour.</Text>
+          <Text style={warning}>Ce lien expire dans 1 heure.</Text>
           <Text style={footer}>
-            If you didn't request a password reset, you can safely ignore this
-            email.
+            Si vous n’êtes pas à l’origine de cette demande, ignorez simplement
+            cet e-mail : votre mot de passe reste inchangé.
           </Text>
-          <Text style={footer}>Or copy and paste this link: {resetUrl}</Text>
+          <Text style={footer}>Ou copiez ce lien dans votre navigateur : {resetUrl}</Text>
         </Container>
       </Body>
     </Html>

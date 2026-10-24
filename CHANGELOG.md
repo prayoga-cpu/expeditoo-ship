@@ -14,6 +14,56 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.65.0] - 2026-10-24 · feat
+
+Nicolas's review of 21 October, point by point.
+
+- **Operators: « À traiter » is now the whole to-do list.** It used to look
+  only at the 25 most recent quotes, so the sidebar said 48 while the tab said
+  1. It now lists every quote waiting for you, however old, oldest first, and
+  says in one line what counts. The sidebar badge counts each quote once — a
+  paid quote past its deadline used to count twice. « Tous » is now
+  « Récents », and the « Reçu » column shows the date and its sort arrow.
+- **Every Expedion quote has a number of ours, « DEV-04659 »**, including the
+  ones sent from the new site, which had none and showed the auction house's
+  lot number instead. The Airtable number is shown underneath when there is
+  one, and the search finds all of them.
+- **One reference format for every job: « PAR-CLA-100018 »** — departure and
+  arrival letters in front of the number, on job pages, « Mes demandes », the
+  admin and the shipments table. The number alone still finds the job.
+- **The shipments table names the driver**, shows the job's reference instead
+  of a random code, and speaks the statuses in French. The « Propositions »
+  column, which always said 0, is gone.
+- **The award queue shows every request still without a driver**: on top, the
+  Expedion jobs you choose a driver for; below, everything else, saying who
+  decides on each. Its badge no longer shows a job you cannot open.
+- **Urgent requests say so.** An open request whose pickup is less than 48
+  hours away wears a red « Urgent » badge everywhere it appears. The board's
+  old badge about bidding closing now reads « Clôture bientôt ».
+- **On a job page, the title, reference, requester and price stay at the top**
+  while you scroll. On a phone, pickup and delivery are two cards you swipe
+  between.
+- **In a conversation, every offer shows the requester's budget beside it**
+  and how far above or below it the price is.
+- **Your dashboard lists all your live requests, one line each**, instead of
+  one large card for the newest. « Mes demandes » can be shown as a list, as
+  cards or in detail, and remembers your choice.
+- **Messages: search by town, by route (« Paris → Clamart ») or by
+  reference**, and your live listings are offered as one-tap filters. A listing
+  with no conversation yet points you to the transporters on that route.
+- **Your profile shows how many requests you have published and how many a
+  transporter took**; admins see the same on « Voir le profil ».
+- **Drivers: offer confirmations and refusals are in French** (« Offre
+  envoyée », « Le délai pour faire une offre … est écoulé »). Deleting a
+  conversation now confirms it.
+- **The password reset email and page are in French.** If the email cannot be
+  sent, the reason is now recorded instead of disappearing.
+- **Admins: Paramètres has a « Tâches planifiées » card** showing when each
+  automatic job last ran — expiring requests, publishing paid quotes,
+  publishing scheduled requests, checking drivers' documents. A request whose
+  deadline has passed now reads « Expirée » instead of « Ouverte ».
+- **The « Directe » tag explains itself** when you point at it.
+
 ## [2.64.1] - 2026-10-17 · fix
 
 - **An Expedion client who pays and closes the page is still recorded as

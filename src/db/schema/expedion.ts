@@ -9,7 +9,7 @@ import {
   pgEnum,
   index,
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import { user } from "./users";
 import { carriers } from "./carriers";
 import { listings } from "./listings";
@@ -111,6 +111,14 @@ export const expedionQuotes = pgTable(
     userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
 
     // ---- Reference ----
+    // « DEV-04659 » — our number for every quote, however it arrived (0040,
+    // client_feedback_2026_10_21_spec.md §A3). The sequence is its only
+    // writer. `quoteNumber` below is the Airtable « Numéro Devis », kept beside
+    // it and set only by the import.
+    reference: integer("reference")
+      .default(sql`nextval('expedion_quote_reference_seq')`)
+      .notNull()
+      .unique(),
     quoteNumber: text("quote_number"),
     bordereauNumber: text("bordereau_number"),
     bordereauPaid: boolean("bordereau_paid").default(false).notNull(),

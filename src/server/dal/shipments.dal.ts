@@ -362,6 +362,39 @@ export const shipmentsDal = {
 
   // ---- Admin ----
 
+  /**
+   * The admin « Expéditions » table: each run with the job it belongs to and
+   * who is driving it (client_feedback_2026_10_21_spec.md §A5). Named columns
+   * only — nothing from the requester's row, no contact details.
+   */
+  async adminOverview(limit = 200, tx: Executor = db) {
+    return await tx.query.shipments.findMany({
+      columns: {
+        id: true,
+        status: true,
+        priceCents: true,
+        pickupAddress: true,
+        dropoffAddress: true,
+        createdAt: true,
+      },
+      with: {
+        listing: {
+          columns: {
+            id: true,
+            title: true,
+            reference: true,
+            pickupCity: true,
+            dropoffCity: true,
+          },
+        },
+        carrier: { columns: { id: true, name: true } },
+        driver: { columns: { id: true, name: true } },
+      },
+      orderBy: [desc(shipments.createdAt)],
+      limit,
+    });
+  },
+
   async listAll(
     filters: { status?: ShipmentStatusType; page: number; limit: number },
     tx: Executor = db

@@ -23,7 +23,7 @@ export default function ShipmentsPage() {
     return (
       <div className="flex items-center justify-center py-12 text-destructive">
         <AlertCircle className="h-6 w-6 mr-2" />
-        <span>Failed to load shipments</span>
+        <span>{t("loadFailed")}</span>
       </div>
     );
   }
@@ -40,9 +40,6 @@ export default function ShipmentsPage() {
 
       <DeliveriesTable
         deliveries={pendingDeliveries || []}
-        // The proposals dialog behind this action is gone; the column itself
-        // should follow in DeliveriesTable rather than reopen a stub here.
-        onAssignClick={() => undefined}
         className="flex-1 min-h-0 flex flex-col"
       />
     </div>
