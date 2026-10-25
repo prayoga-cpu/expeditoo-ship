@@ -9,35 +9,37 @@ _Owner: this section is for you. One row per point in Evan's write-up
 **Legend:** ⬜ not started · 🔧 in progress · ✅ done and tested locally ·
 🚀 live on production · ❓ needs an answer · 🔑 needs the owner's hand
 
-**State on 2026-10-24:** 2.65.0 is in the working tree, gates green, not
-committed. To go live: migrate `0040`/`0041`, then deploy, then set the two
-GitHub values (Operator to-do).
+**State on 2026-10-25:** 2.65.0 is **live** (commit `8e909af`, migrate run
+`40156001990` on `release/2.65.0` first; `/api/public/changelog` reads
+2.65.0, Gates green on `main`). Still yours: the two GitHub values (X1) and
+the Resend domain (C4) — Operator to-do. Questions for Nicolas drafted
+for WhatsApp (EN/FR), below.
 
 | # | Nicolas asked | Status | What was wrong, what changed | Check on prod |
 |---|---|---|---|---|
-| A1 | « À traiter » vs « Tous » unclear | ✅ | Badge counted all quotes (48, some twice), tab only the 25 newest (1). Now one worklist of every quote needing action, oldest first, with a line saying what counts; « Tous » → « Récents » | `/admin/expedion`: tab count = sidebar badge |
-| A2 | Sort « En attente » by request date | ✅ ❓ | Column → « Reçu » with the date and the sort arrow; worklist oldest first, recent newest first. Direction to confirm | same page |
-| A3 | Number site requests + Airtable ref | ✅ | Site quotes had no number of ours. Every quote now « DEV-NNNNN » (migration 0040), Airtable number under it | quote rows and dialog |
-| A4 | Uniform reference (initials + cities) | ✅ ❓ | « PAR-CLA-100018 » everywhere; **no initials** (on the drivers' board). Format to confirm | any job, `/admin/listings` |
-| A5 | Show the selected driver | ✅ | Driver was fetched and dropped; « Propositions » hard-coded 0. Driver column, real reference, French statuses | `/admin/shipments` |
+| A1 | « À traiter » vs « Tous » unclear | 🚀 | Badge counted all quotes (48, some twice), tab only the 25 newest (1). Now one worklist of every quote needing action, oldest first, with a line saying what counts; « Tous » → « Récents » | `/admin/expedion`: tab count = sidebar badge |
+| A2 | Sort « En attente » by request date | 🚀 ❓ | Column → « Reçu » with the date and the sort arrow; worklist oldest first, recent newest first. Direction to confirm | same page |
+| A3 | Number site requests + Airtable ref | 🚀 | Site quotes had no number of ours. Every quote now « DEV-NNNNN » (migration 0040), Airtable number under it | quote rows and dialog |
+| A4 | Uniform reference (initials + cities) | 🚀 ❓ | « PAR-CLA-100018 » everywhere; **no initials** (on the drivers' board). Format to confirm | any job, `/admin/listings` |
+| A5 | Show the selected driver | 🚀 | Driver was fetched and dropped; « Propositions » hard-coded 0. Driver column, real reference, French statuses | `/admin/shipments` |
 | A6 | Switch roles from one account | 🚀 | Already built (2.61.0), sidebar badge « UTILISATEUR ⌄ » | — |
-| B1 | Award queue should show requests without a driver | ✅ ❓ | Only escalated jobs with bids, badge counted an expired one. Second read-only section for every other open request; operators still cannot award a direct one (requester's card) | `/admin/awards` |
+| B1 | Award queue should show requests without a driver | 🚀 ❓ | Only escalated jobs with bids, badge counted an expired one. Second read-only section for every other open request; operators still cannot award a direct one (requester's card) | `/admin/awards` |
 | B2 | Driver cancels → listing back on the board | 🚀 | Already built (« Me désister ») | — |
-| B3 | « Annonce directe » box unclear | 🔧 ❓ | It is the origin tag; it now explains itself on hover. Label waits for Léa's question | `/admin/listings`, hover « Directe » |
-| B4 | Sticky title / requester / price | ✅ | Pinned bar on the job page, both tabs | any job, scroll |
-| B5 | Urgent banner | ✅ ❓ | « Urgent » when open and pickup < 48 h (rule to confirm) | board, job page, lists |
-| B6 | Messaging: the other price | ✅ ❓ | Budget and % gap under every offer in a thread. A requester counter-offer is not built — asked | a job thread |
+| B3 | « Annonce directe » box unclear | 🚀 ❓ | It is the origin tag; it now explains itself on hover. Label waits for Léa's question | `/admin/listings`, hover « Directe » |
+| B4 | Sticky title / requester / price | 🚀 | Pinned bar on the job page, both tabs | any job, scroll |
+| B5 | Urgent banner | 🚀 ❓ | « Urgent » when open and pickup < 48 h (rule to confirm) | board, job page, lists |
+| B6 | Messaging: the other price | 🚀 ❓ | Budget and % gap under every offer in a thread. A requester counter-offer is not built — asked | a job thread |
 | C1 | Driver transfers are manual | ❓ | Unchanged — waits on the client and their lawyer | — |
 | C2 | Pay drivers by Stripe to their IBAN | ❓ | Connect onboarding and transfer code exist, not wired — waits on the commission split and the lawyer | — |
 | C3 | PayPal + Apple Pay | ⬜ 🔑 | Léa's action; Stripe setup first (Operator to-do) | — |
-| C4 | Forgot password does not work | ✅ 🔑 | Resend's sandbox sender refuses his address. Refusal now logged; email and page in French. **Owner: verify a Resend domain** | `/forgot-password` with a non-owner address |
-| D1 | Condensed dashboard | ✅ | One line per live request, up to 4, « Tout voir » | `/home` |
-| D2 | List / card / close-up | ✅ ❓ | Liste / Cartes / Détaillé on « Mes demandes », remembered. « Carte » read as card, not map — asked | `/listings/me` |
-| D3 | Readable on mobile, swipeable cards | ✅ | Pickup / delivery swipe on a phone; pinned bar | a job at phone width |
-| D4 | Confirmation + redirect after each action | ✅ | Audit: offer toasts and refusals were English, delete-conversation silent — fixed. The rest already confirmed | submit / withdraw an offer |
-| D5 | Message search by listing | ✅ | Search by town, route, reference; live listings as chips; a listing with no thread points to its carriers | `/messages` |
-| D6 | Profile: posted / taken | ✅ | Two counters on `/profile` and the admin's « Voir le profil » | `/profile` |
-| X1 | _(found)_ Scheduled jobs never ran | ✅ 🔑 | GitHub `APP_URL` / `CRON_SECRET` unset since forever. « Tâches planifiées » card on Paramètres; past-deadline requests read « Expirée ». **Owner: set the two values** | Paramètres → « Tâches planifiées » |
+| C4 | Forgot password does not work | 🚀 🔑 | Resend's sandbox sender refuses his address. Refusal now logged; email and page in French. **Owner: verify a Resend domain** | `/forgot-password` with a non-owner address |
+| D1 | Condensed dashboard | 🚀 | One line per live request, up to 4, « Tout voir » | `/home` |
+| D2 | List / card / close-up | 🚀 ❓ | Liste / Cartes / Détaillé on « Mes demandes », remembered. « Carte » read as card, not map — asked | `/listings/me` |
+| D3 | Readable on mobile, swipeable cards | 🚀 | Pickup / delivery swipe on a phone; pinned bar | a job at phone width |
+| D4 | Confirmation + redirect after each action | 🚀 | Audit: offer toasts and refusals were English, delete-conversation silent — fixed. The rest already confirmed | submit / withdraw an offer |
+| D5 | Message search by listing | 🚀 | Search by town, route, reference; live listings as chips; a listing with no thread points to its carriers | `/messages` |
+| D6 | Profile: posted / taken | 🚀 | Two counters on `/profile` and the admin's « Voir le profil » | `/profile` |
+| X1 | _(found)_ Scheduled jobs never ran | 🚀 🔑 | GitHub `APP_URL` / `CRON_SECRET` unset since forever. « Tâches planifiées » card on Paramètres; past-deadline requests read « Expirée ». **Owner: set the two values** | Paramètres → « Tâches planifiées » |
 
 ### Questions for Nicolas
 
@@ -303,8 +305,14 @@ adversarial verification pass — treat their detail as slightly less certain.
 Work that needs a human hand outside the codebase. Add to this list rather
 than leaving it in a chat message.
 
-- [ ] **Run Actions → "Migrate database" for `0040_expedion_quote_reference`
-      and `0041_cron_heartbeat` before 2.65.0 deploys.** Both additive: 0040
+- [x] ~~Run Actions → "Migrate database" for `0040_expedion_quote_reference`
+      and `0041_cron_heartbeat` before 2.65.0 deploys~~ — **done 2026-10-25**,
+      run `40156001990` dispatched by the owner on `release/2.65.0`
+      (`8e909af`). Confirmed through `mirror_readonly` before `main` moved:
+      41 journal rows, newest `1788346800000`; `expedion_quotes.reference`
+      integer NOT NULL, all 4,658 quotes numbered 1–4,658, no duplicate;
+      `cron_heartbeat` with its 5 columns. `main` then fast-forwarded to
+      `8e909af`; the deploy serves 2.65.0. Both additive: 0040
       numbers the ~4,658 existing quotes oldest-first and adds the default,
       0041 adds a table. New code on an unmigrated database 500s Supervision,
       which selects `expedion_quotes.reference`. Proved on a scratch database
@@ -870,8 +878,9 @@ are the money path). Also: the stale-listing fix is display-only
 
 ### Known limits
 
-- **Not on production.** Nothing is committed or pushed; the deploy needs the
-  migration first (Operator to-do).
+- **Live since 2026-10-25** (`8e909af`), migrated first (run
+  `40156001990`). Smoke-checked signed out: the new admin, activity and cron
+  routes answer 401, not 500.
 - **The two root causes behind C4 and X1 are settings only the owner can
   change** (Resend domain, GitHub `APP_URL` / `CRON_SECRET`). Until then the
   app now *says* so — in the log for mail, on Admin → Paramètres for the jobs.
