@@ -4,6 +4,8 @@ vi.mock("@/db", () => ({
   db: { transaction: async (fn: (tx: unknown) => unknown) => await fn({}) },
 }));
 vi.mock("@/server/dal/carriers.dal", () => ({ carriersDal: {} }));
+vi.mock("@/server/dal/offers.dal", () => ({ offersDal: {} }));
+vi.mock("@/server/dal/shipments.dal", () => ({ shipmentsDal: {} }));
 vi.mock("@/server/dal/users.dal", () => ({
   assignRoleIfMissing: vi.fn(),
   getUserByEmail: vi.fn(),

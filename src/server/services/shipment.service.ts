@@ -259,6 +259,8 @@ export interface AdminShipmentRow {
     reference: number;
     pickupCity: string | null;
     dropoffCity: string | null;
+    /** Who posted the job, by name only. */
+    requesterName: string | null;
   } | null;
   /**
    * Who is doing the run: the assigned driver, or the transporter who won it
@@ -287,6 +289,7 @@ function toAdminShipmentRow(row: AdminOverviewRecord): AdminShipmentRow {
           reference: row.listing.reference,
           pickupCity: row.listing.pickupCity ?? null,
           dropoffCity: row.listing.dropoffCity ?? null,
+          requesterName: row.listing.shipper?.name ?? null,
         }
       : null,
     driverName: row.driver?.name ?? row.carrier?.name ?? null,

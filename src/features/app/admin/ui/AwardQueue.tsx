@@ -10,7 +10,7 @@ import { PageLoader } from "@/components/ui/page-loader";
 import { CenteredEmptyState } from "@/components/ui/centered-empty-state";
 import { listingsApi } from "@/features/app/listing/api/listings.api";
 import { ListingReference } from "@/features/app/listing/ui/ListingReference";
-import { UrgentBadge } from "@/features/app/listing/ui/UrgentBadge";
+import { UrgencyBadge } from "@/features/app/listing/ui/UrgencyBadge";
 import type { Job } from "@/features/app/listing/types";
 import { formatCurrency } from "@/lib/currency";
 
@@ -143,13 +143,9 @@ function QueueCard({ job }: { job: Job }) {
           <div className="min-w-0">
             <p className="flex flex-wrap items-center gap-2 font-medium">
               {job.title}
-              <UrgentBadge job={job} />
+              <UrgencyBadge job={job} />
             </p>
-            <ListingReference
-              reference={job.reference}
-              from={job.pickupCity}
-              to={job.dropoffCity}
-            />
+            <ListingReference reference={job.reference} />
           </div>
           <div className="flex flex-wrap items-center gap-1.5">
             <Badge variant="outline">

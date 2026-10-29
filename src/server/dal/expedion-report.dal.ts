@@ -438,6 +438,58 @@ export async function getRecentQuotes(limit = 25): Promise<QuoteRow[]> {
   return [...rows].map(toQuoteRow);
 }
 
+export interface QuotePageParams {
+  /** Inclusive lower bound on `requested_at`, or none. */
+  from?: Date;
+  /** Exclusive upper bound on `requested_at`, or none. */
+  to?: Date;
+  order: "asc" | "desc";
+  limit: number;
+  offset: number;
+}
+
+/**
+ * Every quote, a page at a time, in a requested-at window
+ * (client_feedback_2026_10_29_spec.md §A2). « Récents » used to be the 25
+ * newest rows of the report, so a period picked in the toolbar searched those
+ * 25 and found nothing older; this is the same projection, filtered and
+ * ordered by the database. A quote with no `requested_at` sits outside any
+ * window, last in either order.
+ */
+export async function getQuotePage(
+  params: QuotePageParams
+): Promise<{ rows: QuoteRow[]; total: number }> {
+  const where = sql.join(
+    [
+      sql`true`,
+      params.from ? sql`requested_at >= ${params.from}` : sql`true`,
+      params.to ? sql`requested_at < ${params.to}` : sql`true`,
+    ],
+    sql` and `
+  );
+  const order =
+    params.order === "asc"
+      ? sql`requested_at asc nulls last, id`
+      : sql`requested_at desc nulls last, id`;
+
+  const [rows, totals] = await Promise.all([
+    db.execute<Record<string, unknown>>(sql`
+      select ${QUOTE_COLUMNS}
+      from expedion_quotes
+      where ${where}
+      order by ${order}
+      limit ${params.limit} offset ${params.offset}
+    `),
+    db.execute<{ total: number }>(sql`
+      select count(*)::int as total from expedion_quotes where ${where}
+    `),
+  ]);
+  return {
+    rows: [...rows].map(toQuoteRow),
+    total: Number([...totals][0]?.total ?? 0),
+  };
+}
+
 export interface MarketplaceTotals {
   expedionListings: number;
   directListings: number;

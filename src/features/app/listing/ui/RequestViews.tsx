@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 import { STATUS_TONE, displayStatus } from "../statusTone";
 import type { Job } from "../types";
 import { ListingReference } from "./ListingReference";
-import { UrgentBadge } from "./UrgentBadge";
+import { UrgencyBadge } from "./UrgencyBadge";
 
 /**
  * The three ways to look at one's own requests (client feedback 2026-10-21,
@@ -142,7 +142,7 @@ export function RequestCompactRow({ job }: { job: Job }) {
           never squeezes the title down to a letter to make room for them. */}
       <div className="flex shrink-0 flex-col items-start gap-1">
         <StatusBadge job={job} />
-        <UrgentBadge job={job} />
+        <UrgencyBadge job={job} />
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium group-hover:text-primary">
@@ -175,16 +175,12 @@ export function RequestTile({ job }: { job: Job }) {
       <Card className="flex h-full flex-col gap-2 p-4 transition-colors group-hover:border-primary/40">
         <div className="flex flex-wrap items-center gap-1.5">
           <StatusBadge job={job} />
-          <UrgentBadge job={job} />
+          <UrgencyBadge job={job} />
         </div>
         <p className="line-clamp-2 font-semibold group-hover:text-primary">
           {job.title}
         </p>
-        <ListingReference
-          reference={job.reference}
-          from={job.pickupCity}
-          to={job.dropoffCity}
-        />
+        <ListingReference reference={job.reference} />
         <p className="text-sm text-muted-foreground">
           {job.pickupCity} → {job.dropoffCity}
         </p>

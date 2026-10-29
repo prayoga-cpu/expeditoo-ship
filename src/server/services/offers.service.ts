@@ -1,4 +1,5 @@
 import { nanoid } from "nanoid";
+import { mayTakeWork } from "@/lib/carrier-availability";
 import { getTableColumns } from "drizzle-orm";
 import { db } from "@/db";
 import { offersDal } from "@/server/dal/offers.dal";
@@ -189,11 +190,15 @@ function toAwardView(award: {
   };
 }
 
-/** An approved carrier account is the licence to bid. */
+/**
+ * An approved carrier account is the licence to bid — and an absent driver has
+ * put theirs down for a while (client_feedback_2026_10_29_spec.md §REQ-02).
+ */
 async function requireApprovedCarrier(userId: string) {
   const carrier = await carriersDal.getByUserId(userId);
   if (!carrier) throw err("CARRIER_NOT_APPROVED", 403);
   if (carrier.status !== "approved") throw err("CARRIER_NOT_APPROVED", 403);
+  if (!mayTakeWork(carrier)) throw err("CARRIER_ABSENT", 403);
   return carrier;
 }
 
@@ -305,6 +310,7 @@ async function loadAwardable(
   if (!carrier || carrier.status !== "approved") {
     throw err("CARRIER_NO_LONGER_APPROVED", 409);
   }
+  if (!mayTakeWork(carrier)) throw err("CARRIER_ABSENT", 409);
 
   return { offer, listing };
 }
@@ -583,6 +589,8 @@ export const offersService = {
       if (!carrier || carrier.status !== "approved") {
         throw err("CARRIER_NO_LONGER_APPROVED", 409);
       }
+      // Nor one who has since said they are away (§REQ-02).
+      if (!mayTakeWork(carrier)) throw err("CARRIER_ABSENT", 409);
 
       result = await this.commitAward(offerId, listing.id, booked);
     } catch (cause) {

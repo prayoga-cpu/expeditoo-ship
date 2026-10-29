@@ -15,6 +15,7 @@ export const CARRIER_APPLICATION_STATUSES = [
     "approved",
     "rejected",
     "suspended",
+    "deregistered",
 ] as const;
 
 export type CarrierApplicationStatus =
@@ -81,6 +82,12 @@ export interface CarrierApplication {
     bicLast4: string | null;
     rejectionReason: string | null;
     suspensionReason: string | null;
+    /** « Absent » — client_feedback_2026_10_29_spec.md §REQ-02. */
+    absentSince: string | null;
+    absentUntil: string | null;
+    absenceReason: string | null;
+    deregisteredAt: string | null;
+    deregistrationReason: string | null;
     averageRating: number;
     totalRatings: number;
     completedJobs: number;
@@ -189,6 +196,41 @@ export async function suspendCarrier(
         throw new Error(data.error?.message || "Failed to suspend carrier");
     }
 }
+
+/** What `PUT …/availability` takes (`carrierAvailabilitySchema`). */
+export type CarrierAvailabilityRequest =
+    | { absent: true; until: string | null; reason: string | null }
+    | { absent: false };
+
+async function postCarrierAction(
+    path: string,
+    method: "POST" | "PUT",
+    body?: unknown,
+): Promise<void> {
+    const res = await fetch(path, {
+        method,
+        headers: body ? { "Content-Type": "application/json" } : undefined,
+        body: body ? JSON.stringify(body) : undefined,
+    });
+    const data: ApiResponse<CarrierApplication> = await res.json();
+    if (!data.success) {
+        throw new Error(data.error?.message || data.error?.code || "Request failed");
+    }
+}
+
+/** « Marquer absent » / « Fin d'absence » (§REQ-02). */
+export const setCarrierAvailability = (
+    id: string,
+    input: CarrierAvailabilityRequest,
+) => postCarrierAction(`/api/admin/carriers/${id}/availability`, "PUT", input);
+
+/** « Désinscrire » (§REQ-02). */
+export const deregisterCarrier = (id: string, reason: string) =>
+    postCarrierAction(`/api/admin/carriers/${id}/deregister`, "POST", { reason });
+
+/** « Réactiver » a suspended driver (§REQ-02). */
+export const reinstateCarrier = (id: string) =>
+    postCarrierAction(`/api/admin/carriers/${id}/reinstate`, "POST");
 
 export async function createDriver(
     data: CreateDriverInput,

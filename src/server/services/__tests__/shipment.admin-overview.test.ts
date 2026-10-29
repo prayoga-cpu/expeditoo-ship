@@ -41,6 +41,7 @@ describe("shipmentService.adminOverview", () => {
       reference: 100004,
       pickupCity: "Lyon",
       dropoffCity: "Marseille",
+      shipper: { name: "Nicolas Denis" },
     },
     carrier: { id: "c1", name: "Jean Transport" },
     driver: null,
@@ -77,6 +78,8 @@ describe("shipmentService.adminOverview", () => {
         reference: 100004,
         pickupCity: "Lyon",
         dropoffCity: "Marseille",
+        // The requester by name only (client_feedback_2026_10_29_spec.md §A4).
+        requesterName: "Nicolas Denis",
       },
       driverName: "Jean Transport",
     });

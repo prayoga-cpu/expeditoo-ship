@@ -5,6 +5,7 @@ import { ColumnDef } from "@tanstack/react-table";
 import { useTranslations } from "next-intl";
 import { Truck } from "lucide-react";
 import { ListingReference } from "@/features/app/listing/ui/ListingReference";
+import { RequesterCell } from "./RequesterCell";
 import { formatListingReference } from "@/lib/listing-reference";
 import { formatCurrency } from "@/lib/currency";
 import type { PendingDelivery } from "../types";
@@ -66,16 +67,38 @@ export function DeliveriesTable({ deliveries, className }: DeliveriesTableProps)
         ),
         cell: ({ row }) =>
           row.original.reference ? (
-            <ListingReference
-              reference={row.original.reference}
-              from={row.original.origin}
-              to={row.original.destination}
-            />
+            <ListingReference reference={row.original.reference} />
           ) : (
             <span className="font-mono text-xs text-muted-foreground">
               #{row.original.id.slice(0, 8).toUpperCase()}
             </span>
           ),
+      },
+      {
+        id: "departure",
+        accessorKey: "origin",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title={t("departure")} />
+        ),
+        cell: ({ row }) => <p className="text-sm">{row.original.origin}</p>,
+      },
+      {
+        id: "arrival",
+        accessorKey: "destination",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title={t("arrival")} />
+        ),
+        cell: ({ row }) => (
+          <p className="text-sm">{row.original.destination}</p>
+        ),
+      },
+      {
+        id: "requester",
+        accessorFn: (row) => row.requesterName ?? "",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title={t("requester")} />
+        ),
+        cell: ({ row }) => <RequesterCell name={row.original.requesterName} />,
       },
       {
         accessorKey: "title",
@@ -88,28 +111,23 @@ export function DeliveriesTable({ deliveries, className }: DeliveriesTableProps)
         // The toolbar searches everything a person would read off the row.
         filterFn: (row, _id, filterValue) => {
           const value = String(filterValue).toLowerCase();
-          const { title, origin, destination, driverName, reference } =
-            row.original;
+          const {
+            title,
+            origin,
+            destination,
+            driverName,
+            requesterName,
+            reference,
+          } = row.original;
           return [
             title,
             origin,
             destination,
             driverName ?? "",
-            reference ? formatListingReference(reference, origin, destination) : "",
+            requesterName ?? "",
+            reference ? formatListingReference(reference) : "",
           ].some((field) => field.toLowerCase().includes(value));
         },
-      },
-      {
-        id: "route",
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} title={t("route")} />
-        ),
-        cell: ({ row }) => (
-          <p className="text-sm text-muted-foreground">
-            {row.original.origin} → {row.original.destination}
-          </p>
-        ),
-        enableSorting: false,
       },
       {
         id: "driver",
@@ -163,6 +181,9 @@ export function DeliveriesTable({ deliveries, className }: DeliveriesTableProps)
 
   const sortFields = [
     { id: "reference", label: t("reference") },
+    { id: "departure", label: t("departure") },
+    { id: "arrival", label: t("arrival") },
+    { id: "requester", label: t("requester") },
     { id: "title", label: t("title") },
     { id: "driver", label: t("driver") },
     { id: "status", label: t("status") },

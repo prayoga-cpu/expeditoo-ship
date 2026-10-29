@@ -6,7 +6,8 @@ export type CarrierStatus =
   | "under_review"
   | "approved"
   | "rejected"
-  | "suspended";
+  | "suspended"
+  | "deregistered";
 
 export interface Vehicle {
   id: string;
@@ -46,6 +47,12 @@ export interface CarrierApplication {
   bicLast4: string | null;
   rejectionReason: string | null;
   suspensionReason: string | null;
+  /** « Absent » — client_feedback_2026_10_29_spec.md §REQ-02. */
+  absentSince: string | null;
+  absentUntil: string | null;
+  absenceReason: string | null;
+  deregisteredAt: string | null;
+  deregistrationReason: string | null;
   documents: CarrierDocument[];
   vehicles: Vehicle[];
 }
@@ -86,6 +93,17 @@ export const carrierApi = {
 
   withdraw: () =>
     api.post<CarrierApplication>("/api/carrier/application/withdraw"),
+
+  /** « Je m'absente » / « Je suis de retour » (§REQ-02). */
+  setAvailability: (
+    input:
+      | { absent: true; until: string | null; reason: string | null }
+      | { absent: false }
+  ) => api.put<CarrierApplication>("/api/carrier/availability", input),
+
+  /** « Me désinscrire » (§REQ-02). */
+  deregister: (reason: string | null) =>
+    api.post<CarrierApplication>("/api/carrier/deregister", { reason }),
 
   setBanking: (iban: string, bic: string) =>
     api.post<CarrierApplication>("/api/carrier/banking", { iban, bic }),

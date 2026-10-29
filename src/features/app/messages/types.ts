@@ -76,6 +76,7 @@ export interface ThreadOfferView {
 export type ThreadOfferBlock =
   | "NOT_A_CARRIER"
   | "NOT_APPROVED"
+  | "CARRIER_ABSENT"
   | "OWN_LISTING"
   | "LISTING_NOT_OPEN"
   | "LISTING_EXPIRED"

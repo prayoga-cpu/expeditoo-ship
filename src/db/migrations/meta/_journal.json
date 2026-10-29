@@ -288,6 +288,13 @@
       "when": 1788346800000,
       "tag": "0041_cron_heartbeat",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1788433200000,
+      "tag": "0042_carrier_absence_deregistration",
+      "breakpoints": true
     }
   ]
 }

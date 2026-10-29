@@ -17,7 +17,7 @@ import {
 import { useTranslations, useLocale } from "next-intl";
 import { enUS, fr } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
-import { UrgentBadge } from "@/features/app/listing/ui/UrgentBadge";
+import { UrgencyBadge } from "@/features/app/listing/ui/UrgencyBadge";
 import { Card } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
@@ -189,7 +189,7 @@ export function JobCard({ job, isHighlighted = false }: JobCardProps) {
           )}
           {/* The pickup is close (§B5). Distinct from the badge after it,
               which is about the bidding closing, not the transport. */}
-          <UrgentBadge job={job} />
+          <UrgencyBadge job={job} />
           {closingSoon && (
             <Badge className="border-warning/30 bg-warning/15 text-warning">
               <AlertTriangle className="mr-1 h-3 w-3" />

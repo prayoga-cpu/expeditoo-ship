@@ -144,6 +144,9 @@ const withinPaddedBox = (point: LatLng): SQL => {
  */
 const sharedCandidateConditions = (job: MatchCandidateQuery) => [
   eq(carriers.status, "approved"),
+  // Not away (client_feedback_2026_10_29_spec.md §REQ-02) — the SQL twin of
+  // `isAbsent` in src/lib/carrier-availability.ts.
+  sql`(${carriers.absentSince} is null or (${carriers.absentUntil} is not null and ${carriers.absentUntil} <= now()))`,
   eq(user.banned, false),
   // A trajet that declares no capacity is not excluded (spec §3.4).
   or(

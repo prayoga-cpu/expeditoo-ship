@@ -5,7 +5,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import en from "../../../../messages/en.json";
 import fr from "../../../../messages/fr.json";
 
-import { HeaderAccount, initialsOf } from "../HeaderAccount";
+import { initialsOf } from "@/lib/initials";
+import { HeaderAccount } from "../HeaderAccount";
 
 type TestUser = { name: string; email: string; image: string | null };
 

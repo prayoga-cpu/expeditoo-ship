@@ -25,6 +25,9 @@ export const carrierStatusEnum = pgEnum("carrier_status", [
   "approved",
   "rejected",
   "suspended",
+  // « Désinscrit » (client_feedback_2026_10_29_spec.md §REQ-02, migration
+  // 0042). « Absent » is not a status: see `absentSince` below.
+  "deregistered",
 ]);
 
 export const carrierDocumentKindEnum = pgEnum("carrier_document_kind", [
@@ -94,6 +97,18 @@ export const carriers = pgTable(
     }),
     rejectionReason: text("rejection_reason"),
     suspensionReason: text("suspension_reason"),
+
+    // « Absent » (§REQ-02): set by the driver or an admin, ends by itself at
+    // `absentUntil` — or never, while that is null — with no sweep to run.
+    // The carrier stays `approved`; `src/lib/carrier-availability.ts` is the
+    // one reading of these two columns.
+    absentSince: timestamp("absent_since"),
+    absentUntil: timestamp("absent_until"),
+    absenceReason: text("absence_reason"),
+
+    // « Désinscrit » (§REQ-02).
+    deregisteredAt: timestamp("deregistered_at"),
+    deregistrationReason: text("deregistration_reason"),
 
     // Denormalised stats
     averageRating: doublePrecision("average_rating").default(0).notNull(),

@@ -1,5 +1,8 @@
+import { z } from "zod";
 import * as adminDal from "@/server/dal/admin.dal";
 import * as reportDal from "@/server/dal/expedion-report.dal";
+import { AdminError } from "@/server/services/admin.service";
+import type { Viewer } from "@/server/services/shipment-access";
 
 /**
  * Composes the operator report.
@@ -247,4 +250,48 @@ export async function getExpedionReport(): Promise<ExpedionReport> {
       payoutsIncomplete: true,
     },
   };
+}
+
+/** `GET /api/admin/expedion/quotes` — client_feedback_2026_10_29_spec.md §A2. */
+export const quotePageQuerySchema = z
+  .object({
+    from: z.string().datetime({ offset: true }).optional(),
+    to: z.string().datetime({ offset: true }).optional(),
+    order: z.enum(["asc", "desc"]).default("desc"),
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(100).default(25),
+  })
+  .refine((q) => !q.from || !q.to || new Date(q.from) < new Date(q.to), {
+    message: "from must be before to",
+    path: ["to"],
+  });
+
+export type QuotePageQuery = z.infer<typeof quotePageQuerySchema>;
+
+export interface QuotePage {
+  rows: reportDal.QuoteRow[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+/**
+ * Every Expedion quote in a window, a page at a time. Staff only: like the
+ * report, it is unscoped by design and must never answer a client.
+ */
+export async function listQuotePage(
+  viewer: Viewer,
+  query: QuotePageQuery
+): Promise<QuotePage> {
+  if (!viewer.isAdmin && !viewer.isOperator) {
+    throw new AdminError("FORBIDDEN", "Staff access required", 403);
+  }
+  const { rows, total } = await reportDal.getQuotePage({
+    from: query.from ? new Date(query.from) : undefined,
+    to: query.to ? new Date(query.to) : undefined,
+    order: query.order,
+    limit: query.limit,
+    offset: (query.page - 1) * query.limit,
+  });
+  return { rows, total, page: query.page, limit: query.limit };
 }

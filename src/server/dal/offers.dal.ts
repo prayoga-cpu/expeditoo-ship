@@ -160,6 +160,23 @@ export const offersDal = {
     };
   },
 
+  /**
+   * Withdraws every bid still standing for a carrier and gives each job its
+   * count back, the way `offersService.withdrawOffer` does one at a time.
+   * Returns how many went.
+   */
+  async withdrawAllPendingForCarrier(carrierUserId: string, tx: Executor = db) {
+    const withdrawn = await tx
+      .update(offers)
+      .set({ status: "withdrawn", updatedAt: new Date() })
+      .where(and(eq(offers.carrierId, carrierUserId), eq(offers.status, "pending")))
+      .returning({ listingId: offers.listingId });
+    for (const { listingId } of withdrawn) {
+      await offersDal.incrementListingOffersCount(listingId, -1, tx);
+    }
+    return withdrawn.length;
+  },
+
   async updateStatus(id: string, status: OfferStatus, tx: Executor = db) {
     const [result] = await tx
       .update(offers)

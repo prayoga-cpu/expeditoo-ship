@@ -45,7 +45,7 @@ import { AvailabilityLine } from "./AvailabilityLine";
 import { OfferCard } from "./OfferCard";
 import { DraftActions } from "./DraftActions";
 import { STATUS_TONE, displayStatus } from "../statusTone";
-import { UrgentBadge } from "./UrgentBadge";
+import { UrgencyBadge } from "./UrgencyBadge";
 import type { Job } from "../types";
 
 interface JobDetailProps {
@@ -262,7 +262,7 @@ function JobHeader({ job }: { job: Job }) {
         <Badge className={STATUS_TONE[displayStatus(job)]}>
           {tStatus(displayStatus(job))}
         </Badge>
-        <UrgentBadge job={job} />
+        <UrgencyBadge job={job} />
         {job.reopenedAt && (
           <Badge variant="outline" className="border-warning/40 text-warning">
             <RotateCcw className="mr-1 h-3 w-3" />
@@ -333,12 +333,7 @@ function JobIdentityBar({ job }: { job: Job }) {
             {job.title}
           </h1>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
-            <ListingReference
-              reference={job.reference}
-              from={job.pickupCity}
-              to={job.dropoffCity}
-              copyable
-            />
+            <ListingReference reference={job.reference} copyable />
             {requester ? (
               <span className="text-xs text-muted-foreground">
                 {t("requester", { name: requester })}

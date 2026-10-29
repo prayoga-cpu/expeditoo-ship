@@ -7,6 +7,7 @@ import { OrderConfirmationEmail } from "@/server/emails/OrderConfirmationEmail";
 import { ShipmentUpdateEmail } from "@/server/emails/ShipmentUpdateEmail";
 import { ConfirmationRequestEmail } from "@/server/emails/ConfirmationRequestEmail";
 import { TransportRequestReceivedEmail } from "@/server/emails/TransportRequestReceivedEmail";
+import { DriverApplicationSubmittedEmail } from "@/server/emails/DriverApplicationSubmittedEmail";
 import { render } from "@react-email/components";
 
 export const emailService = {
@@ -221,6 +222,25 @@ export const emailService = {
    * `listingsService.createListing` the moment a job publishes
    * (docs/specs/listing_posted_feedback_spec.md §2.2).
    */
+  /** An admin is told a driver application waits for review (§REQ-07). */
+  async sendDriverApplicationSubmittedEmail(
+    to: string,
+    params: {
+      applicantName: string;
+      companyName: string;
+      city: string;
+      reviewUrl: string;
+    }
+  ) {
+    const emailHtml = await render(DriverApplicationSubmittedEmail(params));
+
+    return this.sendEmail({
+      to,
+      subject: `Nouveau dossier chauffeur : ${params.applicantName}`,
+      html: emailHtml,
+    });
+  },
+
   async sendListingPostedEmail(
     to: string,
     params: {

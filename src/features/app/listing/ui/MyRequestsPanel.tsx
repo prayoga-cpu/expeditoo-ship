@@ -20,7 +20,7 @@ import { formatCurrency } from "@/lib/currency";
 import { useMyRequests } from "../hooks/useMyRequests";
 import { RequestSummary } from "./RequestSummary";
 import { ListingReference } from "./ListingReference";
-import { UrgentBadge } from "./UrgentBadge";
+import { UrgencyBadge } from "./UrgencyBadge";
 import { DraftActions } from "./DraftActions";
 import {
   RequestCompactRow,
@@ -144,8 +144,8 @@ function JobRow({ job }: { job: Job }) {
               <Badge className={STATUS_TONE[displayStatus(job)]}>
                 {t(`status.${displayStatus(job)}`)}
               </Badge>
-              <ListingReference reference={job.reference} from={job.pickupCity} to={job.dropoffCity} />
-              <UrgentBadge job={job} />
+              <ListingReference reference={job.reference} />
+              <UrgencyBadge job={job} />
             </div>
             <div className="mt-2">
               <RequestSummary

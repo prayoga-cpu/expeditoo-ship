@@ -41,6 +41,7 @@ export function ApplicationStatusBanner({
     !qualifiedAccessModes(user.roles ?? []).includes("carrier");
   const copy = inactive ? "approvedInactive" : status;
   const failed = inactive || status === "rejected" || status === "suspended";
+  // A driver who left is told how to come back, not shown an error.
   const reason =
     status === "rejected"
       ? application.rejectionReason

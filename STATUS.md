@@ -1,5 +1,43 @@
 # STATUS.md
 
+## Client feedback monitor — Nicolas's answers of 28–29 October 2026
+
+_Owner: this section is for you. One row per item in the consolidated
+document (`EXPEDITOO Client Feedback Consolidated 29.10.2026.pdf`). Spec:
+`docs/specs/client_feedback_2026_10_29_spec.md`. Plan:
+`docs/plans/plan_client_feedback_2026_10_29.md`._
+
+**Legend:** ⬜ not started · 🔧 built, not yet live · 🚀 live on production ·
+❓ needs an answer · 🔑 needs the owner's hand
+
+| # | Item | Status | Release | What was built, or what it waits on |
+|---|---|---|---|---|
+| A2 | Reverse sort + period on Supervision; same on the driver side | 🔧 | 2.66.0 | « Récents » pages every quote from the server; an order button per tab |
+| A4 | Reference = the number alone; admin row number · departure · arrival · requester · initials | 🔧 | 2.66.0 | « PAR-CLA- » still parsed when pasted |
+| B1 | Admin assigns a direct request, client pays to confirm | ⬜ | — | Next release |
+| B3 | « Directe » tag | 🔧 ❓ | 2.66.0 | « Site Expeditoo »; Léa's question still open |
+| B5 | « Immédiat » badge (48 h « Urgent » kept) | 🔧 | 2.66.0 | Rule chosen: the pickup window has already opened (spec §0 A) |
+| B6 | Negotiation loop | ⬜ | — | Next release, on B1's payment step |
+| C1/C2/N3 | Payouts by Stripe | ❓ 🔑 | — | Rail + lawyer; the Stripe account is restricted from creating connected accounts |
+| C3 | Apple Pay / Google Pay / PayPal | 🔧 🔑 | 2.66.0 | Apple Pay + Google Pay in the accept dialog; register the domain in Stripe. PayPal not built |
+| C4 | Sender address | 🔑 ❓ | — | Needs a domain and its DNS — Nicolas |
+| D2 | Map view + driver search | ⬜ | — | |
+| N1 | Delivery availability before payment | ⬜ | — | |
+| N2 | Driver list sorting, period, dates | 🔧 | 2.66.0 | « Mes livraisons » |
+| N4 | Payout held on a reported problem | ⬜ | — | |
+| N5 | « Mes paiements » in « Mes livraisons » | 🔧 | 2.66.0 | Carriers only |
+| N6 | Email per payout | ⬜ | — | |
+| N7 | SMS to the driver | ⬜ 🔑 | — | Twilio has no account configured |
+| N8 | Route planner | ⬜ | — | |
+| N9 | Airtable import / expiry reminder | ❓ | — | Airtable sync held; the reminder needs X1 |
+| X1 | Scheduled jobs | 🔑 | — | `APP_URL` + `CRON_SECRET`; `a-111-02` publishes on the first run |
+| REQ-01/06/08 | Professional / private driver | ❓ | — | What a private driver provides instead of a SIRET |
+| REQ-02 | Actif / Absent / Suspendu / Désinscrit | 🔧 | 2.66.0 | Migration `0042` |
+| REQ-03/04/05 | Verification, bots, reset | 🔑 | — | Built; waits on C4 |
+| REQ-07 | Admin alert on an application | 🔧 | 2.66.0 | In-app for every admin; email reaches the owner only until C4 |
+
+---
+
 ## Client feedback monitor — Nicolas's review of 21 October 2026
 
 _Owner: this section is for you. One row per point in Evan's write-up
@@ -318,6 +356,17 @@ than leaving it in a chat message.
       which selects `expedion_quotes.reference`. Proved on a scratch database
       holding quotes: numbered by request date, a new quote takes the next
       number, a re-run renumbers nothing.
+- [ ] **Run Actions → "Migrate database" for
+      `0042_carrier_absence_deregistration` before 2.66.0 deploys** — on the
+      `release/2.66.0` branch, environment `production`, confirm `migrate`
+      (change « Use workflow from » off `main`). Additive: one enum value and
+      five nullable columns. New code on an unmigrated database 500s every
+      read of `carriers` (it selects `absent_since`).
+- [ ] **Register the payment-method domain for Apple Pay (2.66.0, C3).**
+      Stripe → Settings → Payment method domains → add
+      `expeditoo-ship-five.vercel.app` (and any custom domain later). Until it
+      is there, the accept dialog shows no Apple Pay button; Google Pay may
+      appear in Chrome regardless.
 - [ ] **Set the GitHub repo variable `APP_URL` and secret `CRON_SECRET` — the
       scheduled jobs have never run in production.** Every run of
       `.github/workflows/scheduled-jobs.yml` on record failed (1,000 checked
@@ -774,6 +823,107 @@ than leaving it in a chat message.
       Until then its application page says driver access is off.
 
 ---
+
+## ✅ 2026-10-29 — Nicolas's Answers of 28–29 October, Part One: The Bare Number, « Immédiat », Every Quote in Supervision, and Drivers Who Can Be Away (2.66.0)
+
+_The owner, with the consolidated feedback document of 29 October: « analyze
+this PDF, and check with the codebase if everything can start and finish up to
+implement … give me the green or red flag everything in a single table » —
+then « continue finish up that everything that can implement from your side,
+for any env pls handle with vercel CLI, I give you full permission for push and
+everything go ahead »._
+
+Spec: `docs/specs/client_feedback_2026_10_29_spec.md`. Plan:
+`docs/plans/plan_client_feedback_2026_10_29.md`. Item-by-item monitor at the
+top of this file.
+
+### What checking the document against the code found
+
+- **The commission is not missing.** `COMMISSION_RATE = 0.1` in
+  `payments.service.ts`, and its comment records the split as decided;
+  `schedulePayout` already writes price − 10 % at « Livré ». What payouts wait
+  on is the rail (Connect or the platform's bank) and the lawyer — and the
+  platform's Stripe account is currently **restricted from creating connected
+  accounts** (`stripe.service.ts`, `throughStripe`), which only the owner can
+  clear.
+- **Twilio is not live.** The SMS code exists; the account does not
+  (« Twilio is not registered, so nothing is texted », 2.6x WhatsApp entry).
+  N7 is code that will text nobody until that changes.
+- **A2's period filter already existed — over 25 rows.** « Récents » was the
+  report's 25 newest quotes and « Choisir une période » filtered them in the
+  browser. Moved to the server.
+- **B6's « price required to publish » already exists** (`budgetRequired`), and
+  N1's delivery days and times of day are already collected on `/create`
+  (`dropoff_days` / `dropoff_periods`, 0035).
+- **C4 has no domain to verify.** Production serves on `*.vercel.app`, which
+  Resend cannot verify; a domain the client owns is needed first.
+
+### What changed
+
+- **A4** — `formatListingReference(reference)` is the bare number; `cityCode`
+  and the `from`/`to` props are gone from every caller. `parseListingReference`
+  keeps dropping « PAR-CLA- » so a 2.65.0 copy still finds its job. The admin
+  listings and shipments tables lead with N° · Départ · Arrivée · Demandeur
+  (`RequesterCell`, initials from `initialsOf`, moved to `src/lib/initials.ts`).
+  `shipmentsDal.adminOverview` joins the requester's **name only**.
+- **B5** — `isImmediate` beside `isUrgent` in `src/lib/urgency.ts`; both now
+  refuse a row past `expiresAt`, which the expiry sweep has not reached and
+  `displayStatus` already reads « Expirée » (and the sweep has never run, X1).
+  `UrgentBadge` → `UrgencyBadge`, rendering either or both.
+- **B3** — « Directe » → « Site Expeditoo ».
+- **A2** — `GET /api/admin/expedion/quotes` (`listQuotePage`, staff only;
+  `getQuotePage` in the report DAL, same projection, ties on `id`). The window
+  arrives as instants the browser computed from its own midnights; `to` is
+  exclusive. « Récents » pages 100 at a time; each tab has its own order
+  button; « À traiter » keeps its client-side period filter because it is
+  complete in the browser.
+- **N2 / N5** — `MyShipments` sorts and windows by `listDate` (delivery, then
+  pickup, then booking), shows pickup and delivery dates actual-before-planned,
+  gained the error branch it lacked (gotcha 9), and links « Mes paiements » for
+  `carrier` holders — as does `CarrierTripsScreen`.
+- **REQ-02** — migration `0042_carrier_absence_deregistration`: `deregistered`
+  appended to `carrier_status`; five nullable columns on `carriers`. **Absence
+  is two columns, not a status**, so it ends on its date without a sweep;
+  `mayTakeWork` (`src/lib/carrier-availability.ts`) is asked by every new-work
+  path (submit, take, both award checks, thread offers, `assignDirect`,
+  `requireApproved`, and the carriers-on-route SQL). `setAvailability`,
+  `deregister` and an admin-checked `reinstate` (which had no route at all) in
+  `carrier.service.ts`; five thin routes; the admin dialog and the driver's
+  « Disponibilité » card. Deregistering is refused while a run is
+  `PENDING`/`ASSIGNED`/`PICKED_UP`/`IN_TRANSIT` and withdraws every pending
+  offer with its count in one transaction. Payouts do not read carrier status,
+  so money earned stays payable.
+- **REQ-07** — `submitApplication` notifies and emails every admin
+  (`DriverApplicationSubmittedEmail`), best-effort.
+- **C3 (part)** — Apple Pay and Google Pay `auto` in `AcceptPaymentDialog`. The
+  intent is unchanged (`card`, manual capture), so award, capture and release
+  are the typed-card path.
+
+### Judgment calls
+
+All in spec §0. The two worth re-reading: « Immédiat » is derived from the
+window having opened (Nicolas asked for a rule, and this is the one the data
+can check), and « Absent » is deliberately not a status.
+
+### Verification
+
+- `npx tsc --noEmit`: 0 errors. `pnpm lint`: 0 errors, 61 warnings — the same
+  61 as `d842bbb`.
+- `vitest run`: 236 files, **3,034 tests pass** (2,968 at 2.65.0). New:
+  `carrier-availability` (13 + 18), `expedion-quote-page` (5),
+  `quotePageQuery` (3), `shipment-list` (6), `MyShipments` (4),
+  `AvailabilitySection` (4), `CarrierApplicationDetail.availability` (5), and
+  additions to `urgency`, `listing-reference`, `DeliveriesTable`,
+  `shipment.admin-overview`, `CarrierTripsScreen`.
+- Migration journal test passes with `0042` (`when` 1788433200000 > 0041's).
+
+### Known limits
+
+- Apple Pay / Google Pay were **not** exercised with a real wallet; a headless
+  browser in Stripe test mode cannot present either.
+- The admin email reaches only the Resend account's own address until C4.
+- `CARRIER_APPLICATION_STATUSES` (admin) and `CarrierStatus` (driver) still
+  restate the enum client-side, as before; both gained `deregistered`.
 
 ## ✅ 2026-10-24 — Nicolas's Review of 21 October: One Worklist, One Reference, Urgency, Condensed Requests, and Scheduled Jobs That Never Ran (2.65.0)
 

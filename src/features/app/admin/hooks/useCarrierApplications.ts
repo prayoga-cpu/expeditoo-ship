@@ -7,8 +7,12 @@ import {
     approveCarrierApplication,
     rejectCarrierApplication,
     suspendCarrier,
+    setCarrierAvailability,
+    deregisterCarrier,
+    reinstateCarrier,
     fetchDocumentViewUrl,
     type CarrierApplicationFilter,
+    type CarrierAvailabilityRequest,
 } from "../api/carriers.api";
 
 export function useCarrierApplications(status: CarrierApplicationFilter) {
@@ -62,6 +66,51 @@ export function useCarrierApplications(status: CarrierApplicationFilter) {
         },
     });
 
+    // Actif / Absent / Désinscrit (client_feedback_2026_10_29_spec.md §REQ-02).
+    const availabilityMutation = useMutation({
+        mutationFn: ({
+            id,
+            input,
+        }: {
+            id: string;
+            input: CarrierAvailabilityRequest;
+        }) => setCarrierAvailability(id, input),
+        onSuccess: (_data, { input }) => {
+            invalidate();
+            toast.success(t(input.absent ? "markedAbsent" : "absenceEnded"));
+        },
+        onError: (error) => {
+            toast.error(t("actionFailed", { message: error.message }));
+        },
+    });
+
+    const deregisterMutation = useMutation({
+        mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+            deregisterCarrier(id, reason),
+        onSuccess: () => {
+            invalidate();
+            toast.success(t("deregistered"));
+        },
+        onError: (error) => {
+            toast.error(
+                error.message === "CARRIER_HAS_LIVE_RUNS"
+                    ? t("hasLiveRuns")
+                    : t("actionFailed", { message: error.message }),
+            );
+        },
+    });
+
+    const reinstateMutation = useMutation({
+        mutationFn: (id: string) => reinstateCarrier(id),
+        onSuccess: () => {
+            invalidate();
+            toast.success(t("reinstated"));
+        },
+        onError: (error) => {
+            toast.error(t("actionFailed", { message: error.message }));
+        },
+    });
+
     return {
         applications,
         isLoading,
@@ -69,10 +118,16 @@ export function useCarrierApplications(status: CarrierApplicationFilter) {
         approveApplication: approveMutation.mutateAsync,
         rejectApplication: rejectMutation.mutateAsync,
         suspendCarrierAccount: suspendMutation.mutateAsync,
+        setAvailability: availabilityMutation.mutateAsync,
+        deregisterCarrierAccount: deregisterMutation.mutateAsync,
+        reinstateCarrierAccount: reinstateMutation.mutateAsync,
         isUpdating:
             approveMutation.isPending ||
             rejectMutation.isPending ||
-            suspendMutation.isPending,
+            suspendMutation.isPending ||
+            availabilityMutation.isPending ||
+            deregisterMutation.isPending ||
+            reinstateMutation.isPending,
     };
 }
 

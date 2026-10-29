@@ -3,7 +3,11 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import type { QuoteRow } from "@/server/dal/expedion-report.dal";
-import type { ExpedionReport } from "@/server/services/expedion-report.service";
+import type {
+  ExpedionReport,
+  QuotePage,
+} from "@/server/services/expedion-report.service";
+import { parseLocalISO } from "@/lib/utils/date-range";
 import type { ExpedionQuote } from "@/db/schema/expedion";
 
 /**
@@ -50,13 +54,17 @@ async function unwrap<T>(response: Response): Promise<T> {
  * `expedion-report.dal.test.ts` round-trips a row through `JSON.parse(JSON
  * .stringify(...))` to make that failure loud rather than silent.
  */
-function reviveQuoteDates(report: ExpedionReport): ExpedionReport {
-  const row = (r: QuoteRow): QuoteRow => ({
+function reviveQuoteRow(r: QuoteRow): QuoteRow {
+  return {
     ...r,
     storageFreeUntil: asDate(r.storageFreeUntil),
     escalateAfter: asDate(r.escalateAfter),
     requestedAt: asDate(r.requestedAt),
-  });
+  };
+}
+
+function reviveQuoteDates(report: ExpedionReport): ExpedionReport {
+  const row = reviveQuoteRow;
   return {
     ...report,
     queues: Object.fromEntries(
@@ -86,6 +94,57 @@ export function useExpedionReport() {
     // count is fine, a refetch on every window focus is not.
     staleTime: 60_000,
     refetchOnWindowFocus: false,
+  });
+}
+
+/** How many quotes « Récents » loads for one window (§A2 of the 29 October spec). */
+export const QUOTE_PAGE_LIMIT = 100;
+
+export interface QuotePageFilter {
+  /** Local-day ISO (YYYY-MM-DD), or "" for no lower bound. */
+  from: string;
+  /** Local-day ISO (YYYY-MM-DD), or "" for no upper bound — inclusive. */
+  to: string;
+  order: "asc" | "desc";
+  page: number;
+}
+
+/**
+ * The query string for one page. The days the operator picked become instants
+ * at *their* midnights — the server compares instants and has no idea which
+ * timezone the person reading « 3 oct. » is in — and `to` is the day after,
+ * exclusive, so the last day picked is counted whole.
+ */
+export function quotePageQuery(filter: QuotePageFilter): string {
+  const params = new URLSearchParams({
+    order: filter.order,
+    page: String(filter.page),
+    limit: String(QUOTE_PAGE_LIMIT),
+  });
+  if (filter.from) params.set("from", parseLocalISO(filter.from).toISOString());
+  if (filter.to) {
+    const end = parseLocalISO(filter.to);
+    end.setDate(end.getDate() + 1);
+    params.set("to", end.toISOString());
+  }
+  return params.toString();
+}
+
+/** Every quote in a window, newest or oldest first, a page at a time. */
+export function useQuotePage(filter: QuotePageFilter, enabled: boolean) {
+  return useQuery<QuotePage>({
+    // Under the report's key, so every mutation's invalidation reaches it.
+    queryKey: [...REPORT_KEY, "quotes", filter],
+    queryFn: async () => {
+      const page = await unwrap<QuotePage>(
+        await fetch(`/api/admin/expedion/quotes?${quotePageQuery(filter)}`)
+      );
+      return { ...page, rows: page.rows.map(reviveQuoteRow) };
+    },
+    enabled,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+    placeholderData: (previous) => previous,
   });
 }
 

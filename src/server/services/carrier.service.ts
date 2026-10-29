@@ -2,8 +2,12 @@ import { nanoid } from "nanoid";
 import { db } from "@/db";
 import { carriersDal } from "@/server/dal/carriers.dal";
 import * as usersDal from "@/server/dal/users.dal";
+import { offersDal } from "@/server/dal/offers.dal";
+import { shipmentsDal } from "@/server/dal/shipments.dal";
 import { notificationsService } from "@/server/services/notifications.service";
+import { emailService } from "@/server/services/email.service";
 import { last4 } from "@/lib/french-identifiers";
+import { mayTakeWork } from "@/lib/carrier-availability";
 import {
   REQUIRED_DOCUMENT_KINDS,
   EXPIRING_DOCUMENT_KINDS,
@@ -13,6 +17,7 @@ import {
   type UpdateVehicleInput,
   type UploadDocumentInput,
   type CreateDriverInput,
+  type CarrierAvailabilityInput,
 } from "@/server/dto/carrier.dto";
 import type { Carrier } from "@/db/schema/carriers";
 import type { Viewer } from "@/server/services/shipment.service";
@@ -64,6 +69,22 @@ async function enrolAsOwnDriver(
     },
     tx
   );
+}
+
+/**
+ * The carrier an availability action is about: the caller's own when no id is
+ * given, anyone's for an admin. A driver naming somebody else's id gets the
+ * same 404 as a typo — nothing here confirms another account exists.
+ */
+async function carrierFor(actor: Viewer, carrierId: string | null) {
+  const carrier = carrierId
+    ? await carriersDal.getById(carrierId)
+    : await carriersDal.getByUserId(actor.userId);
+  if (!carrier) throw err("CARRIER_NOT_FOUND", 404);
+  if (carrier.userId !== actor.userId && !actor.isAdmin) {
+    throw err("CARRIER_NOT_FOUND", 404);
+  }
+  return carrier;
 }
 
 /** The account an in-house onboarding may convert, or null to create one. */
@@ -244,7 +265,20 @@ export const carrierService = {
     }
     if (carrier.status === "suspended") throw err("CARRIER_SUSPENDED", 409);
 
-    return await carriersDal.update(carrier.id, { status: "submitted" });
+    // A deregistered driver who applies again is reviewed again (§REQ-02).
+    const submitted = await carriersDal.update(
+      carrier.id,
+      carrier.status === "deregistered"
+        ? { status: "submitted", deregisteredAt: null, deregistrationReason: null }
+        : { status: "submitted" }
+    );
+
+    // Best-effort: a failed alert must not fail the submission (§REQ-07).
+    await alertAdminsOfApplication(carrier).catch((e) =>
+      console.error("driver application alert failed", e)
+    );
+
+    return submitted;
   },
 
   async withdrawApplication(userId: string) {
@@ -451,7 +485,93 @@ export const carrierService = {
     return suspended;
   },
 
-  async reinstate(carrierId: string) {
+  // ---- Availability: Actif / Absent / Désinscrit (§REQ-02) ----
+
+  /**
+   * « Absent »: the driver, or an admin for them. Only an active account can
+   * be away — a suspended or deregistered one has nothing to step back from.
+   * An absent driver keeps their live runs, their money and their documents;
+   * every new-work path asks `mayTakeWork` and refuses them until the return
+   * date passes or someone ends the absence.
+   */
+  async setAvailability(
+    actor: Viewer,
+    carrierId: string | null,
+    input: CarrierAvailabilityInput
+  ) {
+    const carrier = await carrierFor(actor, carrierId);
+    if (!input.absent) {
+      return await carriersDal.update(carrier.id, {
+        absentSince: null,
+        absentUntil: null,
+        absenceReason: null,
+      });
+    }
+
+    if (carrier.status !== "approved") throw err("CARRIER_NOT_ACTIVE", 409);
+    const until = input.until ? new Date(input.until) : null;
+    if (until && until.getTime() <= Date.now()) {
+      throw err("ABSENCE_END_IN_PAST", 422);
+    }
+    const updated = await carriersDal.update(carrier.id, {
+      absentSince: new Date(),
+      absentUntil: until,
+      absenceReason: input.reason,
+    });
+    if (actor.userId !== carrier.userId) {
+      await notifyCarrier(
+        carrier.userId,
+        "Marked as away",
+        "An administrator marked your account as away: you will not be offered new jobs until it ends."
+      );
+    }
+    return updated;
+  },
+
+  /**
+   * « Désinscrit »: the driver leaves, or an admin removes them. Refused while
+   * a run is still owed to somebody, so a delivery is never stranded; every
+   * bid still standing is withdrawn in the same transaction so no requester
+   * goes on comparing an offer nobody will honour. Money already earned stays
+   * payable — a payout follows its delivered shipment, not the account's
+   * status. Applying again starts the review over (`submitApplication`).
+   */
+  async deregister(actor: Viewer, carrierId: string | null, reason: string | null) {
+    const carrier = await carrierFor(actor, carrierId);
+    if (carrier.status === "deregistered") return carrier;
+
+    const live = await shipmentsDal.countLiveForCarrier(carrier.userId);
+    if (live > 0) throw err("CARRIER_HAS_LIVE_RUNS", 409);
+
+    const updated = await db.transaction(async (tx) => {
+      await offersDal.withdrawAllPendingForCarrier(carrier.userId, tx);
+      return await carriersDal.update(
+        carrier.id,
+        {
+          status: "deregistered",
+          deregisteredAt: new Date(),
+          deregistrationReason: reason,
+          absentSince: null,
+          absentUntil: null,
+          absenceReason: null,
+        },
+        tx
+      );
+    });
+
+    if (actor.userId !== carrier.userId) {
+      await notifyCarrier(
+        carrier.userId,
+        "Account deregistered",
+        reason ?? "An administrator closed your driver account."
+      );
+    }
+    return updated;
+  },
+
+  /** Suspended → active again. Admin only; nothing called it until §REQ-02. */
+  async reinstate(actor: Viewer, carrierId: string) {
+    if (!actor.isAdmin) throw err("FORBIDDEN", 403);
     const carrier = await carriersDal.getById(carrierId);
     if (!carrier) throw err("CARRIER_NOT_FOUND", 404);
     if (carrier.status !== "suspended") throw err("NOT_SUSPENDED", 409);
@@ -511,9 +631,45 @@ export const carrierService = {
     if (!carrier || carrier.status !== "approved") {
       throw err("CARRIER_NOT_APPROVED", 403);
     }
+    if (!mayTakeWork(carrier)) throw err("CARRIER_ABSENT", 403);
     return carrier;
   },
 };
+
+/**
+ * Every admin hears that a driver application waits for them, in the app and
+ * by email (client_feedback_2026_10_29_spec.md §REQ-07). Every application,
+ * not only « professional » ones: every applicant today is a SIRET holder,
+ * and the professional / private split waits on REQ-01.
+ *
+ * The email reaches nobody but the Resend account's own address until a
+ * sending domain is verified (C4); the in-app notification reaches everyone.
+ */
+async function alertAdminsOfApplication(carrier: Carrier) {
+  const admins = (await usersDal.getUsersByRole("admin")).filter(Boolean);
+  const applicant = await usersDal.getUserById(carrier.userId);
+  const applicantName = applicant?.name || carrier.companyName;
+  const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://expeditoo.com";
+  const reviewUrl = `${base}/admin/applications`;
+
+  await Promise.allSettled(
+    admins.flatMap((admin) => [
+      notificationsService.createNotification({
+        userId: admin.id,
+        type: "carrier_application",
+        title: "New driver application",
+        message: `${applicantName} · ${carrier.companyName} · ${carrier.city}`,
+        linkUrl: "/admin/applications",
+      }),
+      emailService.sendDriverApplicationSubmittedEmail(admin.email, {
+        applicantName,
+        companyName: carrier.companyName,
+        city: carrier.city,
+        reviewUrl,
+      }),
+    ])
+  );
+}
 
 async function notifyCarrier(userId: string, title: string, message: string) {
   await notificationsService

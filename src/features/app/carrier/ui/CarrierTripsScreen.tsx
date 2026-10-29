@@ -1,7 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { Wallet } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/lib/auth-context";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PlannedTripsPanel } from "./PlannedTripsPanel";
@@ -29,6 +34,8 @@ const tabFrom = (value: string | null): TripTab =>
  */
 export function CarrierTripsScreen() {
   const t = useTranslations("carrier.trips");
+  const tShipments = useTranslations("driver.shipments");
+  const { user } = useAuth();
   const router = useRouter();
   const params = useSearchParams();
 
@@ -42,9 +49,22 @@ export function CarrierTripsScreen() {
 
   return (
     <div className="flex h-full flex-col gap-6">
-      <div>
-        <h1 className="mb-2 text-3xl font-bold text-foreground">{t("title")}</h1>
-        <p className="text-muted-foreground">{t("pageSubtitle")}</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="mb-2 text-3xl font-bold text-foreground">{t("title")}</h1>
+          <p className="text-muted-foreground">{t("pageSubtitle")}</p>
+        </div>
+        {/* « Mes paiements » from the deliveries screen (§N5 of the 29
+            October spec) — carriers only: a driver-only account is never
+            shown pay. */}
+        {user?.roles?.includes("carrier") && (
+          <Button variant="secondary" asChild>
+            <Link href="/carrier/withdrawals">
+              <Wallet className="h-4 w-4" aria-hidden />
+              {tShipments("myPayments")}
+            </Link>
+          </Button>
+        )}
       </div>
 
       <Tabs value={tab} onValueChange={select} className="flex flex-1 flex-col">

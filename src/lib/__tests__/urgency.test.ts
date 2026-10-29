@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { collectBy, isUrgent, URGENT_WITHIN_HOURS } from "../urgency";
+import { collectBy, isImmediate, isUrgent, URGENT_WITHIN_HOURS } from "../urgency";
 
 /** client_feedback_2026_10_21_spec.md §B5 */
 const NOW = new Date("2026-10-24T12:00:00.000Z");
@@ -41,6 +41,52 @@ describe("isUrgent", () => {
     "is never urgent once %s — only a request still without a driver is",
     (status) => {
       expect(isUrgent(job({ status }), NOW)).toBe(false);
+    }
+  );
+});
+
+describe("isUrgent past the bidding deadline", () => {
+  it("is not urgent once bidding has closed, even before the sweep runs", () => {
+    expect(isUrgent(job({ expiresAt: inHours(-1) }), NOW)).toBe(false);
+    expect(isUrgent(job({ expiresAt: inHours(6) }), NOW)).toBe(true);
+  });
+});
+
+/** client_feedback_2026_10_29_spec.md §B5 */
+describe("isImmediate", () => {
+  const flexible = (over: Partial<Parameters<typeof isImmediate>[0]> = {}) =>
+    job({ isFlexible: true, pickupFrom: inHours(-24), pickupUntil: inHours(21 * 24), ...over });
+
+  it("is immediate while the pickup window is already open", () => {
+    expect(isImmediate(flexible(), NOW)).toBe(true);
+  });
+
+  it("is immediate from the very first minute of the window", () => {
+    expect(isImmediate(flexible({ pickupFrom: NOW.toISOString() }), NOW)).toBe(true);
+  });
+
+  it("is not immediate before the window opens", () => {
+    expect(isImmediate(job(), NOW)).toBe(false);
+  });
+
+  it("is not immediate once the window has closed", () => {
+    expect(isImmediate(flexible({ pickupUntil: NOW.toISOString() }), NOW)).toBe(false);
+  });
+
+  it("is not immediate past the bidding deadline", () => {
+    expect(isImmediate(flexible({ expiresAt: inHours(-1) }), NOW)).toBe(false);
+  });
+
+  it("can be immediate and urgent at once", () => {
+    const closing = flexible({ pickupUntil: inHours(40) });
+    expect(isImmediate(closing, NOW)).toBe(true);
+    expect(isUrgent(closing, NOW)).toBe(true);
+  });
+
+  it.each(["draft", "scheduled", "awarded", "in_progress", "completed", "cancelled", "expired"])(
+    "is never immediate once %s",
+    (status) => {
+      expect(isImmediate(flexible({ status }), NOW)).toBe(false);
     }
   );
 });

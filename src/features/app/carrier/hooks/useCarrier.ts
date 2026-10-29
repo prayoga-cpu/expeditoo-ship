@@ -106,6 +106,49 @@ export function useWithdrawApplication() {
   });
 }
 
+/** « Je m'absente » / « Je suis de retour » — §REQ-02 of the 29 October spec. */
+export function useSetAvailability() {
+  const queryClient = useQueryClient();
+  const t = useTranslations("carrier.toasts");
+
+  return useMutation({
+    mutationFn: carrierApi.setAvailability,
+    onSuccess: (_data, input) => {
+      toast.success(t(input.absent ? "markedAbsent" : "backFromAbsence"));
+      queryClient.invalidateQueries({ queryKey: carrierKeys.application });
+    },
+    onError: (error) => {
+      toast.error(
+        describe(error, t, "availabilityFailed", {
+          ABSENCE_END_IN_PAST: "absenceEndInPast",
+          CARRIER_NOT_ACTIVE: "notActive",
+        })
+      );
+    },
+  });
+}
+
+/** « Me désinscrire » — refused while a run is still owed. */
+export function useDeregister() {
+  const queryClient = useQueryClient();
+  const t = useTranslations("carrier.toasts");
+
+  return useMutation({
+    mutationFn: (reason: string | null) => carrierApi.deregister(reason),
+    onSuccess: () => {
+      toast.success(t("deregistered"));
+      queryClient.invalidateQueries({ queryKey: carrierKeys.application });
+    },
+    onError: (error) => {
+      toast.error(
+        describe(error, t, "deregisterFailed", {
+          CARRIER_HAS_LIVE_RUNS: "hasLiveRuns",
+        })
+      );
+    },
+  });
+}
+
 export function useSetBanking() {
   const queryClient = useQueryClient();
   const t = useTranslations("carrier.toasts");

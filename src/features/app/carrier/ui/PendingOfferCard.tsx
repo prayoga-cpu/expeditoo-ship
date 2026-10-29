@@ -86,7 +86,7 @@ export function PendingOfferCard({
             <p className="font-semibold">{listing?.title ?? t("untitledJob")}</p>
             {listing && (
               <div>
-                <ListingReference reference={listing.reference} from={listing.pickupCity} to={listing.dropoffCity} />
+                <ListingReference reference={listing.reference} />
               </div>
             )}
           </div>

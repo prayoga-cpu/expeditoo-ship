@@ -35,7 +35,8 @@ import { formatCurrency } from "@/lib/currency";
 import { STATUS_TONE, displayStatus } from "@/features/app/listing/statusTone";
 import type { AdminListing } from "../hooks/useAdminListings";
 import { ListingReference } from "@/features/app/listing/ui/ListingReference";
-import { UrgentBadge } from "@/features/app/listing/ui/UrgentBadge";
+import { UrgencyBadge } from "@/features/app/listing/ui/UrgencyBadge";
+import { RequesterCell } from "./RequesterCell";
 import { parseListingReference } from "@/lib/listing-reference";
 
 type Listing = AdminListing;
@@ -144,26 +145,61 @@ export function ListingsTable({
   // Define columns for TanStack Table
   const columns: ColumnDef<Listing>[] = useMemo(
     () => [
+      // Left to right as the client asked on 28 October: number, departure,
+      // arrival, requester and their initials (client_feedback_2026_10_29_spec.md §A4).
+      {
+        id: "reference",
+        accessorKey: "reference",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title={t("reference")} />
+        ),
+        cell: ({ row }) => (
+          <ListingReference reference={row.original.reference} />
+        ),
+      },
+      {
+        id: "departure",
+        accessorKey: "pickupCity",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title={t("departure")} />
+        ),
+        cell: ({ row }) => (
+          <span className="text-sm">{row.original.pickupCity}</span>
+        ),
+      },
+      {
+        id: "arrival",
+        accessorKey: "dropoffCity",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title={t("arrival")} />
+        ),
+        cell: ({ row }) => (
+          <span className="text-sm">{row.original.dropoffCity}</span>
+        ),
+      },
+      {
+        accessorKey: "shipper",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title={t("seller")} />
+        ),
+        cell: ({ row }) => (
+          <RequesterCell
+            name={row.original.shipper.name}
+            email={row.original.shipper.email}
+          />
+        ),
+        enableSorting: false,
+      },
       {
         accessorKey: "title",
         header: ({ column }) => (
           <DataTableColumnHeader column={column} title={t("title")} />
         ),
         cell: ({ row }) => (
-          <div className="flex flex-col gap-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-medium">{row.original.title}</span>
-              <ListingOriginBadge origin={row.original.origin} />
-              <UrgentBadge job={row.original} />
-            </div>
-            <span className="text-xs text-muted-foreground">
-              {row.original.pickupCity} → {row.original.dropoffCity}
-            </span>
-            <ListingReference
-              reference={row.original.reference}
-              from={row.original.pickupCity}
-              to={row.original.dropoffCity}
-            />
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-medium">{row.original.title}</span>
+            <ListingOriginBadge origin={row.original.origin} />
+            <UrgencyBadge job={row.original} />
           </div>
         ),
         filterFn: (row, id, filterValue) => {
@@ -181,23 +217,6 @@ export function ListingsTable({
             String(row.original.reference),
           ].some((field) => field.toLowerCase().includes(value));
         },
-      },
-      {
-        accessorKey: "shipper",
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} title={t("seller")} />
-        ),
-        cell: ({ row }) => (
-          <div className="flex flex-col">
-            <span className="text-sm font-medium">
-              {row.original.shipper.name}
-            </span>
-            <span className="text-xs text-muted-foreground">
-              {row.original.shipper.email}
-            </span>
-          </div>
-        ),
-        enableSorting: false,
       },
       {
         accessorKey: "budgetCents",
@@ -259,6 +278,9 @@ export function ListingsTable({
   );
 
   const sortFields = [
+    { id: "reference", label: t("reference") },
+    { id: "departure", label: t("departure") },
+    { id: "arrival", label: t("arrival") },
     { id: "title", label: t("title") },
     { id: "budgetCents", label: t("price") },
     { id: "views", label: t("views") },

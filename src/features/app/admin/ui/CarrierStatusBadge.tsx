@@ -12,14 +12,29 @@ const STATUS_STYLES: Record<CarrierApplicationStatus, string> = {
   approved: "bg-green-500 hover:bg-green-600 text-white",
   rejected: "bg-red-500 hover:bg-red-600 text-white",
   suspended: "bg-slate-600 hover:bg-slate-700 text-white",
+  deregistered: "bg-zinc-800 hover:bg-zinc-900 text-white dark:bg-zinc-700",
 };
 
+/**
+ * The driver's standing in the field test's four words
+ * (client_feedback_2026_10_29_spec.md §REQ-02): an approved driver reads
+ * « Actif », or « Absent » while away — absence is not a status of its own.
+ */
 export function CarrierStatusBadge({
   status,
+  absent = false,
 }: {
   status: CarrierApplicationStatus;
+  absent?: boolean;
 }) {
   const t = useTranslations("admin.carriers.status");
 
+  if (status === "approved" && absent) {
+    return (
+      <Badge className="bg-amber-500 hover:bg-amber-600 text-white dark:bg-amber-600">
+        {t("absent")}
+      </Badge>
+    );
+  }
   return <Badge className={STATUS_STYLES[status]}>{t(status)}</Badge>;
 }

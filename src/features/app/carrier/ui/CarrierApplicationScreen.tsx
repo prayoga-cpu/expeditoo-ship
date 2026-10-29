@@ -23,6 +23,7 @@ import {
 } from "../hooks/useCarrier";
 import type { CarrierApplication } from "../api/carrier.api";
 import { ApplicationStatusBanner } from "./ApplicationStatusBanner";
+import { AvailabilitySection } from "./AvailabilitySection";
 import { BankingSection } from "./BankingSection";
 import { CarrierProfileForm } from "./CarrierProfileForm";
 import { DocumentChecklist } from "./DocumentChecklist";
@@ -52,7 +53,9 @@ export function CarrierApplicationScreen() {
 
 function ApplicationFunnel({ application }: { application: CarrierApplication }) {
   const { status } = application;
-  const editable = status === "draft" || status === "rejected";
+  // A deregistered driver may apply again, and is reviewed again (§REQ-02).
+  const editable =
+    status === "draft" || status === "rejected" || status === "deregistered";
   const locked = status === "submitted" || status === "under_review";
 
   return (
@@ -72,6 +75,7 @@ function ApplicationFunnel({ application }: { application: CarrierApplication })
       {editable && <SubmitSection application={application} />}
       {status === "submitted" && <WithdrawSection />}
       {status === "approved" && <ApprovedActions />}
+      {status === "approved" && <AvailabilitySection application={application} />}
     </div>
   );
 }

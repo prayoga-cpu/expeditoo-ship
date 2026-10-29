@@ -958,7 +958,8 @@
         "VEHICLE_CAPACITY_DIMENSIONS": "That vehicle is too small for this load.",
         "OFFER_ALREADY_EXISTS": "You already have a live offer on this job.",
         "generic": "Could not take this job. Please try again.",
-        "TAKE_NOT_AVAILABLE": "This client chooses their carrier: make an offer instead."
+        "TAKE_NOT_AVAILABLE": "This client chooses their carrier: make an offer instead.",
+        "CARRIER_ABSENT": "You are marked as away: come back from your file to make an offer."
       },
       "form": {
         "title": "Submit an offer",
@@ -1038,7 +1039,8 @@
         "CANNOT_BID_OWN_LISTING": "You cannot bid on your own job.",
         "VEHICLE_CAPACITY_WEIGHT": "That vehicle cannot carry this load.",
         "VEHICLE_CAPACITY_DIMENSIONS": "That vehicle is too small for this load.",
-        "PICKUP_OUTSIDE_WINDOW": "Your pickup time is outside the requester's window."
+        "PICKUP_OUTSIDE_WINDOW": "Your pickup time is outside the requester's window.",
+        "CARRIER_ABSENT": "You are marked as away: come back from your file to make an offer."
       }
     }
   },
@@ -1612,7 +1614,23 @@
         "cancelled": "Cancelled",
         "assigned": "Assigned"
       },
-      "flexible": "Flexible"
+      "flexible": "Flexible",
+      "order": {
+        "toggle": "Reverse the order",
+        "soonest": "Soonest first",
+        "latest": "Latest first"
+      },
+      "dates": {
+        "pickup": "Pickup due {date}",
+        "pickedUp": "Picked up {date}",
+        "delivery": "Delivery due {date}",
+        "delivered": "Delivered {date}"
+      },
+      "myPayments": "My payments",
+      "error": {
+        "title": "Your shipments could not be loaded",
+        "description": "Check your connection, then reload the page."
+      }
     },
     "shipmentDetail": {
       "notFound": "Shipment not found",
@@ -2586,11 +2604,14 @@
         "viewDetails": "View Details",
         "delete": "Delete",
         "origin": {
-          "direct": "Direct",
+          "direct": "Expeditoo site",
           "expedion": "via Expedion",
           "directHint": "Request posted on Expeditoo by its requester. They choose the transporter and pay with their own card.",
           "expedionHint": "A paid Expedion quote published because no driver took it. An operator chooses the transporter in the client's place."
-        }
+        },
+        "reference": "No.",
+        "departure": "From",
+        "arrival": "To"
       },
       "dialogs": {
         "deleteTitle": "Delete Listing",
@@ -2738,9 +2759,11 @@
         "draft": "Draft",
         "submitted": "Submitted",
         "under_review": "Under review",
-        "approved": "Approved",
+        "approved": "Active",
         "rejected": "Rejected",
-        "suspended": "Suspended"
+        "suspended": "Suspended",
+        "deregistered": "Deregistered",
+        "absent": "Away"
       },
       "detail": {
         "title": "Carrier Application",
@@ -2783,7 +2806,21 @@
         "rejectReasonLabel": "Rejection reason (sent to the carrier)",
         "suspendReasonLabel": "Suspension reason (sent to the carrier)",
         "reasonPlaceholder": "Explain the decision...",
-        "documentOpenFailed": "Could not open the document"
+        "documentOpenFailed": "Could not open the document",
+        "absentUntil": "Away until {date}",
+        "absentOpenEnded": "Away until further notice",
+        "deregisteredOn": "Deregistered on {date}",
+        "deregisteredTitle": "Deregistered",
+        "returnDayLabel": "Back on (optional)",
+        "returnDayHint": "With no date, the absence lasts until someone ends it. Runs already booked carry on as normal.",
+        "absenceReasonLabel": "Reason (optional)",
+        "deregisterReasonLabel": "Reason for deregistering",
+        "confirmAbsent": "Mark as away",
+        "confirmDeregister": "Confirm deregistration",
+        "markAbsent": "Mark as away",
+        "endAbsence": "End absence",
+        "deregister": "Deregister",
+        "reinstate": "Reinstate"
       },
       "vehicleTypes": {
         "little_car": "Little car",
@@ -2809,7 +2846,13 @@
         "suspended": "Carrier suspended",
         "approveFailed": "Failed to approve: {message}",
         "rejectFailed": "Failed to reject: {message}",
-        "suspendFailed": "Failed to suspend: {message}"
+        "suspendFailed": "Failed to suspend: {message}",
+        "markedAbsent": "Driver marked as away",
+        "absenceEnded": "Absence ended: the driver is active again",
+        "deregistered": "Driver deregistered, their pending offers withdrawn",
+        "reinstated": "Driver reinstated",
+        "hasLiveRuns": "Not possible: this driver still has a run in progress. It must be delivered or cancelled first.",
+        "actionFailed": "Failed: {message}"
       }
     },
     "expedion": {
@@ -2994,8 +3037,17 @@
         },
         "openHint": "click a row for the full quote and its bordereau",
         "autoPublishIn": "auto-publishes in {count} h",
-        "todoHint": "Everything waiting for an action, however old the quote: to price, paid with no driver, auto-publish deadline passed, storage about to be billed. Oldest first.",
-        "allHint": "The latest quotes received, whether or not there is anything to do. Newest first."
+        "todoHint": "Everything waiting for an action, however old the quote: to price, paid with no driver, auto-publish deadline passed, storage about to be billed. Oldest first, unless you reverse the order.",
+        "allHint": "Every quote received, whether or not there is anything to do, over the period picked. Newest first, unless you reverse the order.",
+        "order": {
+          "toggle": "Reverse the order",
+          "oldest": "Oldest first",
+          "newest": "Newest first"
+        },
+        "pageOf": "{first}–{last} of {total}",
+        "previous": "Previous page",
+        "next": "Next page",
+        "retry": "Try again"
       },
       "detail": {
         "title": "Quote {reference}",
@@ -3189,9 +3241,12 @@
       "price": "Price",
       "created": "Created",
       "searchPlaceholder": "Search shipments...",
-      "reference": "Ref.",
+      "reference": "No.",
       "driver": "Driver",
-      "noDriver": "No driver yet"
+      "noDriver": "No driver yet",
+      "departure": "From",
+      "arrival": "To",
+      "requester": "Requester"
     },
     "proposalsDialog": {
       "title": "Driver Proposals",
@@ -3329,6 +3384,10 @@
         "suspended": {
           "title": "Account suspended",
           "description": "Bidding is paused. Contact support for details."
+        },
+        "deregistered": {
+          "title": "You are deregistered",
+          "description": "Your driver account is closed: you no longer receive jobs. Money already earned is still owed to you. To come back, update your file and submit it again."
         }
       },
       "summary": {
@@ -3386,6 +3445,24 @@
         "goToFleet": "Manage fleet",
         "submit": "Submit for review",
         "submitting": "Submitting…"
+      },
+      "availability": {
+        "title": "Availability",
+        "active": "You are active: requests are offered to you.",
+        "absentUntil": "You are away until {date}. No new jobs are offered to you until then.",
+        "absentOpenEnded": "You are away until further notice. No new jobs are offered to you.",
+        "goAway": "I'm going away",
+        "back": "I'm back",
+        "returnDayLabel": "I'll be back on (optional)",
+        "returnDayHint": "With no date, you stay away until you come back here.",
+        "reasonLabel": "Reason (optional)",
+        "absentKeeps": "Runs already booked, your money and your documents stay as they are. Only new jobs stop.",
+        "confirmAway": "Confirm my absence",
+        "deregister": "Deregister",
+        "deregisterWarning": "Your pending offers will be withdrawn and you will no longer receive jobs. Money already earned is still owed to you. Not possible while a run is in progress.",
+        "deregisterReasonLabel": "Why are you leaving? (optional)",
+        "confirmDeregister": "Confirm deregistration",
+        "cancel": "Cancel"
       }
     },
     "onboarding": {
@@ -3502,7 +3579,15 @@
       "vehicleUpdateFailed": "Could not update vehicle",
       "vehicleRemoved": "Vehicle removed",
       "vehicleInUse": "This vehicle backs a live offer. Deactivate it instead.",
-      "vehicleRemoveFailed": "Could not remove vehicle"
+      "vehicleRemoveFailed": "Could not remove vehicle",
+      "markedAbsent": "Noted: you are away",
+      "backFromAbsence": "Welcome back: jobs are offered to you again",
+      "availabilityFailed": "Your availability could not be updated",
+      "absenceEndInPast": "The return date must be in the future",
+      "notActive": "Only an active account can go away",
+      "deregistered": "You are deregistered",
+      "deregisterFailed": "You could not be deregistered",
+      "hasLiveRuns": "You still have a run in progress: finish it first."
     },
     "trips": {
       "title": "My trips",
@@ -4367,12 +4452,15 @@
       "SLOT_IN_PAST": "This slot has already passed. Choose another one.",
       "SLOT_NOT_ON_OFFER": "This slot is not part of the offer.",
       "FORBIDDEN_NOT_SHIPPER": "Only the person who posted the request can accept an offer.",
-      "FORBIDDEN_NOT_OPERATOR": "Only an operator can award this job."
+      "FORBIDDEN_NOT_OPERATOR": "Only an operator can award this job.",
+      "CARRIER_ABSENT": "This transporter has said they are away and cannot be chosen for now."
     }
   },
   "listingUrgency": {
     "label": "Urgent",
     "hint": "No driver yet, and the pickup must happen within {hours} h.",
-    "banner": "Urgent request: the pickup must happen within {hours} h and no driver has been chosen yet."
+    "banner": "Urgent request: the pickup must happen within {hours} h and no driver has been chosen yet.",
+    "immediate": "Immediate",
+    "immediateHint": "No driver yet, and the pickup window is already open: the goods can be collected right away."
   }
 }

@@ -4,7 +4,19 @@ import { useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { format } from "date-fns";
 import { enUS, fr } from "date-fns/locale";
-import { Check, ExternalLink, ShieldOff, X } from "lucide-react";
+import {
+  Check,
+  ExternalLink,
+  LogOut,
+  Plane,
+  RotateCcw,
+  ShieldOff,
+  UserCheck,
+  X,
+} from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { isAbsent } from "@/lib/carrier-availability";
+import { parseLocalISO, todayLocalISO, addDaysLocalISO } from "@/lib/utils/date-range";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,6 +32,7 @@ import type {
   CarrierApplication,
   CarrierApplicationDocument,
   CarrierApplicationVehicle,
+  CarrierAvailabilityRequest,
 } from "../api/carriers.api";
 
 interface CarrierApplicationDetailProps {
@@ -28,12 +41,19 @@ interface CarrierApplicationDetailProps {
   onApprove: (id: string) => Promise<unknown>;
   onReject: (input: { id: string; reason: string }) => Promise<unknown>;
   onSuspend: (input: { id: string; reason: string }) => Promise<unknown>;
+  /** Actif / Absent / Désinscrit — client_feedback_2026_10_29_spec.md §REQ-02. */
+  onSetAvailability: (input: {
+    id: string;
+    input: CarrierAvailabilityRequest;
+  }) => Promise<unknown>;
+  onDeregister: (input: { id: string; reason: string }) => Promise<unknown>;
+  onReinstate: (id: string) => Promise<unknown>;
   /** Called after an action succeeded; the list closes the dialog. */
   onDone: () => void;
   onClose: () => void;
 }
 
-type ReasonAction = "reject" | "suspend";
+type ReasonAction = "reject" | "suspend" | "deregister" | "absent";
 
 function Field({
   label,
@@ -157,22 +177,29 @@ export function CarrierApplicationDetail({
   onApprove,
   onReject,
   onSuspend,
+  onSetAvailability,
+  onDeregister,
+  onReinstate,
   onDone,
   onClose,
 }: CarrierApplicationDetailProps) {
   const [actionMode, setActionMode] = useState<ReasonAction | null>(null);
   const [reason, setReason] = useState("");
+  // « Retour le » for an absence; "" is "until someone ends it".
+  const [returnDay, setReturnDay] = useState("");
   const t = useTranslations("admin.carriers.detail");
   const locale = useLocale();
   const { openDocument, openingDocId } = useCarrierDocumentViewer();
 
   const dateLocale = locale === "fr" ? fr : enUS;
-  // rejectCarrierSchema / suspendCarrierSchema require 3-1000 characters.
-  const reasonValid = reason.trim().length >= 3;
+  // rejectCarrierSchema / suspendCarrierSchema / deregisterCarrierSchema
+  // require 3-1000 characters; an absence's reason is optional.
+  const reasonValid = actionMode === "absent" || reason.trim().length >= 3;
   const canReview =
     application.status === "submitted" ||
     application.status === "under_review";
   const canSuspend = application.status === "approved";
+  const absent = isAbsent(application);
   const notProvided = t("notProvided");
 
   const runAction = async (action: () => Promise<unknown>) => {
@@ -187,8 +214,25 @@ export function CarrierApplicationDetail({
   const handleConfirmReason = () => {
     if (!actionMode || !reasonValid) return;
     const input = { id: application.id, reason: reason.trim() };
+    if (actionMode === "absent") {
+      void runAction(() =>
+        onSetAvailability({
+          id: application.id,
+          input: {
+            absent: true,
+            until: returnDay ? parseLocalISO(returnDay).toISOString() : null,
+            reason: reason.trim() || null,
+          },
+        }),
+      );
+      return;
+    }
     void runAction(() =>
-      actionMode === "reject" ? onReject(input) : onSuspend(input),
+      actionMode === "reject"
+        ? onReject(input)
+        : actionMode === "deregister"
+          ? onDeregister(input)
+          : onSuspend(input),
     );
   };
 
@@ -221,9 +265,46 @@ export function CarrierApplicationDetail({
             <h4 className="text-sm font-medium text-muted-foreground mb-1">
               {t("currentStatus")}
             </h4>
-            <CarrierStatusBadge status={application.status} />
+            <CarrierStatusBadge status={application.status} absent={absent} />
           </div>
         </div>
+
+        {absent && (
+          <div className="rounded-md border border-amber-500/50 bg-amber-500/10 p-3">
+            <h4 className="text-sm font-medium mb-1">
+              {application.absentUntil
+                ? t("absentUntil", {
+                    date: format(new Date(application.absentUntil), "dd MMMM yyyy", {
+                      locale: dateLocale,
+                    }),
+                  })
+                : t("absentOpenEnded")}
+            </h4>
+            {application.absenceReason && (
+              <p className="text-sm whitespace-pre-wrap">
+                {application.absenceReason}
+              </p>
+            )}
+          </div>
+        )}
+        {application.status === "deregistered" && (
+          <div className="rounded-md border p-3">
+            <h4 className="text-sm font-medium mb-1">
+              {application.deregisteredAt
+                ? t("deregisteredOn", {
+                    date: format(new Date(application.deregisteredAt), "dd MMMM yyyy", {
+                      locale: dateLocale,
+                    }),
+                  })
+                : t("deregisteredTitle")}
+            </h4>
+            {application.deregistrationReason && (
+              <p className="text-sm whitespace-pre-wrap">
+                {application.deregistrationReason}
+              </p>
+            )}
+          </div>
+        )}
 
         {application.status === "rejected" && application.rejectionReason && (
           <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3">
@@ -322,13 +403,37 @@ export function CarrierApplicationDetail({
         <div className="flex w-full flex-col gap-3">
           {actionMode && (
             <div className="space-y-2 text-left">
+              {actionMode === "absent" && (
+                <div className="space-y-1">
+                  <label
+                    className="text-sm font-medium"
+                    htmlFor="carrier-return-day"
+                  >
+                    {t("returnDayLabel")}
+                  </label>
+                  <Input
+                    id="carrier-return-day"
+                    type="date"
+                    min={addDaysLocalISO(todayLocalISO(), 1)}
+                    value={returnDay}
+                    onChange={(event) => setReturnDay(event.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {t("returnDayHint")}
+                  </p>
+                </div>
+              )}
               <label
                 className="text-sm font-medium"
                 htmlFor="carrier-action-reason"
               >
                 {actionMode === "reject"
                   ? t("rejectReasonLabel")
-                  : t("suspendReasonLabel")}
+                  : actionMode === "deregister"
+                    ? t("deregisterReasonLabel")
+                    : actionMode === "absent"
+                      ? t("absenceReasonLabel")
+                      : t("suspendReasonLabel")}
               </label>
               <Textarea
                 id="carrier-action-reason"
@@ -348,13 +453,14 @@ export function CarrierApplicationDetail({
                   onClick={() => {
                     setActionMode(null);
                     setReason("");
+                    setReturnDay("");
                   }}
                   disabled={isUpdating}
                 >
                   {t("cancel")}
                 </Button>
                 <Button
-                  variant="destructive"
+                  variant={actionMode === "absent" ? "default" : "destructive"}
                   onClick={handleConfirmReason}
                   disabled={!reasonValid || isUpdating}
                 >
@@ -362,12 +468,20 @@ export function CarrierApplicationDetail({
                     <LottieLoader width={20} height={20} />
                   ) : actionMode === "reject" ? (
                     <X className="w-4 h-4 mr-2" />
+                  ) : actionMode === "deregister" ? (
+                    <LogOut className="w-4 h-4 mr-2" />
+                  ) : actionMode === "absent" ? (
+                    <Plane className="w-4 h-4 mr-2" />
                   ) : (
                     <ShieldOff className="w-4 h-4 mr-2" />
                   )}
                   {actionMode === "reject"
                     ? t("confirmReject")
-                    : t("confirmSuspend")}
+                    : actionMode === "deregister"
+                      ? t("confirmDeregister")
+                      : actionMode === "absent"
+                        ? t("confirmAbsent")
+                        : t("confirmSuspend")}
                 </Button>
               </>
             ) : (
@@ -375,6 +489,33 @@ export function CarrierApplicationDetail({
                 <Button variant="outline" onClick={onClose}>
                   {t("close")}
                 </Button>
+                {canSuspend &&
+                  (absent ? (
+                    <Button
+                      variant="outline"
+                      onClick={() =>
+                        void runAction(() =>
+                          onSetAvailability({
+                            id: application.id,
+                            input: { absent: false },
+                          }),
+                        )
+                      }
+                      disabled={isUpdating}
+                    >
+                      <UserCheck className="w-4 h-4 mr-2" />
+                      {t("endAbsence")}
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      onClick={() => setActionMode("absent")}
+                      disabled={isUpdating}
+                    >
+                      <Plane className="w-4 h-4 mr-2" />
+                      {t("markAbsent")}
+                    </Button>
+                  ))}
                 {canSuspend && (
                   <Button
                     variant="destructive"
@@ -383,6 +524,25 @@ export function CarrierApplicationDetail({
                   >
                     <ShieldOff className="w-4 h-4 mr-2" />
                     {t("suspend")}
+                  </Button>
+                )}
+                {(canSuspend || application.status === "suspended") && (
+                  <Button
+                    variant="destructive"
+                    onClick={() => setActionMode("deregister")}
+                    disabled={isUpdating}
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    {t("deregister")}
+                  </Button>
+                )}
+                {application.status === "suspended" && (
+                  <Button
+                    onClick={() => void runAction(() => onReinstate(application.id))}
+                    disabled={isUpdating}
+                  >
+                    <RotateCcw className="w-4 h-4 mr-2" />
+                    {t("reinstate")}
                   </Button>
                 )}
                 {canReview && (

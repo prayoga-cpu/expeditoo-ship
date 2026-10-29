@@ -4,6 +4,9 @@ import { useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import {
   ArrowRight,
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
   MoreVertical,
   Package,
   Pencil,
@@ -17,6 +20,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DateRangeField } from "@/components/ui/date-range-field";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,6 +43,10 @@ import { RepriceDialog } from "./RepriceDialog";
 import { RequoteDialog } from "./RequoteDialog";
 import { StorageDialog } from "./StorageDialog";
 import { QuoteReferenceCell, quoteSearchText } from "./QuoteReferenceCell";
+import {
+  QUOTE_PAGE_LIMIT,
+  useQuotePage,
+} from "../hooks/useExpedionReport";
 import {
   escalationHoursLeft,
   isNewQuote,
@@ -201,7 +209,32 @@ export function RecentQuotesPanel({
   // Default to the work when there is any, and to the feed when there is not —
   // an empty "to handle" tab as the landing view reads as a broken page.
   const active = tab ?? (todo.length > 0 ? "todo" : "all");
-  const data = active === "todo" ? todo : all;
+
+  // Each tab keeps its own order, and the operator can turn either round
+  // (client_feedback_2026_10_29_spec.md §A2): the worklist opens oldest first,
+  // the feed newest first.
+  const [orders, setOrders] = useState({
+    todo: "asc" as "asc" | "desc",
+    all: "desc" as "asc" | "desc",
+  });
+  const order = orders[active];
+  const toggleOrder = () =>
+    setOrders((o) => ({ ...o, [active]: o[active] === "asc" ? "desc" : "asc" }));
+
+  // « Récents » reads every quote from the server, in the window picked, a
+  // page at a time. It used to be the report's 25 newest rows, so a period
+  // picked in the toolbar searched those 25 and found nothing older.
+  const [range, setRange] = useState({ from: "", to: "" });
+  const [page, setPage] = useState(1);
+  const filter = { ...range, order: orders.all, page };
+  const isDefaultFilter =
+    !range.from && !range.to && orders.all === "desc" && page === 1;
+  const quotePage = useQuotePage(filter, active === "all");
+  const feed = quotePage.data?.rows ?? (isDefaultFilter ? all : []);
+  const feedTotal = quotePage.data?.total ?? all.length;
+  const data = active === "todo" ? todo : feed;
+  const firstShown = (page - 1) * QUOTE_PAGE_LIMIT + 1;
+  const lastShown = Math.min(page * QUOTE_PAGE_LIMIT, feedTotal);
 
   const openDialog = (quote: QuoteRow, dialog: QuoteDialog) => {
     if (dialog === "reprice") setReprice(quote);
@@ -455,13 +488,48 @@ export function RecentQuotesPanel({
             active={active === "all"}
             onClick={() => setTab("all")}
             label={t("recent.tabs.all")}
-            count={all.length}
+            count={feedTotal}
             tone="muted"
           />
         </div>
       </CardHeader>
       <CardContent>
-        {data.length === 0 ? (
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={toggleOrder}
+            aria-label={t("recent.order.toggle")}
+          >
+            <ArrowUpDown className="h-3.5 w-3.5" aria-hidden />
+            {order === "asc" ? t("recent.order.oldest") : t("recent.order.newest")}
+          </Button>
+          {active === "all" && (
+            <DateRangeField
+              from={range.from}
+              to={range.to}
+              onChange={(from, to) => {
+                setRange({ from, to });
+                setPage(1);
+              }}
+            />
+          )}
+        </div>
+        {active === "all" && quotePage.isError ? (
+          <div className="text-muted-foreground px-6 py-10 text-center">
+            <p className="text-foreground text-sm font-medium">{t("error")}</p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-3"
+              onClick={() => quotePage.refetch()}
+            >
+              {t("recent.retry")}
+            </Button>
+          </div>
+        ) : data.length === 0 ? (
           <div className="text-muted-foreground px-6 py-10 text-center">
             <p className="text-foreground text-sm font-medium">
               {unavailable
@@ -480,9 +548,10 @@ export function RecentQuotesPanel({
           </div>
         ) : (
           <DataTable
-            // Keyed so switching tabs resets the order to that tab's own.
-            key={active}
-            initialSorting={[{ id: "waiting", desc: active === "all" }]}
+            // Keyed so switching tabs, or turning the order round, resets the
+            // table's sort to the order asked for.
+            key={`${active}-${order}`}
+            initialSorting={[{ id: "waiting", desc: order === "desc" }]}
             columns={columns}
             data={data}
             searchKey="reference"
@@ -492,9 +561,44 @@ export function RecentQuotesPanel({
               setDetail(row.id);
               setDetailAutoEdit(false);
             }}
-            dateFilterKey="waiting"
+            // The worklist is complete in the browser and filters there; the
+            // feed's window is the server's, picked above.
+            dateFilterKey={active === "todo" ? "waiting" : undefined}
             sortFields={sortFields}
           />
+        )}
+        {active === "all" && feedTotal > QUOTE_PAGE_LIMIT && (
+          <div className="mt-3 flex flex-wrap items-center justify-end gap-2 text-sm">
+            <span className="text-muted-foreground">
+              {t("recent.pageOf", {
+                first: firstShown,
+                last: lastShown,
+                total: feedTotal,
+              })}
+            </span>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="size-8"
+              disabled={page <= 1 || quotePage.isFetching}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              aria-label={t("recent.previous")}
+            >
+              <ChevronLeft className="h-4 w-4" aria-hidden />
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="size-8"
+              disabled={lastShown >= feedTotal || quotePage.isFetching}
+              onClick={() => setPage((p) => p + 1)}
+              aria-label={t("recent.next")}
+            >
+              <ChevronRight className="h-4 w-4" aria-hidden />
+            </Button>
+          </div>
         )}
       </CardContent>
 

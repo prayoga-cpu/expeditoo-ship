@@ -14,6 +14,42 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.66.0] - 2026-10-29 · feat
+
+Nicolas's answers of 28–29 October, and the driver field test.
+
+- **A job's reference is its number alone, « 100018 ».** The route letters
+  shown since last week are gone. A reference copied with them still finds the
+  job.
+- **Admins: the requests and shipments tables read number · departure ·
+  arrival · requester**, with the requester's initials beside their name.
+- **Supervision: « Récents » now covers every quote, not just the 25 newest.**
+  Pick a period and it searches all of them, a hundred at a time. Each tab has
+  a button that turns the order round: « À traiter » opens with the oldest
+  first, « Récents » with the newest first.
+- **« Immédiat » badge**: an open request whose pickup window has already
+  started — the goods can be collected now — wears an amber « Immédiat »
+  badge, alongside « Urgent » when its pickup must also happen within 48 hours.
+  A request past its bidding deadline no longer reads « Urgent ».
+- **The « Directe » tag reads « Site Expeditoo »**, so it says where the
+  request came from rather than looking like a box someone ticked.
+- **Drivers: « Mes livraisons » shows the pickup and delivery dates of every
+  run**, planned or done, sorts soonest or latest first, and filters by period.
+  Transporters get a « Mes paiements » button there and on « Mes trajets ».
+- **Drivers can say they are away.** « Je m'absente » on your driver file, with
+  a return date or until you come back: no new jobs are offered to you
+  meanwhile, and runs already booked, your money and your documents stay as
+  they are. « Me désinscrire » closes the account once no run is in progress;
+  your pending offers are withdrawn and money already earned is still owed to
+  you.
+- **Admins: a driver is now Actif, Absent, Suspendu or Désinscrit.** From a
+  driver's file you can mark them away or back, suspend them, reinstate a
+  suspended driver, or deregister them with a reason.
+- **Admins are told when a driver submits an application**, in the app and by
+  email.
+- **Clients can pay with Apple Pay or Google Pay** when choosing a transporter,
+  on devices that offer them.
+
 ## [2.65.0] - 2026-10-24 · feat
 
 Nicolas's review of 21 October, point by point.

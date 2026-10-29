@@ -115,7 +115,7 @@ describe("JobDetail header", () => {
   it("names the job by its reference, with a way to copy it", () => {
     render();
 
-    expect(screen.getByText("Réf. CAE-REN-100042")).toBeInTheDocument();
+    expect(screen.getByText("Réf. 100042")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Copier la référence" })
     ).toBeInTheDocument();
@@ -127,7 +127,7 @@ describe("JobDetail header", () => {
 
     expect(container.textContent).not.toMatch(/expedion/i);
     // The reference is the same kind of number on both inlets.
-    expect(screen.getByText("Réf. CAE-REN-100042")).toBeInTheDocument();
+    expect(screen.getByText("Réf. 100042")).toBeInTheDocument();
   });
 });
 
@@ -211,7 +211,7 @@ describe("JobDetail, as the client asked on 21 October", () => {
     const bar = screen.getByTestId("job-identity-bar");
     expect(bar.className).toContain("sticky");
     expect(bar.textContent).toContain("Armoire normande");
-    expect(bar.textContent).toContain("Réf. CAE-REN-100042");
+    expect(bar.textContent).toContain("Réf. 100042");
     expect(bar.textContent).toContain("250,00");
   });
 

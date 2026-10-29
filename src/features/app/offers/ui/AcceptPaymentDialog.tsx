@@ -61,16 +61,26 @@ const KNOWN_ERRORS = [
   "LISTING_NOT_FOUND",
   "COORDINATES_REQUIRED",
   "CARRIER_NO_LONGER_APPROVED",
+  "CARRIER_ABSENT",
   "SLOT_IN_PAST",
   "SLOT_NOT_ON_OFFER",
   "FORBIDDEN_NOT_SHIPPER",
   "FORBIDDEN_NOT_OPERATOR",
 ];
 
-/** No wallet buttons: the card fields are the only way to pay here. */
-const CARD_FORM_ONLY = {
-  applePay: "never",
-  googlePay: "never",
+/**
+ * Apple Pay and Google Pay beside the card fields (client_feedback_2026_10_29_spec.md
+ * §C3). Both are card wallets: the intent stays `payment_method_types: ["card"]`
+ * with manual capture, so the award, the capture and the release are the
+ * typed-card path unchanged. `auto` shows a wallet only where it can work —
+ * Apple Pay needs this domain registered under Stripe → Payment method domains
+ * (STATUS.md → Operator to-do), and until it is, Stripe simply leaves the
+ * button out. Link stays off: it is a second way to keep a card, beside the
+ * checkbox below, and was never asked for.
+ */
+const PAYMENT_WALLETS = {
+  applePay: "auto",
+  googlePay: "auto",
   link: "never",
 } as const;
 
@@ -448,9 +458,9 @@ function NewCardFields({
     <div className="space-y-3">
       {/* Link off: its own "save my details" sign-up sat beside the box
           below and read as a second, different way to keep the card. Apple
-          Pay and Google Pay off: production takes real money, and only the
-          typed-card form was verified (pay_at_accept_spec.md §3.5). */}
-      <PaymentElement options={{ layout: "tabs", wallets: CARD_FORM_ONLY }} />
+          Pay and Google Pay on where the browser and the domain allow them
+          (§C3 of the 29 October spec); see PAYMENT_WALLETS. */}
+      <PaymentElement options={{ layout: "tabs", wallets: PAYMENT_WALLETS }} />
       {/* Unticked: keeping a card is the requester's call, and the client
           asked for it to be possible, not assumed. */}
       <div className="flex items-start gap-2">

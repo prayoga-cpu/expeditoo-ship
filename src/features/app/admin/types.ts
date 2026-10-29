@@ -18,6 +18,8 @@ export interface PendingDelivery {
   createdDate: string;
   /** Who is driving it, or null while nobody is. */
   driverName: string | null;
+  /** Who posted the job, or null for a run with no job behind it. */
+  requesterName: string | null;
 }
 
 export interface User {

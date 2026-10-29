@@ -43,6 +43,7 @@ const NEXT_STEP: Record<
   draft: { key: "draft", href: "/carrier/application" },
   rejected: { key: "blocked", href: "/carrier/application" },
   suspended: { key: "blocked", href: "/carrier/application" },
+  deregistered: { key: "blocked", href: "/carrier/application" },
   none: { key: "none", href: "/carrier/application" },
 };
 

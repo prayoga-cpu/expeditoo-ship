@@ -170,6 +170,15 @@ vi.mock("../../hooks/useExpedionReport", () => ({
   useExpedionAssignDriver: () => ({ mutate: vi.fn(), isPending: false }),
   useExpedionRequote: () => ({ mutate: vi.fn(), isPending: false }),
   useCarrierOptions: () => ({ data: [], isLoading: false }),
+  // « Récents » reads its own pages (client_feedback_2026_10_29_spec.md §A2);
+  // the report's own rows stand in while that query has nothing yet.
+  QUOTE_PAGE_LIMIT: 100,
+  useQuotePage: () => ({
+    data: undefined,
+    isError: false,
+    isFetching: false,
+    refetch: vi.fn(),
+  }),
 }));
 
 // The direct-requests panel runs its own query. Empty here, so its heading and

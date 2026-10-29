@@ -24,6 +24,7 @@ export function toPendingDelivery(item: Wire<AdminShipmentRow>): PendingDelivery
     price: item.priceCents,
     createdDate: item.createdAt,
     driverName: item.driverName,
+    requesterName: item.listing?.requesterName ?? null,
   };
 }
 

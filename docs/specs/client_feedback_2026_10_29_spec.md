@@ -1,0 +1,195 @@
+# Client feedback of 28–29 October 2026 — spec
+
+Status: **current** (2.66.0 onwards). Plan:
+`docs/plans/plan_client_feedback_2026_10_29.md`. Monitor: the top of
+`STATUS.md`, one row per item.
+
+Nicolas answered the nine questions sent on 28 October and added two features;
+the driver field test added eight requirements. The consolidated document
+(`EXPEDITOO Client Feedback Consolidated 29.10.2026.pdf`) checked every item
+against `main` at `d842bbb` (2.65.0). This spec fixes the behaviour of
+everything built from it. Where the client left a choice open, the choice made
+is in §0 so it can be overruled cheaply.
+
+---
+
+## 0. Readings chosen without the client
+
+| | Item | Reading built | Why |
+|---|---|---|---|
+| A | B5 « Immédiat » — « l'enlèvement peut se faire tout de suite » | **Derived**: open, still taking offers, and the pickup window has already opened (`pickupFrom ≤ now < pickupUntil`) | The same shape as « Urgent »: no box to forget to untick. Only a flexible request can be in that state while it takes offers — a fixed one stops 6 h before its window opens |
+| B | B5 — both badges at once | « Immédiat » and « Urgent » are independent; a window open since yesterday that closes tomorrow wears both | They answer different questions: *can I go now* and *must it be done soon* |
+| C | B3 « annonce directe » | The tag reads **« Site Expeditoo »** (EN « Expeditoo site ») beside « via Expedion »; the hover text is unchanged | Léa's question is still outstanding; this names the inlet rather than a box someone ticked, and costs one string to change |
+| D | A4 « initiales » | The **requester's** initials, beside their name, on the staff tables only | The cities already have their own columns; the drivers' board never says who posted a job |
+| E | REQ-02 « Absent » | **Not a status.** Two columns, `absent_since` / `absent_until`; absent while set and the return date is unset or ahead | An absence ends on a date. A status would need a sweep to flip it back, and the sweeps have never run in production (X1) |
+| F | REQ-02 « Désinscrit » | A status, `deregistered`. Refused while a run is still owed; every standing bid withdrawn; money earned stays payable; applying again is reviewed again | A delivery in progress is never stranded, and no requester goes on comparing an offer nobody will honour |
+| G | REQ-07 « professional application » | **Every** submitted application alerts the admins | Every applicant today holds a SIRET; the professional / private split waits on REQ-01 |
+| H | C3 Apple Pay / Google Pay | Wallets `auto` in the accept dialog; PayPal not built | Both wallets are cards to Stripe, so the manual-capture intent is unchanged. PayPal is a redirect method with its own capture and saving rules, and needs enabling on the account first |
+
+---
+
+## A2. Supervision: reverse order, period, every quote
+
+**Was.** « Récents » was the report's 25 newest quotes. The toolbar's
+« Choisir une période » filtered those 25 in the browser, so a period before
+the newest 25 found nothing. The order could be flipped only by a header arrow.
+
+**Now.**
+- `GET /api/admin/expedion/quotes?from&to&order&page&limit` →
+  `listQuotePage(viewer, query)` (staff only, `FORBIDDEN` 403 otherwise) →
+  `reportDal.getQuotePage`. `from` / `to` are **instants** (ISO with offset):
+  the browser turns the days it shows into its own midnights, `to` being the
+  day after the last day picked, exclusive. `order` `asc|desc` (default
+  `desc`), `page` ≥ 1, `limit` 1–100 (default 25). A window whose end is not
+  after its start is `VALIDATION_ERROR` 400.
+- A quote with no `requested_at` is outside every window and last in either
+  order. Ties break on `id`, as the queues do.
+- « Récents » reads 100 at a time from it, with « 1–100 sur N » and previous /
+  next. The tab count is the total.
+- Each tab has its own order and a button that turns it round: « À traiter »
+  opens oldest first, « Récents » newest first. The table's sort arrow follows.
+- « À traiter » is complete in the browser and keeps the client-side period
+  filter; « Récents » uses the server's window.
+- A failed page shows the error and « Réessayer », never a blank table.
+
+## A4. The reference is the number alone
+
+- `formatListingReference(reference)` → `"100018"`. `cityCode` is gone.
+  `ListingReference` takes no cities.
+- `parseListingReference` still drops « PAR-CLA- » in front of a number, so a
+  reference copied off a 2.65.0 screen or email still finds its job.
+- `/admin/listings` reads, left to right: **N° · Départ · Arrivée · Demandeur**
+  (name, email, initials) · Titre (origin tag, time badges) · Prix · Statut ·
+  Vues · Créé.
+- `/admin/shipments` reads **N° · Départ · Arrivée · Demandeur · Titre ·
+  Chauffeur · Statut · Prix · Créé**. `shipmentsDal.adminOverview` adds the
+  requester's **name only** (`listing.shipper.name`) — never an email, a phone
+  or a Stripe id. A run with no job has no requester (« — »).
+- Initials: `initialsOf(name, email)`, moved to `src/lib/initials.ts`.
+
+## B3. The origin tag
+
+« Directe » → « Site Expeditoo » / « Expeditoo site ». The hover text
+(`directHint`) is unchanged. Revisit when Léa's question arrives.
+
+## B5. « Immédiat » beside « Urgent »
+
+- `isImmediate(job, now)` in `src/lib/urgency.ts`: `stillOpen` (status `open`
+  and, when `expiresAt` is given, not past it) and `pickupFrom ≤ now <
+  pickupUntil`.
+- `isUrgent` gains the same `stillOpen` test: an `open` row past its bidding
+  deadline is one the expiry sweep has not reached, and reads « Expirée »
+  (`displayStatus`), not « Urgent ».
+- `UrgencyBadge` (renamed from `UrgentBadge`) renders « Immédiat » (amber,
+  lightning) and/or « Urgent » (destructive, flame), or nothing. Same places as
+  before: board cards, job page, « Mes demandes » (all three views), the admin
+  listings, the award queue.
+
+## C3. Apple Pay and Google Pay
+
+- `AcceptPaymentDialog`'s Payment Element: `applePay: "auto"`, `googlePay:
+  "auto"`, `link: "never"`. Server unchanged: `payment_method_types: ["card"]`,
+  `capture_method: "manual"`, the same metadata checks on capture and release.
+- Apple Pay appears only once the serving domain is registered under Stripe →
+  Settings → Payment method domains (Operator to-do). Until then Stripe leaves
+  the button out.
+- **Not verified with a real wallet.** Test mode in a headless browser cannot
+  present Apple Pay or Google Pay.
+
+## N2. « Mes livraisons »: order, period, dates
+
+- `/driver/shipments` (`MyShipments`): the status filter, plus an order button
+  (« Plus proches d'abord » default / « Plus lointaines d'abord ») and a period
+  field. Both read one date per run, `listDate` (`src/features/app/driver/lib/
+  shipment-list.ts`): delivery done or due, else pickup done or due, else the
+  day it was booked.
+- Each row shows « Retrait prévu / Retiré {date} » and « Livraison prévue /
+  Livré {date} », actual before planned.
+- A failed load shows « Impossible de charger vos expéditions » (gotcha 9).
+
+## N5. « Mes paiements » from the deliveries screens
+
+A « Mes paiements » button to `/carrier/withdrawals` on `/driver/shipments` and
+`/carrier/trips`, **for an account holding `carrier` only** — a driver-only
+account is never shown pay (roles_spec.md).
+
+## REQ-02. Actif / Absent / Suspendu / Désinscrit
+
+**Statuses.** `carrier_status` gains `deregistered` (migration `0042`).
+« Actif » is `approved`, relabelled in the admin; « Suspendu » is `suspended`.
+`carriers` gains `absent_since`, `absent_until`, `absence_reason`,
+`deregistered_at`, `deregistration_reason`, all nullable.
+
+**The rule** (`src/lib/carrier-availability.ts`):
+- `isAbsent(c, now)` — `absentSince` set, and `absentUntil` unset or after
+  `now`.
+- `mayTakeWork(c, now)` — `status === "approved"` and not absent. Every
+  new-work path asks it: `offersService.submitOffer` (`CARRIER_ABSENT` 403),
+  the award checks in `acceptOffer` / its validation (`CARRIER_ABSENT` 409),
+  `takeJob` (through `requireApprovedCarrier`), the thread-offer gate
+  (`CARRIER_ABSENT`, the button renders nothing), `assignDirect`
+  (`CARRIER_ABSENT` 409), `carrierService.requireApproved`, and the
+  « Transporteurs disponibles » match (`sharedCandidateConditions`, the SQL
+  twin of `isAbsent`).
+- An absent driver keeps their live runs, their payouts, their documents and
+  their vetted view of jobs they hold.
+
+**Transitions.**
+
+| From | To | Who | Route | Refusals |
+|---|---|---|---|---|
+| Actif | Absent | driver, admin | `PUT /api/carrier/availability`, `PUT /api/admin/carriers/:id/availability` `{absent:true, until, reason}` | `CARRIER_NOT_ACTIVE` 409 unless approved; `ABSENCE_END_IN_PAST` 422 |
+| Absent | Actif | driver, admin, or the date | same, `{absent:false}` | — |
+| Actif / Suspendu | Désinscrit | driver (reason optional), admin (reason 3–1000) | `POST /api/carrier/deregister`, `POST /api/admin/carriers/:id/deregister` | `CARRIER_HAS_LIVE_RUNS` 409 while a shipment is `PENDING`/`ASSIGNED`/`PICKED_UP`/`IN_TRANSIT` |
+| Suspendu | Actif | admin | `POST /api/admin/carriers/:id/reinstate` | `FORBIDDEN` 403; `NOT_SUSPENDED` 409 |
+| Désinscrit | Soumise | driver | `POST /api/carrier/application/submit` | — (clears `deregistered_at` / reason) |
+
+- A caller naming another driver's id who is not an admin gets
+  `CARRIER_NOT_FOUND` 404, never 403.
+- Deregistering withdraws every `pending` offer and decrements each job's
+  `offers_count` in the same transaction; deregistering twice is a no-op.
+- An admin acting on someone else's account notifies them in the app.
+
+**Screens.** Admin dialog: an approved driver offers « Marquer absent » (return
+day, optional reason) or « Fin d'absence », « Suspendre », « Désinscrire »
+(reason required); a suspended one « Désinscrire » and « Réactiver ». The badge
+reads « Absent » (amber) for an approved driver who is away. The driver's own
+file shows « Disponibilité »: « Je m'absente » / « Je suis de retour » and
+« Me désinscrire », each saying what it keeps and what it stops. A deregistered
+driver's file is editable and can be submitted again.
+
+## REQ-07. The admins hear about every application
+
+`submitApplication` notifies **every admin** in the app (`/admin/applications`)
+and by email (`DriverApplicationSubmittedEmail`: applicant name, company, town,
+a link — no SIRET, no documents). Best-effort: a failed alert never fails the
+submission. Until a Resend domain is verified (C4) the email reaches only the
+Resend account's own address; the in-app notification reaches everyone.
+
+---
+
+## Test coverage required
+
+- `urgency.test.ts`: `isImmediate` inside / before / after the window, past the
+  bidding deadline, every non-open status, immediate *and* urgent;
+  `isUrgent` past the bidding deadline.
+- `listing-reference.test.ts`: the bare number; the retired « PAR-CLA- » form
+  still parsed.
+- `DeliveriesTable.test.tsx`: column order N° · Départ · Arrivée · Demandeur,
+  initials, no route letters.
+- `shipment.admin-overview.test.ts`: the requester's name in the row.
+- `quotePageQuery.test.ts`: local midnights, exclusive `to`, open-ended sides.
+- `expedion-quote-page.test.ts`: staff only, window/order/offset passed
+  through, defaults, a reversed window and an oversized page refused.
+- `shipment-list.test.ts`, `MyShipments.test.tsx`: dates read actual before
+  planned, order both ways, inclusive window, « Mes paiements » for carriers
+  only, the error state.
+- `CarrierTripsScreen.test.tsx`: « Mes paiements » for carriers only.
+- `carrier-availability.test.ts`: `isAbsent`, `mayTakeWork` for every status,
+  `driverStanding`.
+- `carrier-availability.service.test.ts`: every transition and refusal in the
+  table above, the stranger's 404, offers withdrawn, the admin alert on
+  submit and its failure contained.
+- `AvailabilitySection.test.tsx`, `CarrierApplicationDetail.availability.test.tsx`:
+  every button above, the return day sent as local midnight, the deregister
+  reason required of an admin.

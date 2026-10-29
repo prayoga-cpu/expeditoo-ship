@@ -222,7 +222,7 @@ without an `sk_live_` key, so an accept there takes real money.
 Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before shipping.
 
 **Gates — all green.** `npx tsc --noEmit` 0 errors · `pnpm lint` 0 errors ·
-2,968 unit tests pass (2.65.0) · `pnpm build` succeeds.
+3,034 unit tests pass (2.66.0) · `pnpm build` succeeds.
 
 **Done**
 - Schema remodelled to the transport model; one clean initial migration
@@ -677,6 +677,19 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
   list / cards / detailed (`RequestViews.tsx`). Message search reads towns,
   routes and references. Auth mail calls `assertSent`, so a Resend refusal is
   logged. `client_feedback_2026_10_21_spec.md`
+
+- **Nicolas's answers of 28–29 October, part one** (2.66.0), monitored at the
+  top of `STATUS.md`. A job's reference is the bare number again
+  (`formatListingReference(reference)`; « PAR-CLA- » still parsed); the admin
+  tables lead with N° · Départ · Arrivée · Demandeur. « Immédiat » beside
+  « Urgent » (`isImmediate`, `src/lib/urgency.ts` — both refuse a row past its
+  bidding deadline). Supervision's « Récents » pages every quote from
+  `GET /api/admin/expedion/quotes`. Drivers are **Actif / Absent / Suspendu /
+  Désinscrit**: `deregistered` is a status (`0042`), **absence is two columns,
+  not a status**, so it ends on its date without a sweep — every new-work path
+  asks `mayTakeWork` (`src/lib/carrier-availability.ts`); add a new one and it
+  must too. Admins are told of every submitted application. Apple Pay / Google
+  Pay are `auto` in the accept dialog. `client_feedback_2026_10_29_spec.md`
 
 **Not done**
 - **The scheduled jobs have never run in production.** `scheduled-jobs.yml`

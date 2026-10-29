@@ -958,7 +958,8 @@
         "VEHICLE_CAPACITY_DIMENSIONS": "Ce véhicule est trop petit pour ce chargement.",
         "OFFER_ALREADY_EXISTS": "Vous avez déjà une offre en cours sur cette course.",
         "generic": "Impossible de prendre cette course. Veuillez réessayer.",
-        "TAKE_NOT_AVAILABLE": "Ce client choisit lui-même son transporteur : faites-lui une offre."
+        "TAKE_NOT_AVAILABLE": "Ce client choisit lui-même son transporteur : faites-lui une offre.",
+        "CARRIER_ABSENT": "Vous êtes marqué absent : revenez depuis votre dossier pour proposer une offre."
       },
       "form": {
         "title": "Faire une offre",
@@ -1038,7 +1039,8 @@
         "CANNOT_BID_OWN_LISTING": "Vous ne pouvez pas faire d'offre sur votre propre demande.",
         "VEHICLE_CAPACITY_WEIGHT": "Ce véhicule ne peut pas transporter ce chargement.",
         "VEHICLE_CAPACITY_DIMENSIONS": "Ce véhicule est trop petit pour ce chargement.",
-        "PICKUP_OUTSIDE_WINDOW": "Votre horaire de retrait sort du créneau du demandeur."
+        "PICKUP_OUTSIDE_WINDOW": "Votre horaire de retrait sort du créneau du demandeur.",
+        "CARRIER_ABSENT": "Vous êtes marqué absent : revenez depuis votre dossier pour proposer une offre."
       }
     }
   },
@@ -1612,7 +1614,23 @@
         "assigned": "Assignées"
       },
       "defaultTitle": "Expédition",
-      "flexible": "Flexible"
+      "flexible": "Flexible",
+      "order": {
+        "toggle": "Inverser l'ordre",
+        "soonest": "Plus proches d'abord",
+        "latest": "Plus lointaines d'abord"
+      },
+      "dates": {
+        "pickup": "Retrait prévu {date}",
+        "pickedUp": "Retiré {date}",
+        "delivery": "Livraison prévue {date}",
+        "delivered": "Livré {date}"
+      },
+      "myPayments": "Mes paiements",
+      "error": {
+        "title": "Impossible de charger vos expéditions",
+        "description": "Vérifiez votre connexion puis rechargez la page."
+      }
     },
     "shipmentDetail": {
       "notFound": "Expédition introuvable",
@@ -2586,11 +2604,14 @@
         "viewDetails": "Voir les détails",
         "delete": "Supprimer",
         "origin": {
-          "direct": "Directe",
+          "direct": "Site Expeditoo",
           "expedion": "via Expedion",
           "directHint": "Demande publiée sur Expeditoo par son demandeur. C'est lui qui choisit le transporteur et paie avec sa carte.",
           "expedionHint": "Devis Expedion payé et publié faute de chauffeur. Un opérateur choisit le transporteur à la place du client."
-        }
+        },
+        "reference": "N°",
+        "departure": "Départ",
+        "arrival": "Arrivée"
       },
       "dialogs": {
         "deleteTitle": "Supprimer l'annonce",
@@ -2738,9 +2759,11 @@
         "draft": "Brouillon",
         "submitted": "Soumise",
         "under_review": "En cours d'examen",
-        "approved": "Approuvée",
+        "approved": "Actif",
         "rejected": "Refusée",
-        "suspended": "Suspendue"
+        "suspended": "Suspendu",
+        "deregistered": "Désinscrit",
+        "absent": "Absent"
       },
       "detail": {
         "title": "Candidature transporteur",
@@ -2783,7 +2806,21 @@
         "rejectReasonLabel": "Motif du refus (transmis au transporteur)",
         "suspendReasonLabel": "Motif de la suspension (transmis au transporteur)",
         "reasonPlaceholder": "Expliquez la décision...",
-        "documentOpenFailed": "Impossible d'ouvrir le document"
+        "documentOpenFailed": "Impossible d'ouvrir le document",
+        "absentUntil": "Absent jusqu'au {date}",
+        "absentOpenEnded": "Absent jusqu'à nouvel ordre",
+        "deregisteredOn": "Désinscrit le {date}",
+        "deregisteredTitle": "Désinscrit",
+        "returnDayLabel": "Retour prévu le (facultatif)",
+        "returnDayHint": "Sans date, l'absence dure jusqu'à ce que quelqu'un y mette fin. Ses courses déjà réservées continuent normalement.",
+        "absenceReasonLabel": "Motif (facultatif)",
+        "deregisterReasonLabel": "Motif de la désinscription",
+        "confirmAbsent": "Marquer absent",
+        "confirmDeregister": "Confirmer la désinscription",
+        "markAbsent": "Marquer absent",
+        "endAbsence": "Fin d'absence",
+        "deregister": "Désinscrire",
+        "reinstate": "Réactiver"
       },
       "vehicleTypes": {
         "little_car": "Petite voiture",
@@ -2809,7 +2846,13 @@
         "suspended": "Transporteur suspendu",
         "approveFailed": "Échec de l'approbation : {message}",
         "rejectFailed": "Échec du refus : {message}",
-        "suspendFailed": "Échec de la suspension : {message}"
+        "suspendFailed": "Échec de la suspension : {message}",
+        "markedAbsent": "Chauffeur marqué absent",
+        "absenceEnded": "Absence terminée : le chauffeur est de nouveau actif",
+        "deregistered": "Chauffeur désinscrit, ses offres en cours retirées",
+        "reinstated": "Chauffeur réactivé",
+        "hasLiveRuns": "Impossible : ce chauffeur a encore une course en cours. Elle doit être livrée ou annulée d'abord.",
+        "actionFailed": "Échec : {message}"
       }
     },
     "expedion": {
@@ -2994,8 +3037,17 @@
         },
         "openHint": "cliquez sur une ligne pour le devis complet et son bordereau",
         "autoPublishIn": "publication auto dans {count} h",
-        "todoHint": "Tout ce qui attend une action, quel que soit l'âge du devis : à chiffrer, payé sans chauffeur, publication automatique dépassée, stockage bientôt facturé. Le plus ancien en premier.",
-        "allHint": "Les derniers devis reçus, qu'il y ait quelque chose à faire ou non. Le plus récent en premier."
+        "todoHint": "Tout ce qui attend une action, quel que soit l'âge du devis : à chiffrer, payé sans chauffeur, publication automatique dépassée, stockage bientôt facturé. Le plus ancien en premier, sauf si vous inversez l'ordre.",
+        "allHint": "Tous les devis reçus, qu'il y ait quelque chose à faire ou non, sur la période choisie. Le plus récent en premier, sauf si vous inversez l'ordre.",
+        "order": {
+          "toggle": "Inverser l'ordre",
+          "oldest": "Plus anciens d'abord",
+          "newest": "Plus récents d'abord"
+        },
+        "pageOf": "{first}–{last} sur {total}",
+        "previous": "Page précédente",
+        "next": "Page suivante",
+        "retry": "Réessayer"
       },
       "detail": {
         "title": "Devis {reference}",
@@ -3210,9 +3262,12 @@
       "price": "Prix",
       "created": "Créé",
       "searchPlaceholder": "Rechercher des expéditions...",
-      "reference": "Réf.",
+      "reference": "N°",
       "driver": "Chauffeur",
-      "noDriver": "Pas encore de chauffeur"
+      "noDriver": "Pas encore de chauffeur",
+      "departure": "Départ",
+      "arrival": "Arrivée",
+      "requester": "Demandeur"
     },
     "proposalsDialog": {
       "title": "Propositions des chauffeurs",
@@ -3329,6 +3384,10 @@
         "suspended": {
           "title": "Compte suspendu",
           "description": "Les enchères sont suspendues. Contactez le support pour plus de détails."
+        },
+        "deregistered": {
+          "title": "Vous êtes désinscrit",
+          "description": "Votre compte chauffeur est fermé : vous ne recevez plus de missions. L'argent déjà gagné reste dû. Pour revenir, mettez votre dossier à jour et soumettez-le à nouveau."
         }
       },
       "summary": {
@@ -3386,6 +3445,24 @@
         "goToFleet": "Gérer la flotte",
         "submit": "Soumettre pour examen",
         "submitting": "Envoi…"
+      },
+      "availability": {
+        "title": "Disponibilité",
+        "active": "Vous êtes actif : les demandes vous sont proposées.",
+        "absentUntil": "Vous êtes absent jusqu'au {date}. Aucune nouvelle mission ne vous est proposée d'ici là.",
+        "absentOpenEnded": "Vous êtes absent jusqu'à nouvel ordre. Aucune nouvelle mission ne vous est proposée.",
+        "goAway": "Je m'absente",
+        "back": "Je suis de retour",
+        "returnDayLabel": "Je reviens le (facultatif)",
+        "returnDayHint": "Sans date, vous restez absent jusqu'à ce que vous reveniez ici.",
+        "reasonLabel": "Motif (facultatif)",
+        "absentKeeps": "Vos courses déjà réservées, votre argent et vos documents ne changent pas. Seules les nouvelles missions s'arrêtent.",
+        "confirmAway": "Confirmer mon absence",
+        "deregister": "Me désinscrire",
+        "deregisterWarning": "Vos offres en attente seront retirées et vous ne recevrez plus de missions. L'argent déjà gagné reste dû. Ce n'est pas possible tant qu'une course est en cours.",
+        "deregisterReasonLabel": "Pourquoi partez-vous ? (facultatif)",
+        "confirmDeregister": "Confirmer ma désinscription",
+        "cancel": "Annuler"
       }
     },
     "onboarding": {
@@ -3502,7 +3579,15 @@
       "vehicleUpdateFailed": "Mise à jour du véhicule impossible",
       "vehicleRemoved": "Véhicule supprimé",
       "vehicleInUse": "Ce véhicule est engagé sur une offre en cours. Désactivez-le plutôt.",
-      "vehicleRemoveFailed": "Suppression du véhicule impossible"
+      "vehicleRemoveFailed": "Suppression du véhicule impossible",
+      "markedAbsent": "C'est noté : vous êtes absent",
+      "backFromAbsence": "Bon retour : les missions vous sont de nouveau proposées",
+      "availabilityFailed": "Impossible de mettre à jour votre disponibilité",
+      "absenceEndInPast": "La date de retour doit être dans le futur",
+      "notActive": "Seul un compte actif peut se déclarer absent",
+      "deregistered": "Vous êtes désinscrit",
+      "deregisterFailed": "Impossible de vous désinscrire",
+      "hasLiveRuns": "Vous avez encore une course en cours : terminez-la d'abord."
     },
     "trips": {
       "title": "Mes trajets",
@@ -4367,12 +4452,15 @@
       "SLOT_IN_PAST": "Ce créneau est déjà passé. Choisissez-en un autre.",
       "SLOT_NOT_ON_OFFER": "Ce créneau ne fait pas partie de l'offre.",
       "FORBIDDEN_NOT_SHIPPER": "Seul l'auteur de la demande peut accepter une offre.",
-      "FORBIDDEN_NOT_OPERATOR": "Seul un opérateur peut attribuer cette mission."
+      "FORBIDDEN_NOT_OPERATOR": "Seul un opérateur peut attribuer cette mission.",
+      "CARRIER_ABSENT": "Ce transporteur s'est déclaré absent et ne peut pas être retenu pour le moment."
     }
   },
   "listingUrgency": {
     "label": "Urgent",
     "hint": "Pas encore de chauffeur, et le retrait doit avoir lieu dans moins de {hours} h.",
-    "banner": "Demande urgente : le retrait doit avoir lieu dans moins de {hours} h et aucun chauffeur n'est encore retenu."
+    "banner": "Demande urgente : le retrait doit avoir lieu dans moins de {hours} h et aucun chauffeur n'est encore retenu.",
+    "immediate": "Immédiat",
+    "immediateHint": "Pas encore de chauffeur, et la fenêtre de retrait est déjà ouverte : l'enlèvement peut se faire tout de suite."
   }
 }

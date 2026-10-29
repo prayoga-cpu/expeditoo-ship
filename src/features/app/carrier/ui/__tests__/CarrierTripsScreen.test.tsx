@@ -18,6 +18,8 @@ const nav = vi.hoisted(() => ({
   search: "",
   replace: vi.fn(),
 }));
+const auth = vi.hoisted(() => ({ user: { roles: ["carrier"] as string[] } }));
+vi.mock("@/lib/auth-context", () => ({ useAuth: () => auth }));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: nav.replace, push: vi.fn() }),
@@ -122,5 +124,24 @@ describe("CarrierTripsScreen tabs", () => {
     expect(nav.replace).toHaveBeenCalledWith("/carrier/trips?tab=active&from=mail", {
       scroll: false,
     });
+  });
+});
+
+/** client_feedback_2026_10_29_spec.md §N5 */
+describe("CarrierTripsScreen · Mes paiements", () => {
+  it("links a carrier to their payments", () => {
+    auth.user.roles = ["carrier"];
+    renderScreen("");
+    expect(screen.getByRole("link", { name: /Mes paiements/ })).toHaveAttribute(
+      "href",
+      "/carrier/withdrawals"
+    );
+  });
+
+  it("never shows pay to a driver-only account", () => {
+    auth.user.roles = ["driver"];
+    renderScreen("");
+    expect(screen.queryByRole("link", { name: /Mes paiements/ })).not.toBeInTheDocument();
+    auth.user.roles = ["carrier"];
   });
 });

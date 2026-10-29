@@ -10,8 +10,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MapPin, Calendar, ArrowRight, Package } from "lucide-react";
+import {
+  MapPin,
+  Calendar,
+  ArrowRight,
+  ArrowUpDown,
+  Package,
+  Wallet,
+} from "lucide-react";
 import Link from "next/link";
+import { DateRangeField } from "@/components/ui/date-range-field";
+import { useAuth } from "@/lib/auth-context";
+import {
+  deliveryDate,
+  inWindow,
+  pickupDate,
+  sortShipments,
+} from "../lib/shipment-list";
 import { useDriverShipments } from "../hooks/useDriverShipments";
 import { PageLoader } from "@/components/ui/page-loader";
 import { CenteredEmptyState } from "@/components/ui/centered-empty-state";
@@ -20,7 +35,7 @@ import {
   STATUS_ACCENT_CLASSES,
 } from "./ShipmentStatusBadge";
 import type { DriverShipment } from "../api/shipments.api";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 type FilterCategory = "ALL" | "ASSIGNED" | "ACTIVE" | "DELIVERED" | "CANCELLED";
 
@@ -44,20 +59,48 @@ function matchesFilter(shipment: DriverShipment, filter: FilterCategory) {
 export function MyShipments() {
   const t = useTranslations("driver.shipments");
   const tCommon = useTranslations("common");
+  const locale = useLocale();
+  const { user } = useAuth();
   const [filter, setFilter] = useState<FilterCategory>("ALL");
-  const { shipments, isLoading } = useDriverShipments();
+  // Soonest first: a driver plans the next run, not the last one
+  // (client_feedback_2026_10_29_spec.md §N2).
+  const [order, setOrder] = useState<"asc" | "desc">("asc");
+  const [range, setRange] = useState({ from: "", to: "" });
+  const { shipments, isLoading, isError } = useDriverShipments();
 
   if (isLoading) {
     return <PageLoader className="xl:min-h-screen" />;
   }
 
-  const filteredShipments = shipments.filter((shipment) =>
-    matchesFilter(shipment, filter)
+  if (isError) {
+    return (
+      <CenteredEmptyState
+        icon={Package}
+        title={t("error.title")}
+        description={t("error.description")}
+      />
+    );
+  }
+
+  const filteredShipments = sortShipments(
+    shipments.filter(
+      (shipment) =>
+        matchesFilter(shipment, filter) &&
+        inWindow(shipment, range.from, range.to)
+    ),
+    order
   );
+
+  const day = (iso: string) =>
+    new Date(iso).toLocaleDateString(locale, {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+    });
 
   return (
     <div className="flex flex-col flex-1 gap-6 h-full">
-      <div className="flex items-center shrink-0">
+      <div className="flex flex-wrap items-center gap-2 shrink-0">
         <Select
           value={filter}
           onValueChange={(val) => setFilter(val as FilterCategory)}
@@ -73,6 +116,31 @@ export function MyShipments() {
             <SelectItem value="CANCELLED">{t("filters.cancelled")}</SelectItem>
           </SelectContent>
         </Select>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => setOrder((o) => (o === "asc" ? "desc" : "asc"))}
+          aria-label={t("order.toggle")}
+        >
+          <ArrowUpDown className="h-4 w-4" aria-hidden />
+          {order === "asc" ? t("order.soonest") : t("order.latest")}
+        </Button>
+        <DateRangeField
+          from={range.from}
+          to={range.to}
+          onChange={(from, to) => setRange({ from, to })}
+        />
+        {/* Pay lives with the carrier, never with a driver-only account
+            (roles_spec.md) — « Mes paiements » from « Mes livraisons »
+            (§N5 of the 29 October spec). */}
+        {user?.roles?.includes("carrier") && (
+          <Button variant="secondary" asChild className="md:ml-auto">
+            <Link href="/carrier/withdrawals">
+              <Wallet className="h-4 w-4" aria-hidden />
+              {t("myPayments")}
+            </Link>
+          </Button>
+        )}
       </div>
 
       <div className="flex-1 flex flex-col">
@@ -115,15 +183,29 @@ export function MyShipments() {
                             {shipment.dropoffAddress}
                           </span>
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground pl-6">
-                          <Calendar className="w-3 h-3" />
-                          <span>
-                            {shipment.scheduledPickup
-                              ? new Date(
-                                  shipment.scheduledPickup
-                                ).toLocaleDateString()
-                              : t("flexible")}
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground pl-6">
+                          <span className="inline-flex items-center gap-1.5">
+                            <Calendar className="w-3 h-3" aria-hidden />
+                            {(() => {
+                              const at = pickupDate(shipment);
+                              if (!at) return t("flexible");
+                              return shipment.pickedUpAt
+                                ? t("dates.pickedUp", { date: day(at) })
+                                : t("dates.pickup", { date: day(at) });
+                            })()}
                           </span>
+                          {(() => {
+                            const at = deliveryDate(shipment);
+                            if (!at) return null;
+                            return (
+                              <span className="inline-flex items-center gap-1.5">
+                                <Calendar className="w-3 h-3" aria-hidden />
+                                {shipment.deliveredAt
+                                  ? t("dates.delivered", { date: day(at) })
+                                  : t("dates.delivery", { date: day(at) })}
+                              </span>
+                            );
+                          })()}
                         </div>
                       </div>
 

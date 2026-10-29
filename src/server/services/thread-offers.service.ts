@@ -1,4 +1,5 @@
 import { nanoid } from "nanoid";
+import { mayTakeWork } from "@/lib/carrier-availability";
 
 import { messagesDAL } from "@/server/dal/messages.dal";
 import { threadOffersDal } from "@/server/dal/thread-offers.dal";
@@ -36,6 +37,7 @@ const err = (code: string, status: number) => new ThreadOfferError(code, status)
 export type ThreadOfferBlock =
   | "NOT_A_CARRIER"
   | "NOT_APPROVED"
+  | "CARRIER_ABSENT"
   | "OWN_LISTING"
   | "LISTING_NOT_OPEN"
   | "LISTING_EXPIRED"
@@ -140,6 +142,7 @@ export const threadOffersService = {
     // `suspended` still holds the `carrier` role, so a role-only gate would
     // have offered a suspended carrier a form they can only fail.
     if (carrier.status !== "approved") return no("NOT_APPROVED");
+    if (!mayTakeWork(carrier)) return no("CARRIER_ABSENT");
 
     // The carrier's one slot on this listing may already be spent - from this
     // thread or from the job page; the two surfaces share it.

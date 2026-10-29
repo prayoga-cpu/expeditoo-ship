@@ -119,3 +119,28 @@ export const rejectCarrierSchema = z.object({
 export const suspendCarrierSchema = z.object({
   reason: z.string().min(3).max(1000),
 });
+
+/**
+ * « Absent » on or off (client_feedback_2026_10_29_spec.md §REQ-02). `until`
+ * is the return instant — the browser's own midnight on the day picked — or
+ * null for "until I say so".
+ */
+export const carrierAvailabilitySchema = z.discriminatedUnion("absent", [
+  z.object({
+    absent: z.literal(true),
+    until: z.string().datetime({ offset: true }).nullable().default(null),
+    reason: z.string().trim().max(500).nullable().default(null),
+  }),
+  z.object({ absent: z.literal(false) }),
+]);
+
+export type CarrierAvailabilityInput = z.infer<typeof carrierAvailabilitySchema>;
+
+/** « Me désinscrire » — a reason is optional for the driver, required of an admin. */
+export const deregisterSelfSchema = z.object({
+  reason: z.string().trim().max(1000).nullable().default(null),
+});
+
+export const deregisterCarrierSchema = z.object({
+  reason: z.string().trim().min(3).max(1000),
+});

@@ -143,6 +143,29 @@ export const shipmentsDal = {
     });
   },
 
+  /**
+   * Runs a carrier still owes somebody: booked, on its way, or not yet
+   * handed over. What a deregistration has to wait for (§REQ-02 of the 29
+   * October spec) — a delivery in progress is never stranded.
+   */
+  async countLiveForCarrier(carrierUserId: string, tx: Executor = db) {
+    const [row] = await tx
+      .select({ n: count(shipments.id) })
+      .from(shipments)
+      .where(
+        and(
+          eq(shipments.carrierId, carrierUserId),
+          inArray(shipments.status, [
+            "PENDING",
+            "ASSIGNED",
+            "PICKED_UP",
+            "IN_TRANSIT",
+          ])
+        )
+      );
+    return Number(row?.n ?? 0);
+  },
+
   async getByDriverId(driverId: string, tx: Executor = db) {
     return await tx.query.shipments.findMany({
       where: eq(shipments.driverId, driverId),
@@ -386,6 +409,9 @@ export const shipmentsDal = {
             pickupCity: true,
             dropoffCity: true,
           },
+          // The name only, for the « Demandeur » column (§A4 of the 29
+          // October spec) — never an email, a phone or a Stripe id.
+          with: { shipper: { columns: { name: true } } },
         },
         carrier: { columns: { id: true, name: true } },
         driver: { columns: { id: true, name: true } },

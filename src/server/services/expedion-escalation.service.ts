@@ -17,6 +17,7 @@
  */
 
 import { nanoid } from "nanoid";
+import { mayTakeWork } from "@/lib/carrier-availability";
 import { db } from "@/db";
 import { eq } from "drizzle-orm";
 import { categories } from "@/db/schema/listings";
@@ -464,6 +465,9 @@ export const expedionEscalationService = {
         409,
         "This driver is not approved to carry work"
       );
+    }
+    if (!mayTakeWork(carrier)) {
+      throw err("CARRIER_ABSENT", 409, "This driver is marked as away");
     }
     const vehicle =
       carrier.vehicles.find((v) => v.isActive) ?? carrier.vehicles[0];

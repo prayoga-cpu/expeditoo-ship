@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Eye, Inbox } from "lucide-react";
 import { CarrierApplicationDetail } from "./CarrierApplicationDetail";
 import { CarrierStatusBadge } from "./CarrierStatusBadge";
+import { isAbsent } from "@/lib/carrier-availability";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { format } from "date-fns";
 import { enUS, fr } from "date-fns/locale";
@@ -42,6 +43,9 @@ export function CarrierApplicationsList({
     approveApplication,
     rejectApplication,
     suspendCarrierAccount,
+    setAvailability,
+    deregisterCarrierAccount,
+    reinstateCarrierAccount,
     isUpdating,
   } = useCarrierApplications(status);
   const [selectedApplication, setSelectedApplication] =
@@ -155,7 +159,12 @@ export function CarrierApplicationsList({
         header: ({ column }) => (
           <DataTableColumnHeader column={column} title={t("table.status")} />
         ),
-        cell: ({ row }) => <CarrierStatusBadge status={row.original.status} />,
+        cell: ({ row }) => (
+          <CarrierStatusBadge
+            status={row.original.status}
+            absent={isAbsent(row.original)}
+          />
+        ),
       },
       {
         id: "actions",
@@ -248,6 +257,9 @@ export function CarrierApplicationsList({
               onApprove={approveApplication}
               onReject={rejectApplication}
               onSuspend={suspendCarrierAccount}
+              onSetAvailability={setAvailability}
+              onDeregister={deregisterCarrierAccount}
+              onReinstate={reinstateCarrierAccount}
               onDone={handleDetailDone}
               onClose={() => setIsDetailOpen(false)}
             />

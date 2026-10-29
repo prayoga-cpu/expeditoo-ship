@@ -5,25 +5,8 @@ import { useTranslations } from "next-intl";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/lib/auth-context";
+import { initialsOf } from "@/lib/initials";
 import { cn } from "@/lib/utils";
-
-/**
- * Up to two letters for the avatar: the first of each of the first two words
- * of the name, or the email's first letter when there is no name.
- */
-export function initialsOf(
-  name: string | null | undefined,
-  email: string | null | undefined
-): string {
-  const words = (name ?? "").trim().split(/\s+/).filter(Boolean);
-  if (words.length > 0) {
-    return words
-      .slice(0, 2)
-      .map((word) => word.charAt(0).toUpperCase())
-      .join("");
-  }
-  return (email ?? "").trim().charAt(0).toUpperCase();
-}
 
 interface HeaderAccountProps {
   /** The shell's own profile page: `/profile`, `/admin/profile`, `/driver/profile`. */

@@ -55,7 +55,7 @@ export function ActiveTripCard({ trip }: { trip: ActiveTrip }) {
               <p className="font-semibold">{trip.listing?.title ?? t("untitledJob")}</p>
               {trip.listing && (
                 <div>
-                  <ListingReference reference={trip.listing.reference} from={trip.listing.pickupCity} to={trip.listing.dropoffCity} />
+                  <ListingReference reference={trip.listing.reference} />
                 </div>
               )}
             </div>
