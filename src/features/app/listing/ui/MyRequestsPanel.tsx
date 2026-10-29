@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useState } from "react";
 import Link from "next/link";
 import { ClipboardList, Gavel, Plus, AlertTriangle, TriangleAlert } from "lucide-react";
@@ -28,6 +29,12 @@ import {
   RequestViewSwitcher,
   useRequestView,
 } from "./RequestViews";
+
+// The map pulls in MapLibre; only a viewer who picks the map view loads it.
+const RequestsMap = dynamic(
+  () => import("./RequestsMap").then((m) => m.RequestsMap),
+  { ssr: false, loading: () => <PageLoader /> }
+);
 import { STATUS_TONE, displayStatus } from "../statusTone";
 import type { Job, ListingStatus } from "../types";
 
@@ -110,6 +117,8 @@ export function MyRequestsPanel() {
             <RequestCompactRow key={job.id} job={job} />
           ))}
         </div>
+      ) : view === "map" ? (
+        <RequestsMap jobs={jobs} />
       ) : view === "cards" ? (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {jobs.map((job) => (

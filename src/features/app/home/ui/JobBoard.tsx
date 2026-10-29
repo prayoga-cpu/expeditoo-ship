@@ -143,6 +143,7 @@ export function JobBoard({ origin }: { origin?: "direct" | "expedion" } = {}) {
         onModeChange={changeMode}
         filters={filters}
         onChange={updateFilters}
+        onShowMap={() => changePane("map")}
       />
 
       <div className="flex flex-col gap-2 sm:flex-row">

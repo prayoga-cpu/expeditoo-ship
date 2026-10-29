@@ -11,7 +11,7 @@ review (A1–D6, X1), the driver field test (REQ-01–08), Nicolas's answers of
 |---|---|---|---|
 | 2.66.0 | A2, A4, B3, B5, C3 (Apple Pay / Google Pay), N2, N5, REQ-02, REQ-07 | `0042_carrier_absence_deregistration` | — |
 | 2.67.0 | B1 (Expeditoo's pick), B6 (range, counter-price loop), N1 (booking summary before the card) | `0043_offer_proposal_counter` | 2.66.0 |
-| later | D2 map view | — | — |
+| 2.68.0 | D2 map view on « Mes demandes », « Ma position », round trip, the search area drawn | — | — |
 | later | N3, N4, N6, N7 — payouts, holds, payout mail, driver SMS | — | — |
 | later | N8 route planner, N9a listing reminder | — | X1 for N9a's schedule |
 

@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/currency";
 import { getMapStyle } from "@/lib/map-styles";
 import { cargoSizeLabel } from "@/lib/cargo-size";
+import { circleRing } from "@/lib/geo-circle";
 import { isResolvedPlace, type JobFilters } from "../types";
 import type { BoardJob } from "../types";
 
@@ -86,6 +87,13 @@ export function BoardMap({
     ].map((place) => [place.lng, place.lat] as [number, number]);
   }, [filters.from, filters.to, filters.via]);
 
+  // « Autour de »: the area searched, drawn (client_feedback_2026_10_29_spec.md
+  // §D2) — one place and a radius, no arrival.
+  const area = useMemo(() => {
+    if (!filters.from || filters.to || !filters.radiusKm) return null;
+    return circleRing(filters.from, filters.radiusKm);
+  }, [filters.from, filters.to, filters.radiusKm]);
+
   // Refit whenever the answer changes: a board that filtered down to Bordeaux
   // while the map still showed Lille would be showing the wrong thing.
   const fitKey = useMemo(
@@ -93,8 +101,9 @@ export function BoardMap({
       [
         jobs.map((job) => job.id).join(","),
         path?.map((point) => point.join()).join(";") ?? "",
+        area ? `${filters.from?.lat},${filters.from?.lng},${filters.radiusKm}` : "",
       ].join("|"),
-    [jobs, path]
+    [jobs, path, area, filters.from, filters.radiusKm]
   );
 
   // Nothing can be framed until the canvas has a size. `fitBounds` on a map
@@ -113,6 +122,8 @@ export function BoardMap({
         .filter(hasPickupPin)
         .map((job): [number, number] => [job.pickupLng, job.pickupLat]),
       ...(path ?? []),
+      // With no job in it, the circle alone is still worth framing.
+      ...(area ?? []),
     ];
     if (points.length === 0) return;
 
@@ -143,7 +154,7 @@ export function BoardMap({
         duration: 600,
       }
     );
-  }, [jobs, path]);
+  }, [jobs, path, area]);
 
   useEffect(() => {
     if (isLoaded) fit();
@@ -164,6 +175,36 @@ export function BoardMap({
         onResize={() => isLoaded && fit()}
       >
         <NavigationControl position="top-right" showCompass={false} />
+
+        {area && (
+          <Source
+            id="search-area"
+            type="geojson"
+            data={{
+              type: "Feature",
+              properties: {},
+              geometry: { type: "Polygon", coordinates: [area] },
+            }}
+          >
+            <Layer
+              id="search-area-fill"
+              type="fill"
+              paint={{
+                "fill-color": isDark ? "#7aa7ff" : "#2563eb",
+                "fill-opacity": isDark ? 0.12 : 0.08,
+              }}
+            />
+            <Layer
+              id="search-area-edge"
+              type="line"
+              paint={{
+                "line-color": isDark ? "#7aa7ff" : "#2563eb",
+                "line-width": 2,
+                "line-opacity": isDark ? 0.9 : 0.6,
+              }}
+            />
+          </Source>
+        )}
 
         {path && (
           <Source

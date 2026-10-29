@@ -2,7 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Gavel, LayoutGrid, List, Rows3 } from "lucide-react";
+import {
+  ArrowRight,
+  Gavel,
+  LayoutGrid,
+  List,
+  Map as MapIcon,
+  Rows3,
+} from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 
 import { Badge } from "@/components/ui/badge";
@@ -15,20 +22,20 @@ import { ListingReference } from "./ListingReference";
 import { UrgencyBadge } from "./UrgencyBadge";
 
 /**
- * The three ways to look at one's own requests (client feedback 2026-10-21,
- * §D1–D2: « liste, carte ou gros plan »):
+ * The ways to look at one's own requests (client feedback 2026-10-21, §D1–D2:
+ * « liste, carte ou gros plan »):
  *
  * - `list` — one line each, many on screen at once;
  * - `cards` — a grid of small cards;
- * - `detailed` — the full summary per request, as « Mes demandes » always was.
- *
- * « Carte » is read as *card*: the request asked for « plusieurs affichages »
- * of the same requests, and a map view is a different feature that would need
- * its own answer (the spec records the question).
+ * - `detailed` — the full summary per request, as « Mes demandes » always was;
+ * - `map` — the requests beside a map of their routes. Nicolas meant a
+ *   geographic map by « carte » (answer of 28–29 October,
+ *   client_feedback_2026_10_29_spec.md §D2); the card grid stays, since
+ *   people now use it.
  */
-export type RequestView = "list" | "cards" | "detailed";
+export type RequestView = "list" | "cards" | "detailed" | "map";
 
-export const REQUEST_VIEWS: readonly RequestView[] = ["list", "cards", "detailed"];
+export const REQUEST_VIEWS: readonly RequestView[] = ["list", "cards", "detailed", "map"];
 
 const STORAGE_KEY = "expeditoo.myRequests.view";
 
@@ -63,7 +70,12 @@ export function useRequestView(fallback: RequestView = "detailed") {
   return { view, setView: choose };
 }
 
-const VIEW_ICON = { list: List, cards: LayoutGrid, detailed: Rows3 } as const;
+const VIEW_ICON = {
+  list: List,
+  cards: LayoutGrid,
+  detailed: Rows3,
+  map: MapIcon,
+} as const;
 
 /** Three icon buttons, one pressed. */
 export function RequestViewSwitcher({

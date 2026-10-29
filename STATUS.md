@@ -21,7 +21,7 @@ document (`EXPEDITOO Client Feedback Consolidated 29.10.2026.pdf`). Spec:
 | C1/C2/N3 | Payouts by Stripe | ❓ 🔑 | — | Rail + lawyer; the Stripe account is restricted from creating connected accounts |
 | C3 | Apple Pay / Google Pay / PayPal | 🔧 🔑 | 2.66.0 | Apple Pay + Google Pay in the accept dialog; register the domain in Stripe. PayPal not built |
 | C4 | Sender address | 🔑 ❓ | — | Needs a domain and its DNS — Nicolas |
-| D2 | Map view + driver search | ⬜ | — | |
+| D2 | Map view + driver search | 🔧 | 2.68.0 | « Carte » on « Mes demandes »; « Ma position », round trip, the area drawn |
 | N1 | Delivery availability before payment | 🔧 | 2.67.0 | Shown in the accept dialog; changing dates after booking not built |
 | N2 | Driver list sorting, period, dates | 🔧 | 2.66.0 | « Mes livraisons » |
 | N4 | Payout held on a reported problem | ⬜ | — | |
@@ -825,6 +825,40 @@ than leaving it in a chat message.
       Until then its application page says driver access is off.
 
 ---
+
+## ✅ 2026-10-30 — « Carte » Is a Map: « Mes demandes » Beside Its Routes, and a Board Search From Where You Are (2.68.0)
+
+_Nicolas, answer 6: « Option B: a geographic map. The listing list beside a
+map, zooming on click. Driver search: departure point by hand with a km
+radius or from the driver's location, a selectable arrival point that may
+equal the departure, and a clickable map thumbnail of the area. »_
+
+Spec: `docs/specs/client_feedback_2026_10_29_spec.md` §D2.
+
+### What changed
+
+- `RequestView` gains `map`; `RequestsMap` (dynamic import, so MapLibre loads
+  only for a viewer who picks it) lists the requests beside their routes and
+  zooms on a chosen row. The requester's own exact pins — no privacy change.
+- `RouteSearchBar`: « Partir de ma position » (geolocation, rounded to
+  1e-4°), « Retour au départ » (`to = from`; `corridorPath` already reads a
+  one-point path as a circle, so no special case downstream), and
+  `SearchAreaThumbnail` (a non-interactive mini map that opens the board's
+  map pane). `BoardMap` draws the « Autour de » circle from `circleRing`
+  (`src/lib/geo-circle.ts`, geodesic) and frames it.
+- The 2.65.0 card grid stays: « Carte » was read as card then, and the grid is
+  in use.
+
+### Verification
+
+- `npx tsc --noEmit`: 0 errors. New tests: `geo-circle` (3), `RequestsMap` (3,
+  MapLibre mocked — jsdom has no WebGL), `RouteSearchBar` (3).
+
+### Known limits
+
+- Neither map was exercised in a real browser in this session; jsdom cannot
+  draw MapLibre, so the tests cover the behaviour around the canvas, not the
+  canvas.
 
 ## ✅ 2026-10-30 — Nicolas's Answers of 28–29 October, Part Two: Expeditoo's Pick, the Counter-Offer Loop, a Suggested Price, and What Is Booked Before the Card (2.67.0)
 

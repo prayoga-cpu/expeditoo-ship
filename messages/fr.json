@@ -1569,7 +1569,16 @@
       "label": "Affichage des demandes",
       "list": "Liste",
       "cards": "Cartes",
-      "detailed": "Détaillé"
+      "detailed": "Détaillé",
+      "map": "Carte"
+    },
+    "map": {
+      "listLabel": "Vos demandes",
+      "noPin": "Adresse sans point sur la carte",
+      "open": "Ouvrir la demande",
+      "pinLabel": "Voir « {title} » sur la carte",
+      "showAll": "Voir toutes les demandes",
+      "unpinned": "{count, plural, one {# demande sans point sur la carte} other {# demandes sans point sur la carte}}"
     }
   },
   "driver": {
@@ -3847,7 +3856,13 @@
       "km": "{km} km",
       "viaCity": "Étape {n}",
       "addStep": "Ajouter une étape",
-      "removeStep": "Supprimer l'étape {n}"
+      "removeStep": "Supprimer l'étape {n}",
+      "useMyPosition": "Partir de ma position",
+      "myPosition": "Ma position",
+      "positionUnavailable": "Votre appareil ne donne pas sa position.",
+      "positionDenied": "Position refusée ou introuvable. Choisissez une ville.",
+      "backToStart": "Retour au départ",
+      "openMap": "Voir la zone sur la carte"
     },
     "availability": {
       "empty": "Mes disponibilités",

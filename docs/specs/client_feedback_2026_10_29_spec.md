@@ -225,6 +225,27 @@ card's own labels), and the requester's delivery days and times from `/create`
 (`dropoff_days` / `dropoff_periods`) — or that none were set. Changing dates
 after booking is not built (§0 L).
 
+## D2. « Carte » is a map
+
+- **« Mes demandes »** gains a fourth view, `map` (« Carte », remembered like
+  the others): `RequestsMap`, loaded only when chosen. The requests listed
+  beside a map of their routes (pickup pin with the budget, a dashed line to
+  the delivery). Choosing a row zooms onto its two ends (max zoom 13) and
+  reveals « Ouvrir la demande »; choosing a pin picks and scrolls to its row;
+  « Voir toutes les demandes » reframes. Requests with no pin are listed and
+  counted, not plotted. The pins are the requester's own — nobody else's job
+  reaches this view.
+- **The board search** (`RouteSearchBar`): « Partir de ma position » fills the
+  departure from `navigator.geolocation` (rounded to 4 decimals, never stored
+  beyond the board's URL; refused or unavailable → a toast); « Retour au
+  départ » sets the arrival to the departure — a one-point corridor reads as
+  the circle around it (`corridorPath`), so a round trip needs no special case;
+  `SearchAreaThumbnail` draws the area (circle, or trajet) and opens the
+  board's map on click. `BoardMap` draws the « Autour de » circle
+  (`circleRing`, geodesic) and frames it.
+- The radius in km, the optional arrival and the corridor were already there
+  (`board_route_search_spec.md`).
+
 ---
 
 ## Test coverage required
@@ -263,4 +284,10 @@ after booking is not built (§0 L).
   ±15 % range to 5 €.
 - `BookingSummary.test.tsx`: the booked slot and its delivery day, the
   requester's availability, the no-availability line.
+- `geo-circle.test.ts`: the ring closes, reaches the radius due north, and is
+  wider in longitude than latitude at Paris.
+- `RequestsMap.test.tsx`: framed on load, zoom onto a chosen row, the open
+  link, a pin picking its row, the unpinned count.
+- `RouteSearchBar.test.tsx`: « Ma position » rounded with a radius, « Retour au
+  départ », no thumbnail without a departure.
 

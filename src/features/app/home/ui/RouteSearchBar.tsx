@@ -1,14 +1,19 @@
 "use client";
 
+import { useState } from "react";
+import dynamic from "next/dynamic";
 import {
   ArrowUpDown,
   CircleDot,
   Flag,
+  LocateFixed,
   MapPin,
   Plus,
+  Undo2,
   X,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { CityField } from "@/components/ui/city-field";
@@ -30,6 +35,12 @@ import {
   type SearchMode,
 } from "../types";
 
+// MapLibre only once there is an area to draw.
+const SearchAreaThumbnail = dynamic(
+  () => import("./SearchAreaThumbnail").then((m) => m.SearchAreaThumbnail),
+  { ssr: false }
+);
+
 /** Étapes only; the two ends are not "steps" the driver can remove. */
 const MAX_WAYPOINTS = MAX_PATH_POINTS - 2;
 
@@ -47,6 +58,8 @@ interface RouteSearchBarProps {
   onModeChange: (mode: SearchMode) => void;
   filters: JobFilters;
   onChange: (patch: Partial<JobFilters>) => void;
+  /** Opens the board's map — the thumbnail's click (§D2 of the 29 October spec). */
+  onShowMap?: () => void;
 }
 
 /**
@@ -66,8 +79,38 @@ export function RouteSearchBar({
   onModeChange,
   filters,
   onChange,
+  onShowMap,
 }: RouteSearchBarProps) {
   const t = useTranslations("jobBoard.route");
+  const [locating, setLocating] = useState(false);
+
+  // « Ma position » as the departure (§D2): the device's fix, never stored —
+  // it lives in the board's URL like any city the driver picks.
+  const useMyPosition = () => {
+    if (!("geolocation" in navigator)) {
+      toast.error(t("positionUnavailable"));
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (fix) => {
+        setLocating(false);
+        onChange({
+          from: {
+            label: t("myPosition"),
+            lat: Math.round(fix.coords.latitude * 1e4) / 1e4,
+            lng: Math.round(fix.coords.longitude * 1e4) / 1e4,
+          },
+          radiusKm: filters.radiusKm ?? DEFAULT_RADIUS_KM,
+        });
+      },
+      () => {
+        setLocating(false);
+        toast.error(t("positionDenied"));
+      },
+      { enableHighAccuracy: false, timeout: 10_000, maximumAge: 300_000 }
+    );
+  };
 
   const setPlace = (key: "from" | "to") => (place: PlaceValue | null) =>
     onChange({
@@ -131,13 +174,28 @@ export function RouteSearchBar({
 
       <div className="flex items-end gap-2">
         <div className="min-w-0 flex-1 space-y-2">
-          <CityField
-            id="board-from"
-            value={filters.from}
-            onChange={setPlace("from")}
-            placeholder={mode === "route" ? t("fromCity") : t("nearCity")}
-            icon={<CircleDot className="h-4 w-4" />}
-          />
+          <div className="flex items-center gap-2">
+            <CityField
+              id="board-from"
+              value={filters.from}
+              onChange={setPlace("from")}
+              placeholder={mode === "route" ? t("fromCity") : t("nearCity")}
+              icon={<CircleDot className="h-4 w-4" />}
+              className="min-w-0 flex-1"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={useMyPosition}
+              disabled={locating}
+              aria-label={t("useMyPosition")}
+              title={t("useMyPosition")}
+              className="shrink-0"
+            >
+              <LocateFixed className="h-4 w-4" />
+            </Button>
+          </div>
 
           {mode === "route" && (
             <>
@@ -201,17 +259,33 @@ export function RouteSearchBar({
       </div>
 
       {mode === "route" && (
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          disabled={!filters.to || filters.via.length >= MAX_WAYPOINTS}
-          onClick={() => onChange({ via: [...filters.via, PENDING_WAYPOINT] })}
-          className="text-muted-foreground -ml-2"
-        >
-          <Plus className="h-4 w-4" />
-          {t("addStep")}
-        </Button>
+        <div className="flex flex-wrap items-center gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={!filters.to || filters.via.length >= MAX_WAYPOINTS}
+            onClick={() => onChange({ via: [...filters.via, PENDING_WAYPOINT] })}
+            className="text-muted-foreground -ml-2"
+          >
+            <Plus className="h-4 w-4" />
+            {t("addStep")}
+          </Button>
+          {/* A round trip: the arrival may be the departure (§D2). A
+              one-point corridor reads as the circle around it
+              (`corridorPath`), so nothing downstream needs a special case. */}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={!filters.from}
+            onClick={() => onChange({ to: filters.from })}
+            className="text-muted-foreground"
+          >
+            <Undo2 className="h-4 w-4" />
+            {t("backToStart")}
+          </Button>
+        </div>
       )}
 
       <div className="flex items-center gap-3">
@@ -238,6 +312,10 @@ export function RouteSearchBar({
           </SelectContent>
         </Select>
       </div>
+
+      {onShowMap && filters.from && (
+        <SearchAreaThumbnail filters={filters} radiusKm={radiusKm} onOpen={onShowMap} />
+      )}
     </section>
   );
 }

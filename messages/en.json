@@ -1569,7 +1569,16 @@
       "label": "How requests are shown",
       "list": "List",
       "cards": "Cards",
-      "detailed": "Detailed"
+      "detailed": "Detailed",
+      "map": "Map"
+    },
+    "map": {
+      "listLabel": "Your requests",
+      "noPin": "Address with no point on the map",
+      "open": "Open the request",
+      "pinLabel": "See « {title} » on the map",
+      "showAll": "Show every request",
+      "unpinned": "{count, plural, one {# request with no point on the map} other {# requests with no point on the map}}"
     }
   },
   "driver": {
@@ -3847,7 +3856,13 @@
       "km": "{km} km",
       "viaCity": "Stop {n}",
       "addStep": "Add a stop",
-      "removeStep": "Remove stop {n}"
+      "removeStep": "Remove stop {n}",
+      "useMyPosition": "Start from my position",
+      "myPosition": "My position",
+      "positionUnavailable": "Your device does not share its position.",
+      "positionDenied": "Position refused or not found. Pick a city.",
+      "backToStart": "Back to the start",
+      "openMap": "See the area on the map"
     },
     "availability": {
       "empty": "My availability",

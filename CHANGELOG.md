@@ -14,6 +14,17 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.68.0] - 2026-10-30 · feat
+
+- **« Mes demandes » can be shown on a map.** Pick « Carte »: your requests
+  are listed beside a map of their routes. Tap a request to zoom onto its
+  pickup and delivery, or tap a price on the map to find its request.
+- **Drivers: search from where you are.** « Partir de ma position » fills the
+  departure from your phone's location. « Retour au départ » makes the
+  arrival your starting point, for a round trip.
+- **The area you search is drawn on the map** — the circle around your city,
+  or your trajet — and a small preview of it under the search opens the map.
+
 ## [2.67.0] - 2026-10-30 · feat
 
 Nicolas's answers of 28–29 October, part two: choosing and negotiating.
