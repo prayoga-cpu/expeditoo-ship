@@ -31,6 +31,8 @@ is in §0 so it can be overruled cheaply.
 | M | N4 what « a problem reported at delivery » is | An **unresolved** incident on the job, category `damage`, `cargo_mismatch`, `safety` or `other`, reported by the requester (`shipper`) or staff | The goods, not the logistics; and never the driver's own report, which would let a driver hold their own pay |
 | N | N3 « automatic payout when the status becomes Delivered » | Released **48 h after** delivery by an hourly sweep, through Stripe Connect, site lane only | The client needs time to report a problem, or the hold of N4 could never act; an escalated job's money is in Expedion's Stripe account |
 | O | N7 when to text | The requester's message to a driver about the job, at most one text per 30 minutes per thread; every accepted offer. Never the message's words | An SMS sits on a lock screen |
+| P | N8 « estimated times for normal roads and for motorway » | Two Valhalla routes through the same stops, `use_highways` 1 and 0 | The public OSRM server refuses `exclude=motorway`; Valhalla answers both, and the router is one environment variable |
+| Q | N9 the listing-expiry reminder | **Not built** | It describes a request with no deadline — Nicolas's Airtable flow. Every Expeditoo request has a pickup window, so it always has a deadline and expires on it (once X1 runs). Whether Airtable stays is question 5 |
 | L | N1 « changeable later by either side » | **Not built** in 2.67.0: the accept dialog shows the delivery days and times before paying; changing dates after booking still goes through the conversation | A reschedule flow touches the shipment dates, the driver's plan and the Expedion write-back; it is its own release |
 
 ---
@@ -305,6 +307,25 @@ thrown. The email reaches only the Resend account's own address until C4.
 - Answers `TWILIO_NOT_CONFIGURED` and sends nothing until the `TWILIO_*`
   variables exist.
 
+## N8. The route planner
+
+- `/carrier/planner` (« Planificateur », in the carrier and driver menus):
+  `RoutePlanner`. A departure (a town, or « Partir de ma position »); the
+  driver's live runs (`ASSIGNED` → pickup and delivery stops, `PICKED_UP` /
+  `IN_TRANSIT` → delivery only); any town as a stop; ↑ / ↓ / ✕ on every stop;
+  an optional arrival, « Retour au départ » for a round trip. A delivery placed
+  before its own pickup is flagged and « Calculer l'itinéraire » is disabled
+  (`outOfOrder`). Nothing is saved.
+- `POST /api/carrier/route-plan {points}` (2–25, `routePlanSchema`) →
+  `routePlannerService.plan`: two Valhalla `/route` calls, `costing: auto` with
+  `use_highways` 1 and 0, decoded (`decodePolyline`, precision 6). Errors:
+  `NO_ROUTE` 422 (no road joins the points), `ROUTER_UNREACHABLE` /
+  `ROUTER_FAILED` 502. `VALHALLA_URL` overrides the default public FOSSGIS
+  server (light use only — Operator to-do).
+- The result: « Par autoroute » and « Sans autoroute », duration and distance,
+  and `PlanMap` with both lines (blue solid, orange dashed) and numbered stops.
+  Times exclude traffic and breaks, and say so.
+
 ---
 
 ## Test coverage required
@@ -362,4 +383,11 @@ thrown. The email reaches only the Resend account's own address until C4.
 - All new raw SQL run on a fresh database with every migration applied
   (`releasable`, `heldFor`, `claimedPayouts`, `claimForRelease`,
   `lastMessageAtBefore`, `getQuotePage` with and without a window).
+- `polyline.test.ts`: Google's reference line, the empty line.
+- `route-planner.service.test.ts`: both calls with `use_highways` 0 and 1 and
+  the points in order, the rounding, `NO_ROUTE`, `ROUTER_UNREACHABLE`, the
+  2–25 bound.
+- `plan-stops.test.ts`, `RoutePlanner.test.tsx`: pickup then delivery, on-board
+  goods as delivery only, the out-of-order refusal, the points sent in order,
+  both times shown.
 

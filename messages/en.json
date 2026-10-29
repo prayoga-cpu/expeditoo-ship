@@ -51,7 +51,8 @@
       "myTrips": "My trips",
       "myEarnings": "My earnings",
       "language": "Language",
-      "feedback": "Send feedback"
+      "feedback": "Send feedback",
+      "planner": "Planner"
     },
     "categories": {
       "electronics": "Electronics",
@@ -3777,6 +3778,41 @@
           "title": "Nothing in transit",
           "description": "As soon as one of your offers is accepted, the job appears here until it is delivered."
         }
+      }
+    },
+    "planner": {
+      "title": "Route planner",
+      "subtitle": "Pick a start, your jobs and your stops, in the order you will drive them: the trip is timed by motorway and without.",
+      "departure": "Start",
+      "arrival": "Finish (optional)",
+      "useMyPosition": "Start from my position",
+      "myPosition": "My position",
+      "positionUnavailable": "Your device does not share its position.",
+      "positionDenied": "Position refused or not found. Pick a city.",
+      "myRuns": "My jobs",
+      "noRuns": "No job in progress. Add stops by hand.",
+      "untitled": "Job",
+      "pickupOf": "Pickup — {title}",
+      "dropoffOf": "Delivery — {title}",
+      "addStop": "Add a stop",
+      "add": "Add",
+      "stopsLabel": "Stops, in order",
+      "moveUp": "Move « {stop} » up",
+      "moveDown": "Move « {stop} » down",
+      "remove": "Remove « {stop} »",
+      "outOfOrder": "A delivery comes before its pickup: move the pickup higher.",
+      "backToStart": "Back to the start",
+      "plan": "Plan the route",
+      "planning": "Planning…",
+      "withMotorway": "By motorway",
+      "withoutMotorway": "Without motorway",
+      "km": "{km} km",
+      "estimateNote": "Estimates without traffic or breaks. Blue by motorway, orange without.",
+      "errors": {
+        "NO_ROUTE": "No road joins these stops. Check they are all on land.",
+        "ROUTER_UNREACHABLE": "Route planning is not answering. Try again in a moment.",
+        "ROUTER_FAILED": "Route planning failed. Try again in a moment.",
+        "generic": "The route could not be planned."
       }
     }
   },

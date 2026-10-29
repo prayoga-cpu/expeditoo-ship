@@ -51,7 +51,8 @@
       "myTrips": "Mes trajets",
       "myEarnings": "Mes gains",
       "language": "Langue",
-      "feedback": "Envoyer un retour"
+      "feedback": "Envoyer un retour",
+      "planner": "Planificateur"
     },
     "categories": {
       "electronics": "Électronique",
@@ -3777,6 +3778,41 @@
           "title": "Aucune course en transit",
           "description": "Dès qu'une de vos offres est retenue, la course apparaît ici jusqu'à sa livraison."
         }
+      }
+    },
+    "planner": {
+      "title": "Planificateur de tournée",
+      "subtitle": "Choisissez un départ, vos missions et vos étapes, dans l'ordre où vous roulerez : le trajet est calculé par autoroute et sans autoroute.",
+      "departure": "Départ",
+      "arrival": "Arrivée (facultatif)",
+      "useMyPosition": "Partir de ma position",
+      "myPosition": "Ma position",
+      "positionUnavailable": "Votre appareil ne donne pas sa position.",
+      "positionDenied": "Position refusée ou introuvable. Choisissez une ville.",
+      "myRuns": "Mes missions",
+      "noRuns": "Aucune mission en cours. Ajoutez des étapes à la main.",
+      "untitled": "Mission",
+      "pickupOf": "Retrait — {title}",
+      "dropoffOf": "Livraison — {title}",
+      "addStop": "Ajouter une étape",
+      "add": "Ajouter",
+      "stopsLabel": "Étapes, dans l'ordre",
+      "moveUp": "Monter « {stop} »",
+      "moveDown": "Descendre « {stop} »",
+      "remove": "Retirer « {stop} »",
+      "outOfOrder": "Une livraison passe avant son retrait : remettez le retrait plus haut.",
+      "backToStart": "Retour au départ",
+      "plan": "Calculer l'itinéraire",
+      "planning": "Calcul…",
+      "withMotorway": "Par autoroute",
+      "withoutMotorway": "Sans autoroute",
+      "km": "{km} km",
+      "estimateNote": "Estimations hors trafic et hors pauses. En bleu par autoroute, en orange sans autoroute.",
+      "errors": {
+        "NO_ROUTE": "Aucune route ne relie ces étapes. Vérifiez qu'elles sont bien sur la terre ferme.",
+        "ROUTER_UNREACHABLE": "Le calcul d'itinéraire ne répond pas. Réessayez dans un instant.",
+        "ROUTER_FAILED": "Le calcul d'itinéraire a échoué. Réessayez dans un instant.",
+        "generic": "Le trajet n'a pas pu être calculé."
       }
     }
   },

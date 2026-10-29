@@ -13,7 +13,7 @@ review (A1–D6, X1), the driver field test (REQ-01–08), Nicolas's answers of
 | 2.67.0 | B1 (Expeditoo's pick), B6 (range, counter-price loop), N1 (booking summary before the card) | `0043_offer_proposal_counter` | 2.66.0 |
 | 2.68.0 | D2 map view on « Mes demandes », « Ma position », round trip, the search area drawn | — | — |
 | 2.69.0 | N3 (release sweep, inert until Connect + crons), N4 (dispute hold), N6 (payout mail), N7 (driver SMS); A2's window parameters fixed | — | 2.66.0 |
-| later | N8 route planner, N9a listing reminder | — | X1 for N9a's schedule |
+| 2.70.0 | N8 route planner (Valhalla, with and without motorways) | — | — |
 
 Held, each for one answer recorded in STATUS → Questions: REQ-01 / REQ-06 /
 REQ-08 (what a private driver is), N9b (Airtable sync), PayPal (C3).

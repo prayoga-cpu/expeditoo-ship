@@ -14,6 +14,15 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.70.0] - 2026-10-30 · feat
+
+- **Drivers: a route planner.** « Planificateur » in the menu: choose where you
+  start (or use your position), add your jobs — each adds its pickup and its
+  delivery — and any town as a stop, reorder them, and set where you finish
+  (it can be where you started). The trip is calculated twice, by motorway and
+  without, with the distance and the driving time of each, drawn on a map. A
+  delivery placed before its own pickup is flagged.
+
 ## [2.69.0] - 2026-10-30 · feat
 
 - **Drivers: a payout waits while the client reports a problem.** If the

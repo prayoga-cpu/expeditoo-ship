@@ -28,8 +28,8 @@ document (`EXPEDITOO Client Feedback Consolidated 29.10.2026.pdf`). Spec:
 | N5 | « Mes paiements » in « Mes livraisons » | 🔧 | 2.66.0 | Carriers only |
 | N6 | Email per payout | 🔧 🔑 | 2.69.0 | At delivery and at transfer; reaches only the owner until C4 |
 | N7 | SMS to the driver | 🔧 🔑 | 2.69.0 | Built; sends nothing until `TWILIO_*` exist |
-| N8 | Route planner | ⬜ | — | |
-| N9 | Airtable import / expiry reminder | ❓ | — | Airtable sync held; the reminder needs X1 |
+| N8 | Route planner | 🔧 | 2.70.0 | `/carrier/planner`; Valhalla public server until a production host is chosen |
+| N9 | Airtable import / expiry reminder | ❓ | — | Not built: describes Airtable listings with no deadline; every Expeditoo request has one. Waits on question 5 |
 | X1 | Scheduled jobs | 🔑 | — | `APP_URL` + `CRON_SECRET`; `a-111-02` publishes on the first run |
 | REQ-01/06/08 | Professional / private driver | ❓ | — | What a private driver provides instead of a SIRET |
 | REQ-02 | Actif / Absent / Suspendu / Désinscrit | 🔧 | 2.66.0 | Migration `0042` |
@@ -379,6 +379,10 @@ than leaving it in a chat message.
       direct job, and 48 h later Admin → Paramètres → « Tâches planifiées »
       shows `release-payouts` green and the payout reads paid. That first one
       is the first real Connect transfer — watch it in Stripe.
+- [ ] **Choose a routing host for the planner (2.70.0, N8).** It uses the
+      FOSSGIS public Valhalla server, which is for light use. Self-host
+      Valhalla, or use a hosted one, and set `VALHALLA_URL` in Vercel
+      Production (no trailing slash). Nothing else changes.
 - [ ] **Register the payment-method domain for Apple Pay (2.66.0, C3).**
       Stripe → Settings → Payment method domains → add
       `expeditoo-ship-five.vercel.app` (and any custom domain later). Until it
@@ -840,6 +844,41 @@ than leaving it in a chat message.
       Until then its application page says driver access is off.
 
 ---
+
+## ✅ 2026-10-30 — A Route Planner for Drivers, Timed by Motorway and Without (2.70.0)
+
+_Nicolas, feature N8: « Picking jobs from a departure point, intermediate stops
+that can be reordered, and an arrival point. Estimated times shown for normal
+roads and for motorway. »_
+
+Spec: `docs/specs/client_feedback_2026_10_29_spec.md` §N8, §0 P–Q.
+
+### What changed
+
+- `/carrier/planner` (`RoutePlanner`, `PlanMap`), in the carrier and driver
+  menus. The ordering rules are pure (`plan-stops.ts`): pickups before their
+  deliveries, on-board goods with no pickup stop, departure/stops/arrival.
+- `POST /api/carrier/route-plan` → `routePlannerService`: **Valhalla, not
+  OSRM.** The public OSRM server answers `exclude=motorway` with « Exclude
+  flag combination is not supported » (checked with curl); Valhalla's
+  `use_highways: 0` works, and the FOSSGIS public server answered Paris →
+  Dijon → Lyon with 511 km / 5 h 43 by motorway and 518 km / 11 h 01 without.
+  Called from the server so the router is one variable (`VALHALLA_URL`).
+- **N9's reminder is not built**, deliberately (§0 Q).
+
+### Verification
+
+- New tests: `polyline` (2), `route-planner.service` (4, fetch mocked),
+  `plan-stops` (9), `RoutePlanner` (3). One live call to the public router
+  through the service (numbers above).
+
+### Known limits
+
+- The FOSSGIS server is for light use, with no service level; pick a
+  production router before drivers rely on it (Operator to-do).
+- No automatic ordering: Valhalla's optimiser does not respect
+  pickup-before-delivery, and a reordered list that cannot be driven is worse
+  than none.
 
 ## ✅ 2026-10-30 — Payouts: Held on a Reported Problem, an Email Each Time, a Text to the Driver, and an Automatic Release That Waits for Connect (2.69.0)
 

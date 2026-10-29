@@ -34,6 +34,7 @@ import {
   Gavel,
   Truck,
   type LucideIcon,
+  Navigation,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useActiveAccessMode } from "@/lib/use-active-access-mode";
@@ -169,6 +170,7 @@ export function MainLayout({ children }: MainLayoutProps) {
     jobs,
     { href: "/carrier/offers", label: t("myOffers"), icon: Gavel },
     { href: "/carrier/trips", label: t("myTrips"), icon: Route },
+    { href: "/carrier/planner", label: t("planner"), icon: Navigation },
     { href: "/carrier/withdrawals", label: t("myEarnings"), icon: Wallet },
     myApplication,
     messages,
@@ -186,6 +188,7 @@ export function MainLayout({ children }: MainLayoutProps) {
     jobs,
     { href: "/carrier/trips", label: t("myTrips"), icon: Route },
     { href: "/driver/shipments", label: t("deliveries"), icon: Truck },
+    { href: "/carrier/planner", label: t("planner"), icon: Navigation },
     myApplication,
     messages,
     profile,

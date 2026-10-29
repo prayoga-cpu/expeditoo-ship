@@ -222,7 +222,7 @@ without an `sk_live_` key, so an accept there takes real money.
 Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before shipping.
 
 **Gates — all green.** `npx tsc --noEmit` 0 errors · `pnpm lint` 0 errors ·
-3,104 unit tests pass (2.69.0) · `pnpm build` succeeds.
+3,122 unit tests pass (2.70.0) · `pnpm build` succeeds.
 
 **Done**
 - Schema remodelled to the transport model; one clean initial migration
@@ -698,6 +698,15 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
   keeps or revises; whatever `price_cents` is when the requester accepts is
   what is charged, and a price that moved mid-dialog is refused at capture.
   `proposedBy` never leaves the server (`withoutProposer`).
+- **Maps, payouts, texts, a planner** (2.68.0–2.70.0). « Mes demandes » has a
+  map view (`RequestsMap`); the board search takes « Ma position » and draws its
+  area. A goods incident from the client or staff **holds** that payout
+  (`DISPUTED`), the driver is emailed for every payout and texted on a client
+  message or an accepted offer (`driverSmsService`, Twilio not yet configured),
+  and `release-payouts` sends Connect transfers 48 h after delivery — inert
+  until Connect, the lawyer and the crons say yes. `/carrier/planner` times a
+  trip by motorway and without through **Valhalla** (`VALHALLA_URL`), because
+  the public OSRM server refuses `exclude=motorway`.
 
 **Not done**
 - **The scheduled jobs have never run in production.** `scheduled-jobs.yml`
