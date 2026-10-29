@@ -9,6 +9,7 @@ import { carriersDal } from "@/server/dal/carriers.dal";
 import { withdrawalsDal, type Executor } from "@/server/dal/withdrawals.dal";
 import { userHasRole } from "@/server/dal/users.dal";
 import { notificationsService } from "@/server/services/notifications.service";
+import { payoutNoticesService } from "@/server/services/payout-notices.service";
 
 // ========================================
 // Errors
@@ -62,12 +63,14 @@ export type DecideWithdrawalInput = z.infer<typeof decideWithdrawalSchema>;
 // Whether a claimed payout may still be paid
 // ========================================
 
-export type PayoutStanding = "payable" | "undelivered" | "void";
+export type PayoutStanding = "payable" | "undelivered" | "held" | "void";
 
 export interface ClaimedPayoutFacts {
   status: PayoutStatus;
   shipmentStatus: ShipmentStatusType;
   paymentStatus: PaymentStatus | null;
+  /** An open problem report holds it (client_feedback_2026_10_29_spec.md §N4). */
+  disputed: boolean;
 }
 
 /**
@@ -85,7 +88,9 @@ export function payoutStanding(row: ClaimedPayoutFacts): PayoutStanding {
   if (row.status !== "processing") return "void";
   if (row.paymentStatus !== "captured") return "void";
   if (row.shipmentStatus === "CANCELLED") return "void";
-  return row.shipmentStatus === "DELIVERED" ? "payable" : "undelivered";
+  if (row.shipmentStatus !== "DELIVERED") return "undelivered";
+  // Not void: the money is still owed once the incident is resolved.
+  return row.disputed ? "held" : "payable";
 }
 
 async function requireOperator(actorUserId: string) {
@@ -111,9 +116,10 @@ export const withdrawalsService = {
    * route answers for any session, including one with no carrier record.
    */
   async getBalance(carrierUserId: string) {
-    const [available, open, history, hasEverEarned, carrier] =
+    const [available, held, open, history, hasEverEarned, carrier] =
       await Promise.all([
         withdrawalsDal.availableFor(carrierUserId),
+        withdrawalsDal.heldFor(carrierUserId),
         withdrawalsDal.findOpenFor(carrierUserId),
         withdrawalsDal.listForCarrier(carrierUserId),
         withdrawalsDal.hasAnyPayout(carrierUserId),
@@ -123,6 +129,9 @@ export const withdrawalsService = {
     return {
       availableCents: available.amountCents,
       deliveries: available.deliveries,
+      // Earned, held by an open problem report (§N4).
+      heldCents: held.amountCents,
+      heldDeliveries: held.deliveries,
       minimumCents: MIN_WITHDRAWAL_CENTS,
       canRequest: !open && available.amountCents >= MIN_WITHDRAWAL_CENTS,
       openRequest: open ?? null,
@@ -235,10 +244,13 @@ export const withdrawalsService = {
     }
 
     if (input.action === "mark_paid") {
-      return await notifyCarrier(
+      const paid = await notifyCarrier(
         await markPaid(withdrawal, actorUserId, input),
         "paid"
       );
+      // And by email, for every payout (client_feedback_2026_10_29_spec.md §N6).
+      await payoutNoticesService.paid(paid.carrierId, paid.amountCents, paid.reference);
+      return paid;
     }
 
     // A driver told their transfer was being made is not told it was "not

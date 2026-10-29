@@ -462,8 +462,10 @@ export async function getQuotePage(
   const where = sql.join(
     [
       sql`true`,
-      params.from ? sql`requested_at >= ${params.from}` : sql`true`,
-      params.to ? sql`requested_at < ${params.to}` : sql`true`,
+      // ISO strings, not Dates: a raw template hands the driver the value
+      // as-is, and postgres.js refuses a Date there.
+      params.from ? sql`requested_at >= ${params.from.toISOString()}::timestamptz` : sql`true`,
+      params.to ? sql`requested_at < ${params.to.toISOString()}::timestamptz` : sql`true`,
     ],
     sql` and `
   );

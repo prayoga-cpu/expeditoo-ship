@@ -222,7 +222,7 @@ without an `sk_live_` key, so an accept there takes real money.
 Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before shipping.
 
 **Gates — all green.** `npx tsc --noEmit` 0 errors · `pnpm lint` 0 errors ·
-3,074 unit tests pass (2.67.0) · `pnpm build` succeeds.
+3,104 unit tests pass (2.69.0) · `pnpm build` succeeds.
 
 **Done**
 - Schema remodelled to the transport model; one clean initial migration
@@ -833,7 +833,15 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
    payout is payable only while its shipment is `DELIVERED` and its payment
    `captured`; a refund cancels the job's unpaid payouts in the same
    transaction; and every payout status write names the status it moves from
-   (`payout_safety_spec.md`).
+   (`payout_safety_spec.md`). Since 2.69.0 an unresolved goods incident from
+   the client or staff **holds** the payout (`DISPUTED`, `withdrawals.dal.ts`)
+   and the release sweep (`payout-release.service.ts`) sends it 48 h after
+   delivery through Connect; a refused transfer goes back to `scheduled`,
+   never `failed`.
+23. **A JS `Date` inside a raw drizzle `sql` template fails on postgres.js**
+   (`ERR_INVALID_ARG_TYPE`), and a mocked DAL test cannot see it. Compare
+   with a typed operator (`lte(col, date)`) or pass `date.toISOString()` with
+   a `::timestamptz` cast — and run a new raw query once on a real database.
 18. **A box whose number lives elsewhere keeps its own text**
    (`useNumericText`). Re-deriving the text from the number on every
    keystroke turned « 1.0 » into « 1 »: 1.05 t saved as 15 t, 40.05 € as

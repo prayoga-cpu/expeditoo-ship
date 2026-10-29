@@ -1,8 +1,8 @@
-import { and, desc, eq, inArray, isNull, ne, sql, type SQL } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, lte, ne, sql, type SQL } from "drizzle-orm";
 
 import { db } from "@/db";
 import { payments, payouts } from "@/db/schema/payments";
-import { shipments } from "@/db/schema/shipments";
+import { shipmentIncidents, shipments } from "@/db/schema/shipments";
 import { user } from "@/db/schema/users";
 import { carriers } from "@/db/schema/carriers";
 import {
@@ -28,6 +28,11 @@ export type Executor =
  * shown to be paid for.
  */
 function availableTo(carrierUserId: string): SQL {
+  return and(earnedBy(carrierUserId), sql`not ${DISPUTED}`)!;
+}
+
+/** Earned and unclaimed, disputed or not. */
+function earnedBy(carrierUserId: string): SQL {
   return and(
     eq(payouts.carrierId, carrierUserId),
     eq(payouts.status, "scheduled"),
@@ -36,6 +41,28 @@ function availableTo(carrierUserId: string): SQL {
     eq(payments.status, "captured")
   )!;
 }
+
+/**
+ * The incidents that hold a payout (client_feedback_2026_10_29_spec.md §N4):
+ * Nicolas's « held if a problem is reported at delivery ». Unresolved, about
+ * the goods rather than the logistics, and raised by the client's side or by
+ * staff — never the driver's own report, which would let a driver hold their
+ * own pay, and never a delay, an access problem or a breakdown, which are
+ * not reasons to withhold it. An operator resolving the incident releases it.
+ *
+ * This holds the driver's *withdrawal*, not the client's money: the capture
+ * already happened at booking, and nothing here touches `payments`.
+ */
+export const HOLDING_CATEGORIES = ["damage", "cargo_mismatch", "safety", "other"] as const;
+export const HOLDING_REPORTERS = ["shipper", "operator", "admin"] as const;
+
+const DISPUTED = sql`exists (
+  select 1 from ${shipmentIncidents}
+  where ${shipmentIncidents.shipmentId} = ${payouts.shipmentId}
+    and ${shipmentIncidents.status} <> 'RESOLVED'
+    and ${shipmentIncidents.category} in ${sql.raw(`(${HOLDING_CATEGORIES.map((c) => `'${c}'`).join(", ")})`)}
+    and ${shipmentIncidents.reportedByRole} in ${sql.raw(`(${HOLDING_REPORTERS.map((r) => `'${r}'`).join(", ")})`)}
+)`;
 
 export const withdrawalsDal = {
   /** The available balance, and how many deliveries it is made of. */
@@ -49,6 +76,118 @@ export const withdrawalsDal = {
       .innerJoin(shipments, eq(shipments.id, payouts.shipmentId))
       .innerJoin(payments, eq(payments.id, payouts.paymentId))
       .where(availableTo(carrierUserId));
+
+    return row ?? { amountCents: 0, deliveries: 0 };
+  },
+
+  /**
+   * Payouts the automatic release may send (client_feedback_2026_10_29_spec.md
+   * §N3): available exactly as the balance reads it — delivered, captured,
+   * unclaimed, undisputed — and also delivered at least `holdMs` ago, so the
+   * client had time to report a problem; charged on **this** platform's
+   * Stripe account (`source = 'stripe'`, never `pi_mock_`), because an
+   * escalated job's money sits in Expedion's; and owed to a driver whose
+   * Connect account is active.
+   */
+  async releasable(now: Date, holdMs: number, limit: number, tx: Executor = db) {
+    const deliveredBy = new Date(now.getTime() - holdMs);
+    return await tx
+      .select({
+        id: payouts.id,
+        carrierId: payouts.carrierId,
+        shipmentId: payouts.shipmentId,
+        amountCents: payouts.amountCents,
+        currency: payouts.currency,
+        paymentIntentId: payments.stripePaymentIntentId,
+        transferGroup: payments.transferGroup,
+        destination: user.stripeAccountId,
+      })
+      .from(payouts)
+      .innerJoin(shipments, eq(shipments.id, payouts.shipmentId))
+      .innerJoin(payments, eq(payments.id, payouts.paymentId))
+      .innerJoin(user, eq(user.id, payouts.carrierId))
+      .where(
+        and(
+          eq(payouts.status, "scheduled"),
+          isNull(payouts.withdrawalId),
+          eq(shipments.status, "DELIVERED"),
+          lte(shipments.deliveredAt, deliveredBy),
+          eq(payments.status, "captured"),
+          eq(payments.source, "stripe"),
+          sql`${payments.stripePaymentIntentId} is not null`,
+          sql`${payments.stripePaymentIntentId} not like 'pi_mock_%'`,
+          sql`${user.stripeAccountId} is not null`,
+          eq(user.stripeAccountStatus, "active"),
+          sql`not ${DISPUTED}`
+        )
+      )
+      .limit(limit);
+  },
+
+  /**
+   * Takes one payout for the release, or answers undefined when a withdrawal
+   * request or another run got there first. `processing` with no
+   * `withdrawalId` is the release's own claim.
+   */
+  async claimForRelease(payoutId: string, tx: Executor = db) {
+    const [row] = await tx
+      .update(payouts)
+      .set({ status: "processing" })
+      .where(
+        and(
+          eq(payouts.id, payoutId),
+          eq(payouts.status, "scheduled"),
+          isNull(payouts.withdrawalId)
+        )
+      )
+      .returning({ id: payouts.id });
+    return row;
+  },
+
+  /** The transfer went: paid, from the release's own claim only. */
+  async markReleased(payoutId: string, transferId: string, tx: Executor = db) {
+    const [row] = await tx
+      .update(payouts)
+      .set({ status: "paid", stripeTransferId: transferId, paidAt: new Date() })
+      .where(
+        and(
+          eq(payouts.id, payoutId),
+          eq(payouts.status, "processing"),
+          isNull(payouts.withdrawalId)
+        )
+      )
+      .returning({ id: payouts.id });
+    return row;
+  },
+
+  /**
+   * The transfer did not go: back in the balance, as it was. Never `failed`,
+   * which would drop money the driver earned out of what they can withdraw.
+   */
+  async releaseClaim(payoutId: string, reason: string, tx: Executor = db) {
+    await tx
+      .update(payouts)
+      .set({ status: "scheduled", failureReason: reason })
+      .where(
+        and(
+          eq(payouts.id, payoutId),
+          eq(payouts.status, "processing"),
+          isNull(payouts.withdrawalId)
+        )
+      );
+  },
+
+  /** What is earned but held by an open problem report (§N4). */
+  async heldFor(carrierUserId: string, tx: Executor = db) {
+    const [row] = await tx
+      .select({
+        amountCents: sql<number>`coalesce(sum(${payouts.amountCents}), 0)::int`,
+        deliveries: sql<number>`count(*)::int`,
+      })
+      .from(payouts)
+      .innerJoin(shipments, eq(shipments.id, payouts.shipmentId))
+      .innerJoin(payments, eq(payments.id, payouts.paymentId))
+      .where(and(earnedBy(carrierUserId), DISPUTED));
 
     return row ?? { amountCents: 0, deliveries: 0 };
   },
@@ -97,6 +236,8 @@ export const withdrawalsDal = {
         status: payouts.status,
         shipmentStatus: shipments.status,
         paymentStatus: payments.status,
+        // A problem reported after the driver asked still holds it (§N4).
+        disputed: sql<boolean>`${DISPUTED}`,
       })
       .from(payouts)
       .innerJoin(shipments, eq(shipments.id, payouts.shipmentId))

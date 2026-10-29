@@ -18,16 +18,16 @@ document (`EXPEDITOO Client Feedback Consolidated 29.10.2026.pdf`). Spec:
 | B3 | « Directe » tag | 🔧 ❓ | 2.66.0 | « Site Expeditoo »; Léa's question still open |
 | B5 | « Immédiat » badge (48 h « Urgent » kept) | 🔧 | 2.66.0 | Rule chosen: the pickup window has already opened (spec §0 A) |
 | B6 | Negotiation loop | 🔧 | 2.67.0 | Suggested range on /create, requester counter-price, carrier accept / keep / revise (5 rounds) |
-| C1/C2/N3 | Payouts by Stripe | ❓ 🔑 | — | Rail + lawyer; the Stripe account is restricted from creating connected accounts |
+| C1/C2/N3 | Payouts by Stripe | 🔧 🔑 | 2.69.0 | Release sweep built and inert: needs crons (X1), Connect unrestricted on the Stripe account, lawyer's OK, drivers onboarded |
 | C3 | Apple Pay / Google Pay / PayPal | 🔧 🔑 | 2.66.0 | Apple Pay + Google Pay in the accept dialog; register the domain in Stripe. PayPal not built |
 | C4 | Sender address | 🔑 ❓ | — | Needs a domain and its DNS — Nicolas |
 | D2 | Map view + driver search | 🔧 | 2.68.0 | « Carte » on « Mes demandes »; « Ma position », round trip, the area drawn |
 | N1 | Delivery availability before payment | 🔧 | 2.67.0 | Shown in the accept dialog; changing dates after booking not built |
 | N2 | Driver list sorting, period, dates | 🔧 | 2.66.0 | « Mes livraisons » |
-| N4 | Payout held on a reported problem | ⬜ | — | |
+| N4 | Payout held on a reported problem | 🔧 | 2.69.0 | Unresolved goods incident from the client or staff holds that payout |
 | N5 | « Mes paiements » in « Mes livraisons » | 🔧 | 2.66.0 | Carriers only |
-| N6 | Email per payout | ⬜ | — | |
-| N7 | SMS to the driver | ⬜ 🔑 | — | Twilio has no account configured |
+| N6 | Email per payout | 🔧 🔑 | 2.69.0 | At delivery and at transfer; reaches only the owner until C4 |
+| N7 | SMS to the driver | 🔧 🔑 | 2.69.0 | Built; sends nothing until `TWILIO_*` exist |
 | N8 | Route planner | ⬜ | — | |
 | N9 | Airtable import / expiry reminder | ❓ | — | Airtable sync held; the reminder needs X1 |
 | X1 | Scheduled jobs | 🔑 | — | `APP_URL` + `CRON_SECRET`; `a-111-02` publishes on the first run |
@@ -364,6 +364,21 @@ than leaving it in a chat message.
       `0043_offer_proposal_counter` (six nullable or defaulted columns on
       `offers`). All additive. New code on an unmigrated database 500s every
       read of `carriers` and `offers`.
+- [ ] **Twilio for driver texts (2.69.0, N7).** Create the Twilio account
+      (or reuse the Expedion bridge's, once registered), then set
+      `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` and `TWILIO_FROM_NUMBER` in
+      Vercel Production (`vercel env add … production`) and redeploy. A French
+      alphanumeric sender or a French number; until then every text answers
+      `TWILIO_NOT_CONFIGURED` and nothing is sent.
+- [ ] **Automatic payouts (2.69.0, N3) — three switches, in this order.**
+      (1) The lawyer's OK on paying drivers through Stripe Connect.
+      (2) Stripe dashboard: clear the restriction on creating connected
+      accounts (the payout onboarding has answered « temporarily restricted »)
+      and enable Express accounts for France. (3) The scheduled jobs (X1).
+      Then one driver onboards from « Mes paiements », delivers a small
+      direct job, and 48 h later Admin → Paramètres → « Tâches planifiées »
+      shows `release-payouts` green and the payout reads paid. That first one
+      is the first real Connect transfer — watch it in Stripe.
 - [ ] **Register the payment-method domain for Apple Pay (2.66.0, C3).**
       Stripe → Settings → Payment method domains → add
       `expeditoo-ship-five.vercel.app` (and any custom domain later). Until it
@@ -825,6 +840,56 @@ than leaving it in a chat message.
       Until then its application page says driver access is off.
 
 ---
+
+## ✅ 2026-10-30 — Payouts: Held on a Reported Problem, an Email Each Time, a Text to the Driver, and an Automatic Release That Waits for Connect (2.69.0)
+
+_Nicolas, answer 7: « Automatic payout when the status becomes Delivered.
+Held if a problem is reported at delivery. IBAN collected at driver signup. A
+« My payments » button inside « My deliveries ». An email to the driver for
+every payout. » And the added feature N7: « SMS to the driver when the
+requester sends a message, and when the requester accepts the offer. »_
+
+Spec: `docs/specs/client_feedback_2026_10_29_spec.md` §N3, §N4, §N6, §N7, §0 M–O.
+
+### What changed
+
+- **N4** — `DISPUTED` in `withdrawals.dal.ts`; `availableFor`/`availableRows`
+  exclude, `heldFor` sums, `claimedPayouts` flags; `payoutStanding` gains
+  `held`. This **reverses part of a documented rule** (« an incident is a
+  report, not a lever », `shipments.ts`) at the client's request, narrowed to
+  the driver's withdrawal: the comment there now records the exception.
+- **N6** — `payoutNoticesService` (`earned`, `paid`) and `PayoutEmail`.
+- **N7** — `driverSmsService` (`onNewMessage`, `onOfferAccepted`) on the
+  bridge's `expedionSmsService.send`; `messagesDAL.lastMessageAtBefore` for
+  the 30-minute quiet.
+- **N3** — `payoutReleaseService.releaseDue` + `GET /api/cron/release-payouts`
+  (`CRON_JOBS`, `scheduled-jobs.yml` at :20). Compare-and-set at each step;
+  a refused transfer goes back to `scheduled`, never `failed`. Connect holds
+  the IBAN — « IBAN collected at signup » is Stripe's hosted onboarding, so
+  gotcha 5 (never persist a full IBAN) still holds.
+- **Found running the new SQL on a real database:** a JS `Date` inside a raw
+  `sql` template is refused by postgres.js (`ERR_INVALID_ARG_TYPE`). That
+  pattern was in **2.66.0's `getQuotePage`**, so picking a period in
+  « Récents » would have answered 500 — caught before any deploy. Fixed there
+  (ISO string, `::timestamptz`) and avoided in the new queries (typed
+  `lte`/`lt`). Verified on seeded rows: the October window returns the two
+  October quotes in ascending order, the unwindowed page newest first.
+
+### Verification
+
+- `npx tsc --noEmit`: 0 errors. Server suite: 83 files, 1,347 tests.
+- New tests: `payout-release` (5), `payout-notices` (4), `driver-sms` (6),
+  `withdrawals.service` (+4), `WithdrawalPanel` (+2).
+- Every new raw query executed against a scratch database built from all
+  43 migrations.
+
+### Known limits
+
+- **N3 has never moved money**, in any mode: Stripe test-mode Connect needs a
+  connected test account, and this session had none. Treat the first release
+  in production as the first test (Operator to-do).
+- N6 mail reaches only the owner until C4; N7 sends nothing until Twilio is
+  configured.
 
 ## ✅ 2026-10-30 — « Carte » Is a Map: « Mes demandes » Beside Its Routes, and a Board Search From Where You Are (2.68.0)
 

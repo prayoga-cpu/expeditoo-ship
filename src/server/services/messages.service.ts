@@ -9,6 +9,7 @@ import {
 import { nanoid } from "nanoid";
 import { publishNewMessage } from "./message-publish";
 import { threadOffersService } from "./thread-offers.service";
+import { driverSmsService } from "./driver-sms.service";
 
 export const messagesService = {
   /**
@@ -87,6 +88,17 @@ export const messagesService = {
       content: input.content,
       senderInfo,
     });
+
+    // A text to the driver when their client writes (§N7 of the 29 October
+    // spec). Not awaited: the message is sent whatever Twilio does.
+    void driverSmsService
+      .onNewMessage({
+        conversationId: conversationId!,
+        senderId,
+        recipientId,
+        sentAt: message.createdAt ? new Date(message.createdAt) : new Date(),
+      })
+      .catch((e) => console.error("driver message SMS failed", e));
 
     return {
       message,

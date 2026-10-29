@@ -7,7 +7,7 @@ import {
   type InsertConversation,
   type InsertMessage,
 } from "@/db/schema/messages";
-import { eq, and, sql, inArray, gt, asc } from "drizzle-orm";
+import { eq, and, sql, inArray, gt, lt, asc } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 export const messagesDAL = {
@@ -283,6 +283,29 @@ export const messagesDAL = {
         }
       }
     });
+  },
+
+  /**
+   * When this sender last wrote in this conversation before `before`, or
+   * null — what keeps a burst of messages from becoming a burst of SMS
+   * (client_feedback_2026_10_29_spec.md §N7).
+   */
+  async lastMessageAtBefore(
+    conversationId: string,
+    senderId: string,
+    before: Date
+  ): Promise<Date | null> {
+    const [row] = await db
+      .select({ at: sql<Date | null>`max(${messages.createdAt})` })
+      .from(messages)
+      .where(
+        and(
+          eq(messages.conversationId, conversationId),
+          eq(messages.senderId, senderId),
+          lt(messages.createdAt, before)
+        )
+      );
+    return row?.at ? new Date(row.at) : null;
   },
 
   /**

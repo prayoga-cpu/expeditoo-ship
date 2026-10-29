@@ -28,6 +28,9 @@ is in §0 so it can be overruled cheaply.
 | I | B1 « a new state between assigned and paid » | **Not a status.** `offers.proposed_at` marks Expeditoo's pick; the requester pays through the existing accept dialog, which is the award | A new listing or shipment status would need every reader of those enums to learn it; a recommendation that awards nothing needs none of them |
 | J | B6 who negotiates | The **requester** sends a counter-price; the **carrier** answers (accept / keep / another price). Direct requests only; five counter-prices per offer | An escalated job's price was paid in Expedion; a cap keeps the loop from becoming a chat |
 | K | B6 « suggested price range » | The platform's own rate card (`pricingService`, the one that prices Expedion quotes), ±15 %, rounded to 5 € — **only** where that engine applies (≤ 100 kg, ≤ 300 cm) | A range from an engine that does not price furniture would be invented |
+| M | N4 what « a problem reported at delivery » is | An **unresolved** incident on the job, category `damage`, `cargo_mismatch`, `safety` or `other`, reported by the requester (`shipper`) or staff | The goods, not the logistics; and never the driver's own report, which would let a driver hold their own pay |
+| N | N3 « automatic payout when the status becomes Delivered » | Released **48 h after** delivery by an hourly sweep, through Stripe Connect, site lane only | The client needs time to report a problem, or the hold of N4 could never act; an escalated job's money is in Expedion's Stripe account |
+| O | N7 when to text | The requester's message to a driver about the job, at most one text per 30 minutes per thread; every accepted offer. Never the message's words | An SMS sits on a lock screen |
 | L | N1 « changeable later by either side » | **Not built** in 2.67.0: the accept dialog shows the delivery days and times before paying; changing dates after booking still goes through the conversation | A reschedule flow touches the shipment dates, the driver's plan and the Expedion write-back; it is its own release |
 
 ---
@@ -246,6 +249,62 @@ after booking is not built (§0 L).
 - The radius in km, the optional arrival and the corridor were already there
   (`board_route_search_spec.md`).
 
+## N3. Automatic payout, after the hold
+
+- `payoutReleaseService.releaseDue(now)` from `GET /api/cron/release-payouts`
+  (hourly at :20, `scheduled-jobs.yml`; registered in `CRON_JOBS`, so
+  « Tâches planifiées » shows it).
+- **Releasable** (`withdrawalsDal.releasable`): what the balance would count
+  (delivered, captured, unclaimed, undisputed) **and** delivered ≥
+  `PAYOUT_HOLD_HOURS` = 48 ago, **and** `payments.source = 'stripe'` with a
+  real intent (never `pi_mock_`), **and** the driver's `user.stripe_account_id`
+  set with `stripe_account_status = 'active'`. 50 per run.
+- Each: `claimForRelease` (`scheduled` → `processing`, no `withdrawalId`; a
+  withdrawal request that claimed it first wins); `stripe.transfers.create`
+  to the driver's account, `source_transaction` = the client's charge so it
+  may go before funds settle, idempotency key `payout_release_<id>`;
+  `markReleased` (`processing` → `paid`, transfer id, `paid_at`) and the
+  driver's « paid » email. A refused transfer → `releaseClaim` (back to
+  `scheduled`, reason kept) — **never `failed`**, which would drop earned money
+  out of the balance.
+- **Inert** until the crons run (X1), the platform account may create
+  connected accounts, and a driver finishes Connect onboarding. Until then
+  every payout stays in the withdrawal flow as before.
+
+## N4. A reported problem holds the payout
+
+- `DISPUTED` (`withdrawals.dal.ts`): an incident on the payout's shipment with
+  `status <> 'RESOLVED'`, category in `damage | cargo_mismatch | safety |
+  other`, `reported_by_role` in `shipper | operator | admin`.
+- `availableFor` / `availableRows` exclude disputed payouts, so a withdrawal
+  request cannot claim them; `heldFor` sums them and the earnings screen says
+  « {amount} en attente : un problème a été signalé… ». `claimedPayouts`
+  carries `disputed`; `payoutStanding` reads it as `held` — not payable, not
+  void — so recording a transfer for a request whose job was disputed after
+  the request is refused (`WITHDRAWAL_HAS_INVALID_PAYOUT`) and a refusal puts
+  it back in the balance. The release sweep (N3) excludes it too.
+- Resolving the incident (operator, `/admin/incidents`) releases it. Nothing
+  here touches `payments`: the client's money was captured at booking.
+
+## N6. An email for every payout
+
+`payoutNoticesService`: `earned` from `settleDelivery` after `schedulePayout`
+(in-app + `PayoutEmail` kind `earned`); `paid` after `mark_paid` and after an
+automatic release (kind `paid`, the transfer reference). Best-effort; never
+thrown. The email reaches only the Resend account's own address until C4.
+
+## N7. Texts to the driver
+
+`driverSmsService` over the bridge's Twilio sender:
+- `onNewMessage` from `messagesService.sendMessage`, not awaited: only when the
+  sender is the conversation's job's `shipperId` and the recipient has a
+  `carriers` row with a phone; skipped when the same sender wrote in the same
+  thread less than `MESSAGE_SMS_QUIET_MS` = 30 min before. The text names the
+  job and links the thread — never the message.
+- `onOfferAccepted` from `notifyAwardOutcome`: the winner, a link to the job.
+- Answers `TWILIO_NOT_CONFIGURED` and sends nothing until the `TWILIO_*`
+  variables exist.
+
 ---
 
 ## Test coverage required
@@ -290,4 +349,17 @@ after booking is not built (§0 L).
   link, a pin picking its row, the unpinned count.
 - `RouteSearchBar.test.tsx`: « Ma position » rounded with a radius, « Retour au
   départ », no thumbnail without a departure.
+- `withdrawals.service.test.ts`: `held` standing, a transfer refused for a job
+  disputed after the request, the held total in the balance.
+- `WithdrawalPanel.test.tsx`: the held line, and none when nothing is held.
+- `payout-release.service.test.ts`: the hold passed to the query, the transfer
+  funded from the charge with an idempotency key, a payout claimed meanwhile
+  skipped, a refused transfer returned to the balance, nothing due.
+- `payout-notices.service.test.ts`: earned in-app + email, paid with the
+  reference, failures contained, no email without an address.
+- `driver-sms.service.test.ts`: requester → driver only, no job, not a driver,
+  the 30-minute quiet, the award text.
+- All new raw SQL run on a fresh database with every migration applied
+  (`releasable`, `heldFor`, `claimedPayouts`, `claimForRelease`,
+  `lastMessageAtBefore`, `getQuotePage` with and without a window).
 

@@ -14,6 +14,26 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.69.0] - 2026-10-30 · feat
+
+- **Drivers: a payout waits while the client reports a problem.** If the
+  client (or support) reports damage, a cargo that is not what was described,
+  a safety issue or another problem with the goods, that job's payment is
+  shown as « en attente » on « Mes paiements » and cannot be withdrawn until
+  support resolves the report. Your own reports never hold your pay.
+- **Drivers get an email for every payout**: when a delivery adds to what you
+  are owed, and when the transfer is made, with its reference.
+- **Drivers get a text message** when the client writes to you about a job
+  (at most one every 30 minutes per conversation), and when your offer is
+  accepted. The text never contains the message itself.
+- **Automatic payouts are ready, and switched off until the bank side is set
+  up.** Once Stripe payouts are enabled and your payout account is connected,
+  your share of a delivered job is sent to your bank 48 hours after delivery
+  if no problem was reported. Until then, payments are requested and paid as
+  today.
+- Admins: in Supervision, choosing a period in « Récents » works — it failed
+  in the previous build before it ever went live.
+
 ## [2.68.0] - 2026-10-30 · feat
 
 - **« Mes demandes » can be shown on a map.** Pick « Carte »: your requests

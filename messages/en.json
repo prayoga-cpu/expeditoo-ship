@@ -3985,7 +3985,8 @@
       "confirm": "Refuse — transfer not sent"
     },
     "payTo": "Transfer to IBAN •••• {iban} · BIC •••• {bic} — check it against the RIB in the driver’s file.",
-    "payToMissing": "No IBAN on file: ask the driver for it before any transfer."
+    "payToMissing": "No IBAN on file: ask the driver for it before any transfer.",
+    "held": "{amount} held: a problem was reported on {count, plural, one {# delivery} other {# deliveries}}. It becomes available as soon as support resolves it."
   },
   "platformSettings": {
     "title": "Settings",

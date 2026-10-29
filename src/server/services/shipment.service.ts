@@ -1,4 +1,5 @@
 import { nanoid } from "nanoid";
+import { payoutNoticesService } from "@/server/services/payout-notices.service";
 import { shipmentsDal } from "@/server/dal/shipments.dal";
 import { carriersDal } from "@/server/dal/carriers.dal";
 import { listingsDal } from "@/server/dal/listings.dal";
@@ -580,7 +581,11 @@ async function settleDelivery(shipmentId: string, carrierId: string) {
       return;
     }
 
-    await paymentsService.schedulePayout(shipmentId, carrierId);
+    const payout = await paymentsService.schedulePayout(shipmentId, carrierId);
+
+    // « An email to the driver for every payout » (§N6 of the 29 October
+    // spec). Its own failure is contained inside the notice.
+    await payoutNoticesService.earned(carrierId, payout.amountCents);
 
     // The paperwork, in its own try: an invoice that fails to write must not
     // strand a captured payment (billing_documents_spec.md §4.1). It is

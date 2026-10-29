@@ -22,6 +22,7 @@ on:
     - cron: "*/5 * * * *" # publish-scheduled-listings
     - cron: "0 6 * * *" # carrier-documents
     - cron: "0 3 * * 0" # cleanup-images
+    - cron: "20 * * * *" # release-payouts
   workflow_dispatch:
     inputs:
       job:
@@ -34,6 +35,7 @@ on:
           - publish-scheduled-listings
           - carrier-documents
           - cleanup-images
+          - release-payouts
 
 # A long sweep must never overlap the next tick of the same sweep.
 concurrency:
@@ -58,6 +60,7 @@ jobs:
             "publish-scheduled-listings" | "*/5 * * * *") path="/api/cron/publish-scheduled-listings" ;;
             "carrier-documents"  | "0 6 * * *")    path="/api/cron/carrier-documents" ;;
             "cleanup-images"     | "0 3 * * 0")    path="/api/cron/cleanup-images?dryRun=false" ;;
+            "release-payouts"    | "20 * * * *")   path="/api/cron/release-payouts" ;;
             *) echo "::error::No endpoint mapped to trigger '${MANUAL:-$SCHEDULE}'"; exit 1 ;;
           esac
           echo "path=$path" >> "$GITHUB_OUTPUT"

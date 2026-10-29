@@ -376,6 +376,15 @@ export const shipmentPhotos = pgTable(
 // unilateral freeze on the other's money with no adjudication in between. The
 // operator queue is the adjudication step.
 //
+// One deliberate exception since 2.69.0, at the client's request (« held if a
+// problem is reported at delivery », client_feedback_2026_10_29_spec.md §N4):
+// an unresolved report about the *goods*, raised by the client's side or by
+// staff, keeps that job's payout out of the driver's withdrawable balance
+// (`withdrawals.dal.ts`, `DISPUTED`). It holds the driver's withdrawal only —
+// the client's money was captured at booking and is untouched — and the
+// driver's own reports never hold their own pay. Resolving the incident is
+// what releases it, so the operator queue stays the adjudication step.
+//
 // See docs/specs/incident_reporting_spec.md.
 
 export const shipmentIncidentCategoryEnum = pgEnum(

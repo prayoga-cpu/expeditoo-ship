@@ -3985,7 +3985,8 @@
       "confirm": "Refuser — virement non envoyé"
     },
     "payTo": "Virement vers l’IBAN •••• {iban} · BIC •••• {bic} — vérifiez-le sur le RIB du dossier du chauffeur.",
-    "payToMissing": "Aucun IBAN renseigné : demandez-le au chauffeur avant tout virement."
+    "payToMissing": "Aucun IBAN renseigné : demandez-le au chauffeur avant tout virement.",
+    "held": "{amount} en attente : un problème a été signalé sur {count, plural, one {# livraison} other {# livraisons}}. Ce montant sera disponible dès que le support l'aura résolu."
   },
   "platformSettings": {
     "title": "Paramètres",

@@ -30,6 +30,8 @@ vi.mock("../../hooks/useWithdrawals", () => ({
 const BALANCE: WithdrawalBalance = {
   availableCents: 24_000,
   deliveries: 2,
+  heldCents: 0,
+  heldDeliveries: 0,
   minimumCents: 2_000,
   canRequest: true,
   openRequest: null,
@@ -258,5 +260,20 @@ describe("WithdrawalPanel, with nothing earned", () => {
 
     expect(screen.getByText("Earnings unavailable")).toBeInTheDocument();
     expect(screen.queryByText("Nothing earned yet")).toBeNull();
+  });
+});
+
+/** client_feedback_2026_10_29_spec.md §N4 — pay held by a reported problem. */
+describe("WithdrawalPanel · held payouts", () => {
+  it("says how much a reported problem is holding", () => {
+    balance.data = { ...BALANCE, heldCents: 9_000, heldDeliveries: 1 };
+    renderWith();
+    expect(screen.getByText(/held: a problem was reported/)).toBeInTheDocument();
+  });
+
+  it("says nothing when nothing is held", () => {
+    balance.data = BALANCE;
+    renderWith();
+    expect(screen.queryByText(/held: a problem was reported/)).not.toBeInTheDocument();
   });
 });

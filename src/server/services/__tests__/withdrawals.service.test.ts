@@ -45,6 +45,7 @@ const claimed = (over: Partial<ClaimedPayoutFacts & { id: string; amountCents: n
   status: "processing" as const,
   shipmentStatus: "DELIVERED" as const,
   paymentStatus: "captured" as const,
+  disputed: false,
   ...over,
 });
 
@@ -54,6 +55,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   Object.assign(withdrawalsDal, {
     availableFor: vi.fn().mockResolvedValue({ amountCents: 16_200, deliveries: 1 }),
+    heldFor: vi.fn().mockResolvedValue({ amountCents: 0, deliveries: 0 }),
     availableRows: vi
       .fn()
       .mockResolvedValue([{ id: "po-1", amountCents: 16_200 }]),
@@ -109,6 +111,10 @@ describe("payoutStanding", () => {
     ["whose payment row is gone", { paymentStatus: null }, "void"],
     ["already voided by a refund", { status: "cancelled" }, "void"],
     ["already paid", { status: "paid" }, "void"],
+    // Owed, but not payable while the client's problem report is open
+    // (client_feedback_2026_10_29_spec.md §N4).
+    ["delivered, with a problem reported", { disputed: true }, "held"],
+    ["refunded, with a problem reported", { disputed: true, paymentStatus: "refunded" }, "void"],
   ] as const)("a payout %s is %s", (_label, over, expected) => {
     expect(payoutStanding(claimed(over))).toBe(expected);
   });
@@ -199,6 +205,12 @@ describe("withdrawalsService.request", () => {
 // ========================================
 
 describe("withdrawalsService.getBalance", () => {
+  it("says how much is held by an open problem report (§N4)", async () => {
+    vi.mocked(withdrawalsDal.heldFor).mockResolvedValue({ amountCents: 9_000, deliveries: 1 });
+    const balance = await withdrawalsService.getBalance("carrier-1");
+    expect(balance).toMatchObject({ heldCents: 9_000, heldDeliveries: 1 });
+  });
+
   it("will not offer a request while one is already open", async () => {
     Object.assign(withdrawalsDal, {
       ...withdrawalsDal,
@@ -647,6 +659,13 @@ describe("withdrawalsService.decide — a yes that loses the race", () => {
     expect(await codeFrom(() => yes("mark_paid"))).toBe(
       "WITHDRAWAL_ALREADY_SETTLED"
     );
+  });
+
+  it("refuses to record a transfer for a job with a problem reported since the request", async () => {
+    readAs("approved", "approved");
+    vi.mocked(withdrawalsDal.claimedPayouts).mockResolvedValue([claimed({ disputed: true })]);
+
+    expect(await codeFrom(() => yes("mark_paid"))).toBe("WITHDRAWAL_HAS_INVALID_PAYOUT");
   });
 
   it("keeps the refusal reason when the request is still open", async () => {

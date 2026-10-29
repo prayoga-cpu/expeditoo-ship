@@ -133,6 +133,15 @@ export function WithdrawalPanel() {
             </div>
           </div>
 
+          {data.heldCents > 0 && (
+            <p className="rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm">
+              {t("held", {
+                amount: formatCurrency(data.heldCents),
+                count: data.heldDeliveries,
+              })}
+            </p>
+          )}
+
           {open ? (
             <div className="rounded-lg border border-border bg-input p-3 text-sm">
               <div className="flex flex-wrap items-center gap-2">

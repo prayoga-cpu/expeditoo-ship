@@ -8,6 +8,7 @@ import { ShipmentUpdateEmail } from "@/server/emails/ShipmentUpdateEmail";
 import { ConfirmationRequestEmail } from "@/server/emails/ConfirmationRequestEmail";
 import { TransportRequestReceivedEmail } from "@/server/emails/TransportRequestReceivedEmail";
 import { DriverApplicationSubmittedEmail } from "@/server/emails/DriverApplicationSubmittedEmail";
+import { PayoutEmail, type PayoutEmailProps } from "@/server/emails/PayoutEmail";
 import { render } from "@react-email/components";
 
 export const emailService = {
@@ -222,6 +223,19 @@ export const emailService = {
    * `listingsService.createListing` the moment a job publishes
    * (docs/specs/listing_posted_feedback_spec.md §2.2).
    */
+  /** The driver hears about every payout (§N6 of the 29 October spec). */
+  async sendPayoutEmail(to: string, params: PayoutEmailProps) {
+    const emailHtml = await render(PayoutEmail(params));
+    return this.sendEmail({
+      to,
+      subject:
+        params.kind === "earned"
+          ? `${params.amountLabel} ajoutés à votre solde Expeditoo`
+          : `Virement de ${params.amountLabel} effectué`,
+      html: emailHtml,
+    });
+  },
+
   /** An admin is told a driver application waits for review (§REQ-07). */
   async sendDriverApplicationSubmittedEmail(
     to: string,

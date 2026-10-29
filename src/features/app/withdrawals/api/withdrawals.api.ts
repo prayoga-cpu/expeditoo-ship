@@ -17,6 +17,9 @@ export interface Withdrawal {
 export interface WithdrawalBalance {
   availableCents: number;
   deliveries: number;
+  /** Earned but held by an open problem report (client_feedback_2026_10_29_spec.md §N4). */
+  heldCents: number;
+  heldDeliveries: number;
   minimumCents: number;
   canRequest: boolean;
   openRequest: Withdrawal | null;
