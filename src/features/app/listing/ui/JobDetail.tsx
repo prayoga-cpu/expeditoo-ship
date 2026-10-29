@@ -43,6 +43,7 @@ import { ListingReference } from "./ListingReference";
 import { AvailableCarriersPanel } from "./AvailableCarriersPanel";
 import { AvailabilityLine } from "./AvailabilityLine";
 import { OfferCard } from "./OfferCard";
+import { BookingSummary } from "./BookingSummary";
 import { DraftActions } from "./DraftActions";
 import { STATUS_TONE, displayStatus } from "../statusTone";
 import { UrgencyBadge } from "./UrgencyBadge";
@@ -103,6 +104,14 @@ export function JobDetail({
   // §5.2) - so the rule is written once and read twice.
   const canAct = (isShipper || canAward) && job?.status === "open";
 
+  // A direct request is the requester's to award, so the operator recommends
+  // and the requester negotiates (client_feedback_2026_10_29_spec.md §B1, §B6).
+  const directOpen = job?.origin === "direct" && job?.status === "open";
+  const negotiation = {
+    canPropose: isOperator && directOpen,
+    canCounter: isShipper && directOpen,
+  };
+
   // react-query dedupes this with the panel's own read, so the badge costs no
   // second request; `enabled` is what keeps it from firing at all for a viewer
   // who never sees the tab.
@@ -121,6 +130,7 @@ export function JobDetail({
       listingId={listingId}
       viewerId={viewerId}
       canAccept={canAct}
+      negotiation={negotiation}
     />
   );
 
@@ -193,11 +203,13 @@ function JobDetailsTab({
   listingId,
   viewerId,
   canAccept,
+  negotiation,
 }: {
   job: Job;
   listingId: string;
   viewerId: string | null;
   canAccept: boolean;
+  negotiation: Negotiation;
 }) {
   // Only its author can open a request not yet live (`getListing`), and
   // nobody has bid on it: what it needs is a way to finish it, not an empty
@@ -212,7 +224,12 @@ function JobDetailsTab({
       <JobLoad job={job} />
       {!unpublished && (
         <>
-          <JobOffers job={job} listingId={listingId} canAccept={canAccept} />
+          <JobOffers
+            job={job}
+            listingId={listingId}
+            canAccept={canAccept}
+            negotiation={negotiation}
+          />
           <JobBidSection job={job} viewerId={viewerId} />
         </>
       )}
@@ -383,14 +400,22 @@ function JobLoad({ job }: { job: Job }) {
   );
 }
 
+/** Who may recommend an offer (§B1) or send a price back (§B6). */
+interface Negotiation {
+  canPropose: boolean;
+  canCounter: boolean;
+}
+
 function JobOffers({
   job,
   listingId,
   canAccept,
+  negotiation,
 }: {
   job: Job;
   listingId: string;
   canAccept: boolean;
+  negotiation: Negotiation;
 }) {
   const t = useTranslations("myJobs.detail");
   const [sort, setSort] = useState("price_asc");
@@ -424,6 +449,7 @@ function JobOffers({
         offers={offers}
         job={job}
         canAccept={canAccept}
+        negotiation={negotiation}
         isAccepting={acceptOffer.isPending}
         // Every accept goes through the dialog: it shows what will be debited
         // and takes the card, or confirms there is nothing to pay
@@ -444,6 +470,15 @@ function JobOffers({
           onConfirm={(paymentIntentId) =>
             acceptOffer.mutateAsync({ ...accepting, paymentIntentId })
           }
+          booking={(() => {
+            const offer =
+              offers?.scope === "full"
+                ? offers.offers.find((o) => o.id === accepting.offerId)
+                : undefined;
+            return offer ? (
+              <BookingSummary job={job} offer={offer} slotId={accepting.slotId} />
+            ) : null;
+          })()}
         />
       )}
     </section>
@@ -676,12 +711,14 @@ function OfferSection({
   offers,
   job,
   canAccept,
+  negotiation,
   isAccepting,
   onAccept,
 }: {
   offers: ReturnType<typeof useJobOffers>["data"];
   job: Job;
   canAccept: boolean;
+  negotiation: Negotiation;
   isAccepting: boolean;
   onAccept: (offerId: string, slotId?: string) => void;
 }) {
@@ -718,6 +755,8 @@ function OfferSection({
           offer={offer}
           budgetCents={job.budgetCents}
           canAccept={canAccept}
+          canPropose={negotiation.canPropose}
+          canCounter={negotiation.canCounter}
           isAccepting={isAccepting}
           isLowest={offer.priceCents === lowest}
           onAccept={onAccept}

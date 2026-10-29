@@ -209,6 +209,13 @@ export interface Offer {
   createdAt: string;
   carrier: OfferCarrier;
   vehicle: OfferVehicle;
+  /** Expeditoo's pick on a direct request — client_feedback_2026_10_29_spec.md §B1. */
+  proposedAt: string | null;
+  /** The requester's counter-price waiting on the carrier (§B6), or null. */
+  counterPriceCents: number | null;
+  counterNote: string | null;
+  counteredAt: string | null;
+  counterRounds: number;
 }
 
 /**

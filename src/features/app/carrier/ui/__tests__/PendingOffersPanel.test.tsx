@@ -54,6 +54,11 @@ const slot = (id: string, day: string, period: "morning" | "afternoon" | "evenin
 });
 
 const OFFER: PendingOffer = {
+  proposedAt: null,
+  counterPriceCents: null,
+  counterNote: null,
+  counteredAt: null,
+  counterRounds: 0,
   id: "off_1",
   listingId: "job_1",
   priceCents: 18_000,

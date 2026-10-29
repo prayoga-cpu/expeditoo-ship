@@ -16,6 +16,7 @@ import { parseDayString } from "@/lib/availability-window";
 import { formatCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 import type { Offer, OfferSlot } from "../types";
+import { OfferNegotiation } from "./OfferNegotiation";
 
 interface OfferCardProps {
   offer: Offer;
@@ -25,6 +26,10 @@ interface OfferCardProps {
   isAccepting: boolean;
   isLowest: boolean;
   onAccept: (offerId: string, slotId?: string) => void;
+  /** An operator on a direct request: « Proposer au client » (§B1). */
+  canPropose?: boolean;
+  /** The requester of a direct request: « Contre-proposition » (§B6). */
+  canCounter?: boolean;
 }
 
 const euros = formatCurrency;
@@ -36,8 +41,11 @@ export function OfferCard({
   isAccepting,
   isLowest,
   onAccept,
+  canPropose = false,
+  canCounter = false,
 }: OfferCardProps) {
   const t = useTranslations("listing.bid.offerCard");
+  const tn = useTranslations("negotiation");
   const locale = useLocale();
   const dateLocale = locale === "fr" ? fr : enUS;
 
@@ -76,7 +84,10 @@ export function OfferCard({
     <Card
       className={cn(
         "p-4 sm:p-5 transition-colors duration-200",
-        offer.status === "accepted" && "border-success ring-1 ring-success/30"
+        offer.status === "accepted" && "border-success ring-1 ring-success/30",
+        offer.status === "pending" &&
+          offer.proposedAt &&
+          "border-primary ring-1 ring-primary/30"
       )}
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -99,6 +110,12 @@ export function OfferCard({
               )}
               {isLowest && pending && (
                 <Badge variant="secondary">{t("lowest")}</Badge>
+              )}
+              {pending && offer.proposedAt && (
+                <Badge className="bg-primary/15 text-primary border-primary/30">
+                  <BadgeCheck className="mr-1 h-3 w-3" />
+                  {tn("proposedBadge")}
+                </Badge>
               )}
             </div>
 
@@ -223,13 +240,22 @@ export function OfferCard({
             >
               {isAccepting
                 ? t("accepting")
-                : choosable
-                  ? t("acceptSlot")
-                  : t("accept")}
+                : offer.proposedAt
+                  ? tn("payToConfirm")
+                  : choosable
+                    ? t("acceptSlot")
+                    : t("accept")}
             </Button>
           )}
         </div>
       </div>
+
+      {canAccept && pending && offer.proposedAt && (
+        <p className="mt-3 text-sm text-primary">{tn("proposedForYou")}</p>
+      )}
+      {(canPropose || canCounter) && (
+        <OfferNegotiation offer={offer} canPropose={canPropose} canCounter={canCounter} />
+      )}
     </Card>
   );
 }

@@ -14,6 +14,30 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.67.0] - 2026-10-30 · feat
+
+Nicolas's answers of 28–29 October, part two: choosing and negotiating.
+
+- **Admins can pick the transporter for a client's request.** On a request
+  posted on the site, « Proposer au client » marks one offer as Expeditoo's
+  choice. The client sees it outlined, labelled « Choix Expeditoo », with a
+  « Payer pour confirmer » button: nothing is booked and no card is touched
+  until they pay.
+- **Clients can make a counter-offer.** On any offer for their request,
+  « Contre-proposition » sends the transporter another price with a short
+  note. The transporter accepts it, keeps their price, or answers with a new
+  one, from « Mes trajets ». Up to five rounds per offer; the price you pay is
+  the one on the offer when you accept.
+- **A suggested price when posting a request.** For parcels the platform can
+  price (up to 100 kg), the budget step shows « Prix conseillé » with a range
+  and a one-tap « Utiliser ».
+- **Before paying, the payment window shows what you are booking**: the pickup
+  slot, the delivery date the transporter promised, and the delivery days and
+  times you gave when posting.
+- If a transporter changes their price while you are paying, the payment is
+  refused and you are told to reopen the offer — you are never charged a price
+  you were not shown.
+
 ## [2.66.0] - 2026-10-29 · feat
 
 Nicolas's answers of 28–29 October, and the driver field test.

@@ -7,7 +7,7 @@ import {
   type OfferStatus,
 } from "@/db/schema/offers";
 import { listings } from "@/db/schema/listings";
-import { and, asc, desc, eq, min, ne, sql, count } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, min, ne, sql, count } from "drizzle-orm";
 
 /**
  * Either the base client or an open transaction. The accept path runs several
@@ -175,6 +175,44 @@ export const offersDal = {
       await offersDal.incrementListingOffersCount(listingId, -1, tx);
     }
     return withdrawn.length;
+  },
+
+  /**
+   * Writes the proposal and negotiation columns (client_feedback_2026_10_29
+   * _spec.md §B1, §B6) — and `priceCents`, which a counter-offer's answer
+   * moves. Only while the offer is still `pending`: an answer that loses a
+   * race to the award changes nothing, and the caller reads `undefined`.
+   */
+  async updateNegotiation(
+    id: string,
+    data: Partial<
+      Pick<
+        InsertOffer,
+        | "priceCents"
+        | "proposedAt"
+        | "proposedBy"
+        | "counterPriceCents"
+        | "counterNote"
+        | "counteredAt"
+        | "counterRounds"
+      >
+    >,
+    tx: Executor = db
+  ) {
+    const [row] = await tx
+      .update(offers)
+      .set({ ...data, updatedAt: new Date() })
+      .where(and(eq(offers.id, id), eq(offers.status, "pending")))
+      .returning();
+    return row;
+  },
+
+  /** Clears Expeditoo's pick on every other offer of a job (§B1: one per job). */
+  async clearProposalsForListing(listingId: string, tx: Executor = db) {
+    await tx
+      .update(offers)
+      .set({ proposedAt: null, proposedBy: null, updatedAt: new Date() })
+      .where(and(eq(offers.listingId, listingId), isNotNull(offers.proposedAt)));
   },
 
   async updateStatus(id: string, status: OfferStatus, tx: Executor = db) {

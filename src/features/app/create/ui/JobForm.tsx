@@ -22,6 +22,8 @@ import {
 import { Stepper } from "@/components/Stepper";
 import { InlineLoader } from "@/components/ui/page-loader";
 import { NUMERIC_RULES } from "@/lib/numeric-input";
+import { formatCurrency } from "@/lib/currency";
+import { usePriceSuggestion } from "../hooks/usePriceSuggestion";
 import { PhotoDropzone } from "./PhotoDropzone";
 import { FieldError } from "./FieldError";
 import { SizeField } from "./SizeField";
@@ -646,7 +648,26 @@ function BudgetStep({
   onEditDates: () => void;
 }) {
   const t = useTranslations("create.budget");
-  const { register, formState } = form;
+  const { register, formState, setValue, watch } = form;
+
+  // « Prix conseillé » from the platform's own rate card (§B6 of the 29
+  // October spec). Advice, not a price: the requester types their own.
+  const { data: suggestion } = usePriceSuggestion({
+    pickup: watch("pickup") ?? {},
+    dropoff: watch("dropoff") ?? {},
+    weightBracket: watch("weightBracket"),
+    exactWeightKg: watch("exactWeightKg") as string | undefined,
+    sizeMode: watch("sizeMode"),
+    sizePreset: watch("sizePreset"),
+    lengthCm: watch("lengthCm") as string | undefined,
+    widthCm: watch("widthCm") as string | undefined,
+    heightCm: watch("heightCm") as string | undefined,
+  });
+  const euros = (cents: number) =>
+    formatCurrency(cents, { fractionDigits: 0 });
+  const middle = suggestion
+    ? Math.round((suggestion.lowCents + suggestion.highCents) / 2 / 100)
+    : null;
 
   return (
     <div className="space-y-5">
@@ -669,6 +690,32 @@ function BudgetStep({
           />
         </div>
         <FieldError message={formState.errors.budgetEuros?.message} />
+        {suggestion && middle !== null && (
+          <div className="mt-2 flex flex-wrap items-center gap-2 rounded-md bg-primary/5 px-3 py-2 text-sm">
+            <span>
+              {t("suggested", {
+                low: euros(suggestion.lowCents),
+                high: euros(suggestion.highCents),
+              })}
+            </span>
+            <Button
+              type="button"
+              variant="link"
+              size="sm"
+              className="h-auto p-0"
+              onClick={() =>
+                // Whole euros, digits only: a grouping space (« 1 000 ») is
+                // not something the money box types.
+                setValue("budgetEuros", String(middle), {
+                  shouldValidate: true,
+                  shouldDirty: true,
+                })
+              }
+            >
+              {t("useSuggested", { amount: euros(middle * 100) })}
+            </Button>
+          </div>
+        )}
         <p className="mt-2 text-sm text-muted-foreground">{t("hint")}</p>
       </div>
 

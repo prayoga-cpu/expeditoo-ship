@@ -1320,7 +1320,9 @@
         "schedule": "Schedule",
         "pickerLabel": "Publish at",
         "hint": "Your request stays hidden from carriers until this moment."
-      }
+      },
+      "suggested": "Suggested price: {low} – {high}",
+      "useSuggested": "Use {amount}"
     },
     "dropzone": {
       "title": "Add photos",
@@ -3162,7 +3164,8 @@
       },
       "noBids": "No offers",
       "pickup": "Pickup from {date}",
-      "budget": "Requester's budget"
+      "budget": "Requester's budget",
+      "proposeHint": "Open the request to propose an offer to the client: they will pay to confirm."
     },
     "expedionClients": {
       "title": "Expedion clients",
@@ -4453,7 +4456,8 @@
       "SLOT_NOT_ON_OFFER": "This slot is not part of the offer.",
       "FORBIDDEN_NOT_SHIPPER": "Only the person who posted the request can accept an offer.",
       "FORBIDDEN_NOT_OPERATOR": "Only an operator can award this job.",
-      "CARRIER_ABSENT": "This transporter has said they are away and cannot be chosen for now."
+      "CARRIER_ABSENT": "This transporter has said they are away and cannot be chosen for now.",
+      "PAYMENT_INTENT_MISMATCH": "This offer's price has just changed. Close this window and open the offer again to pay the new amount."
     }
   },
   "listingUrgency": {
@@ -4462,5 +4466,55 @@
     "banner": "Urgent request: the pickup must happen within {hours} h and no driver has been chosen yet.",
     "immediate": "Immediate",
     "immediateHint": "No driver yet, and the pickup window is already open: the goods can be collected right away."
+  },
+  "negotiation": {
+    "proposedBadge": "Expeditoo's pick",
+    "proposedForYou": "Expeditoo picked this transporter for you. Pay to confirm the booking.",
+    "payToConfirm": "Pay to confirm",
+    "propose": "Propose to the client",
+    "unpropose": "Withdraw the proposal",
+    "proposedToClient": "Expeditoo recommended your offer to the client. They still have to pay to confirm.",
+    "counter": "Counter-offer",
+    "counterPrice": "Your price (€)",
+    "counterNote": "A word for the transporter (optional)",
+    "sendCounter": "Send my counter-offer",
+    "counterWaiting": "Your counter-offer of {price} is waiting for the transporter's answer.",
+    "roundsLeft": "{count, plural, one {# more counter-offer possible on this offer.} other {# more counter-offers possible on this offer.}}",
+    "cancel": "Cancel",
+    "clientOffers": "The client offers {price} (your price: {yours}).",
+    "acceptClientPrice": "Accept this price",
+    "keepMine": "Keep my price",
+    "otherPrice": "Offer another price",
+    "yourNewPrice": "Your new price (€)",
+    "sendNewPrice": "Send this price",
+    "toast": {
+      "proposed": "Offer proposed to the client: they will be asked to pay to confirm",
+      "unproposed": "Proposal withdrawn",
+      "countered": "Counter-offer sent to the transporter",
+      "answered": {
+        "accept": "Price accepted: the client can book at this price",
+        "decline": "You kept your price",
+        "revise": "New price sent to the client"
+      },
+      "errors": {
+        "OFFER_NOT_PENDING": "This offer is no longer pending.",
+        "LISTING_NOT_OPEN": "This request no longer takes offers.",
+        "PROPOSAL_NOT_AVAILABLE": "Only a request posted on the site can receive a proposal.",
+        "CARRIER_ABSENT": "This transporter is marked as away.",
+        "COUNTER_PENDING": "A counter-offer is already waiting for the transporter's answer.",
+        "COUNTER_LIMIT_REACHED": "You have sent the most counter-offers allowed on this offer.",
+        "COUNTER_SAME_PRICE": "Offer a price different from the offer's.",
+        "COUNTER_NOT_AVAILABLE": "This job's price is already paid: no counter-offer.",
+        "NO_COUNTER_PENDING": "The client is no longer waiting for an answer on this offer.",
+        "PRICE_OUT_OF_RANGE": "The price must be between €1 and €100,000.",
+        "generic": "Something went wrong. Try again."
+      }
+    }
+  },
+  "booking": {
+    "pickup": "Pickup:",
+    "delivery": "Delivery:",
+    "yourAvailability": "Your delivery availability: {availability}. Check that it matches before paying.",
+    "noAvailability": "You did not limit the delivery days or times."
   }
 }

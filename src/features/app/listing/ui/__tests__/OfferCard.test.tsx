@@ -39,6 +39,11 @@ const offer = (slots: OfferSlot[]): Offer =>
     createdAt: iso(-48 * HOUR),
     carrier: { id: "c1", name: "Transports Test", image: null, rating: 4.5, completedJobs: 3, companyName: null },
     vehicle: { id: "v1", type: "van", make: null, model: null, maxWeightKg: 800 },
+    proposedAt: null,
+    counterPriceCents: null,
+    counterNote: null,
+    counteredAt: null,
+    counterRounds: 0,
   }) as Offer;
 
 function renderCard(o: Offer, onAccept = vi.fn()) {
@@ -68,5 +73,20 @@ describe("OfferCard — slots that have passed", () => {
 
     expect(screen.getByRole("button", { name: fr.listing.bid.offerCard.accept })).toBeDisabled();
     expect(screen.getByText(fr.listing.bid.offerCard.slotsPassed)).toBeInTheDocument();
+  });
+});
+
+/** client_feedback_2026_10_29_spec.md §B1 — Expeditoo's pick. */
+describe("OfferCard — Expeditoo's pick", () => {
+  it("marks the recommended offer and asks the requester to pay to confirm", () => {
+    const onAccept = renderCard({
+      ...offer([slot("ahead", 30 * HOUR)]),
+      proposedAt: iso(-HOUR),
+    });
+
+    expect(screen.getByText(fr.negotiation.proposedBadge)).toBeInTheDocument();
+    expect(screen.getByText(fr.negotiation.proposedForYou)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: fr.negotiation.payToConfirm }));
+    expect(onAccept).toHaveBeenCalledWith("offer-1", "ahead");
   });
 });

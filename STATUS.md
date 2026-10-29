@@ -14,15 +14,15 @@ document (`EXPEDITOO Client Feedback Consolidated 29.10.2026.pdf`). Spec:
 |---|---|---|---|---|
 | A2 | Reverse sort + period on Supervision; same on the driver side | 🔧 | 2.66.0 | « Récents » pages every quote from the server; an order button per tab |
 | A4 | Reference = the number alone; admin row number · departure · arrival · requester · initials | 🔧 | 2.66.0 | « PAR-CLA- » still parsed when pasted |
-| B1 | Admin assigns a direct request, client pays to confirm | ⬜ | — | Next release |
+| B1 | Admin assigns a direct request, client pays to confirm | 🔧 | 2.67.0 | « Proposer au client » marks Expeditoo's pick; the client pays through the usual accept dialog |
 | B3 | « Directe » tag | 🔧 ❓ | 2.66.0 | « Site Expeditoo »; Léa's question still open |
 | B5 | « Immédiat » badge (48 h « Urgent » kept) | 🔧 | 2.66.0 | Rule chosen: the pickup window has already opened (spec §0 A) |
-| B6 | Negotiation loop | ⬜ | — | Next release, on B1's payment step |
+| B6 | Negotiation loop | 🔧 | 2.67.0 | Suggested range on /create, requester counter-price, carrier accept / keep / revise (5 rounds) |
 | C1/C2/N3 | Payouts by Stripe | ❓ 🔑 | — | Rail + lawyer; the Stripe account is restricted from creating connected accounts |
 | C3 | Apple Pay / Google Pay / PayPal | 🔧 🔑 | 2.66.0 | Apple Pay + Google Pay in the accept dialog; register the domain in Stripe. PayPal not built |
 | C4 | Sender address | 🔑 ❓ | — | Needs a domain and its DNS — Nicolas |
 | D2 | Map view + driver search | ⬜ | — | |
-| N1 | Delivery availability before payment | ⬜ | — | |
+| N1 | Delivery availability before payment | 🔧 | 2.67.0 | Shown in the accept dialog; changing dates after booking not built |
 | N2 | Driver list sorting, period, dates | 🔧 | 2.66.0 | « Mes livraisons » |
 | N4 | Payout held on a reported problem | ⬜ | — | |
 | N5 | « Mes paiements » in « Mes livraisons » | 🔧 | 2.66.0 | Carriers only |
@@ -356,12 +356,14 @@ than leaving it in a chat message.
       which selects `expedion_quotes.reference`. Proved on a scratch database
       holding quotes: numbered by request date, a new quote takes the next
       number, a re-run renumbers nothing.
-- [ ] **Run Actions → "Migrate database" for
-      `0042_carrier_absence_deregistration` before 2.66.0 deploys** — on the
-      `release/2.66.0` branch, environment `production`, confirm `migrate`
-      (change « Use workflow from » off `main`). Additive: one enum value and
-      five nullable columns. New code on an unmigrated database 500s every
-      read of `carriers` (it selects `absent_since`).
+- [ ] **Run Actions → "Migrate database" before `main` moves past `d842bbb`**
+      — on the newest `release/2.6x.0` branch (it carries every migration
+      below), environment `production`, confirm `migrate`, and change « Use
+      workflow from » off `main`. Pending: `0042_carrier_absence_deregistration`
+      (one enum value, five nullable columns on `carriers`) and
+      `0043_offer_proposal_counter` (six nullable or defaulted columns on
+      `offers`). All additive. New code on an unmigrated database 500s every
+      read of `carriers` and `offers`.
 - [ ] **Register the payment-method domain for Apple Pay (2.66.0, C3).**
       Stripe → Settings → Payment method domains → add
       `expeditoo-ship-five.vercel.app` (and any custom domain later). Until it
@@ -823,6 +825,59 @@ than leaving it in a chat message.
       Until then its application page says driver access is off.
 
 ---
+
+## ✅ 2026-10-30 — Nicolas's Answers of 28–29 October, Part Two: Expeditoo's Pick, the Counter-Offer Loop, a Suggested Price, and What Is Booked Before the Card (2.67.0)
+
+_The same instruction as 2.66.0 — « continue finish up that everything that
+can implement from your side … go ahead »._
+
+Spec: `docs/specs/client_feedback_2026_10_29_spec.md` §B1, §B6, §N1 and §0 I–L.
+
+### What changed
+
+- **B1** — migration `0043_offer_proposal_counter` puts the pick on the offer:
+  `proposed_at` / `proposed_by`. `offersService.proposeOffer` (staff, direct
+  only, the carrier `mayTakeWork`) clears the job's other picks in the same
+  transaction and notifies the requester; `withdrawProposal` takes it back.
+  **Deliberately not a status**: the requester's accept dialog is the award
+  and the payment, as on every direct job, so `acceptOffer` and the money
+  path are untouched and no card moves in the client's absence — the
+  objection Nicolas's answer was built to meet. `proposedBy` is stripped
+  (`withoutProposer`) from every view the requester or carrier reads.
+- **B6** — `counter_price_cents` / `counter_note` / `countered_at` /
+  `counter_rounds` on the same table. `counterOffer` (owner, direct, one
+  pending, ≤ 5 rounds, a different price) and `respondToCounter` (the carrier:
+  accept → the counter becomes `price_cents`; decline; revise → their new
+  price). `offersDal.updateNegotiation` writes only while `status =
+  'pending'`, so a reply racing an award changes nothing. Three thin routes.
+  The suggested range calls the existing `POST /api/pricing/calculate` (the
+  rate card that prices Expedion quotes) from `usePriceSuggestion`, ±15 % to
+  5 €, and asks nothing the parcel engine cannot price (> 100 kg, > 300 cm).
+- **N1** — `AcceptPaymentDialog` takes a `booking` node; the job page passes
+  `BookingSummary` (booked slot, promised delivery, the requester's own
+  delivery days and times).
+- **Safety on the money path, verified rather than added:** a price that moves
+  after the dialog quoted is already refused at capture —
+  `authorisedFeeFor` compares `intent.amount` with the award's price plus the
+  fee — and the dialog now names that refusal (`PAYMENT_INTENT_MISMATCH`)
+  instead of a generic error.
+
+### Verification
+
+- `npx tsc --noEmit`: 0 errors. `pnpm lint`: 0 errors, the same 61 warnings.
+- `vitest run`: 241 files, **3,074 tests pass**. New: `offers.negotiation`
+  (18), `OfferNegotiation` (6), `CounterResponse` (6), `price-suggestion` (6),
+  `BookingSummary` (3), one more `OfferCard`.
+- `0043` registered with `when` 1788519600000 > `0042`'s.
+
+### Known limits
+
+- Changing pickup or delivery dates **after** booking (« both sides can
+  propose changes later ») is not built; it goes through the conversation.
+- The suggested range covers parcels only; most furniture jobs exceed the
+  engine and show no suggestion.
+- Notifications for B1 / B6 are in-app only: email reaches the owner alone
+  until C4, and SMS has no Twilio account.
 
 ## ✅ 2026-10-29 — Nicolas's Answers of 28–29 October, Part One: The Bare Number, « Immédiat », Every Quote in Supervision, and Drivers Who Can Be Away (2.66.0)
 

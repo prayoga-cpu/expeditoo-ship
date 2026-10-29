@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import {
   useQuery,
   useQueryClient,
@@ -48,6 +48,12 @@ interface AcceptPaymentDialogProps {
    * absent when nothing is paid on this platform. Rejects when the award fails.
    */
   onConfirm: (paymentIntentId?: string) => Promise<unknown>;
+  /**
+   * What is being booked — pickup, delivery and the requester's delivery
+   * availability — shown before any card (client_feedback_2026_10_29_spec.md
+   * §N1). The caller has the offer and the job; this dialog has neither.
+   */
+  booking?: ReactNode;
 }
 
 /** Server codes this dialog has its own wording for. */
@@ -62,6 +68,8 @@ const KNOWN_ERRORS = [
   "COORDINATES_REQUIRED",
   "CARRIER_NO_LONGER_APPROVED",
   "CARRIER_ABSENT",
+  // The carrier answered a counter-price after the dialog quoted (§B6).
+  "PAYMENT_INTENT_MISMATCH",
   "SLOT_IN_PAST",
   "SLOT_NOT_ON_OFFER",
   "FORBIDDEN_NOT_SHIPPER",
@@ -140,6 +148,8 @@ export function AcceptPaymentDialog(props: AcceptPaymentDialogProps) {
             {quote.data?.required ? t("descriptionCharge") : t("descriptionFree")}
           </DialogDescription>
         </DialogHeader>
+
+        {props.booking}
 
         <DialogBody {...props} quote={quote} busy={busy} setBusy={setBusy} close={close} />
       </DialogContent>

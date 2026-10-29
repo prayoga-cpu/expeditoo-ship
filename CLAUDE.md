@@ -222,7 +222,7 @@ without an `sk_live_` key, so an accept there takes real money.
 Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before shipping.
 
 **Gates — all green.** `npx tsc --noEmit` 0 errors · `pnpm lint` 0 errors ·
-3,034 unit tests pass (2.66.0) · `pnpm build` succeeds.
+3,074 unit tests pass (2.67.0) · `pnpm build` succeeds.
 
 **Done**
 - Schema remodelled to the transport model; one clean initial migration
@@ -690,6 +690,14 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
   asks `mayTakeWork` (`src/lib/carrier-availability.ts`); add a new one and it
   must too. Admins are told of every submitted application. Apple Pay / Google
   Pay are `auto` in the accept dialog. `client_feedback_2026_10_29_spec.md`
+- **Choosing and negotiating** (2.67.0). On a direct request an operator marks
+  one offer as Expeditoo's pick (`offers.proposed_at`, `0043`) and the
+  requester still pays through the accept dialog — **a recommendation, not a
+  status**; nothing awards but `acceptOffer`. The requester sends a
+  counter-price (`counter_price_cents`, ≤ 5 rounds) and the carrier accepts,
+  keeps or revises; whatever `price_cents` is when the requester accepts is
+  what is charged, and a price that moved mid-dialog is refused at capture.
+  `proposedBy` never leaves the server (`withoutProposer`).
 
 **Not done**
 - **The scheduled jobs have never run in production.** `scheduled-jobs.yml`

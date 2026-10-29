@@ -91,6 +91,29 @@ export const offers = pgTable(
      */
     selfAccepted: boolean("self_accepted").default(false).notNull(),
 
+    /**
+     * Expeditoo's pick on a direct request (client_feedback_2026_10_29_spec.md
+     * §B1, migration 0043): an operator recommends this offer and the
+     * requester still pays to confirm it. A recommendation, not an award — no
+     * status changes and no card is touched. At most one per job.
+     */
+    proposedAt: timestamp("proposed_at"),
+    proposedBy: text("proposed_by").references(() => user.id, {
+      onDelete: "set null",
+    }),
+
+    /**
+     * The requester's outstanding counter-price (§B6), null when none is
+     * pending. The carrier accepts it, declines it, or answers with a price of
+     * their own; every answer clears it. `priceCents` stays the price the
+     * requester pays on accepting.
+     */
+    counterPriceCents: integer("counter_price_cents"),
+    counterNote: text("counter_note"),
+    counteredAt: timestamp("countered_at"),
+    /** How many counter-prices the requester has sent; capped by the service. */
+    counterRounds: integer("counter_rounds").default(0).notNull(),
+
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()

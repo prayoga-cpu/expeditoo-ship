@@ -217,3 +217,26 @@ export const offerAggregateSchema = z.object({
 });
 
 export type OfferAggregate = z.infer<typeof offerAggregateSchema>;
+
+/** How many counter-prices a requester may send on one offer (§B6). */
+export const MAX_COUNTER_ROUNDS = 5;
+
+/**
+ * The requester's counter-price on one offer (client_feedback_2026_10_29_spec.md
+ * §B6). The same bounds as a bid.
+ */
+export const counterOfferSchema = z.object({
+  priceCents: priceCentsSchema,
+  note: z.string().trim().max(500).nullable().default(null),
+});
+
+export type CounterOfferInput = z.infer<typeof counterOfferSchema>;
+
+/** The carrier's answer to a counter-price (§B6). */
+export const counterResponseSchema = z.discriminatedUnion("action", [
+  z.object({ action: z.literal("accept") }),
+  z.object({ action: z.literal("decline") }),
+  z.object({ action: z.literal("revise"), priceCents: priceCentsSchema }),
+]);
+
+export type CounterResponseInput = z.infer<typeof counterResponseSchema>;

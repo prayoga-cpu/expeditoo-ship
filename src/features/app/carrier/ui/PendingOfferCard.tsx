@@ -13,6 +13,7 @@ import { parseDayString } from "@/lib/availability-window";
 import { ListingReference } from "@/features/app/listing/ui/ListingReference";
 import type { PendingOffer } from "../hooks/useCarrierTrips";
 import { TripEndpoints } from "./TripEndpoints";
+import { CounterResponse } from "./CounterResponse";
 
 interface PendingOfferCardProps {
   offer: PendingOffer;
@@ -102,6 +103,8 @@ export function PendingOfferCard({
         {listing && <TripEndpoints from={listing.pickupCity} to={listing.dropoffCity} />}
 
         <EarliestPickupLine offer={offer} />
+
+        <CounterResponse offer={offer} />
 
         <div className="flex flex-wrap justify-end gap-2 border-t pt-3">
           <Button

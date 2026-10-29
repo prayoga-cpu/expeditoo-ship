@@ -94,6 +94,25 @@ export const offersApi = {
   withdraw: (offerId: string) =>
     api.post<Offer>(`/api/offers/${offerId}/withdraw`),
 
+  /** An operator recommends this offer to the requester (§B1). */
+  propose: (offerId: string) => api.post<Offer>(`/api/offers/${offerId}/propose`),
+
+  unpropose: (offerId: string) =>
+    api.delete<Offer>(`/api/offers/${offerId}/propose`),
+
+  /** The requester's counter-price (§B6). */
+  counter: (offerId: string, priceCents: number, note: string | null) =>
+    api.post<Offer>(`/api/offers/${offerId}/counter`, { priceCents, note }),
+
+  /** The carrier's answer to a counter-price (§B6). */
+  respondToCounter: (
+    offerId: string,
+    input:
+      | { action: "accept" }
+      | { action: "decline" }
+      | { action: "revise"; priceCents: number }
+  ) => api.post<Offer>(`/api/offers/${offerId}/counter/respond`, input),
+
   mine: (params: { status?: string; page?: number; limit?: number } = {}) =>
     api.get<Offer[]>(`/api/carrier/offers${toQuery(params)}`),
 };

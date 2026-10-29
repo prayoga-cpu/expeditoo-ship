@@ -25,6 +25,10 @@ is in §0 so it can be overruled cheaply.
 | F | REQ-02 « Désinscrit » | A status, `deregistered`. Refused while a run is still owed; every standing bid withdrawn; money earned stays payable; applying again is reviewed again | A delivery in progress is never stranded, and no requester goes on comparing an offer nobody will honour |
 | G | REQ-07 « professional application » | **Every** submitted application alerts the admins | Every applicant today holds a SIRET; the professional / private split waits on REQ-01 |
 | H | C3 Apple Pay / Google Pay | Wallets `auto` in the accept dialog; PayPal not built | Both wallets are cards to Stripe, so the manual-capture intent is unchanged. PayPal is a redirect method with its own capture and saving rules, and needs enabling on the account first |
+| I | B1 « a new state between assigned and paid » | **Not a status.** `offers.proposed_at` marks Expeditoo's pick; the requester pays through the existing accept dialog, which is the award | A new listing or shipment status would need every reader of those enums to learn it; a recommendation that awards nothing needs none of them |
+| J | B6 who negotiates | The **requester** sends a counter-price; the **carrier** answers (accept / keep / another price). Direct requests only; five counter-prices per offer | An escalated job's price was paid in Expedion; a cap keeps the loop from becoming a chat |
+| K | B6 « suggested price range » | The platform's own rate card (`pricingService`, the one that prices Expedion quotes), ±15 %, rounded to 5 € — **only** where that engine applies (≤ 100 kg, ≤ 300 cm) | A range from an engine that does not price furniture would be invented |
+| L | N1 « changeable later by either side » | **Not built** in 2.67.0: the accept dialog shows the delivery days and times before paying; changing dates after booking still goes through the conversation | A reschedule flow touches the shipment dates, the driver's plan and the Expedion write-back; it is its own release |
 
 ---
 
@@ -166,6 +170,61 @@ a link — no SIRET, no documents). Best-effort: a failed alert never fails the
 submission. Until a Resend domain is verified (C4) the email reaches only the
 Resend account's own address; the in-app notification reaches everyone.
 
+## B1. Expeditoo's pick on a direct request
+
+- `offers.proposed_at` / `proposed_by` (migration `0043`).
+- `POST /api/offers/:id/propose` → `offersService.proposeOffer(viewer, id)`:
+  staff only (`FORBIDDEN_NOT_OPERATOR` 403); the offer `pending`
+  (`OFFER_NOT_PENDING` 409); the job `open` with no award
+  (`LISTING_NOT_OPEN` 409); **direct** only (`PROPOSAL_NOT_AVAILABLE` 409 — an
+  operator awards an escalated job outright); the carrier `mayTakeWork`
+  (`CARRIER_ABSENT` 409). One pick per job: every other offer's pick is
+  cleared in the same transaction. The requester is notified in the app.
+- `DELETE /api/offers/:id/propose` → `withdrawProposal`, staff only.
+- **Nothing is awarded and no card moves.** The requester's card is the
+  accept dialog's, unchanged; the proposed card reads « Choix Expeditoo », is
+  outlined, says « Expeditoo a sélectionné ce transporteur pour vous », and its
+  button reads « Payer pour confirmer ».
+- `proposedBy` never leaves the server: `withoutProposer` strips it from the
+  requester's and the carrier's views. The carrier's pending card says
+  Expeditoo recommended their offer.
+- The award queue's direct cards with bids say to open the request to propose.
+
+## B6. The negotiation
+
+- **Range.** `/create`'s Budget step shows « Prix conseillé : 85 € – 115 € »
+  and « Utiliser 100 € » when `suggestionRequest` can ask the engine (both
+  pins, a weight bracket, a size, ≤ 100 kg, ≤ 300 cm); otherwise nothing. The
+  engine's refusal is no suggestion, never a form error.
+- **Price to publish, « Faire une offre ».** Already there (`budgetRequired`,
+  `SubmitOfferForm`, the thread offer).
+- **Counter-price.** `offers.counter_price_cents` / `counter_note` /
+  `countered_at` / `counter_rounds`. `POST /api/offers/:id/counter
+  {priceCents, note}` → `counterOffer`: the job's owner (`FORBIDDEN_NOT_SHIPPER`
+  403), direct only (`COUNTER_NOT_AVAILABLE` 409), none already pending
+  (`COUNTER_PENDING` 409), fewer than `MAX_COUNTER_ROUNDS` = 5
+  (`COUNTER_LIMIT_REACHED` 409), not the current price (`COUNTER_SAME_PRICE`
+  422), bid bounds (`PRICE_OUT_OF_RANGE`). The carrier is notified.
+- **Answer.** `POST /api/offers/:id/counter/respond {action}` →
+  `respondToCounter`: the offer's carrier (`FORBIDDEN` 403), a counter pending
+  (`NO_COUNTER_PENDING` 409), `mayTakeWork` (`CARRIER_ABSENT`). `accept` sets
+  `price_cents` to the counter, `decline` keeps it, `revise {priceCents}` sets
+  the carrier's new price; every answer clears the counter. The requester is
+  notified. Writes are conditional on `status = 'pending'`, so an answer that
+  loses a race to the award changes nothing (`OFFER_NOT_PENDING`).
+- **What is paid** is `price_cents` when the requester accepts. A price that
+  moves while the accept dialog is open is refused at capture
+  (`PAYMENT_INTENT_MISMATCH`, `authorisedFeeFor` checks the amount) and the
+  authorisation released; the dialog says the price changed.
+
+## N1. What is booked, before the card
+
+`AcceptPaymentDialog` takes a `booking` node; on the job page it is
+`BookingSummary`: the slot being booked, the delivery it promises (the offer
+card's own labels), and the requester's delivery days and times from `/create`
+(`dropoff_days` / `dropoff_periods`) — or that none were set. Changing dates
+after booking is not built (§0 L).
+
 ---
 
 ## Test coverage required
@@ -193,3 +252,15 @@ Resend account's own address; the in-app notification reaches everyone.
 - `AvailabilitySection.test.tsx`, `CarrierApplicationDetail.availability.test.tsx`:
   every button above, the return day sent as local midnight, the deregister
   reason required of an admin.
+- `offers.negotiation.test.ts`: every refusal of `proposeOffer`,
+  `counterOffer` and `respondToCounter` above; the pick cleared on the other
+  offers; `proposedBy` absent from the result; the race lost to the award.
+- `OfferNegotiation.test.tsx`, `CounterResponse.test.tsx`, `OfferCard.test.tsx`:
+  propose / withdraw, the counter sent in cents, the same price refused, the
+  waiting state, the round cap, the three answers, « Payer pour confirmer ».
+- `price-suggestion.test.ts`: the request built from brackets and presets,
+  typed numbers with a comma, nothing asked outside the engine's range, the
+  ±15 % range to 5 €.
+- `BookingSummary.test.tsx`: the booked slot and its delivery day, the
+  requester's availability, the no-availability line.
+

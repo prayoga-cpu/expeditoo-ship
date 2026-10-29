@@ -181,6 +181,11 @@ function QueueCard({ job }: { job: Job }) {
         <p className="mt-1 font-mono text-sm tabular-nums">
           {isDirect ? t("budget") : t("clientPaid")}: {euros(job.budgetCents)}
         </p>
+        {/* An operator recommends on a direct request; the requester pays to
+            confirm (client_feedback_2026_10_29_spec.md §B1). */}
+        {isDirect && bids > 0 ? (
+          <p className="text-xs text-primary">{t("proposeHint")}</p>
+        ) : null}
       </Card>
     </Link>
   );

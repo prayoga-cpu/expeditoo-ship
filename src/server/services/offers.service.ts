@@ -24,9 +24,12 @@ import {
   rearmedWindow,
 } from "@/lib/listing-window";
 import { PARTY_FIELDS, project, toListingView } from "@/server/services/listing-view";
-import type {
-  CreateOfferInput,
-  PreparePaymentInput,
+import {
+  MAX_COUNTER_ROUNDS,
+  type CounterOfferInput,
+  type CounterResponseInput,
+  type CreateOfferInput,
+  type PreparePaymentInput,
 } from "@/server/dto/offers.dto";
 import type { InsertListing, Listing } from "@/db/schema/listings";
 import { offers, type Offer } from "@/db/schema/offers";
@@ -155,11 +158,57 @@ const VEHICLE_FIELDS = [
  * (listing_privacy_spec.md §3).
  */
 function asSeenByRequester<T extends { carrier?: unknown; vehicle?: unknown }>(offer: T) {
-  return {
+  return withoutProposer({
     ...offer,
     carrier: project(offer.carrier, PARTY_FIELDS),
     vehicle: project(offer.vehicle, VEHICLE_FIELDS),
+  });
+}
+
+/**
+ * Drops `proposedBy`: which staff account recommended an offer is the back
+ * office's business. `proposedAt` is what the screens read (§B1).
+ */
+function withoutProposer<T>(offer: T): Omit<T, "proposedBy"> {
+  const { proposedBy: _proposedBy, ...rest } = offer as T & {
+    proposedBy?: unknown;
   };
+  return rest as Omit<T, "proposedBy">;
+}
+
+export { MAX_COUNTER_ROUNDS };
+
+/** A pending offer on a job still taking offers — what B1 and B6 act on. */
+async function loadNegotiable(offerId: string) {
+  const offer = await offersDal.getById(offerId);
+  if (!offer) throw err("OFFER_NOT_FOUND", 404);
+  if (offer.status !== "pending") throw err("OFFER_NOT_PENDING", 409);
+  const listing = await listingsDal.getById(offer.listingId);
+  if (!listing) throw err("LISTING_NOT_FOUND", 404);
+  if (listing.status !== "open" || listing.acceptedOfferId) {
+    throw err("LISTING_NOT_OPEN", 409);
+  }
+  return { offer, listing };
+}
+
+const euroLabel = (cents: number) => `${(cents / 100).toFixed(2)} €`;
+
+/** In-app only, best-effort: a failed notice never fails the negotiation. */
+async function notify(
+  userId: string,
+  type: string,
+  n: { title: string; message: string; listingId: string; offerId: string }
+) {
+  await notificationsService
+    .createNotification({
+      userId,
+      type,
+      title: n.title,
+      message: n.message,
+      linkUrl: `/listing/${n.listingId}`,
+      data: { listingId: n.listingId, offerId: n.offerId },
+    })
+    .catch((e) => console.error(`${type} notification failed`, e));
 }
 
 /** An offer's own columns: the row, without anything the DAL loads beside it. */
@@ -523,6 +572,129 @@ export const offersService = {
       await offersDal.incrementListingOffersCount(offer.listingId, -1, tx);
       return updated;
     });
+  },
+
+  // ---- Expeditoo's pick and the negotiation (client_feedback_2026_10_29_spec.md §B1, §B6) ----
+
+  /**
+   * An operator recommends one offer on a direct request. The requester still
+   * pays to confirm it — in the same dialog as any other accept — so nothing
+   * is awarded here and no card is touched. One pick per job: choosing
+   * another replaces it.
+   */
+  async proposeOffer(actor: { userId: string; isAdmin?: boolean; isOperator?: boolean }, offerId: string) {
+    if (!actor.isAdmin && !actor.isOperator) throw err("FORBIDDEN_NOT_OPERATOR", 403);
+    const { offer, listing } = await loadNegotiable(offerId);
+    if (listing.origin !== "direct") throw err("PROPOSAL_NOT_AVAILABLE", 409);
+
+    const carrier = await carriersDal.getByUserId(offer.carrierId);
+    if (!mayTakeWork(carrier)) throw err("CARRIER_ABSENT", 409);
+
+    const proposed = await db.transaction(async (tx) => {
+      await offersDal.clearProposalsForListing(listing.id, tx);
+      return await offersDal.updateNegotiation(
+        offerId,
+        { proposedAt: new Date(), proposedBy: actor.userId },
+        tx
+      );
+    });
+    if (!proposed) throw err("OFFER_NOT_PENDING", 409);
+
+    await notify(listing.shipperId, "offer_proposed", {
+      title: "Expeditoo recommends a transporter",
+      message: `We picked an offer of ${euroLabel(offer.priceCents)} for "${listing.title}". Pay to confirm it.`,
+      listingId: listing.id,
+      offerId,
+    });
+    return withoutProposer(proposed);
+  },
+
+  /** Takes Expeditoo's pick back off an offer. */
+  async withdrawProposal(actor: { userId: string; isAdmin?: boolean; isOperator?: boolean }, offerId: string) {
+    if (!actor.isAdmin && !actor.isOperator) throw err("FORBIDDEN_NOT_OPERATOR", 403);
+    const updated = await offersDal.updateNegotiation(offerId, {
+      proposedAt: null,
+      proposedBy: null,
+    });
+    if (!updated) throw err("OFFER_NOT_PENDING", 409);
+    return withoutProposer(updated);
+  },
+
+  /**
+   * The requester sends a price back to one carrier. Direct requests only —
+   * an escalated job's price was paid in Expedion. One counter-price pending
+   * at a time per offer, at most MAX_COUNTER_ROUNDS in all.
+   */
+  async counterOffer(actorUserId: string, offerId: string, input: CounterOfferInput) {
+    const { offer, listing } = await loadNegotiable(offerId);
+    if (listing.shipperId !== actorUserId) throw err("FORBIDDEN_NOT_SHIPPER", 403);
+    if (listing.origin !== "direct") throw err("COUNTER_NOT_AVAILABLE", 409);
+    if (offer.counterPriceCents !== null) throw err("COUNTER_PENDING", 409);
+    if (offer.counterRounds >= MAX_COUNTER_ROUNDS) throw err("COUNTER_LIMIT_REACHED", 409);
+    if (input.priceCents === offer.priceCents) throw err("COUNTER_SAME_PRICE", 422);
+
+    const updated = await offersDal.updateNegotiation(offerId, {
+      counterPriceCents: input.priceCents,
+      counterNote: input.note,
+      counteredAt: new Date(),
+      counterRounds: offer.counterRounds + 1,
+    });
+    if (!updated) throw err("OFFER_NOT_PENDING", 409);
+
+    await notify(offer.carrierId, "offer_countered", {
+      title: "The client sent you a price",
+      message: `${euroLabel(input.priceCents)} instead of ${euroLabel(offer.priceCents)} for "${listing.title}".`,
+      listingId: listing.id,
+      offerId,
+    });
+    return withoutProposer(updated);
+  },
+
+  /**
+   * The carrier answers a counter-price: take it (the offer's price becomes
+   * it), refuse it, or answer with a price of their own. Every answer clears
+   * the counter-price, and the requester then accepts — and pays — whatever
+   * the offer's price is at that moment.
+   */
+  async respondToCounter(
+    actorUserId: string,
+    offerId: string,
+    input: CounterResponseInput
+  ) {
+    const { offer, listing } = await loadNegotiable(offerId);
+    if (offer.carrierId !== actorUserId) throw err("FORBIDDEN", 403);
+    if (offer.counterPriceCents === null) throw err("NO_COUNTER_PENDING", 409);
+
+    const carrier = await carriersDal.getByUserId(actorUserId);
+    if (!mayTakeWork(carrier)) throw err("CARRIER_ABSENT", 403);
+
+    const priceCents =
+      input.action === "accept"
+        ? offer.counterPriceCents
+        : input.action === "revise"
+          ? input.priceCents
+          : offer.priceCents;
+
+    const updated = await offersDal.updateNegotiation(offerId, {
+      priceCents,
+      counterPriceCents: null,
+      counterNote: null,
+      counteredAt: null,
+    });
+    if (!updated) throw err("OFFER_NOT_PENDING", 409);
+
+    const said = {
+      accept: `accepted your price of ${euroLabel(priceCents)}`,
+      decline: `kept their price of ${euroLabel(priceCents)}`,
+      revise: `now offers ${euroLabel(priceCents)}`,
+    }[input.action];
+    await notify(listing.shipperId, "offer_counter_answered", {
+      title: "The transporter answered your price",
+      message: `The transporter ${said} for "${listing.title}".`,
+      listingId: listing.id,
+      offerId,
+    });
+    return withoutProposer(updated);
   },
 
   /**
@@ -921,7 +1093,10 @@ export const offersService = {
       );
       if (own) {
         const detailed = await offersDal.getById(own.id);
-        return { scope: "own" as const, offers: detailed ? [detailed] : [] };
+        return {
+          scope: "own" as const,
+          offers: detailed ? [withoutProposer(detailed)] : [],
+        };
       }
     }
 
@@ -939,10 +1114,12 @@ export const offersService = {
     filters: { status?: Offer["status"]; page: number; limit: number }
   ) {
     const rows = await offersDal.listByCarrier(carrierUserId, filters);
-    return rows.map((offer) => ({
-      ...offer,
-      listing: offer.listing ? toListingView(offer.listing, "vetted") : offer.listing,
-    }));
+    return rows.map((offer) =>
+      withoutProposer({
+        ...offer,
+        listing: offer.listing ? toListingView(offer.listing, "vetted") : offer.listing,
+      })
+    );
   },
 
   /** Called by the expiry cron and by material edits to a listing. */

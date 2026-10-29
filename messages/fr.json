@@ -1320,7 +1320,9 @@
         "schedule": "Planifier",
         "pickerLabel": "Publier le",
         "hint": "Votre demande reste invisible pour les transporteurs jusqu'à ce moment."
-      }
+      },
+      "suggested": "Prix conseillé : {low} – {high}",
+      "useSuggested": "Utiliser {amount}"
     },
     "dropzone": {
       "title": "Ajouter des photos",
@@ -3162,7 +3164,8 @@
       },
       "noBids": "Aucune offre",
       "pickup": "Retrait à partir du {date}",
-      "budget": "Budget du demandeur"
+      "budget": "Budget du demandeur",
+      "proposeHint": "Ouvrez la demande pour proposer une offre au client : il paiera pour confirmer."
     },
     "expedionClients": {
       "title": "Clients Expedion",
@@ -4453,7 +4456,8 @@
       "SLOT_NOT_ON_OFFER": "Ce créneau ne fait pas partie de l'offre.",
       "FORBIDDEN_NOT_SHIPPER": "Seul l'auteur de la demande peut accepter une offre.",
       "FORBIDDEN_NOT_OPERATOR": "Seul un opérateur peut attribuer cette mission.",
-      "CARRIER_ABSENT": "Ce transporteur s'est déclaré absent et ne peut pas être retenu pour le moment."
+      "CARRIER_ABSENT": "Ce transporteur s'est déclaré absent et ne peut pas être retenu pour le moment.",
+      "PAYMENT_INTENT_MISMATCH": "Le prix de cette offre vient de changer. Fermez cette fenêtre et rouvrez l'offre pour payer le nouveau montant."
     }
   },
   "listingUrgency": {
@@ -4462,5 +4466,55 @@
     "banner": "Demande urgente : le retrait doit avoir lieu dans moins de {hours} h et aucun chauffeur n'est encore retenu.",
     "immediate": "Immédiat",
     "immediateHint": "Pas encore de chauffeur, et la fenêtre de retrait est déjà ouverte : l'enlèvement peut se faire tout de suite."
+  },
+  "negotiation": {
+    "proposedBadge": "Choix Expeditoo",
+    "proposedForYou": "Expeditoo a sélectionné ce transporteur pour vous. Payez pour confirmer la réservation.",
+    "payToConfirm": "Payer pour confirmer",
+    "propose": "Proposer au client",
+    "unpropose": "Retirer la proposition",
+    "proposedToClient": "Expeditoo a recommandé votre offre au client. Il doit encore payer pour confirmer.",
+    "counter": "Contre-proposition",
+    "counterPrice": "Votre prix (€)",
+    "counterNote": "Un mot pour le transporteur (facultatif)",
+    "sendCounter": "Envoyer ma contre-proposition",
+    "counterWaiting": "Votre contre-proposition de {price} attend la réponse du transporteur.",
+    "roundsLeft": "{count, plural, one {Encore # contre-proposition possible sur cette offre.} other {Encore # contre-propositions possibles sur cette offre.}}",
+    "cancel": "Annuler",
+    "clientOffers": "Le client propose {price} (votre prix : {yours}).",
+    "acceptClientPrice": "Accepter ce prix",
+    "keepMine": "Garder mon prix",
+    "otherPrice": "Proposer un autre prix",
+    "yourNewPrice": "Votre nouveau prix (€)",
+    "sendNewPrice": "Envoyer ce prix",
+    "toast": {
+      "proposed": "Offre proposée au client : il sera invité à payer pour confirmer",
+      "unproposed": "Proposition retirée",
+      "countered": "Contre-proposition envoyée au transporteur",
+      "answered": {
+        "accept": "Prix accepté : le client peut réserver à ce prix",
+        "decline": "Vous gardez votre prix",
+        "revise": "Nouveau prix envoyé au client"
+      },
+      "errors": {
+        "OFFER_NOT_PENDING": "Cette offre n'est plus en attente.",
+        "LISTING_NOT_OPEN": "Cette demande ne prend plus d'offres.",
+        "PROPOSAL_NOT_AVAILABLE": "Seule une demande publiée sur le site peut recevoir une proposition.",
+        "CARRIER_ABSENT": "Ce transporteur est marqué absent.",
+        "COUNTER_PENDING": "Une contre-proposition attend déjà la réponse du transporteur.",
+        "COUNTER_LIMIT_REACHED": "Vous avez atteint le nombre maximum de contre-propositions sur cette offre.",
+        "COUNTER_SAME_PRICE": "Proposez un prix différent de celui de l'offre.",
+        "COUNTER_NOT_AVAILABLE": "Le prix de cette mission est déjà réglé : pas de contre-proposition.",
+        "NO_COUNTER_PENDING": "Le client n'attend plus de réponse sur cette offre.",
+        "PRICE_OUT_OF_RANGE": "Le prix doit être compris entre 1 € et 100 000 €.",
+        "generic": "Une erreur est survenue. Réessayez."
+      }
+    }
+  },
+  "booking": {
+    "pickup": "Retrait :",
+    "delivery": "Livraison :",
+    "yourAvailability": "Vos disponibilités à la livraison : {availability}. Vérifiez qu'elles correspondent avant de payer.",
+    "noAvailability": "Vous n'avez pas limité les jours ni les horaires de livraison."
   }
 }
