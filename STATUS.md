@@ -356,6 +356,14 @@ than leaving it in a chat message.
       which selects `expedion_quotes.reference`. Proved on a scratch database
       holding quotes: numbered by request date, a new quote takes the next
       number, a re-run renumbers nothing.
+- [ ] **Ship 2.66.0–2.70.0 (one branch, `release/2.70.0`, five commits).**
+      (1) Actions → « Migrate database » → « Use workflow from »
+      **`release/2.70.0`**, environment `production`, type `migrate`. It
+      applies `0042` and `0043`. (2) Check: `drizzle.__drizzle_migrations`
+      has 43 rows, newest `when` = 1788519600000. (3) `git push origin
+      release/2.70.0:main` (a fast-forward from `d842bbb`); Vercel deploys.
+      Claude was refused both the dispatch (« Production Deploy ») and, on
+      30 October, `gh variable set` (« Account & Standing-Rule Changes »).
 - [ ] **Run Actions → "Migrate database" before `main` moves past `d842bbb`**
       — on the newest `release/2.6x.0` branch (it carries every migration
       below), environment `production`, confirm `migrate`, and change « Use
@@ -389,7 +397,13 @@ than leaving it in a chat message.
       is there, the accept dialog shows no Apple Pay button; Google Pay may
       appear in Chrome regardless.
 - [ ] **Set the GitHub repo variable `APP_URL` and secret `CRON_SECRET` — the
-      scheduled jobs have never run in production.** Every run of
+      scheduled jobs have never run in production.** (Since 2.69.0 the same
+      switch also starts `release-payouts`, which pays nothing until Connect
+      is enabled and a driver has onboarded. To set a *new* secret rather
+      than re-type Vercel's: `S=$(openssl rand -hex 32)`, then
+      `printf %s "$S" | gh secret set CRON_SECRET`, `vercel env rm
+      CRON_SECRET production`, `printf %s "$S" | vercel env add CRON_SECRET
+      production`, and redeploy.) Every run of
       `.github/workflows/scheduled-jobs.yml` on record failed (1,000 checked
       on 2026-10-24) with « Repo variable APP_URL is unset »; `gh variable
       list` is empty and the only repo secret is `POSTGRES_URL_PRODUCTION`.
