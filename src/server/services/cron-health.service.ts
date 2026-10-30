@@ -27,8 +27,6 @@ export const CRON_JOBS = [
   { job: "publish-scheduled-listings", everyMinutes: 5 },
   { job: "expedion-escalate", everyMinutes: 10 },
   { job: "expire-listings", everyMinutes: 15 },
-  // client_feedback_2026_10_29_spec.md §N3.
-  { job: "release-payouts", everyMinutes: 60 },
   { job: "carrier-documents", everyMinutes: 24 * 60 },
   { job: "cleanup-images", everyMinutes: 7 * 24 * 60 },
 ] as const;

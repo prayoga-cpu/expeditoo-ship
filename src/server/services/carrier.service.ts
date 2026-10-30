@@ -665,6 +665,7 @@ async function alertAdminsOfApplication(carrier: Carrier) {
         applicantName,
         companyName: carrier.companyName,
         city: carrier.city,
+        kindLabel: carrier.kind === "private" ? "Particulier" : "Professionnel",
         reviewUrl,
       }),
     ])

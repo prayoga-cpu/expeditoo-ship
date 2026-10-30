@@ -9,7 +9,7 @@ import {
 import { nanoid } from "nanoid";
 import { publishNewMessage } from "./message-publish";
 import { threadOffersService } from "./thread-offers.service";
-import { driverSmsService } from "./driver-sms.service";
+import { driverAlertsService } from "./driver-alerts.service";
 
 export const messagesService = {
   /**
@@ -89,16 +89,16 @@ export const messagesService = {
       senderInfo,
     });
 
-    // A text to the driver when their client writes (§N7 of the 29 October
-    // spec). Not awaited: the message is sent whatever Twilio does.
-    void driverSmsService
+    // An email and a text to the driver when their client writes (§N7 of the
+    // 29 October spec). Not awaited: the message is sent whatever they do.
+    void driverAlertsService
       .onNewMessage({
         conversationId: conversationId!,
         senderId,
         recipientId,
         sentAt: message.createdAt ? new Date(message.createdAt) : new Date(),
       })
-      .catch((e) => console.error("driver message SMS failed", e));
+      .catch((e) => console.error("driver message alert failed", e));
 
     return {
       message,

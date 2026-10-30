@@ -2832,7 +2832,12 @@
         "markAbsent": "Marquer absent",
         "endAbsence": "Fin d'absence",
         "deregister": "Désinscrire",
-        "reinstate": "Réactiver"
+        "reinstate": "Réactiver",
+        "kindLabel": "Type de chauffeur",
+        "kind": {
+          "professional": "Professionnel",
+          "private": "Particulier"
+        }
       },
       "vehicleTypes": {
         "little_car": "Petite voiture",
@@ -3143,6 +3148,15 @@
         "empty": "Aucune demande directe pour l'instant",
         "emptyBody": "Les demandes publiées avec « Demander un transport » apparaîtront ici.",
         "requester": "par {name}"
+      },
+      "autoPublish": {
+        "pause": "Suspendre la publication auto",
+        "resume": "Reprendre (dans 48 h)",
+        "activeNote": "Publié automatiquement aux chauffeurs à la date ci-dessus.",
+        "parkedNote": "Publication automatique suspendue : ce devis ne sera publié qu'à la main.",
+        "paused": "Publication automatique suspendue",
+        "resumed": "Publication automatique reprise dans 48 h",
+        "failed": "La modification a échoué."
       }
     },
     "awards": {

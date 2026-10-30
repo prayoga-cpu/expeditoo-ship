@@ -7,7 +7,7 @@ import { listingsDal } from "@/server/dal/listings.dal";
 import { carriersDal } from "@/server/dal/carriers.dal";
 import { userHasRole } from "@/server/dal/users.dal";
 import { notificationsService } from "@/server/services/notifications.service";
-import { driverSmsService } from "@/server/services/driver-sms.service";
+import { driverAlertsService } from "@/server/services/driver-alerts.service";
 import { paymentsService } from "@/server/services/payments.service";
 import { stripeService } from "@/server/services/stripe.service";
 import {
@@ -1188,14 +1188,14 @@ async function notifyAwardOutcome(
       })
       .catch((e) => console.error("offer_accepted notification failed", e)),
 
-    // And a text (client_feedback_2026_10_29_spec.md §N7).
-    driverSmsService
+    // And an email and a text (client_feedback_2026_10_29_spec.md §N7).
+    driverAlertsService
       .onOfferAccepted({
         carrierUserId: winner.carrierId,
         jobTitle,
         listingId: winner.listingId,
       })
-      .catch((e) => console.error("offer_accepted SMS failed", e)),
+      .catch((e) => console.error("offer_accepted alert failed", e)),
 
     ...rejected.map((offer) =>
       notificationsService

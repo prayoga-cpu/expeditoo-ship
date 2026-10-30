@@ -1,40 +1,58 @@
 # STATUS.md
 
-## Client feedback monitor — Nicolas's answers of 28–29 October 2026
+## Client feedback monitor — consolidated document of 29 October 2026, with the owner's decisions of 30 October
 
-_Owner: this section is for you. One row per item in the consolidated
-document (`EXPEDITOO Client Feedback Consolidated 29.10.2026.pdf`). Spec:
-`docs/specs/client_feedback_2026_10_29_spec.md`. Plan:
+_Owner: this section is for you. One row per item in `EXPEDITOO Client
+Feedback Consolidated 29.10.2026.pdf`, with its state on 30 October. Spec:
+`docs/specs/client_feedback_2026_10_29_spec.md` (decisions in §0). Plan:
 `docs/plans/plan_client_feedback_2026_10_29.md`._
 
-**Legend:** ⬜ not started · 🔧 built, not yet live · 🚀 live on production ·
-❓ needs an answer · 🔑 needs the owner's hand
+**Legend:** ✅ live on production (2.65.0) · 🟡 built, live once
+`release/2.71.0` is migrated and deployed · 🟠 built, also needs a setting
+outside the code · ⏸ decided not to build for now
 
-| # | Item | Status | Release | What was built, or what it waits on |
+| # | Item | State | Release | Decision / what it waits on |
 |---|---|---|---|---|
-| A2 | Reverse sort + period on Supervision; same on the driver side | 🔧 | 2.66.0 | « Récents » pages every quote from the server; an order button per tab |
-| A4 | Reference = the number alone; admin row number · departure · arrival · requester · initials | 🔧 | 2.66.0 | « PAR-CLA- » still parsed when pasted |
-| B1 | Admin assigns a direct request, client pays to confirm | 🔧 | 2.67.0 | « Proposer au client » marks Expeditoo's pick; the client pays through the usual accept dialog |
-| B3 | « Directe » tag | 🔧 ❓ | 2.66.0 | « Site Expeditoo »; Léa's question still open |
-| B5 | « Immédiat » badge (48 h « Urgent » kept) | 🔧 | 2.66.0 | Rule chosen: the pickup window has already opened (spec §0 A) |
-| B6 | Negotiation loop | 🔧 | 2.67.0 | Suggested range on /create, requester counter-price, carrier accept / keep / revise (5 rounds) |
-| C1/C2/N3 | Payouts by Stripe | 🔧 🔑 | 2.69.0 | Release sweep built and inert: needs crons (X1), Connect unrestricted on the Stripe account, lawyer's OK, drivers onboarded |
-| C3 | Apple Pay / Google Pay / PayPal | 🔧 🔑 | 2.66.0 | Apple Pay + Google Pay in the accept dialog; register the domain in Stripe. PayPal not built |
-| C4 | Sender address | 🔑 ❓ | — | Needs a domain and its DNS — Nicolas |
-| D2 | Map view + driver search | 🔧 | 2.68.0 | « Carte » on « Mes demandes »; « Ma position », round trip, the area drawn |
-| N1 | Delivery availability before payment | 🔧 | 2.67.0 | Shown in the accept dialog; changing dates after booking not built |
-| N2 | Driver list sorting, period, dates | 🔧 | 2.66.0 | « Mes livraisons » |
-| N4 | Payout held on a reported problem | 🔧 | 2.69.0 | Unresolved goods incident from the client or staff holds that payout |
-| N5 | « Mes paiements » in « Mes livraisons » | 🔧 | 2.66.0 | Carriers only |
-| N6 | Email per payout | 🔧 🔑 | 2.69.0 | At delivery and at transfer; reaches only the owner until C4 |
-| N7 | SMS to the driver | 🔧 🔑 | 2.69.0 | Built; sends nothing until `TWILIO_*` exist |
-| N8 | Route planner | 🔧 | 2.70.0 | `/carrier/planner`; Valhalla public server until a production host is chosen |
-| N9 | Airtable import / expiry reminder | ❓ | — | Not built: describes Airtable listings with no deadline; every Expeditoo request has one. Waits on question 5 |
-| X1 | Scheduled jobs | 🔑 | — | `APP_URL` + `CRON_SECRET`; `a-111-02` publishes on the first run |
-| REQ-01/06/08 | Professional / private driver | ❓ | — | What a private driver provides instead of a SIRET |
-| REQ-02 | Actif / Absent / Suspendu / Désinscrit | 🔧 | 2.66.0 | Migration `0042` |
-| REQ-03/04/05 | Verification, bots, reset | 🔑 | — | Built; waits on C4 |
-| REQ-07 | Admin alert on an application | 🔧 | 2.66.0 | In-app for every admin; email reaches the owner only until C4 |
+| A1 | « À traiter » vs « Tous » | ✅ | 2.65.0 | — |
+| A2 | Reverse sort + period filter | 🟡 | 2.66.0, fixed 2.69.0 | — |
+| A3 | Number on every quote | ✅ | 2.65.0 | — |
+| A4 | Reference = number alone; admin columns | 🟡 | 2.66.0 | — |
+| A5 | Driver on shipments | ✅ | 2.65.0 | — |
+| A6 | Role switch | ✅ | 2.61.0 | — |
+| B1 | Admin picks, client pays to confirm | 🟡 | 2.67.0 | — |
+| B2 | Driver withdraws → back on board | ✅ | 2.6x | — |
+| B3 | « Annonce directe » tag | 🟡 | 2.66.0 | Shipped as « Site Expeditoo »; two strings if Léa asks otherwise |
+| B4 | Fixed panel on job page | ✅ | 2.65.0 | — |
+| B5 | « Urgent » 48 h + « Immédiat » | 🟡 | 2.66.0 | « Immédiat » = pickup window already open (assumption, one line to change) |
+| B6 | Negotiation | 🟡 | 2.67.0 | Range, counter-offer, 5 rounds |
+| C1 | Driver transfers | ✅ manual | — | Stay request → approve → paid until the lawyer clears Connect |
+| C2 | Stripe to the driver's IBAN | ⏸ | 2.69.0 (code) | Release sweep built, **not scheduled**; IBAN via the RIB at signup |
+| C3 | Apple Pay / Google Pay / PayPal | 🟠 | 2.66.0 | Register the domain in Stripe for Apple Pay; PayPal skipped |
+| C4 | Sender address | 🟠 | — | `no-reply@prionation.io`: verify in Resend, set `EMAIL_FROM` |
+| D1 | Condensed dashboard | ✅ | 2.65.0 | — |
+| D2 | Map view + driver search | 🟡 | 2.68.0 | — |
+| D3 | Readable on mobile | ✅ | 2.65.0 | — |
+| D4 | Confirmation after actions | ✅ | 2.65.0 | — |
+| D5 | Search messages by listing | ✅ | 2.65.0 | — |
+| D6 | Profile counters | ✅ | 2.65.0 | — |
+| X1 | Scheduled jobs | 🟠 | 2.71.0 (park) | Park `a-111-02`, then set `APP_URL` + `CRON_SECRET` |
+| REQ-01 | Professional / private | 🟡 | 2.71.0 | Field added, everyone professional |
+| REQ-02 | Actif / Absent / Suspendu / Désinscrit | 🟡 | 2.66.0 | — |
+| REQ-03 | Email verification | 🟠 | built | Needs C4 |
+| REQ-04 | Bot prevention | 🟠 | built | Needs C4 |
+| REQ-05 | Reset link | 🟠 | built | Needs C4 |
+| REQ-06 | Separate private signup | ⏸ | — | Opens when the client defines a private driver |
+| REQ-07 | Admin alert on applications | 🟡 🟠 | 2.66.0 | In-app now; email needs C4 |
+| REQ-08 | Pro approval button | ✅ | — | Approve / reject / suspend exist; every driver is professional |
+| N1 | Delivery availability before payment | 🟡 | 2.67.0 | Dates after booking: through messages |
+| N2 | Driver list sorting, dates | 🟡 | 2.66.0 | — |
+| N3 | Automatic payout | ⏸ | 2.69.0 (code) | Not scheduled — see C2 |
+| N4 | Payout held on a reported problem | 🟡 | 2.69.0 | — |
+| N5 | « Mes paiements » in « Mes livraisons » | 🟡 | 2.66.0 | — |
+| N6 | Email per payout | 🟡 🟠 | 2.69.0 | Needs C4 to reach drivers |
+| N7 | Alerts to the driver | 🟡 🟠 | 2.69.0, email 2.71.0 | Email now (needs C4); texts once `TWILIO_*` exist |
+| N8 | Route planner | 🟡 🟠 | 2.70.0 | Set `VALHALLA_URL` to a production router |
+| N9 | Airtable import / reminder | ⏸ | — | Airtable stays a one-way, read-only import |
 
 ---
 
@@ -356,12 +374,25 @@ than leaving it in a chat message.
       which selects `expedion_quotes.reference`. Proved on a scratch database
       holding quotes: numbered by request date, a new quote takes the next
       number, a re-run renumbers nothing.
-- [ ] **Ship 2.66.0–2.70.0 (one branch, `release/2.70.0`, five commits).**
+- [ ] **Ship 2.66.0–2.71.0 (one branch, `release/2.71.0`).**
       (1) Actions → « Migrate database » → « Use workflow from »
-      **`release/2.70.0`**, environment `production`, type `migrate`. It
-      applies `0042` and `0043`. (2) Check: `drizzle.__drizzle_migrations`
-      has 43 rows, newest `when` = 1788519600000. (3) `git push origin
-      release/2.70.0:main` (a fast-forward from `d842bbb`); Vercel deploys.
+      **`release/2.71.0`**, environment `production`, type `migrate`. It
+      applies `0042`, `0043` and `0044`. (2) Check: `drizzle.__drizzle_migrations`
+      has 44 rows, newest `when` = 1788606000000. (3) `git push origin
+      release/2.71.0:main` (a fast-forward from `d842bbb`); Vercel deploys.
+- [ ] **Send mail from `no-reply@prionation.io` (C4, decided 30 October).**
+      Resend → Domains → add `prionation.io` → add the records it shows (SPF,
+      DKIM, and the MX/return-path) at the DNS host → wait for « Verified ».
+      Then `vercel env rm EMAIL_FROM production` and `vercel env add EMAIL_FROM
+      production` with `Expeditoo <no-reply@prionation.io>`, and redeploy.
+      **Not before « Verified »**: an unverified sender makes every mail fail,
+      the owner's included. The `RESEND_API_KEY` in Vercel must belong to the
+      Resend account that holds the domain. Test « Mot de passe oublié » with
+      an address that is not the owner's. Switching to expeditoo.fr later is
+      the same steps and one variable.
+- [ ] **Park `a-111-02` before the scheduled jobs switch on (X1).** After the
+      deploy: Admin → Passerelle Expedion → open DEV-04657 (`a-111-02`) →
+      « Suspendre la publication auto ».
       Claude was refused both the dispatch (« Production Deploy ») and, on
       30 October, `gh variable set` (« Account & Standing-Rule Changes »).
 - [ ] **Run Actions → "Migrate database" before `main` moves past `d842bbb`**
@@ -378,7 +409,7 @@ than leaving it in a chat message.
       Vercel Production (`vercel env add … production`) and redeploy. A French
       alphanumeric sender or a French number; until then every text answers
       `TWILIO_NOT_CONFIGURED` and nothing is sent.
-- [ ] **Automatic payouts (2.69.0, N3) — three switches, in this order.**
+- [ ] **Automatic payouts (2.69.0, N3) — parked on 30 October; when the lawyer clears Connect, three switches plus re-adding the route (spec §N3).**
       (1) The lawyer's OK on paying drivers through Stripe Connect.
       (2) Stripe dashboard: clear the restriction on creating connected
       accounts (the payout onboarding has answered « temporarily restricted »)
@@ -397,9 +428,8 @@ than leaving it in a chat message.
       is there, the accept dialog shows no Apple Pay button; Google Pay may
       appear in Chrome regardless.
 - [ ] **Set the GitHub repo variable `APP_URL` and secret `CRON_SECRET` — the
-      scheduled jobs have never run in production.** (Since 2.69.0 the same
-      switch also starts `release-payouts`, which pays nothing until Connect
-      is enabled and a driver has onboarded. To set a *new* secret rather
+      scheduled jobs have never run in production.** (`release-payouts` is
+      not scheduled since 2.71.0: payouts stay manual. To set a *new* secret rather
       than re-type Vercel's: `S=$(openssl rand -hex 32)`, then
       `printf %s "$S" | gh secret set CRON_SECRET`, `vercel env rm
       CRON_SECRET production`, `printf %s "$S" | vercel env add CRON_SECRET
@@ -858,6 +888,48 @@ than leaving it in a chat message.
       Until then its application page says driver access is off.
 
 ---
+
+## ✅ 2026-10-30 — The Owner's Decisions of 30 October: Park a Test Quote, Payouts Stay Manual, a Driver Type, Driver Alerts by Email (2.71.0)
+
+_The owner, with a table of interim decisions for the eleven open questions:
+« I hope everything solve and answered for now, and tackle all of status to be
+clear, then push everything to main then give me the rest to finish up such as
+migration »._
+
+Spec: `docs/specs/client_feedback_2026_10_29_spec.md` §0 R–W, §REQ-01, §X1, §N3, §N7.
+
+### What changed
+
+- **X1 / `a-111-02`** — `AutoPublishControl` in the quote dialog: « Suspendre
+  la publication auto » clears `escalate_after` through the existing admin
+  PATCH (not a price field), and `findDueForEscalation` never takes a null;
+  « Reprendre » sets now + 48 h. No migration, nothing deleted.
+- **Payouts stay manual** — the `release-payouts` route, its `CRON_JOBS` entry
+  and its hourly line are gone; `payoutReleaseService` stays with its tests and
+  a comment saying how to switch it on. **Found while deciding this:**
+  production holds **one** `user` with an `active` Connect account (read-only,
+  `mirror_readonly`, counts only), so the 2.69.0 schedule would have started
+  real transfers the first time the crons ran after a real charge.
+- **REQ-01** — migration `0044_carrier_kind`: `carrier_kind` enum, `carriers.kind`
+  default `professional` NOT NULL. Shown on the admin driver file and in the
+  application email. Onboarding unchanged.
+- **N7** — `driver-sms.service.ts` → `driver-alerts.service.ts`: every alert
+  goes by `DriverAlertEmail` and by text, each surviving the other's failure.
+- **C4** — no code: `EMAIL_FROM` becomes `Expeditoo <no-reply@prionation.io>`
+  once that domain is verified in Resend (Operator to-do).
+- The status table at the top of this file now has one row per item of the
+  29 October document with its final state.
+
+### Verification
+
+- `0044` applied on a fresh database after all 43 others, and re-run without
+  error. New tests: `driver-alerts` (6, replacing `driver-sms`),
+  `AutoPublishControl` (2). Full gates below in the commit.
+
+### Known limits
+
+- Nothing from 2.66.0 on is live until the migration runs and `main` moves —
+  Claude was refused the migration dispatch again; see Operator to-do.
 
 ## ✅ 2026-10-30 — A Route Planner for Drivers, Timed by Motorway and Without (2.70.0)
 

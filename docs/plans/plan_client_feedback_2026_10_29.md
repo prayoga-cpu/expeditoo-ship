@@ -15,8 +15,11 @@ review (A1–D6, X1), the driver field test (REQ-01–08), Nicolas's answers of
 | 2.69.0 | N3 (release sweep, inert until Connect + crons), N4 (dispute hold), N6 (payout mail), N7 (driver SMS); A2's window parameters fixed | — | 2.66.0 |
 | 2.70.0 | N8 route planner (Valhalla, with and without motorways) | — | — |
 
-Held, each for one answer recorded in STATUS → Questions: REQ-01 / REQ-06 /
-REQ-08 (what a private driver is), N9b (Airtable sync), PayPal (C3).
+| 2.71.0 | The owner's decisions of 30 October: park a paid quote's auto-publish (X1), payouts stay manual (release sweep unscheduled), `carriers.kind` (REQ-01), driver alerts by email as well as text (N7), sender `no-reply@prionation.io` (C4, a variable) | `0044_carrier_kind` | 2.70.0 |
+
+Decided on 30 October, not built: PayPal (skipped), the private-driver lane
+(REQ-06/08, waits on the definition), Airtable sync (stays a one-way import),
+a « propose another date » button (messages instead).
 
 ## 2.66.0 steps
 

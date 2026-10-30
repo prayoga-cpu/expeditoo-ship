@@ -9,6 +9,7 @@ import { ConfirmationRequestEmail } from "@/server/emails/ConfirmationRequestEma
 import { TransportRequestReceivedEmail } from "@/server/emails/TransportRequestReceivedEmail";
 import { DriverApplicationSubmittedEmail } from "@/server/emails/DriverApplicationSubmittedEmail";
 import { PayoutEmail, type PayoutEmailProps } from "@/server/emails/PayoutEmail";
+import { DriverAlertEmail, type DriverAlertEmailProps } from "@/server/emails/DriverAlertEmail";
 import { render } from "@react-email/components";
 
 export const emailService = {
@@ -223,6 +224,19 @@ export const emailService = {
    * `listingsService.createListing` the moment a job publishes
    * (docs/specs/listing_posted_feedback_spec.md §2.2).
    */
+  /** The email twin of the driver's texts (§N7 of the 29 October spec). */
+  async sendDriverAlertEmail(to: string, params: DriverAlertEmailProps) {
+    const emailHtml = await render(DriverAlertEmail(params));
+    return this.sendEmail({
+      to,
+      subject:
+        params.kind === "message"
+          ? `Nouveau message au sujet de « ${params.jobTitle} »`
+          : `Offre acceptée : « ${params.jobTitle} »`,
+      html: emailHtml,
+    });
+  },
+
   /** The driver hears about every payout (§N6 of the 29 October spec). */
   async sendPayoutEmail(to: string, params: PayoutEmailProps) {
     const emailHtml = await render(PayoutEmail(params));
@@ -243,6 +257,7 @@ export const emailService = {
       applicantName: string;
       companyName: string;
       city: string;
+      kindLabel: string;
       reviewUrl: string;
     }
   ) {

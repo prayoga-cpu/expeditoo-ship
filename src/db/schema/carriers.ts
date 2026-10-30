@@ -30,6 +30,14 @@ export const carrierStatusEnum = pgEnum("carrier_status", [
   "deregistered",
 ]);
 
+/**
+ * Professional or private (REQ-01, migration 0044). Every driver is
+ * `professional` today and onboarding stays professional-only; `private`
+ * opens when the client defines what a private driver provides instead of a
+ * SIRET (client_feedback_2026_10_29_spec.md §REQ-01).
+ */
+export const carrierKindEnum = pgEnum("carrier_kind", ["professional", "private"]);
+
 export const carrierDocumentKindEnum = pgEnum("carrier_document_kind", [
   "cni_recto",
   "cni_verso",
@@ -83,6 +91,7 @@ export const carriers = pgTable(
     postalCode: text("postal_code").notNull(),
 
     status: carrierStatusEnum("status").default("draft").notNull(),
+    kind: carrierKindEnum("kind").default("professional").notNull(),
 
     // Banking. The full IBAN/BIC is never persisted here - it goes straight to
     // Stripe, and only the last 4 are kept for display (carrier_kyc_spec.md §4.3).
@@ -292,6 +301,7 @@ export type CarrierDriver = typeof carrierDrivers.$inferSelect;
 export type InsertCarrierDriver = typeof carrierDrivers.$inferInsert;
 
 export type CarrierStatus = (typeof carrierStatusEnum.enumValues)[number];
+export type CarrierKind = (typeof carrierKindEnum.enumValues)[number];
 export type CarrierDocumentKind =
   (typeof carrierDocumentKindEnum.enumValues)[number];
 export type VehicleType = (typeof vehicleTypeEnum.enumValues)[number];

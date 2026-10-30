@@ -302,6 +302,13 @@
       "when": 1788519600000,
       "tag": "0043_offer_proposal_counter",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1788606000000,
+      "tag": "0044_carrier_kind",
+      "breakpoints": true
     }
   ]
 }

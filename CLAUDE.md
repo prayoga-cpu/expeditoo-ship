@@ -222,7 +222,7 @@ without an `sk_live_` key, so an accept there takes real money.
 Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before shipping.
 
 **Gates — all green.** `npx tsc --noEmit` 0 errors · `pnpm lint` 0 errors ·
-3,122 unit tests pass (2.70.0) · `pnpm build` succeeds.
+3,124 unit tests pass (2.71.0) · `pnpm build` succeeds.
 
 **Done**
 - Schema remodelled to the transport model; one clean initial migration
@@ -707,6 +707,12 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
   until Connect, the lawyer and the crons say yes. `/carrier/planner` times a
   trip by motorway and without through **Valhalla** (`VALHALLA_URL`), because
   the public OSRM server refuses `exclude=motorway`.
+- **The owner's decisions of 30 October** (2.71.0): a paid quote's
+  auto-publish can be **parked** (`AutoPublishControl`, `escalate_after =
+  null`); **payouts stay manual** — `release-payouts` has no route and no
+  schedule, because production holds an active Connect account and a schedule
+  would move real money; `carriers.kind` (`0044`, everyone `professional`);
+  driver alerts go by **email and text** (`driver-alerts.service.ts`).
 
 **Not done**
 - **The scheduled jobs have never run in production.** `scheduled-jobs.yml`
@@ -845,8 +851,8 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
    (`payout_safety_spec.md`). Since 2.69.0 an unresolved goods incident from
    the client or staff **holds** the payout (`DISPUTED`, `withdrawals.dal.ts`)
    and the release sweep (`payout-release.service.ts`) sends it 48 h after
-   delivery through Connect; a refused transfer goes back to `scheduled`,
-   never `failed`.
+   delivery through Connect — **not scheduled** since 2.71.0 — and a refused
+   transfer goes back to `scheduled`, never `failed`.
 23. **A JS `Date` inside a raw drizzle `sql` template fails on postgres.js**
    (`ERR_INVALID_ARG_TYPE`), and a mocked DAL test cannot see it. Compare
    with a typed operator (`lte(col, date)`) or pass `date.toISOString()` with

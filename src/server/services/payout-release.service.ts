@@ -13,10 +13,13 @@ import { payoutNoticesService } from "@/server/services/payout-notices.service";
  * Stripe Connect to the driver's own account — Stripe holds their IBAN; this
  * platform never does.
  *
- * **Inert until three things are true**, none of them code: the scheduled jobs
- * run (X1), the platform's Stripe account may create connected accounts (it
- * is currently restricted), and a driver has finished Connect onboarding.
- * Until then every payout stays in the withdrawal balance exactly as before.
+ * **Not scheduled** (decision of 30 October, client_feedback_2026_10_29_spec.md
+ * §0 R): payouts stay request → approve → paid by hand until the lawyer clears
+ * Stripe Connect. Production already holds one active Connect account, so a
+ * scheduled sweep would have moved real money. Switching on is the transfer
+ * step only: a `GET /api/cron/release-payouts` route that calls `releaseDue`
+ * and records its heartbeat, a `CRON_JOBS` entry, and an hourly line in
+ * `scheduled-jobs.yml` (spec §N3 has the route as it was).
  *
  * Every write is conditional on the state it moves from (gotcha 17): a payout
  * a withdrawal request claimed meanwhile is skipped, and a transfer Stripe

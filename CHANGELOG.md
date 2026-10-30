@@ -14,6 +14,18 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.71.0] - 2026-10-30 · feat
+
+- **Admins can pause the automatic publication of a paid quote** from its
+  detail window, and resume it later. Nothing is deleted, and « Publier »
+  still works by hand.
+- **Drivers get an email** when a client writes to them about a job and when
+  their offer is accepted. Texts will follow once the SMS service is set up.
+- **Each driver's file shows their type**: every driver is « Professionnel »
+  for now, and the application alert says so.
+- Payments to drivers stay as they are: you request them, an operator approves
+  and records the transfer.
+
 ## [2.70.0] - 2026-10-30 · feat
 
 - **Drivers: a route planner.** « Planificateur » in the menu: choose where you

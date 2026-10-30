@@ -267,6 +267,7 @@ export function CarrierApplicationDetail({
             </h4>
             <CarrierStatusBadge status={application.status} absent={absent} />
           </div>
+          <Field label={t("kindLabel")} value={t(`kind.${application.kind ?? "professional"}`)} />
         </div>
 
         {absent && (

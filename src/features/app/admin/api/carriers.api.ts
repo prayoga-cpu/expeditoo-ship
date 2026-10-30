@@ -78,6 +78,8 @@ export interface CarrierApplication {
     city: string;
     postalCode: string;
     status: CarrierApplicationStatus;
+    /** REQ-01 (migration 0044): every driver is `professional` for now. */
+    kind: "professional" | "private";
     ibanLast4: string | null;
     bicLast4: string | null;
     rejectionReason: string | null;

@@ -23,6 +23,8 @@ interface DriverApplicationSubmittedEmailProps {
   applicantName: string;
   companyName: string;
   city: string;
+  /** « Professionnel » or « Particulier » (REQ-01, REQ-07). */
+  kindLabel: string;
   reviewUrl: string;
 }
 
@@ -30,6 +32,7 @@ export const DriverApplicationSubmittedEmail = ({
   applicantName,
   companyName,
   city,
+  kindLabel,
   reviewUrl,
 }: DriverApplicationSubmittedEmailProps) => {
   return (
@@ -56,6 +59,7 @@ export const DriverApplicationSubmittedEmail = ({
                 {companyName}
               </Text>
               <Text className="text-[#666666] text-[13px] m-0 mt-1">{city}</Text>
+              <Text className="text-[#666666] text-[13px] m-0 mt-1">{kindLabel}</Text>
             </Section>
 
             <Section className="text-center mt-[32px] mb-[32px]">

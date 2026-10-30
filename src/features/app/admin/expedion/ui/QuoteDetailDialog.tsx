@@ -60,6 +60,7 @@ import {
 } from "@/lib/numeric-input";
 import { cn } from "@/lib/utils";
 import { formatQuoteReference } from "@/lib/quote-reference";
+import { AutoPublishControl } from "./AutoPublishControl";
 import {
   canRepriceQuote,
   canSupplyMissingPrice,
@@ -979,6 +980,17 @@ export function QuoteDetailDialog({
                     label={t("escalateAfter")}
                     value={dateTime(data.escalateAfter)}
                   />
+                  {/* Park or resume the automatic publication of a paid quote
+                      no driver has yet (§X1 of the 29 October spec). */}
+                  {data.status === "paid" &&
+                    !data.listingId &&
+                    !data.escalatedAt &&
+                    !data.assignedCarrierId && (
+                      <AutoPublishControl
+                        quoteId={data.id}
+                        escalateAfter={data.escalateAfter}
+                      />
+                    )}
                   <Field
                     label={t("escalatedAt")}
                     value={dateTime(data.escalatedAt)}

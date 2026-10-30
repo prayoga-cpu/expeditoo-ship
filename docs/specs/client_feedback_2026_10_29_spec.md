@@ -33,6 +33,12 @@ is in §0 so it can be overruled cheaply.
 | O | N7 when to text | The requester's message to a driver about the job, at most one text per 30 minutes per thread; every accepted offer. Never the message's words | An SMS sits on a lock screen |
 | P | N8 « estimated times for normal roads and for motorway » | Two Valhalla routes through the same stops, `use_highways` 1 and 0 | The public OSRM server refuses `exclude=motorway`; Valhalla answers both, and the router is one environment variable |
 | Q | N9 the listing-expiry reminder | **Not built** | It describes a request with no deadline — Nicolas's Airtable flow. Every Expeditoo request has a pickup window, so it always has a deadline and expires on it (once X1 runs). Whether Airtable stays is question 5 |
+| R | N3 / C1 / C2, decided 30 October | **Payouts stay manual** (request → approve → paid). The release sweep is built and tested but **not scheduled** — no route, no cron entry | The lawyer has not cleared Connect; and production already holds one active Connect account, so a scheduled sweep would move real money |
+| S | REQ-01, decided 30 October | `carriers.kind` (`professional` \| `private`, migration 0044), every driver `professional`; onboarding stays professional-only; the admin sees the type, the application email names it | The field exists before the rule, so opening the private lane later is a lane, not a migration |
+| T | X1 / `a-111-02`, decided 30 October | **Park, don't delete**: « Suspendre la publication auto » on a paid quote clears its `escalate_after`, so the sweep skips it; « Reprendre » sets now + 48 h | Nothing is lost and the client's payment stands |
+| U | N7, decided 30 October | Every driver text also goes **by email**; texts start the day `TWILIO_*` exist | Email is the channel that works now |
+| V | C4, decided 30 October | Send from **`no-reply@prionation.io`** (the owner's domain and DNS) until the client buys expeditoo.fr | One variable, no code, to switch |
+| W | C3 PayPal, B3, N9, N1-after-booking, decided 30 October | PayPal skipped (Apple / Google Pay cover it); « Site Expeditoo » shipped; Airtable stays a one-way, read-only import; dates after booking go through messages | — |
 | L | N1 « changeable later by either side » | **Not built** in 2.67.0: the accept dialog shows the delivery days and times before paying; changing dates after booking still goes through the conversation | A reschedule flow touches the shipment dates, the driver's plan and the Expedion write-back; it is its own release |
 
 ---
@@ -167,6 +173,23 @@ file shows « Disponibilité »: « Je m'absente » / « Je suis de retour » an
 « Me désinscrire », each saying what it keeps and what it stops. A deregistered
 driver's file is editable and can be submitted again.
 
+## REQ-01. Professional or private (decided 30 October)
+
+`carriers.kind` — `carrier_kind` enum `professional | private`, default
+`professional`, NOT NULL (migration `0044`). Nothing sets `private` yet:
+onboarding stays professional-only and `siret` stays NOT NULL. The admin's
+driver file shows « Type de chauffeur : Professionnel »; the application email
+(REQ-07) names the type.
+
+## X1. Parking a paid quote (decided 30 October)
+
+« Suspendre la publication auto » in the quote dialog, on a quote that is
+`paid` with no listing, no driver and not escalated: `PATCH
+/api/expedion/quotes/:id/admin {escalateAfter: null}` — not a price field, so
+not `PRICE_LOCKED`. `findDueForEscalation` requires `escalate_after <= now`,
+so a null is never due. « Reprendre (dans 48 h) » sets now + 48 h. « Publier »
+by hand still works. For `a-111-02` before the scheduled jobs switch on.
+
 ## REQ-07. The admins hear about every application
 
 `submitApplication` notifies **every admin** in the app (`/admin/applications`)
@@ -269,9 +292,13 @@ after booking is not built (§0 L).
   driver's « paid » email. A refused transfer → `releaseClaim` (back to
   `scheduled`, reason kept) — **never `failed`**, which would drop earned money
   out of the balance.
-- **Inert** until the crons run (X1), the platform account may create
-  connected accounts, and a driver finishes Connect onboarding. Until then
-  every payout stays in the withdrawal flow as before.
+- **Not scheduled** (§0 R). `payoutReleaseService` and its tests stay; the
+  cron route, its `CRON_JOBS` entry and its hourly line were removed on 30
+  October. To switch on once the lawyer clears Connect: a route
+  `GET /api/cron/release-payouts` that authorises (`isAuthorisedCron`), calls
+  `releaseDue()`, records `cronHealthService.record("release-payouts", …)`;
+  `{ job: "release-payouts", everyMinutes: 60 }` in `CRON_JOBS`; and
+  `- cron: "20 * * * *"` with its `case` line in `scheduled-jobs.yml`.
 
 ## N4. A reported problem holds the payout
 
@@ -297,15 +324,18 @@ thrown. The email reaches only the Resend account's own address until C4.
 
 ## N7. Texts to the driver
 
-`driverSmsService` over the bridge's Twilio sender:
+`driverAlertsService` (`driver-alerts.service.ts`) — **email and text** (§0 U),
+each channel on its own, over `DriverAlertEmail` and the bridge's Twilio
+sender:
 - `onNewMessage` from `messagesService.sendMessage`, not awaited: only when the
   sender is the conversation's job's `shipperId` and the recipient has a
   `carriers` row with a phone; skipped when the same sender wrote in the same
   thread less than `MESSAGE_SMS_QUIET_MS` = 30 min before. The text names the
   job and links the thread — never the message.
 - `onOfferAccepted` from `notifyAwardOutcome`: the winner, a link to the job.
-- Answers `TWILIO_NOT_CONFIGURED` and sends nothing until the `TWILIO_*`
-  variables exist.
+- The text answers `TWILIO_NOT_CONFIGURED` until the `TWILIO_*` variables
+  exist; the email goes regardless (reaching only the Resend account's own
+  address until §0 V's domain is verified).
 
 ## N8. The route planner
 
@@ -390,4 +420,11 @@ thrown. The email reaches only the Resend account's own address until C4.
 - `plan-stops.test.ts`, `RoutePlanner.test.tsx`: pickup then delivery, on-board
   goods as delivery only, the out-of-order refusal, the points sent in order,
   both times shown.
+- `driver-alerts.service.test.ts`: email with Twilio unset, text once set,
+  requester → driver only, no job, not a driver, the 30-minute quiet, each
+  channel surviving the other's failure, the award alert on both.
+- `AutoPublishControl.test.tsx`: park sends `escalateAfter: null`; resume
+  sends now + 48 h.
+- `0044` applied on a fresh database after every other migration, and run a
+  second time without error.
 

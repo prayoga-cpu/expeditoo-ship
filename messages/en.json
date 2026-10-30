@@ -2832,7 +2832,12 @@
         "markAbsent": "Mark as away",
         "endAbsence": "End absence",
         "deregister": "Deregister",
-        "reinstate": "Reinstate"
+        "reinstate": "Reinstate",
+        "kindLabel": "Driver type",
+        "kind": {
+          "professional": "Professional",
+          "private": "Private"
+        }
       },
       "vehicleTypes": {
         "little_car": "Little car",
@@ -3143,6 +3148,15 @@
         "empty": "No direct requests yet",
         "emptyBody": "Requests posted with “Request transport” will show up here.",
         "requester": "by {name}"
+      },
+      "autoPublish": {
+        "pause": "Pause auto-publish",
+        "resume": "Resume (in 48 h)",
+        "activeNote": "Published to drivers automatically on the date above.",
+        "parkedNote": "Auto-publish paused: this quote will only be published by hand.",
+        "paused": "Auto-publish paused",
+        "resumed": "Auto-publish resumes in 48 h",
+        "failed": "The change failed."
       }
     },
     "awards": {
