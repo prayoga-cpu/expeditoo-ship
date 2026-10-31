@@ -3821,7 +3821,7 @@
       "withMotorway": "Par autoroute",
       "withoutMotorway": "Sans autoroute",
       "km": "{km} km",
-      "estimateNote": "Estimations hors trafic et hors pauses. En bleu par autoroute, en orange sans autoroute.",
+      "estimateNote": "Estimations hors trafic et hors pauses. En bleu par autoroute, en orange sans autoroute. Itinéraires calculés avec Valhalla sur les données © les contributeurs OpenStreetMap.",
       "errors": {
         "NO_ROUTE": "Aucune route ne relie ces étapes. Vérifiez qu'elles sont bien sur la terre ferme.",
         "ROUTER_UNREACHABLE": "Le calcul d'itinéraire ne répond pas. Réessayez dans un instant.",

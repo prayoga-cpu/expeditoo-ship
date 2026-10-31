@@ -347,11 +347,20 @@ sender:
   before its own pickup is flagged and « Calculer l'itinéraire » is disabled
   (`outOfOrder`). Nothing is saved.
 - `POST /api/carrier/route-plan {points}` (2–25, `routePlanSchema`) →
-  `routePlannerService.plan`: two Valhalla `/route` calls, `costing: auto` with
-  `use_highways` 1 and 0, decoded (`decodePolyline`, precision 6). Errors:
-  `NO_ROUTE` 422 (no road joins the points), `ROUTER_UNREACHABLE` /
-  `ROUTER_FAILED` 502. `VALHALLA_URL` overrides the default public FOSSGIS
-  server (light use only — Operator to-do).
+  `routePlannerService.plan`: two Valhalla route requests, **POST JSON**,
+  `costing: auto` with `use_highways` 1 and 0, decoded (`decodePolyline`,
+  precision 6), User-Agent naming the app. Errors: `NO_ROUTE` 422 (no road
+  joins the points), `ROUTER_UNREACHABLE` / `ROUTER_FAILED` 502.
+- **The router** (2.72.0): `VALHALLA_ROUTE_URL` is the full endpoint
+  (Production: `https://valhalla1.openstreetmap.de/route`, also the default);
+  `VALHALLA_API_KEY`, when set, is sent as `api_key`. The FOSSGIS server's fair
+  use is ~1 request/second per caller with bursts of 10, a User-Agent naming
+  the app and OpenStreetMap attribution (printed under the result); it is
+  best-effort. When drivers outgrow it: Stadia Maps' EU host,
+  `https://api-eu.stadiamaps.com/route/v1` + a key (commercial use from the
+  Starter plan), with no code change. **Not `@valhallajs/valhallajs`**: 261 MB
+  of native bindings routing over self-built OSM tiles (several GB for
+  France), beyond a Vercel function's 250 MB.
 - The result: « Par autoroute » and « Sans autoroute », duration and distance,
   and `PlanMap` with both lines (blue solid, orange dashed) and numbered stops.
   Times exclude traffic and breaks, and say so.

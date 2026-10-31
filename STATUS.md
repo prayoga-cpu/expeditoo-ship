@@ -56,7 +56,7 @@ code to do all it can · ⏸ decided not to build for now
 | N5 | « Mes paiements » in « Mes livraisons » | ✅ | 2.66.0 | — |
 | N6 | Email per payout | ✅ | 2.69.0 | — |
 | N7 | Alerts to the driver | 🟠 | 2.69.0, email 2.71.0 | Email live; texts once `TWILIO_*` exist |
-| N8 | Route planner | 🟠 | 2.70.0 | Set `VALHALLA_URL` to a production router |
+| N8 | Route planner | ✅ | 2.70.0, 2.72.0 | FOSSGIS public Valhalla (fair use, set as `VALHALLA_ROUTE_URL`); Stadia Maps EU + `VALHALLA_API_KEY` when it outgrows it |
 | N9 | Airtable import / reminder | ⏸ | — | Airtable stays a one-way, read-only import |
 
 ---
@@ -383,7 +383,9 @@ than leaving it in a chat message.
       2026-10-30 13:53 UTC, before it could be parked, as job **100012**
       (1 €, open, no offer). Admin → Annonces → 100012 → Supprimer — or leave
       it: it expires on 2026-11-01 07:53 UTC. Its quote reads `escalated`.
-- [ ] **Remove `NODE_ENV` from Vercel (Production, Preview).** It is set to
+- [x] ~~Remove `NODE_ENV` from Vercel~~ — **done 2026-10-31** with
+      `vercel env rm` (2.72.0). Original note:
+- [ ] *(reference)* **Remove `NODE_ENV` from Vercel (Production, Preview).** It is set to
       `development`; Next.js overrides it at runtime and logs « NODE_ENV was
       incorrectly set », but a build-time read of it would get the wrong
       answer. `vercel env rm NODE_ENV` and redeploy.
@@ -441,7 +443,12 @@ than leaving it in a chat message.
       direct job, and 48 h later Admin → Paramètres → « Tâches planifiées »
       shows `release-payouts` green and the payout reads paid. That first one
       is the first real Connect transfer — watch it in Stripe.
-- [ ] **Choose a routing host for the planner (2.70.0, N8).** It uses the
+- [x] ~~Choose a routing host for the planner~~ — **2026-10-31**: FOSSGIS
+      public Valhalla, set explicitly as `VALHALLA_ROUTE_URL` (2.72.0). When
+      drivers outgrow its fair use, a Stadia Maps account (Starter, EU host)
+      and two variables: `VALHALLA_ROUTE_URL=https://api-eu.stadiamaps.com/route/v1`,
+      `VALHALLA_API_KEY=…`. Original note:
+- [ ] *(reference)* **Choose a routing host for the planner (2.70.0, N8).** It uses the
       FOSSGIS public Valhalla server, which is for light use. Self-host
       Valhalla, or use a hosted one, and set `VALHALLA_URL` in Vercel
       Production (no trailing slash). Nothing else changes.
@@ -917,6 +924,50 @@ than leaving it in a chat message.
       Until then its application page says driver access is off.
 
 ---
+
+## ✅ 2026-10-31 — The Planner's Router Made Swappable and Compliant, and NODE_ENV Removed From Vercel (2.72.0)
+
+_The owner: « remove the node_env for me from the vercel CLI … npm install
+@valhallajs/valhallajs handle the valhalla URL for me by install or figure out
+on the internet … handle the rest that can be done from your end … for the
+domain we will add the new one later, for now keep the vercel url »._
+
+### What changed
+
+- **Not installed: `@valhallajs/valhallajs`.** `npm view` reads 3.7.0, «
+  NodeJs bindings for Valhalla », **260,869,043 bytes unpacked**, and its README
+  routes over tiles you build from an OSM extract (`build_tiles`) — several GB
+  for France. A Vercel function is capped at 250 MB, so it would have broken
+  the build and still had no map to route on. It belongs on a server of our own.
+- **`route-planner.service.ts`**: `VALHALLA_ROUTE_URL` (full endpoint) and
+  `VALHALLA_API_KEY` (sent as `api_key`) replace the never-set `VALHALLA_URL`;
+  requests are POST JSON (what Stadia's hosted Valhalla takes; checked that
+  FOSSGIS takes it too) with a User-Agent naming the app, as the FOSSGIS
+  fair-use terms ask; the planner credits OpenStreetMap under its result.
+- **Vercel**: `NODE_ENV` (« development », Production + Preview, 78 days old)
+  removed — production logged « NODE_ENV was incorrectly set to
+  "development" » on every request. `VALHALLA_ROUTE_URL` set for Production to
+  `https://valhalla1.openstreetmap.de/route`. Both effective with this deploy.
+- **Domain**: unchanged, as asked — `APP_URL` and the sender links stay on
+  `expeditoo-ship-five.vercel.app`.
+
+### What the research found
+
+- FOSSGIS public Valhalla: ~1 request/second per caller, bursts of 10, a
+  User-Agent and ODbL attribution required, best-effort, « won't be usable for
+  any production service for third parties » (maintainer, valhalla#3373).
+  Enough for today's handful of drivers; every plan is two requests.
+- Stadia Maps: hosted Valhalla, `use_highways` supported, EU host
+  `api-eu.stadiamaps.com`; 20 credits per route; Free 200,000 credits/month
+  non-commercial; Starter $20/month for 1,000,000 credits, commercial.
+
+### Verification
+
+- `route-planner.service` tests 6 (POST body, User-Agent, endpoint + key).
+  A live plan through the new path: Paris → Lyon 465.8 km / 297 min by
+  motorway, 497.9 km / 617 min without.
+- Stripe CLI is installed but logged in to no account, so the Apple Pay
+  domain (Operator to-do) could not be registered from here.
 
 ## ✅ 2026-10-30 — The Owner's Decisions of 30 October: Park a Test Quote, Payouts Stay Manual, a Driver Type, Driver Alerts by Email (2.71.0)
 

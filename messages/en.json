@@ -3821,7 +3821,7 @@
       "withMotorway": "By motorway",
       "withoutMotorway": "Without motorway",
       "km": "{km} km",
-      "estimateNote": "Estimates without traffic or breaks. Blue by motorway, orange without.",
+      "estimateNote": "Estimates without traffic or breaks. Blue by motorway, orange without. Routes computed with Valhalla on data © OpenStreetMap contributors.",
       "errors": {
         "NO_ROUTE": "No road joins these stops. Check they are all on land.",
         "ROUTER_UNREACHABLE": "Route planning is not answering. Try again in a moment.",

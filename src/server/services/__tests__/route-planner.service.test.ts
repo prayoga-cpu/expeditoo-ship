@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { routePlannerService } from "../route-planner.service";
+import { routeEndpoint, routePlannerService } from "../route-planner.service";
 import { routePlanSchema } from "@/server/dto/route-plan.dto";
 
 /** The driver's route planner — client_feedback_2026_10_29_spec.md §N8. */
@@ -13,7 +13,10 @@ const trip = (km: number, seconds: number) => ({
   }),
 });
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
+});
 
 const points = [
   { lat: 48.85, lng: 2.35 },
@@ -27,9 +30,11 @@ describe("routePlannerService.plan", () => {
 
     const plan = await routePlannerService.plan({ userId: "d1" }, { points });
 
-    const asked = fetchMock.mock.calls.map(([url]) =>
-      JSON.parse(decodeURIComponent(String(url).split("json=")[1]))
-    );
+    const asked = fetchMock.mock.calls.map(([, init]) => JSON.parse(init.body));
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({
+      method: "POST",
+      headers: expect.objectContaining({ "User-Agent": expect.stringContaining("Expeditoo") }),
+    });
     expect(asked.map((b) => b.costing_options.auto.use_highways).sort()).toEqual([0, 1]);
     expect(asked[0].locations).toEqual([
       { lat: 48.85, lon: 2.35 },
@@ -48,6 +53,20 @@ describe("routePlannerService.plan", () => {
   it("says when the router cannot be reached", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("timeout")));
     await expect(routePlannerService.plan({ userId: "d1" }, { points })).rejects.toMatchObject({ code: "ROUTER_UNREACHABLE", status: 502 });
+  });
+});
+
+describe("routeEndpoint", () => {
+  it("defaults to the public FOSSGIS router", () => {
+    vi.stubEnv("VALHALLA_ROUTE_URL", "");
+    vi.stubEnv("VALHALLA_API_KEY", "");
+    expect(routeEndpoint()).toBe("https://valhalla1.openstreetmap.de/route");
+  });
+
+  it("takes a hosted router and its key, Stadia's way", () => {
+    vi.stubEnv("VALHALLA_ROUTE_URL", "https://api-eu.stadiamaps.com/route/v1");
+    vi.stubEnv("VALHALLA_API_KEY", "k3y/with+chars");
+    expect(routeEndpoint()).toBe("https://api-eu.stadiamaps.com/route/v1?api_key=k3y%2Fwith%2Bchars");
   });
 });
 

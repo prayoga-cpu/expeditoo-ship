@@ -14,6 +14,13 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.72.0] - 2026-10-31 · infra
+
+- Nothing you can see changes, apart from one line under the route planner's
+  result crediting OpenStreetMap, whose data it uses.
+- The planner's routing service can now be switched to a paid provider with a
+  setting, and the server no longer runs with a wrong environment flag.
+
 ## [2.71.0] - 2026-10-30 · feat
 
 - **Admins can pause the automatic publication of a paid quote** from its

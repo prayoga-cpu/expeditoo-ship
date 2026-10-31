@@ -8,10 +8,20 @@ import type { RoutePlanInput } from "@/server/dto/route-plan.dto";
  *
  * Valhalla, because it can be asked to avoid motorways: the public OSRM server
  * the shipment map uses answers « Exclude flag combination is not supported »
- * to `exclude=motorway`. `VALHALLA_URL` points at the router; it defaults to
- * the FOSSGIS public server, which is for light use — a production host is an
- * Operator to-do, not a code change. Called from the server so the browser
- * never learns which router, and so it can be swapped in one place.
+ * to `exclude=motorway`. Called from the server so the browser never learns
+ * which router, and so it can be swapped in one place:
+ *
+ * - `VALHALLA_ROUTE_URL` — the full `/route` endpoint. Defaults to the FOSSGIS
+ *   public server, whose fair-use terms are about one request a second per
+ *   caller (bursts of ten), a User-Agent naming the app, and OpenStreetMap
+ *   attribution; it is best-effort and not meant for heavy production use.
+ * - `VALHALLA_API_KEY` — sent as `api_key`, for a hosted Valhalla such as
+ *   Stadia Maps (`https://api-eu.stadiamaps.com/route/v1`, EU-hosted).
+ *
+ * Not `@valhallajs/valhallajs`: those Node bindings are 261 MB of native code
+ * that route over tiles built from OpenStreetMap data — several GB for France
+ * — and a Vercel function is capped at 250 MB (client_feedback_2026_10_29_spec
+ * .md §N8). They belong on a router of our own, if we ever run one.
  */
 
 export class RoutePlanError extends Error {
@@ -25,8 +35,18 @@ export class RoutePlanError extends Error {
   }
 }
 
-const DEFAULT_VALHALLA_URL = "https://valhalla1.openstreetmap.de";
+const DEFAULT_ROUTE_URL = "https://valhalla1.openstreetmap.de/route";
 const TIMEOUT_MS = 20_000;
+/** FOSSGIS asks every caller to name itself. */
+const USER_AGENT = "Expeditoo route planner (+https://expeditoo-ship-five.vercel.app)";
+
+/** The endpoint, with the hosted provider's key when there is one. */
+export function routeEndpoint(): string {
+  const url = process.env.VALHALLA_ROUTE_URL || DEFAULT_ROUTE_URL;
+  const key = process.env.VALHALLA_API_KEY;
+  if (!key) return url;
+  return `${url}${url.includes("?") ? "&" : "?"}api_key=${encodeURIComponent(key)}`;
+}
 
 export interface PlannedRoute {
   distanceKm: number;
@@ -52,18 +72,20 @@ async function route(
   points: RoutePlanInput["points"],
   useHighways: number
 ): Promise<PlannedRoute> {
-  const base = process.env.VALHALLA_URL || DEFAULT_VALHALLA_URL;
   const body = {
     locations: points.map((p) => ({ lat: p.lat, lon: p.lng })),
     costing: "auto",
     costing_options: { auto: { use_highways: useHighways } },
     directions_options: { units: "kilometers" },
   };
-  const url = `${base}/route?json=${encodeURIComponent(JSON.stringify(body))}`;
-
   let res: Response;
   try {
-    res = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT_MS) });
+    res = await fetch(routeEndpoint(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
   } catch {
     throw new RoutePlanError("ROUTER_UNREACHABLE", 502);
   }

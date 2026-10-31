@@ -222,7 +222,7 @@ without an `sk_live_` key, so an accept there takes real money.
 Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before shipping.
 
 **Gates — all green.** `npx tsc --noEmit` 0 errors · `pnpm lint` 0 errors ·
-3,124 unit tests pass (2.71.0) · `pnpm build` succeeds.
+3,126 unit tests pass (2.72.0) · `pnpm build` succeeds.
 
 **Done**
 - Schema remodelled to the transport model; one clean initial migration
@@ -708,8 +708,10 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
   message or an accepted offer (`driverSmsService`, Twilio not yet configured),
   and `release-payouts` sends Connect transfers 48 h after delivery — inert
   until Connect, the lawyer and the crons say yes. `/carrier/planner` times a
-  trip by motorway and without through **Valhalla** (`VALHALLA_URL`), because
-  the public OSRM server refuses `exclude=motorway`.
+  trip by motorway and without through **Valhalla** (`VALHALLA_ROUTE_URL`,
+  optional `VALHALLA_API_KEY` for a hosted one), because the public OSRM server
+  refuses `exclude=motorway`. Not `@valhallajs/valhallajs` — 261 MB of native
+  bindings plus self-built tiles, beyond a Vercel function.
 - **The owner's decisions of 30 October** (2.71.0): a paid quote's
   auto-publish can be **parked** (`AutoPublishControl`, `escalate_after =
   null`); **payouts stay manual** — `release-payouts` has no route and no
