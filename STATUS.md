@@ -7,51 +7,56 @@ Feedback Consolidated 29.10.2026.pdf`, with its state on 30 October. Spec:
 `docs/specs/client_feedback_2026_10_29_spec.md` (decisions in §0). Plan:
 `docs/plans/plan_client_feedback_2026_10_29.md`._
 
-**Legend:** ✅ live on production (2.65.0) · 🟡 built, live once
-`release/2.71.0` is migrated and deployed · 🟠 built, also needs a setting
-outside the code · ⏸ decided not to build for now
+**State on 2026-10-31:** 2.71.0 is **live** — migrations `0042`–`0044`
+applied by the owner (44 journal rows, newest `when` 1788606000000, checked
+through `mirror_readonly`), `main` fast-forwarded to `5a61011`,
+`/api/public/changelog` reads 2.71.0. The scheduled jobs run (every run green
+since 2026-10-30 19:01 UTC). Mail goes out from `no-reply@prionation.io`.
+
+**Legend:** ✅ live on production · 🟠 live, but needs a setting outside the
+code to do all it can · ⏸ decided not to build for now
 
 | # | Item | State | Release | Decision / what it waits on |
 |---|---|---|---|---|
 | A1 | « À traiter » vs « Tous » | ✅ | 2.65.0 | — |
-| A2 | Reverse sort + period filter | 🟡 | 2.66.0, fixed 2.69.0 | — |
+| A2 | Reverse sort + period filter | ✅ | 2.66.0, fixed 2.69.0 | — |
 | A3 | Number on every quote | ✅ | 2.65.0 | — |
-| A4 | Reference = number alone; admin columns | 🟡 | 2.66.0 | — |
+| A4 | Reference = number alone; admin columns | ✅ | 2.66.0 | — |
 | A5 | Driver on shipments | ✅ | 2.65.0 | — |
 | A6 | Role switch | ✅ | 2.61.0 | — |
-| B1 | Admin picks, client pays to confirm | 🟡 | 2.67.0 | — |
+| B1 | Admin picks, client pays to confirm | ✅ | 2.67.0 | — |
 | B2 | Driver withdraws → back on board | ✅ | 2.6x | — |
-| B3 | « Annonce directe » tag | 🟡 | 2.66.0 | Shipped as « Site Expeditoo »; two strings if Léa asks otherwise |
+| B3 | « Annonce directe » tag | ✅ | 2.66.0 | Shipped as « Site Expeditoo »; two strings if Léa asks otherwise |
 | B4 | Fixed panel on job page | ✅ | 2.65.0 | — |
-| B5 | « Urgent » 48 h + « Immédiat » | 🟡 | 2.66.0 | « Immédiat » = pickup window already open (assumption, one line to change) |
-| B6 | Negotiation | 🟡 | 2.67.0 | Range, counter-offer, 5 rounds |
+| B5 | « Urgent » 48 h + « Immédiat » | ✅ | 2.66.0 | « Immédiat » = pickup window already open (assumption, one line to change) |
+| B6 | Negotiation | ✅ | 2.67.0 | Range, counter-offer, 5 rounds |
 | C1 | Driver transfers | ✅ manual | — | Stay request → approve → paid until the lawyer clears Connect |
 | C2 | Stripe to the driver's IBAN | ⏸ | 2.69.0 (code) | Release sweep built, **not scheduled**; IBAN via the RIB at signup |
 | C3 | Apple Pay / Google Pay / PayPal | 🟠 | 2.66.0 | Register the domain in Stripe for Apple Pay; PayPal skipped |
-| C4 | Sender address | 🟠 | — | `no-reply@prionation.io`: verify in Resend, set `EMAIL_FROM` |
+| C4 | Sender address | ✅ | — | `no-reply@prionation.io`, verified in Resend, `EMAIL_FROM` set in Vercel Production on 30 October |
 | D1 | Condensed dashboard | ✅ | 2.65.0 | — |
-| D2 | Map view + driver search | 🟡 | 2.68.0 | — |
+| D2 | Map view + driver search | ✅ | 2.68.0 | — |
 | D3 | Readable on mobile | ✅ | 2.65.0 | — |
 | D4 | Confirmation after actions | ✅ | 2.65.0 | — |
 | D5 | Search messages by listing | ✅ | 2.65.0 | — |
 | D6 | Profile counters | ✅ | 2.65.0 | — |
-| X1 | Scheduled jobs | 🟠 | 2.71.0 (park) | Park `a-111-02`, then set `APP_URL` + `CRON_SECRET` |
-| REQ-01 | Professional / private | 🟡 | 2.71.0 | Field added, everyone professional |
-| REQ-02 | Actif / Absent / Suspendu / Désinscrit | 🟡 | 2.66.0 | — |
-| REQ-03 | Email verification | 🟠 | built | Needs C4 |
-| REQ-04 | Bot prevention | 🟠 | built | Needs C4 |
-| REQ-05 | Reset link | 🟠 | built | Needs C4 |
+| X1 | Scheduled jobs | ✅ | 2.71.0 | Running since 30 October. `a-111-02` was not parked in time and was published at 13:53 UTC as job 100012 (1 €, no offer) — remove it from Admin → Annonces or let it expire on 1 November 07:53 UTC |
+| REQ-01 | Professional / private | ✅ | 2.71.0 | Field added, everyone professional |
+| REQ-02 | Actif / Absent / Suspendu / Désinscrit | ✅ | 2.66.0 | — |
+| REQ-03 | Email verification | ✅ | built | Mail now reaches everyone |
+| REQ-04 | Bot prevention | ✅ | built | Mail now reaches everyone |
+| REQ-05 | Reset link | ✅ | built | Checked on production on 31 October |
 | REQ-06 | Separate private signup | ⏸ | — | Opens when the client defines a private driver |
-| REQ-07 | Admin alert on applications | 🟡 🟠 | 2.66.0 | In-app now; email needs C4 |
+| REQ-07 | Admin alert on applications | ✅ | 2.66.0 | In-app and email |
 | REQ-08 | Pro approval button | ✅ | — | Approve / reject / suspend exist; every driver is professional |
-| N1 | Delivery availability before payment | 🟡 | 2.67.0 | Dates after booking: through messages |
-| N2 | Driver list sorting, dates | 🟡 | 2.66.0 | — |
+| N1 | Delivery availability before payment | ✅ | 2.67.0 | Dates after booking: through messages |
+| N2 | Driver list sorting, dates | ✅ | 2.66.0 | — |
 | N3 | Automatic payout | ⏸ | 2.69.0 (code) | Not scheduled — see C2 |
-| N4 | Payout held on a reported problem | 🟡 | 2.69.0 | — |
-| N5 | « Mes paiements » in « Mes livraisons » | 🟡 | 2.66.0 | — |
-| N6 | Email per payout | 🟡 🟠 | 2.69.0 | Needs C4 to reach drivers |
-| N7 | Alerts to the driver | 🟡 🟠 | 2.69.0, email 2.71.0 | Email now (needs C4); texts once `TWILIO_*` exist |
-| N8 | Route planner | 🟡 🟠 | 2.70.0 | Set `VALHALLA_URL` to a production router |
+| N4 | Payout held on a reported problem | ✅ | 2.69.0 | — |
+| N5 | « Mes paiements » in « Mes livraisons » | ✅ | 2.66.0 | — |
+| N6 | Email per payout | ✅ | 2.69.0 | — |
+| N7 | Alerts to the driver | 🟠 | 2.69.0, email 2.71.0 | Email live; texts once `TWILIO_*` exist |
+| N8 | Route planner | 🟠 | 2.70.0 | Set `VALHALLA_URL` to a production router |
 | N9 | Airtable import / reminder | ⏸ | — | Airtable stays a one-way, read-only import |
 
 ---
@@ -374,13 +379,31 @@ than leaving it in a chat message.
       which selects `expedion_quotes.reference`. Proved on a scratch database
       holding quotes: numbered by request date, a new quote takes the next
       number, a re-run renumbers nothing.
-- [ ] **Ship 2.66.0–2.71.0 (one branch, `release/2.71.0`).**
+- [ ] **Remove the published test quote (X1).** `a-111-02` was published at
+      2026-10-30 13:53 UTC, before it could be parked, as job **100012**
+      (1 €, open, no offer). Admin → Annonces → 100012 → Supprimer — or leave
+      it: it expires on 2026-11-01 07:53 UTC. Its quote reads `escalated`.
+- [ ] **Remove `NODE_ENV` from Vercel (Production, Preview).** It is set to
+      `development`; Next.js overrides it at runtime and logs « NODE_ENV was
+      incorrectly set », but a build-time read of it would get the wrong
+      answer. `vercel env rm NODE_ENV` and redeploy.
+- [x] ~~Ship 2.66.0–2.71.0 (one branch, `release/2.71.0`)~~ — **done
+      2026-10-30**: migrations `0042`–`0044` by the owner (44 rows, newest
+      `when` 1788606000000, via `mirror_readonly`), `main` → `5a61011`,
+      production serves 2.71.0.
       (1) Actions → « Migrate database » → « Use workflow from »
       **`release/2.71.0`**, environment `production`, type `migrate`. It
       applies `0042`, `0043` and `0044`. (2) Check: `drizzle.__drizzle_migrations`
       has 44 rows, newest `when` = 1788606000000. (3) `git push origin
       release/2.71.0:main` (a fast-forward from `d842bbb`); Vercel deploys.
-- [ ] **Send mail from `no-reply@prionation.io` (C4, decided 30 October).**
+- [x] ~~Send mail from `no-reply@prionation.io`~~ — **done 2026-10-30**:
+      domain verified in Resend by the owner; a test send from the new
+      sender accepted through the local key; `EMAIL_FROM` replaced in Vercel
+      Production (`Expeditoo <no-reply@prionation.io>`; Preview now falls back
+      to the sandbox sender); a production password reset on 2026-10-31
+      answered 200 with no Resend refusal logged. Original instructions kept
+      below for the switch to expeditoo.fr.
+- [ ] *(reference)* **Send mail from `no-reply@prionation.io` (C4, decided 30 October).**
       Resend → Domains → add `prionation.io` → add the records it shows (SPF,
       DKIM, and the MX/return-path) at the DNS host → wait for « Verified ».
       Then `vercel env rm EMAIL_FROM production` and `vercel env add EMAIL_FROM
@@ -390,9 +413,9 @@ than leaving it in a chat message.
       Resend account that holds the domain. Test « Mot de passe oublié » with
       an address that is not the owner's. Switching to expeditoo.fr later is
       the same steps and one variable.
-- [ ] **Park `a-111-02` before the scheduled jobs switch on (X1).** After the
-      deploy: Admin → Passerelle Expedion → open DEV-04657 (`a-111-02`) →
-      « Suspendre la publication auto ».
+- [x] ~~Park `a-111-02` before the scheduled jobs switch on~~ — too late: the
+      escalation sweep published it at 13:53 UTC on 2026-10-30, five hours
+      after the deploy. See « Remove the published test quote » above.
       Claude was refused both the dispatch (« Production Deploy ») and, on
       30 October, `gh variable set` (« Account & Standing-Rule Changes »).
 - [ ] **Run Actions → "Migrate database" before `main` moves past `d842bbb`**
@@ -427,7 +450,13 @@ than leaving it in a chat message.
       `expeditoo-ship-five.vercel.app` (and any custom domain later). Until it
       is there, the accept dialog shows no Apple Pay button; Google Pay may
       appear in Chrome regardless.
-- [ ] **Set the GitHub repo variable `APP_URL` and secret `CRON_SECRET` — the
+- [x] ~~Set the GitHub repo variable `APP_URL` and secret `CRON_SECRET`~~ —
+      **done 2026-10-30 08:33 UTC** by the owner, Vercel's `CRON_SECRET`
+      rotated with it; effective with the 2.71.0 deploy. Every scheduled run
+      green since 19:01 UTC; heartbeats for all four jobs. The first runs
+      expired the 7 stale listings and published `a-111-02` (see above).
+      Original notes:
+- [ ] *(reference)* **Set the GitHub repo variable `APP_URL` and secret `CRON_SECRET` — the
       scheduled jobs have never run in production.** (`release-payouts` is
       not scheduled since 2.71.0: payouts stay manual. To set a *new* secret rather
       than re-type Vercel's: `S=$(openssl rand -hex 32)`, then

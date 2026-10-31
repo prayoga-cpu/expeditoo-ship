@@ -279,7 +279,10 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
   `docs/specs/expedion_post_payment_fork_spec.md`
 - Crons: listing expiry, document expiry, escalation sweep, image cleanup — driven by
   `.github/workflows/scheduled-jobs.yml`, not Vercel Cron (Hobby caps crons at 2/project,
-  once per day). Needs repo variable `APP_URL` and repo secret `CRON_SECRET`.
+  once per day). Repo variable `APP_URL` and secret `CRON_SECRET` set on 2026-10-30;
+  **running in production since then** (Admin → Paramètres → « Tâches planifiées »).
+- **Mail** goes out from `no-reply@prionation.io` (owner's domain, verified in Resend,
+  `EMAIL_FROM` in Vercel Production since 2026-10-30) until the client buys expeditoo.fr.
 - Theme-aware loader (light/dark `.lottie` cuts, picked by `resolvedTheme`); one shared
   `BrandWordmark` lockup across sidebar, mobile header and marketing
 - FR/EN parity exact, verified by key diff rather than by eye (a leaf count is
@@ -715,12 +718,6 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
   driver alerts go by **email and text** (`driver-alerts.service.ts`).
 
 **Not done**
-- **The scheduled jobs have never run in production.** `scheduled-jobs.yml`
-  has failed every run: the repo has no `APP_URL` variable and no
-  `CRON_SECRET` secret (STATUS → Operator to-do). Admin → Paramètres →
-  « Tâches planifiées » reads each job's heartbeat (`cron_heartbeat`, `0041`).
-  Until then no listing expires and no paid quote auto-publishes;
-  `displayStatus` only makes a past-deadline request *read* « Expirée ».
 - **`EXPEDION_APP_ORIGINS` is set in Vercel Production but not in `.env.local`**,
   so `user.origin` reads `expedion` on the deployment and never locally — an
   account created since it was set wears the right badge in `/admin/users`, one
