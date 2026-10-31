@@ -318,6 +318,40 @@ export const listingsDal = {
   },
 
   /**
+   * Fills the map pins a request was posted without
+   * (`listing-pins.service.ts`). `coalesce` keeps any pin already there — one
+   * the requester dropped meanwhile always wins over a geocoded guess.
+   */
+  async setMissingPins(
+    id: string,
+    pins: {
+      pickupLat: number;
+      pickupLng: number;
+      dropoffLat: number;
+      dropoffLng: number;
+    },
+    tx: Executor = db
+  ) {
+    const [row] = await tx
+      .update(listings)
+      .set({
+        pickupLat: sql`coalesce(${listings.pickupLat}, ${pins.pickupLat})`,
+        pickupLng: sql`coalesce(${listings.pickupLng}, ${pins.pickupLng})`,
+        dropoffLat: sql`coalesce(${listings.dropoffLat}, ${pins.dropoffLat})`,
+        dropoffLng: sql`coalesce(${listings.dropoffLng}, ${pins.dropoffLng})`,
+        updatedAt: new Date(),
+      })
+      .where(eq(listings.id, id))
+      .returning({
+        pickupLat: listings.pickupLat,
+        pickupLng: listings.pickupLng,
+        dropoffLat: listings.dropoffLat,
+        dropoffLng: listings.dropoffLng,
+      });
+    return row;
+  },
+
+  /**
    * How many requests a person has put on the board, and how many of those a
    * transporter took (client_feedback_2026_10_21_spec.md §D6). « Posted » is
    * every request that went live — drafts and scheduled ones have not; « taken »

@@ -58,6 +58,7 @@ code to do all it can · ⏸ decided not to build for now
 | N7 | Alerts to the driver | 🟠 | 2.69.0, email 2.71.0 | Email live; texts once `TWILIO_*` exist |
 | N8 | Route planner | ✅ | 2.70.0, 2.72.0 | FOSSGIS public Valhalla (fair use, set as `VALHALLA_ROUTE_URL`); Stadia Maps EU + `VALHALLA_API_KEY` when it outgrows it |
 | N9 | Airtable import / reminder | ⏸ | — | Airtable stays a one-way, read-only import |
+| P1 | _(reported 31 Oct)_ Accept blocked: « no map point » | ✅ | 2.73.0 | Missing pins looked up from the address, then the town, at award and at posting |
 
 ---
 
@@ -924,6 +925,45 @@ than leaving it in a chat message.
       Until then its application page says driver access is off.
 
 ---
+
+## ✅ 2026-10-31 — A Request Without Map Pins Is Placed, Not Refused (2.73.0)
+
+_The owner, with a screenshot of the accept dialog refusing « This request has
+no map point for the pickup or the delivery, and a carrier cannot be chosen
+without one »: « automate this part, so the transaction not blocked, or auto
+choose, any alternative you can suggest »._
+
+Spec: `docs/specs/client_feedback_2026_10_29_spec.md` §P1.
+
+### What changed
+
+- New `listing-pins.service.ts`: `locate` (full address → postcode + town →
+  town, first hit, France and neighbours — job postcodes from abroad are
+  allowed) and `ensurePins`, which writes the found pins through the new
+  `listingsDal.setMissingPins` (`coalesce`: a real pin always wins).
+- `offersService.loadAwardable` (the dialog's quote and authorisation) and
+  `acceptOffer` (before `commitAward`'s lock — the lookup is HTTP) now place a
+  pinless request instead of refusing it; `COORDINATES_REQUIRED` remains for
+  an address not even the town of which can be found, and its copy now says
+  to correct the address.
+- `createListing` and `saveDraft` place a pinless request as it is written
+  (`withPins`, never failing the write), so the board map and the
+  carriers-on-route match have a point from the start.
+- **Coordinated** with the concurrent `expeditoo-ship-74` session (a `/create`
+  release, 2.74.0 / `0045`): it will pass each request's own country into
+  `locate` once it adds `pickup_country` / `dropoff_country`.
+
+### Verification
+
+- `listing-pins.service` (7). The suites that construct `offers` / `listings`
+  services now mock the lookup, so no test reaches Nominatim. Live through
+  `locate`: Paris (full address), Clamart (town fallback from a made-up
+  street), Brussels.
+
+### Known limits
+
+- A town-level pin puts the driver's navigation at the town centre; the
+  street address is still on the job and the run.
 
 ## ✅ 2026-10-31 — The Planner's Router Made Swappable and Compliant, and NODE_ENV Removed From Vercel (2.72.0)
 

@@ -771,7 +771,7 @@
         "CANNOT_BID_OWN_LISTING": "You cannot bid on your own job.",
         "PAYMENT_CHARGE_FAILED": "The payment did not go through. Your card was not charged.",
         "PAYMENT_NOT_AUTHORISED": "The payment was not confirmed. Please try again.",
-        "COORDINATES_REQUIRED": "This request has no map point for the pickup or the delivery, and a carrier cannot be chosen without one.",
+        "COORDINATES_REQUIRED": "We could not place the pickup or delivery address on the map, not even its town. Correct the request's address, then try again.",
         "generic": "Could not send this offer. Please try again."
       }
     },
@@ -4516,7 +4516,7 @@
       "OFFER_NOT_FOUND": "This offer could not be found.",
       "LISTING_NOT_OPEN": "This request is no longer open for offers.",
       "LISTING_NOT_FOUND": "This request could not be found.",
-      "COORDINATES_REQUIRED": "This request has no map point for the pickup or the delivery, and a carrier cannot be chosen without one.",
+      "COORDINATES_REQUIRED": "We could not place the pickup or delivery address on the map, not even its town. Correct the request's address, then try again.",
       "CARRIER_NO_LONGER_APPROVED": "This carrier can no longer be chosen.",
       "SLOT_IN_PAST": "This slot has already passed. Choose another one.",
       "SLOT_NOT_ON_OFFER": "This slot is not part of the offer.",

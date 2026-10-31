@@ -1,4 +1,5 @@
 import { nanoid } from "nanoid";
+import { listingPinsService } from "@/server/services/listing-pins.service";
 import { db } from "@/db";
 import { listingsDal, type BrowseFilters } from "@/server/dal/listings.dal";
 import { shipmentsDal } from "@/server/dal/shipments.dal";
@@ -302,6 +303,24 @@ function assertOwner(listing: Listing | undefined, userId: string): Listing {
   return listing;
 }
 
+/**
+ * A request typed without map pins gets them from its addresses as it is
+ * written, so the board map, the carriers-on-route match and the award all
+ * have a point (client_feedback_2026_10_29_spec.md §P1). Never fails the
+ * write: a lookup that finds nothing leaves the request as it was, and the
+ * award tries again.
+ */
+async function withPins<T extends Parameters<typeof listingPinsService.ensurePins>[0]>(
+  listing: T
+): Promise<T> {
+  try {
+    return await listingPinsService.ensurePins(listing);
+  } catch (error) {
+    console.error(`Pin lookup failed for listing ${listing.id}`, error);
+    return listing;
+  }
+}
+
 export const listingsService = {
   /**
    * `options.notifyRouteMatches` defaults true and is not part of the
@@ -326,8 +345,8 @@ export const listingsService = {
     // resolved here when the caller did not name one.
     const categoryId =
       data.categoryId ?? (await listingsDal.ensureDefaultCategory());
-    const listing = await listingsDal.create(
-      toInsert(shipperId, data, expiresAt, categoryId, now)
+    const listing = await withPins(
+      await listingsDal.create(toInsert(shipperId, data, expiresAt, categoryId, now))
     );
 
     if (data.photos.length > 0) {
@@ -379,9 +398,10 @@ export const listingsService = {
       return updated;
     });
     if (!listing) throw await unpublishedError(listingId, shipperId);
+    const pinned = await withPins(listing);
 
-    if (isLiveNow(data)) await goLive(listing, shipperId);
-    return toListingView(listing, "full");
+    if (isLiveNow(data)) await goLive(pinned, shipperId);
+    return toListingView(pinned, "full");
   },
 
   /** Deletes a draft or scheduled request outright: nobody else has seen it. */

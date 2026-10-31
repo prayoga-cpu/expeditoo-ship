@@ -7,6 +7,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
  * else's, and never the one the requester's own first request is capturing.
  */
 
+// The pin lookup reaches Nominatim; these suites test their own service, so it
+// hands the listing back as it is (listing-pins.service.test.ts covers it).
+vi.mock("@/server/services/listing-pins.service", () => ({
+  listingPinsService: { ensurePins: async <T,>(listing: T) => listing },
+}));
 vi.mock("@/db", () => ({
   db: { transaction: vi.fn(async (cb: (tx: unknown) => unknown) => cb({})) },
 }));

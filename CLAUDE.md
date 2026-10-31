@@ -222,7 +222,7 @@ without an `sk_live_` key, so an accept there takes real money.
 Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before shipping.
 
 **Gates — all green.** `npx tsc --noEmit` 0 errors · `pnpm lint` 0 errors ·
-3,126 unit tests pass (2.72.0) · `pnpm build` succeeds.
+3,133 unit tests pass (2.73.0) · `pnpm build` succeeds.
 
 **Done**
 - Schema remodelled to the transport model; one clean initial migration
@@ -712,6 +712,11 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
   optional `VALHALLA_API_KEY` for a hosted one), because the public OSRM server
   refuses `exclude=motorway`. Not `@valhallajs/valhallajs` — 261 MB of native
   bindings plus self-built tiles, beyond a Vercel function.
+- **A pinless request is placed, not refused** (2.73.0): `listingPinsService`
+  looks a missing pin up from the address, then the town, at award
+  (`loadAwardable`, `acceptOffer`) and at posting (`createListing`,
+  `saveDraft`); `COORDINATES_REQUIRED` is left for an address that cannot be
+  found at all. Test suites that build the offers/listings services mock it.
 - **The owner's decisions of 30 October** (2.71.0): a paid quote's
   auto-publish can be **parked** (`AutoPublishControl`, `escalate_after =
   null`); **payouts stay manual** — `release-payouts` has no route and no

@@ -14,6 +14,15 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.73.0] - 2026-10-31 · fix
+
+- **Choosing a transporter is no longer blocked when a request has no map
+  point.** If the pickup or delivery address was typed without placing it on
+  the map, the app now finds it from the address — or at least the town — and
+  the payment goes through. New requests get their map point as soon as they
+  are posted. Only an address that cannot be found at all still asks to be
+  corrected.
+
 ## [2.72.0] - 2026-10-31 · infra
 
 - Nothing you can see changes, apart from one line under the route planner's

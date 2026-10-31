@@ -16,6 +16,11 @@ const m = vi.hoisted(() => ({
   notify: vi.fn().mockResolvedValue({}),
 }));
 
+// The pin lookup reaches Nominatim; these suites test their own service, so it
+// hands the listing back as it is (listing-pins.service.test.ts covers it).
+vi.mock("@/server/services/listing-pins.service", () => ({
+  listingPinsService: { ensurePins: async <T,>(listing: T) => listing },
+}));
 vi.mock("@/db", () => ({
   db: { transaction: async (fn: (tx: unknown) => unknown) => await fn("tx") },
 }));

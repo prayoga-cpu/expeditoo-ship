@@ -8,6 +8,7 @@ import { carriersDal } from "@/server/dal/carriers.dal";
 import { userHasRole } from "@/server/dal/users.dal";
 import { notificationsService } from "@/server/services/notifications.service";
 import { driverAlertsService } from "@/server/services/driver-alerts.service";
+import { listingPinsService } from "@/server/services/listing-pins.service";
 import { paymentsService } from "@/server/services/payments.service";
 import { stripeService } from "@/server/services/stripe.service";
 import {
@@ -354,7 +355,11 @@ async function loadAwardable(
   if (listing.status !== "open" || listing.acceptedOfferId) {
     throw err("LISTING_NOT_OPEN", 409);
   }
-  if (!hasBothPins(listing)) throw err("COORDINATES_REQUIRED", 422);
+  // No pin? Look the addresses up and keep the result, rather than refuse the
+  // requester's payment (client_feedback_2026_10_29_spec.md §P1). Refused
+  // only when not even the town can be placed.
+  const pinned = await listingPinsService.ensurePins(listing);
+  if (!hasBothPins(pinned)) throw err("COORDINATES_REQUIRED", 422);
 
   const carrier = await carriersDal.getByUserId(offer.carrierId);
   if (!carrier || carrier.status !== "approved") {
@@ -362,7 +367,7 @@ async function loadAwardable(
   }
   if (!mayTakeWork(carrier)) throw err("CARRIER_ABSENT", 409);
 
-  return { offer, listing };
+  return { offer, listing: pinned };
 }
 
 /**
@@ -735,6 +740,11 @@ export const offersService = {
       listing.origin === "expedion";
 
     if (!isSelfAward) await assertMayAward(actorUserId, listing);
+
+    // A request posted without map pins gets them from its addresses before
+    // the lock — the lookup is an HTTP call — so `commitAward`'s re-check
+    // finds them (client_feedback_2026_10_29_spec.md §P1).
+    await listingPinsService.ensurePins(listing);
 
     // Past the permission check, so a card this actor authorised for this
     // award is theirs to have released if the award does not use it.

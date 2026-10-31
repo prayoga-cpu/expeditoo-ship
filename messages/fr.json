@@ -771,7 +771,7 @@
         "CANNOT_BID_OWN_LISTING": "Vous ne pouvez pas enchérir sur votre propre annonce.",
         "PAYMENT_CHARGE_FAILED": "Le paiement n'a pas abouti. Votre carte n'a pas été débitée.",
         "PAYMENT_NOT_AUTHORISED": "Le paiement n'a pas été confirmé. Réessayez.",
-        "COORDINATES_REQUIRED": "Cette demande n'a pas de point sur la carte pour l'enlèvement ou la livraison, et un transporteur ne peut pas être retenu sans ce point.",
+        "COORDINATES_REQUIRED": "Nous n'avons pas pu situer l'adresse de retrait ou de livraison, même au niveau de la ville. Corrigez l'adresse de la demande, puis réessayez.",
         "generic": "Impossible d'envoyer cette offre. Réessayez."
       }
     },
@@ -4516,7 +4516,7 @@
       "OFFER_NOT_FOUND": "Cette offre est introuvable.",
       "LISTING_NOT_OPEN": "Cette demande n'est plus ouverte aux offres.",
       "LISTING_NOT_FOUND": "Cette demande est introuvable.",
-      "COORDINATES_REQUIRED": "Cette demande n'a pas de point sur la carte pour l'enlèvement ou la livraison, et un transporteur ne peut pas être retenu sans ce point.",
+      "COORDINATES_REQUIRED": "Nous n'avons pas pu situer l'adresse de retrait ou de livraison, même au niveau de la ville. Corrigez l'adresse de la demande, puis réessayez.",
       "CARRIER_NO_LONGER_APPROVED": "Ce transporteur ne peut plus être retenu.",
       "SLOT_IN_PAST": "Ce créneau est déjà passé. Choisissez-en un autre.",
       "SLOT_NOT_ON_OFFER": "Ce créneau ne fait pas partie de l'offre.",

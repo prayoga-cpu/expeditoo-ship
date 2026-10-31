@@ -15,6 +15,11 @@ import { publishNewMessage } from "../message-publish";
 
 // Covers docs/specs/thread_offer_spec.md §5, §7 and §12.
 
+// The pin lookup reaches Nominatim; these suites test their own service, so it
+// hands the listing back as it is (listing-pins.service.test.ts covers it).
+vi.mock("@/server/services/listing-pins.service", () => ({
+  listingPinsService: { ensurePins: async <T,>(listing: T) => listing },
+}));
 vi.mock("@/server/dal/messages.dal", () => ({
   messagesDAL: { getConversationById: vi.fn(), createMessage: vi.fn() },
 }));

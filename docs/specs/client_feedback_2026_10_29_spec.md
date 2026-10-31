@@ -365,6 +365,34 @@ sender:
   and `PlanMap` with both lines (blue solid, orange dashed) and numbered stops.
   Times exclude traffic and breaks, and say so.
 
+## P1. A request without map pins is placed, not refused (reported 31 October)
+
+**Was.** A request typed without a map pin could be posted and bid on, but
+accepting an offer answered `COORDINATES_REQUIRED` (« This request has no map
+point… ») and the requester could not pay: a run needs a point to drive to
+(`shipments.pickup_lat` NOT NULL).
+
+**Now.** `listingPinsService.ensurePins(listing)`:
+- Returns the listing untouched when both pins exist.
+- Otherwise looks up each missing end with `locate(address, postalCode,
+  city)`: the full address, then postcode + town, then the town alone,
+  stopping at the first hit, in `fr,be,lu,ch,mc,de,es,it,nl,gb` (Nominatim).
+- Both ends placed → `listingsDal.setMissingPins` writes them with
+  `coalesce`, so a pin already there always wins; the listing comes back with
+  them.
+- An end that cannot be placed → the listing unchanged.
+
+Called:
+- in `loadAwardable` (the payment dialog's quote and authorisation) — the
+  refusal now happens only when even the town is unknown;
+- in `acceptOffer` before `commitAward`'s lock (an HTTP call never runs
+  inside it), so the locked re-check finds the pins;
+- after `createListing` and `saveDraft` write the row (`withPins`, which never
+  fails the write), so the board map, the carriers-on-route match and the
+  award have a point from the start.
+
+The refusal copy says what is left to do: correct the request's address.
+
 ---
 
 ## Test coverage required
@@ -436,4 +464,9 @@ sender:
   sends now + 48 h.
 - `0044` applied on a fresh database after every other migration, and run a
   second time without error.
+- `listing-pins.service.test.ts`: the three lookups in order, the countries
+  searched, the first hit wins, nothing found, a pinned request untouched,
+  only the missing end looked up and saved, an unplaceable end left alone.
+- Live: « 2 boulevard de Grenelle, 75015 Paris », a made-up street falling
+  back to Clamart, and Brussels all placed through `locate`.
 
