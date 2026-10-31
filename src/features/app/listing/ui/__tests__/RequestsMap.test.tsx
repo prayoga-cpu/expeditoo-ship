@@ -19,7 +19,11 @@ vi.mock("react-map-gl/maplibre", async () => {
   });
   return {
     default: Map,
-    Marker: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+    Marker: ({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) => (
+      <div data-testid="marker" style={style}>
+        {children}
+      </div>
+    ),
     NavigationControl: () => null,
     Source: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
     Layer: () => null,
@@ -82,6 +86,17 @@ describe("RequestsMap", () => {
     renderMap([job("a")]);
     fireEvent.click(screen.getByRole("button", { name: /Voir « Demande a »/ }));
     expect(screen.getByRole("button", { name: /^Demande a/, pressed: true })).toBeInTheDocument();
+  });
+
+  it("lifts the chosen pin above another from the same town", () => {
+    renderMap([job("a"), job("b")]);
+    fireEvent.click(screen.getByRole("button", { name: /^Demande a/ }));
+    const container = (title: string) =>
+      screen.getByRole("button", { name: `Voir « ${title} » sur la carte` }).closest(
+        "[data-testid=marker]"
+      ) as HTMLElement;
+    expect(container("Demande a").style.zIndex).toBe("1");
+    expect(container("Demande b").style.zIndex).toBe("0");
   });
 
   it("counts the requests with no point to plot", () => {

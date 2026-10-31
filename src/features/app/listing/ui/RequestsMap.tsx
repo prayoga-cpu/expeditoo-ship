@@ -205,7 +205,15 @@ export function RequestsMap({ jobs }: { jobs: Job[] }) {
           {pinned.map((job) => {
             const active = job.id === selectedId;
             return (
-              <Marker key={job.id} longitude={job.pickupLng} latitude={job.pickupLat} anchor="bottom">
+              <Marker
+                key={job.id}
+                longitude={job.pickupLng}
+                latitude={job.pickupLat}
+                anchor="bottom"
+                // Each marker is its own transformed element, so only its
+                // container decides which pill shows when two share a town.
+                style={{ zIndex: active ? 1 : 0 }}
+              >
                 <button
                   type="button"
                   aria-label={t("pinLabel", { title: job.title })}
@@ -217,7 +225,7 @@ export function RequestsMap({ jobs }: { jobs: Job[] }) {
                     "rounded-full border px-2.5 py-1 text-xs font-semibold shadow-sm transition-colors",
                     "focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none",
                     active
-                      ? "z-10 border-primary bg-primary text-primary-foreground"
+                      ? "border-primary bg-primary text-primary-foreground"
                       : "bg-background text-foreground hover:border-primary/50"
                   )}
                 >

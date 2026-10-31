@@ -926,6 +926,41 @@ than leaving it in a chat message.
 
 ---
 
+## ✅ 2026-10-31 — The Selected Request's Pin Shows On Top, After a Browser Pass Over the New Screens (2.73.1)
+
+_Found while walking the screens shipped in 2.66.0–2.72.0 in Chromium. Nobody
+reported it._
+
+### What changed
+
+- `RequestsMap`: the selected request's pickup marker gets `style={{ zIndex:
+  1 }}` (0 otherwise). The `z-10` it carried sat on the button *inside* the
+  marker. Each MapLibre marker is its own transformed element, so the class
+  had no effect, and of two requests from the same town the later one in the
+  DOM always painted over the chosen one. The class is gone.
+
+### Verification
+
+- `RequestsMap.test.tsx` (4, one new). The mocked `Marker` now passes `style`
+  through, so the test reads the container's z-index.
+- Chromium, on a scratch database, against a production build of 2.72.0 plus
+  this change. Before the fix, the topmost element at the selected
+  pill's centre was the other Lyon request's pill. After it, the selected pill
+  is on top.
+- The same pass, no console errors anywhere:
+  - « Mes demandes » → Carte at 1366 px light and 390 px dark: four pins, no
+    horizontal overflow.
+  - `/admin/listings` and `/admin/shipments`: « Demandeur » with initials.
+  - `/admin/awards`: three cards in « En attente d'un chauffeur ».
+  - `/carrier/planner`: a seeded Paris → Lille run timed through the public
+    Valhalla server, 2 h 41 / 226.2 km by motorway and 6 h 01 / 250.8 km
+    without.
+
+### Known limits
+
+- On a phone the map sits under the list, so choosing a row zooms a map that
+  may be off-screen. The row still opens « Ouvrir la demande ».
+
 ## ✅ 2026-10-31 — A Request Without Map Pins Is Placed, Not Refused (2.73.0)
 
 _The owner, with a screenshot of the accept dialog refusing « This request has

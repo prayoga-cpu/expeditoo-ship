@@ -14,6 +14,12 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.73.1] - 2026-10-31 · fix
+
+- On the map view of « Mes demandes », the request you select now shows its
+  price on top. Before, when two of your requests left from the same town,
+  the other one's price could cover it.
+
 ## [2.73.0] - 2026-10-31 · fix
 
 - **Choosing a transporter is no longer blocked when a request has no map
