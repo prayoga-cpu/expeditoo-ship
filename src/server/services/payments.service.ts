@@ -716,8 +716,15 @@ export const paymentsService = {
    * `saved` confirms here against the first saved card, and answers
    * `requires_action` when the bank wants 3-D Secure — the requester is at the
    * keyboard to answer it, which an off-session charge could never ask. `new`
-   * returns a client secret for the card form, and keeps the card only when
+   * returns a client secret for the payment form, and keeps the card only when
    * the requester ticked the box (pay_at_accept_spec.md §3.2).
+   *
+   * `new` offers every method switched on in the Stripe Dashboard that can
+   * hold money until capture — card, Link, PayPal when the owner turns it on —
+   * rather than cards alone (payment_alternatives_spec.md §2). The Dashboard is
+   * the switch: no method is named here, so turning PayPal off there cannot
+   * break a payment here. `saved` stays a card: it confirms server-side, where
+   * a method that redirects would have nowhere to send the requester.
    */
   async authoriseForAccept(params: {
     shipperId: string;
@@ -741,7 +748,6 @@ export const paymentsService = {
       amount: params.amountCents + platformFeeCents,
       currency: "eur",
       customer: customerId,
-      payment_method_types: ["card"],
       capture_method: "manual" as const,
       metadata: {
         purpose: ACCEPT_INTENT_PURPOSE,
@@ -754,9 +760,12 @@ export const paymentsService = {
 
     const intent =
       params.method === "saved"
-        ? await confirmSavedCard(base, customerId)
+        ? await confirmSavedCard({ ...base, payment_method_types: ["card"] }, customerId)
         : await stripe.paymentIntents.create({
             ...base,
+            automatic_payment_methods: { enabled: true },
+            // Kept only when asked. The form sends the same value, and Stripe
+            // then offers only the methods that can be kept (a card, Link).
             ...(params.saveCard ? { setup_future_usage: "off_session" } : {}),
           });
 

@@ -962,6 +962,60 @@ than leaving it in a chat message.
 
 ---
 
+## ✅ 2026-11-02 — Payment Alternatives Beside the Card Fields: Link, PayPal From the Dashboard, and a Return From PayPal That Finishes the Award (2.77.0)
+
+_The owner: « also every payment part give alternative for paypal/stripe
+besides the credit card fields »._
+
+Spec: `docs/specs/payment_alternatives_spec.md`. Plan:
+`docs/plans/plan_payment_alternatives.md`. **Real money**: production takes
+live payments; this was verified in Stripe test mode only.
+
+### What changed
+
+- `authoriseForAccept` (`method: "new"`): `automatic_payment_methods` instead
+  of `payment_method_types: ["card"]`, so the Stripe Dashboard decides —
+  filtered by Stripe to what supports manual capture in EUR. The saved-card
+  lane keeps `["card"]` (it confirms server-side; a redirect has nowhere to
+  go). Capture, release, refund, receipt and payout read no card details.
+- `AcceptPaymentDialog`: no `paymentMethodTypes` in the Elements options; Link
+  on (`wallets.link: "auto"`); « Enregistrer cette carte » only while card is
+  the chosen method; `return_url` names the award (`acceptReturnUrl`); a
+  `resume` prop finishes the award once on return (`ResumeStep`);
+  `PAYMENT_NOT_AUTHORISED` worded, with « Réessayer ».
+- `useAcceptReturn` (new) reads the return and clears it with
+  `history.replaceState`. `JobOffers` and `ThreadOfferBubble` reopen the
+  dialog for their offer.
+- `AddPaymentMethodForm`: French, Apple Pay / Google Pay, a line saying PayPal
+  is chosen at payment, and `LoadErrorState` instead of « refresh the page ».
+
+### Verification
+
+- Gates on the final tree, one at a time, after the last code edit: tsc 0 ·
+  lint 0 errors (61 warnings, none in touched files) · vitest 3,309 / 3,309
+  in 941 files · changelog:check ok · `pnpm build` on the commit before the
+  push. New: `useAcceptReturn.test.ts` (5), the dialog's return path (3),
+  the server's Dashboard-driven intent (1).
+- Stripe **test mode**, Chromium, a scratch database, `MOCK_PAYMENTS=false`:
+  a 4242 card through the Dashboard-driven form → awarded, payment
+  `captured`, shipment `PENDING`. The test account offered `["card", "link"]`.
+  A real held intent (prepared through the app, confirmed with `pm_card_visa`
+  as PayPal would approve it) returned with `redirect_status=failed` → « n'a
+  pas été approuvé » and « Réessayer » brought the form back; returned with
+  `succeeded` → awarded, `captured 25000`, URL cleaned to `?tab=details`.
+  Throwaway Stripe customer deleted.
+
+### Operator to-do
+
+- **Stripe → Settings → Payment methods → PayPal → Turn on**, test and live.
+  Not on in the test account on 2026-11-02. Then one test-mode PayPal accept
+  end to end, which this release could not do.
+
+### Known limits
+
+- With Link on, Stripe's own optional « save with Link » sits inside the card
+  form beside our « keep this card » box (different things).
+
 ## ✅ 2026-11-02 — The Request Form as the Client Asked on 31 October: Moves, Countries, an Address Book per End, Floors That Show, « Commissaire-priseur » (2.76.0)
 
 _Forwarded by the client on WhatsApp, ten messages, seven with Cocolis

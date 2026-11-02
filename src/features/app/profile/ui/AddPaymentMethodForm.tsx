@@ -1,15 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Elements,
   PaymentElement,
   useStripe,
   useElements,
 } from "@stripe/react-stripe-js";
+import { useTranslations } from "next-intl";
 import { getStripe } from "@/lib/stripe-client";
 import { getStripeAppearance } from "@/lib/stripe-appearance";
 import { Button } from "@/components/ui/button";
+import { LoadErrorState } from "@/components/ui/load-error-state";
 import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
 import { LottieLoader } from "@/components/ui/lottie-loader";
@@ -24,7 +26,16 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 
+/**
+ * Apple Pay and Google Pay keep a card too, so they sit beside the card
+ * fields where the device and the domain allow them. Nothing else is offered
+ * here: a kept method is charged later as a card, and PayPal is chosen when
+ * paying for a transport instead (payment_alternatives_spec.md §4).
+ */
+const SAVE_WALLETS = { applePay: "auto", googlePay: "auto" } as const;
+
 function StripeForm({ onSuccess }: { onSuccess: () => void }) {
+  const t = useTranslations("profile.paymentMethods.add");
   const stripe = useStripe();
   const elements = useElements();
   const [isProcessing, setIsProcessing] = useState(false);
@@ -47,17 +58,19 @@ function StripeForm({ onSuccess }: { onSuccess: () => void }) {
     });
 
     if (error) {
-      setErrorMessage(error.message || "Failed to setup card");
+      // Stripe.js already words its refusal in the viewer's language.
+      setErrorMessage(error.message || t("failed"));
       setIsProcessing(false);
     } else {
-      toast.success("Card added successfully");
+      toast.success(t("saved"));
       onSuccess();
     }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <PaymentElement />
+      <PaymentElement options={{ wallets: SAVE_WALLETS }} />
+      <p className="text-xs text-muted-foreground">{t("paypalHint")}</p>
       {errorMessage && (
         <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md">
           {errorMessage}
@@ -71,30 +84,23 @@ function StripeForm({ onSuccess }: { onSuccess: () => void }) {
         {isProcessing ? (
           <>
             <LottieLoader width={20} height={20} className="mr-2" />
-            Saving secured card...
+            {t("saving")}
           </>
         ) : (
-          "Save Card"
+          t("save")
         )}
       </Button>
     </form>
   );
 }
 
-export function AddPaymentMethodForm() {
+/** The form's own setup intent, asked for again on « Réessayer ». */
+function useSetupIntent() {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
-  const stripePromise = getStripe();
-  const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
 
-  // Ensure we're mounted before rendering Stripe (to get correct theme)
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
+  const load = useCallback(() => {
+    setLoading(true);
     fetch("/api/stripe/setup-intent", { method: "POST" })
       .then((r) => r.json())
       .then((d) => {
@@ -103,9 +109,27 @@ export function AddPaymentMethodForm() {
       })
       .catch((err) => {
         console.error("Failed to fetch setup intent", err);
-        toast.error("Failed to initialize payment setup");
+        setClientSecret(null);
       })
       .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(load, [load]);
+
+  return { clientSecret, loading, retry: load };
+}
+
+export function AddPaymentMethodForm() {
+  const t = useTranslations("profile.paymentMethods.add");
+  const { clientSecret, loading, retry } = useSetupIntent();
+  const router = useRouter();
+  const stripePromise = getStripe();
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  // Ensure we're mounted before rendering Stripe (to get correct theme)
+  useEffect(() => {
+    setMounted(true);
   }, []);
 
   // Get appearance based on current theme
@@ -120,26 +144,20 @@ export function AddPaymentMethodForm() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Add New Card</h1>
-          <p className="text-muted-foreground mt-1">
-            Securely save your card for future purchases.
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
+          <p className="text-muted-foreground mt-1">{t("subtitle")}</p>
         </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Card Details</CardTitle>
-          <CardDescription>
-            Your card information is encrypted and stored securely by Stripe. We
-            do not store your card details on our servers.
-          </CardDescription>
+          <CardTitle>{t("cardTitle")}</CardTitle>
+          <CardDescription>{t("cardDescription")}</CardDescription>
         </CardHeader>
         <CardContent>
           {!stripePromise ? (
             <div className="p-4 text-destructive bg-destructive/10 rounded-md text-sm">
-              Configuration Error: Stripe Publishable Key is missing. Please
-              check your environment variables and restart the server.
+              {t("unavailable")}
             </div>
           ) : loading || !mounted ? (
             <div className="flex justify-center p-12">
@@ -158,9 +176,12 @@ export function AddPaymentMethodForm() {
               />
             </Elements>
           ) : (
-            <div className="text-center text-muted-foreground p-8">
-              Failed to load payment form. Please try refreshing the page.
-            </div>
+            // A failed setup intent was « refresh the page », in English, with
+            // nothing to press (no_dead_ends_spec.md §4).
+            <LoadErrorState
+              onRetry={retry}
+              back={{ href: "/profile/payment-methods", label: t("back") }}
+            />
           )}
         </CardContent>
       </Card>

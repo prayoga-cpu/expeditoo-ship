@@ -499,7 +499,20 @@
       "confirmDelete": "Êtes-vous sûr de vouloir supprimer cette carte ?",
       "deleteSuccess": "Carte supprimée avec succès",
       "deleteError": "Échec de la suppression de la carte",
-      "loadError": "Échec du chargement des moyens de paiement"
+      "loadError": "Échec du chargement des moyens de paiement",
+      "add": {
+        "title": "Ajouter une carte",
+        "subtitle": "Enregistrez une carte pour payer plus vite vos prochains transports.",
+        "cardTitle": "Votre carte",
+        "cardDescription": "Vos données de carte sont chiffrées et conservées par Stripe. Nous ne les enregistrons pas sur nos serveurs.",
+        "paypalHint": "Apple Pay et Google Pay apparaissent quand votre appareil les propose. PayPal se choisit au moment de payer un transport ; il ne s'enregistre pas ici.",
+        "save": "Enregistrer la carte",
+        "saving": "Enregistrement…",
+        "saved": "Carte enregistrée",
+        "failed": "La carte n'a pas pu être enregistrée. Réessayez.",
+        "unavailable": "Le paiement en ligne n'est pas disponible pour le moment.",
+        "back": "Mes moyens de paiement"
+      }
     },
     "picture": {
       "title": "Photo de profil",
@@ -4694,7 +4707,8 @@
       "FORBIDDEN_NOT_SHIPPER": "Seul l'auteur de la demande peut accepter une offre.",
       "FORBIDDEN_NOT_OPERATOR": "Seul un opérateur peut attribuer cette mission.",
       "CARRIER_ABSENT": "Ce transporteur s'est déclaré absent et ne peut pas être retenu pour le moment.",
-      "PAYMENT_INTENT_MISMATCH": "Le prix de cette offre vient de changer. Fermez cette fenêtre et rouvrez l'offre pour payer le nouveau montant."
+      "PAYMENT_INTENT_MISMATCH": "Le prix de cette offre vient de changer. Fermez cette fenêtre et rouvrez l'offre pour payer le nouveau montant.",
+      "PAYMENT_NOT_AUTHORISED": "Le paiement n'a pas été confirmé. Réessayez, avec ce moyen de paiement ou un autre."
     },
     "notDebited": "Votre carte n'a pas été débitée.",
     "next": {
@@ -4704,7 +4718,9 @@
       "seeRequest": "Voir où en est la demande",
       "carriers": "Transporteurs sur ce trajet",
       "editRequest": "Modifier la demande"
-    }
+    },
+    "finishing": "Finalisation de la réservation…",
+    "redirectFailed": "Le paiement n'a pas été approuvé. Réessayez, avec ce moyen de paiement ou un autre."
   },
   "listingUrgency": {
     "label": "Urgent",

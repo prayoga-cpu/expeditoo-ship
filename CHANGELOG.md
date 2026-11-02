@@ -14,6 +14,19 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.77.0] - 2026-11-02 · feat
+
+- **More ways to pay than typing a card.** When you accept an offer, the
+  payment window now also offers **Link**, Stripe's quick checkout, and
+  **PayPal** as soon as it is switched on for Expeditoo — beside the card
+  fields, Apple Pay and Google Pay. With PayPal you approve the payment on
+  PayPal's site and come straight back to finish the booking; if you cancel
+  there, the window says so and lets you choose again.
+- « Enregistrer cette carte » now appears only when you pay by card, since only
+  a card can be kept for next time.
+- The « Ajouter une carte » page is now in French, offers Apple Pay and
+  Google Pay, and lets you try again if it does not load.
+
 ## [2.76.0] - 2026-11-02 · feat
 
 - **Request a moving quote.** On the first step of a request, « Vous

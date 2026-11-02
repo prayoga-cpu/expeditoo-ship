@@ -1313,6 +1313,21 @@ describe("pay at accept", () => {
       expect(stripe.paymentMethods.list).not.toHaveBeenCalled();
     });
 
+    // payment_alternatives_spec.md §2: the Dashboard decides which methods a
+    // new payment offers — PayPal and Link included once switched on there —
+    // so nothing here may name one, and the hold still waits for the award.
+    it("offers a new payment every method the Dashboard allows, held for capture", async () => {
+      await paymentsService.authoriseForAccept(acceptParams({ method: "new" }));
+
+      const [args] = vi.mocked(stripe.paymentIntents.create).mock.calls[0];
+      expect(args).toMatchObject({
+        automatic_payment_methods: { enabled: true },
+        capture_method: "manual",
+        metadata: { purpose: "offer_accept", offerId: "offer-1" },
+      });
+      expect(args).not.toHaveProperty("payment_method_types");
+    });
+
     it("authorises nothing, and creates no customer, in test mode", async () => {
       process.env.MOCK_PAYMENTS = "true";
       const params = acceptParams();

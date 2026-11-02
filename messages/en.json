@@ -499,7 +499,20 @@
       "confirmDelete": "Are you sure you want to remove this card?",
       "deleteSuccess": "Card removed successfully",
       "deleteError": "Failed to remove card",
-      "loadError": "Failed to load payment methods"
+      "loadError": "Failed to load payment methods",
+      "add": {
+        "title": "Add a card",
+        "subtitle": "Save a card to pay for your next transports faster.",
+        "cardTitle": "Your card",
+        "cardDescription": "Your card details are encrypted and kept by Stripe. We do not store them on our servers.",
+        "paypalHint": "Apple Pay and Google Pay appear when your device offers them. PayPal is chosen when you pay for a transport; it is not saved here.",
+        "save": "Save the card",
+        "saving": "Saving…",
+        "saved": "Card saved",
+        "failed": "The card could not be saved. Please try again.",
+        "unavailable": "Online payment is not available right now.",
+        "back": "My payment methods"
+      }
     },
     "picture": {
       "title": "Profile Picture",
@@ -4694,7 +4707,8 @@
       "FORBIDDEN_NOT_SHIPPER": "Only the person who posted the request can accept an offer.",
       "FORBIDDEN_NOT_OPERATOR": "Only an operator can award this job.",
       "CARRIER_ABSENT": "This transporter has said they are away and cannot be chosen for now.",
-      "PAYMENT_INTENT_MISMATCH": "This offer's price has just changed. Close this window and open the offer again to pay the new amount."
+      "PAYMENT_INTENT_MISMATCH": "This offer's price has just changed. Close this window and open the offer again to pay the new amount.",
+      "PAYMENT_NOT_AUTHORISED": "The payment was not confirmed. Try again, with this payment method or another."
     },
     "notDebited": "Your card has not been charged.",
     "next": {
@@ -4704,7 +4718,9 @@
       "seeRequest": "See where the request stands",
       "carriers": "Carriers on this route",
       "editRequest": "Edit the request"
-    }
+    },
+    "finishing": "Finishing the booking…",
+    "redirectFailed": "The payment was not approved. Try again, with this payment method or another."
   },
   "listingUrgency": {
     "label": "Urgent",

@@ -222,7 +222,7 @@ without an `sk_live_` key, so an accept there takes real money.
 Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before shipping.
 
 **Gates — all green.** `npx tsc --noEmit` 0 errors · `pnpm lint` 0 errors ·
-3,300 unit tests pass (2.76.0) · `pnpm build` succeeds.
+3,309 unit tests pass (2.77.0) · `pnpm build` succeeds.
 
 **Done**
 - Schema remodelled to the transport model; one clean initial migration
@@ -725,6 +725,13 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
   (`listingsDal.copyAsDraft`); `RequestActions` carries all three. Failed reads
   go through `LoadErrorState`, empty states lead somewhere
   (`common.nextSteps`), and `src/__tests__/no-dead-ends.test.ts` holds it.
+- **Payment alternatives** (2.77.0, `payment_alternatives_spec.md`): a new
+  payment in the accept dialog takes whatever the Stripe Dashboard switches on
+  (`automatic_payment_methods`, manual capture) — card, Link, PayPal once on —
+  while the saved-card lane stays `["card"]`. PayPal leaves the page; the
+  return (`useAcceptReturn`, `acceptOffer` + Stripe's `payment_intent`) reopens
+  the dialog, which finishes the award once. Never name a method list on a new
+  payment again: the Dashboard is the switch.
 - **The request form, as the client asked on 31 October** (2.76.0,
   `0045`), monitored at the top of `STATUS.md`. A **move** is a job kind
   (`listings.job_kind`, surface or volume, weight derived in `src/lib/moving.ts`;

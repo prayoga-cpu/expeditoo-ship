@@ -40,6 +40,7 @@ import {
 import { CenteredEmptyState } from "@/components/ui/centered-empty-state";
 import { PageLoader } from "@/components/ui/page-loader";
 import { useJobDetail, useJobOffers, useAcceptOffer } from "../hooks/useJobDetail";
+import { useAcceptReturn } from "@/features/app/offers/hooks/useAcceptReturn";
 import { useListingCarriers } from "../hooks/useListingCarriers";
 import { useEndpointText } from "../hooks/useEndpointText";
 import { JobBidSection } from "./JobBidSection";
@@ -481,13 +482,16 @@ function JobOffers({
   const t = useTranslations("myJobs.detail");
   const router = useRouter();
   const [sort, setSort] = useState("price_asc");
+  // Back from PayPal: the dialog opens again on the offer it was paying for,
+  // and finishes the award there (payment_alternatives_spec.md §3).
+  const { resume, clear } = useAcceptReturn();
   // The offer being accepted, kept after the dialog closes so it can animate
   // out with its content rather than blanking first.
   const [accepting, setAccepting] = useState<{
     offerId: string;
     slotId?: string;
-  } | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  } | null>(() => (resume ? { offerId: resume.offerId, slotId: resume.slotId } : null));
+  const [dialogOpen, setDialogOpen] = useState(() => resume !== null);
 
   const { data: offers } = useJobOffers(listingId, sort);
   const acceptOffer = useAcceptOffer(listingId);
@@ -528,7 +532,11 @@ function JobOffers({
           offerId={accepting.offerId}
           slotId={accepting.slotId}
           open={dialogOpen}
-          onOpenChange={setDialogOpen}
+          onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (!open && resume) clear();
+          }}
+          resume={resume?.offerId === accepting.offerId ? resume : undefined}
           onConfirm={(paymentIntentId) =>
             acceptOffer.mutateAsync({ ...accepting, paymentIntentId })
           }

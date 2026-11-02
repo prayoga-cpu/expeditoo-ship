@@ -16,6 +16,7 @@ import { parseDayString } from "@/lib/availability-window";
 import type { ThreadOfferView } from "../types";
 import { useThreadOffer } from "../hooks/useThreadOffer";
 import { AcceptPaymentDialog } from "@/features/app/offers/ui/AcceptPaymentDialog";
+import { useAcceptReturn } from "@/features/app/offers/hooks/useAcceptReturn";
 
 /**
  * What the card actually shows.
@@ -91,7 +92,11 @@ export function ThreadOfferBubble({
   const locale = useLocale();
   const dateLocale = locale === "fr" ? fr : enUS;
   const { accept, decline, withdraw } = useThreadOffer(conversationId);
-  const [paying, setPaying] = useState(false);
+  // Back from PayPal on this offer: its dialog opens again to finish the award
+  // (payment_alternatives_spec.md §3).
+  const { resume, clear } = useAcceptReturn();
+  const mine = resume !== null && resume.offerId === offer.offer?.id;
+  const [paying, setPaying] = useState(mine);
 
   const isJobLane = offer.offer !== null;
   // The one case where the bid and the thread offer disagree: the recipient
@@ -249,7 +254,11 @@ export function ThreadOfferBubble({
             <AcceptPaymentDialog
               offerId={offer.offer.id}
               open={paying}
-              onOpenChange={setPaying}
+              onOpenChange={(open) => {
+                setPaying(open);
+                if (!open && mine) clear();
+              }}
+              resume={mine ? resume : undefined}
               onConfirm={(paymentIntentId) =>
                 accept.mutateAsync({ threadOfferId: offer.id, paymentIntentId })
               }

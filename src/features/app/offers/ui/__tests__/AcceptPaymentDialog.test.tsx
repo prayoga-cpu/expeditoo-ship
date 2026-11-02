@@ -50,7 +50,8 @@ const onOpenChange = vi.fn();
 
 function renderDialog(
   onConfirm: (intentId?: string) => Promise<unknown>,
-  nextSteps?: { editRequest?: () => void; carriers?: () => void }
+  nextSteps?: { editRequest?: () => void; carriers?: () => void },
+  resume?: { offerId: string; paymentIntentId: string; failed: boolean }
 ) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -66,6 +67,7 @@ function renderDialog(
           onOpenChange={onOpenChange}
           onConfirm={onConfirm}
           nextSteps={nextSteps}
+          resume={resume}
         />
       </NextIntlClientProvider>
     </QueryClientProvider>
@@ -275,5 +277,48 @@ describe("AcceptPaymentDialog — a quote that cannot be given", () => {
 
     expect(await payButton()).toBeTruthy();
     expect(read).toHaveBeenCalledTimes(2);
+  });
+});
+
+// payment_alternatives_spec.md §3: PayPal approves the payment on its own
+// site and sends the requester back; the dialog then finishes the award once.
+describe("AcceptPaymentDialog — back from a method that left the page", () => {
+  const back = (failed = false) => ({ offerId: "offer-1", paymentIntentId: "pi_paypal", failed });
+
+  beforeEach(() => {
+    vi.spyOn(offersApi, "paymentQuote").mockResolvedValue(quote());
+  });
+
+  it("finishes the award with the payment approved there, once", async () => {
+    const onConfirm = vi.fn().mockResolvedValue({});
+    renderDialog(onConfirm, undefined, back());
+
+    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+    expect(onConfirm).toHaveBeenCalledTimes(1);
+    expect(onConfirm).toHaveBeenCalledWith("pi_paypal");
+    // Nothing is asked of the requester a second time.
+    expect(offersApi.preparePayment).not.toHaveBeenCalled();
+  });
+
+  it("says a cancelled approval was not taken, and goes back to the form", async () => {
+    const onConfirm = vi.fn();
+    renderDialog(onConfirm, undefined, back(true));
+
+    expect(await screen.findByText(t.redirectFailed)).toBeTruthy();
+    expect(onConfirm).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: t.next.retry }));
+    expect(await payButton()).toBeTruthy();
+  });
+
+  it("offers to try again when the server finds nothing approved", async () => {
+    renderDialog(
+      vi.fn().mockRejectedValue(new ApiError("PAYMENT_NOT_AUTHORISED", "", 402)),
+      undefined,
+      back()
+    );
+
+    expect(await screen.findByText(t.errors.PAYMENT_NOT_AUTHORISED)).toBeTruthy();
+    expect(screen.getByRole("button", { name: t.next.retry })).toBeTruthy();
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   useQuery,
   useQueryClient,
@@ -37,6 +37,7 @@ import { ApiError } from "@/lib/fetcher";
 import { getStripe } from "@/lib/stripe-client";
 import { getStripeAppearance } from "@/lib/stripe-appearance";
 import { offersApi, type PaymentQuote } from "../api/offers.api";
+import { acceptReturnUrl, type AcceptReturn } from "../hooks/useAcceptReturn";
 
 interface AcceptPaymentDialogProps {
   offerId: string;
@@ -64,6 +65,13 @@ interface AcceptPaymentDialogProps {
     editRequest?: () => void;
     carriers?: () => void;
   };
+  /**
+   * The requester is back from a method that left the page to approve the
+   * payment — PayPal — and the award is finished here, with the payment they
+   * approved (payment_alternatives_spec.md §3). `failed` when they cancelled
+   * or the method refused. From `useAcceptReturn`.
+   */
+  resume?: AcceptReturn;
 }
 
 /**
@@ -86,6 +94,7 @@ const NEXT_STEPS: Record<string, NextStep[]> = {
   LISTING_NOT_OPEN: ["seeRequest"],
   LISTING_NOT_FOUND: ["seeRequest"],
   PAYMENT_INTENT_MISMATCH: ["retry"],
+  PAYMENT_NOT_AUTHORISED: ["retry"],
   PAYMENT_NOT_REQUIRED: ["retry"],
   // Not this viewer's to award: nothing here would change that.
   FORBIDDEN_NOT_SHIPPER: [],
@@ -123,22 +132,23 @@ const KNOWN_ERRORS = [
   "SLOT_NOT_ON_OFFER",
   "FORBIDDEN_NOT_SHIPPER",
   "FORBIDDEN_NOT_OPERATOR",
+  // Back from PayPal without approving it (payment_alternatives_spec.md §3).
+  "PAYMENT_NOT_AUTHORISED",
 ];
 
 /**
  * Apple Pay and Google Pay beside the card fields (client_feedback_2026_10_29_spec.md
- * §C3). Both are card wallets: the intent stays `payment_method_types: ["card"]`
- * with manual capture, so the award, the capture and the release are the
- * typed-card path unchanged. `auto` shows a wallet only where it can work —
+ * §C3). Both are card wallets, held with manual capture like a typed card, so
+ * the award, the capture and the release are the typed-card path unchanged. `auto` shows a wallet only where it can work —
  * Apple Pay needs this domain registered under Stripe → Payment method domains
  * (STATUS.md → Operator to-do), and until it is, Stripe simply leaves the
- * button out. Link stays off: it is a second way to keep a card, beside the
- * checkbox below, and was never asked for.
+ * button out. Link is on since 2.77.0: the owner asked for Stripe's own way to
+ * pay beside the card fields (payment_alternatives_spec.md §1).
  */
 const PAYMENT_WALLETS = {
   applePay: "auto",
   googlePay: "auto",
-  link: "never",
+  link: "auto",
 } as const;
 
 /** A refusal from Stripe.js, which already arrives in the viewer's language. */
@@ -164,6 +174,9 @@ export function AcceptPaymentDialog(props: AcceptPaymentDialogProps) {
   const t = useTranslations("acceptPayment");
   const [busy, setBusy] = useState(false);
   const [refusal, setRefusal] = useState<Refusal | null>(null);
+  // A return from PayPal is finished once; « Réessayer » goes back to the form.
+  const [resumeDone, setResumeDone] = useState(false);
+  const resume = props.resume && !resumeDone ? props.resume : undefined;
 
   const quote = useQuery({
     queryKey: ["offer-payment", offerId, slotId ?? null],
@@ -179,6 +192,7 @@ export function AcceptPaymentDialog(props: AcceptPaymentDialogProps) {
 
   const retry = () => {
     setRefusal(null);
+    setResumeDone(true);
     void quote.refetch();
   };
 
@@ -213,6 +227,7 @@ export function AcceptPaymentDialog(props: AcceptPaymentDialogProps) {
           setBusy={setBusy}
           close={close}
           refusal={refusal}
+          resume={resume}
           // « Not debited » is a fact only where a card was in play.
           onRefused={(cause) => setRefusal({ cause, afterPay: Boolean(quote.data?.required) })}
           retry={retry}
@@ -244,6 +259,8 @@ function DialogBody({
       <RefusalStep {...refusal} close={close} retry={retry} nextSteps={rest.nextSteps} />
     );
   }
+
+  if (rest.resume) return <ResumeStep {...rest} resume={rest.resume} close={close} retry={retry} />;
 
   // Re-reading after « Réessayer » shows the loader, but a background refetch
   // of a quote already on screen never does: it would unmount a card half
@@ -441,7 +458,9 @@ function PaymentStep(props: StepProps) {
         amount: props.quote.totalCents,
         currency: "eur",
         captureMethod: "manual",
-        paymentMethodTypes: ["card"],
+        // No list: the Stripe Dashboard decides — card, Link, PayPal once
+        // switched on there — filtered to what can be held until capture
+        // (payment_alternatives_spec.md §2). The intent is created the same way.
         setupFutureUsage: saveCard ? "off_session" : null,
         locale: locale === "fr" ? "fr" : "en",
         appearance: getStripeAppearance(resolvedTheme),
@@ -555,30 +574,41 @@ function NewCardFields({
   disabled: boolean;
 }) {
   const t = useTranslations("acceptPayment");
+  // The method chosen in the form. Only a card is kept for next time: a
+  // PayPal account cannot be charged later without PayPal's own billing
+  // agreement, and ticking the box hides every method that cannot be kept.
+  const [method, setMethod] = useState("card");
 
   return (
     <div className="space-y-3">
-      {/* Link off: its own "save my details" sign-up sat beside the box
-          below and read as a second, different way to keep the card. Apple
-          Pay and Google Pay on where the browser and the domain allow them
+      {/* Card, Link, PayPal and whatever else the Stripe Dashboard allows;
+          Apple Pay and Google Pay where the browser and the domain allow them
           (§C3 of the 29 October spec); see PAYMENT_WALLETS. */}
-      <PaymentElement options={{ layout: "tabs", wallets: PAYMENT_WALLETS }} />
+      <PaymentElement
+        options={{ layout: "tabs", wallets: PAYMENT_WALLETS }}
+        onChange={(event) => {
+          setMethod(event.value.type);
+          if (event.value.type !== "card") setSaveCard(false);
+        }}
+      />
       {/* Unticked: keeping a card is the requester's call, and the client
           asked for it to be possible, not assumed. */}
-      <div className="flex items-start gap-2">
-        <Checkbox
-          id="accept-save-card"
-          checked={saveCard}
-          onCheckedChange={(checked) => setSaveCard(checked === true)}
-          disabled={disabled}
-        />
-        <div className="grid gap-0.5">
-          <Label htmlFor="accept-save-card" className="text-sm font-normal">
-            {t("saveCard")}
-          </Label>
-          <p className="text-xs text-muted-foreground">{t("saveCardHint")}</p>
+      {method === "card" && (
+        <div className="flex items-start gap-2">
+          <Checkbox
+            id="accept-save-card"
+            checked={saveCard}
+            onCheckedChange={(checked) => setSaveCard(checked === true)}
+            disabled={disabled}
+          />
+          <div className="grid gap-0.5">
+            <Label htmlFor="accept-save-card" className="text-sm font-normal">
+              {t("saveCard")}
+            </Label>
+            <p className="text-xs text-muted-foreground">{t("saveCardHint")}</p>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -626,7 +656,9 @@ async function authoriseNew(
     elements,
     clientSecret: prepared.clientSecret,
     redirect: "if_required",
-    confirmParams: { return_url: window.location.href },
+    // PayPal leaves the page to be approved and comes back here, naming the
+    // award, where `useAcceptReturn` finishes it (§3). A card stays in place.
+    confirmParams: { return_url: acceptReturnUrl(input.offerId, input.slotId) },
   });
   if (error) throw new StripeStepError(error.message);
   if (paymentIntent?.status !== "requires_capture") throw new StripeStepError();
@@ -712,6 +744,66 @@ function CardChoice({
         <span>{t("otherCard")}</span>
       </Label>
     </RadioGroup>
+  );
+}
+
+/**
+ * Back from PayPal: the award is finished with the payment the requester
+ * approved there (payment_alternatives_spec.md §3), once — a reload or a
+ * re-render must not try it twice. Cancelled at PayPal, it says so and goes
+ * back to the form; any refusal goes through the same steps as a Pay press.
+ */
+function ResumeStep({
+  resume,
+  onConfirm,
+  onOpenChange,
+  onRefused,
+  setBusy,
+  close,
+  retry,
+}: AcceptPaymentDialogProps & {
+  resume: AcceptReturn;
+  onRefused: (cause: unknown) => void;
+  setBusy: (busy: boolean) => void;
+  close: () => void;
+  retry: () => void;
+}) {
+  const t = useTranslations("acceptPayment");
+  const started = useRef(false);
+  const { error, unknown, report } = useAcceptFailure(
+    { refused: t("acceptFailed"), unknown: t("acceptUnknownPaid") },
+    onRefused
+  );
+
+  useEffect(() => {
+    if (resume.failed || started.current) return;
+    started.current = true;
+    setBusy(true);
+    onConfirm(resume.paymentIntentId)
+      .then(() => onOpenChange(false))
+      .catch(report)
+      .finally(() => setBusy(false));
+  }, [resume, onConfirm, onOpenChange, report, setBusy]);
+
+  if (!resume.failed && !error) {
+    return (
+      <div className="flex flex-col items-center gap-2 py-8 text-sm text-muted-foreground">
+        <LottieLoader width={40} height={40} />
+        {t("finishing")}
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <ErrorLine message={error ?? t("redirectFailed")} />
+      <DialogFooter className="flex-wrap gap-2">
+        <Button variant="outline" onClick={close}>
+          {t("close")}
+        </Button>
+        {!unknown && <Button onClick={retry}>{t("next.retry")}</Button>}
+      </DialogFooter>
+    </>
   );
 }
 
