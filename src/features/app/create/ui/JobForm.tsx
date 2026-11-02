@@ -1,14 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo } from "react";
-import { useTranslations } from "next-intl";
+import { useCallback, useEffect } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import { TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { NumericInput, useNumericText } from "@/components/ui/numeric-input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -22,8 +22,8 @@ import {
 import { Stepper } from "@/components/Stepper";
 import { InlineLoader } from "@/components/ui/page-loader";
 import { NUMERIC_RULES } from "@/lib/numeric-input";
-import { formatCurrency } from "@/lib/currency";
-import { usePriceSuggestion } from "../hooks/usePriceSuggestion";
+import { countryName, JOB_COUNTRIES, postalCodeExample, type JobCountry } from "@/lib/countries";
+import { hasFloors } from "@/lib/location-types";
 import { PhotoDropzone } from "./PhotoDropzone";
 import { FieldError } from "./FieldError";
 import { SizeField } from "./SizeField";
@@ -36,6 +36,9 @@ import { SavedAddressPicker } from "./SavedAddressPicker";
 import { AddressLabelField } from "@/features/app/profile/ui/AddressLabelField";
 import { PackagingField } from "./PackagingField";
 import { ToggleRow } from "./ToggleRow";
+import { FloorFields } from "./FloorFields";
+import { JobKindLink, MovingFields } from "./MovingFields";
+import { EstimateCard, HowItWorks } from "./EstimateCard";
 import { LOCATION_TYPES, sameEndpoint, type LocationType } from "../schemas";
 import { useAddressBook, type Address } from "../hooks/useAddressBook";
 import { applySavedAddress, matchSavedAddress, type Side } from "../address-book";
@@ -83,17 +86,21 @@ export function JobForm(props: JobFormApi) {
     handleNext,
     handlePrev,
     prefillAddresses,
+    setJobKind,
     publish,
     saveDraft,
   } = props;
+  const isMoving = form.watch("jobKind") === "moving";
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-6 p-4 sm:p-6 xl:max-w-3xl 2xl:max-w-4xl">
       <header className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">
-          {t(isResuming ? "resume.title" : "title")}
+          {t(isResuming ? "resume.title" : isMoving ? "moving.pageTitle" : "title")}
         </h1>
-        <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
+        <p className="text-sm text-muted-foreground">
+          {t(isMoving ? "moving.subtitle" : "subtitle")}
+        </p>
       </header>
 
       <Stepper
@@ -107,6 +114,7 @@ export function JobForm(props: JobFormApi) {
             form={form}
             photos={photos}
             onPhotosChange={handlePhotosChange}
+            onKindChange={setJobKind}
           />
         )}
         {currentStep === 1 && (
@@ -186,13 +194,29 @@ function WhatStep({
   form,
   photos,
   onPhotosChange,
-}: StepProps & { photos: string[]; onPhotosChange: (p: string[]) => void }) {
+  onKindChange,
+}: StepProps & {
+  photos: string[];
+  onPhotosChange: (p: string[]) => void;
+  onKindChange: JobFormApi["setJobKind"];
+}) {
   const t = useTranslations("create.what");
   const { register, formState, setValue, watch } = form;
   const errors = formState.errors;
+  const kind = watch("jobKind") ?? "items";
+
+  if (kind === "moving") {
+    return (
+      <div className="space-y-5">
+        <JobKindLink kind={kind} onChange={onKindChange} />
+        <MovingFields form={form} photos={photos} onPhotosChange={onPhotosChange} />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">
+      <JobKindLink kind={kind} onChange={onKindChange} />
       <ItemField form={form} />
 
       <div>
@@ -261,19 +285,16 @@ function WhereStep({
   onAddressesLoaded,
 }: StepProps & { onAddressesLoaded: (addresses: Address[]) => void }) {
   const t = useTranslations("create.where");
+  // Every saved address, with a pin or not: one typed by hand — a foreign one
+  // always is — is still an address, and a request needs no pin to be posted
+  // (client_feedback_2026_10_31_spec.md §1.2).
   const { data: savedAddresses } = useAddressBook();
-  // A job needs a pin to route and price; the profile lets an address be
-  // saved without one, so only a geocoded saved address is selectable here.
-  const pinnedAddresses = useMemo(
-    () => (savedAddresses ?? []).filter((a) => a.lat != null && a.lng != null),
-    [savedAddresses]
-  );
 
   // Both ends are filled together, so they can never be filled with the same
   // address; the hook makes sure it happens once per request.
   useEffect(() => {
-    if (savedAddresses) onAddressesLoaded(pinnedAddresses);
-  }, [savedAddresses, pinnedAddresses, onAddressesLoaded]);
+    if (savedAddresses) onAddressesLoaded(savedAddresses);
+  }, [savedAddresses, onAddressesLoaded]);
 
   return (
     <div className="space-y-8">
@@ -281,13 +302,13 @@ function WhereStep({
         form={form}
         side="pickup"
         title={t("pickup")}
-        addresses={pinnedAddresses}
+        addresses={savedAddresses}
       />
       <EndpointFields
         form={form}
         side="dropoff"
         title={t("dropoff")}
-        addresses={pinnedAddresses}
+        addresses={savedAddresses}
       />
     </div>
   );
@@ -298,9 +319,15 @@ function EndpointFields({
   side,
   title,
   addresses,
-}: StepProps & { side: Side; title: string; addresses: Address[] }) {
+}: StepProps & {
+  side: Side;
+  title: string;
+  /** Undefined while the address book loads: nothing is said about it yet. */
+  addresses: Address[] | undefined;
+}) {
   const t = useTranslations("create.where");
   const tTypes = useTranslations("create.locationTypes");
+  const locale = useLocale();
   const { setValue, watch, formState, clearErrors } = form;
   const endpoint = watch(side);
   const other = watch(side === "pickup" ? "dropoff" : "pickup");
@@ -319,8 +346,30 @@ function EndpointFields({
     setValue(`${side}.locationEntry`, undefined);
   }, [setValue, side]);
 
-  const selectedAddress = matchSavedAddress(addresses, endpoint);
+  const book = addresses ?? [];
+  const selectedAddress = matchSavedAddress(book, endpoint);
   const usingSavedAddress = selectedAddress !== undefined;
+  const country = endpoint?.country ?? "FR";
+
+  // Another country is another address: the one there was typed or found in
+  // the old one, and its postal code no longer has the right shape.
+  const changeCountry = (next: JobCountry) => {
+    if (next === country) return;
+    setValue(`${side}.country`, next);
+    switchToNewAddress();
+    clearErrors([`${side}.address`, `${side}.postalCode`, `${side}.city`]);
+  };
+
+  // A place without floors keeps none: a port answered « 3ᵉ étage » while it
+  // was an apartment would otherwise reach the carrier.
+  const changeLocationType = (next: LocationType) => {
+    setValue(`${side}.locationType`, next);
+    if (!hasFloors(next)) {
+      setValue(`${side}.floor`, undefined);
+      setValue(`${side}.hasLift`, undefined);
+      clearErrors([`${side}.floor`, `${side}.hasLift`]);
+    }
+  };
 
   // Said under the delivery the moment the two ends are the same, not only
   // after « Suivant »; and a refusal the ends no longer earn is not repeated.
@@ -340,13 +389,13 @@ function EndpointFields({
     <section className="space-y-4">
       <h2 className="font-semibold">{title}</h2>
 
-      {addresses.length > 0 && (
+      {addresses && (
         <SavedAddressPicker
           id={`${side}-saved-address`}
           side={side}
-          addresses={addresses}
+          addresses={book}
           selectedId={selectedAddress?.id}
-          otherSideId={matchSavedAddress(addresses, other)?.id}
+          otherSideId={matchSavedAddress(book, other)?.id}
           onSelect={(address) =>
             address
               ? applySavedAddress(setValue, side, address)
@@ -354,6 +403,24 @@ function EndpointFields({
           }
         />
       )}
+
+      <div>
+        <Label htmlFor={`${side}-country`} required>
+          {t(`country.${side}`)}
+        </Label>
+        <Select value={country} onValueChange={(v) => changeCountry(v as JobCountry)}>
+          <SelectTrigger id={`${side}-country`} className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {JOB_COUNTRIES.map((code) => (
+              <SelectItem key={code} value={code}>
+                {countryName(code, locale)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
       {/* The delivery's refusal belongs to the address, whichever way it was
           given — a saved one included, where it was never shown and
@@ -366,8 +433,16 @@ function EndpointFields({
               Nominatim, drags a pin, reverse-geocodes and refuses anywhere
               outside France, in both languages and both themes. */}
           <LocationPickerField
+            // Remounted per country: the map opens on, and is held to, it.
+            key={country}
             id={`${side}-location`}
             allowManualOnly
+            countryCode={country}
+            addressLabel={t(`addressLabel.${side}`)}
+            searchPlaceholder={t(`searchPlaceholder.${side}`)}
+            postalCodePlaceholder={t("postalCodeExample", {
+              example: postalCodeExample(country),
+            })}
             mode={endpoint?.locationEntry}
             onModeChange={(mode) => {
               setValue(`${side}.locationEntry`, mode);
@@ -446,6 +521,32 @@ function EndpointFields({
         </>
       )}
 
+      {/* Directly under the address, so the floor it asks for follows it
+          (client_feedback_2026_10_31_spec.md §3). */}
+      <div>
+        <Label htmlFor={`${side}-location-type`} required>
+          {t("locationType")}
+        </Label>
+        <Select
+          value={locationType}
+          onValueChange={(v) => changeLocationType(v as LocationType)}
+        >
+          <SelectTrigger id={`${side}-location-type`}>
+            <SelectValue placeholder={t("select")} />
+          </SelectTrigger>
+          <SelectContent>
+            {LOCATION_TYPES.map((type) => (
+              <SelectItem key={type} value={type}>
+                {tTypes(type)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <FieldError message={error?.locationType?.message} />
+      </div>
+
+      <FloorFields form={form} side={side} />
+
       <div>
         {/* Beside a link the note is the only description the carrier gets
             of the spot, so it stops being optional (`endpointSchema`). */}
@@ -493,92 +594,7 @@ function EndpointFields({
         </div>
       </div>
 
-      <div>
-        <Label required>{t("locationType")}</Label>
-        <Select
-          value={locationType}
-          onValueChange={(v) =>
-            setValue(`${side}.locationType`, v as LocationType)
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder={t("select")} />
-          </SelectTrigger>
-          <SelectContent>
-            {LOCATION_TYPES.map((type) => (
-              <SelectItem key={type} value={type}>
-                {tTypes(type)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <FieldError message={error?.locationType?.message} />
-      </div>
-
-      {/* Floor and lift change the job materially, so an apartment must say. */}
-      {locationType === "apartment" && (
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <Label htmlFor={`${side}-floor`} required>
-              {t("floor")}
-            </Label>
-            <FloorInput
-              id={`${side}-floor`}
-              value={endpoint?.floor}
-              onChange={(floor) => setValue(`${side}.floor`, floor)}
-            />
-            <FieldError message={error?.floor?.message} />
-          </div>
-          <ToggleRow
-            id={`${side}-lift`}
-            label={t("lift")}
-            description={t("liftHint")}
-            checked={Boolean(endpoint?.hasLift)}
-            onChange={(v) => setValue(`${side}.hasLift`, v)}
-          />
-        </div>
-      )}
-      <FieldError message={error?.hasLift?.message} />
     </section>
-  );
-}
-
-/**
- * An apartment's floor: a number in the form, its own text in the box
- * (numeric_input_spec.md §6). A deletion keeps the zeros it exposes, and
- * « 00 » is a text no number reads back as: re-derived from the floor, the
- * box was rewritten to « 0 » with the caret thrown to the end, so « 100 »
- * with its « 1 » deleted and a « 2 » typed in its place gave floor 2, not
- * 200 (found in review).
- */
-function FloorInput({
-  id,
-  value,
-  onChange,
-}: {
-  id: string;
-  /**
-   * The form's floor, typed `unknown` as every preprocessed field is
-   * (numeric_input_spec.md §7): a number, or `undefined`.
-   */
-  value: unknown;
-  onChange: (floor: number | undefined) => void;
-}) {
-  const field = useNumericText(value, (floor) =>
-    floor == null ? "" : String(floor)
-  );
-  return (
-    <NumericInput
-      id={id}
-      rules={NUMERIC_RULES.COUNT}
-      value={field.text}
-      onChange={(e) => {
-        const text = e.target.value;
-        const floor = text === "" ? undefined : Number(text);
-        field.typed(text, floor);
-        onChange(floor);
-      }}
-    />
   );
 }
 
@@ -648,29 +664,14 @@ function BudgetStep({
   onEditDates: () => void;
 }) {
   const t = useTranslations("create.budget");
-  const { register, formState, setValue, watch } = form;
-
-  // « Prix conseillé » from the platform's own rate card (§B6 of the 29
-  // October spec). Advice, not a price: the requester types their own.
-  const { data: suggestion } = usePriceSuggestion({
-    pickup: watch("pickup") ?? {},
-    dropoff: watch("dropoff") ?? {},
-    weightBracket: watch("weightBracket"),
-    exactWeightKg: watch("exactWeightKg") as string | undefined,
-    sizeMode: watch("sizeMode"),
-    sizePreset: watch("sizePreset"),
-    lengthCm: watch("lengthCm") as string | undefined,
-    widthCm: watch("widthCm") as string | undefined,
-    heightCm: watch("heightCm") as string | undefined,
-  });
-  const euros = (cents: number) =>
-    formatCurrency(cents, { fractionDigits: 0 });
-  const middle = suggestion
-    ? Math.round((suggestion.lowCents + suggestion.highCents) / 2 / 100)
-    : null;
+  const { register, formState } = form;
 
   return (
     <div className="space-y-5">
+      {/* « Estimation du prix » first, as the client's reference has it: the
+          figure the budget below is most often typed from (spec §4). */}
+      <EstimateCard form={form} />
+
       <div>
         <Label htmlFor="budgetEuros" required>
           {t("label")}
@@ -690,32 +691,6 @@ function BudgetStep({
           />
         </div>
         <FieldError message={formState.errors.budgetEuros?.message} />
-        {suggestion && middle !== null && (
-          <div className="mt-2 flex flex-wrap items-center gap-2 rounded-md bg-primary/5 px-3 py-2 text-sm">
-            <span>
-              {t("suggested", {
-                low: euros(suggestion.lowCents),
-                high: euros(suggestion.highCents),
-              })}
-            </span>
-            <Button
-              type="button"
-              variant="link"
-              size="sm"
-              className="h-auto p-0"
-              onClick={() =>
-                // Whole euros, digits only: a grouping space (« 1 000 ») is
-                // not something the money box types.
-                setValue("budgetEuros", String(middle), {
-                  shouldValidate: true,
-                  shouldDirty: true,
-                })
-              }
-            >
-              {t("useSuggested", { amount: euros(middle * 100) })}
-            </Button>
-          </div>
-        )}
         <p className="mt-2 text-sm text-muted-foreground">{t("hint")}</p>
       </div>
 
@@ -726,6 +701,8 @@ function BudgetStep({
           dates when they no longer leave carriers time to bid
           (publication_timing_spec.md §3.3). */}
       <PickupPublicationNotice publication={publication} onEditDates={onEditDates} />
+
+      <HowItWorks />
     </div>
   );
 }

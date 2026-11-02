@@ -16,6 +16,7 @@ const endpoint = {
   address: "12 rue A",
   city: "Lyon",
   postalCode: "69003",
+  country: "FR" as const,
   locationType: "house" as const,
   contactPhone: "0612345678",
 };
@@ -177,6 +178,79 @@ describe("toCreatePayload", () => {
     // Stamped server-side: it decides who may award the job.
     expect(payload).not.toHaveProperty("origin");
     expect(payload).not.toHaveProperty("categoryId");
+  });
+});
+
+// client_feedback_2026_10_31_spec.md §2.2, §6
+describe("toCreatePayload — a move, and countries", () => {
+  const move = (over: Partial<JobFormOutput> = {}) =>
+    values({
+      jobKind: "moving",
+      title: "Déménagement · 65 m²",
+      weightBracket: undefined,
+      movingSizeMode: "surface",
+      movingSurfaceM2: 65,
+      ...over,
+    });
+
+  it("sends a move as its surface, with a weight derived from it", () => {
+    const payload = toCreatePayload(move(), true);
+
+    expect(payload).toMatchObject({
+      jobKind: "moving",
+      title: "Déménagement · 65 m²",
+      movingSurfaceM2: 65,
+      // 65 m² → 32.5 m³ → × 150 kg.
+      weightKg: 4875,
+      quantity: 1,
+      needsHelp: true,
+      isFragile: false,
+    });
+    expect(payload).not.toHaveProperty("movingVolumeM3");
+    expect(payload).not.toHaveProperty("lengthCm");
+  });
+
+  it("sends the volume alone once the volume is what was given", () => {
+    const payload = toCreatePayload(
+      move({ movingSizeMode: "volume", movingVolumeM3: 30, movingSurfaceM2: 65 }),
+      true
+    );
+
+    expect(payload).toMatchObject({ movingVolumeM3: 30, weightKg: 4500 });
+    expect(payload).not.toHaveProperty("movingSurfaceM2");
+  });
+
+  it("leaves a move's stale item fields behind", () => {
+    const payload = toCreatePayload(
+      move({ quantity: 12, isFragile: true, fragileNote: "Glass", sizePreset: "l" }),
+      true
+    );
+
+    expect(payload).toMatchObject({ quantity: 1, isFragile: false });
+    expect(payload.description).not.toContain("Glass");
+    expect(payload).not.toHaveProperty("lengthCm");
+  });
+
+  it("sends items as items", () => {
+    expect(toCreatePayload(values({ jobKind: "items" }), true).jobKind).toBe("items");
+  });
+
+  it("sends each end's country", () => {
+    const payload = toCreatePayload(
+      values({
+        dropoff: {
+          ...endpoint,
+          country: "BE",
+          postalCode: "1000",
+          city: "Bruxelles",
+          saveAddress: false,
+        },
+      }),
+      true
+    );
+
+    expect(payload.pickup.country).toBe("FR");
+    expect(payload.dropoff.country).toBe("BE");
   });
 });
 

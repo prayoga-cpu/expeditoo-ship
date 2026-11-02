@@ -39,8 +39,14 @@ export interface Job {
   reference: number;
   shipperId: string;
   status: ListingStatus;
+  /**
+   * Items or a move (client_feedback_2026_10_31_spec.md §2). Optional because
+   * two projections build a job without it; absent reads as items.
+   */
+  jobKind?: "items" | "moving";
   title: string;
   description: string;
+  /** On a move, derived from its size — an estimate, said as one. */
   weightKg: number;
   lengthCm: number | null;
   widthCm: number | null;
@@ -51,6 +57,9 @@ export interface Job {
   packagingLevel: "protected" | "boxed" | null;
   needsProtection: boolean;
   needsPackaging: boolean;
+  /** A move's size, as given: one of the two, null on items. */
+  movingSurfaceM2?: number | null;
+  movingVolumeM3?: number | null;
 
   /**
    * The street, for the owner, staff and approved carriers only; others read
@@ -59,7 +68,12 @@ export interface Job {
   pickupAddress?: string;
   pickupCity: string;
   pickupPostalCode: string;
+  /** ISO 3166-1 alpha-2; absent from older projections, read as France. */
+  pickupCountry?: string;
   pickupLocationType: string;
+  /** Public since the view classified them; shown since 2.76.0 (spec §3). */
+  pickupFloor?: number | null;
+  pickupHasLift?: boolean | null;
   // Null when the requester typed the address by hand with no map pin and
   // no pasted link — the job is still real, it just has no coordinates.
   pickupLat: number | null;
@@ -68,7 +82,10 @@ export interface Job {
   dropoffAddress?: string;
   dropoffCity: string;
   dropoffPostalCode: string;
+  dropoffCountry?: string;
   dropoffLocationType: string;
+  dropoffFloor?: number | null;
+  dropoffHasLift?: boolean | null;
   dropoffLat: number | null;
   dropoffLng: number | null;
 

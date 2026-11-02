@@ -1,5 +1,31 @@
 # STATUS.md
 
+## Client feedback monitor — WhatsApp batch of 31 October 2026 (the request form)
+
+_Owner: this section is for you. One row per message the client forwarded on
+31 October, seven of them with Cocolis screenshots as the reference. Spec:
+`docs/specs/client_feedback_2026_10_31_spec.md` (choices made without the
+client in §0). Plan: `docs/plans/plan_client_feedback_2026_10_31.md`._
+
+**State on 2026-11-02:** all eight shipped in **2.76.0**, which went to `main`
+on 2026-11-02 together with 2.75.0. Migration `0045_request_form_feedback` was
+applied first, by the owner through Actions → Migrate database, and checked
+through `mirror_readonly`.
+
+**Legend:** 🔵 shipped in 2.76.0 ·
+🟠 shipped, with a choice the client should confirm
+
+| # | The client's ask | Root cause found | State | Waits on |
+|---|---|---|---|---|
+| F1 | Address book for pickup and delivery addresses | The dropdown only showed when a saved address had a map pin, so most requesters never saw it; an address saved without a pin was stored and then filtered out forever; one mixed list for both ends | 🔵 | — |
+| F2 | Link to a moving quote, and the moving description | Not built: a request could only describe items | 🟠 | Rate per m³ for an automatic estimate; whether moves need a « déménageur » profile (§0 C–F) |
+| F3 | Delivery address with floors | Floor and lift were saved but **shown nowhere**; asked only for « Appartement »; the lift switch could not say « non » | 🔵 | — |
+| F4 | Price estimate | Quantity ignored (ten boxes priced as one); nothing without a map pin; a one-line hint | 🟠 | Rates above 100 kg and for moves (§0 F–G) |
+| F5 | « Ni protection ni emballage », ticked by default | "Nothing" was four switches left off, and the job page showed nothing | 🔵 | — |
+| F6 | Pickup country and delivery country | No country anywhere: search and map France-only, saved addresses stored as « France », escalation dropped `delivery_country` | 🟠 | Confirm the 14 countries offered (§0 A) |
+| F7 | « de retrait » / « de livraison » in the address labels | Shared address component, generic labels | 🔵 | — |
+| F8 | « Commissaire-priseur » / « Auction house » location type | Missing from the enum; every Expedion pickup was stamped « Autre » for that reason | 🔵 | — |
+
 ## Client feedback monitor — consolidated document of 29 October 2026, with the owner's decisions of 30 October
 
 _Owner: this section is for you. One row per item in `EXPEDITOO Client
@@ -367,6 +393,16 @@ adversarial verification pass — treat their detail as slightly less certain.
 Work that needs a human hand outside the codebase. Add to this list rather
 than leaving it in a chat message.
 
+- [x] ~~Run Actions → « Migrate database » for `0045_request_form_feedback`
+      before 2.76.0 deploys~~. **Done by the owner by 2026-11-02**, dispatched on
+      `release/2.76.0`. Confirmed through `mirror_readonly` before `main`
+      moved:
+      - `drizzle.__drizzle_migrations` has 45 rows, newest
+        1788692400000.
+      - `listings` has `job_kind`, `pickup_country`, `dropoff_country`,
+        `moving_surface_m2` and `moving_volume_m3` with their defaults.
+      - `location_type` lists `auction_house` after `shop`.
+      - Both ISO check constraints are present.
 - [x] ~~Run Actions → "Migrate database" for `0040_expedion_quote_reference`
       and `0041_cron_heartbeat` before 2.65.0 deploys~~ — **done 2026-10-25**,
       run `40156001990` dispatched by the owner on `release/2.65.0`
@@ -926,6 +962,193 @@ than leaving it in a chat message.
 
 ---
 
+## ✅ 2026-11-02 — The Request Form as the Client Asked on 31 October: Moves, Countries, an Address Book per End, Floors That Show, « Commissaire-priseur » (2.76.0)
+
+_Forwarded by the client on WhatsApp, ten messages, seven with Cocolis
+screenshots: « Il faut créer un répertoire d'adresses pour les adresses de
+départ et également pour les adresses d'arrivée » · « Il faut ajouter
+également un lien pour effectuer un devis Déménagement » · « Et adresse de
+livraison avec mention des étages » · « Estimation de prix » · « Dans la
+rubrique emballage du dépôt de l'annonce, il faut rajouter une coche
+(automatiquement cochée) aux quatre déjà présentes avec le texte suivant : Ni
+protection ni emballage » · « Il faut créer deux champs de données pour le
+pays concerné : pays de retrait, pays de livraison » · « Il faut rajouter au
+texte des champs adresse dans le dépôt de l'annonce les mots suivants : de
+retrait, de livraison » · « Dans la liste des types de lieux, rajouter
+commissaire-priseur » / « Auction house ou auctioneer en anglais »._
+
+The owner then asked: « implement all of the feedbacks from your side ».
+Built as 2.74.0 and renumbered **2.76.0** before landing. A parallel
+session's 2.75.0 has no migration, so it went to `main` first, and this
+release follows it. There is no 2.74.0.
+Monitor at the top of this file. Spec: `docs/specs/client_feedback_2026_10_31_spec.md`,
+whose §0 lists every choice made without the client. Plan:
+`docs/plans/plan_client_feedback_2026_10_31.md`.
+
+### What changed
+
+- **One migration, `0045_request_form_feedback`** (journal `idx` 44, `when`
+  1788692400000). `location_type` gains `auction_house` `AFTER 'shop'`; new
+  enum `job_kind` (`items`, `moving`); `listings.job_kind` NOT NULL DEFAULT
+  `items`, `moving_surface_m2` integer, `moving_volume_m3` double precision,
+  `pickup_country` / `dropoff_country` text NOT NULL DEFAULT `FR` with an
+  `^[A-Z]{2}$` check. All public in `listing-view.ts`. The default is the
+  backfill: production's 13 listings all have 5-digit codes at both ends
+  (checked through `mirror_readonly`).
+- **Three shared lists** in `src/lib`. `location-types.ts` holds
+  `LOCATION_TYPES` (the pg enum, the DTO and the form all import it; they used
+  to be three copies, gotcha 8), plus `FLOOR_LOCATION_TYPES`,
+  `floorRequired` and `liftRequired`. `countries.ts` holds the 14
+  `JOB_COUNTRIES`, each with a postal pattern, an example, a box and a map
+  centre, plus `countryCodeFrom` (free text → ISO) and `countryName`
+  (`Intl.DisplayNames`, so no copy to translate). `moving.ts` holds
+  `JOB_KINDS`, the size ranges, and `movingWeightKg` (volume, or surface ÷ 2,
+  × 150 kg/m³, capped at 44 t).
+- **F6 countries.** The endpoint takes `country`. In the DTO it is any ISO code
+  (an escalated job delivers wherever its quote does), refused with
+  `UNSUPPORTED_COUNTRY` outside `JOB_COUNTRIES` over HTTP. The postal code and
+  the box are checked **on the endpoint itself**, so they still run when the
+  rest of the payload is broken, as the old regex did. `LocationPickerField`
+  takes `countryCode` (search `countrycodes`, reverse-geocode refusal, map
+  centre and `maxBounds`) and is remounted per country; other callers keep
+  France. `listing-pins.service.ts` (2.73.0) now searches the listing's own
+  country. Escalation maps `expedion_quotes.delivery_country` through
+  `countryCodeFrom`, with France when blank or unknown. `/create` saves an
+  address's country as its name, the way the profile form writes it.
+- **F2 moves.** `/create?type=moving`, or « Vous déménagez ? Cliquez plutôt
+  ici ! » on step 1 (`JobKindLink`), switch to `MovingFields`: photos,
+  surface or « Je connais le volume exact », « Informations complémentaires »
+  with the public-data line from the client's screenshot, and packaging.
+  `setJobKind` empties the other kind's fields, so a hidden box can never
+  refuse « Suivant ». The title is written at submit (`nameMove`), in the
+  requester's language. `toCreatePayload` sends one load, `needsHelp: true`,
+  the derived weight and the one size given. The schema moved `title` and
+  `weightBracket` into `superRefine`, conditional on the kind. DTO codes:
+  `MOVING_SIZE_REQUIRED`, `MOVING_SIZE_ON_ITEMS`, and `FLOOR_REQUIRED` /
+  `LIFT_REQUIRED` for a move's non-apartment ends. A « Déménagement » badge
+  appears on the job header, the board card and the summary; the job page and
+  the driver's run show the size and an « estimé » weight.
+- **F3 floors.** `FloorFields` shows for every type in
+  `FLOOR_LOCATION_TYPES`. The floor is required on an apartment, and on every
+  such end of a move. The lift is a « Oui / Non » `ToggleGroup`, asked from the
+  first floor up and cleared at 0. The server relaxes `APARTMENT_LIFT_REQUIRED`
+  to floor ≥ 1. « Type de lieu » sits under the address, and choosing a type
+  without floors clears floor and lift. **Shown**: the job page's `Endpoint`
+  and the driver's `RouteStop`, through `useEndpointText`.
+- **F1 address book.** `WhereStep` no longer filters to pinned addresses.
+  `SavedAddressPicker` is always rendered once the book loads, labelled
+  « Carnet d'adresses de retrait / de livraison », grouped by `addressGroups`
+  with this end's addresses first, and says how to fill it when empty.
+  `matchSavedAddress` compares `null` and `undefined` coordinates as equal.
+  `applySavedAddress` writes the country (`savedAddressCountry`) and no pin for
+  an unpinned address; it used to write `null` into a number field.
+  `/profile/addresses` has three drawers, each with « Ajouter » → `?for=`,
+  which `AddressForm` reads.
+- **F4 estimate.** `EstimateCard` (range, « Utiliser 145 € », footnote) leads
+  the Budget step, and `HowItWorks` closes it. `usePriceSuggestion` multiplies
+  the single-parcel price by `itemCount`. For an end with no pin it looks up
+  the address, then the postcode and town, in the end's country. That lookup
+  is for the estimate only and writes nothing to the form. No estimate for a
+  move.
+- **F5.** `hasNoPackaging` (`cargo-packaging.ts`) drives a fifth `ToggleRow`
+  that is ticked whenever the other four are off. A job-page badge and the
+  summary's « Protection » now read « Ni protection ni emballage » instead of
+  « Non précisée ». Nothing is stored.
+- **F7.** `LocationPickerField` takes `addressLabel`, `searchPlaceholder` and
+  `postalCodePlaceholder` (« Ex. 1000 »). The access note's placeholder no
+  longer suggests « 2ᵉ étage sans ascenseur »: the floor has its own field,
+  and the client's screenshot showed the two side by side.
+- **F8.** « Commissaire-priseur » / « Auction house »; escalation stamps the
+  pickup `auction_house` (`AUCTION_LOCATION_TYPE`), the delivery `other`.
+- Copy spliced with `tools/apply_i18n.py` (`i18n-2.76.0.json`, kept outside the
+  repo), FR/EN parity checked by the tool. Removed keys that no longer had a
+  reader: `create.where.savedAddress`, `liftHint`,
+  `create.validation.outsideFrance`, `create.budget.suggested` /
+  `useSuggested`, `common.locationPicker.outsideFrance`.
+
+### Found on the way
+
+- **The floor and lift were collected and shown nowhere.** `Job` did not even
+  type them, and no component read `pickupFloor`. An apartment's « 3ᵉ, sans
+  ascenseur » reached a carrier only if the requester also wrote it in the
+  note, which is why the note's placeholder suggested exactly that.
+- **The lift switch could not say « non ».** `hasLift` started `undefined`
+  and was required, so an apartment with no lift had to be switched on and
+  off again before « Suivant » would move.
+- **An address saved from `/create` without a pin never came back.** It was
+  stored, then filtered out by `pinnedAddresses`. A foreign address is always
+  typed without a pin, so every one was lost.
+- **The estimate priced ten boxes as one**: `quantity` was never sent.
+- `applySavedAddress` wrote the API's `null` into `lat` (a `z.number()`
+  field). Harmless only because a pinned address was the only kind it was ever
+  given.
+- **Landing on 2.75.0 surfaced one type error from that release.**
+  `listings.service.test.ts` read `pickupFrom` off `createInput()`, whose
+  type is `never`, so `tsc` failed on `f3f2a03` and on the stacked tree. The
+  input is now typed `{ pickupFrom: Date }`; that suite passes (107).
+
+### Verification
+
+- **On the tree that went to `main`** (2.73.1 + 2.75.0 + this, stacked on
+  2026-11-02): `npx tsc --noEmit` **0** errors (after the fix below), `pnpm
+  lint` **0** errors (61 warnings, none in a touched file), `vitest`
+  **3,300 / 3,300** (261 files), `changelog:check` ok, `pnpm build` passes.
+- Before the rebase, on 2.73.1 alone: `npx tsc --noEmit` **0** errors.
+- `vitest`: **3,265 / 3,267** on the full run (259 files). The two failures
+  were this entry, not yet written, and the version test reading
+  `package.json` mid-bump; both pass alone. New or extended suites:
+  `countries` (46), `location-types` (5), `moving` (5), `cargo-packaging`,
+  `listing-moving` (12, DTO), `listing-postal-code` (14),
+  `schemas` (93, of which 14 new), `jobs.api` (26, 5 new), `from-listing` (33,
+  2 new), `address-book`, `price-suggestion`, `PackagingField`,
+  `MovingFields` (6), `useJobForm` (24, 4 new), `useEndpointText` (4),
+  `expedion-escalation.escalate` (6 new), `listing-pins` (1 new).
+- Migrations on a scratch database (`exp_check_274`): all 45 applied in
+  journal order. `enum_range(null::location_type)` matches `LOCATION_TYPES`
+  exactly. 0045 also runs as one transaction, as the migrator runs it, and
+  re-runs as a no-op.
+- `messages/*.json`: parity ok after the splice.
+- **Chromium**, `next dev` on :3005 against that scratch database, a throwaway
+  account (dropped with the database), at 1366 px light and 390 px dark: 58 of
+  60 checks passed. The 2 that failed were the script's: it matched the
+  header's « Ajouter une nouvelle adresse » before the drawer's « Ajouter ».
+  The screenshot shows the drawers. What was checked:
+  - « Vous déménagez ? » → move, and `?type=moving` opens one; surface ↔
+    volume; « Ni protection ni emballage » ticked by default.
+  - Both « Carnet d'adresses », the delivery one grouped livraison → either →
+    retrait. Auto-fill put the **unpinned Belgian** saved address on the
+    delivery, with « Belgique » in « Pays de livraison ».
+  - « Rechercher l'adresse de retrait… »; « Commissaire-priseur » offered;
+    the lift asked at floor 3 as Oui / Non and gone at 0; the pickup country
+    switched.
+  - The seeded move's job page: « 3ᵉ étage · sans ascenseur »,
+    « Rez-de-chaussée », « 1000 Bruxelles, Belgique », « Déménagement »,
+    « Logement de 65 m² », « Ni protection ni emballage ».
+  - The profile's three drawers, and the Budget step's moving line with « Comment
+    ça marche ? ».
+  - No horizontal overflow and no console or page errors on any screen.
+
+### Known limits
+
+- **France's box still takes in Belgium and Luxembourg**, as it always has. A
+  Belgian pin labelled France passes the server. The form catches it, because
+  it reverse-geocodes every pin and refuses one in another country.
+- **No rate for moves or for anything above 100 kg**, so no automatic
+  estimate. Those numbers are the client's (spec §0 F).
+- **The 14 countries are a default**, chosen from where Expedion quotes go
+  and what a van reaches without customs (spec §0 A). One row each in
+  `countries.ts`.
+- The profile's own address form still refuses a pin outside France
+  (`AddressForm`, `errors.outsideFrance`); a foreign address is typed there,
+  or saved from `/create`.
+- Escalated listings already on the board keep `other` as their pickup type.
+  0045 cannot write the new enum value in the transaction that adds it, and
+  there are two.
+- No board filter by kind, and no « déménageur » carrier profile: any approved
+  driver may bid on a move.
+- `/create`'s When step is unchanged for a move. « Doit être effectué avant
+  le » is a flexible window ending on that day.
+
 ## ✅ 2026-11-02 — No Dead Ends: Every Refusal, Failed Load and Empty Screen Offers a Way On (2.75.0)
 
 _The owner, after the accept dialog refused a payment with « Fermer » alone:
@@ -999,6 +1222,7 @@ Spec: `docs/specs/no_dead_ends_spec.md`. Plan: `docs/plans/plan_no_dead_ends.md`
 - A bid landing in the instant between « Modifier » and the expiry stays
   pending on the draft (`updateListing` has the same window).
 
+
 ## ✅ 2026-10-31 — The Selected Request's Pin Shows On Top, After a Browser Pass Over the New Screens (2.73.1)
 
 _Found while walking the screens shipped in 2.66.0–2.72.0 in Chromium. Nobody
@@ -1058,7 +1282,7 @@ Spec: `docs/specs/client_feedback_2026_10_29_spec.md` §P1.
   (`withPins`, never failing the write), so the board map and the
   carriers-on-route match have a point from the start.
 - **Coordinated** with the concurrent `expeditoo-ship-74` session (a `/create`
-  release, 2.74.0 / `0045`): it will pass each request's own country into
+  release, 2.76.0 / `0045`): it will pass each request's own country into
   `locate` once it adds `pickup_country` / `dropoff_country`.
 
 ### Verification

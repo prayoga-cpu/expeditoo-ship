@@ -7,14 +7,16 @@ import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
 import { addressDisplayName } from "@/lib/saved-address";
 import { cn } from "@/lib/utils";
 import type { Address } from "../hooks/useAddressBook";
-import type { Side } from "../address-book";
+import { addressGroups, type Side } from "../address-book";
 
 /**
  * Secondary text inside an option: muted, except on the highlighted option,
@@ -40,9 +42,12 @@ interface SavedAddressPickerProps {
 }
 
 /**
- * A dropdown of the requester's saved addresses, with « Saisir une nouvelle
- * adresse » always last (saved_addresses_spec.md §3.1). An address already at
- * the other end says so but stays selectable: choosing it is refused by the
+ * « Carnet d'adresses de retrait / de livraison »: a dropdown of the
+ * requester's saved addresses, with « Saisir une nouvelle adresse » always last
+ * (saved_addresses_spec.md §3.1). Grouped by the end each is kept for, this
+ * end's first; shown even when empty, so the requester learns it exists and
+ * how to fill it (client_feedback_2026_10_31_spec.md §1.2). An address already
+ * at the other end says so but stays selectable: choosing it is refused by the
  * schema, in words, rather than hidden.
  */
 export function SavedAddressPicker({
@@ -58,10 +63,11 @@ export function SavedAddressPicker({
   const name = (address: Address) => addressDisplayName(address, (p) => tPreset(p));
   const selected = addresses.find((a) => a.id === selectedId);
   const otherSide: Side = side === "pickup" ? "dropoff" : "pickup";
+  const groups = addressGroups(addresses, side);
 
   return (
     <div className="space-y-2">
-      <Label htmlFor={id}>{t("savedAddress")}</Label>
+      <Label htmlFor={id}>{t(`addressBook.label.${side}`)}</Label>
       <Select
         value={selected?.id ?? NEW_ADDRESS}
         onValueChange={(value) =>
@@ -93,28 +99,34 @@ export function SavedAddressPicker({
           </SelectValue>
         </SelectTrigger>
         <SelectContent className="max-w-[var(--radix-select-trigger-width)]">
-          {addresses.map((address) => (
-            <SelectItem
-              key={address.id}
-              value={address.id}
-              className="group py-2 *:[span]:last:min-w-0"
-            >
-              <span className="flex min-w-0 flex-col gap-0.5">
-                <span className="flex flex-wrap items-center gap-1.5">
-                  <span className="font-medium">{name(address)}</span>
-                  {address.isDefault && <Badge>{t("defaultAddress")}</Badge>}
-                  {address.usedFor && <Badge>{t(address.usedFor)}</Badge>}
-                  {address.id === otherSideId && (
-                    <span className={cn("text-xs", ON_HIGHLIGHT)}>
-                      {t(`alreadyAt.${otherSide}`)}
+          {groups.map((group) => (
+            <SelectGroup key={group.usedFor ?? "either"}>
+              <SelectLabel>
+                {t(`addressBook.group.${group.usedFor ?? "either"}`)}
+              </SelectLabel>
+              {group.addresses.map((address) => (
+                <SelectItem
+                  key={address.id}
+                  value={address.id}
+                  className="group py-2 *:[span]:last:min-w-0"
+                >
+                  <span className="flex min-w-0 flex-col gap-0.5">
+                    <span className="flex flex-wrap items-center gap-1.5">
+                      <span className="font-medium">{name(address)}</span>
+                      {address.isDefault && <Badge>{t("defaultAddress")}</Badge>}
+                      {address.id === otherSideId && (
+                        <span className={cn("text-xs", ON_HIGHLIGHT)}>
+                          {t(`alreadyAt.${otherSide}`)}
+                        </span>
+                      )}
                     </span>
-                  )}
-                </span>
-                <span className={cn("truncate text-xs", ON_HIGHLIGHT)}>
-                  {oneLine(address)}
-                </span>
-              </span>
-            </SelectItem>
+                    <span className={cn("truncate text-xs", ON_HIGHLIGHT)}>
+                      {oneLine(address)}
+                    </span>
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectGroup>
           ))}
           <SelectItem value={NEW_ADDRESS} className="py-2">
             <span className="flex items-center gap-2">
@@ -124,6 +136,9 @@ export function SavedAddressPicker({
           </SelectItem>
         </SelectContent>
       </Select>
+      {addresses.length === 0 && (
+        <p className="text-xs text-muted-foreground">{t("addressBook.empty")}</p>
+      )}
     </div>
   );
 }

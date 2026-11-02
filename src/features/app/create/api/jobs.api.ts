@@ -1,5 +1,6 @@
 import { api } from "@/lib/fetcher";
 import type { Job } from "@/features/app/listing/types";
+import { movingWeightKg } from "@/lib/moving";
 import { resolveDimensions, resolveWeightKg } from "../cargo";
 import type { JobFormOutput } from "../schemas";
 
@@ -58,15 +59,60 @@ function stripAddressMeta(endpoint: JobFormOutput["pickup"]) {
   return rest;
 }
 
-export function toCreatePayload(values: JobFormOutput, publish: boolean) {
+/**
+ * What is moved. Items as the What step describes them; a move as its size
+ * alone — one load, the movers loading it, a weight derived from the volume
+ * because vehicle matching reads `weightKg` (client_feedback_2026_10_31_spec.md
+ * §2.2). Whatever the other mode still holds is left behind.
+ */
+interface Cargo {
+  description: string;
+  weightKg: number | undefined;
+  lengthCm?: number;
+  widthCm?: number;
+  heightCm?: number;
+  quantity: number;
+  isFragile: boolean;
+  needsHelp: boolean;
+  movingSurfaceM2?: number;
+  movingVolumeM3?: number;
+}
+
+function cargo(values: JobFormOutput): Cargo {
+  if (values.jobKind === "moving") {
+    const size =
+      values.movingSizeMode === "volume"
+        ? { movingVolumeM3: values.movingVolumeM3 }
+        : { movingSurfaceM2: values.movingSurfaceM2 };
+    return {
+      ...size,
+      description: values.description,
+      weightKg: movingWeightKg({
+        surfaceM2: size.movingSurfaceM2,
+        volumeM3: size.movingVolumeM3,
+      }) ?? undefined,
+      quantity: 1,
+      isFragile: false,
+      needsHelp: true,
+    };
+  }
   return {
-    title: values.title,
     description: withFragileNote(values),
-    weightKg: resolveWeightKg(values.weightBracket, values.exactWeightKg),
+    weightKg: values.weightBracket
+      ? resolveWeightKg(values.weightBracket, values.exactWeightKg)
+      : undefined,
     ...resolveDimensions(values.sizeMode, values.sizePreset, values),
     quantity: values.quantity,
     isFragile: values.isFragile,
     needsHelp: values.needsHelp,
+  };
+}
+
+export function toCreatePayload(values: JobFormOutput, publish: boolean) {
+  return {
+    jobKind: values.jobKind,
+    title: values.title,
+    ...cargo(values),
     packagingLevel: values.packagingLevel,
     needsProtection: values.needsProtection,
     needsPackaging: values.needsPackaging,

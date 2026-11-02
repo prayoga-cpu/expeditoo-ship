@@ -10,27 +10,54 @@ import { createListingSchema } from "../listings.dto";
  * Only the postal code's own issues are read, so the test does not depend on
  * the rest of a listing payload staying valid as the DTO grows.
  */
-const postalIssues = (postalCode: string) => {
+const issuesAt = (field: string, postalCode: string, country?: string) => {
   const result = createListingSchema.safeParse({
     dropoff: {
       address: "Place du Roi Baudouin",
       city: "Bruxelles",
       postalCode,
+      ...(country && { country }),
       locationType: "house",
     },
   });
   if (result.success) return [];
   return result.error.issues
-    .filter((issue) => issue.path.join(".") === "dropoff.postalCode")
+    .filter((issue) => issue.path.join(".") === `dropoff.${field}`)
     .map((issue) => issue.message);
 };
 
+const postalIssues = (postalCode: string, country?: string) =>
+  issuesAt("postalCode", postalCode, country);
+
+/**
+ * Since 2.76.0 the code is read in the end's own country
+ * (client_feedback_2026_10_31_spec.md §6.3); absent means France.
+ */
 describe("createListingSchema — postal codes", () => {
-  it.each(["1000", "75011", "010011"])("accepts %s", (code) => {
-    expect(postalIssues(code)).toEqual([]);
+  it.each([
+    ["75011", undefined],
+    ["75011", "FR"],
+    ["1000", "BE"],
+    ["010011", "RO"],
+    ["1012 AB", "NL"],
+    ["1100-148", "PT"],
+    ["00-950", "PL"],
+  ])("accepts %s in %s", (code, country) => {
+    expect(postalIssues(code, country)).toEqual([]);
   });
 
-  it.each(["123", "1234567", "75 011", "AB123"])("refuses %j", (code) => {
-    expect(postalIssues(code)).toEqual(["INVALID_POSTAL_CODE"]);
+  it.each([
+    ["123", undefined],
+    ["1234567", undefined],
+    ["75 011", undefined],
+    ["AB123", undefined],
+    ["1000", "FR"],
+    ["75011", "BE"],
+  ])("refuses %j in %s", (code, country) => {
+    expect(postalIssues(code, country)).toEqual(["INVALID_POSTAL_CODE"]);
+  });
+
+  it("refuses a country a request cannot be posted to", () => {
+    expect(issuesAt("country", "10001", "US")).toEqual(["UNSUPPORTED_COUNTRY"]);
   });
 });

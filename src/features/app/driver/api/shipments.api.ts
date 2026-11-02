@@ -47,6 +47,20 @@ export interface DriverShipmentListing {
   needsHelp: boolean;
   needsProtection: boolean;
   needsPackaging: boolean;
+  /**
+   * Public listing columns the driver needs at the door: the floor and the
+   * lift, the country, and a move's size (client_feedback_2026_10_31_spec.md
+   * §2.4, §3, §6.4). Optional: absent from rows projected before 2.76.0.
+   */
+  jobKind?: "items" | "moving";
+  movingSurfaceM2?: number | null;
+  movingVolumeM3?: number | null;
+  pickupCountry?: string;
+  dropoffCountry?: string;
+  pickupFloor?: number | null;
+  pickupHasLift?: boolean | null;
+  dropoffFloor?: number | null;
+  dropoffHasLift?: boolean | null;
 }
 
 /**

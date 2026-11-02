@@ -1,5 +1,6 @@
 import type { UseFormSetValue } from "react-hook-form";
 import type { Address } from "@/features/app/profile/api/addresses.api";
+import { countryCodeFrom, DEFAULT_COUNTRY, isJobCountry, type JobCountry } from "@/lib/countries";
 import type { JobFormValues } from "./schemas";
 
 export type Side = "pickup" | "dropoff";
@@ -13,8 +14,15 @@ export interface EndpointPlace {
 }
 
 /**
+ * The API answers `null` for a saved address with no pin, the form holds
+ * `undefined` for an end with none: the same absence, compared as one.
+ */
+const coordinate = (value: number | null | undefined) => value ?? undefined;
+
+/**
  * The saved address an end of the form currently holds, if it is one: the
- * same street, postal code and pin. Anything typed or pinned by hand is not.
+ * same street, postal code and pin — or the same lack of one. Anything typed
+ * or pinned by hand is not.
  */
 export function matchSavedAddress(
   addresses: Address[],
@@ -25,9 +33,41 @@ export function matchSavedAddress(
     (a) =>
       a.street === place.address &&
       a.zip === place.postalCode &&
-      a.lat === place.lat &&
-      a.lng === place.lng
+      coordinate(a.lat) === coordinate(place.lat) &&
+      coordinate(a.lng) === coordinate(place.lng)
   );
+}
+
+/**
+ * The country a saved address is in. The profile form stores a name
+ * (« France », « Belgique »), `/create` the name in the requester's language;
+ * either reads back as its code, and anything unrecognised as France
+ * (client_feedback_2026_10_31_spec.md §6.5).
+ */
+export function savedAddressCountry(address: Pick<Address, "country">): JobCountry {
+  const code = countryCodeFrom(address.country);
+  return isJobCountry(code) ? code : DEFAULT_COUNTRY;
+}
+
+/** One group of the « Carnet d'adresses » list (spec §1.2). */
+export interface AddressGroup {
+  /** The end the addresses are kept for; `null` for either. */
+  usedFor: Side | null;
+  addresses: Address[];
+}
+
+/**
+ * The address book as one end reads it: the addresses kept for this end
+ * first, then those kept for either, then those kept for the other end — each
+ * group only when it has any. Every address is offered, with a pin or not.
+ */
+export function addressGroups(addresses: Address[], side: Side): AddressGroup[] {
+  const other: Side = side === "pickup" ? "dropoff" : "pickup";
+  return [
+    { usedFor: side, addresses: addresses.filter((a) => a.usedFor === side) },
+    { usedFor: null, addresses: addresses.filter((a) => !a.usedFor) },
+    { usedFor: other, addresses: addresses.filter((a) => a.usedFor === other) },
+  ].filter((group) => group.addresses.length > 0);
 }
 
 /**
@@ -77,11 +117,14 @@ export function applySavedAddress(
   side: Side,
   address: Address
 ) {
+  // The country first: the postal code below is checked against it.
+  setValue(`${side}.country`, savedAddressCountry(address));
   setValue(`${side}.address`, address.street, { shouldValidate: true });
   setValue(`${side}.city`, address.city);
   setValue(`${side}.postalCode`, address.zip);
-  setValue(`${side}.lat`, address.lat as number);
-  setValue(`${side}.lng`, address.lng as number);
+  // A saved address with no pin leaves the end with none, as typing it would.
+  setValue(`${side}.lat`, coordinate(address.lat) as number);
+  setValue(`${side}.lng`, coordinate(address.lng) as number);
   setValue(`${side}.saveAddress`, false);
   setValue(`${side}.addressLabel`, "");
   setValue(`${side}.locationEntry`, undefined);

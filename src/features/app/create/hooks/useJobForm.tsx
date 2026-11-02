@@ -8,6 +8,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { ApiError } from "@/lib/fetcher";
+import { countryName, DEFAULT_COUNTRY } from "@/lib/countries";
+import type { JobKind } from "@/lib/moving";
 import {
   createAddress,
   type Address,
@@ -45,6 +47,7 @@ const emptyEndpoint = {
   address: "",
   city: "",
   postalCode: "",
+  country: DEFAULT_COUNTRY,
   locationType: "house" as const,
   note: "",
   contactName: "",
@@ -108,7 +111,38 @@ export interface JobFormSeed {
   draft?: DraftJob;
   startStep?: number;
   publishNow?: boolean;
+  /** A fresh request's kind — `/create?type=moving` (spec §2.2). */
+  kind?: JobKind;
 }
+
+/**
+ * What one kind asks that the other does not, as a blank form holds it. A
+ * switch empties the kind being left: its fields are off screen, and a value
+ * one of them still held — a quantity of 0, a stray dimension — would refuse
+ * « Suivant » about a box nobody can see (client_feedback_2026_10_31_spec.md
+ * §2.2). The description, the photos and the packaging are both kinds'.
+ */
+const ITEM_FIELDS = {
+  title: "",
+  weightBracket: undefined,
+  exactWeightKg: "",
+  sizeMode: "preset",
+  sizePreset: undefined,
+  lengthCm: "",
+  widthCm: "",
+  heightCm: "",
+  quantity: 1,
+  isFragile: false,
+  fragileNote: "",
+  needsHelp: false,
+} as const;
+
+const MOVING_FIELDS = {
+  title: "",
+  movingSizeMode: "surface",
+  movingSurfaceM2: "",
+  movingVolumeM3: "",
+} as const;
 
 export function useJobForm(seed: JobFormSeed = {}) {
   const router = useRouter();
@@ -178,6 +212,7 @@ export function useJobForm(seed: JobFormSeed = {}) {
       // holds the box's text, « 40,5 », and the schema reads it
       // (numeric_input_spec.md §7).
       budgetEuros: "",
+      jobKind: seed.kind ?? "items",
       ...resumed?.values,
       ...(seed.publishNow ? { publishMode: "now" as const, scheduledPublishAt: "" } : {}),
       // Derived now, from the resumed When step too: a flexible start saved
@@ -362,7 +397,8 @@ export function useJobForm(seed: JobFormSeed = {}) {
           street: endpoint.address,
           city: endpoint.city,
           zip: endpoint.postalCode,
-          country: "France",
+          // A name, as the profile form writes one; read back as its code.
+          country: countryName(endpoint.country, locale),
           lat: endpoint.lat,
           lng: endpoint.lng,
           usedFor: side,
@@ -374,7 +410,39 @@ export function useJobForm(seed: JobFormSeed = {}) {
         toast.error(t("toast.addressSaveFailed"));
       }
     }
-  }, [form, queryClient, t]);
+  }, [form, locale, queryClient, t]);
+
+  /** Items or a move, emptying what the kind left behind asked for. */
+  const setJobKind = useCallback(
+    (kind: JobKind) => {
+      if (form.getValues("jobKind") === kind) return;
+      const left = kind === "moving" ? ITEM_FIELDS : MOVING_FIELDS;
+      for (const [field, value] of Object.entries(left)) {
+        form.setValue(field as keyof typeof left, value as never);
+      }
+      form.setValue("jobKind", kind);
+      form.clearErrors();
+    },
+    [form]
+  );
+
+  /**
+   * A move's title is its size, in the requester's words — « Déménagement ·
+   * 65 m² » — written just before a submit validates and sends it.
+   */
+  const nameMove = useCallback(() => {
+    if (form.getValues("jobKind") !== "moving") return;
+    const byVolume = form.getValues("movingSizeMode") === "volume";
+    const size = String(
+      form.getValues(byVolume ? "movingVolumeM3" : "movingSurfaceM2") ?? ""
+    ).trim();
+    form.setValue(
+      "title",
+      size
+        ? t(byVolume ? "moving.titleVolume" : "moving.titleSurface", { size })
+        : t("moving.titleBare")
+    );
+  }, [form, t]);
 
   /**
    * The one refusal on « Où » that is about both ends at once, said as a
@@ -443,6 +511,7 @@ export function useJobForm(seed: JobFormSeed = {}) {
       };
 
       syncTiming(timing, new Date(), false);
+      nameMove();
       return form
         .handleSubmit(
           (values) => {
@@ -496,6 +565,7 @@ export function useJobForm(seed: JobFormSeed = {}) {
       createJob,
       currentStep,
       furthestStep,
+      nameMove,
       saveRequestedAddresses,
       sendToStep,
       showStep,
@@ -554,6 +624,7 @@ export function useJobForm(seed: JobFormSeed = {}) {
     handleNext,
     handlePrev,
     prefillAddresses,
+    setJobKind,
     goToStep: showStep,
     publish: () => submit(true),
     saveDraft: () => submit(false),

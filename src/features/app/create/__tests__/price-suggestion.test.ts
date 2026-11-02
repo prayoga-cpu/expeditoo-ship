@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { suggestedRange, suggestionRequest } from "../price-suggestion";
+import {
+  canLocate,
+  itemCount,
+  parcelFor,
+  suggestedRange,
+  suggestionRequest,
+} from "../price-suggestion";
 
 /** client_feedback_2026_10_29_spec.md §B6 — « Prix conseillé ». */
 const base = {
@@ -54,5 +60,29 @@ describe("suggestedRange", () => {
 
   it("never suggests below 5 €", () => {
     expect(suggestedRange(2)).toEqual({ lowCents: 500, highCents: 500 });
+  });
+});
+
+// client_feedback_2026_10_31_spec.md §4, §0 F, §0 G.
+describe("the estimate since 31 October", () => {
+  it("prices nothing for a move", () => {
+    expect(parcelFor({ ...base, jobKind: "moving" })).toBeNull();
+    expect(suggestionRequest({ ...base, jobKind: "moving" })).toBeNull();
+  });
+
+  it("counts the items it prices, at least one, whole", () => {
+    expect(itemCount({ ...base, quantity: "10" })).toBe(10);
+    expect(itemCount({ ...base, quantity: 3 })).toBe(3);
+    expect(itemCount({ ...base, quantity: "" })).toBe(1);
+    expect(itemCount({ ...base, quantity: "0" })).toBe(1);
+    expect(itemCount(base)).toBe(1);
+  });
+
+  it("can find an end with no pin from its town or postal code", () => {
+    expect(canLocate({ lat: 48.85, lng: 2.35 })).toBe(true);
+    expect(canLocate({ city: "Bruxelles", country: "BE" })).toBe(true);
+    expect(canLocate({ postalCode: "1000" })).toBe(true);
+    expect(canLocate({ address: "Rue Neuve 1" })).toBe(false);
+    expect(canLocate({})).toBe(false);
   });
 });

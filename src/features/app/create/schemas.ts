@@ -1,8 +1,15 @@
 import { z } from "zod";
 import { isValidPhoneNumber } from "libphonenumber-js/min";
 
-import { JOB_POSTAL_CODE_PATTERN } from "@/lib/postal-code";
 import { parseDecimal } from "@/lib/numeric-input";
+import { isInCountry, isValidPostalCode, JOB_COUNTRIES } from "@/lib/countries";
+import {
+  floorRequired,
+  liftRequired,
+  LOCATION_TYPES,
+  type LocationType,
+} from "@/lib/location-types";
+import { JOB_KINDS, MOVING_SURFACE_M2, MOVING_VOLUME_M3 } from "@/lib/moving";
 import {
   TIME_SLOTS,
   toDayString,
@@ -27,7 +34,8 @@ import {
  * disagree the server wins, so every rule here is deliberately a copy of one
  * over there — including the France bounds and the minimum route length, which
  * this mirror used to omit and so let the form pass work the API then rejected
- * with a code the form had no message for.
+ * with a code the form had no message for. The country rules — postal code
+ * format, the country's box — are `src/lib/countries.ts` on both sides.
  *
  * Messages are translation keys rather than English, resolved through
  * `create.validation.*`. A Zod schema cannot call `useTranslations`, so the
@@ -40,26 +48,12 @@ import {
  * only seam that had to move. See docs/specs/cargo_input_spec.md §2.
  */
 
-export const LOCATION_TYPES = [
-  "house",
-  "apartment",
-  "warehouse",
-  "factory",
-  "construction_site",
-  "shop",
-  "office",
-  "storage_unit",
-  "farm",
-  "port",
-  "airport",
-  "rail_terminal",
-  "other",
-] as const;
+// One list for the enum, the DTO and this form (src/lib/location-types.ts).
+export { LOCATION_TYPES, type LocationType };
 
-export type LocationType = (typeof LOCATION_TYPES)[number];
-
-/** Matches `FRANCE_BOUNDS` in `listings.dto.ts`. */
-const FRANCE_BOUNDS = { minLat: 41.3, maxLat: 51.2, minLng: -5.2, maxLng: 9.7 };
+/** How a move is sized: the home's surface, or « Je connais le volume exact ». */
+export const MOVING_SIZE_MODES = ["surface", "volume"] as const;
+export type MovingSizeMode = (typeof MOVING_SIZE_MODES)[number];
 
 /** Matches `MIN_ROUTE_METRES` in `listings.dto.ts`. */
 const MIN_ROUTE_METRES = 500;
@@ -74,12 +68,6 @@ const BUDGET_EUROS = { min: 1, max: 100_000 };
  * add up past it (numeric_input_spec.md §8).
  */
 const QUANTITY_MAX = 99_999;
-
-const isInFrance = (lat: number, lng: number) =>
-  lat >= FRANCE_BOUNDS.minLat &&
-  lat <= FRANCE_BOUNDS.maxLat &&
-  lng >= FRANCE_BOUNDS.minLng &&
-  lng <= FRANCE_BOUNDS.maxLng;
 
 function metresBetween(
   aLat: number,
@@ -177,9 +165,9 @@ export const endpointSchema = z
     lng: z.number().optional(),
     address: z.string().min(1, "create.validation.addressRequired"),
     city: z.string().min(1, "create.validation.cityRequired"),
-    postalCode: z
-      .string()
-      .regex(JOB_POSTAL_CODE_PATTERN, "create.validation.postalCode"),
+    // Its format is the country's, checked below (spec §6.2).
+    postalCode: z.string(),
+    country: z.enum(JOB_COUNTRIES),
     locationType: z.enum(LOCATION_TYPES),
     floor: z.preprocess(
       optionalTypedNumber,
@@ -240,40 +228,65 @@ export const endpointSchema = z
       }
     }
 
-    // Floor and lift change the work materially, so an apartment must state both.
-    if (endpoint.locationType === "apartment") {
-      if (endpoint.floor === undefined) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "create.validation.floorRequired",
-          path: ["floor"],
-        });
-      }
-      if (endpoint.hasLift === undefined) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "create.validation.liftRequired",
-          path: ["hasLift"],
-        });
-      }
+    // Floor and lift are the request's rule, not the end's: a move asks them
+    // of more places than items do (`floorIssues`, on `jobFormSchema`).
+
+    if (!isValidPostalCode(endpoint.country, endpoint.postalCode)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "create.validation.postalCode",
+        path: ["postalCode"],
+      });
     }
 
     if (
       endpoint.lat !== undefined &&
       endpoint.lng !== undefined &&
-      !isInFrance(endpoint.lat, endpoint.lng)
+      !isInCountry(endpoint.country, endpoint.lat, endpoint.lng)
     ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "create.validation.outsideFrance",
+        message: "create.validation.outsideCountry",
         path: ["address"],
       });
     }
   });
 
+/**
+ * Floor and lift change the work materially: an apartment states both, and on
+ * a move so does every place with floors. The lift from the first floor up —
+ * a ground floor has nothing to climb (client_feedback_2026_10_31_spec.md §3).
+ */
+function floorIssues(
+  endpoint: z.output<typeof endpointSchema>,
+  isMoving: boolean,
+  side: "pickup" | "dropoff",
+  ctx: z.RefinementCtx
+) {
+  const type = endpoint.locationType;
+  if (floorRequired(type, isMoving) && endpoint.floor === undefined) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "create.validation.floorRequired",
+      path: [side, "floor"],
+    });
+  }
+  if (liftRequired(type, isMoving, endpoint.floor) && endpoint.hasLift === undefined) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "create.validation.liftRequired",
+      path: [side, "hasLift"],
+    });
+  }
+}
+
 export const jobFormSchema = z
   .object({
-    title: z.string().min(2, "create.validation.titleShort").max(120),
+    // Items, or a move (spec §2). A move has no title or weight to type: both
+    // are derived from its size, so the rules for them sit in `superRefine`,
+    // where the kind is in view.
+    jobKind: z.enum(JOB_KINDS).default("items"),
+    title: z.string().max(120),
     // Optional since 2.63.0: the client found a mandatory description a hurdle
     // for a sofa that is just a sofa (client_feedback_2026_10_spec.md §8).
     description: z.string().max(5000),
@@ -284,9 +297,9 @@ export const jobFormSchema = z
      * only `over1000` asks for it — the DTO accepts up to 44 t and no ladder of
      * chips can express a part-loaded lorry.
      */
-    weightBracket: z.enum(WEIGHT_BRACKET_IDS, {
-      message: "create.validation.weightRequired",
-    }),
+    weightBracket: z
+      .enum(WEIGHT_BRACKET_IDS, { message: "create.validation.weightRequired" })
+      .optional(),
     exactWeightKg: z.preprocess(
       optionalTypedNumber,
       z
@@ -324,6 +337,27 @@ export const jobFormSchema = z
     // contradicting each other (`isRedundantService`), so nothing here needs to.
     needsProtection: z.boolean().default(false),
     needsPackaging: z.boolean().default(false),
+
+    // A move's size: the home's surface, or its volume once « Je connais le
+    // volume exact » is on. Each box holds its text (numeric_input_spec.md §7).
+    movingSizeMode: z.enum(MOVING_SIZE_MODES).default("surface"),
+    movingSurfaceM2: z.preprocess(
+      optionalTypedNumber,
+      z
+        .number()
+        .int("create.validation.wholeNumber")
+        .min(MOVING_SURFACE_M2.min, "create.validation.movingSurfaceRange")
+        .max(MOVING_SURFACE_M2.max, "create.validation.movingSurfaceRange")
+        .optional()
+    ),
+    movingVolumeM3: z.preprocess(
+      optionalTypedNumber,
+      z
+        .number()
+        .min(MOVING_VOLUME_M3.min, "create.validation.movingVolumeRange")
+        .max(MOVING_VOLUME_M3.max, "create.validation.movingVolumeRange")
+        .optional()
+    ),
 
     pickup: endpointSchema,
     dropoff: endpointSchema,
@@ -365,6 +399,36 @@ export const jobFormSchema = z
     scheduledPublishAt: optionalDatetimeLocal,
   })
   .superRefine((data, ctx) => {
+    const isMoving = data.jobKind === "moving";
+
+    if (isMoving) {
+      const [field, message] =
+        data.movingSizeMode === "volume"
+          ? (["movingVolumeM3", "create.validation.movingVolumeRequired"] as const)
+          : (["movingSurfaceM2", "create.validation.movingSurfaceRequired"] as const);
+      if (data[field] === undefined) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message, path: [field] });
+      }
+    } else {
+      if (data.title.length < 2) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "create.validation.titleShort",
+          path: ["title"],
+        });
+      }
+      if (data.weightBracket === undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "create.validation.weightRequired",
+          path: ["weightBracket"],
+        });
+      }
+    }
+
+    floorIssues(data.pickup, isMoving, "pickup", ctx);
+    floorIssues(data.dropoff, isMoving, "dropoff", ctx);
+
     if (data.weightBracket === HEAVY_BRACKET_ID) {
       if (data.exactWeightKg === undefined) {
         ctx.addIssue({
@@ -397,8 +461,9 @@ export const jobFormSchema = z
     }
 
     // Only in `exact` mode: the three fields are off screen under a preset, and
-    // a stale value one of them still holds must not fail a submit.
-    if (data.sizeMode === "exact") {
+    // a stale value one of them still holds must not fail a submit. Nor on a
+    // move, which has no item size at all.
+    if (!isMoving && data.sizeMode === "exact") {
       const dims = [data.lengthCm, data.widthCm, data.heightCm];
       const given = dims.filter((d) => d !== undefined).length;
       if (given !== 0 && given !== 3) {
@@ -501,6 +566,8 @@ export const STEP_FIELDS = [
   [
     "title",
     "description",
+    "movingSurfaceM2",
+    "movingVolumeM3",
     "weightBracket",
     "exactWeightKg",
     "quantity",

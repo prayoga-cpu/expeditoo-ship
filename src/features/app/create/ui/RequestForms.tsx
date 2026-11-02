@@ -13,12 +13,13 @@ import { ApiError } from "@/lib/fetcher";
 import { listingsApi } from "@/features/app/listing/api/listings.api";
 import { jobKeys } from "@/features/app/listing/hooks/useJobDetail";
 import type { DraftJob } from "@/features/app/listing/types";
+import type { JobKind } from "@/lib/moving";
 import { useJobForm } from "../hooks/useJobForm";
 import { JobForm } from "./JobForm";
 
-/** A new request, from a blank form. */
-export function NewRequestForm() {
-  return <JobForm {...useJobForm()} />;
+/** A new request, from a blank form — items, or a move (`?type=moving`). */
+export function NewRequestForm({ kind }: { kind?: JobKind }) {
+  return <JobForm {...useJobForm({ kind })} />;
 }
 
 interface DraftFormProps {

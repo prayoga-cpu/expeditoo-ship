@@ -30,6 +30,7 @@ import { offersService } from "@/server/services/offers.service";
 import { expedionSmsService } from "@/server/services/expedion-sms.service";
 import { notifyExpedionAdmins } from "@/server/services/expedion-realtime.service";
 import { normaliseJobPostalCode } from "@/lib/postal-code";
+import { countryCodeFrom, DEFAULT_COUNTRY } from "@/lib/countries";
 import {
   ExpedionError,
   canTransition,
@@ -86,11 +87,19 @@ const DROPOFF_WINDOW_DAYS = 14;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
- * The auction house is not one of the 13 location types, and guessing wrong
- * changes what carriers quote. `other` is the honest answer, and it avoids the
- * apartment floor/lift requirement that would otherwise reject the listing.
+ * Every Expedion pickup is an auction house — the type exists since 2.76.0
+ * (client_feedback_2026_10_31_spec.md §0 L). The delivery is the client's
+ * address, whose kind the quote does not say: `other` is the honest answer,
+ * and it avoids the apartment floor/lift requirement that would otherwise
+ * reject the listing.
  */
-const AUCTION_LOCATION_TYPE = "other" as const;
+const AUCTION_LOCATION_TYPE = "auction_house" as const;
+const DELIVERY_LOCATION_TYPE = "other" as const;
+
+/** The quote's free-typed delivery country as an ISO code; France if unsaid. */
+function deliveryCountry(text: string | null | undefined): string {
+  return countryCodeFrom(text) ?? DEFAULT_COUNTRY;
+}
 
 /**
  * Escalated jobs are owned by a dedicated platform account rather than by the
@@ -311,7 +320,10 @@ export const expedionEscalationService = {
             address: quote.deliveryAddress!,
             city: quote.deliveryCity!,
             postalCode: normalisePostalCode(quote.deliveryPostalCode)!,
-            locationType: AUCTION_LOCATION_TYPE,
+            // Free text in the quote (« Belgique », « USA », blank); blank or
+            // unrecognised was always read as France (spec §0 B).
+            country: deliveryCountry(quote.deliveryCountry),
+            locationType: DELIVERY_LOCATION_TYPE,
             contactName: quote.recipientName ?? undefined,
             contactPhone: quote.deliveryPhone ?? undefined,
           },

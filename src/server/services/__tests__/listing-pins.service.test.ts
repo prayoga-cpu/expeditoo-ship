@@ -52,6 +52,13 @@ describe("locate", () => {
     expect(m.searchAddress.mock.calls[0][1]).toContain("be");
   });
 
+  // client_feedback_2026_10_31_spec.md §6: a listing knows its country.
+  it("searches the end's own country when it is known", async () => {
+    m.searchAddress.mockResolvedValue(hit(50.85, 4.35));
+    await locate("Rue Neuve 1", "1000", "Bruxelles", "BE");
+    expect(m.searchAddress.mock.calls[0][1]).toBe("be");
+  });
+
   it("stops at the first lookup that finds something", async () => {
     m.searchAddress.mockResolvedValue(hit(48.85, 2.35));
     await locate("12 rue Imaginaire", "75011", "Paris");

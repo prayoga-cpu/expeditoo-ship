@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { isRedundantService } from "../cargo-packaging";
+import { hasNoPackaging, isRedundantService } from "../cargo-packaging";
 
 /**
  * The whole table from cargo_packaging_services_spec.md §2. The form and the
@@ -22,5 +22,22 @@ describe("isRedundantService", () => {
     ["boxed", "needsPackaging", true],
   ] as const)("%s covers %s: %s", (level, service, expected) => {
     expect(isRedundantService(level, service)).toBe(expected);
+  });
+});
+
+/** client_feedback_2026_10_31_spec.md §5 — « Ni protection ni emballage ». */
+describe("hasNoPackaging", () => {
+  it("is the four left unsaid", () => {
+    expect(hasNoPackaging({ packagingLevel: null, needsProtection: false, needsPackaging: false })).toBe(true);
+    expect(hasNoPackaging({})).toBe(true);
+  });
+
+  it.each([
+    [{ packagingLevel: "protected" as const }],
+    [{ packagingLevel: "boxed" as const }],
+    [{ needsProtection: true }],
+    [{ needsPackaging: true }],
+  ])("is not %j", (job) => {
+    expect(hasNoPackaging(job)).toBe(false);
   });
 });

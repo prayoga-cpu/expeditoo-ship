@@ -211,6 +211,44 @@ describe("fromListing — the request comes back as it was saved", () => {
     expect(resumed.values.publishMode).toBe("now");
   });
 
+  // client_feedback_2026_10_31_spec.md §2.2, §6.2
+  it("resumes a move as a move, in the box its size was given in", () => {
+    const move = draft({
+      jobKind: "moving",
+      title: "Déménagement · 30,5 m³",
+      movingVolumeM3: 30.5,
+      movingSurfaceM2: null,
+      weightKg: 4575,
+      pickupFloor: 0,
+      dropoffFloor: 0,
+    });
+    const { resumed, payload } = roundTrip(move);
+
+    expect(resumed.values).toMatchObject({
+      jobKind: "moving",
+      movingSizeMode: "volume",
+      movingVolumeM3: "30,5",
+    });
+    expect(resumed.values).not.toHaveProperty("weightBracket");
+    expect(payload).toMatchObject({ jobKind: "moving", movingVolumeM3: 30.5, weightKg: 4575 });
+  });
+
+  it("brings each end's country back", () => {
+    const { resumed, payload } = roundTrip(
+      draft({
+        dropoffCountry: "BE",
+        dropoffPostalCode: "1000",
+        dropoffCity: "Bruxelles",
+        dropoffLat: 50.8503,
+        dropoffLng: 4.3517,
+      })
+    );
+
+    expect(resumed.values.dropoff?.country).toBe("BE");
+    expect(resumed.values.pickup?.country).toBe("FR");
+    expect(payload.dropoff.country).toBe("BE");
+  });
+
   it("never adds to the address book on the way through", () => {
     const { resumed } = roundTrip(draft());
 

@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth";
 import { DraftForm, NewRequestForm } from "@/features/app/create/ui/RequestForms";
 
 interface PageProps {
-  searchParams: Promise<{ draft?: string; step?: string; publish?: string }>;
+  searchParams: Promise<{ draft?: string; step?: string; publish?: string; type?: string }>;
 }
 
 /** The Budget step, where a request is published. */
@@ -12,7 +12,9 @@ const BUDGET_STEP = 3;
 
 /**
  * Request transport for an object — or finish one saved earlier
- * (`?draft=<id>`, docs/specs/draft_requests_spec.md §2).
+ * (`?draft=<id>`, docs/specs/draft_requests_spec.md §2). `?type=moving` opens
+ * it as a move — the link to share for « devis déménagement »
+ * (client_feedback_2026_10_31_spec.md §2.2).
  *
  * The job it creates is `origin: "direct"` — stamped by the service, never
  * sent from here — so the requester owns it and chooses which carrier's offer
@@ -21,8 +23,8 @@ const BUDGET_STEP = 3;
  * Suspense boundary it would demand.
  */
 export default async function CreateJobPage({ searchParams }: PageProps) {
-  const { draft, step, publish } = await searchParams;
-  if (!draft) return <NewRequestForm />;
+  const { draft, step, publish, type } = await searchParams;
+  if (!draft) return <NewRequestForm kind={type === "moving" ? "moving" : "items"} />;
 
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) {

@@ -5,7 +5,9 @@ import {
   TIME_SLOTS,
 } from "@/lib/availability-window";
 import { MAX_PATH_POINTS } from "@/lib/route-corridor";
-import { JOB_POSTAL_CODE_PATTERN } from "@/lib/postal-code";
+import { isInCountry, isJobCountry, isValidPostalCode } from "@/lib/countries";
+import { floorRequired, liftRequired, LOCATION_TYPES } from "@/lib/location-types";
+import { JOB_KINDS, MOVING_SURFACE_M2, MOVING_VOLUME_M3 } from "@/lib/moving";
 import { PACKAGING_SERVICES, isRedundantService } from "@/lib/cargo-packaging";
 import { listingOriginEnum, listingStatusEnum } from "@/db/schema/listings";
 
@@ -14,21 +16,8 @@ import { listingOriginEnum, listingStatusEnum } from "@/db/schema/listings";
 // ========================================
 // See docs/specs/transport_listing_spec.md §2.
 
-export const LOCATION_TYPES = [
-  "house",
-  "apartment",
-  "warehouse",
-  "factory",
-  "construction_site",
-  "shop",
-  "office",
-  "storage_unit",
-  "farm",
-  "port",
-  "airport",
-  "rail_terminal",
-  "other",
-] as const;
+// One list for the enum, this DTO and the form (src/lib/location-types.ts).
+export { LOCATION_TYPES };
 
 export const MIN_BUDGET_CENTS = 100;
 export const MAX_BUDGET_CENTS = 10_000_000;
@@ -38,15 +27,6 @@ export const MAX_WEIGHT_KG = 44_000;
 export const MAX_QUANTITY = 99_999;
 /** Minimum separation between pickup and dropoff, in metres. */
 export const MIN_ROUTE_METRES = 500;
-
-/** Metropolitan France plus Corsica. v2.0 is France-only (ROADMAP.md §9). */
-const FRANCE_BOUNDS = { minLat: 41.3, maxLat: 51.2, minLng: -5.2, maxLng: 9.7 };
-
-const isInFrance = (lat: number, lng: number) =>
-  lat >= FRANCE_BOUNDS.minLat &&
-  lat <= FRANCE_BOUNDS.maxLat &&
-  lng >= FRANCE_BOUNDS.minLng &&
-  lng <= FRANCE_BOUNDS.maxLng;
 
 /** Equirectangular approximation, ample for a 500 m proximity guard. */
 const metresBetween = (
@@ -69,8 +49,14 @@ const endpointSchema = z.object({
   lng: z.number().min(-180).max(180).optional(),
   address: z.string().min(1, "Address is required"),
   city: z.string().min(1, "City is required"),
-  // 4 to 6 digits: a job can collect or deliver abroad (postal_codes_abroad_spec.md).
-  postalCode: z.string().regex(JOB_POSTAL_CODE_PATTERN, "INVALID_POSTAL_CODE"),
+  // Its format is the country's, checked below with the country beside it
+  // (client_feedback_2026_10_31_spec.md §6.3).
+  postalCode: z.string().trim().min(1, "INVALID_POSTAL_CODE").max(12, "INVALID_POSTAL_CODE"),
+  // ISO 3166-1 alpha-2; absent means France — every caller before 2.76.0, and
+  // escalation's pickup. Any code here, because an escalated job delivers
+  // wherever its quote does; a request posted over HTTP is held to
+  // `JOB_COUNTRIES` below (client_feedback_2026_10_31_spec.md §6.3).
+  country: z.string().regex(/^[A-Z]{2}$/, "UNSUPPORTED_COUNTRY").optional(),
   locationType: z.enum(LOCATION_TYPES),
   floor: z.number().int().min(0).optional(),
   hasLift: z.boolean().optional(),
@@ -84,29 +70,65 @@ const endpointSchema = z.object({
   note: z.string().max(300).optional(),
   contactName: z.string().max(120).optional(),
   contactPhone: z.string().max(30).optional(),
+}).superRefine((endpoint, ctx) => {
+  // On the end itself, beside its country, so they run whatever else in the
+  // payload is wrong — as the regex they replace did
+  // (client_feedback_2026_10_31_spec.md §6.3).
+  if (endpoint.country !== undefined && !isJobCountry(endpoint.country)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "UNSUPPORTED_COUNTRY",
+      path: ["country"],
+    });
+  }
+  if (!isValidPostalCode(endpoint.country, endpoint.postalCode)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "INVALID_POSTAL_CODE",
+      path: ["postalCode"],
+    });
+  }
+  // Nothing to bound-check for a pin-less, manually-typed endpoint — there is
+  // no coordinate to be out of its country. The address itself is not
+  // verified against any gazetteer; that is the tradeoff this mode accepts.
+  if (
+    endpoint.lat !== undefined &&
+    endpoint.lng !== undefined &&
+    !isInCountry(endpoint.country, endpoint.lat, endpoint.lng)
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "LOCATION_OUT_OF_COUNTRY",
+      path: ["lat"],
+    });
+  }
 });
 
 /**
- * An apartment's floor and lift materially change the job, so they are
- * required rather than merely encouraged by the UI.
+ * The floor and the lift materially change the job, so they are required
+ * rather than merely encouraged by the UI: on an apartment, and on every place
+ * with floors when the job is a move. The lift only from the first floor up —
+ * a ground floor has nothing to climb (client_feedback_2026_10_31_spec.md §3).
  */
-const requireApartmentDetail = (
+const requireFloorDetail = (
   endpoint: z.infer<typeof endpointSchema>,
   ctx: z.RefinementCtx,
-  side: "pickup" | "dropoff"
+  side: "pickup" | "dropoff",
+  isMoving: boolean
 ) => {
-  if (endpoint.locationType !== "apartment") return;
-  if (endpoint.floor === undefined) {
+  const type = endpoint.locationType;
+  const prefix = type === "apartment" ? "APARTMENT_" : "";
+  if (floorRequired(type, isMoving) && endpoint.floor === undefined) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
-      message: "APARTMENT_FLOOR_REQUIRED",
+      message: `${prefix}FLOOR_REQUIRED`,
       path: [side, "floor"],
     });
   }
-  if (endpoint.hasLift === undefined) {
+  if (liftRequired(type, isMoving, endpoint.floor) && endpoint.hasLift === undefined) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
-      message: "APARTMENT_LIFT_REQUIRED",
+      message: `${prefix}LIFT_REQUIRED`,
       path: [side, "hasLift"],
     });
   }
@@ -147,6 +169,8 @@ const AVAILABILITY_FIELDS = [
 ] as const;
 
 const baseListingSchema = z.object({
+  // Absent means items, as every request was before 2.76.0.
+  jobKind: z.enum(JOB_KINDS).optional(),
   title: z.string().min(2).max(120),
   // Optional (client_feedback_2026_10_spec.md §8). The column stays NOT NULL,
   // so an absent description is stored as "" rather than null.
@@ -174,6 +198,18 @@ const baseListingSchema = z.object({
   // (cargo_packaging_services_spec.md).
   needsProtection: z.boolean().default(false),
   needsPackaging: z.boolean().default(false),
+  // A move's size: one of the two, as the requester gave it (spec §2.3).
+  movingSurfaceM2: z
+    .number()
+    .int()
+    .min(MOVING_SURFACE_M2.min)
+    .max(MOVING_SURFACE_M2.max)
+    .optional(),
+  movingVolumeM3: z
+    .number()
+    .min(MOVING_VOLUME_M3.min)
+    .max(MOVING_VOLUME_M3.max)
+    .optional(),
 
   pickup: endpointSchema,
   dropoff: endpointSchema,
@@ -213,25 +249,29 @@ export const createListingSchema = baseListingSchema.superRefine((data, ctx) => 
     });
   }
 
+  const isMoving = data.jobKind === "moving";
+  const sizes = [data.movingSurfaceM2, data.movingVolumeM3].filter(
+    (size) => size !== undefined
+  ).length;
+  if (isMoving && sizes !== 1) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "MOVING_SIZE_REQUIRED",
+      path: ["movingSurfaceM2"],
+    });
+  } else if (!isMoving && sizes > 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "MOVING_SIZE_ON_ITEMS",
+      path: ["movingSurfaceM2"],
+    });
+  }
+
   for (const [side, endpoint] of [
     ["pickup", data.pickup],
     ["dropoff", data.dropoff],
   ] as const) {
-    // Nothing to bound-check for a pin-less, manually-typed endpoint — there
-    // is no coordinate to be out of France. The address itself is not
-    // verified against any gazetteer; that is the tradeoff this mode accepts.
-    if (
-      endpoint.lat !== undefined &&
-      endpoint.lng !== undefined &&
-      !isInFrance(endpoint.lat, endpoint.lng)
-    ) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "LOCATION_OUT_OF_COUNTRY",
-        path: [side, "lat"],
-      });
-    }
-    requireApartmentDetail(endpoint, ctx, side);
+    requireFloorDetail(endpoint, ctx, side, isMoving);
   }
 
   // Only checkable when both ends have real coordinates — a manually-typed
@@ -325,6 +365,9 @@ export type UpdateListingInput = z.infer<typeof updateListingSchema>;
  * and consumed by the service.
  */
 export const MATERIAL_FIELDS = [
+  "jobKind",
+  "movingSurfaceM2",
+  "movingVolumeM3",
   "weightKg",
   "lengthCm",
   "widthCm",

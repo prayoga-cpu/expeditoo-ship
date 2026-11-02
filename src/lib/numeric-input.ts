@@ -36,9 +36,10 @@ export interface NumericRules {
  * 44 t a lorry carries, to 100 g and to the kilogram; `CM` reaches a 13,6 m
  * trailer; `QUANTITY` reaches the 99 999 items a request may count
  * (`quantityMax`) — it shared `COUNT`, a floor's three digits, and « 1200 »
- * chairs read « 120 ». The limits stop a stray key from making an absurd
- * figure — what is too much is still the schema's to say
- * (numeric_input_spec.md §3).
+ * chairs read « 120 ». `AREA` and `VOLUME` reach a move's 1 000 m² and
+ * 200 m³ (client_feedback_2026_10_31_spec.md §2.2). The limits stop a stray
+ * key from making an absurd figure — what is too much is still the schema's
+ * to say (numeric_input_spec.md §3).
  */
 export const NUMERIC_RULES = {
   MONEY: { decimals: 2, integerDigits: 6 },
@@ -47,6 +48,8 @@ export const NUMERIC_RULES = {
   CM: { decimals: 1, integerDigits: 4 },
   QUANTITY: { decimals: 0, integerDigits: 5 },
   COUNT: { decimals: 0, integerDigits: 3 },
+  AREA: { decimals: 0, integerDigits: 4 },
+  VOLUME: { decimals: 1, integerDigits: 3 },
 } as const satisfies Record<string, NumericRules>;
 
 /** A box's text after an edit, and where its caret goes. */

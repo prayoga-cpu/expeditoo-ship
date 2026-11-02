@@ -1,5 +1,6 @@
 import { SLOT_HOURS, TIME_SLOTS, toDayString, type TimeSlot } from "@/lib/availability-window";
 import { centsToInput, numberToInput } from "@/lib/numeric-input";
+import { DEFAULT_COUNTRY, isJobCountry } from "@/lib/countries";
 import type { DraftJob } from "@/features/app/listing/types";
 import { splitFragileNote } from "./api/jobs.api";
 import { bracketForWeight, sizeForDimensions } from "./cargo";
@@ -180,6 +181,7 @@ function endpointValues(job: DraftJob, side: "pickup" | "dropoff") {
           address: job.pickupAddress,
           city: job.pickupCity,
           postalCode: job.pickupPostalCode,
+          country: job.pickupCountry,
           lat: job.pickupLat,
           lng: job.pickupLng,
           locationType: job.pickupLocationType,
@@ -193,6 +195,7 @@ function endpointValues(job: DraftJob, side: "pickup" | "dropoff") {
           address: job.dropoffAddress,
           city: job.dropoffCity,
           postalCode: job.dropoffPostalCode,
+          country: job.dropoffCountry,
           lat: job.dropoffLat,
           lng: job.dropoffLng,
           locationType: job.dropoffLocationType,
@@ -207,6 +210,8 @@ function endpointValues(job: DraftJob, side: "pickup" | "dropoff") {
     address: end.address ?? "",
     city: end.city,
     postalCode: end.postalCode,
+    // A draft is a direct request, posted from this form's own list.
+    country: isJobCountry(end.country) ? end.country : DEFAULT_COUNTRY,
     lat: end.lat ?? undefined,
     lng: end.lng ?? undefined,
     locationType: end.locationType as LocationType,
@@ -233,6 +238,22 @@ function sizeValues(job: DraftJob, locale: string) {
   return { ...size, lengthCm: text(lengthCm), widthCm: text(widthCm), heightCm: text(heightCm) };
 }
 
+/**
+ * A move's size as the step holds it: the box it was given in, as text. Its
+ * weight is derived again on save, so no bracket is read back
+ * (client_feedback_2026_10_31_spec.md §2.2).
+ */
+function movingValues(job: DraftJob, locale: string): Partial<JobFormValues> {
+  const volume = job.movingVolumeM3 ?? null;
+  const surface = job.movingSurfaceM2 ?? null;
+  return {
+    jobKind: "moving",
+    movingSizeMode: volume !== null ? "volume" : "surface",
+    movingSurfaceM2: surface === null ? "" : String(surface),
+    movingVolumeM3: volume === null ? "" : numberToInput(volume, 1, locale),
+  };
+}
+
 /** A schedule still ahead is kept; one gone by asks again, like a draft. */
 function publication(job: DraftJob, now: Date) {
   const scheduled = job.scheduledPublishAt ? new Date(job.scheduledPublishAt) : null;
@@ -249,8 +270,9 @@ export function fromListing(job: DraftJob, { locale, now }: FromListingOptions):
   const values: Partial<JobFormValues> = {
     title: job.title,
     ...splitFragileNote(job.description, job.isFragile),
-    ...bracketForWeight(job.weightKg),
-    ...sizeValues(job, locale),
+    ...(job.jobKind === "moving"
+      ? movingValues(job, locale)
+      : { ...bracketForWeight(job.weightKg), ...sizeValues(job, locale) }),
     quantity: job.quantity,
     isFragile: job.isFragile,
     needsHelp: job.needsHelp,

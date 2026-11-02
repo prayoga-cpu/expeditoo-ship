@@ -20,9 +20,12 @@ import {
   Hourglass,
   Phone,
   Info,
+  Building2,
+  Truck,
 } from "lucide-react";
 import { useDriverShipmentDetail } from "@/features/app/driver/hooks/useDriverShipments";
 import { ListingReference } from "@/features/app/listing/ui/ListingReference";
+import { useEndpointText } from "@/features/app/listing/hooks/useEndpointText";
 import type {
   DriverShipmentDetail,
   DriverShipmentListing,
@@ -144,6 +147,8 @@ export default function ShipmentDetailPage() {
 
 function RouteCard({ shipment }: { shipment: DriverShipmentDetail }) {
   const t = useTranslations("driver.shipmentDetail");
+  const text = useEndpointText();
+  const listing = shipment.listing;
 
   return (
     <Card className="overflow-hidden border">
@@ -170,7 +175,8 @@ function RouteCard({ shipment }: { shipment: DriverShipmentDetail }) {
           <RouteStop
             colorClass="bg-blue-500"
             label={t("pickup")}
-            address={shipment.pickupAddress}
+            address={withCountry(shipment.pickupAddress, text.country(listing?.pickupCountry))}
+            floor={text.floor(listing?.pickupFloor, listing?.pickupHasLift)}
             note={shipment.pickupNote}
             contactName={shipment.pickupContactName}
             contactPhone={shipment.pickupContactPhone}
@@ -180,7 +186,8 @@ function RouteCard({ shipment }: { shipment: DriverShipmentDetail }) {
           <RouteStop
             colorClass="bg-green-500"
             label={t("dropoff")}
-            address={shipment.dropoffAddress}
+            address={withCountry(shipment.dropoffAddress, text.country(listing?.dropoffCountry))}
+            floor={text.floor(listing?.dropoffFloor, listing?.dropoffHasLift)}
             note={shipment.dropoffNote}
             contactName={shipment.dropoffContactName}
             contactPhone={shipment.dropoffContactPhone}
@@ -193,10 +200,16 @@ function RouteCard({ shipment }: { shipment: DriverShipmentDetail }) {
   );
 }
 
+/** The stop's address, and its country when it is not France. */
+function withCountry(address: string, country: string | null) {
+  return country ? `${address}, ${country}` : address;
+}
+
 function RouteStop({
   colorClass,
   label,
   address,
+  floor,
   note,
   contactName,
   contactPhone,
@@ -206,6 +219,8 @@ function RouteStop({
   colorClass: string;
   label: string;
   address: string;
+  /** « 3ᵉ étage · sans ascenseur », as the requester gave it. */
+  floor: string | null;
   note: string | null;
   contactName: string | null;
   contactPhone: string | null;
@@ -222,6 +237,12 @@ function RouteStop({
           {label}
         </p>
         <p className="font-medium text-sm md:text-base">{address}</p>
+        {floor ? (
+          <p className="flex items-center gap-1 text-xs mt-1">
+            <Building2 className="w-3 h-3 text-muted-foreground" />
+            {floor}
+          </p>
+        ) : null}
         <p className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
           <Calendar className="w-3 h-3" />
           {scheduledLabel}:{" "}
@@ -261,8 +282,14 @@ function formatDimensions(listing: DriverShipmentListing | null) {
 
 function CargoCard({ shipment }: { shipment: DriverShipmentDetail }) {
   const t = useTranslations("driver.shipmentDetail");
+  const tDetail = useTranslations("myJobs.detail");
+  const text = useEndpointText();
   const listing = shipment.listing;
   const dimensions = formatDimensions(listing);
+  const moveSize =
+    listing?.jobKind === "moving"
+      ? text.moveSize(listing.movingSurfaceM2, listing.movingVolumeM3)
+      : null;
 
   return (
     <Card className="rounded-xl border">
@@ -274,11 +301,19 @@ function CargoCard({ shipment }: { shipment: DriverShipmentDetail }) {
       </CardHeader>
       <CardContent className="space-y-4 md:space-y-6 px-4 md:px-6">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+          {/* A move: its home's size, and a weight that is only derived. */}
+          {moveSize && (
+            <CargoFact icon={Truck} label={tDetail("moving")} value={moveSize} />
+          )}
           {listing && (
             <CargoFact
               icon={Weight}
-              label={t("weight")}
-              value={`${listing.weightKg} kg`}
+              label={moveSize ? tDetail("estimatedWeight") : t("weight")}
+              value={
+                moveSize
+                  ? tDetail("approxKg", { weight: listing.weightKg })
+                  : `${listing.weightKg} kg`
+              }
             />
           )}
           {dimensions && (

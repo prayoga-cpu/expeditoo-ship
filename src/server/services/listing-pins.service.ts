@@ -19,7 +19,11 @@ import { listingsDal } from "@/server/dal/listings.dal";
  * was, and the award still refuses with `COORDINATES_REQUIRED`.
  */
 
-/** France and the countries a job postcode from abroad usually comes from. */
+/**
+ * France and the countries a job postcode from abroad usually comes from —
+ * for a caller that does not know the end's country. A listing does since
+ * 2.76.0 (`pickup_country` / `dropoff_country`), and is searched in it alone.
+ */
 const COUNTRIES = "fr,be,lu,ch,mc,de,es,it,nl,gb";
 
 interface Pinnable {
@@ -34,6 +38,8 @@ interface Pinnable {
   dropoffAddress: string;
   dropoffPostalCode: string | null;
   dropoffCity: string;
+  pickupCountry?: string | null;
+  dropoffCountry?: string | null;
 }
 
 type Point = { lat: number; lng: number };
@@ -42,8 +48,10 @@ type Point = { lat: number; lng: number };
 export async function locate(
   address: string | null,
   postalCode: string | null,
-  city: string | null
+  city: string | null,
+  country?: string | null
 ): Promise<Point | null> {
+  const countries = country ? country.toLowerCase() : COUNTRIES;
   const attempts = [
     [address, postalCode, city],
     [postalCode, city],
@@ -53,7 +61,7 @@ export async function locate(
     .filter((query, i, all) => query.length >= 3 && all.indexOf(query) === i);
 
   for (const query of attempts) {
-    const [hit] = await searchAddress(query, COUNTRIES, 1);
+    const [hit] = await searchAddress(query, countries, 1);
     if (hit) return { lat: hit.center[1], lng: hit.center[0] };
   }
   return null;
@@ -74,10 +82,20 @@ export const listingPinsService = {
     const [pickup, dropoff] = await Promise.all([
       pickupKnown
         ? { lat: listing.pickupLat!, lng: listing.pickupLng! }
-        : locate(listing.pickupAddress, listing.pickupPostalCode, listing.pickupCity),
+        : locate(
+            listing.pickupAddress,
+            listing.pickupPostalCode,
+            listing.pickupCity,
+            listing.pickupCountry
+          ),
       dropoffKnown
         ? { lat: listing.dropoffLat!, lng: listing.dropoffLng! }
-        : locate(listing.dropoffAddress, listing.dropoffPostalCode, listing.dropoffCity),
+        : locate(
+            listing.dropoffAddress,
+            listing.dropoffPostalCode,
+            listing.dropoffCity,
+            listing.dropoffCountry
+          ),
     ]);
     if (!pickup || !dropoff) return listing;
 

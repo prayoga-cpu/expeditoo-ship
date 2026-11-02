@@ -48,6 +48,7 @@ const ALREADY_PROTECTED = fr.create.what.packagingOptions.protected.label;
 const ALREADY_BOXED = fr.create.what.packagingOptions.boxed.label;
 const NEEDS_PROTECTION = fr.create.what.serviceOptions.needsProtection.label;
 const NEEDS_PACKAGING = fr.create.what.serviceOptions.needsPackaging.label;
+const NONE = fr.create.what.packagingOptions.none.label;
 
 describe.each([
   ["fr", fr],
@@ -60,12 +61,44 @@ describe.each([
     expect(onError).not.toHaveBeenCalled();
   });
 
-  it("offers two states and two services, all off", () => {
+  // client_feedback_2026_10_31_spec.md §5: a fifth row, ticked by default.
+  it("offers « nothing » ticked, then two states and two services, all off", () => {
     renderField(locale, messages as typeof en);
 
-    const switches = screen.getAllByRole("switch");
-    expect(switches).toHaveLength(4);
-    for (const s of switches) expect(s).toHaveAttribute("aria-checked", "false");
+    const [none, ...rest] = screen.getAllByRole("switch");
+    expect(rest).toHaveLength(4);
+    expect(none).toHaveAttribute("aria-checked", "true");
+    for (const s of rest) expect(s).toHaveAttribute("aria-checked", "false");
+  });
+});
+
+describe("« Ni protection ni emballage »", () => {
+  it("is cleared by any of the other four", () => {
+    renderField();
+
+    toggle(NEEDS_PACKAGING);
+
+    expect(isOn(NONE)).toBe(false);
+  });
+
+  it("clears all four when ticked again", () => {
+    renderField();
+
+    toggle(ALREADY_PROTECTED);
+    toggle(NEEDS_PACKAGING);
+    toggle(NONE);
+
+    expect(isOn(NONE)).toBe(true);
+    expect(isOn(ALREADY_PROTECTED)).toBe(false);
+    expect(isOn(NEEDS_PACKAGING)).toBe(false);
+  });
+
+  it("cannot be unticked on its own: one of the four is the answer", () => {
+    renderField();
+
+    toggle(NONE);
+
+    expect(isOn(NONE)).toBe(true);
   });
 });
 

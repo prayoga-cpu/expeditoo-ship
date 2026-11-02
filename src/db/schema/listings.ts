@@ -16,6 +16,8 @@ import {
   type IsoWeekday,
   type TimeSlot,
 } from "@/lib/availability-window";
+import { LOCATION_TYPES } from "@/lib/location-types";
+import { JOB_KINDS } from "@/lib/moving";
 import { user } from "./users";
 
 // ========================================
@@ -45,22 +47,12 @@ export const packagingLevelEnum = pgEnum("packaging_level", [
   "boxed",
 ]);
 
-// The 13 location types (ROADMAP.md §8 Phase A).
-export const locationTypeEnum = pgEnum("location_type", [
-  "house",
-  "apartment",
-  "warehouse",
-  "factory",
-  "construction_site",
-  "shop",
-  "office",
-  "storage_unit",
-  "farm",
-  "port",
-  "airport",
-  "rail_terminal",
-  "other",
-]);
+// The location types (ROADMAP.md §8 Phase A), from the one list the DTO and
+// the form read too. `auction_house` was added in 0045, `AFTER 'shop'`.
+export const locationTypeEnum = pgEnum("location_type", LOCATION_TYPES);
+
+// Items, or a whole home (0045, client_feedback_2026_10_31_spec.md §2).
+export const jobKindEnum = pgEnum("job_kind", JOB_KINDS);
 
 // Marks jobs escalated from Expedion. The bridge itself is Phase B; the column
 // exists now because it is part of the target schema (ROADMAP.md §5).
@@ -99,6 +91,7 @@ export const listings = pgTable(
     status: listingStatusEnum("status").default("draft").notNull(),
 
     // ---- What ----
+    jobKind: jobKindEnum("job_kind").default("items").notNull(),
     title: text("title").notNull(),
     description: text("description").notNull(),
     weightKg: doublePrecision("weight_kg").notNull(),
@@ -113,6 +106,11 @@ export const listings = pgTable(
     // (0032, cargo_packaging_services_spec.md). `false` = not requested.
     needsProtection: boolean("needs_protection").default(false).notNull(),
     needsPackaging: boolean("needs_packaging").default(false).notNull(),
+    // A move's size, as the requester gave it: the home's surface or its
+    // volume, exactly one of them, and neither on items. `weight_kg` holds
+    // the weight derived from it (0045, spec §2.1).
+    movingSurfaceM2: integer("moving_surface_m2"),
+    movingVolumeM3: doublePrecision("moving_volume_m3"),
 
     // ---- Where: pickup ----
     // Nullable: a requester who types the address by hand, with no map pin
@@ -126,6 +124,9 @@ export const listings = pgTable(
     pickupAddress: text("pickup_address").notNull(),
     pickupCity: text("pickup_city").notNull(),
     pickupPostalCode: text("pickup_postal_code").notNull(),
+    // ISO 3166-1 alpha-2. France unless the requester chose another, or the
+    // Expedion quote delivers abroad (0045, spec §6).
+    pickupCountry: text("pickup_country").default("FR").notNull(),
     pickupLocationType: locationTypeEnum("pickup_location_type").notNull(),
     pickupFloor: integer("pickup_floor"),
     pickupHasLift: boolean("pickup_has_lift"),
@@ -143,6 +144,7 @@ export const listings = pgTable(
     dropoffAddress: text("dropoff_address").notNull(),
     dropoffCity: text("dropoff_city").notNull(),
     dropoffPostalCode: text("dropoff_postal_code").notNull(),
+    dropoffCountry: text("dropoff_country").default("FR").notNull(),
     dropoffLocationType: locationTypeEnum("dropoff_location_type").notNull(),
     dropoffFloor: integer("dropoff_floor"),
     dropoffHasLift: boolean("dropoff_has_lift"),

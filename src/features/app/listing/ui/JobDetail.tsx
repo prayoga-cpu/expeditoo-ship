@@ -18,6 +18,8 @@ import {
   Shield,
   PackageOpen,
   SearchX,
+  Truck,
+  Building2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,6 +27,7 @@ import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatCurrency } from "@/lib/currency";
+import { hasNoPackaging } from "@/lib/cargo-packaging";
 import { ApiError } from "@/lib/fetcher";
 import { AcceptPaymentDialog } from "@/features/app/offers/ui/AcceptPaymentDialog";
 import {
@@ -38,6 +41,7 @@ import { CenteredEmptyState } from "@/components/ui/centered-empty-state";
 import { PageLoader } from "@/components/ui/page-loader";
 import { useJobDetail, useJobOffers, useAcceptOffer } from "../hooks/useJobDetail";
 import { useListingCarriers } from "../hooks/useListingCarriers";
+import { useEndpointText } from "../hooks/useEndpointText";
 import { JobBidSection } from "./JobBidSection";
 import { ListingReference } from "./ListingReference";
 import { AvailableCarriersPanel } from "./AvailableCarriersPanel";
@@ -292,6 +296,12 @@ function JobHeader({ job }: { job: Job }) {
           {tStatus(displayStatus(job))}
         </Badge>
         <UrgencyBadge job={job} />
+        {job.jobKind === "moving" && (
+          <Badge variant="outline" className="border-primary/40 text-primary">
+            <Truck className="mr-1 h-3 w-3" />
+            {t("moving")}
+          </Badge>
+        )}
         {job.reopenedAt && (
           <Badge variant="outline" className="border-warning/40 text-warning">
             <RotateCcw className="mr-1 h-3 w-3" />
@@ -328,6 +338,14 @@ function JobHeader({ job }: { job: Job }) {
           <Badge variant="outline">
             <PackageOpen className="mr-1 h-3 w-3" />
             {t("needsPackaging")}
+          </Badge>
+        )}
+        {/* The fifth answer of the form's « Emballage »: said, not left out
+            (client_feedback_2026_10_31_spec.md §5). */}
+        {hasNoPackaging(job) && (
+          <Badge variant="outline">
+            <Package className="mr-1 h-3 w-3" />
+            {t("noPackaging")}
           </Badge>
         )}
       </div>
@@ -383,6 +401,35 @@ function JobIdentityBar({ job }: { job: Job }) {
 
 function JobLoad({ job }: { job: Job }) {
   const t = useTranslations("myJobs.detail");
+  const text = useEndpointText();
+
+  if (job.jobKind === "moving") {
+    return (
+      <Card className="space-y-4 p-4 sm:p-5">
+        <h2 className="flex items-center gap-2 font-semibold">
+          <Truck className="h-4 w-4 text-muted-foreground" />
+          {t("moving")}
+        </h2>
+        <Separator />
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:grid-cols-3">
+          <Detail
+            label={t("moveSize")}
+            value={text.moveSize(job.movingSurfaceM2, job.movingVolumeM3) ?? "—"}
+          />
+          {/* Derived from the size, never weighed: said as an estimate. */}
+          <Detail
+            label={t("estimatedWeight")}
+            value={t("approxKg", { weight: job.weightKg })}
+          />
+        </dl>
+        {job.description.trim() && (
+          <p className="text-sm leading-relaxed text-foreground/80">
+            {job.description}
+          </p>
+        )}
+      </Card>
+    );
+  }
 
   return (
     <Card className="space-y-4 p-4 sm:p-5">
@@ -534,6 +581,7 @@ function OfferSort({
 
 function JobRoute({ job }: { job: Job }) {
   const t = useTranslations("myJobs.detail");
+  const text = useEndpointText();
 
   return (
     <Card className="space-y-4 p-4 sm:p-5">
@@ -556,8 +604,9 @@ function JobRoute({ job }: { job: Job }) {
           <Endpoint
             title={t("pickup")}
             address={job.pickupAddress}
-            city={`${job.pickupPostalCode} ${job.pickupCity}`}
+            city={text.town(job.pickupPostalCode, job.pickupCity, job.pickupCountry)}
             locationType={job.pickupLocationType}
+            floor={text.floor(job.pickupFloor, job.pickupHasLift)}
             from={job.pickupFrom}
             until={job.pickupUntil}
             days={job.pickupDays}
@@ -568,8 +617,9 @@ function JobRoute({ job }: { job: Job }) {
           <Endpoint
             title={t("dropoff")}
             address={job.dropoffAddress}
-            city={`${job.dropoffPostalCode} ${job.dropoffCity}`}
+            city={text.town(job.dropoffPostalCode, job.dropoffCity, job.dropoffCountry)}
             locationType={job.dropoffLocationType}
+            floor={text.floor(job.dropoffFloor, job.dropoffHasLift)}
             from={job.dropoffFrom}
             until={job.dropoffUntil}
             days={job.dropoffDays}
@@ -641,6 +691,7 @@ function Endpoint({
   address,
   city,
   locationType,
+  floor,
   from,
   until,
   days,
@@ -650,6 +701,8 @@ function Endpoint({
   address?: string;
   city: string;
   locationType: string;
+  /** « 3ᵉ étage · sans ascenseur »; null where none was given. */
+  floor: string | null;
   from: string;
   until: string;
   days?: Job["pickupDays"];
@@ -676,6 +729,14 @@ function Endpoint({
       <Badge variant="outline" className="mt-1">
         {tTypes(locationType)}
       </Badge>
+      {/* Collected since the form asked it, shown since 2.76.0 — the carrier
+          prices the stairs (client_feedback_2026_10_31_spec.md §3). */}
+      {floor && (
+        <p className="flex items-center gap-1.5 text-sm">
+          <Building2 className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+          {floor}
+        </p>
+      )}
       <p className="flex items-center gap-1.5 pt-1 text-sm text-muted-foreground">
         <CalendarClock className="h-3.5 w-3.5" />
         {format(new Date(from), "d MMM HH:mm", { locale: dateLocale })} –{" "}

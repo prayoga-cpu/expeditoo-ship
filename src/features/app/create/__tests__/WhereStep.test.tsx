@@ -84,9 +84,9 @@ function typeAtCaret(input: HTMLInputElement, key: string) {
 function floorOf100() {
   render(<WherePage />, { wrapper });
   act(() => api.form.setValue("pickup.locationType", "apartment"));
-  const floor = screen.getByLabelText(fr.create.where.floor, {
-    exact: false,
-  }) as HTMLInputElement;
+  // The pickup's: since 2.76.0 a house has a floor box too, so the delivery
+  // shows one as well (client_feedback_2026_10_31_spec.md §3).
+  const floor = document.getElementById("pickup-floor") as HTMLInputElement;
   for (const key of "100") typeAtCaret(floor, key);
   expect(floor.value).toBe("100");
   expect(api.form.getValues("pickup.floor")).toBe(100);

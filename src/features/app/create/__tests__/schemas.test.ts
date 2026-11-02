@@ -25,6 +25,7 @@ const iso = (offsetHours: number) => {
 const endpoint = (over: Record<string, unknown> = {}) => ({
   ...LYON,
   postalCode: "69003",
+  country: "FR",
   locationType: "house",
   contactPhone: "0612345678",
   ...over,
@@ -71,7 +72,21 @@ describe("jobFormSchema", () => {
     const berlin = endpoint({ lat: 52.52, lng: 13.4, city: "Berlin" });
 
     expect(messages(form({ pickup: berlin }))).toContain(
-      "create.validation.outsideFrance"
+      "create.validation.outsideCountry"
+    );
+  });
+
+  it("accepts the same Berlin pin once the end says Germany", () => {
+    const berlin = endpoint({
+      lat: 52.52,
+      lng: 13.4,
+      city: "Berlin",
+      postalCode: "10115",
+      country: "DE",
+    });
+
+    expect(messages(form({ pickup: berlin }))).not.toContain(
+      "create.validation.outsideCountry"
     );
   });
 
@@ -79,7 +94,7 @@ describe("jobFormSchema", () => {
     const london = endpoint({ lat: 51.5, lng: -0.12, city: "London" });
 
     expect(messages(form({ dropoff: london }))).toContain(
-      "create.validation.outsideFrance"
+      "create.validation.outsideCountry"
     );
   });
 
@@ -143,7 +158,7 @@ describe("jobFormSchema", () => {
     const noPin = endpoint({ lat: undefined, lng: undefined });
 
     expect(messages(form({ pickup: noPin }))).not.toContain(
-      "create.validation.outsideFrance"
+      "create.validation.outsideCountry"
     );
   });
 
@@ -345,12 +360,33 @@ describe("jobFormSchema", () => {
     }
   });
 
-  it("makes an apartment declare its floor and lift", () => {
+  it("makes an apartment declare its floor", () => {
     const flat = endpoint({ locationType: "apartment" });
-    const raised = messages(form({ pickup: flat }));
 
-    expect(raised).toContain("create.validation.floorRequired");
-    expect(raised).toContain("create.validation.liftRequired");
+    expect(messages(form({ pickup: flat }))).toContain(
+      "create.validation.floorRequired"
+    );
+  });
+
+  // client_feedback_2026_10_31_spec.md §0 I: a lift from the first floor up.
+  it("asks an upstairs apartment about its lift", () => {
+    const flat = endpoint({ locationType: "apartment", floor: "3" });
+
+    expect(messages(form({ pickup: flat }))).toContain(
+      "create.validation.liftRequired"
+    );
+  });
+
+  it("does not ask a ground-floor apartment about a lift", () => {
+    const flat = endpoint({ locationType: "apartment", floor: "0" });
+
+    expect(jobFormSchema.safeParse(form({ pickup: flat })).success).toBe(true);
+  });
+
+  it("takes « Non » for an answer about the lift", () => {
+    const flat = endpoint({ locationType: "apartment", floor: "2", hasLift: false });
+
+    expect(jobFormSchema.safeParse(form({ pickup: flat })).success).toBe(true);
   });
 
   it("accepts an apartment that declares both", () => {
@@ -615,20 +651,105 @@ describe("jobFormSchema — typed numbers", () => {
 });
 
 // The client typed 1000 BRUXELLES and was told "Doit comporter 5 chiffres"
-// (postal_codes_abroad_spec.md): a job can start or end abroad.
+// (postal_codes_abroad_spec.md): a job can start or end abroad. Since 2.76.0
+// the code is read in the end's own country (client_feedback_2026_10_31_spec.md
+// §6.2).
 describe("jobFormSchema — postal codes", () => {
-  it.each(["1000", "75011", "010011"])("accepts %s on a typed address", (code) => {
-    const typed = endpoint({ lat: undefined, lng: undefined, postalCode: code });
+  it.each([
+    ["1000", "BE"],
+    ["75011", "FR"],
+    ["010011", "RO"],
+    ["1012 AB", "NL"],
+  ])("accepts %s in %s on a typed address", (code, country) => {
+    const typed = endpoint({ lat: undefined, lng: undefined, postalCode: code, country });
 
     expect(messages(form({ dropoff: typed }))).not.toContain(
       "create.validation.postalCode"
     );
   });
 
-  it.each(["123", "1234567", "75 011", "AB123"])("refuses %j", (code) => {
+  it.each(["123", "1234567", "75 011", "AB123", "1000"])("refuses %j in France", (code) => {
     expect(messages(form({ dropoff: endpoint({ postalCode: code }) }))).toContain(
       "create.validation.postalCode"
     );
+  });
+
+  it("refuses a French code given as Belgian", () => {
+    const typed = endpoint({ lat: undefined, lng: undefined, country: "BE" });
+
+    expect(messages(form({ dropoff: typed }))).toContain("create.validation.postalCode");
+  });
+});
+
+// client_feedback_2026_10_31_spec.md §2
+describe("jobFormSchema — a move", () => {
+  const move = (over: Record<string, unknown> = {}) =>
+    form({
+      jobKind: "moving",
+      title: "",
+      weightBracket: undefined,
+      movingSizeMode: "surface",
+      movingSurfaceM2: "65",
+      // Houses, so a move asks their floors: given, ground floor both.
+      pickup: endpoint({ floor: "0" }),
+      dropoff: endpoint({ ...MARSEILLE, postalCode: "13001", floor: "0" }),
+      ...over,
+    });
+
+  it("needs no title and no weight bracket", () => {
+    expect(jobFormSchema.safeParse(move()).success).toBe(true);
+  });
+
+  it("needs the home's surface", () => {
+    expect(messages(move({ movingSurfaceM2: "" }))).toContain(
+      "create.validation.movingSurfaceRequired"
+    );
+  });
+
+  it("needs the volume once « Je connais le volume exact » is on", () => {
+    expect(messages(move({ movingSizeMode: "volume" }))).toContain(
+      "create.validation.movingVolumeRequired"
+    );
+    expect(
+      jobFormSchema.safeParse(move({ movingSizeMode: "volume", movingVolumeM3: "30,5" }))
+        .success
+    ).toBe(true);
+  });
+
+  it("holds the sizes to their range", () => {
+    expect(messages(move({ movingSurfaceM2: "2" }))).toContain(
+      "create.validation.movingSurfaceRange"
+    );
+    expect(
+      messages(move({ movingSizeMode: "volume", movingVolumeM3: "500" }))
+    ).toContain("create.validation.movingVolumeRange");
+  });
+
+  it("asks every end with floors for its floor", () => {
+    const office = endpoint({ locationType: "office" });
+
+    expect(messages(move({ pickup: office }))).toContain(
+      "create.validation.floorRequired"
+    );
+    // The same office on items may leave it unsaid.
+    expect(messages(form({ pickup: office }))).not.toContain(
+      "create.validation.floorRequired"
+    );
+  });
+
+  it("does not ask a warehouse for a floor, even on a move", () => {
+    const warehouse = endpoint({ locationType: "warehouse" });
+
+    expect(messages(move({ pickup: warehouse }))).not.toContain(
+      "create.validation.floorRequired"
+    );
+  });
+
+  it("still wants a title and a weight on items", () => {
+    const raised = messages(form({ title: "", weightBracket: undefined }));
+
+    expect(raised).toContain("create.validation.titleShort");
+    expect(raised).toContain("create.validation.weightRequired");
   });
 });
 

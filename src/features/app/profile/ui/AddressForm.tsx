@@ -31,6 +31,7 @@ import { searchAddress, reverseGeocode } from "@/lib/geocoding";
 import { useTranslations } from "next-intl";
 import {
   ADDRESS_LABEL_PRESETS,
+  ADDRESS_SIDES,
   addressLabelPreset,
   type AddressSide,
 } from "@/lib/saved-address";
@@ -50,6 +51,13 @@ export function AddressForm({ addressId }: AddressFormProps) {
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const returnUrl = searchParams.get("returnUrl") || "/profile/addresses";
+  // « Ajouter » under one end of the address book opens with that end chosen
+  // (client_feedback_2026_10_31_spec.md §1.2).
+  const forSide = searchParams.get("for");
+  const presetSide: AddressSide | null =
+    forSide && (ADDRESS_SIDES as readonly string[]).includes(forSide)
+      ? (forSide as AddressSide)
+      : null;
   const isEditMode = !!addressId;
   const t = useTranslations("profile.address");
 
@@ -95,7 +103,7 @@ export function AddressForm({ addressId }: AddressFormProps) {
     country: "",
     details: "",
     isDefault: false,
-    usedFor: null,
+    usedFor: presetSide,
   });
 
   // Once the requester edits the address text by hand, the map becomes a

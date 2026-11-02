@@ -33,3 +33,17 @@ export function isRedundantService(
   if (level === "protected") return service === "needsProtection";
   return false;
 }
+
+/**
+ * « Ni protection ni emballage »: the item travels as it is, and the carrier
+ * does nothing to it. Not a stored flag but the state where neither the item's
+ * preparation nor a service is stated — so it can never disagree with them
+ * (client_feedback_2026_10_31_spec.md §5).
+ */
+export function hasNoPackaging(job: {
+  packagingLevel?: PackagingLevel | null;
+  needsProtection?: boolean | null;
+  needsPackaging?: boolean | null;
+}): boolean {
+  return !job.packagingLevel && !job.needsProtection && !job.needsPackaging;
+}

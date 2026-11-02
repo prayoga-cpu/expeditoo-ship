@@ -23,7 +23,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { useToast } from "@/hooks/use-toast";
 import { PageLoader } from "@/components/ui/page-loader";
-import { addressDisplayName, addressLabelPreset } from "@/lib/saved-address";
+import {
+  addressDisplayName,
+  addressLabelPreset,
+  type AddressSide,
+} from "@/lib/saved-address";
+import type { Address } from "../api/addresses.api";
 import { AddressBadges } from "./SavedAddressesCard";
 
 import {
@@ -31,6 +36,13 @@ import {
   deleteAddress,
   setDefaultAddress
 } from "../api";
+
+/**
+ * The address book in its three drawers — kept for pickups, for deliveries,
+ * for either — the same groups `/create` offers them in
+ * (client_feedback_2026_10_31_spec.md §1.2). Each drawer adds to itself.
+ */
+const DRAWERS: (AddressSide | null)[] = ["pickup", "dropoff", null];
 
 export function AddressManagement() {
   const queryClient = useQueryClient();
@@ -120,75 +132,127 @@ export function AddressManagement() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
-          {addresses.map((address) => {
-            const name = addressDisplayName(address, (p) =>
-              t(`form.labelPresets.${p}`)
-            );
-            const Icon =
-              addressLabelPreset(address.label) === "home" ? Home : MapPin;
+        <div className="space-y-8">
+          {DRAWERS.map((usedFor) => {
+            const drawer = addresses.filter((a) => (a.usedFor ?? null) === usedFor);
+            const key = usedFor ?? "either";
             return (
-              <Card
-                key={address.id}
-                className={`relative ${address.isDefault ? "border-primary shadow-sm" : ""}`}
-              >
-                <CardHeader className="pb-2">
-                  <div className="flex justify-between items-start gap-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Icon className="w-4 h-4 text-primary" aria-hidden />
-                      <CardTitle className="text-base font-semibold">{name}</CardTitle>
-                      <AddressBadges address={address} />
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 -mr-2 -mt-2"
-                          aria-label={t("list.actions", { name })}
-                        >
-                          <MoreVertical className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        {!address.isDefault && (
-                          <DropdownMenuItem
-                            onClick={() => handleSetDefault(address.id)}
-                            disabled={setDefaultMutation.isPending}
-                          >
-                            <Check className="w-4 h-4 mr-2" /> {t("list.setDefault")}
-                          </DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem asChild>
-                          <Link href={`/profile/addresses/${address.id}/edit`}>
-                            <Edit2 className="w-4 h-4 mr-2" /> {t("list.edit")}
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="text-destructive"
-                          onClick={() => handleDelete(address.id)}
-                          disabled={deleteMutation.isPending}
-                        >
-                          <Trash2 className="w-4 h-4 mr-2" /> {t("list.delete")}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+              <section key={key} aria-labelledby={`drawer-${key}`} className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h2 id={`drawer-${key}`} className="text-lg font-semibold">
+                    {t(`list.drawers.${key}`)}
+                  </h2>
+                  <Button variant="outline" size="sm" className="rounded-full" asChild>
+                    <Link
+                      href={
+                        usedFor
+                          ? `/profile/addresses/create?for=${usedFor}`
+                          : "/profile/addresses/create"
+                      }
+                    >
+                      <Plus className="w-4 h-4 mr-1" />
+                      {t("list.drawerAdd")}
+                    </Link>
+                  </Button>
+                </div>
+                {drawer.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">{t("list.drawerEmpty")}</p>
+                ) : (
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {drawer.map((address) => (
+                      <AddressCard
+                        key={address.id}
+                        address={address}
+                        onDelete={handleDelete}
+                        onSetDefault={handleSetDefault}
+                        deleting={deleteMutation.isPending}
+                        settingDefault={setDefaultMutation.isPending}
+                      />
+                    ))}
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-sm text-muted-foreground space-y-1">
-                    <p>{address.street}</p>
-                    <p>
-                      {address.zip} {address.city}
-                    </p>
-                    <p>{address.country}</p>
-                  </div>
-                </CardContent>
-              </Card>
+                )}
+              </section>
             );
           })}
         </div>
       )}
     </div>
+  );
+}
+
+function AddressCard({
+  address,
+  onDelete,
+  onSetDefault,
+  deleting,
+  settingDefault,
+}: {
+  address: Address;
+  onDelete: (id: string) => void;
+  onSetDefault: (id: string) => void;
+  deleting: boolean;
+  settingDefault: boolean;
+}) {
+  const t = useTranslations("profile.address");
+  const name = addressDisplayName(address, (p) => t(`form.labelPresets.${p}`));
+  const Icon = addressLabelPreset(address.label) === "home" ? Home : MapPin;
+
+  return (
+    <Card
+      className={`relative ${address.isDefault ? "border-primary shadow-sm" : ""}`}
+    >
+      <CardHeader className="pb-2">
+        <div className="flex justify-between items-start gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Icon className="w-4 h-4 text-primary" aria-hidden />
+            <CardTitle className="text-base font-semibold">{name}</CardTitle>
+            <AddressBadges address={address} />
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 -mr-2 -mt-2"
+                aria-label={t("list.actions", { name })}
+              >
+                <MoreVertical className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {!address.isDefault && (
+                <DropdownMenuItem
+                  onClick={() => onSetDefault(address.id)}
+                  disabled={settingDefault}
+                >
+                  <Check className="w-4 h-4 mr-2" /> {t("list.setDefault")}
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem asChild>
+                <Link href={`/profile/addresses/${address.id}/edit`}>
+                  <Edit2 className="w-4 h-4 mr-2" /> {t("list.edit")}
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-destructive"
+                onClick={() => onDelete(address.id)}
+                disabled={deleting}
+              >
+                <Trash2 className="w-4 h-4 mr-2" /> {t("list.delete")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="text-sm text-muted-foreground space-y-1">
+          <p>{address.street}</p>
+          <p>
+            {address.zip} {address.city}
+          </p>
+          <p>{address.country}</p>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

@@ -5,6 +5,7 @@ import { CalendarClock, MapPin, Package, ShieldCheck } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import type { Job } from "../types";
+import { useEndpointText } from "../hooks/useEndpointText";
 import { AvailabilityLine } from "./AvailabilityLine";
 
 type SummaryJob = Pick<
@@ -28,6 +29,11 @@ type SummaryJob = Pick<
   | "needsHelp"
   | "weightKg"
   | "quantity"
+  | "jobKind"
+  | "movingSurfaceM2"
+  | "movingVolumeM3"
+  | "pickupCountry"
+  | "dropoffCountry"
 >;
 
 interface RequestSummaryProps {
@@ -61,6 +67,7 @@ export function RequestSummary({
   const t = useTranslations("myJobs.summary");
   const tDetail = useTranslations("myJobs.detail");
   const format = useFormatter();
+  const text = useEndpointText();
 
   const range = (from: string, until: string) =>
     format.dateTimeRange(new Date(from), new Date(until), WINDOW_FORMAT);
@@ -68,7 +75,9 @@ export function RequestSummary({
   // How the item is prepared, then what the carrier is asked to do with it
   // (cargo_packaging_services_spec.md §1), in the job page's own words. With
   // neither said it reads "not stated", never "unprotected": the schema's
-  // rule for `packaging_level`.
+  // rule for `packaging_level`. Since 2.76.0 the form asks it as a fifth
+  // answer, « Ni protection ni emballage », and the summary says it in those
+  // words (client_feedback_2026_10_31_spec.md §5).
   const stated = [
     job.packagingLevel ? tDetail(`packaging.${job.packagingLevel}`) : null,
     job.needsProtection ? tDetail("needsProtection") : null,
@@ -81,13 +90,23 @@ export function RequestSummary({
     .filter(Boolean)
     .join(" · ");
 
-  const load = [
-    t("weight", { weight: job.weightKg }),
-    job.quantity > 1 ? t("quantity", { count: job.quantity }) : null,
-    job.needsHelp ? t("needsHelp") : null,
-  ]
+  // A move reads as one: its size, not a weight nobody weighed (spec §2.4).
+  const load = (
+    job.jobKind === "moving"
+      ? [tDetail("moving"), text.moveSize(job.movingSurfaceM2, job.movingVolumeM3)]
+      : [
+          t("weight", { weight: job.weightKg }),
+          job.quantity > 1 ? t("quantity", { count: job.quantity }) : null,
+          job.needsHelp ? t("needsHelp") : null,
+        ]
+  )
     .filter(Boolean)
     .join(" · ");
+
+  const place = (city: string, code?: string) => {
+    const country = text.country(code);
+    return country ? `${city} (${country})` : city;
+  };
 
   return (
     <div className="space-y-3">
@@ -100,7 +119,8 @@ export function RequestSummary({
         <p className="flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground">
           <MapPin className="h-4 w-4 shrink-0" aria-hidden />
           <span className="wrap-break-word">
-            {job.pickupCity} → {job.dropoffCity}
+            {place(job.pickupCity, job.pickupCountry)} →{" "}
+            {place(job.dropoffCity, job.dropoffCountry)}
           </span>
         </p>
       </div>

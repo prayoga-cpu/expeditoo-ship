@@ -111,7 +111,6 @@
       "clickToPin": "Click the map to pin the location",
       "gettingAddress": "Getting the address…",
       "notFound": "No address found for this point",
-      "outsideFrance": "This point is outside France",
       "genericError": "Could not resolve this location",
       "address": "Address",
       "postalCode": "Postal code",
@@ -131,7 +130,8 @@
       "useLink": "Use link",
       "cancel": "Cancel",
       "linkUnsupported": "We don't recognise that link. Try Google Maps, Apple Maps, Bing Maps, Waze or OpenStreetMap.",
-      "linkNotFound": "Couldn't find a location in that link. Try pasting the full map link instead."
+      "linkNotFound": "Couldn't find a location in that link. Try pasting the full map link instead.",
+      "outsideCountry": "This point is outside the chosen country ({country})"
     },
     "phoneInput": {
       "searchPlaceholder": "Search country or code…",
@@ -173,6 +173,14 @@
       "myRequests": "My requests",
       "showAll": "Show all",
       "becomeDriver": "Become a driver"
+    },
+    "endpoint": {
+      "groundFloor": "Ground floor",
+      "floor": "{floor, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} floor",
+      "withLift": "with lift",
+      "withoutLift": "no lift",
+      "surface": "{surface, number} m² home",
+      "volume": "{volume, number} m³"
     }
   },
   "auth": {
@@ -420,7 +428,14 @@
         "deleted": "Address deleted",
         "deletedDescription": "The address has been removed.",
         "errorTitle": "Error",
-        "deleteFailed": "Couldn't delete the address. Please try again."
+        "deleteFailed": "Couldn't delete the address. Please try again.",
+        "drawers": {
+          "pickup": "Pickup addresses (from)",
+          "dropoff": "Delivery addresses (to)",
+          "either": "Pickup or delivery"
+        },
+        "drawerAdd": "Add",
+        "drawerEmpty": "No addresses here yet."
       },
       "form": {
         "labelPresetLabel": "Address type",
@@ -1186,6 +1201,10 @@
         "boxed": {
           "label": "Already packaged",
           "description": "You've wrapped it and put it in a box"
+        },
+        "none": {
+          "label": "No protection or packaging",
+          "description": "It travels as it is: nothing to protect, nothing to pack"
         }
       },
       "serviceOptions": {
@@ -1276,7 +1295,6 @@
       "pickup": "Pickup",
       "dropoff": "Delivery",
       "defaultAddress": "Default",
-      "savedAddress": "Saved address",
       "alreadyAt": {
         "pickup": "Already your pickup",
         "dropoff": "Already your delivery"
@@ -1287,16 +1305,43 @@
       "locationType": "Location type",
       "select": "Select",
       "floor": "Floor",
-      "lift": "Lift available",
-      "liftHint": "Is there a lift to this floor?",
+      "lift": "Is there a lift?",
       "noteLabel": "Details – access conditions (optional)",
-      "notePlaceholder": "e.g. 2nd floor, no lift, gate code 1234, hard to park",
+      "notePlaceholder": "e.g. gate code 1234, narrow street, hard to park",
       "linkNoteLabel": "Describe the exact spot",
       "linkNotePlaceholder": "e.g. Blue gate on the left, 200 m after the church",
       "contactName": "Contact name (optional)",
       "contactNamePlaceholder": "Who the carrier should ask for",
       "contactPhone": "Contact phone",
-      "contactPhonePlaceholder": "06 12 34 56 78"
+      "contactPhonePlaceholder": "06 12 34 56 78",
+      "addressBook": {
+        "label": {
+          "pickup": "Pickup address book",
+          "dropoff": "Delivery address book"
+        },
+        "group": {
+          "pickup": "Pickup addresses",
+          "dropoff": "Delivery addresses",
+          "either": "Pickup or delivery"
+        },
+        "empty": "No saved addresses yet. Tick \"Save this address to my profile\" below to find it here next time."
+      },
+      "country": {
+        "pickup": "Pickup country",
+        "dropoff": "Delivery country"
+      },
+      "addressLabel": {
+        "pickup": "Pickup address",
+        "dropoff": "Delivery address"
+      },
+      "searchPlaceholder": {
+        "pickup": "Search for the pickup address…",
+        "dropoff": "Search for the delivery address…"
+      },
+      "postalCodeExample": "e.g. {example}",
+      "floorHint": "0 = ground floor",
+      "liftYes": "Yes",
+      "liftNo": "No"
     },
     "locationTypes": {
       "house": "House",
@@ -1311,7 +1356,8 @@
       "port": "Port",
       "airport": "Airport",
       "rail_terminal": "Rail terminal",
-      "other": "Other"
+      "other": "Other",
+      "auction_house": "Auction house"
     },
     "when": {
       "modeLabel": "How firm are your dates?",
@@ -1367,8 +1413,21 @@
         "pickerLabel": "Publish at",
         "hint": "Your request stays hidden from carriers until this moment."
       },
-      "suggested": "Suggested price: {low} – {high}",
-      "useSuggested": "Use {amount}"
+      "estimate": {
+        "title": "Price estimate",
+        "use": "Use {amount}",
+        "footnote": "From our rate card, as a guide: each carrier offers their own price.",
+        "loading": "Working out the estimate…",
+        "none": "No automatic estimate for this transport: carriers will send you their offers.",
+        "moving": "No automatic estimate for a move: movers will send you their offers."
+      },
+      "howItWorks": {
+        "title": "How does it work?",
+        "offers": "Carriers send you their offers and can write to you in your messages.",
+        "choose": "You choose the one that suits you best.",
+        "pay": "You pay when you accept the offer, by secure payment.",
+        "payout": "The carrier is paid once the delivery is done."
+      }
     },
     "dropzone": {
       "title": "Add photos",
@@ -1390,10 +1449,9 @@
       "dimensionsPartial": "Give all three dimensions, or none",
       "addressRequired": "Address is required",
       "cityRequired": "City is required",
-      "postalCode": "Must be 4 to 6 digits",
+      "postalCode": "Invalid postal code for this country",
       "pinRequired": "Place the pin on the map",
-      "outsideFrance": "We only carry within France",
-      "floorRequired": "Floor is required for an apartment",
+      "floorRequired": "Enter the floor (0 for the ground floor)",
       "liftRequired": "Tell carriers whether there is a lift",
       "sameAddress": "Pickup and delivery are the same address",
       "tooClose": "Pickup and delivery are too close together",
@@ -1418,7 +1476,12 @@
       "quantityMin": "Enter at least 1",
       "floorMin": "Enter 0 (ground floor) or a higher floor",
       "wholeNumber": "Enter a whole number",
-      "quantityMax": "The total quantity cannot exceed 99,999"
+      "quantityMax": "The total quantity cannot exceed 99,999",
+      "outsideCountry": "This point is not in the chosen country",
+      "movingSurfaceRequired": "Enter the size of the home",
+      "movingVolumeRequired": "Enter the volume to move",
+      "movingSurfaceRange": "Between 5 and 1,000 m²",
+      "movingVolumeRange": "Between 0.5 and 200 m³"
     },
     "success": {
       "open": {
@@ -1455,6 +1518,30 @@
       "snappedTime": {
         "pickup": "The saved pickup time, {saved}, isn't one of the times on offer: the time selected is now {selected}. Check it before publishing.",
         "dropoff": "The saved delivery time, {saved}, isn't one of the times on offer: the time selected is now {selected}. Check it before publishing."
+      }
+    },
+    "moving": {
+      "pageTitle": "Request a moving quote",
+      "subtitle": "Describe your move: vetted movers send you their offers, and you choose.",
+      "heading": "About your move",
+      "photosHint": "A few photos of the rooms and the large furniture help movers quote accurately.",
+      "exactVolume": "I know the exact volume",
+      "exactVolumeHint": "Otherwise the size of your home is enough: we work out the volume from it.",
+      "surface": "Size of the home (m²)",
+      "surfacePlaceholder": "e.g. 65",
+      "volume": "Volume (m³)",
+      "volumePlaceholder": "e.g. 30",
+      "detailsLabel": "Further details",
+      "detailsPlaceholder": "e.g. The longest box is 2.15 m, the heaviest item is a sofa",
+      "publicNote": "This is public. To protect your privacy, don't include your contact details (email, phone or address).",
+      "titleSurface": "Move · {size} m²",
+      "titleVolume": "Move · {size} m³",
+      "titleBare": "Move",
+      "switch": {
+        "toMovingQuestion": "Moving home?",
+        "toMoving": "Click here instead!",
+        "toItemsQuestion": "Sending one or more items?",
+        "toItems": "Back to the items form"
       }
     }
   },
@@ -1548,7 +1635,12 @@
       "requester": "Requester: {name}",
       "budgetLabel": "Budget",
       "swipeHint": "Swipe to see the delivery →",
-      "noOffersCarriers": "See carriers on this route"
+      "noOffersCarriers": "See carriers on this route",
+      "moving": "Move",
+      "noPackaging": "No protection or packaging",
+      "moveSize": "Size",
+      "estimatedWeight": "Estimated weight",
+      "approxKg": "≈ {weight, number} kg"
     },
     "carriers": {
       "tab": "Available carriers",
@@ -1581,7 +1673,7 @@
       "pickup": "Pickup",
       "dropoff": "Delivery",
       "protection": "Protection",
-      "protectionNone": "Not stated",
+      "protectionNone": "No protection or packaging",
       "fragile": "Fragile",
       "load": "Load",
       "weight": "{weight} kg",
@@ -4022,7 +4114,8 @@
       "needsHelp": "Help loading",
       "needsProtection": "Needs protection",
       "needsPackaging": "Needs packaging",
-      "sizeTitle": "Size {size}"
+      "sizeTitle": "Size {size}",
+      "moving": "Move"
     },
     "map": {
       "openJob": "Open the “{title}” job",

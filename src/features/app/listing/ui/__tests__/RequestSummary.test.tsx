@@ -87,10 +87,12 @@ describe("RequestSummary", () => {
     expect(errors(onError)).toEqual([]);
   });
 
-  it("says the protection was not stated rather than implying none", () => {
+  // client_feedback_2026_10_31_spec.md §5: the form now asks « nothing » as
+  // an answer of its own, so the summary says it in the same words.
+  it("says « Ni protection ni emballage » when nothing was asked", () => {
     renderSummary(job({ packagingLevel: null }));
     expect(screen.getByText("Protection").nextElementSibling?.textContent).toBe(
-      "Non précisée"
+      "Ni protection ni emballage"
     );
   });
 
@@ -128,10 +130,10 @@ describe("RequestSummary", () => {
     );
   });
 
-  it("keeps Fragile beside 'not stated' when nothing else was said", () => {
+  it("keeps Fragile beside « Ni protection ni emballage »", () => {
     renderSummary(job({ packagingLevel: null, isFragile: true }));
     expect(screen.getByText("Protection").nextElementSibling?.textContent).toBe(
-      "Non précisée · Fragile"
+      "Ni protection ni emballage · Fragile"
     );
   });
 
@@ -183,7 +185,7 @@ describe("RequestSummary", () => {
     expect(screen.getByText("Pickup")).toBeInTheDocument();
     expect(screen.getByText("Delivery")).toBeInTheDocument();
     expect(screen.getByText("Protection").nextElementSibling?.textContent).toBe(
-      "Not stated"
+      "No protection or packaging"
     );
     expect(screen.getByText("Load").nextElementSibling?.textContent).toBe(
       "50 kg · 2 items"

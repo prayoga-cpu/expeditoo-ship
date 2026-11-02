@@ -111,7 +111,6 @@
       "clickToPin": "Cliquez sur la carte pour épingler l'emplacement",
       "gettingAddress": "Recherche de l'adresse…",
       "notFound": "Aucune adresse trouvée pour ce point",
-      "outsideFrance": "Ce point est en dehors de la France",
       "genericError": "Impossible de résoudre cet emplacement",
       "address": "Adresse",
       "postalCode": "Code postal",
@@ -131,7 +130,8 @@
       "useLink": "Utiliser le lien",
       "cancel": "Annuler",
       "linkUnsupported": "Ce lien n'est pas reconnu. Essayez Google Maps, Apple Maps, Bing Maps, Waze ou OpenStreetMap.",
-      "linkNotFound": "Impossible de trouver un emplacement dans ce lien. Essayez de coller le lien complet de la carte."
+      "linkNotFound": "Impossible de trouver un emplacement dans ce lien. Essayez de coller le lien complet de la carte.",
+      "outsideCountry": "Ce point est hors du pays choisi ({country})"
     },
     "phoneInput": {
       "searchPlaceholder": "Rechercher un pays ou un indicatif…",
@@ -173,6 +173,14 @@
       "myRequests": "Mes demandes",
       "showAll": "Tout afficher",
       "becomeDriver": "Devenir chauffeur"
+    },
+    "endpoint": {
+      "groundFloor": "Rez-de-chaussée",
+      "floor": "{floor, plural, =1 {1er étage} other {#ᵉ étage}}",
+      "withLift": "avec ascenseur",
+      "withoutLift": "sans ascenseur",
+      "surface": "Logement de {surface, number} m²",
+      "volume": "Volume de {volume, number} m³"
     }
   },
   "auth": {
@@ -420,7 +428,14 @@
         "deleted": "Adresse supprimée",
         "deletedDescription": "L'adresse a été supprimée.",
         "errorTitle": "Erreur",
-        "deleteFailed": "Impossible de supprimer l'adresse. Veuillez réessayer."
+        "deleteFailed": "Impossible de supprimer l'adresse. Veuillez réessayer.",
+        "drawers": {
+          "pickup": "Adresses de retrait (départ)",
+          "dropoff": "Adresses de livraison (arrivée)",
+          "either": "Retrait ou livraison"
+        },
+        "drawerAdd": "Ajouter",
+        "drawerEmpty": "Aucune adresse ici pour l'instant."
       },
       "form": {
         "labelPresetLabel": "Type d'adresse",
@@ -1186,6 +1201,10 @@
         "boxed": {
           "label": "Déjà emballé",
           "description": "Vous l'avez protégé et mis en carton"
+        },
+        "none": {
+          "label": "Ni protection ni emballage",
+          "description": "L'objet voyage tel quel : rien à protéger, rien à emballer"
         }
       },
       "serviceOptions": {
@@ -1276,7 +1295,6 @@
       "pickup": "Retrait",
       "dropoff": "Livraison",
       "defaultAddress": "Par défaut",
-      "savedAddress": "Adresse enregistrée",
       "alreadyAt": {
         "pickup": "Déjà le retrait",
         "dropoff": "Déjà la livraison"
@@ -1287,16 +1305,43 @@
       "locationType": "Type de lieu",
       "select": "Sélectionner",
       "floor": "Étage",
-      "lift": "Ascenseur disponible",
-      "liftHint": "Y a-t-il un ascenseur jusqu'à cet étage ?",
+      "lift": "Y a-t-il un ascenseur ?",
       "noteLabel": "Détails – conditions d'accès (facultatif)",
-      "notePlaceholder": "Ex : 2ᵉ étage sans ascenseur, code portail 1234, stationnement difficile",
+      "notePlaceholder": "Ex : code portail 1234, rue étroite, stationnement difficile",
       "linkNoteLabel": "Décrivez l'endroit exact",
       "linkNotePlaceholder": "Ex : portail bleu à gauche, 200 m après l'église",
       "contactName": "Nom du contact (facultatif)",
       "contactNamePlaceholder": "La personne que le transporteur doit demander",
       "contactPhone": "Téléphone du contact",
-      "contactPhonePlaceholder": "06 12 34 56 78"
+      "contactPhonePlaceholder": "06 12 34 56 78",
+      "addressBook": {
+        "label": {
+          "pickup": "Carnet d'adresses de retrait",
+          "dropoff": "Carnet d'adresses de livraison"
+        },
+        "group": {
+          "pickup": "Adresses de retrait",
+          "dropoff": "Adresses de livraison",
+          "either": "Retrait ou livraison"
+        },
+        "empty": "Aucune adresse enregistrée pour l'instant. Cochez « Enregistrer cette adresse » ci-dessous pour la retrouver ici la prochaine fois."
+      },
+      "country": {
+        "pickup": "Pays de retrait",
+        "dropoff": "Pays de livraison"
+      },
+      "addressLabel": {
+        "pickup": "Adresse de retrait",
+        "dropoff": "Adresse de livraison"
+      },
+      "searchPlaceholder": {
+        "pickup": "Rechercher l'adresse de retrait…",
+        "dropoff": "Rechercher l'adresse de livraison…"
+      },
+      "postalCodeExample": "Ex. {example}",
+      "floorHint": "0 = rez-de-chaussée",
+      "liftYes": "Oui",
+      "liftNo": "Non"
     },
     "locationTypes": {
       "house": "Maison",
@@ -1311,7 +1356,8 @@
       "port": "Port",
       "airport": "Aéroport",
       "rail_terminal": "Terminal ferroviaire",
-      "other": "Autre"
+      "other": "Autre",
+      "auction_house": "Commissaire-priseur"
     },
     "when": {
       "modeLabel": "Vos dates sont-elles fixes ?",
@@ -1367,8 +1413,21 @@
         "pickerLabel": "Publier le",
         "hint": "Votre demande reste invisible pour les transporteurs jusqu'à ce moment."
       },
-      "suggested": "Prix conseillé : {low} – {high}",
-      "useSuggested": "Utiliser {amount}"
+      "estimate": {
+        "title": "Estimation du prix",
+        "use": "Utiliser {amount}",
+        "footnote": "Calculée sur notre grille tarifaire, à titre indicatif : chaque transporteur propose son propre prix.",
+        "loading": "Calcul de l'estimation…",
+        "none": "Pas d'estimation automatique pour ce transport : les transporteurs vous feront leurs offres.",
+        "moving": "Pas d'estimation automatique pour un déménagement : les déménageurs vous feront leurs offres."
+      },
+      "howItWorks": {
+        "title": "Comment ça marche ?",
+        "offers": "Les transporteurs vous font leurs offres et peuvent vous écrire dans la messagerie.",
+        "choose": "Vous choisissez celle qui vous convient le mieux.",
+        "pay": "Vous payez au moment d'accepter l'offre, par paiement sécurisé.",
+        "payout": "Le transporteur est payé une fois la livraison effectuée."
+      }
     },
     "dropzone": {
       "title": "Ajouter des photos",
@@ -1390,10 +1449,9 @@
       "dimensionsPartial": "Indiquez les trois dimensions, ou aucune",
       "addressRequired": "L'adresse est obligatoire",
       "cityRequired": "La ville est obligatoire",
-      "postalCode": "Doit comporter 4 à 6 chiffres",
+      "postalCode": "Code postal invalide pour ce pays",
       "pinRequired": "Placez le repère sur la carte",
-      "outsideFrance": "Nous ne transportons qu'en France",
-      "floorRequired": "L'étage est obligatoire pour un appartement",
+      "floorRequired": "Indiquez l'étage (0 pour le rez-de-chaussée)",
       "liftRequired": "Indiquez aux transporteurs s'il y a un ascenseur",
       "sameAddress": "Le retrait et la livraison sont à la même adresse",
       "tooClose": "Le retrait et la livraison sont trop proches l'un de l'autre",
@@ -1418,7 +1476,12 @@
       "quantityMin": "Indiquez au moins 1",
       "floorMin": "Indiquez 0 (rez-de-chaussée) ou un étage supérieur",
       "wholeNumber": "Indiquez un nombre entier",
-      "quantityMax": "La quantité totale ne peut pas dépasser 99 999"
+      "quantityMax": "La quantité totale ne peut pas dépasser 99 999",
+      "outsideCountry": "Ce point n'est pas dans le pays choisi",
+      "movingSurfaceRequired": "Indiquez la superficie du logement",
+      "movingVolumeRequired": "Indiquez le volume à déménager",
+      "movingSurfaceRange": "Entre 5 et 1 000 m²",
+      "movingVolumeRange": "Entre 0,5 et 200 m³"
     },
     "success": {
       "open": {
@@ -1455,6 +1518,30 @@
       "snappedTime": {
         "pickup": "L'heure d'enlèvement enregistrée, {saved}, ne fait pas partie des horaires proposés : l'heure sélectionnée est maintenant {selected}. Vérifiez-la avant de publier.",
         "dropoff": "L'heure de livraison enregistrée, {saved}, ne fait pas partie des horaires proposés : l'heure sélectionnée est maintenant {selected}. Vérifiez-la avant de publier."
+      }
+    },
+    "moving": {
+      "pageTitle": "Demander un devis déménagement",
+      "subtitle": "Décrivez votre déménagement : des déménageurs vérifiés vous font leurs offres, vous choisissez.",
+      "heading": "Description du déménagement",
+      "photosHint": "Quelques photos des pièces et des gros meubles aident les déménageurs à chiffrer juste.",
+      "exactVolume": "Je connais le volume exact",
+      "exactVolumeHint": "Sinon, la superficie du logement suffit : nous en déduisons le volume.",
+      "surface": "Superficie du logement (m²)",
+      "surfacePlaceholder": "Ex : 65",
+      "volume": "Volume (m³)",
+      "volumePlaceholder": "Ex : 30",
+      "detailsLabel": "Informations complémentaires",
+      "detailsPlaceholder": "Ex : Le carton le plus long fait 2 m 15, le plus lourd est un canapé",
+      "publicNote": "Ces informations sont publiques. Pour préserver votre vie privée, n'indiquez pas vos coordonnées (adresse e-mail, téléphone ou adresse).",
+      "titleSurface": "Déménagement · {size} m²",
+      "titleVolume": "Déménagement · {size} m³",
+      "titleBare": "Déménagement",
+      "switch": {
+        "toMovingQuestion": "Vous déménagez ?",
+        "toMoving": "Cliquez plutôt ici !",
+        "toItemsQuestion": "Vous envoyez un ou plusieurs objets ?",
+        "toItems": "Revenir au formulaire objets"
       }
     }
   },
@@ -1548,7 +1635,12 @@
       "requester": "Demandeur : {name}",
       "budgetLabel": "Budget",
       "swipeHint": "Faites glisser pour voir la livraison →",
-      "noOffersCarriers": "Voir les transporteurs sur ce trajet"
+      "noOffersCarriers": "Voir les transporteurs sur ce trajet",
+      "moving": "Déménagement",
+      "noPackaging": "Ni protection ni emballage",
+      "moveSize": "Taille",
+      "estimatedWeight": "Poids estimé",
+      "approxKg": "≈ {weight, number} kg"
     },
     "carriers": {
       "tab": "Transporteurs disponibles",
@@ -1581,7 +1673,7 @@
       "pickup": "Retrait",
       "dropoff": "Livraison",
       "protection": "Protection",
-      "protectionNone": "Non précisée",
+      "protectionNone": "Ni protection ni emballage",
       "fragile": "Fragile",
       "load": "Marchandise",
       "weight": "{weight} kg",
@@ -4022,7 +4114,8 @@
       "needsHelp": "Aide au chargement",
       "needsProtection": "À protéger",
       "needsPackaging": "À emballer",
-      "sizeTitle": "Taille {size}"
+      "sizeTitle": "Taille {size}",
+      "moving": "Déménagement"
     },
     "map": {
       "openJob": "Ouvrir la mission « {title} »",

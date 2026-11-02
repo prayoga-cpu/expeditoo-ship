@@ -14,6 +14,43 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.76.0] - 2026-11-02 · feat
+
+- **Request a moving quote.** On the first step of a request, « Vous
+  déménagez ? Cliquez plutôt ici ! » switches the form to a move: photos, the
+  size of your home in m² (or the exact volume in m³ if you know it), and
+  anything the movers should know. Movers then send their offers as for any
+  request. The job shows a « Déménagement » badge everywhere.
+- **An address book for each end.** « Carnet d'adresses de retrait » and
+  « Carnet d'adresses de livraison » now always appear on the request form,
+  with your pickup addresses listed first on the pickup side and your
+  delivery addresses first on the delivery side. An address you saved without
+  placing it on the map now shows up too; before, it never came back. Your
+  profile's address list is sorted the same way, with a button to add one to
+  each.
+- **Pickup and delivery countries.** Each end has a « Pays de retrait » /
+  « Pays de livraison » field: France by default, or one of 13 neighbouring
+  countries. The address search, the map and the postal code all follow the
+  country you choose. Carriers see the country next to the town.
+- **Floors are shown to the carrier.** Until now the floor and lift you gave
+  were saved but never shown on the job, so a carrier only knew if you also
+  wrote it in the notes. They now appear at each end (« 3ᵉ étage · sans
+  ascenseur »), on the job page and on the driver's run. You can give a floor
+  for a house, an office, a shop, an auction house or a storage unit, not
+  only an apartment. The lift is now a plain Oui / Non, asked only from the
+  first floor up.
+- **« Ni protection ni emballage »** is a fifth packaging choice, ticked by
+  default, and the job says so instead of leaving carriers guessing.
+- **« Commissaire-priseur »** (« Auction house » in English) is a new type of
+  place. Jobs coming from Expedion now say their pickup is an auction house.
+- **A clearer price estimate.** The last step shows an « Estimation du prix »
+  card you can apply with one tap. It now counts every item (ten boxes used to
+  be priced as one), and works when an address was typed without a map point.
+  Underneath, four steps explain what happens next. Moves have no automatic
+  estimate yet: the movers make their offers.
+- The address fields now say which end they are for: « Adresse de retrait »,
+  « Adresse de livraison ».
+
 ## [2.75.0] - 2026-11-02 · ux
 
 - **No screen leaves you stuck any more.** When something cannot be done, the
@@ -46,6 +83,7 @@ the first release below is the commit that began the transport pivot.
 - Empty pages now point to where the next thing comes from: request a
   transport, see the available jobs, become a driver, or show everything again
   after a filter.
+
 
 ## [2.73.1] - 2026-10-31 · fix
 

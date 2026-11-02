@@ -1492,8 +1492,8 @@ describe("createListing — bidding runs to a flexible window's end", () => {
   it("leaves an exact-date request exactly as it was", async () => {
     // Read from the input, not a second `at(48 * HOUR)`: the clock moves
     // between the two, and a slow run failed by a few milliseconds.
-    const input = createInput();
-    await listingsService.createListing("user-1", input);
+    const input = createInput() as { pickupFrom: Date };
+    await listingsService.createListing("user-1", input as never);
 
     const row = vi.mocked(listingsDal.create).mock.calls[0][0];
     expect(row.expiresAt.getTime()).toBe(input.pickupFrom.getTime() - 6 * HOUR);

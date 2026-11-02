@@ -205,3 +205,32 @@ describe("expedionEscalationService.escalate — packaging", () => {
     expect((await escalatedWith(false)).needsPackaging).toBe(false);
   });
 });
+
+// client_feedback_2026_10_31_spec.md §0 B, §0 L — the place and the country.
+describe("expedionEscalationService.escalate — auction house and country", () => {
+  const escalatedWith = async (over: Record<string, unknown> = {}) => {
+    vi.mocked(expedionDal.getById).mockResolvedValue(paidQuote(over) as never);
+    await expedionEscalationService.escalate("q_1", {});
+    return vi.mocked(listingsService.createListing).mock.calls[0][1];
+  };
+
+  it("collects from an auction house and delivers to « other »", async () => {
+    const payload = await escalatedWith();
+
+    expect(payload.pickup.locationType).toBe("auction_house");
+    expect(payload.dropoff.locationType).toBe("other");
+  });
+
+  it.each([
+    ["Belgique", "BE"],
+    ["USA", "US"],
+    ["france", "FR"],
+    [null, "FR"],
+    ["non précisé", "FR"],
+  ])("reads the delivery country %j as %s", async (deliveryCountry, code) => {
+    const payload = await escalatedWith({ deliveryCountry });
+
+    expect(payload.dropoff.country).toBe(code);
+    expect(payload.pickup.country).toBeUndefined();
+  });
+});

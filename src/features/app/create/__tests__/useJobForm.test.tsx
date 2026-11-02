@@ -70,6 +70,7 @@ const endpoint = (over: Record<string, unknown> = {}) => ({
   address: "12 rue de la République",
   city: "Lyon",
   postalCode: "69002",
+  country: "FR" as const,
   locationType: "house" as const,
   note: "",
   contactName: "",
@@ -478,5 +479,64 @@ describe("useJobForm — saved addresses (saved_addresses_spec.md)", () => {
     act(() => result.current.prefillAddresses([home]));
 
     expect(result.current.form.getValues("pickup.address")).toBe("");
+  });
+});
+
+// client_feedback_2026_10_31_spec.md §2.2
+describe("useJobForm — items or a move", () => {
+  it("opens as a move when asked to (`/create?type=moving`)", () => {
+    const { result } = renderHook(() => useJobForm({ kind: "moving" }), { wrapper });
+
+    expect(result.current.form.getValues("jobKind")).toBe("moving");
+  });
+
+  it("empties the items' fields on the way to a move, and goes on without them", async () => {
+    const { result } = renderHook(() => useJobForm(), { wrapper });
+    act(() => {
+      result.current.form.setValue("title", "Canapé");
+      result.current.form.setValue("weightBracket", "upTo100");
+      result.current.form.setValue("quantity", "0");
+      result.current.form.setValue("description", "Deux pièces, troisième sans ascenseur.");
+    });
+
+    act(() => result.current.setJobKind("moving"));
+
+    const values = result.current.form.getValues();
+    expect(values).toMatchObject({ jobKind: "moving", title: "", quantity: 1 });
+    expect(values.weightBracket).toBeUndefined();
+    // Both kinds' own: kept.
+    expect(values.description).toBe("Deux pièces, troisième sans ascenseur.");
+
+    act(() => result.current.form.setValue("movingSurfaceM2", "65"));
+    await act(() => result.current.handleNext());
+    expect(result.current.currentStep).toBe(1);
+  });
+
+  it("will not leave step 1 of a move without its size", async () => {
+    const { result } = renderHook(() => useJobForm({ kind: "moving" }), { wrapper });
+
+    await act(() => result.current.handleNext());
+
+    expect(result.current.currentStep).toBe(0);
+    expect(result.current.form.getFieldState("movingSurfaceM2").error?.message).toBe(
+      "create.validation.movingSurfaceRequired"
+    );
+  });
+
+  it("names a move by its size when it is saved", async () => {
+    saveDraft.mockReset();
+    create.mockResolvedValue({ id: "job-9", status: "draft" });
+    const { result } = renderHook(() => useJobForm({ kind: "moving" }), { wrapper });
+    act(() => result.current.form.setValue("movingSurfaceM2", "65"));
+
+    act(() => {
+      void result.current.saveDraft();
+    });
+
+    await waitFor(() =>
+      expect(result.current.form.getValues("title")).toBe(
+        tr("create.moving.titleSurface", { size: "65" })
+      )
+    );
   });
 });

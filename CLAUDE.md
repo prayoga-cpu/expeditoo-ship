@@ -222,7 +222,7 @@ without an `sk_live_` key, so an accept there takes real money.
 Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before shipping.
 
 **Gates — all green.** `npx tsc --noEmit` 0 errors · `pnpm lint` 0 errors ·
-3,167 unit tests pass (2.75.0) · `pnpm build` succeeds.
+3,300 unit tests pass (2.76.0) · `pnpm build` succeeds.
 
 **Done**
 - Schema remodelled to the transport model; one clean initial migration
@@ -725,6 +725,17 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
   (`listingsDal.copyAsDraft`); `RequestActions` carries all three. Failed reads
   go through `LoadErrorState`, empty states lead somewhere
   (`common.nextSteps`), and `src/__tests__/no-dead-ends.test.ts` holds it.
+- **The request form, as the client asked on 31 October** (2.76.0,
+  `0045`), monitored at the top of `STATUS.md`. A **move** is a job kind
+  (`listings.job_kind`, surface or volume, weight derived in `src/lib/moving.ts`;
+  `/create?type=moving`). Each end has a **country** (`pickup_country` /
+  `dropoff_country`, ISO, default FR): postal format, map, search and box all
+  come from `src/lib/countries.ts`. `LOCATION_TYPES` lives once in
+  `src/lib/location-types.ts`, with `auction_house`, which is what every
+  escalated pickup now is. Floors are asked wherever there are floors and are
+  finally **shown** (`useEndpointText`). The address book is always on « Où »,
+  grouped by end, pin or no pin. « Ni protection ni emballage » is derived
+  (`hasNoPackaging`), never stored. `client_feedback_2026_10_31_spec.md`
 - **The owner's decisions of 30 October** (2.71.0): a paid quote's
   auto-publish can be **parked** (`AutoPublishControl`, `escalate_after =
   null`); **payouts stay manual** — `release-payouts` has no route and no

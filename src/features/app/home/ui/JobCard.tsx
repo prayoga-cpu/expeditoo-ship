@@ -13,11 +13,13 @@ import {
   MapPin,
   Package,
   Weight,
+  Truck,
 } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import { enUS, fr } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
 import { UrgencyBadge } from "@/features/app/listing/ui/UrgencyBadge";
+import { useEndpointText } from "@/features/app/listing/hooks/useEndpointText";
 import { Card } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
@@ -107,6 +109,8 @@ export function JobCard({ job, isHighlighted = false }: JobCardProps) {
   const closingSoon = remaining !== null && remaining < 6;
 
   const size = cargoSizeLabel(job);
+  const text = useEndpointText();
+  const isMoving = job.jobKind === "moving";
   const pickupWindow = describeWindow(
     job.pickupFrom,
     job.pickupUntil,
@@ -138,6 +142,7 @@ export function JobCard({ job, isHighlighted = false }: JobCardProps) {
             <div className="mt-2 space-y-1.5">
               <Endpoint
                 city={job.pickupCity}
+                country={text.country(job.pickupCountry)}
                 postalCode={job.pickupPostalCode}
                 lat={job.pickupLat}
                 lng={job.pickupLng}
@@ -145,6 +150,7 @@ export function JobCard({ job, isHighlighted = false }: JobCardProps) {
               />
               <Endpoint
                 city={job.dropoffCity}
+                country={text.country(job.dropoffCountry)}
                 postalCode={job.dropoffPostalCode}
                 lat={job.dropoffLat}
                 lng={job.dropoffLng}
@@ -159,7 +165,12 @@ export function JobCard({ job, isHighlighted = false }: JobCardProps) {
               </div>
               <div className="flex items-center gap-1.5">
                 <Weight className="h-3.5 w-3.5 shrink-0" />
-                <dd className="font-mono">{job.weightKg} kg</dd>
+                {/* A move is sized by its home; its weight is only derived. */}
+                <dd className="font-mono">
+                  {isMoving
+                    ? text.moveSize(job.movingSurfaceM2, job.movingVolumeM3)
+                    : `${job.weightKg} kg`}
+                </dd>
               </div>
               <div className="flex items-center gap-1.5">
                 <Gavel className="h-3.5 w-3.5 shrink-0" />
@@ -190,6 +201,12 @@ export function JobCard({ job, isHighlighted = false }: JobCardProps) {
           {/* The pickup is close (§B5). Distinct from the badge after it,
               which is about the bidding closing, not the transport. */}
           <UrgencyBadge job={job} />
+          {isMoving && (
+            <Badge variant="outline" className="border-primary/40 text-primary">
+              <Truck className="mr-1 h-3 w-3" />
+              {t("moving")}
+            </Badge>
+          )}
           {closingSoon && (
             <Badge className="border-warning/30 bg-warning/15 text-warning">
               <AlertTriangle className="mr-1 h-3 w-3" />
@@ -253,12 +270,15 @@ function describeWindow(
  */
 function Endpoint({
   city,
+  country,
   postalCode,
   lat,
   lng,
   icon,
 }: {
   city: string;
+  /** The country's name when it is not France (spec §6.4). */
+  country: string | null;
   postalCode: string;
   // Null when the requester typed the address by hand with no map pin.
   lat: number | null;
@@ -274,7 +294,8 @@ function Endpoint({
       <span className="text-muted-foreground mt-0.5 shrink-0">{icon}</span>
       <div className="min-w-0">
         <p className="truncate font-medium">
-          {city}{" "}
+          {city}
+          {country && `, ${country}`}{" "}
           <span className="text-muted-foreground font-mono text-xs">
             ({postalCode})
           </span>

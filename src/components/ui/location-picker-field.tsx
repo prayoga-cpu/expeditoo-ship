@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { CircleCheck, Keyboard, Link2, MapPin, Search } from "lucide-react";
 import Map, {
   Marker,
@@ -21,6 +21,12 @@ import { LottieLoader } from "@/components/ui/lottie-loader";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { getMapStyle } from "@/lib/map-styles";
 import { reverseGeocode, resolveMapLink, searchAddress } from "@/lib/geocoding";
+import {
+  countryMapBounds,
+  countryMapCenter,
+  countryName,
+  DEFAULT_COUNTRY,
+} from "@/lib/countries";
 
 /**
  * One postal address plus the coordinates a route needs — a search box and a
@@ -71,14 +77,22 @@ export interface LocationPickerFieldProps {
    */
   mode?: LocationPickerMode;
   onModeChange?: (mode: LocationPickerMode) => void;
+  /**
+   * The country the place is in, ISO 3166-1 alpha-2: the search looks there,
+   * the map opens and stays there, and a pin reverse-geocoded elsewhere is
+   * refused. France unless the caller lets the person choose (`/create`,
+   * client_feedback_2026_10_31_spec.md §6.2).
+   */
+  countryCode?: string;
+  /**
+   * Which address this is, for a form holding two: « Adresse de retrait »
+   * rather than « Adresse » (spec §7). The generic words otherwise.
+   */
+  addressLabel?: string;
+  searchPlaceholder?: string;
+  /** The country's postal code shape, « Ex. 1000 ». */
+  postalCodePlaceholder?: string;
 }
-
-// France bounding box (approximate) — matches AddressForm's picker.
-const FRANCE_BOUNDS: [[number, number], [number, number]] = [
-  [-5.5, 41.3],
-  [9.6, 51.1],
-];
-const FRANCE_CENTER = { longitude: 2.3522, latitude: 48.8566, zoom: 5 };
 
 export function LocationPickerField({
   id,
@@ -88,8 +102,13 @@ export function LocationPickerField({
   allowManualOnly = false,
   mode: controlledMode,
   onModeChange,
+  countryCode = DEFAULT_COUNTRY,
+  addressLabel,
+  searchPlaceholder,
+  postalCodePlaceholder,
 }: LocationPickerFieldProps) {
   const t = useTranslations("common.locationPicker");
+  const locale = useLocale();
   const mapRef = useRef<MapRef>(null);
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
@@ -115,7 +134,7 @@ export function LocationPickerField({
   const [viewState, setViewState] = useState(
     hasPin
       ? { longitude: value.lng!, latitude: value.lat!, zoom: 13 }
-      : FRANCE_CENTER
+      : countryMapCenter(countryCode)
   );
 
   const [isGeocoding, setIsGeocoding] = useState(false);
@@ -169,7 +188,7 @@ export function LocationPickerField({
     searchTimeoutRef.current = setTimeout(async () => {
       setIsSearching(true);
       try {
-        const results = await searchAddress(query, "fr", 5);
+        const results = await searchAddress(query, countryCode.toLowerCase(), 5);
         setSearchResults(
           results.map((r) => ({
             id: r.id,
@@ -184,7 +203,7 @@ export function LocationPickerField({
         setIsSearching(false);
       }
     }, 300);
-  }, []);
+  }, [countryCode]);
 
   const setPin = useCallback(
     async (lng: number, lat: number) => {
@@ -198,8 +217,10 @@ export function LocationPickerField({
           onChange({ ...value, lat, lng });
           return;
         }
-        if (result.countryCode.toLowerCase() !== "fr") {
-          setLocationError(t("outsideFrance"));
+        if (result.countryCode.toUpperCase() !== countryCode) {
+          setLocationError(
+            t("outsideCountry", { country: countryName(countryCode, locale) })
+          );
           return;
         }
         // A field already holding text is trusted over the guess: reverse
@@ -222,7 +243,7 @@ export function LocationPickerField({
         setIsGeocoding(false);
       }
     },
-    [onChange, t, value]
+    [countryCode, locale, onChange, t, value]
   );
 
   const selectResult = (result: { center: [number, number] }) => {
@@ -304,7 +325,7 @@ export function LocationPickerField({
             ) : null}
             <Input
               value={searchQuery}
-              placeholder={t("searchPlaceholder")}
+              placeholder={searchPlaceholder ?? t("searchPlaceholder")}
               className="bg-background/90 h-8 pl-8 pr-8 text-xs shadow-sm backdrop-blur"
               onChange={(e) => handleSearchChange(e.target.value)}
               onFocus={() => searchResults.length > 0 && setShowSuggestions(true)}
@@ -338,7 +359,7 @@ export function LocationPickerField({
           mapStyle={getMapStyle(isDark)}
           onClick={(e) => void setPin(e.lngLat.lng, e.lngLat.lat)}
           cursor="crosshair"
-          maxBounds={FRANCE_BOUNDS}
+          maxBounds={countryMapBounds(countryCode)}
         >
           <NavigationControl position="bottom-right" showCompass={false} />
           {hasPin ? (
@@ -492,7 +513,7 @@ export function LocationPickerField({
       <div className="grid grid-cols-3 gap-2">
         <div className="col-span-3 space-y-1">
           <Label htmlFor={`${id}-address`} className="text-xs">
-            {t("address")}
+            {addressLabel ?? t("address")}
           </Label>
           <Input
             id={`${id}-address`}
@@ -509,6 +530,7 @@ export function LocationPickerField({
           <Input
             id={`${id}-postal`}
             value={value.postalCode}
+            placeholder={postalCodePlaceholder}
             className="h-8 text-xs"
             disabled={fieldsLocked}
             onChange={(e) =>
