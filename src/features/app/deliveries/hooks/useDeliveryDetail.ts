@@ -44,7 +44,7 @@ export function useDeliveryDetail(id: string) {
   const stop = useTranslations("shipments.stop");
   const { user } = useAuth();
 
-  const { data, isLoading, isError, error } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: deliveryKeys.detail(id),
     queryFn: () => deliveriesApi.getById(id),
     enabled: Boolean(id),
@@ -58,6 +58,9 @@ export function useDeliveryDetail(id: string) {
     isLoading,
     isError,
     error: error instanceof Error ? error.message : null,
+    // A 404 or 403 is « introuvable »; anything else deserves a retry.
+    isGone: error instanceof ApiError && (error.status === 404 || error.status === 403),
+    refetch,
   };
 }
 

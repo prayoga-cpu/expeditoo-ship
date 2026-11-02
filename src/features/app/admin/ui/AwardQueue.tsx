@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadErrorState } from "@/components/ui/load-error-state";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useFormatter, useTranslations } from "next-intl";
@@ -61,10 +62,13 @@ export function AwardQueue() {
 
   if (expedion.isError || direct.isError) {
     return (
-      <CenteredEmptyState
-        icon={Gavel}
+      <LoadErrorState
         title={t("error.title")}
         description={t("error.description")}
+        onRetry={() => {
+          if (expedion.isError) void expedion.refetch();
+          if (direct.isError) void direct.refetch();
+        }}
       />
     );
   }

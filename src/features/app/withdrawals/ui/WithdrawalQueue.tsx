@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadErrorState } from "@/components/ui/load-error-state";
 import { useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 
@@ -35,7 +36,7 @@ export function WithdrawalQueue() {
   const t = useTranslations("withdrawals");
   const format = useFormatter();
   const [status, setStatus] = useState<string | undefined>("requested");
-  const { data: rows, isLoading } = useWithdrawalQueue(status);
+  const { data: rows, isLoading, isError, refetch } = useWithdrawalQueue(status);
   // Moved on by a colleague, a request leaves the « Demandé » list: show
   // every status, so the operator sees it as it now is — approved, its
   // *Refuse* asking first.
@@ -75,6 +76,10 @@ export function WithdrawalQueue() {
 
       {isLoading ? (
         <PageLoader />
+      ) : isError ? (
+        // Read as « nothing to pay », a failure hid every request a driver
+        // was waiting on (no_dead_ends_spec.md §4).
+        <LoadErrorState onRetry={() => void refetch()} />
       ) : !rows || rows.length === 0 ? (
         <CenteredEmptyState title={t("queueEmpty")} description={t("queueEmptyHint")} />
       ) : (

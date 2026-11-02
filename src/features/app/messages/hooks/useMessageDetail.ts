@@ -151,6 +151,7 @@ export function useMessageDetail(conversationId: string) {
     data: threadData,
     isLoading,
     error,
+    refetch,
   } = useQuery({
     queryKey: ["messages", "thread", conversationId],
     queryFn: () => messagesApi.getThread(conversationId),
@@ -316,5 +317,8 @@ export function useMessageDetail(conversationId: string) {
     isLoading,
     isSending: sendMutation.isPending,
     error,
+    // Nothing on screen to fall back on: the thread never loaded.
+    loadFailed: Boolean(error) && !threadData,
+    retry: () => void refetch(),
   };
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadErrorState } from "@/components/ui/load-error-state";
 import { useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -20,15 +21,28 @@ import { VehicleForm } from "./VehicleForm";
 
 /** The carrier's fleet: list, add, activate/deactivate, remove. */
 export function CarrierFleetScreen() {
-  const { data: application, isLoading: applicationLoading } =
-    useCarrierApplication();
-  const { data: vehicles, isLoading: vehiclesLoading } = useVehicles();
+  const application = useCarrierApplication();
+  const vehicles = useVehicles();
   const [adding, setAdding] = useState(false);
   const t = useTranslations("carrier.fleet");
 
-  if (applicationLoading || vehiclesLoading) return <PageLoader />;
+  if (application.isLoading || vehicles.isLoading) return <PageLoader />;
 
-  if (!application) return <NeedApplicationState />;
+  // « Apply first » and « no vehicle yet » are both wrong answers to a read
+  // that failed (no_dead_ends_spec.md §4).
+  if (application.isError || vehicles.isError) {
+    return (
+      <LoadErrorState
+        variant="page"
+        onRetry={() => {
+          if (application.isError) void application.refetch();
+          if (vehicles.isError) void vehicles.refetch();
+        }}
+      />
+    );
+  }
+
+  if (!application.data) return <NeedApplicationState />;
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6 p-4 sm:p-6">
@@ -47,7 +61,7 @@ export function CarrierFleetScreen() {
 
       {adding && <VehicleForm onDone={() => setAdding(false)} />}
 
-      {!adding && (!vehicles || vehicles.length === 0) ? (
+      {!adding && (!vehicles.data || vehicles.data.length === 0) ? (
         <CenteredEmptyState
           icon={Truck}
           title={t("empty.title")}
@@ -61,7 +75,7 @@ export function CarrierFleetScreen() {
         </CenteredEmptyState>
       ) : (
         <div className="space-y-3">
-          {vehicles?.map((vehicle) => (
+          {vehicles.data?.map((vehicle) => (
             <VehicleCard key={vehicle.id} vehicle={vehicle} />
           ))}
         </div>

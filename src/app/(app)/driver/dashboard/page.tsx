@@ -5,14 +5,21 @@ import { DriverStats } from "@/features/app/driver/ui/DriverStats";
 import { Truck } from "lucide-react";
 import { useDriverShipments } from "@/features/app/driver/hooks/useDriverShipments";
 import { PageLoader } from "@/components/ui/page-loader";
+import { LoadErrorState } from "@/components/ui/load-error-state";
 import { useTranslations } from "next-intl";
 
 export default function DriverDashboardPage() {
-  const { isLoading } = useDriverShipments();
+  const { isLoading, isError, refetch } = useDriverShipments();
   const t = useTranslations("driver.dashboard");
 
   if (isLoading) {
     return <PageLoader />;
+  }
+
+  // The stats and the list below both read this one query: on a failure they
+  // would show zero runs, a fact nobody stated (no_dead_ends_spec.md §4).
+  if (isError) {
+    return <LoadErrorState variant="page" onRetry={() => void refetch()} />;
   }
 
   return (

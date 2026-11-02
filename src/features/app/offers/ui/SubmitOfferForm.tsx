@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Truck, TriangleAlert } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -140,6 +141,17 @@ export function SubmitOfferForm({ job }: SubmitOfferFormProps) {
             })}
           </SelectContent>
         </Select>
+        {/* Every option greyed out reads as a broken form; say why, and where
+            a vehicle that fits is added (no_dead_ends_spec.md §6). */}
+        {!vehicles.some((v) => fits(v) && v.isActive) && (
+          <p className="mt-1 flex flex-wrap items-center gap-x-2 text-sm text-warning">
+            <TriangleAlert className="h-3.5 w-3.5" />
+            {t("noVehicleFits")}
+            <Link href="/carrier/fleet" className="font-medium underline underline-offset-2">
+              {t("noVehicleCta")}
+            </Link>
+          </p>
+        )}
       </div>
 
       <div>

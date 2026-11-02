@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadErrorState } from "@/components/ui/load-error-state";
 import { useTranslations } from "next-intl";
 import { IdCard } from "lucide-react";
 
@@ -15,7 +16,7 @@ import { ContactSummary } from "./ContactDetailsCard";
  */
 export function StaffContactCard({ userId }: { userId: string }) {
   const t = useTranslations("profile.contact");
-  const { data, isLoading, isError } = useStaffContactDetails(userId, true);
+  const { data, isLoading, isError, refetch } = useStaffContactDetails(userId, true);
 
   return (
     <Card className="mb-8">
@@ -29,7 +30,7 @@ export function StaffContactCard({ userId }: { userId: string }) {
         {isLoading ? (
           <InlineLoader size="md" className="h-16" />
         ) : isError || !data ? (
-          <p className="text-sm text-destructive">{t("loadError")}</p>
+          <LoadErrorState variant="inline" title={t("loadError")} onRetry={() => void refetch()} />
         ) : (
           <ContactSummary details={data} />
         )}

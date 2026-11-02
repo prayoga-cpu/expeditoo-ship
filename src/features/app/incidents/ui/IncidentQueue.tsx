@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadErrorState } from "@/components/ui/load-error-state";
 import { useState } from "react";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
@@ -34,7 +35,7 @@ const TABS: IncidentStatus[] = ["OPEN", "ACKNOWLEDGED", "RESOLVED"];
 export function IncidentQueue() {
   const t = useTranslations("incidents");
   const [status, setStatus] = useState<IncidentStatus>("OPEN");
-  const { page, isLoading, isError } = useIncidentQueue({ status, limit: 50 });
+  const { page, isLoading, isError, refetch } = useIncidentQueue({ status, limit: 50 });
 
   return (
     <div className="space-y-6">
@@ -61,9 +62,7 @@ export function IncidentQueue() {
       {isLoading && <LottieLoader />}
 
       {isError && (
-        <p className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-          {t("queue.error")}
-        </p>
+        <LoadErrorState variant="inline" title={t("queue.error")} onRetry={() => void refetch()} />
       )}
 
       {!isLoading && !isError && !page?.items.length && (

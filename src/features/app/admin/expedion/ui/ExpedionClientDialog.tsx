@@ -1,7 +1,8 @@
 "use client";
 
+import { LoadErrorState } from "@/components/ui/load-error-state";
 import { useFormatter, useTranslations } from "next-intl";
-import { AlertCircle, Mail, MapPin, Phone } from "lucide-react";
+import { Mail, MapPin, Phone } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import {
@@ -49,7 +50,7 @@ export function ExpedionClientDialog({
 }) {
   const t = useTranslations("admin.expedionClients");
   const format = useFormatter();
-  const { data, isLoading, isError } = useExpedionClient(ownerId);
+  const { data, isLoading, isError, refetch } = useExpedionClient(ownerId);
 
   return (
     <Dialog open={Boolean(ownerId)} onOpenChange={onOpenChange}>
@@ -66,10 +67,7 @@ export function ExpedionClientDialog({
         {isLoading ? (
           <PageLoader />
         ) : isError || !data ? (
-          <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-            <AlertCircle className="h-4 w-4 shrink-0" />
-            {t("detail.error")}
-          </div>
+          <LoadErrorState variant="inline" title={t("detail.error")} onRetry={() => void refetch()} />
         ) : (
           <div className="space-y-6">
             <div className="grid gap-3 sm:grid-cols-2">

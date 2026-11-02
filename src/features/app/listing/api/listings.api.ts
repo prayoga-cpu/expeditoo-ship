@@ -49,4 +49,14 @@ export const listingsApi = {
 
   /** A scheduled request back to a draft. */
   unschedule: (id: string) => api.post<DraftJob>(`/api/listings/${id}/unschedule`),
+
+  /** A live request back to a draft, to change it; its offers are withdrawn. */
+  unpublish: (id: string) =>
+    api.post<{ withdrawnOffers: number }>(`/api/listings/${id}/unpublish`),
+
+  /** A live request nobody has been chosen for, called off. */
+  cancel: (id: string) => api.delete<{ deleted: boolean }>(`/api/listings/${id}`),
+
+  /** An ended request copied into a new draft; answers the draft's id. */
+  repost: (id: string) => api.post<{ id: string }>(`/api/listings/${id}/repost`),
 };

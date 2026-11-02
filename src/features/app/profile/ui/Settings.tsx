@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadErrorState } from "@/components/ui/load-error-state";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -85,6 +86,7 @@ export function Settings() {
     email,
     inApp,
     isError,
+    refetch,
     handleThemeChange,
     handleNotificationChange,
   } = useSettings();
@@ -180,9 +182,11 @@ export function Settings() {
           {t("notifications.description")}
         </p>
         {isError ? (
-          <p className="text-sm text-destructive">
-            {t("notifications.loadError")}
-          </p>
+          <LoadErrorState
+            variant="inline"
+            title={t("notifications.loadError")}
+            onRetry={() => void refetch()}
+          />
         ) : (
           <div className="space-y-3">
             <NotificationCategory

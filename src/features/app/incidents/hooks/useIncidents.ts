@@ -27,6 +27,7 @@ export function useShipmentIncidents(shipmentId: string, enabled = true) {
     incidents: query.data ?? [],
     isLoading: query.isLoading,
     isError: query.isError,
+    refetch: query.refetch,
   };
 }
 
@@ -67,6 +68,7 @@ export function useIncidentQueue(params: IncidentQueueParams) {
     page: query.data,
     isLoading: query.isLoading,
     isError: query.isError,
+    refetch: query.refetch,
   };
 }
 

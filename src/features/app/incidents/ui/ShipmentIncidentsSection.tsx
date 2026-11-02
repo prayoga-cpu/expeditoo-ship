@@ -27,7 +27,7 @@ export function ShipmentIncidentsSection({
   canReport,
 }: ShipmentIncidentsSectionProps) {
   const t = useTranslations("incidents");
-  const { incidents, isLoading, isError } = useShipmentIncidents(shipmentId);
+  const { incidents, isLoading, isError, refetch } = useShipmentIncidents(shipmentId);
 
   return (
     <Card className="space-y-4 p-4 sm:p-5">
@@ -47,6 +47,7 @@ export function ShipmentIncidentsSection({
         incidents={incidents}
         isLoading={isLoading}
         isError={isError}
+        onRetry={() => void refetch()}
       />
     </Card>
   );

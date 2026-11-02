@@ -14,6 +14,8 @@ export default function MessagesPage() {
     setSearchQuery,
     deleteConversation,
     isLoading,
+    error,
+    refetch,
     listingChips,
     listingFilter,
     setListingFilter,
@@ -25,6 +27,8 @@ export default function MessagesPage() {
       searchQuery={searchQuery}
       isLoading={isLoading}
       onSearchChange={setSearchQuery}
+      isError={Boolean(error)}
+      onRetry={() => void refetch()}
       onDeleteConversation={deleteConversation}
       listingChips={listingChips}
       listingFilter={listingFilter}

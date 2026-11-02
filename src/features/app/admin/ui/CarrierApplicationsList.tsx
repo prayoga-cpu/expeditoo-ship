@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadErrorState } from "@/components/ui/load-error-state";
 import { useState, useMemo, useCallback } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,8 @@ export function CarrierApplicationsList({
   const {
     applications,
     isLoading,
+    error,
+    refetch,
     approveApplication,
     rejectApplication,
     suspendCarrierAccount,
@@ -224,6 +227,8 @@ export function CarrierApplicationsList({
 
       {isLoading ? (
         <PageLoader />
+      ) : error ? (
+        <LoadErrorState onRetry={() => void refetch()} />
       ) : applications.length === 0 ? (
         <CenteredEmptyState
           icon={Inbox}

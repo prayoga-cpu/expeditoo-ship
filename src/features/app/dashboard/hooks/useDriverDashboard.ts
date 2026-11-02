@@ -99,5 +99,16 @@ export function useDriverDashboard() {
 
     needsCardNudge,
     showDriverInvite,
+
+    // A count that failed would otherwise read « 0 » — a fact nobody stated —
+    // so the page says a read failed and offers it again (§4).
+    loadFailed: [application, openJobs, liveOffers, activeRuns, myRequests].some(
+      (query) => query.isError
+    ),
+    retry: () => {
+      for (const query of [application, openJobs, liveOffers, activeRuns, myRequests]) {
+        if (query.isError) void query.refetch();
+      }
+    },
   };
 }

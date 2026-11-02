@@ -160,6 +160,7 @@ export function ExpedionDashboard() {
         total={directRequests.data?.total ?? 0}
         isLoading={directRequests.isLoading}
         isError={directRequests.isError}
+        onRetry={() => void directRequests.refetch()}
       />
 
       {/* ---- KPIs: the auction business, then the platform around it ---- */}

@@ -47,6 +47,7 @@ function renderPanel(props: Partial<Props> = {}, locale: "en" | "fr" = "fr") {
         total={0}
         isLoading={false}
         isError={false}
+        onRetry={() => {}}
         {...props}
       />
     </NextIntlClientProvider>

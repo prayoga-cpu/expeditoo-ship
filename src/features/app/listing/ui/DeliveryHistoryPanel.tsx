@@ -1,8 +1,11 @@
 "use client";
 
-import { AlertTriangle, PackageCheck } from "lucide-react";
+import Link from "next/link";
+import { PackageCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
 import { CenteredEmptyState } from "@/components/ui/centered-empty-state";
+import { LoadErrorState } from "@/components/ui/load-error-state";
 import { PageLoader } from "@/components/ui/page-loader";
 import { useDeliveryHistory } from "../hooks/useMyRequests";
 import { DeliveredRequestCard } from "./DeliveredRequestCard";
@@ -13,7 +16,8 @@ import { DeliveredRequestCard } from "./DeliveredRequestCard";
  */
 export function DeliveryHistoryPanel() {
   const t = useTranslations("myJobs.history");
-  const { deliveries, isLoading, isError } = useDeliveryHistory();
+  const next = useTranslations("common.nextSteps");
+  const { deliveries, isLoading, isError, refetch } = useDeliveryHistory();
 
   if (isLoading) return <PageLoader />;
 
@@ -21,11 +25,7 @@ export function DeliveryHistoryPanel() {
   // stayed invisible for a week (CLAUDE.md gotcha 9).
   if (isError) {
     return (
-      <CenteredEmptyState
-        variant="page"
-        icon={AlertTriangle}
-        title={t("loadFailed")}
-      />
+      <LoadErrorState variant="page" title={t("loadFailed")} onRetry={() => void refetch()} />
     );
   }
 
@@ -36,7 +36,11 @@ export function DeliveryHistoryPanel() {
         icon={PackageCheck}
         title={t("empty")}
         description={t("emptyDesc")}
-      />
+      >
+        <Button asChild variant="outline">
+          <Link href="/listings/me">{next("myRequests")}</Link>
+        </Button>
+      </CenteredEmptyState>
     );
   }
 

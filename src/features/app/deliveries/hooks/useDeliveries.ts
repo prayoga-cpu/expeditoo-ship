@@ -29,7 +29,7 @@ export function useDeliveries() {
   const { user } = useAuth();
   const { activeTab, setActiveTab } = useTabState<DeliveryTab>("active");
 
-  const { data, isLoading, isError, error } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: deliveryKeys.list(activeTab),
     queryFn: () =>
       deliveriesApi.list({ status: TAB_STATUSES[activeTab], limit: 50 }),
@@ -47,6 +47,7 @@ export function useDeliveries() {
     isLoading,
     isError,
     error: error instanceof Error ? error.message : null,
+    refetch,
   };
 }
 

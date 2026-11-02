@@ -107,7 +107,7 @@ export function useReviews(targetUserId?: string) {
   const userIdToFetch = targetUserId || user?.id;
 
   // Fetch reviews received by user
-  const { data: reviewsData, isLoading: isLoadingReviews } = useQuery({
+  const reviewsQuery = useQuery({
     queryKey: ["reviews", userIdToFetch],
     queryFn: () => fetchMyReviews(userIdToFetch!),
     enabled: !!userIdToFetch,
@@ -115,7 +115,7 @@ export function useReviews(targetUserId?: string) {
   });
 
   // Fetch stats for user
-  const { data: statsData, isLoading: isLoadingStats } = useQuery({
+  const statsQuery = useQuery({
     queryKey: ["user-stats", userIdToFetch],
     queryFn: () => fetchMyStats(userIdToFetch!),
     enabled: !!userIdToFetch,
@@ -124,9 +124,9 @@ export function useReviews(targetUserId?: string) {
 
   // Transform API data to UI format
   const allReviews = useMemo(() => {
-    if (!reviewsData?.items) return [];
+    if (!reviewsQuery.data?.items) return [];
 
-    return reviewsData.items.map((review) => ({
+    return reviewsQuery.data.items.map((review) => ({
       id: review.id,
       author: review.author.name,
       authorImage: review.author.image,
@@ -139,16 +139,16 @@ export function useReviews(targetUserId?: string) {
       helpful: 0,
       listingId: review.listing?.id,
     }));
-  }, [reviewsData]);
+  }, [reviewsQuery.data]);
 
   // Default stats
   const stats: ReviewStats = useMemo(
     () => ({
-      average: statsData?.average || 0,
-      total: statsData?.total || 0,
-      distribution: statsData?.distribution || { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+      average: statsQuery.data?.average || 0,
+      total: statsQuery.data?.total || 0,
+      distribution: statsQuery.data?.distribution || { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
     }),
-    [statsData]
+    [statsQuery.data]
   );
 
   // Filter reviews by tab
@@ -167,6 +167,12 @@ export function useReviews(targetUserId?: string) {
     stats,
     activeTab,
     setActiveTab,
-    isLoading: isLoadingReviews || isLoadingStats,
+    isLoading: reviewsQuery.isLoading || statsQuery.isLoading,
+    // « Aucun avis » is a claim; a read that failed must not make it (§4).
+    isError: reviewsQuery.isError || statsQuery.isError,
+    retry: () => {
+      if (reviewsQuery.isError) void reviewsQuery.refetch();
+      if (statsQuery.isError) void statsQuery.refetch();
+    },
   };
 }

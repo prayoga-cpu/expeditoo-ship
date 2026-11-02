@@ -161,6 +161,18 @@
     },
     "header": {
       "profile": "Voir mon profil"
+    },
+    "loadError": {
+      "title": "Le chargement n'a pas abouti",
+      "description": "La connexion ou le serveur n'a pas répondu. Vos données ne sont pas perdues.",
+      "retry": "Réessayer"
+    },
+    "nextSteps": {
+      "findJobs": "Voir les missions disponibles",
+      "newRequest": "Demander un transport",
+      "myRequests": "Mes demandes",
+      "showAll": "Tout afficher",
+      "becomeDriver": "Devenir chauffeur"
     }
   },
   "auth": {
@@ -714,7 +726,8 @@
       "typeMessage": "Écrivez un message...",
       "loading": "Chargement...",
       "unknown": "Inconnu",
-      "you": "Vous"
+      "you": "Vous",
+      "backToInbox": "Retour aux messages"
     },
     "offer": {
       "button": "Faire une offre",
@@ -899,7 +912,8 @@
       "cancelledTransport": "Ce transport a été annulé, il n'y a rien à confirmer.",
       "notYours": "Le transporteur enregistre cette étape ; seul le client la confirme.",
       "failed": "La confirmation n'a pas pu être enregistrée. Réessayez dans un instant."
-    }
+    },
+    "backToList": "Toutes mes livraisons"
   },
   "listing": {
     "title": "Annonce",
@@ -979,7 +993,8 @@
         "message": "Message (facultatif)",
         "messagePlaceholder": "Dites au client pourquoi vous êtes le bon transporteur pour cette course.",
         "submit": "Envoyer l'offre",
-        "submitting": "Envoi…"
+        "submitting": "Envoi…",
+        "noVehicleFits": "Aucun de vos véhicules actifs ne peut prendre ce chargement."
       },
       "slots": {
         "label": "Vos créneaux",
@@ -1042,6 +1057,36 @@
         "VEHICLE_CAPACITY_DIMENSIONS": "Ce véhicule est trop petit pour ce chargement.",
         "PICKUP_OUTSIDE_WINDOW": "Votre horaire de retrait sort du créneau du demandeur.",
         "CARRIER_ABSENT": "Vous êtes marqué absent : revenez depuis votre dossier pour proposer une offre."
+      },
+      "actions": {
+        "availability": "Gérer ma disponibilité",
+        "application": "Mon dossier",
+        "otherJobs": "Autres missions",
+        "myOffers": "Mes offres",
+        "addVehicle": "Ajouter un véhicule"
+      },
+      "mine": {
+        "title": "Vous avez proposé {price}",
+        "description": "Votre offre attend le choix du demandeur. Vous pouvez la retirer pour en faire une autre.",
+        "all": "Mes offres",
+        "withdraw": "Retirer mon offre"
+      },
+      "myOffers": {
+        "title": "Mes offres",
+        "empty": "Aucune offre pour l'instant",
+        "emptyDesc": "Parcourez les missions ouvertes et proposez un prix sur celles qui suivent vos trajets.",
+        "browse": "Voir les missions",
+        "findAnother": "Trouver une autre mission",
+        "viewJob": "Voir la mission",
+        "withdraw": "Retirer",
+        "pickup": "Enlèvement {date}",
+        "status": {
+          "pending": "En attente",
+          "accepted": "Retenue",
+          "rejected": "Non retenue",
+          "withdrawn": "Retirée",
+          "expired": "Expirée"
+        }
       }
     }
   },
@@ -1502,7 +1547,8 @@
       },
       "requester": "Demandeur : {name}",
       "budgetLabel": "Budget",
-      "swipeHint": "Faites glisser pour voir la livraison →"
+      "swipeHint": "Faites glisser pour voir la livraison →",
+      "noOffersCarriers": "Voir les transporteurs sur ce trajet"
     },
     "carriers": {
       "tab": "Transporteurs disponibles",
@@ -1580,6 +1626,34 @@
       "pinLabel": "Voir « {title} » sur la carte",
       "showAll": "Voir toutes les demandes",
       "unpinned": "{count, plural, one {# demande sans point sur la carte} other {# demandes sans point sur la carte}}"
+    },
+    "owner": {
+      "edit": "Modifier",
+      "editTitle": "Modifier cette demande ?",
+      "editBody": "Elle quitte le tableau le temps de vos modifications et redevient un brouillon. Vous la remettez en ligne depuis la dernière étape du formulaire.",
+      "editConfirm": "Modifier la demande",
+      "cancel": "Annuler la demande",
+      "cancelTitle": "Annuler cette demande ?",
+      "cancelBody": "Elle quitte le tableau et plus aucune offre ne pourra être acceptée. Rien n'a été débité : vous ne payez qu'en acceptant une offre.",
+      "cancelConfirm": "Annuler la demande",
+      "offersWithdrawn": "{count, plural, one {L'offre reçue sera retirée et son transporteur prévenu.} other {Les # offres reçues seront retirées et leurs transporteurs prévenus.}}",
+      "keep": "Garder telle quelle",
+      "repost": "Republier",
+      "repostHint": "Une copie en brouillon, à vérifier avant de la publier.",
+      "working": "Un instant…",
+      "trackDelivery": "Suivre la livraison",
+      "done": {
+        "unpublished": "La demande est redevenue un brouillon : modifiez-la puis publiez-la.",
+        "cancelled": "Demande annulée.",
+        "reposted": "Copie créée. Vérifiez les dates avant de publier."
+      },
+      "errors": {
+        "LISTING_NOT_OPEN": "Cette demande n'est plus en ligne : un transporteur a peut-être déjà été choisi. La page a été actualisée.",
+        "LISTING_NOT_CANCELLABLE": "Cette demande ne peut plus être annulée d'ici. La page a été actualisée.",
+        "CANCEL_VIA_SHIPMENT": "Un transporteur a été choisi : l'annulation se fait depuis la livraison.",
+        "LISTING_NOT_ENDED": "Cette demande est encore en cours : elle ne peut pas être republiée.",
+        "generic": "L'action n'a pas abouti. Réessayez."
+      }
     }
   },
   "driver": {
@@ -1666,7 +1740,8 @@
       "needsPackaging": "Emballage requis",
       "timeline": "Historique",
       "cancellationReason": "Motif d'annulation",
-      "accessConditions": "Conditions d'accès :"
+      "accessConditions": "Conditions d'accès :",
+      "backToList": "Mes livraisons"
     },
     "actions": {
       "actions": "Actions",
@@ -1699,7 +1774,9 @@
         "deliveryPhotoRequired": "Prenez une photo du colis livré avant de confirmer la livraison.",
         "withdrawAfterPickup": "La marchandise est déjà chargée — contactez le support",
         "driverCannotWithdraw": "Seul le transporteur titulaire de la course peut se désister",
-        "requiresSupport": "La marchandise est déjà en route — contactez le support"
+        "requiresSupport": "La marchandise est déjà en route — contactez le support",
+        "contactSupport": "Contacter le support",
+        "refresh": "Actualiser"
       },
       "unassignedTitle": "Mission remportée, non démarrée",
       "unassignedDesc": "Cette course est la vôtre. Prenez-la en charge pour débloquer le retrait et la livraison.",
@@ -3955,7 +4032,8 @@
     "pane": {
       "list": "Liste",
       "map": "Carte"
-    }
+    },
+    "retry": "Réessayer"
   },
   "impersonation": {
     "viewingAs": "Connecté en tant que",
@@ -4524,6 +4602,15 @@
       "FORBIDDEN_NOT_OPERATOR": "Seul un opérateur peut attribuer cette mission.",
       "CARRIER_ABSENT": "Ce transporteur s'est déclaré absent et ne peut pas être retenu pour le moment.",
       "PAYMENT_INTENT_MISMATCH": "Le prix de cette offre vient de changer. Fermez cette fenêtre et rouvrez l'offre pour payer le nouveau montant."
+    },
+    "notDebited": "Votre carte n'a pas été débitée.",
+    "next": {
+      "retry": "Réessayer",
+      "chooseSlot": "Choisir un autre créneau",
+      "otherOffers": "Voir les autres offres",
+      "seeRequest": "Voir où en est la demande",
+      "carriers": "Transporteurs sur ce trajet",
+      "editRequest": "Modifier la demande"
     }
   },
   "listingUrgency": {

@@ -222,7 +222,7 @@ without an `sk_live_` key, so an accept there takes real money.
 Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before shipping.
 
 **Gates — all green.** `npx tsc --noEmit` 0 errors · `pnpm lint` 0 errors ·
-3,133 unit tests pass (2.73.0) · `pnpm build` succeeds.
+3,167 unit tests pass (2.75.0) · `pnpm build` succeeds.
 
 **Done**
 - Schema remodelled to the transport model; one clean initial migration
@@ -717,6 +717,14 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
   (`loadAwardable`, `acceptOffer`) and at posting (`createListing`,
   `saveDraft`); `COORDINATES_REQUIRED` is left for an address that cannot be
   found at all. Test suites that build the offers/listings services mock it.
+- **No dead ends** (2.75.0, `no_dead_ends_spec.md`): every refusal in the
+  accept dialog names its next step (`NEXT_STEPS`); a live direct request can
+  be changed (`POST /api/listings/:id/unpublish` → draft → the form, so the
+  publish path stays one) or cancelled (`cancelListing`, now a
+  compare-and-set); an ended one is posted again as a copy
+  (`listingsDal.copyAsDraft`); `RequestActions` carries all three. Failed reads
+  go through `LoadErrorState`, empty states lead somewhere
+  (`common.nextSteps`), and `src/__tests__/no-dead-ends.test.ts` holds it.
 - **The owner's decisions of 30 October** (2.71.0): a paid quote's
   auto-publish can be **parked** (`AutoPublishControl`, `escalate_after =
   null`); **payouts stay manual** — `release-payouts` has no route and no
@@ -891,3 +899,11 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
    debugging one of them, look at Admin → Paramètres → « Tâches planifiées »;
    a new cron route must call `cronHealthService.record` after it authorises,
    and add itself to `CRON_JOBS`.
+24. **No screen ends on a sentence with nothing to press.** A failed read goes
+   through `LoadErrorState` (retry, and a way back) — never red text alone,
+   never « nothing here », never a blank form for a record that exists. An
+   empty state names where the next thing comes from. A refusal says what to
+   do instead. `src/__tests__/no-dead-ends.test.ts` reads the source and fails
+   on a failure branch with no retry or a childless `<CenteredEmptyState />`;
+   an exception goes in its allowlist **with the reason** (an empty staff
+   queue is the goal), and a stale entry fails too.

@@ -1,7 +1,8 @@
 "use client";
 
+import { LoadErrorState } from "@/components/ui/load-error-state";
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, Inbox, MapPin } from "lucide-react";
+import { ArrowRight, Inbox, MapPin } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +19,7 @@ interface RecentDirectRequestsPanelProps {
   total: number;
   isLoading: boolean;
   isError: boolean;
+  onRetry: () => void;
 }
 
 /**
@@ -36,6 +38,7 @@ export function RecentDirectRequestsPanel({
   total,
   isLoading,
   isError,
+  onRetry,
 }: RecentDirectRequestsPanelProps) {
   const t = useTranslations("admin.expedion.directRequests");
 
@@ -61,7 +64,7 @@ export function RecentDirectRequestsPanel({
             {t("loading")}
           </p>
         ) : isError ? (
-          <CenteredEmptyState icon={AlertTriangle} title={t("error")} />
+          <LoadErrorState variant="inline" title={t("error")} onRetry={onRetry} />
         ) : rows.length === 0 ? (
           <CenteredEmptyState
             icon={Inbox}

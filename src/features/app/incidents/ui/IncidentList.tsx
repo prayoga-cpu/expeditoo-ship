@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadErrorState } from "@/components/ui/load-error-state";
 import { formatDistanceToNow } from "date-fns";
 import { AlertTriangle } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -34,12 +35,14 @@ interface IncidentListProps {
   incidents: Incident[];
   isLoading?: boolean;
   isError?: boolean;
+  onRetry: () => void;
 }
 
 export function IncidentList({
   incidents,
   isLoading = false,
   isError = false,
+  onRetry,
 }: IncidentListProps) {
   const t = useTranslations("incidents");
 
@@ -56,9 +59,7 @@ export function IncidentList({
   // clear" to the one person who needed to see it (CLAUDE.md §Gotchas 9).
   if (isError) {
     return (
-      <p className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-        {t("list.error")}
-      </p>
+      <LoadErrorState variant="inline" title={t("list.error")} onRetry={onRetry} />
     );
   }
 

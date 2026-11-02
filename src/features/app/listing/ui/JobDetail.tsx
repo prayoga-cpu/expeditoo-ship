@@ -45,6 +45,7 @@ import { AvailabilityLine } from "./AvailabilityLine";
 import { OfferCard } from "./OfferCard";
 import { BookingSummary } from "./BookingSummary";
 import { DraftActions } from "./DraftActions";
+import { RequestActions } from "./RequestActions";
 import { STATUS_TONE, displayStatus } from "../statusTone";
 import { UrgencyBadge } from "./UrgencyBadge";
 import type { Job } from "../types";
@@ -215,11 +216,21 @@ function JobDetailsTab({
   // nobody has bid on it: what it needs is a way to finish it, not an empty
   // offers section saying carriers have been told (draft_requests_spec.md §1).
   const unpublished = job.status === "draft" || job.status === "scheduled";
+  // Live or done, the owner can still change, call off or repost it
+  // (no_dead_ends_spec.md §2–3); a draft has its own actions in the banner.
+  const isOwner = viewerId !== null && job.shipperId === viewerId;
+  // Held here so the accept dialog can open the same « Modifier » confirmation
+  // when it is refused for an address it cannot place (§1).
+  const [confirming, setConfirming] = useState<"edit" | "cancel" | null>(null);
+  const canEdit = isOwner && job.origin === "direct" && job.status === "open";
 
   return (
     <div className="space-y-6">
       <JobHeader job={job} />
       {unpublished && <DraftBanner job={job} />}
+      {isOwner && !unpublished && (
+        <RequestActions job={job} confirming={confirming} onConfirmingChange={setConfirming} />
+      )}
       <JobRoute job={job} />
       <JobLoad job={job} />
       {!unpublished && (
@@ -229,6 +240,7 @@ function JobDetailsTab({
             listingId={listingId}
             canAccept={canAccept}
             negotiation={negotiation}
+            onEditRequest={canEdit ? () => setConfirming("edit") : undefined}
           />
           <JobBidSection job={job} viewerId={viewerId} />
         </>
@@ -411,13 +423,16 @@ function JobOffers({
   listingId,
   canAccept,
   negotiation,
+  onEditRequest,
 }: {
   job: Job;
   listingId: string;
   canAccept: boolean;
   negotiation: Negotiation;
+  onEditRequest?: () => void;
 }) {
   const t = useTranslations("myJobs.detail");
+  const router = useRouter();
   const [sort, setSort] = useState("price_asc");
   // The offer being accepted, kept after the dialog closes so it can animate
   // out with its content rather than blanking first.
@@ -470,6 +485,13 @@ function JobOffers({
           onConfirm={(paymentIntentId) =>
             acceptOffer.mutateAsync({ ...accepting, paymentIntentId })
           }
+          nextSteps={{
+            editRequest: onEditRequest,
+            // The tab strip exists only for someone who may act (JobTabs).
+            carriers: canAccept
+              ? () => router.replace(`/listing/${listingId}?tab=carriers`, { scroll: false })
+              : undefined,
+          }}
           booking={(() => {
             const offer =
               offers?.scope === "full"
@@ -736,12 +758,22 @@ function OfferSection({
   }
 
   if (offers.offers.length === 0) {
+    // Waiting is not the only move: the carriers who already drive this way
+    // can be asked directly (no_dead_ends_spec.md §5).
     return (
       <CenteredEmptyState
         icon={Inbox}
         title={t("noOffers")}
         description={t("noOffersDesc")}
-      />
+      >
+        {canAccept && (
+          <Button asChild variant="outline">
+            <Link href={`/listing/${job.id}?tab=carriers`} scroll={false}>
+              {t("noOffersCarriers")}
+            </Link>
+          </Button>
+        )}
+      </CenteredEmptyState>
     );
   }
 

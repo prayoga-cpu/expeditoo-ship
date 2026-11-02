@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
 import { Truck } from "lucide-react";
 
 import { PageLoader } from "@/components/ui/page-loader";
@@ -16,6 +18,7 @@ import { TripsLoadError } from "./TripsLoadError";
  */
 export function ActiveTripsPanel() {
   const t = useTranslations("carrier.trips.active");
+  const next = useTranslations("common.nextSteps");
   const { trips, isLoading, isError, refetch } = useActiveTrips();
 
   if (isLoading) return <PageLoader className="xl:min-h-[50vh]" />;
@@ -31,7 +34,11 @@ export function ActiveTripsPanel() {
           icon={Truck}
           title={t("empty.title")}
           description={t("empty.description")}
-        />
+        >
+          <Button asChild>
+            <Link href="/expedion">{next("findJobs")}</Link>
+          </Button>
+        </CenteredEmptyState>
       ) : (
         <div className="grid gap-3">
           {trips.map((trip) => (

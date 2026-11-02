@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadErrorState } from "@/components/ui/load-error-state";
 import { DollarSign } from "lucide-react";
 import { PaymentsTable } from "@/features/app/admin/ui/PaymentsTable";
 import { useAdminPayments } from "@/features/app/admin/hooks/useAdminPayments";
@@ -7,7 +8,7 @@ import { PageLoader } from "@/components/ui/page-loader";
 import { useTranslations } from "next-intl";
 
 export default function AdminPaymentsPage() {
-    const { data: payments, isLoading, isError, processRefund, isRefunding } = useAdminPayments();
+    const { data: payments, isLoading, isError, refetch, processRefund, isRefunding } = useAdminPayments();
     const t = useTranslations("admin.payments");
     const tCommon = useTranslations("common");
 
@@ -16,11 +17,7 @@ export default function AdminPaymentsPage() {
     }
 
     if (isError) {
-        return (
-            <div className="text-center py-12">
-                <p className="text-destructive">{tCommon("errors.loadFailed")}</p>
-            </div>
-        );
+        return <LoadErrorState title={tCommon("errors.loadFailed")} onRetry={() => void refetch()} />;
     }
 
     return (

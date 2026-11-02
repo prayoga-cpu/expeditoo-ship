@@ -12,7 +12,7 @@ import { useGeolocation, type GeolocationFailure } from "./useGeolocation";
 
 /** Every party to the run reads the same list, so one hook serves both sides. */
 export function useShipmentPhotos(shipmentId: string) {
-  const { data, isLoading, isError, error } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["shipment-photos", shipmentId],
     queryFn: () => shipmentPhotosApi.list(shipmentId),
     enabled: !!shipmentId,
@@ -24,6 +24,7 @@ export function useShipmentPhotos(shipmentId: string) {
     isLoading,
     isError,
     error: error as Error | null,
+    refetch,
   };
 }
 

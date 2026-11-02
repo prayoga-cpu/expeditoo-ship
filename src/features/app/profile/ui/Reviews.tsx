@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadErrorState } from "@/components/ui/load-error-state";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +18,7 @@ import { cn } from "@/lib/utils";
 
 export function Reviews({ userId }: { userId?: string }) {
   const t = useTranslations("profile.reviews");
-  const { reviews, stats, activeTab, setActiveTab, allReviews, isLoading } =
+  const { reviews, stats, activeTab, setActiveTab, allReviews, isLoading, isError, retry } =
     useReviews(userId);
   
   const searchParams = useSearchParams();
@@ -32,6 +33,8 @@ export function Reviews({ userId }: { userId?: string }) {
       />
     );
   }
+
+  if (isError) return <LoadErrorState variant="page" onRetry={retry} />;
 
   return (
     <div className="w-full mx-auto px-4 md:px-6 md:py-6 pb-24 md:pb-6">

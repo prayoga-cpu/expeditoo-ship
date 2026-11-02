@@ -35,7 +35,7 @@ export function useNotifications() {
   const queryClient = useQueryClient();
 
   // Fetch notifications (real-time updates via Ably)
-  const { data: notificationsData, isLoading } = useQuery({
+  const { data: notificationsData, isLoading, isError, refetch } = useQuery({
     queryKey: ["notifications", activeTab],
     queryFn: () =>
       getNotifications(
@@ -182,6 +182,8 @@ export function useNotifications() {
     markAllAsRead,
     deleteNotification,
     isLoading,
+    isError,
+    refetch,
   };
 }
 

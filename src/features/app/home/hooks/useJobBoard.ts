@@ -145,6 +145,7 @@ export function useJobBoard(options: { origin?: "direct" | "expedion" } = {}) {
     isLoading: query.isLoading,
     isFetching: query.isFetching,
     isError: query.isError,
+    refetch: query.refetch,
     error: query.error,
     filters,
     updateFilters,

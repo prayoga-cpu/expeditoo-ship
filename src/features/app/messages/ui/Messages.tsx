@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadErrorState } from "@/components/ui/load-error-state";
 import Link from "next/link";
 import { Search, MessageSquare, MapPin, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -23,6 +24,9 @@ interface MessagesProps {
   onSearchChange: (query: string) => void;
   onDeleteConversation?: (id: string) => void;
   isLoading?: boolean;
+  /** The inbox could not be read: said so, with a retry, never « no messages ». */
+  isError?: boolean;
+  onRetry?: () => void;
   basePath?: string;
   /** Jobs offered as one-tap filters under the search box (§D5). */
   listingChips?: ListingChip[];
@@ -36,12 +40,15 @@ export function Messages({
   onSearchChange,
   onDeleteConversation,
   isLoading = false,
+  isError = false,
+  onRetry,
   basePath = "/messages",
   listingChips = [],
   listingFilter = null,
   onListingFilterChange,
 }: MessagesProps) {
   const t = useTranslations("messages");
+  const next = useTranslations("common.nextSteps");
   const picked = listingChips.find((chip) => chip.id === listingFilter) ?? null;
 
   if (isLoading) {
@@ -52,6 +59,13 @@ export function Messages({
       />
     );
   }
+
+  if (isError && onRetry) {
+    return <LoadErrorState variant="page" onRetry={onRetry} />;
+  }
+
+  // Where a first conversation starts, from either shell (§5).
+  const isDriverShell = basePath.includes("/driver");
 
   return (
     <div className="h-full flex flex-col   mx-auto w-full">
@@ -147,7 +161,13 @@ export function Messages({
             icon={MessageSquare}
             title={t("empty.title")}
             description={t("empty.description")}
-          />
+          >
+            <Button asChild variant="outline">
+              <Link href={isDriverShell ? "/expedion" : "/listings/me"}>
+                {isDriverShell ? next("findJobs") : next("myRequests")}
+              </Link>
+            </Button>
+          </CenteredEmptyState>
         )}
       </div>
     </div>

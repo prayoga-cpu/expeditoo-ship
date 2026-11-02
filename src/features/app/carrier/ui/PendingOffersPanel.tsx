@@ -36,6 +36,7 @@ const NOT_A_CARRIER = "FORBIDDEN_NOT_CARRIER";
  */
 export function PendingOffersPanel() {
   const t = useTranslations("carrier.trips.pending");
+  const next = useTranslations("common.nextSteps");
   const { data, isLoading, isError, error, refetch } = usePendingOffers();
   const withdraw = useWithdrawPendingOffer();
   const [confirming, setConfirming] = useState<PendingOffer | null>(null);
@@ -54,7 +55,11 @@ export function PendingOffersPanel() {
           icon={Gavel}
           title={t("noCarrier.title")}
           description={t("noCarrier.description")}
-        />
+        >
+          <Button asChild>
+            <Link href="/carrier/application">{next("becomeDriver")}</Link>
+          </Button>
+        </CenteredEmptyState>
       ) : isError ? (
         <TripsLoadError onRetry={() => void refetch()} />
       ) : offers.length === 0 ? (

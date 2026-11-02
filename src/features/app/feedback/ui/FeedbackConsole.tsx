@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadErrorState } from "@/components/ui/load-error-state";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -115,7 +116,7 @@ export function FeedbackConsole() {
   const [sort, setSort] = useState<FeedbackSort>("triage");
   const [offset, setOffset] = useState(0);
 
-  const { items, meta, isLoading, isError } = useFeedbackQueue({
+  const { items, meta, isLoading, isError, refetch } = useFeedbackQueue({
     status,
     type,
     priority,
@@ -261,10 +262,7 @@ export function FeedbackConsole() {
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       ) : isError ? (
-        <CenteredEmptyState
-          icon={MessageSquarePlus}
-          title={t("console.error")}
-        />
+        <LoadErrorState title={t("console.error")} onRetry={() => void refetch()} />
       ) : items.length === 0 ? (
         <CenteredEmptyState
           icon={MessageSquarePlus}

@@ -6,6 +6,7 @@ import {
   useQueryClient,
   type QueryClient,
 } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { ApiError } from "@/lib/fetcher";
@@ -23,7 +24,7 @@ const LIST_LIMIT = 50;
  * caller, so no role parameter is needed (or accepted).
  */
 export function useDriverShipments() {
-  const { data, isLoading, isError, error } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["driver-shipments"],
     queryFn: () => driverShipmentsApi.list({ limit: LIST_LIMIT }),
   });
@@ -34,6 +35,7 @@ export function useDriverShipments() {
     isLoading,
     isError,
     error: error as Error | null,
+    refetch,
   };
 }
 
@@ -43,13 +45,14 @@ export function useDriverShipmentDetail(id: string) {
     isLoading,
     isError,
     error,
+    refetch,
   } = useQuery({
     queryKey: ["driver-shipment", id],
     queryFn: () => driverShipmentsApi.get(id),
     enabled: !!id,
   });
 
-  return { shipment, isLoading, isError, error: error as Error | null };
+  return { shipment, isLoading, isError, error: error as Error | null, refetch };
 }
 
 /** Maps the service's error codes to something a driver can act on. */
@@ -83,6 +86,31 @@ function useActionErrorMessage() {
   };
 }
 
+/**
+ * The refusal, with the one thing the driver can do about it as the toast's
+ * button (no_dead_ends_spec.md §6): support when the goods are already
+ * moving, a fresh read when the run moved under them.
+ */
+function useActionError(shipmentId: string) {
+  const messageFor = useActionErrorMessage();
+  const queryClient = useQueryClient();
+  const router = useRouter();
+  const t = useTranslations("driver.actions.errors");
+
+  return (error: unknown) => {
+    const code = error instanceof ApiError ? error.code : "";
+    const needsSupport = ["WITHDRAW_AFTER_PICKUP", "CANCEL_REQUIRES_SUPPORT"].includes(code);
+    const stale = code === "INVALID_STATUS_TRANSITION";
+    toast.error(messageFor(error), {
+      action: needsSupport
+        ? { label: t("contactSupport"), onClick: () => router.push("/driver/help") }
+        : stale
+          ? { label: t("refresh"), onClick: () => invalidateShipment(queryClient, shipmentId) }
+          : undefined,
+    });
+  };
+}
+
 function invalidateShipment(queryClient: QueryClient, shipmentId: string) {
   queryClient.invalidateQueries({ queryKey: ["driver-shipment", shipmentId] });
   queryClient.invalidateQueries({ queryKey: ["driver-shipments"] });
@@ -97,7 +125,7 @@ function invalidateShipment(queryClient: QueryClient, shipmentId: string) {
 export function useAssignSelfToShipment(shipmentId: string) {
   const queryClient = useQueryClient();
   const t = useTranslations("driver.actions");
-  const messageFor = useActionErrorMessage();
+  const report = useActionError(shipmentId);
   const { user } = useAuth();
   const viewerId = user?.id ?? null;
 
@@ -112,7 +140,7 @@ export function useAssignSelfToShipment(shipmentId: string) {
       toast.success(t("jobStarted"));
       invalidateShipment(queryClient, shipmentId);
     },
-    onError: (error) => toast.error(messageFor(error)),
+    onError: report,
   });
 
   return { ...mutation, canAssign: viewerId !== null };
@@ -122,7 +150,7 @@ export function useAssignSelfToShipment(shipmentId: string) {
 export function useUpdateShipmentStatus(shipmentId: string) {
   const queryClient = useQueryClient();
   const t = useTranslations("driver.actions");
-  const messageFor = useActionErrorMessage();
+  const report = useActionError(shipmentId);
 
   return useMutation({
     mutationFn: (input: { status: DriverStatusMove; note?: string }) =>
@@ -131,7 +159,7 @@ export function useUpdateShipmentStatus(shipmentId: string) {
       toast.success(t("statusUpdated"));
       invalidateShipment(queryClient, shipmentId);
     },
-    onError: (error) => toast.error(messageFor(error)),
+    onError: report,
   });
 }
 
@@ -147,7 +175,7 @@ export function useUpdateShipmentStatus(shipmentId: string) {
 export function useWithdrawFromJob(shipmentId: string) {
   const queryClient = useQueryClient();
   const t = useTranslations("driver.actions");
-  const messageFor = useActionErrorMessage();
+  const report = useActionError(shipmentId);
 
   return useMutation({
     mutationFn: (input: { category: string; reason?: string }) =>
@@ -157,6 +185,6 @@ export function useWithdrawFromJob(shipmentId: string) {
       invalidateShipment(queryClient, shipmentId);
       queryClient.invalidateQueries({ queryKey: ["listings"] });
     },
-    onError: (error) => toast.error(messageFor(error)),
+    onError: report,
   });
 }

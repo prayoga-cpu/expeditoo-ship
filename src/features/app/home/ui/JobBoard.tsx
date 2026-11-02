@@ -63,6 +63,7 @@ export function JobBoard({ origin }: { origin?: "direct" | "expedion" } = {}) {
     total,
     isLoading,
     isError,
+    refetch,
     filters,
     updateFilters,
     resetFilters,
@@ -289,9 +290,14 @@ export function JobBoard({ origin }: { origin?: "direct" | "expedion" } = {}) {
           title={t("error.title")}
           description={t("error.description")}
         >
-          <Button variant="outline" onClick={resetFilters}>
-            {t("clearFilters")}
-          </Button>
+          {/* A failed read is usually not the filters' fault: try again
+              first (no_dead_ends_spec.md §4). */}
+          <div className="flex flex-wrap justify-center gap-2">
+            <Button onClick={() => void refetch()}>{t("retry")}</Button>
+            <Button variant="outline" onClick={resetFilters}>
+              {t("clearFilters")}
+            </Button>
+          </div>
         </CenteredEmptyState>
       ) : isLoading ? (
         <div className="space-y-3">

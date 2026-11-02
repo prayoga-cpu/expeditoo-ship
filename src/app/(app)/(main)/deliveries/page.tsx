@@ -8,7 +8,7 @@ import { useDeliveries } from "@/features/app/deliveries/hooks";
  * presentation in the feature UI.
  */
 export default function DeliveriesPage() {
-  const { activeTab, setActiveTab, deliveries, isLoading, error } =
+  const { activeTab, setActiveTab, deliveries, isLoading, error, refetch } =
     useDeliveries();
 
   return (
@@ -17,6 +17,7 @@ export default function DeliveriesPage() {
       deliveries={deliveries}
       isLoading={isLoading}
       error={error}
+      onRetry={() => void refetch()}
       onTabChange={setActiveTab}
     />
   );

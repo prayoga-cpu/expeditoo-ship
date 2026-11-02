@@ -14,6 +14,8 @@ export default function DriverMessagesPage() {
     setSearchQuery,
     deleteConversation,
     isLoading,
+    error,
+    refetch,
     listingChips,
     listingFilter,
     setListingFilter,
@@ -24,6 +26,8 @@ export default function DriverMessagesPage() {
       messages={messages}
       searchQuery={searchQuery}
       onSearchChange={setSearchQuery}
+      isError={Boolean(error)}
+      onRetry={() => void refetch()}
       onDeleteConversation={deleteConversation}
       listingChips={listingChips}
       listingFilter={listingFilter}

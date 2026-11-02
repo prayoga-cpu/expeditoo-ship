@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadErrorState } from "@/components/ui/load-error-state";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import {
@@ -30,10 +31,14 @@ import { DocumentChecklist } from "./DocumentChecklist";
 
 /** The whole onboarding funnel on one screen, switched by application status. */
 export function CarrierApplicationScreen() {
-  const { data: application, isLoading } = useCarrierApplication();
+  const { data: application, isLoading, isError, refetch } = useCarrierApplication();
   const t = useTranslations("carrier.application");
 
   if (isLoading) return <PageLoader />;
+
+  // Read as « no application yet », a failure offered the blank form to a
+  // driver whose file is already under review (no_dead_ends_spec.md §4).
+  if (isError) return <LoadErrorState variant="page" onRetry={() => void refetch()} />;
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6 p-4 sm:p-6">

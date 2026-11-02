@@ -112,6 +112,9 @@ function draftExpiresAt(pickupFrom: Date, now: Date): Date {
   return expiresAtFor(pickupFrom, now) ?? pickupFrom;
 }
 
+/** A request that has run its course, which « Republier » copies (no_dead_ends_spec.md §3). */
+const REPOSTABLE: Listing["status"][] = ["expired", "cancelled", "completed"];
+
 /** Going live now — not saved as a draft, not scheduled for later. */
 const isLiveNow = (data: CreateListingInput) =>
   data.publish && !data.scheduledPublishAt;
@@ -428,6 +431,54 @@ export const listingsService = {
   },
 
   /**
+   * A live request back to a draft, so its owner can change it
+   * (no_dead_ends_spec.md §2). Publishing goes through the form's Budget step
+   * and nowhere else — only the browser can re-derive a flexible window on
+   * the requester's clock (CLAUDE.md gotcha 19) — so an edit goes through it
+   * too, and gets the publication checks, the re-armed `expires_at` and the
+   * pin lookup a new request gets. The status write is a compare-and-set on
+   * `open`, so it loses cleanly to an award landing at the same moment. Every
+   * pending offer priced the request as it was: each is expired, and its
+   * carrier told.
+   */
+  async unpublish(shipperId: string, listingId: string) {
+    const listing = assertOwner(await listingsDal.getById(listingId), shipperId);
+    if (listing.origin !== "direct") throw err("LISTING_NOT_EDITABLE", 409);
+
+    const updated = await listingsDal.updateIfStatus(listingId, "open", {
+      status: "draft",
+      offersCount: 0,
+      expiresAt: draftExpiresAt(listing.pickupFrom, new Date()),
+      // « Réouverte » says a machine moved the dates after a withdrawal; once
+      // the owner has set them again in the form, it no longer does.
+      reopenedAt: null,
+    });
+    if (!updated) throw err("LISTING_NOT_OPEN", 409);
+
+    const expired = await offersService.expirePendingOffers(listingId);
+    await notifyOffersWithdrawn(expired, listing, "edited");
+    return { listing: toListingView(updated, "full"), withdrawnOffers: expired.length };
+  },
+
+  /**
+   * A request that has ended — expired, cancelled or delivered — copied into
+   * a new draft, to post it again without typing it again
+   * (no_dead_ends_spec.md §3). The ended request is left exactly as it was:
+   * its offers, its run and its money belong to it.
+   */
+  async repostAsDraft(shipperId: string, listingId: string) {
+    const listing = assertOwner(await listingsDal.getById(listingId), shipperId);
+    if (listing.origin !== "direct" || !REPOSTABLE.includes(listing.status)) {
+      throw err("LISTING_NOT_ENDED", 409);
+    }
+
+    const draft = { id: nanoid(), expiresAt: draftExpiresAt(listing.pickupFrom, new Date()) };
+    const copy = await db.transaction((tx) => listingsDal.copyAsDraft(listingId, draft, tx));
+    if (!copy) throw err("LISTING_NOT_FOUND", 404);
+    return { id: copy.id };
+  },
+
+  /**
    * Edits split by whether a carrier priced against the field. Changing what
    * was priced invalidates every live offer, so carriers are told to re-bid
    * rather than left holding a quote for a different job.
@@ -492,13 +543,19 @@ export const listingsService = {
     }
 
     // Nothing was ever charged: `chargeForShipment` runs at award, and an
-    // awarded job cannot reach here.
-    await offersService.expirePendingOffers(listingId);
-    const cancelled = await listingsDal.update(listingId, {
+    // awarded job cannot reach here. Conditional on the status just read, so
+    // an award landing in between wins and this answers instead of cancelling
+    // a paid job behind its back — the requester can reach this from the job
+    // page since 2.75.0 (no_dead_ends_spec.md §2.2).
+    const cancelled = await listingsDal.updateIfStatus(listingId, listing.status, {
       status: "cancelled",
       offersCount: 0,
     });
-    return { deleted: false, listing: cancelled };
+    if (!cancelled) throw err("LISTING_NOT_CANCELLABLE", 409);
+
+    const expired = await offersService.expirePendingOffers(listingId);
+    await notifyOffersWithdrawn(expired, listing, "cancelled");
+    return { deleted: false, listing: toListingView(cancelled, "full") };
   },
 
   /**
@@ -832,6 +889,46 @@ async function notifyOffersInvalidated(
           data: { listingId: listing.id },
         })
         .catch((e) => console.error("offer_invalidated notification failed", e))
+    )
+  );
+}
+
+const WITHDRAWN_NOTICE = {
+  edited: {
+    title: "Demande en cours de modification",
+    message: (title: string) =>
+      `« ${title} » a été retirée par le demandeur pour être modifiée. Votre offre a été retirée : vous pourrez en refaire une quand la demande sera de nouveau en ligne.`,
+  },
+  cancelled: {
+    title: "Demande annulée",
+    message: (title: string) =>
+      `« ${title} » a été annulée par le demandeur. Votre offre a été retirée.`,
+  },
+};
+
+/**
+ * A carrier whose pending offer went because the requester took the request
+ * back to change it, or called it off (no_dead_ends_spec.md §2.3). Without it
+ * the offer only reads « expirée », and the carrier never learns why.
+ */
+async function notifyOffersWithdrawn(
+  expired: { carrierId: string }[],
+  listing: Listing,
+  why: keyof typeof WITHDRAWN_NOTICE
+) {
+  const notice = WITHDRAWN_NOTICE[why];
+  await Promise.all(
+    expired.map((offer) =>
+      notificationsService
+        .createNotification({
+          userId: offer.carrierId,
+          type: "offer_invalidated",
+          title: notice.title,
+          message: notice.message(listing.title),
+          linkUrl: why === "edited" ? "/carrier/offers" : "/expedion",
+          data: { listingId: listing.id },
+        })
+        .catch((e) => console.error("offer_withdrawn notification failed", e))
     )
   );
 }

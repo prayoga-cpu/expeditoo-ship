@@ -297,6 +297,115 @@ describe("listingsService — finishing a saved request", () => {
   });
 });
 
+// ========================================
+// No dead ends — no_dead_ends_spec.md §2–3
+// ========================================
+
+describe("listingsService.unpublish — a live request back to a draft", () => {
+  const direct = (over: Record<string, unknown> = {}) =>
+    job({ origin: "direct", offersCount: 2, ...over });
+
+  beforeEach(() => {
+    vi.mocked(listingsDal.getById).mockResolvedValue(direct() as never);
+  });
+
+  it("takes an open request off the board, conditional on it still being open", async () => {
+    const result = await listingsService.unpublish("shipper-1", "job-1");
+
+    expect(listingsDal.updateIfStatus).toHaveBeenCalledWith(
+      "job-1",
+      "open",
+      expect.objectContaining({
+        status: "draft",
+        offersCount: 0,
+        expiresAt: expect.any(Date),
+        reopenedAt: null,
+      })
+    );
+    expect(result.listing).toMatchObject({ id: "job-1", status: "draft" });
+  });
+
+  it("withdraws the pending offers and tells their carriers why", async () => {
+    vi.mocked(offersService.expirePendingOffers).mockResolvedValueOnce([
+      { carrierId: "carrier-1" },
+    ] as never);
+
+    const result = await listingsService.unpublish("shipper-1", "job-1");
+
+    expect(result.withdrawnOffers).toBe(1);
+    const [[notice]] = vi.mocked(notificationsService.createNotification).mock.calls;
+    expect(notice).toMatchObject({
+      userId: "carrier-1",
+      title: "Demande en cours de modification",
+      // The listing is a draft now, which a carrier cannot open.
+      linkUrl: "/carrier/offers",
+    });
+  });
+
+  it("loses to an award landing at the same moment, and withdraws nothing", async () => {
+    vi.mocked(listingsDal.updateIfStatus).mockResolvedValueOnce(undefined);
+
+    expect(await codeFrom(() => listingsService.unpublish("shipper-1", "job-1"))).toBe(
+      "LISTING_NOT_OPEN"
+    );
+    expect(offersService.expirePendingOffers).not.toHaveBeenCalled();
+  });
+
+  it("is the owner's only", async () => {
+    expect(await codeFrom(() => listingsService.unpublish("intruder", "job-1"))).toBe(
+      "FORBIDDEN_NOT_OWNER"
+    );
+    expect(listingsDal.updateIfStatus).not.toHaveBeenCalled();
+  });
+
+  it("never takes back an escalated job, which no requester owns", async () => {
+    vi.mocked(listingsDal.getById).mockResolvedValue(direct({ origin: "expedion" }) as never);
+
+    expect(await codeFrom(() => listingsService.unpublish("shipper-1", "job-1"))).toBe(
+      "LISTING_NOT_EDITABLE"
+    );
+  });
+});
+
+describe("listingsService.repostAsDraft — an ended request posted again", () => {
+  beforeEach(() => {
+    Object.assign(listingsDal, {
+      copyAsDraft: vi.fn(async (_source, draft) => ({ ...job(), ...draft, status: "draft" })),
+    });
+  });
+
+  it.each(["expired", "cancelled", "completed"])("copies a %s request into a new draft", async (status) => {
+    vi.mocked(listingsDal.getById).mockResolvedValue(job({ status, origin: "direct" }) as never);
+
+    const result = await listingsService.repostAsDraft("shipper-1", "job-1");
+
+    const [[source, draft]] = vi.mocked(listingsDal.copyAsDraft).mock.calls;
+    expect(source).toBe("job-1");
+    expect(draft.id).not.toBe("job-1");
+    expect(result).toEqual({ id: draft.id });
+    // The ended request is left as it was: its offers, run and money are its own.
+    expect(listingsDal.update).not.toHaveBeenCalled();
+    expect(listingsDal.updateIfStatus).not.toHaveBeenCalled();
+  });
+
+  it.each(["draft", "scheduled", "open", "awarded"])("refuses a request that is %s", async (status) => {
+    vi.mocked(listingsDal.getById).mockResolvedValue(job({ status, origin: "direct" }) as never);
+
+    expect(await codeFrom(() => listingsService.repostAsDraft("shipper-1", "job-1"))).toBe(
+      "LISTING_NOT_ENDED"
+    );
+    expect(listingsDal.copyAsDraft).not.toHaveBeenCalled();
+  });
+
+  it("is the owner's only", async () => {
+    vi.mocked(listingsDal.getById).mockResolvedValue(job({ status: "expired", origin: "direct" }) as never);
+
+    expect(await codeFrom(() => listingsService.repostAsDraft("intruder", "job-1"))).toBe(
+      "FORBIDDEN_NOT_OWNER"
+    );
+  });
+});
+
 describe("createListing — the publication date", () => {
   it("dates a request that goes live now, and nothing else", async () => {
     await listingsService.createListing("user-1", createInput());
@@ -416,10 +525,47 @@ describe("listingsService.cancelListing", () => {
 
     expect(result.deleted).toBe(false);
     expect(offersService.expirePendingOffers).toHaveBeenCalledWith("job-1");
-    expect(listingsDal.update).toHaveBeenCalledWith("job-1", {
+    expect(listingsDal.updateIfStatus).toHaveBeenCalledWith("job-1", "open", {
       status: "cancelled",
       offersCount: 0,
     });
+  });
+
+  // The requester reaches this from the job page since 2.75.0. An award
+  // landing between the read and the write must win, not be cancelled with
+  // the client's money taken (no_dead_ends_spec.md §2.2).
+  it("loses to an award that lands between the read and the write", async () => {
+    vi.mocked(listingsDal.updateIfStatus).mockResolvedValueOnce(undefined);
+
+    expect(
+      await codeFrom(() => listingsService.cancelListing("shipper-1", "job-1"))
+    ).toBe("LISTING_NOT_CANCELLABLE");
+    expect(offersService.expirePendingOffers).not.toHaveBeenCalled();
+  });
+
+  it("tells each carrier whose offer went that the request was cancelled", async () => {
+    vi.mocked(offersService.expirePendingOffers).mockResolvedValueOnce([
+      { carrierId: "carrier-1" },
+      { carrierId: "carrier-2" },
+    ] as never);
+
+    await listingsService.cancelListing("shipper-1", "job-1");
+
+    const notices = vi.mocked(notificationsService.createNotification).mock.calls;
+    expect(notices.map(([n]) => n.userId)).toEqual(["carrier-1", "carrier-2"]);
+    expect(notices[0][0].title).toBe("Demande annulée");
+  });
+
+  it("never hands the raw row back", async () => {
+    vi.mocked(listingsDal.updateIfStatus).mockResolvedValueOnce({
+      ...job({ status: "cancelled" }),
+      internalNote: "not for the wire",
+    } as never);
+
+    const result = await listingsService.cancelListing("shipper-1", "job-1");
+    // `toListingView` keeps the classified fields only (gotcha 16).
+    expect(result.listing).toMatchObject({ id: "job-1", status: "cancelled" });
+    expect(result.listing).not.toHaveProperty("internalNote");
   });
 
   // This door is for a job nobody has taken yet, and only that. Once an offer
@@ -1344,10 +1490,13 @@ describe("createListing — bidding runs to a flexible window's end", () => {
   });
 
   it("leaves an exact-date request exactly as it was", async () => {
-    await listingsService.createListing("user-1", createInput());
+    // Read from the input, not a second `at(48 * HOUR)`: the clock moves
+    // between the two, and a slow run failed by a few milliseconds.
+    const input = createInput();
+    await listingsService.createListing("user-1", input);
 
     const row = vi.mocked(listingsDal.create).mock.calls[0][0];
-    expect(row.expiresAt.getTime()).toBe(at(48 * HOUR).getTime() - 6 * HOUR);
+    expect(row.expiresAt.getTime()).toBe(input.pickupFrom.getTime() - 6 * HOUR);
   });
 
   it("still refuses a flexible request that starts too soon", async () => {

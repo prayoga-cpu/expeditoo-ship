@@ -48,7 +48,10 @@ const quote = (over: Partial<PaymentQuote> = {}): PaymentQuote => ({
 
 const onOpenChange = vi.fn();
 
-function renderDialog(onConfirm: (intentId?: string) => Promise<unknown>) {
+function renderDialog(
+  onConfirm: (intentId?: string) => Promise<unknown>,
+  nextSteps?: { editRequest?: () => void; carriers?: () => void }
+) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -62,6 +65,7 @@ function renderDialog(onConfirm: (intentId?: string) => Promise<unknown>) {
           open
           onOpenChange={onOpenChange}
           onConfirm={onConfirm}
+          nextSteps={nextSteps}
         />
       </NextIntlClientProvider>
     </QueryClientProvider>
@@ -113,15 +117,42 @@ describe("AcceptPaymentDialog — a job that is paid here", () => {
   });
 
   it("says the card was not debited only when the server refused the award", async () => {
-    renderDialog(
-      vi.fn().mockRejectedValue(new ApiError("OFFER_NOT_PENDING", "", 409))
-    );
+    renderDialog(vi.fn().mockRejectedValue(new ApiError("SOME_OTHER_REFUSAL", "", 409)));
 
     fireEvent.click(await payButton());
 
     expect(await screen.findByText(t.acceptFailed)).toBeTruthy();
     // A refusal changed nothing, so paying again is still on offer.
     expect(await payButton()).toBeTruthy();
+  });
+
+  // no_dead_ends_spec.md §1: the offer is what failed, so paying again would
+  // fail again — the dialog hands over to what can be done instead.
+  it("turns a refused award into next steps, and says the card was not debited", async () => {
+    const carriers = vi.fn();
+    renderDialog(vi.fn().mockRejectedValue(new ApiError("OFFER_NOT_PENDING", "", 409)), {
+      carriers,
+    });
+
+    fireEvent.click(await payButton());
+
+    expect(await screen.findByText(t.errors.OFFER_NOT_PENDING)).toBeTruthy();
+    expect(screen.getByText(t.notDebited)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /^Payer/ })).toBeNull();
+    expect(screen.getByRole("button", { name: t.next.otherOffers })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: t.next.carriers }));
+    expect(carriers).toHaveBeenCalled();
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("sends a slot that has passed back to the slot choice", async () => {
+    renderDialog(vi.fn().mockRejectedValue(new ApiError("SLOT_IN_PAST", "", 409)));
+
+    fireEvent.click(await payButton());
+
+    fireEvent.click(await screen.findByRole("button", { name: t.next.chooseSlot }));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
   it.each([
@@ -199,8 +230,10 @@ describe("AcceptPaymentDialog — a job nothing is paid for here", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: t.confirm }));
 
-    expect(await screen.findByText(t.acceptRefused)).toBeTruthy();
+    expect(await screen.findByText(t.errors.LISTING_NOT_OPEN)).toBeTruthy();
     expect(screen.queryByText(t.acceptFailed)).toBeNull();
+    expect(screen.queryByText(t.notDebited)).toBeNull();
+    expect(screen.getByRole("button", { name: t.next.seeRequest })).toBeTruthy();
   });
 });
 
@@ -214,5 +247,33 @@ describe("AcceptPaymentDialog — a quote that cannot be given", () => {
     expect(await screen.findByText(t.errors.COORDINATES_REQUIRED)).toBeTruthy();
     expect(screen.queryByRole("button", { name: /^Payer/ })).toBeNull();
     expect(screen.getByRole("button", { name: t.close })).toBeTruthy();
+    // No way to edit was handed in (the operator's queue): none is offered.
+    expect(screen.queryByRole("button", { name: t.next.editRequest })).toBeNull();
+  });
+
+  it("offers to edit the request when its address cannot be placed", async () => {
+    vi.spyOn(offersApi, "paymentQuote").mockRejectedValue(
+      new ApiError("COORDINATES_REQUIRED", "COORDINATES_REQUIRED", 422)
+    );
+    const editRequest = vi.fn();
+    renderDialog(vi.fn(), { editRequest });
+
+    fireEvent.click(await screen.findByRole("button", { name: t.next.editRequest }));
+
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(editRequest).toHaveBeenCalled();
+  });
+
+  it("asks again when the quote failed for no reason it can name", async () => {
+    const read = vi
+      .spyOn(offersApi, "paymentQuote")
+      .mockRejectedValueOnce(new TypeError("Failed to fetch"))
+      .mockResolvedValue(quote());
+    renderDialog(vi.fn());
+
+    fireEvent.click(await screen.findByRole("button", { name: t.next.retry }));
+
+    expect(await payButton()).toBeTruthy();
+    expect(read).toHaveBeenCalledTimes(2);
   });
 });

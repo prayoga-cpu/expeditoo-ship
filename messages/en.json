@@ -161,6 +161,18 @@
     },
     "header": {
       "profile": "View my profile"
+    },
+    "loadError": {
+      "title": "This did not load",
+      "description": "The connection or the server did not answer. Nothing of yours was lost.",
+      "retry": "Try again"
+    },
+    "nextSteps": {
+      "findJobs": "See available jobs",
+      "newRequest": "Request a transport",
+      "myRequests": "My requests",
+      "showAll": "Show all",
+      "becomeDriver": "Become a driver"
     }
   },
   "auth": {
@@ -714,7 +726,8 @@
       "typeMessage": "Type a message...",
       "loading": "Loading...",
       "unknown": "Unknown",
-      "you": "You"
+      "you": "You",
+      "backToInbox": "Back to messages"
     },
     "offer": {
       "button": "Make an offer",
@@ -899,7 +912,8 @@
       "cancelledTransport": "This transport was cancelled, so there is nothing to confirm.",
       "notYours": "The transporter records this step; only the client confirms it.",
       "failed": "The confirmation could not be saved. Please try again in a moment."
-    }
+    },
+    "backToList": "All my deliveries"
   },
   "listing": {
     "title": "Listing",
@@ -979,7 +993,8 @@
         "message": "Message (optional)",
         "messagePlaceholder": "Tell the client why you are the right carrier for this job.",
         "submit": "Submit offer",
-        "submitting": "Submitting…"
+        "submitting": "Submitting…",
+        "noVehicleFits": "None of your active vehicles can take this load."
       },
       "slots": {
         "label": "Your time slots",
@@ -1042,6 +1057,36 @@
         "VEHICLE_CAPACITY_DIMENSIONS": "That vehicle is too small for this load.",
         "PICKUP_OUTSIDE_WINDOW": "Your pickup time is outside the requester's window.",
         "CARRIER_ABSENT": "You are marked as away: come back from your file to make an offer."
+      },
+      "actions": {
+        "availability": "Manage my availability",
+        "application": "My application",
+        "otherJobs": "Other jobs",
+        "myOffers": "My offers",
+        "addVehicle": "Add a vehicle"
+      },
+      "mine": {
+        "title": "You offered {price}",
+        "description": "Your offer is waiting for the requester's choice. You can withdraw it to make another.",
+        "all": "My offers",
+        "withdraw": "Withdraw my offer"
+      },
+      "myOffers": {
+        "title": "My offers",
+        "empty": "No offers yet",
+        "emptyDesc": "Browse open jobs and offer a price on the ones that follow your routes.",
+        "browse": "See jobs",
+        "findAnother": "Find another job",
+        "viewJob": "View the job",
+        "withdraw": "Withdraw",
+        "pickup": "Pickup {date}",
+        "status": {
+          "pending": "Pending",
+          "accepted": "Selected",
+          "rejected": "Not selected",
+          "withdrawn": "Withdrawn",
+          "expired": "Expired"
+        }
       }
     }
   },
@@ -1502,7 +1547,8 @@
       },
       "requester": "Requester: {name}",
       "budgetLabel": "Budget",
-      "swipeHint": "Swipe to see the delivery →"
+      "swipeHint": "Swipe to see the delivery →",
+      "noOffersCarriers": "See carriers on this route"
     },
     "carriers": {
       "tab": "Available carriers",
@@ -1580,6 +1626,34 @@
       "pinLabel": "See « {title} » on the map",
       "showAll": "Show every request",
       "unpinned": "{count, plural, one {# request with no point on the map} other {# requests with no point on the map}}"
+    },
+    "owner": {
+      "edit": "Edit",
+      "editTitle": "Edit this request?",
+      "editBody": "It comes off the board while you make your changes and becomes a draft again. You put it back online from the form's last step.",
+      "editConfirm": "Edit the request",
+      "cancel": "Cancel the request",
+      "cancelTitle": "Cancel this request?",
+      "cancelBody": "It comes off the board and no offer can be accepted any more. Nothing has been charged: you only pay when you accept an offer.",
+      "cancelConfirm": "Cancel the request",
+      "offersWithdrawn": "{count, plural, one {The offer received will be withdrawn and its carrier told.} other {The # offers received will be withdrawn and their carriers told.}}",
+      "keep": "Keep it as it is",
+      "repost": "Post again",
+      "repostHint": "A copy as a draft, to check before you publish it.",
+      "working": "One moment…",
+      "trackDelivery": "Track the delivery",
+      "done": {
+        "unpublished": "The request is a draft again: change it, then publish it.",
+        "cancelled": "Request cancelled.",
+        "reposted": "Copy created. Check the dates before you publish."
+      },
+      "errors": {
+        "LISTING_NOT_OPEN": "This request is no longer online: a carrier may already have been chosen. The page has been refreshed.",
+        "LISTING_NOT_CANCELLABLE": "This request can no longer be cancelled here. The page has been refreshed.",
+        "CANCEL_VIA_SHIPMENT": "A carrier has been chosen: cancel from the delivery.",
+        "LISTING_NOT_ENDED": "This request is still running: it cannot be posted again.",
+        "generic": "That did not go through. Please try again."
+      }
     }
   },
   "driver": {
@@ -1666,7 +1740,8 @@
       "needsPackaging": "Packaging required",
       "timeline": "History",
       "cancellationReason": "Cancellation reason",
-      "accessConditions": "Access conditions:"
+      "accessConditions": "Access conditions:",
+      "backToList": "My deliveries"
     },
     "actions": {
       "actions": "Actions",
@@ -1699,7 +1774,9 @@
         "deliveryPhotoRequired": "Take a photo of the delivered load before confirming delivery.",
         "withdrawAfterPickup": "The goods are already loaded — contact support",
         "driverCannotWithdraw": "Only the carrier who won the job can withdraw",
-        "requiresSupport": "The goods are already on the move — contact support"
+        "requiresSupport": "The goods are already on the move — contact support",
+        "contactSupport": "Contact support",
+        "refresh": "Refresh"
       },
       "unassignedTitle": "Job won, not started",
       "unassignedDesc": "This job is yours. Take it on to unlock pickup and delivery.",
@@ -3955,7 +4032,8 @@
     "pane": {
       "list": "List",
       "map": "Map"
-    }
+    },
+    "retry": "Try again"
   },
   "impersonation": {
     "viewingAs": "Viewing as",
@@ -4524,6 +4602,15 @@
       "FORBIDDEN_NOT_OPERATOR": "Only an operator can award this job.",
       "CARRIER_ABSENT": "This transporter has said they are away and cannot be chosen for now.",
       "PAYMENT_INTENT_MISMATCH": "This offer's price has just changed. Close this window and open the offer again to pay the new amount."
+    },
+    "notDebited": "Your card has not been charged.",
+    "next": {
+      "retry": "Try again",
+      "chooseSlot": "Choose another slot",
+      "otherOffers": "See the other offers",
+      "seeRequest": "See where the request stands",
+      "carriers": "Carriers on this route",
+      "editRequest": "Edit the request"
     }
   },
   "listingUrgency": {

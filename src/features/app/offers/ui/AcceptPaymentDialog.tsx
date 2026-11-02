@@ -54,7 +54,56 @@ interface AcceptPaymentDialogProps {
    * §N1). The caller has the offer and the job; this dialog has neither.
    */
   booking?: ReactNode;
+  /**
+   * Ways forward only the caller can offer, shown beside a refusal they answer
+   * (no_dead_ends_spec.md §1): taking the request back to fix an address that
+   * cannot be placed, and the carriers who already drive this route. Absent
+   * where the caller has neither — the operator's queue, a chat bubble.
+   */
+  nextSteps?: {
+    editRequest?: () => void;
+    carriers?: () => void;
+  };
 }
+
+/**
+ * What the requester can do about each refusal, so none of them ends on
+ * « Fermer » alone (no_dead_ends_spec.md §1). `refresh` closes and re-reads
+ * the page behind, which is where another slot, another offer or the
+ * request's new state is; `retry` asks for the quote again. A code not listed
+ * here — a dropped connection, a 5xx — gets `retry`.
+ */
+type NextStep = "retry" | "chooseSlot" | "otherOffers" | "seeRequest" | "carriers" | "editRequest";
+
+const NEXT_STEPS: Record<string, NextStep[]> = {
+  COORDINATES_REQUIRED: ["editRequest"],
+  SLOT_IN_PAST: ["chooseSlot"],
+  SLOT_NOT_ON_OFFER: ["chooseSlot"],
+  OFFER_NOT_PENDING: ["otherOffers", "carriers"],
+  OFFER_NOT_FOUND: ["otherOffers", "carriers"],
+  CARRIER_NO_LONGER_APPROVED: ["otherOffers", "carriers"],
+  CARRIER_ABSENT: ["otherOffers", "carriers"],
+  LISTING_NOT_OPEN: ["seeRequest"],
+  LISTING_NOT_FOUND: ["seeRequest"],
+  PAYMENT_INTENT_MISMATCH: ["retry"],
+  PAYMENT_NOT_REQUIRED: ["retry"],
+  // Not this viewer's to award: nothing here would change that.
+  FORBIDDEN_NOT_SHIPPER: [],
+  FORBIDDEN_NOT_OPERATOR: [],
+};
+
+const stepsFor = (cause: unknown): NextStep[] =>
+  (cause instanceof ApiError && NEXT_STEPS[cause.code]) || ["retry"];
+
+/**
+ * A refusal the whole dialog answers rather than the step: the card form is
+ * no use once the offer is gone, so the next steps replace it. Payment
+ * failures stay in the step, where another card is the answer.
+ */
+const isRefusal = (cause: unknown) =>
+  cause instanceof ApiError && cause.code in NEXT_STEPS;
+
+type Refusal = { cause: unknown; afterPay: boolean };
 
 /** Server codes this dialog has its own wording for. */
 const KNOWN_ERRORS = [
@@ -114,6 +163,7 @@ export function AcceptPaymentDialog(props: AcceptPaymentDialogProps) {
   const { offerId, slotId, open, onOpenChange } = props;
   const t = useTranslations("acceptPayment");
   const [busy, setBusy] = useState(false);
+  const [refusal, setRefusal] = useState<Refusal | null>(null);
 
   const quote = useQuery({
     queryKey: ["offer-payment", offerId, slotId ?? null],
@@ -125,6 +175,11 @@ export function AcceptPaymentDialog(props: AcceptPaymentDialogProps) {
 
   const close = () => {
     if (!busy) onOpenChange(false);
+  };
+
+  const retry = () => {
+    setRefusal(null);
+    void quote.refetch();
   };
 
   return (
@@ -151,7 +206,17 @@ export function AcceptPaymentDialog(props: AcceptPaymentDialogProps) {
 
         {props.booking}
 
-        <DialogBody {...props} quote={quote} busy={busy} setBusy={setBusy} close={close} />
+        <DialogBody
+          {...props}
+          quote={quote}
+          busy={busy}
+          setBusy={setBusy}
+          close={close}
+          refusal={refusal}
+          // « Not debited » is a fact only where a card was in play.
+          onRefused={(cause) => setRefusal({ cause, afterPay: Boolean(quote.data?.required) })}
+          retry={retry}
+        />
       </DialogContent>
     </Dialog>
   );
@@ -160,17 +225,30 @@ export function AcceptPaymentDialog(props: AcceptPaymentDialogProps) {
 function DialogBody({
   quote,
   close,
+  refusal,
+  retry,
   ...rest
 }: AcceptPaymentDialogProps & {
   quote: UseQueryResult<PaymentQuote>;
   busy: boolean;
   setBusy: (busy: boolean) => void;
   close: () => void;
+  refusal: Refusal | null;
+  onRefused: (cause: unknown) => void;
+  retry: () => void;
 }) {
   const t = useTranslations("acceptPayment");
-  const messageFor = useErrorMessage();
 
-  if (quote.isLoading) {
+  if (refusal) {
+    return (
+      <RefusalStep {...refusal} close={close} retry={retry} nextSteps={rest.nextSteps} />
+    );
+  }
+
+  // Re-reading after « Réessayer » shows the loader, but a background refetch
+  // of a quote already on screen never does: it would unmount a card half
+  // typed, and the 3-D Secure frame stealing focus triggers exactly that.
+  if (quote.isLoading || (quote.isFetching && !quote.data)) {
     return (
       <div className="flex flex-col items-center gap-2 py-8 text-sm text-muted-foreground">
         <LottieLoader width={40} height={40} />
@@ -183,14 +261,13 @@ function DialogBody({
   // gotcha 9) — and it is usually the answer itself: the offer was taken.
   if (quote.isError || !quote.data) {
     return (
-      <>
-        <ErrorLine message={messageFor(quote.error)} />
-        <DialogFooter>
-          <Button variant="outline" onClick={close}>
-            {t("close")}
-          </Button>
-        </DialogFooter>
-      </>
+      <RefusalStep
+        cause={quote.error}
+        afterPay={false}
+        close={close}
+        retry={retry}
+        nextSteps={rest.nextSteps}
+      />
     );
   }
 
@@ -216,16 +293,25 @@ const wasRefused = (cause: unknown) =>
 /**
  * What a step does once its accept call has failed.
  *
- * On an unknown outcome every query is refetched, so the page behind shows
- * what actually happened, and the step stops offering to pay or confirm again
- * until the requester has looked.
+ * A refusal with next steps hands the dialog over to them: the offer, the slot
+ * or the request is what failed, so paying again would fail again. On an
+ * unknown outcome every query is refetched, so the page behind shows what
+ * actually happened, and the step stops offering to pay or confirm again until
+ * the requester has looked.
  */
-function useAcceptFailure(messages: { refused: string; unknown: string }) {
+function useAcceptFailure(
+  messages: { refused: string; unknown: string },
+  onRefused: (cause: unknown) => void
+) {
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const [unknown, setUnknown] = useState(false);
 
   const report = (cause: unknown) => {
+    if (wasRefused(cause) && isRefusal(cause)) {
+      onRefused(cause);
+      return;
+    }
     if (wasRefused(cause)) {
       setError(messages.refused);
       return;
@@ -281,15 +367,16 @@ function ConfirmStep({
   quote,
   onConfirm,
   onOpenChange,
+  onRefused,
   busy,
   setBusy,
   close,
 }: StepProps) {
   const t = useTranslations("acceptPayment");
-  const { error, setError, unknown, report } = useAcceptFailure({
-    refused: t("acceptRefused"),
-    unknown: t("acceptUnknown"),
-  });
+  const { error, setError, unknown, report } = useAcceptFailure(
+    { refused: t("acceptRefused"), unknown: t("acceptUnknown") },
+    onRefused
+  );
 
   const confirm = async () => {
     setBusy(true);
@@ -324,6 +411,7 @@ function ConfirmStep({
 
 type StepProps = AcceptPaymentDialogProps & {
   quote: PaymentQuote;
+  onRefused: (cause: unknown) => void;
   busy: boolean;
   setBusy: (busy: boolean) => void;
   close: () => void;
@@ -370,6 +458,7 @@ function PaymentForm({
   slotId,
   onConfirm,
   onOpenChange,
+  onRefused,
   busy,
   setBusy,
   close,
@@ -383,11 +472,11 @@ function PaymentForm({
   const [method, setMethod] = useState<"saved" | "new">(
     quote.savedCard ? "saved" : "new"
   );
-  const { error, setError, unknown, report } = useAcceptFailure({
+  const { error, setError, unknown, report } = useAcceptFailure(
     // The server released the authorisation when it refused the award.
-    refused: t("acceptFailed"),
-    unknown: t("acceptUnknownPaid"),
-  });
+    { refused: t("acceptFailed"), unknown: t("acceptUnknownPaid") },
+    onRefused
+  );
 
   const pay = async () => {
     if (!stripe || !elements) return;
@@ -401,7 +490,10 @@ function PaymentForm({
           ? await authoriseSaved(stripe, offerId, slotId)
           : await authoriseNew(stripe, elements, { offerId, slotId, saveCard });
     } catch (cause) {
-      setError(messageFor(cause));
+      // Refused before any card was confirmed — the award's own checks run at
+      // authorisation too (pay_at_accept_spec.md §4).
+      if (isRefusal(cause)) onRefused(cause);
+      else setError(messageFor(cause));
       setBusy(false);
       return;
     }
@@ -620,6 +712,68 @@ function CardChoice({
         <span>{t("otherCard")}</span>
       </Label>
     </RadioGroup>
+  );
+}
+
+/**
+ * Why this offer cannot be accepted, and what to do instead
+ * (no_dead_ends_spec.md §1). « Fermer » is always there; it is never alone.
+ */
+function RefusalStep({
+  cause,
+  afterPay,
+  close,
+  retry,
+  nextSteps,
+}: Refusal & {
+  close: () => void;
+  retry: () => void;
+  nextSteps: AcceptPaymentDialogProps["nextSteps"];
+}) {
+  const t = useTranslations("acceptPayment");
+  const messageFor = useErrorMessage();
+  const queryClient = useQueryClient();
+
+  // Another slot, another offer, the request as it now is: all on the page
+  // behind, which is re-read so it shows the truth.
+  const refresh = () => {
+    void queryClient.invalidateQueries();
+    close();
+  };
+  const handoff = (action: () => void) => () => {
+    close();
+    action();
+  };
+
+  const actions: Record<NextStep, (() => void) | undefined> = {
+    retry,
+    chooseSlot: refresh,
+    otherOffers: refresh,
+    seeRequest: refresh,
+    carriers: nextSteps?.carriers && handoff(nextSteps.carriers),
+    editRequest: nextSteps?.editRequest && handoff(nextSteps.editRequest),
+  };
+  const steps = stepsFor(cause).filter((step) => actions[step]);
+
+  return (
+    <>
+      <ErrorLine message={messageFor(cause)} />
+      {afterPay && <p className="text-sm text-muted-foreground">{t("notDebited")}</p>}
+      <DialogFooter className="flex-wrap gap-2">
+        <Button variant="outline" onClick={close}>
+          {t("close")}
+        </Button>
+        {steps.map((step, index) => (
+          <Button
+            key={step}
+            variant={index === 0 ? "default" : "outline"}
+            onClick={actions[step]}
+          >
+            {t(`next.${step}`)}
+          </Button>
+        ))}
+      </DialogFooter>
+    </>
   );
 }
 

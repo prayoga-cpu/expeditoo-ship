@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { FileText, Package, Search } from "lucide-react";
 
@@ -60,6 +61,7 @@ function withinPeriod(trip: CompletedTrip, bounds: { from?: Date; to?: Date }) {
  */
 export function CompletedTripsPanel() {
   const t = useTranslations("carrier.trips.completed");
+  const next = useTranslations("common.nextSteps");
   const [search, setSearch] = useState("");
   const [period, setPeriod] = useState<PeriodKey>("all");
 
@@ -130,7 +132,11 @@ export function CompletedTripsPanel() {
           icon={Package}
           title={t("empty.title")}
           description={t("empty.description")}
-        />
+        >
+          <Button asChild>
+            <Link href="/expedion">{next("findJobs")}</Link>
+          </Button>
+        </CenteredEmptyState>
       ) : (
         <div className="grid gap-3">
           {visible.map((trip) => (

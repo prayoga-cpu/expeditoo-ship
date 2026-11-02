@@ -2,14 +2,19 @@
 
 import Link from "next/link";
 import { useMutationState } from "@tanstack/react-query";
-import { FileClock, Truck, type LucideIcon } from "lucide-react";
+import { FileClock, Gavel, Truck, type LucideIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { formatCurrency } from "@/lib/currency";
 import { SubmitOfferForm, TakeJobPanel } from "@/features/app/offers/ui";
+import {
+  useMyOffers,
+  useWithdrawOffer,
+} from "@/features/app/offers/hooks/useCarrierOffers";
 import { useAuth } from "@/lib/auth-context";
 import { ApiError } from "@/lib/fetcher";
-import type { Job } from "../types";
+import type { Job, Offer } from "../types";
 
 interface JobBidSectionProps {
   job: Job;
@@ -45,11 +50,21 @@ export function JobBidSection({ job, viewerId }: JobBidSectionProps) {
   });
 
   const isOwner = viewerId !== null && viewerId === job.shipperId;
-  if (viewerId === null || isOwner || job.status !== "open") return null;
-  if (isLoading) return null;
+  const bidding = viewerId !== null && !isOwner && job.status === "open";
+  const isCarrier = roles.includes("carrier");
 
-  if (!roles.includes("carrier")) return <BecomeCarrierCard />;
+  // A carrier who already bid sees their bid, not a second form the server
+  // would refuse with OFFER_ALREADY_EXISTS (no_dead_ends_spec.md §6).
+  const { data: myOffers } = useMyOffers(undefined, { enabled: bidding && isCarrier });
+  const mine = myOffers?.find(
+    (offer) => offer.listingId === job.id && offer.status === "pending"
+  );
+
+  if (!bidding || isLoading) return null;
+
+  if (!isCarrier) return <BecomeCarrierCard />;
   if (notApprovedSubmits.length > 0) return <NotApprovedCard />;
+  if (mine) return <MyOfferCard offer={mine} />;
 
   // On an escalated job both routes are offered, take-it-now first. A driver
   // who wants the job at the posted price should not have to compose a bid to
@@ -64,6 +79,41 @@ export function JobBidSection({ job, viewerId }: JobBidSectionProps) {
       {job.origin === "expedion" && <TakeJobPanel job={job} />}
       <SubmitOfferForm job={job} />
     </div>
+  );
+}
+
+/** The carrier's own pending bid on this job, with the two ways on from it. */
+function MyOfferCard({ offer }: { offer: Offer }) {
+  const t = useTranslations("listing.bid.mine");
+  const withdraw = useWithdrawOffer();
+
+  return (
+    <Card className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+      <div className="flex items-start gap-3">
+        <div className="rounded-full bg-primary/10 p-2.5">
+          <Gavel className="h-5 w-5 text-primary" />
+        </div>
+        <div>
+          <p className="font-semibold">
+            {t("title", { price: formatCurrency(offer.priceCents) })}
+          </p>
+          <p className="mt-0.5 text-sm text-muted-foreground">{t("description")}</p>
+        </div>
+      </div>
+      <div className="flex shrink-0 flex-wrap gap-2">
+        <Button asChild variant="outline">
+          <Link href="/carrier/offers">{t("all")}</Link>
+        </Button>
+        <Button
+          variant="ghost"
+          className="text-destructive"
+          disabled={withdraw.isPending}
+          onClick={() => withdraw.mutate(offer.id)}
+        >
+          {t("withdraw")}
+        </Button>
+      </div>
+    </Card>
   );
 }
 

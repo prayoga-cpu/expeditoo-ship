@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadErrorState } from "@/components/ui/load-error-state";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
@@ -74,7 +75,7 @@ export function ExpedionClientsTable() {
   // seven of a narrower set shows an empty table that looks like no matches.
   useEffect(() => setPage(1), [debouncedQuery, linked, sortBy]);
 
-  const { data, isLoading, isError } = useExpedionClients({
+  const { data, isLoading, isError, refetch } = useExpedionClients({
     search: debouncedQuery || undefined,
     linked,
     sortBy,
@@ -139,10 +140,10 @@ export function ExpedionClientsTable() {
       {isLoading ? (
         <PageLoader />
       ) : isError ? (
-        <CenteredEmptyState
-          icon={Users}
+        <LoadErrorState
           title={t("loadFailed")}
           description={t("loadFailedHint")}
+          onRetry={() => void refetch()}
         />
       ) : !data || data.clients.length === 0 ? (
         <CenteredEmptyState

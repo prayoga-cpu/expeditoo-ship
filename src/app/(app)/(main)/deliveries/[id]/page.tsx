@@ -6,7 +6,10 @@ import { toast } from "sonner";
 import { PackageX } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { PageLoader } from "@/components/ui/page-loader";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { CenteredEmptyState } from "@/components/ui/centered-empty-state";
+import { LoadErrorState } from "@/components/ui/load-error-state";
 import { DeliveryDetail } from "@/features/app/deliveries/ui";
 import {
   useDeliveryDetail,
@@ -27,7 +30,7 @@ export default function DeliveryDetailPage({
   const t = useTranslations("deliveries");
   const router = useRouter();
   const { user } = useAuth();
-  const { delivery, isLoading, error } = useDeliveryDetail(id);
+  const { delivery, isLoading, isError, isGone, error, refetch } = useDeliveryDetail(id);
   const cancelShipment = useCancelShipment();
   const [isContacting, setIsContacting] = useState(false);
 
@@ -67,6 +70,18 @@ export default function DeliveryDetailPage({
 
   if (isLoading) return <PageLoader />;
 
+  // « Introuvable » only when the server says so; any other failure is a
+  // failed read, with a retry (no_dead_ends_spec.md §4).
+  if (isError && !isGone) {
+    return (
+      <LoadErrorState
+        variant="page"
+        onRetry={() => void refetch()}
+        back={{ href: "/deliveries", label: t("backToList") }}
+      />
+    );
+  }
+
   if (!delivery) {
     return (
       <CenteredEmptyState
@@ -74,7 +89,11 @@ export default function DeliveryDetailPage({
         icon={PackageX}
         title={t("errors.notFound")}
         description={error ?? t("errors.notFoundDesc")}
-      />
+      >
+        <Button asChild variant="outline">
+          <Link href="/deliveries">{t("backToList")}</Link>
+        </Button>
+      </CenteredEmptyState>
     );
   }
 

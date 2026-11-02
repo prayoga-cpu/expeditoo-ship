@@ -926,6 +926,79 @@ than leaving it in a chat message.
 
 ---
 
+## ✅ 2026-11-02 — No Dead Ends: Every Refusal, Failed Load and Empty Screen Offers a Way On (2.75.0)
+
+_The owner, after the accept dialog refused a payment with « Fermer » alone:
+« fix this, make sure there's no blocked on the app, and always has way to go
+ahead/alternative or close/edit/cancel on every necessary features », then
+« check the others section/pages as well then prevent and solve ». The cause
+of that refusal (no map pin) shipped as 2.73.0._
+
+Spec: `docs/specs/no_dead_ends_spec.md`. Plan: `docs/plans/plan_no_dead_ends.md`.
+
+### What changed
+
+- **Accept dialog** (`AcceptPaymentDialog.tsx`): a refusal at quote,
+  authorisation or accept replaces the card form with its next steps
+  (`NEXT_STEPS`); the caller supplies the two only it can offer
+  (`nextSteps.editRequest`, `nextSteps.carriers`). « Votre carte n'a pas été
+  débitée » only after a Pay press on a charged quote. A background refetch of
+  a quote on screen no longer shows the loader (it unmounted a half-typed card).
+- **A live request can be changed or called off.** `POST
+  /api/listings/:id/unpublish` → `listingsService.unpublish`: owner, direct,
+  compare-and-set on `open` → `draft`, offers expired, `reopened_at` cleared,
+  carriers told; the form opens on the draft, so republishing gets every
+  publish check (gotcha 19). The requester now reaches `DELETE
+  /api/listings/:id`, so **`cancelListing` became a compare-and-set** — it
+  read the status, then wrote `cancelled` unconditionally, and an award landing
+  in between would have been cancelled with the money taken. It now tells
+  carriers too and returns `toListingView(…, "full")`, not the DAL row.
+- **An ended request can be posted again.** `POST /api/listings/:id/repost` →
+  `listingsDal.copyAsDraft`, which copies the row as stored (new columns
+  carry over unasked) and resets what the server owns; photos copied as rows.
+- `RequestActions` (job page and « Mes demandes »): Modifier / Annuler on
+  `open`, « Suivre la livraison » on `awarded`/`in_progress`, « Republier » on
+  `expired`/`cancelled`/`completed`. Direct requests only.
+- **`LoadErrorState`** (`components/ui/load-error-state.tsx`) on ~30 screens
+  whose failure was red text, « nothing here », a blank page or the wrong form:
+  the inbox and threads (the header read « Chargement… » forever), `/home` (a
+  failed count read 0), the driver application (a failure offered the blank
+  form to a driver under review), the fleet (« apply first »), the payout
+  queue (« nothing to pay »), and the rest listed in the spec §4.
+- Empty states lead somewhere (`common.nextSteps.*`); a carrier who already
+  bid sees their bid with « Retirer »; carrier and driver refusal toasts carry
+  their action; « Mes offres » translated.
+- **Prevention:** `src/__tests__/no-dead-ends.test.ts` reads every `.tsx` and
+  fails on a failure branch with no retry, or a childless
+  `<CenteredEmptyState />`, unless an allowlist entry says why — and on an
+  allowlist entry that no longer matches anything. Gotcha 24.
+
+### Verification
+
+- tsc 0 · lint 0 errors, 61 warnings (one fewer than main) · 3,167 tests in
+  907 files. New: `RequestActions.test.tsx` (10), the guard (3), the dialog's
+  next steps (6), service (16). One existing test was clock-flaky — « leaves
+  an exact-date request exactly as it was » rebuilt `at(48 h)` at assertion
+  time and failed by 6 ms on a loaded run — and now reads the input's own
+  `pickupFrom`.
+- Real Postgres (scratch DB, every migration): unpublish → `draft`, the
+  pending offer `expired`, the carrier's French notice; a second unpublish →
+  `LISTING_NOT_OPEN`; cancel → `cancelled`; repost of `expired` and
+  `cancelled` → new drafts with references 100004/100005 and the photos.
+- Chromium against a production build on that database: the dialog's refusal
+  for a suspended carrier offers « Voir les autres offres » and
+  « Transporteurs sur ce trajet »; « Modifier » names the two offers it will
+  withdraw and lands on `/create?draft=…`; « Republier » lands on the copy; a
+  forced 500 on notifications shows « Réessayer », which recovers; 390 px dark,
+  no horizontal overflow.
+
+### Known limits
+
+- An edit withdraws every pending offer, even for a typo — the price of one
+  publish path; the confirmation says so first.
+- A bid landing in the instant between « Modifier » and the expiry stays
+  pending on the draft (`updateListing` has the same window).
+
 ## ✅ 2026-10-31 — The Selected Request's Pin Shows On Top, After a Browser Pass Over the New Screens (2.73.1)
 
 _Found while walking the screens shipped in 2.66.0–2.72.0 in Chromium. Nobody

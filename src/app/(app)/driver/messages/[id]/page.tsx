@@ -14,7 +14,7 @@ interface PageProps {
 
 export default function DriverMessageDetailPage({ params }: PageProps) {
   const { id } = use(params);
-  const { conversation, messages, inputValue, setInputValue, sendMessage } =
+  const { conversation, messages, inputValue, setInputValue, sendMessage, loadFailed, retry } =
     useMessageDetail(id);
 
   return (
@@ -24,6 +24,8 @@ export default function DriverMessageDetailPage({ params }: PageProps) {
       inputValue={inputValue}
       onInputChange={setInputValue}
       onSendMessage={sendMessage}
+      loadFailed={loadFailed}
+      onRetry={retry}
       backLink="/driver/messages"
     />
   );

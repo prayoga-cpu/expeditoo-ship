@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadErrorState } from "@/components/ui/load-error-state";
 import { useRef, useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +38,12 @@ interface MessageDetailProps {
   onSendMessage: () => void;
   onDeleteMessage?: (messageId: string) => void;
   backLink?: string;
+  /**
+   * The thread never loaded. Without this the header read « Chargement… »
+   * forever over an input box (no_dead_ends_spec.md §4).
+   */
+  loadFailed?: boolean;
+  onRetry?: () => void;
 }
 
 export function MessageDetail({
@@ -47,6 +54,8 @@ export function MessageDetail({
   onSendMessage,
   onDeleteMessage,
   backLink = "/messages",
+  loadFailed = false,
+  onRetry,
 }: MessageDetailProps) {
   const t = useTranslations("messages.detail");
   const router = useRouter();
@@ -118,6 +127,16 @@ export function MessageDetail({
       onSendMessage();
     }
   };
+
+  if (loadFailed && onRetry) {
+    return (
+      <LoadErrorState
+        variant="page"
+        onRetry={onRetry}
+        back={{ href: backLink, label: t("backToInbox") }}
+      />
+    );
+  }
 
   return (
     <div className="h-full min-h-0 flex flex-col bg-background   mx-auto w-full relative">

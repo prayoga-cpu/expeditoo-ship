@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadErrorState } from "@/components/ui/load-error-state";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { ArrowRight, FileText, Gavel, Package, Truck } from "lucide-react";
@@ -97,6 +98,8 @@ export function DriverDashboard() {
     isRunsLoading,
     needsCardNudge,
     showDriverInvite,
+    loadFailed,
+    retry,
   } = useDriverDashboard();
   const { active: activeRequests } = useMyRequestStatus();
 
@@ -108,6 +111,8 @@ export function DriverDashboard() {
         <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
         <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
       </header>
+
+      {loadFailed && <LoadErrorState variant="inline" onRetry={retry} />}
 
       {needsCardNudge && <CardConnectBanner />}
 

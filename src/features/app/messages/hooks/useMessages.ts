@@ -87,6 +87,7 @@ export function useMessages() {
     data: conversations = [],
     isLoading,
     error,
+    refetch,
   } = useQuery({
     queryKey: ["messages", "conversations", debouncedSearch],
     queryFn: () => messagesApi.getConversations(1, 50, debouncedSearch || undefined),
@@ -219,6 +220,7 @@ export function useMessages() {
     deleteConversation,
     isLoading,
     error,
+    refetch,
   };
 }
 

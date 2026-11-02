@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { useState } from "react";
 import Link from "next/link";
-import { ClipboardList, Gavel, Plus, AlertTriangle, TriangleAlert } from "lucide-react";
+import { ClipboardList, Gavel, Plus, TriangleAlert } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,12 +17,14 @@ import {
 } from "@/components/ui/select";
 import { CenteredEmptyState } from "@/components/ui/centered-empty-state";
 import { PageLoader } from "@/components/ui/page-loader";
+import { LoadErrorState } from "@/components/ui/load-error-state";
 import { formatCurrency } from "@/lib/currency";
 import { useMyRequests } from "../hooks/useMyRequests";
 import { RequestSummary } from "./RequestSummary";
 import { ListingReference } from "./ListingReference";
 import { UrgencyBadge } from "./UrgencyBadge";
 import { DraftActions } from "./DraftActions";
+import { RequestActions } from "./RequestActions";
 import {
   RequestCompactRow,
   RequestTile,
@@ -52,11 +54,13 @@ const STATUSES: ListingStatus[] = [
 /** Every request the caller has posted, in any state. */
 export function MyRequestsPanel() {
   const t = useTranslations("myJobs");
+  const next = useTranslations("common.nextSteps");
   const [status, setStatus] = useState<ListingStatus | "all">("all");
   const {
     data: jobs,
     isLoading,
     isError,
+    refetch,
   } = useMyRequests(status === "all" ? undefined : status);
   const { view, setView } = useRequestView();
 
@@ -91,11 +95,7 @@ export function MyRequestsPanel() {
       {isLoading ? (
         <PageLoader />
       ) : isError ? (
-        <CenteredEmptyState
-          variant="page"
-          icon={AlertTriangle}
-          title={t("loadFailed")}
-        />
+        <LoadErrorState variant="page" title={t("loadFailed")} onRetry={() => void refetch()} />
       ) : !jobs || jobs.length === 0 ? (
         <CenteredEmptyState
           variant="page"
@@ -105,9 +105,13 @@ export function MyRequestsPanel() {
             status === "all" ? t("emptyDesc") : t("emptyFilteredDesc")
           }
         >
-          {status === "all" && (
+          {status === "all" ? (
             <Button asChild>
               <Link href="/create">{t("postJob")}</Link>
+            </Button>
+          ) : (
+            <Button variant="outline" onClick={() => setStatus("all")}>
+              {next("showAll")}
             </Button>
           )}
         </CenteredEmptyState>
@@ -142,8 +146,8 @@ const isUnpublished = (job: Job) => job.status === "draft" || job.status === "sc
 function JobRow({ job }: { job: Job }) {
   const t = useTranslations("myJobs");
 
-  // The card is a link to the request; the actions on a request not yet live
-  // sit below it, outside the link (draft_requests_spec.md §1).
+  // The card is a link to the request; its actions sit below it, outside the
+  // link (draft_requests_spec.md §1, no_dead_ends_spec.md §2–3).
   return (
     <Card className="group p-4 transition-colors hover:border-primary/40 sm:p-5">
       <Link href={`/listing/${job.id}`} className="block cursor-pointer">
@@ -178,7 +182,11 @@ function JobRow({ job }: { job: Job }) {
         <RowDate job={job} />
       </Link>
 
-      {isUnpublished(job) && <DraftActions job={job} className="mt-3" />}
+      {isUnpublished(job) ? (
+        <DraftActions job={job} className="mt-3" />
+      ) : (
+        <RequestActions job={job} className="mt-3" />
+      )}
     </Card>
   );
 }

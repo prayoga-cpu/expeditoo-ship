@@ -17,6 +17,8 @@ export default function NotificationsPage() {
     markAllAsRead,
     deleteNotification,
     isLoading,
+    isError,
+    refetch,
   } = useNotifications();
 
   return (
@@ -26,6 +28,8 @@ export default function NotificationsPage() {
       unreadCount={unreadCount}
       unreadByType={unreadByType}
       isLoading={isLoading}
+      isError={isError}
+      onRetry={() => void refetch()}
       onTabChange={setActiveTab}
       onMarkAllAsRead={markAllAsRead}
       onDismiss={deleteNotification}

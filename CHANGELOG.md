@@ -14,6 +14,39 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.75.0] - 2026-11-02 · ux
+
+- **No screen leaves you stuck any more.** When something cannot be done, the
+  app now says what to do instead, with a button for it.
+- **Accepting an offer:** if the offer cannot be accepted, the window now
+  offers the way on — choose another time slot, see the other offers, see the
+  transporters who drive this route, or change the request — instead of
+  « Fermer » alone. When you had already pressed Pay, it says your card was
+  not charged.
+- **Your requests:** a request that is online can now be **changed** (it
+  becomes a draft while you edit it, then you publish it again) or
+  **cancelled**, from its page or from « Mes demandes ». Any transporter who
+  had made an offer is told. A request that has expired, been cancelled or
+  been delivered can be **posted again** in one tap, as a copy you check
+  before publishing. Once a transporter is chosen, the request points you to
+  its delivery.
+- **No offers yet?** The request page now leads to the transporters who
+  already drive that route.
+- **Transporters:** if you already made an offer on a job, the job now shows
+  it, with « Retirer mon offre », instead of a second form. A refused offer
+  says why and offers the next step — manage your availability, add a vehicle,
+  see other jobs. When none of your vehicles can carry the load, the offer
+  form says so. « Mes offres » is now in French.
+- **Drivers:** when the goods are already moving and something must change,
+  the message comes with « Contacter le support ».
+- **When a page fails to load**, it says so and offers « Réessayer » —
+  messages, notifications, deliveries, your requests, the home page, your
+  application, your fleet and the admin queues. Before, some showed a blank
+  page, « nothing here », or an empty form.
+- Empty pages now point to where the next thing comes from: request a
+  transport, see the available jobs, become a driver, or show everything again
+  after a filter.
+
 ## [2.73.1] - 2026-10-31 · fix
 
 - On the map view of « Mes demandes », the request you select now shows its

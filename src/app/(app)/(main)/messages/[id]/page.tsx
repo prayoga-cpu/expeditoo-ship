@@ -22,6 +22,8 @@ export default function MessageDetailPage({
     inputValue,
     setInputValue,
     sendMessage,
+    loadFailed,
+    retry,
   } = useMessageDetail(id);
 
   return (
@@ -31,6 +33,8 @@ export default function MessageDetailPage({
       inputValue={inputValue}
       onInputChange={setInputValue}
       onSendMessage={sendMessage}
+      loadFailed={loadFailed}
+      onRetry={retry}
     />
   );
 }

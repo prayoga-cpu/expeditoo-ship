@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadErrorState } from "@/components/ui/load-error-state";
 import { NotificationItem } from "./NotificationItem";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,9 @@ interface NotificationsProps {
   onMarkAllAsRead: () => void;
   onDismiss: (id: string) => void;
   isLoading?: boolean;
+  /** A failed read is said, with a retry — never « nothing new » (§4). */
+  isError?: boolean;
+  onRetry?: () => void;
 }
 
 export function Notifications({
@@ -42,11 +46,17 @@ export function Notifications({
   onMarkAllAsRead,
   onDismiss,
   isLoading = false,
+  isError = false,
+  onRetry,
 }: NotificationsProps) {
   const t = useTranslations("notifications");
 
   if (isLoading) {
     return <PageLoader />;
+  }
+
+  if (isError && onRetry) {
+    return <LoadErrorState variant="page" onRetry={onRetry} />;
   }
 
   return (

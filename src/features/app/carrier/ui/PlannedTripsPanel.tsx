@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Plus, Route } from "lucide-react";
 
@@ -40,6 +41,7 @@ const isCarrierMissing = (error: unknown) =>
  */
 export function PlannedTripsPanel() {
   const t = useTranslations("carrier.trips");
+  const next = useTranslations("common.nextSteps");
   const { data, isLoading, error, refetch } = useCarrierRoutes();
   const { data: vehicles } = useVehicles();
   const save = useSaveCarrierRoute();
@@ -89,7 +91,11 @@ export function PlannedTripsPanel() {
           icon={Route}
           title={t("noCarrier.title")}
           description={t("noCarrier.description")}
-        />
+        >
+          <Button asChild>
+            <Link href="/carrier/application">{next("becomeDriver")}</Link>
+          </Button>
+        </CenteredEmptyState>
       ) : error ? (
         <TripsLoadError onRetry={() => void refetch()} />
       ) : routes.length === 0 ? (

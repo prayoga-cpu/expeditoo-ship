@@ -1,3 +1,4 @@
+import { nanoid } from "nanoid";
 import { db } from "@/db";
 import {
   categories,
@@ -655,6 +656,54 @@ export const listingsDal = {
       .where(and(eq(listings.id, id), eq(listings.status, status)))
       .returning();
     return result;
+  },
+
+  /**
+   * A new draft from a request that has ended, for « Republier »
+   * (no_dead_ends_spec.md §3). The row is copied as stored, so a column added
+   * later comes along without anyone remembering it here; only what the
+   * server owns is reset — identity, status, the award, the Expedion link, the
+   * counters and every lifecycle stamp. The reference is the sequence's next
+   * number. The photos come too: the image sweep keeps an object while any
+   * row names it.
+   */
+  async copyAsDraft(
+    sourceId: string,
+    draft: { id: string; expiresAt: Date },
+    tx: Executor = db
+  ): Promise<Listing | undefined> {
+    const [source] = await tx.select().from(listings).where(eq(listings.id, sourceId));
+    if (!source) return undefined;
+
+    const { id: _id, reference: _reference, createdAt: _c, updatedAt: _u, ...columns } = source;
+    const [copy] = await tx
+      .insert(listings)
+      .values({
+        ...columns,
+        id: draft.id,
+        status: "draft",
+        acceptedOfferId: null,
+        origin: "direct",
+        externalRef: null,
+        offersCount: 0,
+        views: 0,
+        expiresAt: draft.expiresAt,
+        reopenedAt: null,
+        scheduledPublishAt: null,
+        publishedAt: null,
+      })
+      .returning();
+
+    const sourcePhotos = await tx
+      .select({ url: photos.url, order: photos.order })
+      .from(photos)
+      .where(eq(photos.listingId, sourceId));
+    if (sourcePhotos.length > 0) {
+      await tx
+        .insert(photos)
+        .values(sourcePhotos.map((p) => ({ id: nanoid(), listingId: copy.id, ...p })));
+    }
+    return copy;
   },
 
   /** Scheduled jobs whose go-live instant has arrived, for the publish cron. */

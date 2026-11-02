@@ -50,6 +50,7 @@ export function useDeliveryHistory() {
     deliveries,
     isLoading: query.isLoading,
     isError: query.isError,
+    refetch: query.refetch,
   };
 }
 

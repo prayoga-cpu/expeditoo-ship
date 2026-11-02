@@ -29,6 +29,9 @@ import type {
 } from "@/features/app/driver/api/shipments.api";
 import { useTranslations } from "next-intl";
 import { PageLoader } from "@/components/ui/page-loader";
+import { LoadErrorState } from "@/components/ui/load-error-state";
+import { ApiError } from "@/lib/fetcher";
+import Link from "next/link";
 
 /**
  * The driver's view of a run: route, time windows, cargo and history.
@@ -41,17 +44,32 @@ export default function ShipmentDetailPage() {
   const id = params.id as string;
   const t = useTranslations("driver.shipmentDetail");
 
-  const { shipment, isLoading, isError } = useDriverShipmentDetail(id);
+  const { shipment, isLoading, isError, error, refetch } = useDriverShipmentDetail(id);
 
   if (isLoading) {
     return <PageLoader />;
   }
 
-  if (isError || !shipment) {
+  // « Introuvable » only when the server says so; anything else is a failed
+  // read, with a retry (no_dead_ends_spec.md §4).
+  const gone = error instanceof ApiError && (error.status === 404 || error.status === 403);
+  if (isError && !gone) {
+    return (
+      <LoadErrorState
+        variant="page"
+        onRetry={() => void refetch()}
+        back={{ href: "/driver/shipments", label: t("backToList") }}
+      />
+    );
+  }
+
+  if (!shipment) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <h2 className="text-xl font-semibold">{t("notFound")}</h2>
-        <Button onClick={() => router.back()}>{t("goBack")}</Button>
+        <Button asChild>
+          <Link href="/driver/shipments">{t("backToList")}</Link>
+        </Button>
       </div>
     );
   }

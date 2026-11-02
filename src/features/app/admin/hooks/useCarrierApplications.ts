@@ -23,6 +23,7 @@ export function useCarrierApplications(status: CarrierApplicationFilter) {
         data: applications = [],
         isLoading,
         error,
+        refetch,
     } = useQuery({
         queryKey: ["carrier-applications", status],
         queryFn: () => fetchCarrierApplications(status),
@@ -115,6 +116,7 @@ export function useCarrierApplications(status: CarrierApplicationFilter) {
         applications,
         isLoading,
         error,
+        refetch,
         approveApplication: approveMutation.mutateAsync,
         rejectApplication: rejectMutation.mutateAsync,
         suspendCarrierAccount: suspendMutation.mutateAsync,

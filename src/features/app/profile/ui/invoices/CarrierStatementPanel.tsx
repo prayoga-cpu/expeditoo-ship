@@ -90,6 +90,7 @@ function StatementBody({
 }) {
     const t = useTranslations("profile.invoices.carrier");
     const tShared = useTranslations("profile.invoices");
+    const next = useTranslations("common.nextSteps");
     const { data, isLoading, isError, refetch } = statement;
 
     if (isLoading) {
@@ -107,7 +108,11 @@ function StatementBody({
         statement.error instanceof ApiError && statement.error.code === "CARRIER_NOT_FOUND";
     if (noCarrierFile || (!isError && data && data.items.length === 0)) {
         return (
-            <CenteredEmptyState icon={Truck} title={t("empty")} description={t("emptyDesc")} />
+            <CenteredEmptyState icon={Truck} title={t("empty")} description={t("emptyDesc")}>
+                <Button asChild>
+                    <Link href="/expedion">{next("findJobs")}</Link>
+                </Button>
+            </CenteredEmptyState>
         );
     }
 

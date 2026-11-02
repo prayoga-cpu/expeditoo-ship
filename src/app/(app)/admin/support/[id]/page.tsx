@@ -21,6 +21,8 @@ export default function AdminSupportChatPage({
         inputValue,
         setInputValue,
         sendMessage,
+        loadFailed,
+        retry,
     } = useMessageDetail(id);
 
     return (
@@ -31,6 +33,8 @@ export default function AdminSupportChatPage({
                 inputValue={inputValue}
                 onInputChange={setInputValue}
                 onSendMessage={sendMessage}
+                loadFailed={loadFailed}
+                onRetry={retry}
                 backLink="/admin/support"
             />
         </div>

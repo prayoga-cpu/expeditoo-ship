@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadErrorState } from "@/components/ui/load-error-state";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
@@ -236,7 +237,7 @@ function AttestationRow({
  */
 function ShipmentPhotosCard({ shipmentId }: { shipmentId: string }) {
   const t = useTranslations("shipmentPhotos");
-  const { pickup, delivery, isError } = useShipmentPhotos(shipmentId);
+  const { pickup, delivery, isError, refetch } = useShipmentPhotos(shipmentId);
 
   return (
     <Card className="space-y-4 p-4 sm:p-5">
@@ -246,7 +247,11 @@ function ShipmentPhotosCard({ shipmentId }: { shipmentId: string }) {
       </h2>
       <Separator />
       {isError ? (
-        <p className="text-sm text-destructive">{t("errors.loadFailed")}</p>
+        <LoadErrorState
+          variant="inline"
+          title={t("errors.loadFailed")}
+          onRetry={() => void refetch()}
+        />
       ) : (
         <>
           <ShipmentPhotoGallery

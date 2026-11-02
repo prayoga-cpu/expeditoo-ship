@@ -30,6 +30,7 @@ import {
 import { useDriverShipments } from "../hooks/useDriverShipments";
 import { PageLoader } from "@/components/ui/page-loader";
 import { CenteredEmptyState } from "@/components/ui/centered-empty-state";
+import { LoadErrorState } from "@/components/ui/load-error-state";
 import {
   ShipmentStatusBadge,
   STATUS_ACCENT_CLASSES,
@@ -66,7 +67,7 @@ export function MyShipments() {
   // (client_feedback_2026_10_29_spec.md §N2).
   const [order, setOrder] = useState<"asc" | "desc">("asc");
   const [range, setRange] = useState({ from: "", to: "" });
-  const { shipments, isLoading, isError } = useDriverShipments();
+  const { shipments, isLoading, isError, refetch } = useDriverShipments();
 
   if (isLoading) {
     return <PageLoader className="xl:min-h-screen" />;
@@ -74,13 +75,15 @@ export function MyShipments() {
 
   if (isError) {
     return (
-      <CenteredEmptyState
-        icon={Package}
+      <LoadErrorState
         title={t("error.title")}
         description={t("error.description")}
+        onRetry={() => void refetch()}
       />
     );
   }
+
+  const narrowed = filter !== "ALL" || range.from !== "" || range.to !== "";
 
   const filteredShipments = sortShipments(
     shipments.filter(
@@ -149,7 +152,26 @@ export function MyShipments() {
             icon={Package}
             title={t("empty.title")}
             description={t("empty.description")}
-          />
+          >
+            {/* A filter that hides everything is undone in one tap; with
+                nothing to hide, a carrier's next run is on the board
+                (no_dead_ends_spec.md §5). */}
+            {narrowed ? (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setFilter("ALL");
+                  setRange({ from: "", to: "" });
+                }}
+              >
+                {tCommon("nextSteps.showAll")}
+              </Button>
+            ) : user?.roles?.includes("carrier") ? (
+              <Button asChild>
+                <Link href="/expedion">{tCommon("nextSteps.findJobs")}</Link>
+              </Button>
+            ) : null}
+          </CenteredEmptyState>
         ) : (
           <div className="grid gap-4">
             {filteredShipments.map((shipment) => (

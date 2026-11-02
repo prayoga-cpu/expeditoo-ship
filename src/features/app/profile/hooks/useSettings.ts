@@ -68,7 +68,7 @@ export function useSettings() {
   const { theme, setTheme } = useTheme();
   const queryClient = useQueryClient();
 
-  const { data: preferencesData, isLoading, isError } = useQuery({
+  const { data: preferencesData, isLoading, isError, refetch } = useQuery({
     queryKey: ["preferences"],
     queryFn: fetchPreferences,
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -111,6 +111,7 @@ export function useSettings() {
     inApp,
     isLoading,
     isError,
+    refetch,
     handleThemeChange,
     handleNotificationChange,
   };

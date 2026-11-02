@@ -68,6 +68,7 @@ export function useFeedbackQueue(params: Partial<FeedbackQuery>) {
     meta: query.data?.meta,
     isLoading: query.isLoading,
     isError: query.isError,
+    refetch: query.refetch,
   };
 }
 

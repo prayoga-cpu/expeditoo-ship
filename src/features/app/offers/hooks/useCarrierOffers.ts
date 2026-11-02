@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import {
@@ -38,16 +39,42 @@ const SUBMIT_CODES = [
 const isSubmitCode = (code: string): code is (typeof SUBMIT_CODES)[number] =>
   (SUBMIT_CODES as readonly string[]).includes(code);
 
-export function useMyOffers(status?: string) {
+/**
+ * Where a refused bid or take sends the carrier next, beside the reason
+ * (no_dead_ends_spec.md §6). A refusal the form itself can fix — a slot, a
+ * price — has none: the form is still on screen.
+ */
+const NEXT_FOR: Record<string, { label: string; href: string }> = {
+  CARRIER_ABSENT: { label: "availability", href: "/carrier/application" },
+  CARRIER_NOT_APPROVED: { label: "application", href: "/carrier/application" },
+  LISTING_NOT_OPEN: { label: "otherJobs", href: "/expedion" },
+  LISTING_EXPIRED: { label: "otherJobs", href: "/expedion" },
+  OFFER_ALREADY_EXISTS: { label: "myOffers", href: "/carrier/offers" },
+  VEHICLE_CAPACITY_WEIGHT: { label: "addVehicle", href: "/carrier/fleet" },
+  VEHICLE_CAPACITY_DIMENSIONS: { label: "addVehicle", href: "/carrier/fleet" },
+};
+
+function useRefusalAction() {
+  const router = useRouter();
+  const t = useTranslations("listing.bid.actions");
+  return (code: string | undefined) => {
+    const next = code ? NEXT_FOR[code] : undefined;
+    return next && { label: t(next.label), onClick: () => router.push(next.href) };
+  };
+}
+
+export function useMyOffers(status?: string, options: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: ["carrier-offers", status ?? "all"],
     queryFn: () => offersApi.mine({ status }),
+    enabled: options.enabled ?? true,
   });
 }
 
 export function useSubmitOffer(listingId: string) {
   const queryClient = useQueryClient();
   const t = useTranslations("listing.bid");
+  const actionFor = useRefusalAction();
 
   return useMutation({
     mutationFn: (input: SubmitOfferInput) => offersApi.submit(listingId, input),
@@ -70,7 +97,8 @@ export function useSubmitOffer(listingId: string) {
       const known = coded.find(isSubmitCode);
 
       toast.error(
-        known ? t(`submitErrors.${known}`) : t("toast.submitFailed")
+        known ? t(`submitErrors.${known}`) : t("toast.submitFailed"),
+        { action: actionFor(known) }
       );
     },
   });
@@ -104,6 +132,7 @@ export function useWithdrawOffer() {
 export function useTakeJob(listingId: string) {
   const queryClient = useQueryClient();
   const t = useTranslations("listing.bid");
+  const actionFor = useRefusalAction();
 
   return useMutation({
     mutationFn: (input: TakeJobInput) => offersApi.take(listingId, input),
@@ -126,7 +155,8 @@ export function useTakeJob(listingId: string) {
         "TAKE_NOT_AVAILABLE",
       ];
       toast.error(
-        known.includes(code) ? t(`errors.${code}`) : t("errors.generic")
+        known.includes(code) ? t(`errors.${code}`) : t("errors.generic"),
+        { action: actionFor(code) }
       );
     },
   });

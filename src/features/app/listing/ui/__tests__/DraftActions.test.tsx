@@ -34,8 +34,13 @@ Element.prototype.releasePointerCapture ??= () => {};
 const api = vi.hoisted(() => ({
   deleteDraft: vi.fn(),
   unschedule: vi.fn(),
+  unpublish: vi.fn(),
+  cancel: vi.fn(),
+  repost: vi.fn(),
 }));
 vi.mock("../../api/listings.api", () => ({ listingsApi: api }));
+// A live or ended row carries `RequestActions`, whose hooks navigate.
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 let rows: Job[] = [];
