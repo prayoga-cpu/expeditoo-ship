@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CenteredEmptyState } from "@/components/ui/centered-empty-state";
 import { LoadErrorState } from "@/components/ui/load-error-state";
+import { isRefusal } from "@/lib/fetcher";
 import { PageLoader } from "@/components/ui/page-loader";
 import Link from "next/link";
 import { useMyOffers, useWithdrawOffer } from "../hooks/useCarrierOffers";
@@ -33,9 +34,25 @@ const STATUS_TONE: Record<OfferStatus, string> = {
  */
 export function MyOffers() {
   const t = useTranslations("listing.bid.myOffers");
-  const { data: offers, isLoading, isError, refetch } = useMyOffers();
+  const { data: offers, isLoading, isError, error, refetch } = useMyOffers();
 
   if (isLoading) return <PageLoader />;
+
+  // Not a carrier (yet, or any more): « try again » cannot help, the
+  // application can (2.77.1).
+  if (isError && isRefusal(error)) {
+    return (
+      <CenteredEmptyState
+        icon={Gavel}
+        title={t("notCarrier")}
+        description={t("notCarrierDesc")}
+      >
+        <Button asChild>
+          <Link href="/carrier/application">{t("application")}</Link>
+        </Button>
+      </CenteredEmptyState>
+    );
+  }
 
   if (isError) {
     return (

@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ActiveConversationProvider } from "@/features/app/messages/context";
 import React from "react";
+import { isRefusal } from "@/lib/fetcher";
 
 // Dynamically import AblyProvider to avoid SSR issues
 import { LazyAblyProvider } from "@/components/providers/LazyAblyProvider";
@@ -19,7 +20,9 @@ const queryClient = new QueryClient({
     queries: {
       staleTime: 60 * 1000, // 1 minute
       gcTime: 5 * 60 * 1000, // 5 minutes (formerly cacheTime)
-      retry: 1,
+      // One retry for a dropped connection or a 5xx; none for a refusal, which
+      // answers the same every time.
+      retry: (failures, error) => !isRefusal(error) && failures < 1,
       refetchOnWindowFocus: false,
     },
   },

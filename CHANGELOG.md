@@ -14,6 +14,17 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.77.1] - 2026-11-04 · fix
+
+- **The dashboard no longer says « This did not load » when the real answer is
+  « you do not have driver access ».** An account whose application is
+  approved but which no longer holds the driver role now just sees the
+  « Approved, but driver access is off » notice, without a retry button that
+  could never work.
+- « My offers » explains that offers are for approved carriers and links to
+  the application, instead of offering to try again.
+- A refusal (not allowed, not signed in, not found) is no longer sent twice.
+
 ## [2.77.0] - 2026-11-02 · feat
 
 - **More ways to pay than typing a card.** When you accept an offer, the

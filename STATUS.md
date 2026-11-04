@@ -962,6 +962,41 @@ than leaving it in a chat message.
 
 ---
 
+## ✅ 2026-11-04 — A Refusal Is Not a Failed Load: the Dashboard Banner From 2.75.0 (2.77.1)
+
+_The owner, with a screenshot of « This did not load » over a 403 on
+`/api/carrier/offers`: « analyze if it's bug »._
+
+### Cause
+
+`useDriverDashboard` asked for the carrier's offers whenever the application
+was `approved`; the route answers only to the `carrier` **role**, which
+approval grants (`carrier.service.ts`) but which can be revoked afterwards.
+The owner's account was approved (24 Sep) with roles `shipper,admin`. Before
+2.75.0 the 403 was silent (a « 0 »); 2.75.0's `loadFailed` banner treated any
+error as a failed load, so it offered a retry that could never succeed — the
+dead end 2.75.0 set out to remove. The request showed twice because
+`Providers` retried every failure once. One production account affected
+(approved application, no carrier role), read through `mirror_readonly`.
+
+### What changed
+
+- `isRefusal` (`lib/fetcher.ts`): 401/403/404 are answers that will not change.
+- `Providers`: no retry for a refusal.
+- `useDriverDashboard`: offers only with the carrier role; a refusal is not
+  `loadFailed`, and `retry` skips it.
+- `MyOffers`: a refusal explains and links to `/carrier/application`.
+
+### Verification
+
+Final tree, one gate at a time: tsc 0 · lint 0 errors · vitest 3,323 / 3,323 · changelog:check ok · `pnpm build` on the commit before the push. New tests:
+`is-refusal` (3 groups), `useDriverDashboard` (4), `MyOffers` (2).
+
+### Operator to-do
+
+The owner's account has no `carrier`/`driver` role despite an approved
+application: add them in Admin → Users, then sign out and in.
+
 ## ✅ 2026-11-02 — Payment Alternatives Beside the Card Fields: Link, PayPal From the Dashboard, and a Return From PayPal That Finishes the Award (2.77.0)
 
 _The owner: « also every payment part give alternative for paypal/stripe

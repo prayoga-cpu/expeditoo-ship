@@ -86,3 +86,11 @@ export function toQuery(params: object): string {
   const qs = search.toString();
   return qs ? `?${qs}` : "";
 }
+
+/**
+ * An answer that will not change on a second try: not signed in, not allowed,
+ * not found. Retrying it only doubles the request, and « Réessayer » on it is
+ * a dead end — the screen should explain instead (no_dead_ends_spec.md §4).
+ */
+export const isRefusal = (error: unknown): error is ApiError =>
+  error instanceof ApiError && [401, 403, 404].includes(error.status);

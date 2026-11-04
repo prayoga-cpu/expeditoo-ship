@@ -5,6 +5,8 @@ import { listingsApi } from "@/features/app/listing/api/listings.api";
 import { offersApi } from "@/features/app/offers/api/offers.api";
 import { deliveriesApi } from "@/features/app/deliveries/api/deliveries.api";
 import { useCarrierApplication } from "@/features/app/carrier/hooks/useCarrier";
+import { useAuth } from "@/lib/auth-context";
+import { isRefusal } from "@/lib/fetcher";
 import { useMyRequests } from "@/features/app/listing/hooks/useMyRequests";
 import { useSavedCards } from "@/features/app/profile/hooks/useSavedCards";
 import type { ListingStatus } from "@/features/app/listing/types";
@@ -28,6 +30,11 @@ const NEEDS_CARD_STATUSES: ListingStatus[] = ["open", "awarded"];
  */
 export function useDriverDashboard() {
   const application = useCarrierApplication();
+  // The offers route answers only to the carrier role, which an approved
+  // application does not guarantee (it can be revoked afterwards): asking
+  // without it is a 403 that read as « did not load » (2.77.1).
+  const { user } = useAuth();
+  const isCarrier = user?.roles?.includes("carrier") ?? false;
 
   // `limit: 1` because only the total is rendered; the page never lists these.
   // Unpinned from `origin: "expedion"` so the count matches what the board
@@ -43,7 +50,7 @@ export function useDriverDashboard() {
     queryFn: () => offersApi.mine({ status: "pending", limit: 50 }),
     // A driver without an approved application cannot have offers, and the
     // route answers FORBIDDEN_NOT_CARRIER rather than an empty list.
-    enabled: application.data?.status === "approved",
+    enabled: application.data?.status === "approved" && isCarrier,
   });
 
   const activeRuns = useQuery({
@@ -102,12 +109,13 @@ export function useDriverDashboard() {
 
     // A count that failed would otherwise read « 0 » — a fact nobody stated —
     // so the page says a read failed and offers it again (§4).
+    // A refusal is not a failed read: the banner above already explains it.
     loadFailed: [application, openJobs, liveOffers, activeRuns, myRequests].some(
-      (query) => query.isError
+      (query) => query.isError && !isRefusal(query.error)
     ),
     retry: () => {
       for (const query of [application, openJobs, liveOffers, activeRuns, myRequests]) {
-        if (query.isError) void query.refetch();
+        if (query.isError && !isRefusal(query.error)) void query.refetch();
       }
     },
   };

@@ -1114,7 +1114,10 @@
           "rejected": "Non retenue",
           "withdrawn": "Retirée",
           "expired": "Expirée"
-        }
+        },
+        "notCarrier": "Les offres sont réservées aux transporteurs validés",
+        "notCarrierDesc": "Ce compte n'a pas l'accès transporteur. Consultez votre dossier ; s'il est déjà approuvé, déconnectez-vous puis reconnectez-vous, sinon contactez le support.",
+        "application": "Mon dossier transporteur"
       }
     }
   },

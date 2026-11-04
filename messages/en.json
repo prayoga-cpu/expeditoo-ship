@@ -1114,7 +1114,10 @@
           "rejected": "Not selected",
           "withdrawn": "Withdrawn",
           "expired": "Expired"
-        }
+        },
+        "notCarrier": "Offers are for approved carriers",
+        "notCarrierDesc": "This account does not have carrier access. Check your application; if it is already approved, sign out and back in, otherwise contact support.",
+        "application": "My carrier application"
       }
     }
   },
