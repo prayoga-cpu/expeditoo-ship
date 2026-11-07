@@ -45,8 +45,8 @@ import {
 } from "@/lib/airtable-documents";
 
 const PAT = process.env.AIRTABLE_PAT ?? "";
-const BASE_ID = process.env.AIRTABLE_BASE_ID ?? "appu3jamyzCJRuOjr";
-const TABLE = process.env.AIRTABLE_TABLE ?? "CONTACTS";
+const BASE_ID = process.env.AIRTABLE_BASE_ID || "appu3jamyzCJRuOjr";
+const TABLE = process.env.AIRTABLE_TABLE || "CONTACTS";
 
 const args = process.argv.slice(2);
 const flag = (name: string) => args.includes(`--${name}`);

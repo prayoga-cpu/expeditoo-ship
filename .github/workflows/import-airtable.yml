@@ -20,7 +20,7 @@ name: Import Airtable quotes and documents
 #   POSTGRES_URL_PRODUCTION, AIRTABLE_PAT,
 #   R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY,
 #   R2_EXPEDION_BUCKET_NAME   (the private Expedion bucket, as in Vercel Production)
-# Optional repo variable: AIRTABLE_BASE_ID (defaults to the production base).
+# The Airtable base defaults to the production one inside the scripts.
 
 on:
   workflow_dispatch:
@@ -57,7 +57,6 @@ jobs:
       POSTGRES_URL: ${{ secrets.POSTGRES_URL_PRODUCTION }}
       APP_ENV: production
       AIRTABLE_PAT: ${{ secrets.AIRTABLE_PAT }}
-      AIRTABLE_BASE_ID: ${{ vars.AIRTABLE_BASE_ID }}
       R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
       R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
       R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}

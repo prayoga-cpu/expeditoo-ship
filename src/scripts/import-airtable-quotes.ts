@@ -40,8 +40,8 @@ import { sql } from "drizzle-orm";
 // ========================================
 
 const AIRTABLE_PAT = process.env.AIRTABLE_PAT ?? "";
-const BASE_ID = process.env.AIRTABLE_BASE_ID ?? "appu3jamyzCJRuOjr";
-const TABLE = process.env.AIRTABLE_TABLE ?? "CONTACTS";
+const BASE_ID = process.env.AIRTABLE_BASE_ID || "appu3jamyzCJRuOjr";
+const TABLE = process.env.AIRTABLE_TABLE || "CONTACTS";
 const COMMIT = process.argv.includes("--commit");
 const PAGE_SIZE = 100;
 
