@@ -32,6 +32,17 @@ the first release below is the commit that began the transport pivot.
   but stays for applicants and drivers.
 - A deregistered driver's status now reads « Désinscrit » instead of a blank.
 
+## [2.82.1] - 2026-11-07 · fix
+
+- **Slip documents open on the real site.** Imported slips pointed at an
+  address that only exists on a developer's computer; they now always open from
+  the live site.
+- **Every row of Slips can show its documents.** « Voir les documents » opens a
+  pop-up with every file of the quote — slip, invoices, powers of attorney and
+  photos — instead of a row with nothing to click.
+- **From a slip to its quote.** Each row carries the quote number (DEV-…), which
+  opens that quote in the Expedion bridge.
+
 ## [2.82.0] - 2026-11-07 · feat
 
 - **Every document of a quote in one place.** The admin quote detail now lists

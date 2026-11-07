@@ -64,6 +64,18 @@ export function expedionFileIdFromUrl(
 }
 
 /**
+ * What a browser should load for a stored file: the path alone, so it is always
+ * this deployment — never the host the row was written under. A row written by
+ * a script run with no `NEXT_PUBLIC_APP_URL` holds `http://localhost:3000/…`,
+ * and an absolute link from one of those opens the admin's own machine, not the
+ * document. Anything that is not one of ours is returned untouched.
+ */
+export function expedionFileHref(url: string): string {
+  const id = expedionFileIdFromUrl(url);
+  return id ? `${EXPEDION_FILE_PATH_PREFIX}${encodeURIComponent(id)}` : url;
+}
+
+/**
  * The stable URL for a stored file.
  *
  * Absolute, because it is persisted: into `bordereau_doc_url`, and into the

@@ -12,6 +12,8 @@ import { db } from "@/db";
 export type BordereauRow = {
   id: string;
   reference: number | null;
+  /** Our own number, « DEV-04659 » once formatted. */
+  quoteRef: number | null;
   quoteNumber: string | null;
   bordereauNumber: string | null;
   firstName: string | null;
@@ -53,7 +55,7 @@ function matching(search: string | undefined) {
 
 const COLUMNS = sql`
   q.id,
-  q.reference,
+  q.reference as "quoteRef",
   q.quote_number as "quoteNumber",
   q.bordereau_number as "bordereauNumber",
   q.first_name as "firstName",

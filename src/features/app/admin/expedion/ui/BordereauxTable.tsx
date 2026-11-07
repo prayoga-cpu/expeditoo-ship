@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { ChevronLeft, ChevronRight, Download, FileSpreadsheet, Search } from "lucide-react";
 
@@ -12,7 +13,10 @@ import { LoadErrorState } from "@/components/ui/load-error-state";
 import { PageLoader } from "@/components/ui/page-loader";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useSearch } from "@/features/app/common/hooks/useSearch";
+import { formatQuoteReference } from "@/lib/quote-reference";
+import { expedionFileHref } from "@/lib/expedion-files";
 import { useBordereaux } from "../hooks/useBordereaux";
+import { QuoteDocumentsDialog } from "./QuoteDocumentsDialog";
 
 const PAGE_SIZE = 25;
 
@@ -26,6 +30,8 @@ export function BordereauxTable() {
   const t = useTranslations("admin.bordereaux");
   const { searchQuery, debouncedQuery, setSearchQuery } = useSearch("", 350);
   const [page, setPage] = useState(1);
+  // The row whose documents are open in the pop-up.
+  const [viewing, setViewing] = useState<{ id: string; legacyUrl: string | null; title: string } | null>(null);
   useEffect(() => setPage(1), [debouncedQuery]);
 
   const { data, isLoading, isError, refetch } = useBordereaux({
@@ -86,6 +92,7 @@ export function BordereauxTable() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>{t("table.quote")}</TableHead>
                     <TableHead>{t("table.number")}</TableHead>
                     <TableHead>{t("table.client")}</TableHead>
                     <TableHead>{t("table.contact")}</TableHead>
@@ -98,6 +105,16 @@ export function BordereauxTable() {
                 <TableBody>
                   {data.rows.map((row) => (
                     <TableRow key={row.id}>
+                      <TableCell className="whitespace-nowrap">
+                        {/* The quote this slip belongs to, in the Expedion bridge. */}
+                        <Link
+                          href={`/admin/expedion?quote=${encodeURIComponent(row.id)}`}
+                          className="font-mono text-xs font-medium text-primary underline-offset-2 hover:underline"
+                          title={t("openQuote")}
+                        >
+                          {row.quoteRef ? formatQuoteReference(row.quoteRef) : (row.quoteNumber ?? row.id.slice(0, 8))}
+                        </Link>
+                      </TableCell>
                       <TableCell className="font-mono text-sm">{row.bordereauNumber ?? "—"}</TableCell>
                       <TableCell className="font-medium">
                         {[row.firstName, row.lastName].filter(Boolean).join(" ") || "—"}
@@ -116,20 +133,26 @@ export function BordereauxTable() {
                         {row.description ?? "—"}
                       </TableCell>
                       <TableCell className="text-right">
-                        {row.bordereauDocUrl ? (
-                          <a
-                            href={row.bordereauDocUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm font-medium text-primary underline-offset-2 hover:underline"
+                        {row.bordereauDocUrl || row.documentCount > 0 ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-primary"
+                            onClick={() =>
+                              setViewing({
+                                id: row.id,
+                                legacyUrl: row.bordereauDocUrl ? expedionFileHref(row.bordereauDocUrl) : null,
+                                title: [row.bordereauNumber, [row.firstName, row.lastName].filter(Boolean).join(" ")]
+                                  .filter(Boolean)
+                                  .join(" · ") || t("table.documents"),
+                              })
+                            }
                           >
-                            {t("openSlip")}
-                            {row.documentCount > 1 ? ` (+${row.documentCount - 1})` : ""}
-                          </a>
+                            {t("viewDocuments", { count: Math.max(row.documentCount, row.bordereauDocUrl ? 1 : 0) })}
+                          </Button>
                         ) : (
-                          <span className="text-sm text-muted-foreground">
-                            {row.documentCount > 0 ? t("documentsCount", { count: row.documentCount }) : "—"}
-                          </span>
+                          <span className="text-sm text-muted-foreground">—</span>
                         )}
                       </TableCell>
                     </TableRow>
@@ -167,6 +190,12 @@ export function BordereauxTable() {
           </div>
         </>
       )}
+      <QuoteDocumentsDialog
+        quoteId={viewing?.id ?? null}
+        legacyUrl={viewing?.legacyUrl}
+        title={viewing?.title ?? ""}
+        onClose={() => setViewing(null)}
+      />
     </div>
   );
 }

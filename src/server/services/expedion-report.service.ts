@@ -2,7 +2,7 @@ import { z } from "zod";
 import * as adminDal from "@/server/dal/admin.dal";
 import * as reportDal from "@/server/dal/expedion-report.dal";
 import { expedionFilesDal } from "@/server/dal/expedion-files.dal";
-import { expedionFileUrl } from "@/lib/expedion-files";
+import { EXPEDION_FILE_PATH_PREFIX } from "@/lib/expedion-files";
 import { AdminError } from "@/server/services/admin.service";
 import type { Viewer } from "@/server/services/shipment-access";
 
@@ -303,7 +303,7 @@ export interface QuoteDocument {
   kind: string;
   mimeType: string;
   sizeBytes: number;
-  /** `/api/expedion/files/:id` — authorises on the reader's own session. */
+  /** The path `/api/expedion/files/:id` — always this deployment, never a stored host. */
   url: string;
 }
 
@@ -325,6 +325,6 @@ export async function listQuoteDocuments(
     kind: file.kind,
     mimeType: file.mimeType,
     sizeBytes: file.sizeBytes,
-    url: expedionFileUrl(file.id),
+    url: `${EXPEDION_FILE_PATH_PREFIX}${file.id}`,
   }));
 }

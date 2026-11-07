@@ -3431,6 +3431,7 @@
       "emptySearch": "Aucun bordereau ne correspond à cette recherche. Essayez un autre mot ou effacez la recherche.",
       "emptyHint": "Les bordereaux apparaissent ici dès qu'un client en téléverse un ou que l'import Airtable a tourné.",
       "table": {
+        "quote": "Devis",
         "number": "N°",
         "client": "Client",
         "contact": "Contact",
@@ -3439,6 +3440,11 @@
         "description": "Description",
         "documents": "Documents"
       },
+      "openQuote": "Ouvrir le devis dans Expedion",
+      "viewDocuments": "{count, plural, one {Voir le document} other {Voir les # documents}}",
+      "documentsDialogHint": "Tous les documents de ce devis. Ouvrez-en un dans un nouvel onglet pour le télécharger.",
+      "documentsFailed": "Les documents n'ont pas pu être chargés.",
+      "retry": "Réessayer",
       "openSlip": "Ouvrir",
       "documentsCount": "{count, plural, one {# document} other {# documents}}",
       "count": "{total, plural, one {# bordereau} other {# bordereaux}}",

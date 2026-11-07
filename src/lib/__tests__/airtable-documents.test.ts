@@ -57,3 +57,21 @@ describe("mimeFor", () => {
     expect(mimeFor({ id: "a", url: "u" })).toBe("application/octet-stream");
   });
 });
+
+import { expedionFileHref } from "../expedion-files";
+
+describe("expedionFileHref — a stored file always opens on this deployment", () => {
+  it("drops the host a row was written under", () => {
+    expect(expedionFileHref("http://localhost:3000/api/expedion/files/abc123")).toBe(
+      "/api/expedion/files/abc123"
+    );
+    expect(expedionFileHref("https://old.example.com/api/expedion/files/abc123")).toBe(
+      "/api/expedion/files/abc123"
+    );
+  });
+
+  it("leaves any other link alone", () => {
+    const firebase = "https://firebasestorage.googleapis.com/v0/b/x/o/users%2Fa.pdf?alt=media&token=t";
+    expect(expedionFileHref(firebase)).toBe(firebase);
+  });
+});

@@ -1,6 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { QuoteDetailDialog } from "./QuoteDetailDialog";
 import {
   AlertCircle,
   AlertTriangle,
@@ -84,6 +86,11 @@ export function ExpedionDashboard() {
   // the Expedion figures down with it.
   const directRequests = useRecentDirectRequests();
   const t = useTranslations("admin.expedion");
+  // `/admin/expedion?quote=<id>` opens that quote's detail — the Slips table
+  // links here, so a slip is one click from the quote it belongs to.
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [linkedQuote, setLinkedQuote] = useState<string | null>(searchParams.get("quote"));
   // Controlled so a data-quality tile can jump straight to the queue it is
   // counting, rather than leaving the operator to find the right tab
   // themselves for a number the page already knows the source of.
@@ -135,6 +142,13 @@ export function ExpedionDashboard() {
 
   return (
     <div className="w-full space-y-6">
+      <QuoteDetailDialog
+        quoteId={linkedQuote}
+        onClose={() => {
+          setLinkedQuote(null);
+          router.replace("/admin/expedion");
+        }}
+      />
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
         <div>
           <h1 className="text-foreground flex items-center gap-2 text-2xl font-bold md:text-3xl">

@@ -52,6 +52,11 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { formatCurrency } from "@/lib/currency";
 import {
+  EXPEDION_FILE_PATH_PREFIX,
+  expedionFileHref,
+  expedionFileIdFromUrl,
+} from "@/lib/expedion-files";
+import {
   centsToInput,
   numberToInput,
   parseCents,
@@ -95,7 +100,7 @@ import {
  */
 
 function isPreviewable(url: string): boolean {
-  return /^https?:\/\//i.test(url);
+  return /^https?:\/\//i.test(url) || url.startsWith(EXPEDION_FILE_PATH_PREFIX);
 }
 
 /**
@@ -355,12 +360,14 @@ export function QuoteDetailDialog({
         // listed twice.
         ...(filedDocuments ?? [])
           .filter((file) => !(
-            file.url === data.bordereauDocUrl ||
-            (Array.isArray(data.photoUrls) && data.photoUrls.includes(file.url))
+            expedionFileIdFromUrl(data.bordereauDocUrl) === file.id ||
+            (Array.isArray(data.photoUrls) &&
+              data.photoUrls.some((u) => expedionFileIdFromUrl(u) === file.id))
           ))
           .map((file) => ({
             url: file.url,
             label: t(`docKind.${file.kind}` as never),
+            mimeType: file.mimeType,
           })),
       ]
     : [];
@@ -601,6 +608,7 @@ export function QuoteDetailDialog({
                           label={doc.label}
                           openLabel={t("openDocument")}
                           unavailableLabel={t("documentNotPreviewable")}
+                          mimeType={"mimeType" in doc ? (doc.mimeType as string) : undefined}
                         />
                       ))}
                     </div>
@@ -1245,19 +1253,23 @@ function NumberEditableField({
  * is shown as text: the column is a free string and older rows hold a storage
  * key, which no `<img>` can resolve — printing it beats an empty box.
  */
-function DocumentPreview({
-  url,
+export function DocumentPreview({
+  url: rawUrl,
   label,
   openLabel,
   unavailableLabel,
+  mimeType,
 }: {
   url: string;
   label: string;
   openLabel: string;
   unavailableLabel: string;
+  mimeType?: string;
 }) {
+  // Always this deployment's own path for a stored file (see expedionFileHref).
+  const url = expedionFileHref(rawUrl);
   const previewable = isPreviewable(url);
-  const image = previewable && looksLikeImage(url);
+  const image = previewable && (mimeType ? mimeType.startsWith("image/") : looksLikeImage(url));
 
   return (
     <div className="rounded-lg border">

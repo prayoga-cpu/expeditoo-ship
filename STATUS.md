@@ -987,6 +987,32 @@ _The owner, with a screenshot of the admin sidebar: « I think the driver applic
 - The phone bars for drivers and requesters were not regrouped (they are icon bars with no room for headings).
 - Not checked in a browser.
 
+## ✅ 2026-11-07 — Slips: documents in a pop-up, a link to the quote, and the localhost links repaired (2.82.1)
+
+_Owner request: « some rows cannot open the PDF, make each previewable in a modal; none of the slips is related to a transaction — redirect to the quote in /admin/expedion; in production the open-PDF links still point to the local »._
+
+### Cause
+
+- **localhost:** the import ran in CI with no `NEXT_PUBLIC_APP_URL`, so `expedionFileUrl` fell back to `http://localhost:3000`; **3,761** `bordereau_doc_url` rows carry it (read from the mirror). A link with that host opens the admin's own machine.
+- **Rows that did not open:** **547** quotes have a bordereau file but no `bordereau_doc_url` (their slip sat only in « BORDEREAU 2 »), **246** more have only invoices / powers of attorney / photos. The Slips cell linked only when `bordereau_doc_url` was set.
+- **No relation:** the table had no link to the quote at all.
+
+### Changes
+
+- `expedionFileHref` (`src/lib/expedion-files.ts`): a stored file is always loaded by path, whatever host the row holds. `DocumentPreview` and the new `QuoteDocumentsDialog` use it; image detection uses the file's mime instead of an extension that `/api/expedion/files/:id` does not have. `listQuoteDocuments` returns paths, and the quote dialog de-duplicates by file id rather than by string.
+- Slips: « Voir les documents » opens `QuoteDocumentsDialog` for any row with a link or a filed file; a new « Devis » column (DEV-…) links to `/admin/expedion?quote=<id>`, which `ExpedionDashboard` now opens as the detail dialog (the page gained the `Suspense` that `useSearchParams` needs).
+- `src/scripts/repair-expedion-file-urls.ts` + the workflow's `repair_urls` box: re-hosts the localhost links on `NEXT_PUBLIC_APP_URL` and links the 547 quotes to their first bordereau. The workflow now sets `NEXT_PUBLIC_APP_URL` from the repo variable `APP_URL`, so a re-run writes correct links.
+
+### Verification
+
+`tsc` 0 errors; ESLint clean on the touched trees; `src/features/app/admin` + `src/lib` 793 tests pass. Not checked in a browser; the repair has not been run when this was written.
+
+### Known limits
+
+« Transaction » was read as the quote in the Expedion bridge; no payment row is joined to a slip (Airtable payments are in other tables of the base and were not imported).
+
+---
+
 ## ✅ 2026-11-07 — Airtable documents into the admin: importer, workflow and a Documents list (2.82.0)
 
 _Owner request: « you have access to the airtable, can you check again all of the data, and import with the PDF files as well to our storage, so everything is integrated to manage »._

@@ -3431,6 +3431,7 @@
       "emptySearch": "No slip matches this search. Try another word or clear the search.",
       "emptyHint": "Slips appear here as soon as a client uploads one or the Airtable import has run.",
       "table": {
+        "quote": "Quote",
         "number": "No.",
         "client": "Client",
         "contact": "Contact",
@@ -3439,6 +3440,11 @@
         "description": "Description",
         "documents": "Documents"
       },
+      "openQuote": "Open the quote in Expedion",
+      "viewDocuments": "{count, plural, one {View document} other {View # documents}}",
+      "documentsDialogHint": "Every document of this quote. Open one in a new tab to download it.",
+      "documentsFailed": "The documents could not be loaded.",
+      "retry": "Try again",
       "openSlip": "Open",
       "documentsCount": "{count, plural, one {# document} other {# documents}}",
       "count": "{total, plural, one {# slip} other {# slips}}",

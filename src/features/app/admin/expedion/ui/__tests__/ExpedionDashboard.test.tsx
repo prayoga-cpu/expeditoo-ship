@@ -158,6 +158,15 @@ const state = vi.hoisted(() => ({
   error: null as Error | null,
 }));
 
+// The detail dialog has its own tests; here it is the `?quote=` deep link that matters.
+vi.mock("../QuoteDetailDialog", () => ({ QuoteDetailDialog: () => null }));
+
+// The dashboard reads `?quote=` and can replace the URL when that dialog closes.
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 vi.mock("../../hooks/useExpedionReport", () => ({
   useExpedionReport: () => ({
     data: state.report,
