@@ -3294,6 +3294,13 @@
         "documents": "Documents téléversés",
         "bordereau": "Bordereau",
         "photo": "Photo {index}",
+        "docKind": {
+          "bordereau": "Bordereau",
+          "invoice": "Facture",
+          "procuration": "Procuration",
+          "photo": "Photo",
+          "proof": "Preuve d'achat"
+        },
         "noDocuments": "Le client n'a téléversé aucun document.",
         "openDocument": "Ouvrir",
         "documentNotPreviewable": "Référence stockée — ce n'est pas un lien public, l'aperçu est impossible ici.",

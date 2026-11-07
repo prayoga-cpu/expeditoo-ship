@@ -3294,6 +3294,13 @@
         "documents": "Uploaded documents",
         "bordereau": "Bordereau",
         "photo": "Photo {index}",
+        "docKind": {
+          "bordereau": "Slip",
+          "invoice": "Invoice",
+          "procuration": "Power of attorney",
+          "photo": "Photo",
+          "proof": "Proof of purchase"
+        },
         "noDocuments": "The client uploaded no document.",
         "openDocument": "Open",
         "documentNotPreviewable": "Stored reference — not a public link, so it cannot be previewed here.",

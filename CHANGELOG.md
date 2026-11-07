@@ -32,6 +32,13 @@ the first release below is the commit that began the transport pivot.
   but stays for applicants and drivers.
 - A deregistered driver's status now reads « Désinscrit » instead of a blank.
 
+## [2.82.0] - 2026-11-07 · feat
+
+- **Every document of a quote in one place.** The admin quote detail now lists
+  the client's bordereau and, once the Airtable import has run, the second
+  bordereau, invoices, powers of attorney and photos that sat in Airtable.
+  Nothing changes until the import is run.
+
 ## [2.80.0] - 2026-11-07 · feat
 
 - **« Envoyer l'offre » says why it is dark.** A driver with one suitable

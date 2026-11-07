@@ -1,0 +1,103 @@
+name: Import Airtable quotes and documents
+
+# One-off (and resumable) catch-up of the Airtable base into the platform:
+#   1. quotes created in Airtable since the first import (insert-only);
+#   2. every attachment — bordereaux, invoices, powers of attorney, photos —
+#      copied into the PRIVATE Expedion bucket and recorded in `expedion_files`,
+#      with `bordereau_doc_url` pointed at the first bordereau.
+#
+# It runs here because this is the only place the production connection string
+# exists (see migrate.yml). The code refuses to open production from a laptop.
+#
+# Safe to re-run: every object key is fixed by its Airtable ids, an attachment
+# already stored is skipped, and nothing is ever overwritten or deleted. If the
+# time budget runs out it stops cleanly; run it again to resume.
+#
+# Identity documents (« Piece d'Identité ») are NOT imported unless the box is
+# ticked: personal data the platform has no use for.
+#
+# Requires, in repo Settings → Secrets:
+#   POSTGRES_URL_PRODUCTION, AIRTABLE_PAT,
+#   R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY,
+#   R2_EXPEDION_BUCKET_NAME   (the private Expedion bucket, as in Vercel Production)
+# Optional repo variable: AIRTABLE_BASE_ID (defaults to the production base).
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: Type "import" to confirm
+        required: true
+        type: string
+      dry_run:
+        description: Count only — read Airtable and the database, write nothing
+        required: true
+        type: boolean
+        default: true
+      import_new_quotes:
+        description: Import quotes that are in Airtable but not yet here, first
+        required: true
+        type: boolean
+        default: true
+      include_identity:
+        description: Also store identity documents (personal data — normally NO)
+        required: true
+        type: boolean
+        default: false
+
+concurrency:
+  group: import-airtable
+  cancel-in-progress: false
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    env:
+      POSTGRES_URL: ${{ secrets.POSTGRES_URL_PRODUCTION }}
+      APP_ENV: production
+      AIRTABLE_PAT: ${{ secrets.AIRTABLE_PAT }}
+      AIRTABLE_BASE_ID: ${{ vars.AIRTABLE_BASE_ID }}
+      R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+      R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      R2_EXPEDION_BUCKET_NAME: ${{ secrets.R2_EXPEDION_BUCKET_NAME }}
+    steps:
+      - name: Refuse an unconfirmed run
+        if: inputs.confirm != 'import'
+        run: |
+          echo "::error::Type \"import\" in the confirm box to run this."
+          exit 1
+
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Check the secrets are present
+        run: |
+          for name in POSTGRES_URL AIRTABLE_PAT R2_ACCOUNT_ID R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY R2_EXPEDION_BUCKET_NAME; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Secret for $name is not set — see the header of this workflow."
+              exit 1
+            fi
+          done
+
+      - name: Import quotes new in Airtable
+        if: inputs.import_new_quotes
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            pnpm tsx src/scripts/import-airtable-quotes.ts
+          else
+            pnpm tsx src/scripts/import-airtable-quotes.ts --commit
+          fi
+
+      - name: Import documents
+        run: |
+          flags=""
+          if [ "${{ inputs.dry_run }}" != "true" ]; then flags="$flags --commit"; fi
+          if [ "${{ inputs.include_identity }}" = "true" ]; then flags="$flags --include-identity"; fi
+          pnpm tsx src/scripts/import-airtable-documents.ts $flags --max-minutes 330

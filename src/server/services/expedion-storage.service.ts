@@ -97,6 +97,24 @@ export const expedionStorageService = {
   },
 
   /**
+   * Stores an object under a key the caller chose, so a re-run of an import
+   * overwrites the same object instead of duplicating it. Only the Airtable
+   * importer uses this; uploads from people always go through `upload`, whose
+   * key they cannot influence.
+   */
+  async uploadAt(key: string, fileBuffer: Buffer, mimeType: string): Promise<void> {
+    const { client, bucket } = ensureClient();
+    await client.send(
+      new PutObjectCommand({
+        Bucket: bucket,
+        Key: key,
+        Body: fileBuffer,
+        ContentType: mimeType,
+      })
+    );
+  },
+
+  /**
    * Issues a time-limited read URL. Callers must authorise first - this
    * function assumes that has already happened.
    */

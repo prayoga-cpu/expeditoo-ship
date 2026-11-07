@@ -987,6 +987,30 @@ _The owner, with a screenshot of the admin sidebar: « I think the driver applic
 - The phone bars for drivers and requesters were not regrouped (they are icon bars with no room for headings).
 - Not checked in a browser.
 
+## ✅ 2026-11-07 — Airtable documents into the admin: importer, workflow and a Documents list (2.82.0)
+
+_Owner request: « you have access to the airtable, can you check again all of the data, and import with the PDF files as well to our storage, so everything is integrated to manage »._
+
+### What was found (read-only)
+
+Airtable `CONTACTS`: **4,860 records**, 4,656 already in `expedion_quotes` (204 are newer than the first import; 186 of them carry files). **8,395 attachments, ≈ 2.35 GB** — 4,579 bordereaux (1.38 GB), 2,172 powers of attorney, 1,307 photos (0.76 GB), 304 invoices, 33 purchase proofs; 142 identity documents (164 MB) are **left out by default**. 107 attachments are `text/html`. On the production mirror, `expedion_quotes` held 4,658 rows and **zero** `bordereau_doc_url`: the first import copied rows, never files.
+
+### What changed
+
+- `src/lib/airtable-documents.ts` — which column is which kind, the fixed object key `expedion/airtable/<record>/<attachment>`, mime fallback. Tested.
+- `src/scripts/import-airtable-documents.ts` — dry run by default; `--commit`, `--limit`, `--max-minutes` (resumable), `--concurrency`, `--include-identity`. Stores into the private Expedion bucket through the new `expedionStorageService.uploadAt`, records `expedion_files` against the quote (owner = the quote's `firebase_uid`), points `bordereau_doc_url` at the first bordereau only if it is empty. Insert-only, idempotent, never deletes.
+- `.github/workflows/import-airtable.yml` — dispatch with `import`; dry-run on by default; imports new quotes first, then documents. Needs repo secrets `AIRTABLE_PAT`, `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_EXPEDION_BUCKET_NAME` besides `POSTGRES_URL_PRODUCTION`.
+- `GET /api/admin/expedion/quotes/:id/documents` (staff) and a merged list in `QuoteDetailDialog`; files are still served by `/api/expedion/files/:id`, which authorises again.
+
+### Not done / limits
+
+- **Nothing has been imported.** The code refuses to open the production database from a laptop (`assertNotProductionDatabase`), and I did not bypass it; the dry-run figures above come from Airtable directly plus the read-only mirror's record ids. The importer itself has not been run end to end against any database.
+- No new table or migration: `expedion_files.kind` is free text.
+- The `Airtable` columns other than attachments were not re-compared with Postgres; only quotes missing from Postgres were counted.
+- A flat « Bordereaux » table with CSV export (owner's earlier idea) is not built.
+
+---
+
 ## ✅ 2026-11-07 — Nicolas's feedback of 4–6 November: the offer form, the request form, the phone chrome (2.80.0)
 
 _Owner request: « analyze this feedback, give me the context and a fix plan … solve everything and implement what you can handle », then « refer from epidom … pwa with toggle to install, fullscreen and unfullscreen toggle … minimalist mobile, remove profile from the bottom bar, glass floating rounded bottom navbar ». Spec: `docs/specs/client_feedback_2026_11_06_spec.md`._

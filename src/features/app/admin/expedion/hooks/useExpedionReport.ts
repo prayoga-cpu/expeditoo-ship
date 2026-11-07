@@ -451,3 +451,22 @@ export function useCarrierOptions() {
 
 /** Exposed for the JSON round-trip test; not part of the hook's public API. */
 export const __testing = { reviveQuoteDates };
+
+/**
+ * Every document filed with a quote — the client's uploads and the ones
+ * imported from Airtable — for the detail's « Documents » section.
+ */
+export function useExpedionQuoteDocuments(quoteId: string | null) {
+  return useQuery<
+    { id: string; kind: string; mimeType: string; sizeBytes: number; url: string }[]
+  >({
+    queryKey: ["admin", "expedion", "quote", quoteId, "documents"],
+    enabled: quoteId !== null,
+    queryFn: async () => {
+      const response = await fetch(`/api/admin/expedion/quotes/${quoteId}/documents`);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const body = (await response.json()) as { success: boolean; data: never[] };
+      return body.data;
+    },
+  });
+}

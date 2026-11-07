@@ -1,6 +1,8 @@
 import { z } from "zod";
 import * as adminDal from "@/server/dal/admin.dal";
 import * as reportDal from "@/server/dal/expedion-report.dal";
+import { expedionFilesDal } from "@/server/dal/expedion-files.dal";
+import { expedionFileUrl } from "@/lib/expedion-files";
 import { AdminError } from "@/server/services/admin.service";
 import type { Viewer } from "@/server/services/shipment-access";
 
@@ -294,4 +296,35 @@ export async function listQuotePage(
     offset: (query.page - 1) * query.limit,
   });
   return { rows, total, page: query.page, limit: query.limit };
+}
+
+export interface QuoteDocument {
+  id: string;
+  kind: string;
+  mimeType: string;
+  sizeBytes: number;
+  /** `/api/expedion/files/:id` — authorises on the reader's own session. */
+  url: string;
+}
+
+/**
+ * The documents filed with one quote — the client's own uploads and the ones
+ * imported from Airtable. Staff only; the bytes are served, and authorised
+ * again, by `/api/expedion/files/:id`.
+ */
+export async function listQuoteDocuments(
+  viewer: Viewer,
+  quoteId: string
+): Promise<QuoteDocument[]> {
+  if (!viewer.isAdmin && !viewer.isOperator) {
+    throw new AdminError("FORBIDDEN", "Staff access required", 403);
+  }
+  const files = await expedionFilesDal.listByQuote(quoteId);
+  return files.map((file) => ({
+    id: file.id,
+    kind: file.kind,
+    mimeType: file.mimeType,
+    sizeBytes: file.sizeBytes,
+    url: expedionFileUrl(file.id),
+  }));
 }

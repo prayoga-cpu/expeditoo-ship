@@ -70,6 +70,7 @@ import {
   useExpedionEscalate,
   useExpedionQuoteAdmin,
   useExpedionQuoteDetail,
+  useExpedionQuoteDocuments,
   useExpedionReextract,
   type QuoteAdminPatch,
   type QuoteDetail,
@@ -194,6 +195,7 @@ export function QuoteDetailDialog({
   const locale = useLocale();
 
   const { data, isLoading, error } = useExpedionQuoteDetail(quoteId);
+  const { data: filedDocuments } = useExpedionQuoteDocuments(quoteId);
 
   const [isEditing, setIsEditing] = useState(false);
   const [form, setForm] = useState<QuoteAdminPatch>({});
@@ -346,6 +348,19 @@ export function QuoteDetailDialog({
           .map((url, index) => ({
             url,
             label: t("photo", { index: index + 1 }),
+          })),
+        // What was filed beyond the two columns above — the Airtable import's
+        // second bordereau, invoice and power of attorney included. Anything
+        // already shown (the primary bordereau points at its own file) is not
+        // listed twice.
+        ...(filedDocuments ?? [])
+          .filter((file) => !(
+            file.url === data.bordereauDocUrl ||
+            (Array.isArray(data.photoUrls) && data.photoUrls.includes(file.url))
+          ))
+          .map((file) => ({
+            url: file.url,
+            label: t(`docKind.${file.kind}` as never),
           })),
       ]
     : [];

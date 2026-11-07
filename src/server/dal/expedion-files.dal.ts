@@ -27,6 +27,15 @@ export const expedionFilesDal = {
     return row ?? null;
   },
 
+  /** Every stored document filed with one quote, oldest first. */
+  async listByQuote(quoteId: string) {
+    return db
+      .select()
+      .from(expedionFiles)
+      .where(eq(expedionFiles.quoteId, quoteId))
+      .orderBy(expedionFiles.createdAt);
+  },
+
   /**
    * Every object key on record.
    *
