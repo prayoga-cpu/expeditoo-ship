@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import en from "../../../../../../messages/en.json";
 import fr from "../../../../../../messages/fr.json";
@@ -17,6 +17,7 @@ import type { Job } from "@/features/app/listing/types";
  */
 
 const mutate = vi.fn();
+beforeEach(() => mutate.mockClear());
 
 vi.mock("@/features/app/carrier/hooks/useCarrier", () => ({
   useVehicles: () => ({
@@ -104,6 +105,9 @@ describe("SubmitOfferForm — the price box", () => {
     fireEvent.change(price, { target: { value: "040" } });
     expect(price.value).toBe("40");
     fireEvent.click(screen.getByRole("button", { name: fr.listing.bid.form.submit }));
+    // Nothing is sent until the summary is confirmed.
+    expect(mutate).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: fr.listing.bid.form.confirm }));
 
     expect(mutate).toHaveBeenCalledWith(
       expect.objectContaining({ vehicleId: "vehicle-1", priceCents: 4000 })
@@ -117,6 +121,9 @@ describe("SubmitOfferForm — the price box", () => {
 
     fireEvent.change(price, { target: { value: "40,05" } });
     fireEvent.click(screen.getByRole("button", { name: fr.listing.bid.form.submit }));
+    // Nothing is sent until the summary is confirmed.
+    expect(mutate).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: fr.listing.bid.form.confirm }));
 
     expect(mutate).toHaveBeenCalledWith(
       expect.objectContaining({ priceCents: 4005 })
@@ -133,5 +140,33 @@ describe("SubmitOfferForm — the price box", () => {
     expect(
       screen.getByRole("button", { name: fr.listing.bid.form.submit })
     ).toBeDisabled();
+  });
+});
+
+describe("SubmitOfferForm — a button that says why it is dark (client feedback 2026-11-06)", () => {
+  it("picks the only vehicle that fits, so a one-van driver has nothing to choose", () => {
+    renderForm();
+    fireEvent.click(screen.getByRole("button", { name: "pick a slot" }));
+
+    expect(
+      screen.getByRole("button", { name: fr.listing.bid.form.submit })
+    ).toBeEnabled();
+  });
+
+  it("names the missing day when only the day is missing", () => {
+    renderForm();
+
+    expect(
+      screen.getByRole("button", { name: fr.listing.bid.form.submit })
+    ).toBeDisabled();
+    expect(screen.getByText(fr.listing.bid.form.missingSlots)).toBeInTheDocument();
+  });
+
+  it("names the missing price when the box is emptied", () => {
+    const price = renderForm();
+    fireEvent.click(screen.getByRole("button", { name: "pick a slot" }));
+    fireEvent.change(price, { target: { value: "" } });
+
+    expect(screen.getByText(fr.listing.bid.form.missingPrice)).toBeInTheDocument();
   });
 });

@@ -121,6 +121,20 @@ export function OfferSlotsField({
     return offerable(day).length === 0;
   };
 
+  // Nothing left to add: every day this job can take is already chosen. Said
+  // out loud, or "Ajouter un jour" opens a calendar with no live day and reads
+  // as broken (client feedback 2026-11-06, B03).
+  const noMoreDays = (() => {
+    if (atDayCap) return false;
+    const cursor = startOfToday();
+    for (let i = 0; i < 90; i++) {
+      const day = toDayString(cursor);
+      if (!chosenDays.has(day) && offerable(day).length > 0) return false;
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    return true;
+  })();
+
   const earliest = window.isFlexible
     ? startOfToday()
     : new Date(Math.max(startOfToday().getTime(), window.from.getTime()));
@@ -156,7 +170,9 @@ export function OfferSlotsField({
               }}
             />
             <p className="text-muted-foreground mt-3 border-t pt-3 text-sm">
-              {t("dayLimit", { count: MAX_OFFER_SLOT_DAYS })}
+              {noMoreDays
+                ? t("noMoreDays")
+                : t("dayLimit", { count: MAX_OFFER_SLOT_DAYS })}
             </p>
           </PopoverContent>
         </Popover>

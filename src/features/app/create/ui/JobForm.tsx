@@ -118,9 +118,6 @@ export function JobForm(props: JobFormApi) {
           />
         )}
         {currentStep === 1 && (
-          <WhereStep form={form} onAddressesLoaded={prefillAddresses} />
-        )}
-        {currentStep === 2 && (
           <WhenStep
             form={form}
             timing={timing}
@@ -130,11 +127,14 @@ export function JobForm(props: JobFormApi) {
             snappedTimes={snappedTimes}
           />
         )}
+        {currentStep === 2 && (
+          <WhereStep form={form} onAddressesLoaded={prefillAddresses} />
+        )}
         {currentStep === 3 && (
           <BudgetStep
             form={form}
             publication={publication}
-            onEditDates={() => goToStep(2)}
+            onEditDates={() => goToStep(1)}
           />
         )}
       </Card>
@@ -235,6 +235,18 @@ function WhatStep({
       <WeightBracketField form={form} />
 
       <SizeField form={form} />
+
+      <div>
+        <Label htmlFor="accessHeightCm">{t("accessHeight")}</Label>
+        <NumericInput
+          id="accessHeightCm"
+          rules={NUMERIC_RULES.CM}
+          placeholder={t("accessHeightPlaceholder")}
+          {...register("accessHeightCm")}
+        />
+        <p className="mt-1 text-xs text-muted-foreground">{t("accessHeightHint")}</p>
+        <FieldError message={errors.accessHeightCm?.message} />
+      </div>
 
       <div className="space-y-3">
         <ToggleRow

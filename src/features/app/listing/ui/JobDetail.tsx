@@ -448,6 +448,9 @@ function JobLoad({ job }: { job: Job }) {
             value={`${job.lengthCm} × ${job.widthCm} × ${job.heightCm} cm`}
           />
         )}
+        {job.accessHeightCm ? (
+          <Detail label={t("accessHeight")} value={`${job.accessHeightCm} cm`} />
+        ) : null}
       </dl>
       {/* Optional since 2.63.0, so an empty one draws nothing rather than a
           blank paragraph. */}

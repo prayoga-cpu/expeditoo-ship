@@ -53,6 +53,8 @@ export const userListItemSchema = z.object({
   // Null until the user has actually signed in once; the admin table renders
   // that as "Never" rather than inventing a date.
   lastLoginAt: z.date().nullable(),
+  // The nickname chosen at sign-up, shown beside the name in the admin tables.
+  alias: z.string().nullable().optional(),
   // Which product the account was created in, so the table can label an
   // Expedion client apart from an EXPEDITOO driver.
   origin: z.enum(["expeditoo", "expedion"]),

@@ -162,6 +162,19 @@
     "header": {
       "profile": "Voir mon profil"
     },
+    "toolbox": {
+      "access": "Accès",
+      "label": "Réglages rapides",
+      "language": "Langue",
+      "theme": "Thème",
+      "light": "Clair",
+      "dark": "Sombre",
+      "system": "Auto",
+      "install": "Installer l'application",
+      "fullscreen": "Plein écran",
+      "exitFullscreen": "Quitter le plein écran",
+      "feedback": "Un avis, un souci ?"
+    },
     "loadError": {
       "title": "Le chargement n'a pas abouti",
       "description": "La connexion ou le serveur n'a pas répondu. Vos données ne sont pas perdues.",
@@ -328,6 +341,7 @@
       "myBids": "Mes offres",
       "earnings": "Revenus",
       "myReviews": "Mes avis",
+      "myTrips": "Mes trajets",
       "paymentMethods": "Moyens de paiement",
       "contactHelp": "Contact & Aide",
       "adminDashboard": "Tableau de bord admin",
@@ -1016,12 +1030,19 @@
         "vehicleTooSmall": "trop petit pour ce chargement",
         "vehicleInactive": "inactif",
         "price": "Votre prix (€)",
-        "overBudget": "Au-dessus du budget du client. Autorisé — expliquez pourquoi ci-dessous.",
+        "overBudget": "Au-dessus du budget du client. C'est autorisé.",
         "pickupPreference": "Préférence du client pour l'enlèvement : {value}",
         "message": "Message (facultatif)",
         "messagePlaceholder": "Dites au client pourquoi vous êtes le bon transporteur pour cette course.",
         "submit": "Envoyer l'offre",
         "submitting": "Envoi…",
+        "missingVehicle": "Choisissez un véhicule pour envoyer l'offre.",
+        "missingPrice": "Indiquez votre prix (1 € minimum).",
+        "missingSlots": "Ajoutez au moins un jour pour envoyer l'offre.",
+        "confirmTitle": "Vérifiez votre offre",
+        "confirmDays": "Jours proposés",
+        "confirmEdit": "Modifier",
+        "confirm": "Confirmer l'offre",
         "noVehicleFits": "Aucun de vos véhicules actifs ne peut prendre ce chargement."
       },
       "slots": {
@@ -1029,6 +1050,7 @@
         "addDay": "Ajouter un jour",
         "dayLimit": "{count} jours maximum.",
         "dayLimitReached": "{count} jours maximum. Retirez-en un pour en proposer un autre.",
+        "noMoreDays": "Tous les jours possibles pour cette demande sont déjà choisis.",
         "empty": "Ajoutez au moins un jour où vous pouvez faire cette course.",
         "removeDay": "Retirer ce jour",
         "slot": {
@@ -1204,6 +1226,9 @@
       "fragile": "Fragile",
       "fragileHint": "Nécessite une manipulation soignée",
       "fragileNoteLabel": "Note pour le transporteur (facultatif)",
+      "accessHeight": "Hauteur maximale d'accès",
+      "accessHeightHint": "Parking, porche, passage : la hauteur la plus basse que le transporteur devra passer (facultatif).",
+      "accessHeightPlaceholder": "ex. 190",
       "fragileNotePlaceholder": "ex. plateau en verre, à garder à l'endroit",
       "help": "Aide au chargement",
       "helpHint": "Le transporteur doit aider à charger et décharger",
@@ -1316,6 +1341,7 @@
         "dropoff": "Déjà la livraison"
       },
       "useNewAddress": "Saisir une nouvelle adresse",
+      "useSavedAddress": "Choisir une adresse enregistrée",
       "saveAddress": "Enregistrer cette adresse dans mon profil",
       "addressLabelField": "Libellé (facultatif)",
       "locationType": "Type de lieu",
@@ -1614,6 +1640,7 @@
       "weight": "Poids",
       "quantity": "Quantité",
       "dimensions": "Dimensions",
+      "accessHeight": "Hauteur maximale d'accès",
       "route": "Trajet",
       "pickup": "Retrait",
       "dropoff": "Livraison",
@@ -4025,6 +4052,14 @@
   "dashboard": {
     "title": "Tableau de bord",
     "subtitle": "Votre situation, et ce qui vous attend.",
+    "newJobs": {
+      "text": "{capped, select, yes {Plus de # nouvelles courses} other {{count, plural, one {# nouvelle course} other {# nouvelles courses}}}} dans les dernières 24 h",
+      "action": "Voir les courses"
+    },
+    "switchToDriver": {
+      "text": "Votre accès chauffeur est actif. Passez à votre tableau de bord chauffeur.",
+      "action": "Passer en mode Chauffeur"
+    },
     "getStarted": {
       "title": "Commencez à rouler avec EXPEDITOO",
       "description": "Déposez votre dossier chauffeur pour répondre aux offres de transport.",

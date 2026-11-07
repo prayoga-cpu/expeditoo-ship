@@ -533,7 +533,12 @@ export function UsersTable({
         cell: ({ row }) => (
           <div>
             <div className="flex items-center gap-2">
+              <div>
               <p className="font-medium text-foreground">{row.original.name}</p>
+              {row.original.alias ? (
+                <p className="text-xs text-muted-foreground">@{row.original.alias}</p>
+              ) : null}
+            </div>
               <OriginBadge origin={row.original.origin} />
             </div>
             <p className="text-sm text-muted-foreground">
@@ -545,6 +550,7 @@ export function UsersTable({
           const value = (filterValue as string).toLowerCase();
           return (
             row.original.name.toLowerCase().includes(value) ||
+          (row.original.alias ?? "").toLowerCase().includes(value) ||
             row.original.email.toLowerCase().includes(value)
           );
         },

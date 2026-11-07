@@ -1,7 +1,7 @@
 "use client";
 
 import { NotificationBell } from "@/components/NotificationBell";
-import { FeedbackLauncher } from "@/features/app/feedback/ui";
+import { HeaderToolbox } from "@/components/layouts/HeaderToolbox";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -133,7 +133,7 @@ export function DriverLayout({ children }: DriverLayoutProps) {
                 <ArrowLeft className="w-4 h-4" />
                 {tCommon("buttons.back")}
               </Button>
-              <FeedbackLauncher />
+              <HeaderToolbox />
               <NotificationBell />
               <HeaderAccount profileHref="/driver/profile" />
             </div>

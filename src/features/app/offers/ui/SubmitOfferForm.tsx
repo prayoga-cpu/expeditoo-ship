@@ -62,6 +62,9 @@ export function SubmitOfferForm({ job }: SubmitOfferFormProps) {
   const [slots, setSlots] = useState<OfferSlotInput[]>([]);
   const [deliveryLeadDays, setDeliveryLeadDays] = useState(0);
   const [message, setMessage] = useState("");
+  // « Envoyer l'offre » first shows what will be sent; « Confirmer » sends it
+  // (client feedback 2026-11-06, B02).
+  const [confirming, setConfirming] = useState(false);
   // The requester's weekdays and times of day for the pickup, right where the
   // carrier picks slots. A preference: a flexible job still takes slots
   // outside it (request_availability_spec.md §6–7).
@@ -98,12 +101,22 @@ export function SubmitOfferForm({ job }: SubmitOfferFormProps) {
   // Read on the digits, so « 40,05 » is 4005 cents and a blank box is none.
   const priceCents = parseCents(priceEuros);
   const overBudget = priceCents !== null && priceCents > job.budgetCents;
-  const canSubmit =
-    vehicleId &&
-    priceCents !== null &&
-    priceCents >= 100 &&
-    slots.length > 0 &&
-    !submitOffer.isPending;
+  // A driver with one vehicle that fits has nothing to choose: pick it for
+  // them, or the button stays dark behind a dropdown they never opened
+  // (client feedback 2026-11-06, B01).
+  const usable = vehicles.filter((v) => fits(v) && v.isActive);
+  const chosenVehicleId =
+    vehicleId || (usable.length === 1 ? usable[0].id : "");
+  // What still blocks the button, in the order the form reads, so a disabled
+  // button always says why.
+  const missing = !chosenVehicleId
+    ? "missingVehicle"
+    : priceCents === null || priceCents < 100
+      ? "missingPrice"
+      : slots.length === 0
+        ? "missingSlots"
+        : null;
+  const canSubmit = missing === null && !submitOffer.isPending;
 
   return (
     <Card className="space-y-5 p-4 sm:p-6">
@@ -118,7 +131,7 @@ export function SubmitOfferForm({ job }: SubmitOfferFormProps) {
 
       <div>
         <Label htmlFor="vehicle">{t("vehicle")}</Label>
-        <Select value={vehicleId} onValueChange={setVehicleId}>
+        <Select value={chosenVehicleId} onValueChange={setVehicleId}>
           <SelectTrigger id="vehicle">
             <SelectValue placeholder={t("vehiclePlaceholder")} />
           </SelectTrigger>
@@ -200,25 +213,54 @@ export function SubmitOfferForm({ job }: SubmitOfferFormProps) {
         />
       </div>
 
-      <Button
-        className="w-full"
-        disabled={!canSubmit}
-        onClick={() =>
-          priceCents !== null &&
-          submitOffer.mutate({
-            vehicleId,
-            priceCents,
-            slots,
-            deliveryLeadDays,
-            // Resolved server-side into instants, so "matin" is the driver's
-            // morning and not the (UTC) server's.
-            tzOffset: new Date().getTimezoneOffset(),
-            message: message || undefined,
-          })
-        }
-      >
-        {submitOffer.isPending ? t("submitting") : t("submit")}
-      </Button>
+      {confirming && canSubmit && priceCents !== null ? (
+        <div className="space-y-3 rounded-xl border bg-muted/40 p-4" role="group" aria-label={t("confirmTitle")}>
+          <p className="font-medium">{t("confirmTitle")}</p>
+          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+            <dt className="text-muted-foreground">{t("price")}</dt>
+            <dd className="font-medium">{euros(priceCents)}</dd>
+            <dt className="text-muted-foreground">{t("vehicle")}</dt>
+            <dd>{vehicles.find((v) => v.id === chosenVehicleId)?.plateNumber}</dd>
+            <dt className="text-muted-foreground">{t("confirmDays")}</dt>
+            <dd>{new Set(slots.map((x) => x.day)).size}</dd>
+          </dl>
+          <div className="grid grid-cols-2 gap-2">
+            <Button variant="outline" onClick={() => setConfirming(false)}>
+              {t("confirmEdit")}
+            </Button>
+            <Button
+              disabled={submitOffer.isPending}
+              onClick={() =>
+                submitOffer.mutate({
+                  vehicleId: chosenVehicleId,
+                  priceCents,
+                  slots,
+                  deliveryLeadDays,
+                  // Resolved server-side into instants, so "matin" is the driver's
+                  // morning and not the (UTC) server's.
+                  tzOffset: new Date().getTimezoneOffset(),
+                  message: message || undefined,
+                })
+              }
+            >
+              {submitOffer.isPending ? t("submitting") : t("confirm")}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <Button
+          className="w-full"
+          disabled={!canSubmit}
+          onClick={() => setConfirming(true)}
+        >
+          {t("submit")}
+        </Button>
+      )}
+      {missing && (
+        <p className="text-muted-foreground -mt-2 text-center text-sm" role="status">
+          {t(missing)}
+        </p>
+      )}
     </Card>
   );
 }

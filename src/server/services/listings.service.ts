@@ -145,6 +145,7 @@ function toColumns(data: CreateListingInput, expiresAt: Date, now: Date) {
     lengthCm: data.lengthCm ?? null,
     widthCm: data.widthCm ?? null,
     heightCm: data.heightCm ?? null,
+    accessHeightCm: data.accessHeightCm ?? null,
     quantity: data.quantity,
     isFragile: data.isFragile,
     needsHelp: data.needsHelp,

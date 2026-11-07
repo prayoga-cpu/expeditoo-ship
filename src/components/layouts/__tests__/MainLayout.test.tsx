@@ -30,7 +30,7 @@ vi.mock("@/features/app/messages/hooks", () => ({
   useUnreadMessages: () => ({ unreadCount: 0 }),
 }));
 vi.mock("../../NotificationBell", () => ({ NotificationBell: () => null }));
-vi.mock("@/features/app/feedback/ui", () => ({ FeedbackLauncher: () => null }));
+vi.mock("../HeaderToolbox", () => ({ HeaderToolbox: () => null }));
 vi.mock("../HeaderQuickActions", () => ({ HeaderQuickActions: () => null }));
 vi.mock("../../ui/theme-toggle", () => ({ ThemeToggle: () => null }));
 vi.mock("../../ui/lang-toggle", () => ({ LangToggle: () => null }));

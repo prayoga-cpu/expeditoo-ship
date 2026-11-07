@@ -113,6 +113,7 @@ export function toCreatePayload(values: JobFormOutput, publish: boolean) {
     jobKind: values.jobKind,
     title: values.title,
     ...cargo(values),
+    accessHeightCm: values.accessHeightCm,
     packagingLevel: values.packagingLevel,
     needsProtection: values.needsProtection,
     needsPackaging: values.needsPackaging,

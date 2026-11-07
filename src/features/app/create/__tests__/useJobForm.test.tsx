@@ -82,7 +82,7 @@ const endpoint = (over: Record<string, unknown> = {}) => ({
 
 type Form = ReturnType<typeof useJobForm>;
 
-/** Fill « Quoi » and press « Suivant », then fill « Où ». */
+/** Fill « Quoi », go through « Quand » on its defaults, then fill « Où ». */
 async function reachWhere(result: { current: Form }, pickup = endpoint()) {
   act(() => {
     const { form } = result.current;
@@ -92,6 +92,8 @@ async function reachWhere(result: { current: Form }, pickup = endpoint()) {
   });
   await act(() => result.current.handleNext());
   expect(result.current.currentStep).toBe(1);
+  await act(() => result.current.handleNext());
+  expect(result.current.currentStep).toBe(2);
   act(() => {
     result.current.form.setValue("pickup", pickup);
     result.current.form.setValue(
@@ -108,14 +110,14 @@ beforeEach(() => {
 });
 
 describe("useJobForm — a submit from an earlier step", () => {
-  it("walks on one step instead of skipping « Quand » unseen", async () => {
+  it("walks on one step instead of skipping « Budget » unseen", async () => {
     const { result } = renderHook(() => useJobForm(), { wrapper });
     await reachWhere(result);
 
-    // The only error is the budget, two steps ahead.
+    // The only error is the budget, one step ahead.
     await act(() => result.current.saveDraft());
 
-    await waitFor(() => expect(result.current.currentStep).toBe(2));
+    await waitFor(() => expect(result.current.currentStep).toBe(3));
     expect(toastError).toHaveBeenCalledWith(fr.create.toast.finishSteps);
     expect(create).not.toHaveBeenCalled();
   });
@@ -224,9 +226,10 @@ describe("useJobForm — never twice, never the long way round", () => {
     const { result } = renderHook(() => useJobForm(), { wrapper });
     await reachWhere(result);
     await act(() => result.current.handleNext());
-    expect(result.current.currentStep).toBe(2);
+    expect(result.current.currentStep).toBe(3);
 
     // Back to « Quoi » to change the title, then « Enregistrer le brouillon ».
+    act(() => result.current.handlePrev());
     act(() => result.current.handlePrev());
     act(() => result.current.handlePrev());
     act(() => result.current.form.setValue("title", "Canapé trois places"));
@@ -337,7 +340,7 @@ describe("useJobForm — finishing a saved request", () => {
       { wrapper }
     );
 
-    expect(result.current.currentStep).toBe(2);
+    expect(result.current.currentStep).toBe(1);
     expect(result.current.snappedTimes).toEqual([
       { side: "pickup", saved: "09:15", selected: "09:30", hour: "09:30" },
     ]);
@@ -356,7 +359,7 @@ describe("useJobForm — finishing a saved request", () => {
       { wrapper }
     );
 
-    expect(result.current.currentStep).toBe(2);
+    expect(result.current.currentStep).toBe(1);
     expect(result.current.snappedTimes).toEqual([
       { side: "pickup", saved: "09:00–17:00", selected: "09:00–10:00", hour: "09:00" },
     ]);
@@ -438,7 +441,7 @@ describe("useJobForm — saved addresses (saved_addresses_spec.md)", () => {
 
     await act(() => result.current.handleNext());
 
-    expect(result.current.currentStep).toBe(1);
+    expect(result.current.currentStep).toBe(2);
     expect(toastError).toHaveBeenCalledWith(tr("create.toast.sameAddress"));
   });
 

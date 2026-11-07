@@ -14,6 +14,21 @@ import { orderRunsByProgress } from "../orderRuns";
 import { showsDriverInvite } from "../driverInvite";
 
 /** Shipment states that mean "currently on the road, or about to be". */
+const NEW_JOBS_PAGE = 50;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** How many of the newest jobs went live in the last 24 hours. */
+export function countNewJobs(
+  items: { publishedAt?: string | null; createdAt: string }[],
+  now: number,
+  pageSize: number
+) {
+  const count = items.filter(
+    (job) => now - new Date(job.publishedAt ?? job.createdAt).getTime() <= DAY_MS
+  ).length;
+  return { count, capped: count >= pageSize };
+}
+
 const ACTIVE_SHIPMENT_STATUSES = "PENDING,ASSIGNED,PICKED_UP,IN_TRANSIT";
 
 /** A requester still owes a card once one of these is open with none on file. */
@@ -44,6 +59,16 @@ export function useDriverDashboard() {
     queryKey: ["dashboard", "open-jobs"],
     queryFn: () => listingsApi.browse({ limit: 1 }),
   });
+
+  // « N new jobs » — the newest page of the board, counted by the day each went
+  // live. The board has no "since" filter, and a page of 50 is plenty to say
+  // « 50+ » when a day brought more than that.
+  const newest = useQuery({
+    queryKey: ["dashboard", "new-jobs"],
+    queryFn: () => listingsApi.browse({ limit: NEW_JOBS_PAGE, sort: "created_desc" }),
+    staleTime: 60_000,
+  });
+  const newJobs = countNewJobs(newest.data?.items ?? [], Date.now(), NEW_JOBS_PAGE);
 
   const liveOffers = useQuery({
     queryKey: ["dashboard", "live-offers"],
@@ -93,6 +118,8 @@ export function useDriverDashboard() {
     isApplicationLoading: application.isLoading,
     isApproved: application.data?.status === "approved",
 
+    newJobCount: newJobs.count,
+    newJobsCapped: newJobs.capped,
     openJobCount: openJobs.data?.total ?? 0,
     isOpenJobsLoading: openJobs.isLoading,
 

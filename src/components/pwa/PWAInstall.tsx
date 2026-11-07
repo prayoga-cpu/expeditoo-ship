@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef } from "react";
+import { registerInstallElement } from "@/lib/pwa-install";
 // @ts-ignore
 import type { PWAInstallElement } from "@khmyznikov/pwa-install";
 
@@ -9,6 +10,11 @@ import type { PWAInstallElement } from "@khmyznikov/pwa-install";
 
 export function PWAInstall() {
   const pwaInstallRef = useRef<PWAInstallElement | null>(null);
+
+  useEffect(() => {
+    registerInstallElement(pwaInstallRef.current);
+    return () => registerInstallElement(null);
+  }, []);
 
   useEffect(() => {
     // Already code-split via the dynamic import, but this mounts in the root

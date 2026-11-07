@@ -269,6 +269,8 @@ export function fromListing(job: DraftJob, { locale, now }: FromListingOptions):
 
   const values: Partial<JobFormValues> = {
     title: job.title,
+    accessHeightCm:
+      job.accessHeightCm == null ? "" : numberToInput(job.accessHeightCm, 1, locale),
     ...splitFragileNote(job.description, job.isFragile),
     ...(job.jobKind === "moving"
       ? movingValues(job, locale)

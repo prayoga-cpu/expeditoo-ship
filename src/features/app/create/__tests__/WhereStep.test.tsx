@@ -40,7 +40,7 @@ let api: JobFormApi;
 function WherePage() {
   api = useJobForm();
   return (
-    <JobForm {...api} currentStep={1} isFirstStep={false} isLastStep={false} />
+    <JobForm {...api} currentStep={2} isFirstStep={false} isLastStep={false} />
   );
 }
 
@@ -218,20 +218,20 @@ const floorBox = (side: "pickup" | "dropoff") =>
 
 describe("the floor box, mounted over a floor already in the form", () => {
   it("shows a resumed draft's floors, the ground floor included", () => {
-    render(<SteppedPage seed={{ draft: savedWithFloors(3, 0), startStep: 1 }} />, { wrapper });
+    render(<SteppedPage seed={{ draft: savedWithFloors(3, 0), startStep: 2 }} />, { wrapper });
 
     expect(floorBox("pickup")?.value).toBe("3");
     expect(floorBox("dropoff")?.value).toBe("0");
   });
 
   it("keeps a typed floor through « Suivant » and « Retour »", () => {
-    render(<SteppedPage seed={{ startStep: 1 }} />, { wrapper });
+    render(<SteppedPage seed={{ startStep: 2 }} />, { wrapper });
     act(() => api.form.setValue("pickup.locationType", "apartment"));
     typeAtCaret(floorBox("pickup")!, "3");
 
-    act(() => setStep(2));
+    act(() => setStep(3));
     expect(floorBox("pickup")).toBeNull();
-    act(() => setStep(1));
+    act(() => setStep(2));
 
     expect(floorBox("pickup")?.value).toBe("3");
     expect(api.form.getValues("pickup.floor")).toBe(3);
@@ -270,13 +270,16 @@ describe("the saved addresses on « Où » (saved_addresses_spec.md §3)", () =>
 
   it("fills the pickup only, and opens the delivery on a new address", async () => {
     book.addresses = [work, home];
-    render(<SteppedPage seed={{ startStep: 1 }} />, { wrapper });
+    render(<SteppedPage seed={{ startStep: 2 }} />, { wrapper });
 
     await waitFor(() =>
       expect(api.form.getValues("pickup.address")).toBe("Autoroute des Anglais")
     );
     expect(api.form.getValues("dropoff.address")).toBe("");
-    expect(trigger("dropoff")).toHaveTextContent(fr.create.where.useNewAddress);
+    // « Saisir une nouvelle adresse » is the action in force at the delivery.
+    expect(
+      screen.getAllByRole("button", { name: fr.create.where.useNewAddress })[1]
+    ).toHaveAttribute("aria-pressed", "true");
     // The new-address fields are open at the delivery, not at the pickup.
     expect(document.getElementById("dropoff-save-address")).not.toBeNull();
     expect(document.getElementById("pickup-save-address")).toBeNull();
@@ -284,7 +287,7 @@ describe("the saved addresses on « Où » (saved_addresses_spec.md §3)", () =>
 
   it("names a saved address, never by its translation key", async () => {
     book.addresses = [work, home];
-    render(<SteppedPage seed={{ startStep: 1 }} />, { wrapper });
+    render(<SteppedPage seed={{ startStep: 2 }} />, { wrapper });
 
     await waitFor(() => expect(trigger("pickup")).toHaveTextContent("Travail"));
     expect(document.body).not.toHaveTextContent("profile.address");
@@ -292,7 +295,7 @@ describe("the saved addresses on « Où » (saved_addresses_spec.md §3)", () =>
 
   it("says the delivery is the pickup's address the moment it is chosen", async () => {
     book.addresses = [home];
-    render(<SteppedPage seed={{ startStep: 1 }} />, { wrapper });
+    render(<SteppedPage seed={{ startStep: 2 }} />, { wrapper });
     await waitFor(() =>
       expect(api.form.getValues("pickup.address")).toBe("Voie du Loup")
     );
@@ -300,7 +303,9 @@ describe("the saved addresses on « Où » (saved_addresses_spec.md §3)", () =>
 
     // Radix answers a letter on a closed select by picking the option it
     // starts — « Domicile », the pickup's address.
-    fireEvent.keyDown(trigger("dropoff"), { key: "D" });
+    fireEvent.click(
+      screen.getAllByRole("button", { name: fr.create.where.useSavedAddress })[1]
+    );
 
     expect(api.form.getValues("dropoff.address")).toBe("Voie du Loup");
     expect(screen.getByText(fr.create.validation.sameAddress)).toBeInTheDocument();
@@ -308,11 +313,15 @@ describe("the saved addresses on « Où » (saved_addresses_spec.md §3)", () =>
 
   it("leaves a resumed request's addresses as they were saved", async () => {
     book.addresses = [home];
-    render(<SteppedPage seed={{ draft: savedWithFloors(1, 1), startStep: 1 }} />, {
+    render(<SteppedPage seed={{ draft: savedWithFloors(1, 1), startStep: 2 }} />, {
       wrapper,
     });
 
-    await waitFor(() => expect(trigger("pickup")).not.toBeNull());
+    await waitFor(() =>
+      expect(
+        screen.getAllByRole("button", { name: fr.create.where.useNewAddress })[0]
+      ).toBeInTheDocument()
+    );
     expect(api.form.getValues("pickup.address")).toBe("12 rue de la République");
     expect(api.form.getValues("dropoff.address")).toBe("3 rue Paradis");
   });

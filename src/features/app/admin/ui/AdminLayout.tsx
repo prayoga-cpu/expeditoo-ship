@@ -2,9 +2,8 @@
 
 import { useEffect } from "react";
 import { NotificationBell } from "@/components/NotificationBell";
-import { FeedbackLauncher } from "@/features/app/feedback/ui";
+import { HeaderToolbox } from "@/components/layouts/HeaderToolbox";
 import { AppVersionLink } from "@/components/ui/app-version";
-import { LangToggle } from "@/components/ui/lang-toggle";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -257,8 +256,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 <ArrowLeft className="w-4 h-4" />
                 {tCommon("buttons.back")}
               </Button>
-              <LangToggle className="mr-1" />
-              <FeedbackLauncher />
+              <HeaderToolbox />
               <NotificationBell />
               <HeaderAccount profileHref="/admin/profile" />
             </div>

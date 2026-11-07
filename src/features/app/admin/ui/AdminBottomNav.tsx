@@ -16,6 +16,7 @@ import {
   MessageSquarePlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { FLOATING_NAV_CAPSULE, FLOATING_NAV_OUTER } from "@/components/layouts/FloatingNav";
 import { useTranslations } from "next-intl";
 import { useAdminNavCounts } from "../hooks/useAdminNavCounts";
 import type { AdminNavCounts } from "@/server/services/admin-nav.service";
@@ -126,15 +127,12 @@ export function AdminBottomNav() {
   }, [pathname]);
 
   return (
-    <nav 
-      aria-label="Admin navigation"
-      className="fixed bottom-0 left-0 right-0 bg-background border-t border-border/50 xl:hidden pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-50 h-[calc(88px_+_env(safe-area-inset-bottom))]"
-    >
+    <nav aria-label="Admin navigation" className={FLOATING_NAV_OUTER}>
       <div 
         ref={scrollRef}
         role="menubar"
         aria-label="Admin menu - scroll horizontally for more options"
-        className="flex overflow-x-auto scrollbar-hide scroll-smooth sm:justify-center"
+        className={cn(FLOATING_NAV_CAPSULE, "flex overflow-x-auto scrollbar-hide scroll-smooth sm:justify-center")}
         style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
       >
         {navItems.map((item) => {
@@ -148,16 +146,12 @@ export function AdminBottomNav() {
               role="menuitem"
               aria-current={isActive ? "page" : undefined}
               className={cn(
-                "flex flex-col items-center justify-center gap-1 py-3 px-4 min-w-[72px] min-h-16 transition-all duration-200 relative group shrink-0",
+                "flex flex-col items-center justify-center gap-1 py-2 px-3 min-w-[68px] min-h-14 rounded-[24px] transition-all duration-200 relative group shrink-0",
                 isActive
-                  ? "text-primary"
+                  ? "bg-foreground/[0.08] text-primary"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              {isActive && (
-                <div className="absolute top-0 left-0 right-0 h-1 bg-primary rounded-b-md transition-all duration-200" />
-              )}
-
               <div
                 className={cn(
                   "relative p-1.5 rounded-lg transition-all duration-200",

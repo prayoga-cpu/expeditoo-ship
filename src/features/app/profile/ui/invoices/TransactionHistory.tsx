@@ -1,5 +1,6 @@
 "use client";
 
+import { BackButton } from "@/components/ui/back-button";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 
@@ -41,6 +42,7 @@ export function TransactionHistory() {
 
     return (
         <div className="space-y-4">
+            <BackButton fallbackHref="/profile" />
             <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
 
             {askedForCarrier && rolesLoading ? (

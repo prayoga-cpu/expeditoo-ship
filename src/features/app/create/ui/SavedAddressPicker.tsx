@@ -68,6 +68,43 @@ export function SavedAddressPicker({
   return (
     <div className="space-y-2">
       <Label htmlFor={id}>{t(`addressBook.label.${side}`)}</Label>
+      {/* The two ways in, as two actions rather than one menu: enter a new
+          address, or pick a saved one (client feedback 2026-11-06, A04). */}
+      <div
+        role="group"
+        aria-label={t(`addressBook.label.${side}`)}
+        className="grid grid-cols-2 gap-1 rounded-xl bg-muted p-1"
+      >
+        <button
+          type="button"
+          aria-pressed={!selected}
+          onClick={() => onSelect(null)}
+          className={cn(
+            "flex items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-sm font-medium transition-colors",
+            !selected ? "bg-background shadow-sm" : "text-muted-foreground"
+          )}
+        >
+          <Plus className="h-4 w-4 shrink-0" aria-hidden />
+          {t("useNewAddress")}
+        </button>
+        <button
+          type="button"
+          aria-pressed={Boolean(selected)}
+          disabled={addresses.length === 0}
+          onClick={() => {
+            const first = groups[0]?.addresses[0] ?? addresses[0];
+            if (first) onSelect(first);
+          }}
+          className={cn(
+            "flex items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-sm font-medium transition-colors disabled:opacity-50",
+            selected ? "bg-background shadow-sm" : "text-muted-foreground"
+          )}
+        >
+          <MapPin className="h-4 w-4 shrink-0" aria-hidden />
+          {t("useSavedAddress")}
+        </button>
+      </div>
+      {selected && (
       <Select
         value={selected?.id ?? NEW_ADDRESS}
         onValueChange={(value) =>
@@ -136,6 +173,7 @@ export function SavedAddressPicker({
           </SelectItem>
         </SelectContent>
       </Select>
+      )}
       {addresses.length === 0 && (
         <p className="text-xs text-muted-foreground">{t("addressBook.empty")}</p>
       )}

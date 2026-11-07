@@ -32,7 +32,9 @@ const providers = [
   (children: React.ReactNode) => (
     <ThemeProvider
       attribute="class"
-      defaultTheme="system"
+      // Light for a first visit (client feedback 2026-11-06: « fond blanc »);
+      // the toggle still offers Dark and System, and a choice is remembered.
+      defaultTheme="light"
       enableSystem
       storageKey="theme"
       disableTransitionOnChange={false}

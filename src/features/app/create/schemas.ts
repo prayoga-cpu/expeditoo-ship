@@ -163,7 +163,9 @@ export const endpointSchema = z
     // map pin and no pasted link is postable with no coordinates at all.
     lat: z.number().optional(),
     lng: z.number().optional(),
-    address: z.string().min(1, "create.validation.addressRequired"),
+    // The street line is optional; town and postal code are the minimum
+    // (client feedback 2026-11-06, A03).
+    address: z.string().default(""),
     city: z.string().min(1, "create.validation.cityRequired"),
     // Its format is the country's, checked below (spec §6.2).
     postalCode: z.string(),
@@ -314,6 +316,7 @@ export const jobFormSchema = z
     lengthCm: optionalPositive,
     widthCm: optionalPositive,
     heightCm: optionalPositive,
+    accessHeightCm: optionalPositive,
     quantity: z
       .preprocess(
         typedNumber,
@@ -572,9 +575,9 @@ export const STEP_FIELDS = [
     "exactWeightKg",
     "quantity",
     "lengthCm",
+    "accessHeightCm",
     "fragileNote",
   ],
-  ["pickup", "dropoff"],
   [
     "pickupFrom",
     "pickupUntil",
@@ -583,5 +586,6 @@ export const STEP_FIELDS = [
     "pickupDays",
     "dropoffDays",
   ],
+  ["pickup", "dropoff"],
   ["budgetEuros", "publishMode", "scheduledPublishAt"],
 ] as const;

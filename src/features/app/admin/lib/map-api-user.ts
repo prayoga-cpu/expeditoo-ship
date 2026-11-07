@@ -14,6 +14,7 @@ export interface ApiUser {
   banned?: boolean;
   createdAt?: string;
   lastLoginAt?: string | null;
+  alias?: string | null;
   origin?: "expeditoo" | "expedion";
   impersonateBlocked?: string | null;
   deleteBlocked?: string | null;
@@ -50,6 +51,7 @@ export function mapApiUser(user: ApiUser): User {
       ? new Date(user.createdAt).toISOString().split("T")[0]
       : new Date().toISOString().split("T")[0],
     lastLoginAt: user.lastLoginAt ?? null,
+    alias: user.alias ?? null,
     origin: user.origin ?? "expeditoo",
     // Undefined means an endpoint that does not send these yet, which is not
     // the same as "refused" — leave the action enabled and let the server have

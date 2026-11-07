@@ -51,6 +51,7 @@ export interface Job {
   lengthCm: number | null;
   widthCm: number | null;
   heightCm: number | null;
+  accessHeightCm?: number | null;
   quantity: number;
   isFragile: boolean;
   needsHelp: boolean;

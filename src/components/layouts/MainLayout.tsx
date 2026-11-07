@@ -4,14 +4,12 @@ import type React from "react";
 import { useEffect, useState } from "react";
 import { BottomNav } from "../BottomNav";
 import { NotificationBell } from "../NotificationBell";
-import { ThemeToggle } from "../ui/theme-toggle";
-import { LangToggle } from "../ui/lang-toggle";
+import { HeaderToolbox } from "./HeaderToolbox";
 import { AppVersionLink } from "../ui/app-version";
 import { AppSidebarHeader } from "./AppSidebarHeader";
 import { AccessSwitcher } from "./AccessSwitcher";
 import { HeaderQuickActions } from "./HeaderQuickActions";
 import { HeaderAccount } from "./HeaderAccount";
-import { FeedbackLauncher } from "@/features/app/feedback/ui";
 import { BrandWordmark } from "@/components/ui/brand-mark";
 import { PageLoader } from "@/components/ui/page-loader";
 
@@ -333,7 +331,7 @@ function Header() {
           {/* The sidebar, where the switcher lives from `xl`, does not exist
               on a phone — so a driver sitting in the wrong mode had no way to
               see, let alone change, which one they were in. */}
-          <AccessSwitcher className="xl:hidden" />
+          <AccessSwitcher className="max-md:hidden xl:hidden" />
           <AppVersionLink className="hidden md:inline-flex" />
         </div>
 
@@ -349,9 +347,7 @@ function Header() {
             this is closes the row, in the corner the client asked for. */}
         <div className="flex items-center gap-1 min-w-0 ml-auto">
           <HeaderQuickActions />
-          <FeedbackLauncher />
-          <LangToggle className="mr-1" />
-          <ThemeToggle />
+          <HeaderToolbox showAccess />
           <NotificationBell />
           <HeaderAccount profileHref="/profile" />
         </div>

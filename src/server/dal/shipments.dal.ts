@@ -414,7 +414,7 @@ export const shipmentsDal = {
           with: { shipper: { columns: { name: true } } },
         },
         carrier: { columns: { id: true, name: true } },
-        driver: { columns: { id: true, name: true } },
+        driver: { columns: { id: true, name: true, alias: true } },
       },
       orderBy: [desc(shipments.createdAt)],
       limit,

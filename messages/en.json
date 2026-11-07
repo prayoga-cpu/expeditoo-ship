@@ -162,6 +162,19 @@
     "header": {
       "profile": "View my profile"
     },
+    "toolbox": {
+      "access": "Access",
+      "label": "Quick settings",
+      "language": "Language",
+      "theme": "Theme",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "Auto",
+      "install": "Install the app",
+      "fullscreen": "Full screen",
+      "exitFullscreen": "Exit full screen",
+      "feedback": "Feedback or a problem?"
+    },
     "loadError": {
       "title": "This did not load",
       "description": "The connection or the server did not answer. Nothing of yours was lost.",
@@ -328,6 +341,7 @@
       "myBids": "My Bids",
       "earnings": "Earnings",
       "myReviews": "My Reviews",
+      "myTrips": "My trips",
       "paymentMethods": "Payment Methods",
       "contactHelp": "Contact & Help",
       "adminDashboard": "Admin Dashboard",
@@ -1016,12 +1030,19 @@
         "vehicleTooSmall": "too small for this load",
         "vehicleInactive": "inactive",
         "price": "Your price (€)",
-        "overBudget": "Above the client's budget. Allowed — explain why below.",
+        "overBudget": "Above the client's budget. That is allowed.",
         "pickupPreference": "Client's preference for pickup: {value}",
         "message": "Message (optional)",
         "messagePlaceholder": "Tell the client why you are the right carrier for this job.",
         "submit": "Submit offer",
         "submitting": "Submitting…",
+        "missingVehicle": "Choose a vehicle to send the offer.",
+        "missingPrice": "Enter your price (€1 minimum).",
+        "missingSlots": "Add at least one day to send the offer.",
+        "confirmTitle": "Check your offer",
+        "confirmDays": "Days offered",
+        "confirmEdit": "Edit",
+        "confirm": "Confirm the offer",
         "noVehicleFits": "None of your active vehicles can take this load."
       },
       "slots": {
@@ -1029,6 +1050,7 @@
         "addDay": "Add a day",
         "dayLimit": "{count} days maximum.",
         "dayLimitReached": "{count} days maximum. Remove one to propose another.",
+        "noMoreDays": "Every day this request can take is already chosen.",
         "empty": "Add at least one day when you can do this job.",
         "removeDay": "Remove this day",
         "slot": {
@@ -1204,6 +1226,9 @@
       "fragile": "Fragile",
       "fragileHint": "Needs careful handling",
       "fragileNoteLabel": "Note for the carrier (optional)",
+      "accessHeight": "Maximum access height",
+      "accessHeightHint": "Car park, archway, passage: the lowest clearance the carrier has to get through (optional).",
+      "accessHeightPlaceholder": "e.g. 190",
       "fragileNotePlaceholder": "e.g. glass top, keep upright",
       "help": "Help loading",
       "helpHint": "The carrier must help load and unload",
@@ -1316,6 +1341,7 @@
         "dropoff": "Already your delivery"
       },
       "useNewAddress": "Enter a new address",
+      "useSavedAddress": "Pick a saved address",
       "saveAddress": "Save this address to my profile",
       "addressLabelField": "Label (optional)",
       "locationType": "Location type",
@@ -1614,6 +1640,7 @@
       "weight": "Weight",
       "quantity": "Quantity",
       "dimensions": "Dimensions",
+      "accessHeight": "Maximum access height",
       "route": "Route",
       "pickup": "Pickup",
       "dropoff": "Dropoff",
@@ -4025,6 +4052,14 @@
   "dashboard": {
     "title": "Dashboard",
     "subtitle": "Where you stand, and what is waiting.",
+    "newJobs": {
+      "text": "{capped, select, yes {{count}+ new jobs} other {{count, plural, one {# new job} other {# new jobs}}}} posted in the last 24 h",
+      "action": "See the jobs"
+    },
+    "switchToDriver": {
+      "text": "Your driver access is active. Switch to your driver dashboard.",
+      "action": "Switch to Driver mode"
+    },
     "getStarted": {
       "title": "Start driving with EXPEDITOO",
       "description": "Submit your driver application to bid on transport jobs.",

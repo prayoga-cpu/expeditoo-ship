@@ -38,6 +38,8 @@ export interface User {
   joinDate: string;
   /** ISO timestamp of the last real sign-in; null when there has never been one. */
   lastLoginAt: string | null;
+  /** The nickname, when the person gave one. */
+  alias?: string | null;
   /** Which app the account was created in. */
   origin: "expeditoo" | "expedion";
   /**

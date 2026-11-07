@@ -65,7 +65,7 @@ export function HeaderQuickActions() {
 
   return (
     <>
-      <div className="flex min-w-0 items-center gap-0.5">
+      <div className="flex min-w-0 items-center gap-0.5 max-md:hidden">
         {actions.map(({ href, labelKey, icon: Icon }) => {
           const isActive = pathname === href || pathname?.startsWith(`${href}/`);
           return (
@@ -95,7 +95,7 @@ export function HeaderQuickActions() {
           the buttons instead of hanging beside the language toggle alone. It
           rides the same early return as they do, and every session keeps at
           least the posting verb, so it is never drawn with nothing to separate. */}
-      <span aria-hidden className="mx-1 h-5 w-px shrink-0 bg-border" />
+      <span aria-hidden className="mx-1 h-5 w-px shrink-0 bg-border max-md:hidden" />
     </>
   );
 }

@@ -1,10 +1,12 @@
 "use client";
 
+import { BackButton } from "@/components/ui/back-button";
 import { LoadErrorState } from "@/components/ui/load-error-state";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { ArrowRight, FileText, Gavel, Package, Truck } from "lucide-react";
+import { ArrowRight, FileText, Gavel, Megaphone, Package, Repeat, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useActiveAccessMode } from "@/lib/use-active-access-mode";
 import { Card } from "@/components/ui/card";
 import { PageLoader } from "@/components/ui/page-loader";
 import { ApplicationStatusBanner } from "@/features/app/carrier/ui";
@@ -91,6 +93,8 @@ export function DriverDashboard() {
     isApproved,
     openJobCount,
     isOpenJobsLoading,
+    newJobCount,
+    newJobsCapped,
     liveOfferCount,
     isOffersLoading,
     activeRuns,
@@ -102,17 +106,45 @@ export function DriverDashboard() {
     retry,
   } = useDriverDashboard();
   const { active: activeRequests } = useMyRequestStatus();
+  const { mode, qualifiedModes, setMode } = useActiveAccessMode();
+  // Approved to drive but browsing as a requester: the driver view is one tap.
+  const canSwitchToDriver = mode === "user" && qualifiedModes.includes("carrier");
 
   if (isApplicationLoading) return <PageLoader />;
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-5 p-4 sm:p-6">
+      <BackButton fallbackHref="/profile" className="-mb-2" />
       <header className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
         <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
       </header>
 
       {loadFailed && <LoadErrorState variant="inline" onRetry={retry} />}
+
+      {canSwitchToDriver && (
+        <Card className="flex flex-wrap items-center justify-between gap-3 border-success/30 bg-success/10 p-4">
+          <p className="flex items-center gap-2 text-sm font-medium">
+            <Repeat className="h-4 w-4 shrink-0 text-success" aria-hidden />
+            {t("switchToDriver.text")}
+          </p>
+          <Button size="sm" onClick={() => setMode("carrier")}>
+            {t("switchToDriver.action")}
+          </Button>
+        </Card>
+      )}
+
+      {newJobCount > 0 && (
+        <Card className="flex flex-wrap items-center justify-between gap-3 p-4">
+          <p className="flex items-center gap-2 text-sm font-medium">
+            <Megaphone className="h-4 w-4 shrink-0 text-primary" aria-hidden />
+            {t("newJobs.text", { count: newJobCount, capped: newJobsCapped ? "yes" : "no" })}
+          </p>
+          <Button asChild size="sm" variant="outline">
+            <Link href="/expedion">{t("newJobs.action")}</Link>
+          </Button>
+        </Card>
+      )}
 
       {needsCardNudge && <CardConnectBanner />}
 

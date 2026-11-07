@@ -293,7 +293,13 @@ function toAdminShipmentRow(row: AdminOverviewRecord): AdminShipmentRow {
           requesterName: row.listing.shipper?.name ?? null,
         }
       : null,
-    driverName: row.driver?.name ?? row.carrier?.name ?? null,
+    // The nickname rides beside the name: operators know drivers by it
+    // (client feedback 2026-11-06, C03).
+    driverName: row.driver?.name
+      ? row.driver.alias
+        ? `${row.driver.name} (${row.driver.alias})`
+        : row.driver.name
+      : (row.carrier?.name ?? null),
   };
 }
 

@@ -98,6 +98,9 @@ export const listings = pgTable(
     lengthCm: doublePrecision("length_cm"),
     widthCm: doublePrecision("width_cm"),
     heightCm: doublePrecision("height_cm"),
+    // The tightest height on the way in (a car park, an arch), in cm. Optional:
+    // most places have none (client_feedback_2026_11_06_spec.md §A05).
+    accessHeightCm: doublePrecision("access_height_cm"),
     quantity: integer("quantity").default(1).notNull(),
     isFragile: boolean("is_fragile").default(false).notNull(),
     needsHelp: boolean("needs_help").default(false).notNull(),

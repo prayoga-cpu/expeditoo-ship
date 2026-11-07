@@ -13,7 +13,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
+import { Route,
   CreditCard,
   Star,
   Settings,
@@ -356,6 +356,8 @@ function QuickLinks({ userRoles }: { userRoles?: string[] }) {
         labelKey: "myReviews",
         icon: Star,
       },
+      // Trips are added, edited and deleted here (client feedback 2026-11-06, C05).
+      { href: "/carrier/trips", labelKey: "myTrips", icon: Route },
       {
         href: "/driver/help",
         labelKey: "driverSupport",
@@ -401,6 +403,7 @@ function QuickLinks({ userRoles }: { userRoles?: string[] }) {
       labelKey: "driverDashboard",
       icon: Truck,
     });
+    links.unshift({ href: "/carrier/trips", labelKey: "myTrips", icon: Route });
   } else {
     // Was /become-driver, a route that never existed. Becoming a driver is the
     // carrier application, which is also the "My application" nav entry.

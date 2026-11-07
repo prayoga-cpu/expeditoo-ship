@@ -36,6 +36,7 @@ export const PUBLIC_LISTING_FIELDS = [
   "lengthCm",
   "widthCm",
   "heightCm",
+  "accessHeightCm",
   "quantity",
   "isFragile",
   "needsHelp",

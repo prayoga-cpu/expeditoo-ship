@@ -962,6 +962,45 @@ than leaving it in a chat message.
 
 ---
 
+## ✅ 2026-11-07 — Nicolas's feedback of 4–6 November: the offer form, the request form, the phone chrome (2.80.0)
+
+_Owner request: « analyze this feedback, give me the context and a fix plan … solve everything and implement what you can handle », then « refer from epidom … pwa with toggle to install, fullscreen and unfullscreen toggle … minimalist mobile, remove profile from the bottom bar, glass floating rounded bottom navbar ». Spec: `docs/specs/client_feedback_2026_11_06_spec.md`._
+
+### What changed and why
+
+- **B01/B04 — the dark « Envoyer l'offre ».** `canSubmit` (SubmitOfferForm) needs a vehicle, a price ≥ €1 and a slot; Nicolas had no vehicle chosen and the button gave no reason. A single usable vehicle is now preselected and a `missing*` line sits under the button. **The cause is read from code and screenshots, not reproduced in a browser.**
+- **B03 — « Ajouter un jour ».** `dayClosed` closes every day outside the job's window, so a one-day job already picked leaves an empty calendar. `OfferSlotsField` now says `noMoreDays`. **The « Add trip » greyed-out report is about `/carrier/trips` and was not investigated.**
+- **A06** — `overBudget` no longer says « expliquez pourquoi ci-dessous » (the message was never required).
+- **A05** — `listings.access_height_cm` (migration `0046`, hand-written, journal `when` 1788778800000): DTO, create form, draft resume, `listing-view` classification, job page. Not yet used to filter vehicles (a vehicle's own height is not stored; `max_height_cm` is its cargo bay).
+- **A03** — `address` defaults to `""` in the DTO and the form; `listing-pins.service` already looks a pin up from postcode + town. Saved addresses with an empty street may be refused by the address API and are caught silently.
+- **C03** — `alias` on the admin user DTO/table (name + `@alias`, searchable) and appended to the shipments table's driver name.
+- **U03** — `BackButton` on Historique des transactions and both driver dashboards.
+- **U02** — light `--background` pure white, neutrals de-blued; dark lifted (L 0.10 → 0.16); `defaultTheme` `system` → `light`. **A product decision: a first visit no longer follows the OS theme.**
+- **Phone chrome** — `FloatingNav` (frosted capsule) shared by the three bottom bars; the Account / Profile tab is gone (the avatar in the header goes to the profile). `HeaderToolbox` groups language, theme, install, full screen and feedback behind one button below `md`, inline from `md`. `use-fullscreen.ts` and `pwa-install.ts` are ported from Epidom; `PWAInstall` registers the `<pwa-install>` element so the button can open its dialog (install is hidden when already standalone, full screen when the browser has no API — iPhone Safari).
+
+- **A02** — `JOB_STEPS` is now what → when → where → budget (`useJobForm`, `STEP_FIELDS`, `JobForm` render order). `WHERE_STEP` still drives `saveRequestedAddresses`. Step-index tests were rewritten (`reachWhere` now crosses « Quand » on its defaults).
+- **A04** — `SavedAddressPicker` gained a two-button group (new / saved); the `Select` shows only in saved mode. « Saved » picks the first address of the first group.
+- **B02** — the screenshot for « Confirm » was not identifiable; I read it as the offer form and added a summary step (`confirming` in `SubmitOfferForm`) with « Confirmer l'offre ». If Nicolas meant another screen, this is the wrong fix.
+- **C05** — trips already add/edit/delete at `/carrier/trips`; the driver profile and the general profile now link « Mes trajets ».
+- **Home announcements (owner, mid-session)** — `useDriverDashboard.newJobCount` counts the newest 50 board jobs published within 24 h (`countNewJobs`, tested; « 50+ » when capped) — the board has no « since » filter. `DriverDashboard` shows the card and, when `mode === "user"` and `qualifiedModes` has `carrier`, a « Passer en mode Chauffeur » card (`setMode("carrier")`).
+- **Top bar on phones** — `AccessSwitcher` and `HeaderQuickActions` are `max-md:hidden`; `HeaderToolbox showAccess` renders the switcher inside the quick-settings popover (MainLayout only).
+- **C01 verified, not changed** — `carrierService.submitApplication` already calls `alertAdminsOfApplication` (2.66.0).
+
+### Judgment calls
+
+- Version **2.80.0**: another session took 2.79.0 after I had claimed 2.78.0; 2.78.0 is skipped.
+- Bottom bars keep the shells' `88px + inset` reservation, which covers the capsule (≈64px) plus its 12px gap.
+
+### Verification
+
+`npx tsc --noEmit` 0 errors at the last run. Vitest on `src/components`, offers, create, driver, admin/ui, db: 558 passed; new tests in `SubmitOfferForm.test.tsx` and `FloatingNav.test.tsx`. Not run: `pnpm lint`, `pnpm build`, a real-browser check of the capsule, the toolbox popover, the install dialog or full screen.
+
+### Known limits
+
+A02 (form order), A04 (explicit buttons — the existing `Select` already offers « new address »), A07, C01/C02/C05, B02, B05, U01, U04, D01 are not done — see the owner's follow-up list.
+
+---
+
 ## ✅ 2026-11-07 — No Dead End on a Driver Account: Reinstate Restores the Roles, Approve From Any State, Deregister When Suspended (2.79.1)
 
 _The owner, testing with their own account: « I can't deregister and nothing from the admin side … I expect any case can be handled without code »._

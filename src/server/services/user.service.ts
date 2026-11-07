@@ -273,6 +273,7 @@ export async function getUsers(query: unknown, adminId: string): Promise<UserLis
       roles: user.roles.map((r: { role: string }) => r.role as UserRole),
       createdAt: user.createdAt,
       lastLoginAt: user.lastLoginAt,
+      alias: user.alias ?? null,
       origin: user.origin,
       impersonateBlocked: impersonationRefusal(adminId, user)?.code ?? null,
       deleteBlocked: deletionRefusal(adminId, user)?.code ?? null,

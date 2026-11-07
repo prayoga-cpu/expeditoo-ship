@@ -47,7 +47,9 @@ const endpointSchema = z.object({
   // destination, coordinates are the map's convenience on top of that.
   lat: z.number().min(-90).max(90).optional(),
   lng: z.number().min(-180).max(180).optional(),
-  address: z.string().min(1, "Address is required"),
+  // Street line optional (client feedback 2026-11-06, A03): the town and the
+  // postal code are the minimum, and the pin is looked up from them.
+  address: z.string().default(""),
   city: z.string().min(1, "City is required"),
   // Its format is the country's, checked below with the country beside it
   // (client_feedback_2026_10_31_spec.md §6.3).
@@ -188,6 +190,7 @@ const baseListingSchema = z.object({
   lengthCm: z.number().positive().optional(),
   widthCm: z.number().positive().optional(),
   heightCm: z.number().positive().optional(),
+  accessHeightCm: z.number().positive().max(1000).optional(),
   quantity: z.number().int().min(1).max(MAX_QUANTITY).default(1),
   isFragile: z.boolean().default(false),
   needsHelp: z.boolean().default(false),
@@ -372,6 +375,7 @@ export const MATERIAL_FIELDS = [
   "lengthCm",
   "widthCm",
   "heightCm",
+  "accessHeightCm",
   "quantity",
   "needsHelp",
   "isFragile",

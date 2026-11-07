@@ -10,7 +10,9 @@ import { describe, expect, it } from "vitest";
  * `env(safe-area-inset-bottom)`, so this pins the classes rather than a layout.
  */
 
-const BAR_HEIGHT = "h-[calc(88px_+_env(safe-area-inset-bottom))]";
+// The bars are floating capsules now (FloatingNav.tsx): they sit 12px above the
+// inset, and the shells keep reserving 88px + inset, which covers capsule + gap.
+const FLOAT_GAP = "pb-[calc(12px_+_env(safe-area-inset-bottom))]";
 const SHELL_PADDING = "pb-[calc(88px_+_env(safe-area-inset-bottom))]";
 
 const read = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
@@ -28,11 +30,12 @@ const SHELLS = [
 ];
 
 describe("bottom bars and the iOS safe area", () => {
-  it.each(BARS)("%s is 88px tall above the inset, with the inset as padding", (path) => {
-    const source = read(path);
-    expect(source).toContain(BAR_HEIGHT);
-    expect(source).toContain("pb-[env(safe-area-inset-bottom)]");
-    expect(source).not.toContain("h-[88px]");
+  it("the floating capsule lifts itself above the inset", () => {
+    expect(read("src/components/layouts/FloatingNav.tsx")).toContain(FLOAT_GAP);
+  });
+
+  it.each(BARS)("%s is drawn by the shared floating capsule", (path) => {
+    expect(read(path)).toMatch(/FloatingNav|FLOATING_NAV_OUTER/);
   });
 
   it.each(SHELLS)("%s pads its scroller by the same height", (path) => {

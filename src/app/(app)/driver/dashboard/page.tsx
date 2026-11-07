@@ -1,5 +1,6 @@
 "use client";
 
+import { BackButton } from "@/components/ui/back-button";
 import { ActiveShipments } from "@/features/app/driver/ui/ActiveShipments";
 import { DriverStats } from "@/features/app/driver/ui/DriverStats";
 import { Truck } from "lucide-react";
@@ -24,6 +25,7 @@ export default function DriverDashboardPage() {
 
   return (
     <div className="mx-auto space-y-6 pb-12 md:pb-0">
+      <BackButton fallbackHref="/profile" />
       {/* Header */}
       <div>
         <h1 className="text-2xl md:text-3xl font-bold text-foreground flex items-center gap-2">

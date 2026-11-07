@@ -37,10 +37,12 @@ import {
 } from "../timing";
 
 /** Step order. Labels are looked up from `create.steps.*`, never shown raw. */
-export const JOB_STEPS = ["what", "where", "when", "budget"] as const;
+// What → When → Where → Budget: the order the client asked for on 6 November
+// (« Quoi, Quand, adresses (villes) »).
+export const JOB_STEPS = ["what", "when", "where", "budget"] as const;
 
-const WHERE_STEP = 1;
-const WHEN_STEP = 2;
+const WHEN_STEP = 1;
+const WHERE_STEP = 2;
 const BUDGET_STEP = 3;
 
 const emptyEndpoint = {
@@ -131,6 +133,7 @@ const ITEM_FIELDS = {
   lengthCm: "",
   widthCm: "",
   heightCm: "",
+  accessHeightCm: "",
   quantity: 1,
   isFragile: false,
   fragileNote: "",
@@ -394,7 +397,7 @@ export function useJobForm(seed: JobFormSeed = {}) {
           // A preset's id or a typed name; unnamed, the town it is in. The end
           // it was saved from is its own field now (saved_addresses_spec.md §3.4).
           label: endpoint.addressLabel?.trim() || endpoint.city || t(`where.${side}`),
-          street: endpoint.address,
+          street: endpoint.address ?? "",
           city: endpoint.city,
           zip: endpoint.postalCode,
           // A name, as the profile form writes one; read back as its code.

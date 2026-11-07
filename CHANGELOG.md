@@ -14,6 +14,47 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.80.0] - 2026-11-07 · feat
+
+- **« Envoyer l'offre » says why it is dark.** A driver with one suitable
+  vehicle no longer has to open a menu to choose it, and the button now names
+  what is still missing — vehicle, price or day — instead of just fading.
+- **« Ajouter un jour » explains itself.** When every day a request can take is
+  already chosen, the calendar says so rather than opening with nothing to tap.
+- **Over-budget offers read simply.** « Au-dessus du budget du client. C'est
+  autorisé. » — the wording that sent drivers hunting for a field to explain
+  themselves is gone.
+- **A request can state the lowest height on the way in** (a car park, an
+  archway). It shows on the job page for the carriers.
+- **The street line of an address is optional.** Town and postal code are
+  enough to post; the pin is found from them.
+- **Phone screens are quieter.** Language, theme, full screen, install and
+  « Un avis, un souci ? » now sit behind one button in the top bar, and the
+  bottom bar is a floating, frosted capsule. Profile is no longer a tab: it is
+  your avatar at the top.
+- **Install the app, and go full screen.** A button offers « Installer
+  l'application » when the app is not yet installed, and « Plein écran » where
+  the browser allows it.
+- **A whiter, lighter look.** The light theme is pure white, the dark theme is
+  less heavy, and a first visit opens in light.
+- **Nicknames appear in the driver and tracking tables** for operators.
+- **« Retour » on Historique des transactions and the driver dashboard.**
+- **The home page announces new jobs.** « N nouvelles courses dans les
+  dernières 24 h », with a button to the jobs.
+- **Approved drivers can switch from the home page.** When you hold driver
+  access but are browsing as a requester, the dashboard offers « Passer en
+  mode Chauffeur » in one tap.
+- **A lighter top bar on phones.** Only the logo, quick settings, the bell and
+  your avatar stay; the access switch moved into quick settings, and the two
+  shortcuts that the bottom bar already has are gone from the top.
+- **The request form asks What, then When, then Where**, as the client asked.
+- **Choose how to give an address.** At each end, two clear buttons: « Saisir
+  une nouvelle adresse » or « Choisir une adresse enregistrée ».
+- **An offer is checked before it is sent.** « Envoyer l'offre » shows the
+  price, vehicle and days, and « Confirmer l'offre » sends it.
+- **« Mes trajets » is one tap from the driver profile**, where trips are
+  added, edited and deleted.
+
 ## [2.79.1] - 2026-11-07 · fix
 
 - **An admin can now repair any driver account from the screen.** Reactivating a
