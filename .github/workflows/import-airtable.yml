@@ -44,6 +44,11 @@ on:
         required: true
         type: boolean
         default: false
+      reupload:
+        description: Write the stored documents again to the configured bucket (after a wrong bucket name)
+        required: true
+        type: boolean
+        default: false
       verify_storage:
         description: Only check that the bucket CI writes to holds the stored files (read-only)
         required: true
@@ -125,4 +130,5 @@ jobs:
           flags=""
           if [ "${{ inputs.dry_run }}" != "true" ]; then flags="$flags --commit"; fi
           if [ "${{ inputs.include_identity }}" = "true" ]; then flags="$flags --include-identity"; fi
+          if [ "${{ inputs.reupload }}" = "true" ]; then flags="$flags --reupload"; fi
           pnpm tsx src/scripts/import-airtable-documents.ts $flags --max-minutes 330

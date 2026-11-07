@@ -987,6 +987,24 @@ _The owner, with a screenshot of the admin sidebar: « I think the driver applic
 - The phone bars for drivers and requesters were not regrouped (they are icon bars with no room for headings).
 - Not checked in a browser.
 
+## ✅ 2026-11-07 — Slip documents « NoSuchKey »: the import wrote to the dev bucket (2.82.2)
+
+_Owner: « still not able to view/open — analyze the root cause, fix immediately »._
+
+### Root cause (proven, not guessed)
+
+The pop-up now loaded, but R2 answered `NoSuchKey`. A read-only CI check (`verify-expedion-files.ts`, workflow box « verify_storage », run 42370351093) printed sha256 prefixes of what CI is configured with: **account matches production** (`8228bf32651d`), **bucket does not** (`635f135ca967` = `expeditoo-expedion-dev`, production's is `expeditoo-expedion` = `ec1a78ea1f23`), and **10 of 10** imported keys exist in CI's bucket. So the GitHub secret `R2_EXPEDION_BUCKET_NAME` holds the *development* bucket name, and all 8,395 files (≈ 2.25 GB of client documents) sit in the dev bucket while the deployment reads `expeditoo-expedion`. Database rows and keys are correct.
+
+### What changed
+
+`import-airtable-documents.ts --reupload` (workflow box « reupload »): writes the objects again to the bucket the run is configured for, for files already recorded; no database change, no new rows. `expedionStorageService.exists`, `verify-expedion-files.ts` and the « verify_storage » box stay as a check.
+
+### Not done
+
+The secret has to be corrected by the owner, then « reupload » run, then « verify_storage » should show bucket `ec1a78ea1f23` and 10 of 10 found. The ≈ 2.25 GB left in `expeditoo-expedion-dev` should then be deleted (client personal data in a development bucket).
+
+---
+
 ## ✅ 2026-11-07 — Slips: documents in a pop-up, a link to the quote, and the localhost links repaired (2.82.1)
 
 _Owner request: « some rows cannot open the PDF, make each previewable in a modal; none of the slips is related to a transaction — redirect to the quote in /admin/expedion; in production the open-PDF links still point to the local »._

@@ -32,6 +32,12 @@ the first release below is the commit that began the transport pivot.
   but stays for applicants and drivers.
 - A deregistered driver's status now reads « Désinscrit » instead of a blank.
 
+## [2.82.2] - 2026-11-07 · infra
+
+- Nothing you can see changes yet. This adds the tools to finish the Airtable
+  documents import: a check of where the files were stored, and a way to write
+  them again to the right place. The slips' documents open once that has run.
+
 ## [2.82.1] - 2026-11-07 · fix
 
 - **Slip documents open on the real site.** Imported slips pointed at an

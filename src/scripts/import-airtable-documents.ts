@@ -16,6 +16,9 @@
  *   --limit N            stop after N Airtable records (a trial)
  *   --max-minutes N      stop cleanly after N minutes; a re-run resumes
  *   --concurrency N      parallel downloads (default 4)
+ *   --reupload           write the objects again to the bucket this run is configured
+ *                        for, for files already recorded (no database change) —
+ *                        used when they went to the wrong bucket
  *   --include-identity   also store « Piece d'Identité » (left out by default:
  *                        personal data nothing here needs)
  *
@@ -56,6 +59,7 @@ const value = (name: string) => {
 };
 const COMMIT = flag("commit");
 const INCLUDE_IDENTITY = flag("include-identity");
+const REUPLOAD = flag("reupload");
 const LIMIT = value("limit");
 const DEADLINE = value("max-minutes")
   ? Date.now() + (value("max-minutes") as number) * 60_000
@@ -110,6 +114,8 @@ interface Task {
   recordId: string;
   quote: { id: string; firebaseUid: string; hasPrimary: boolean };
   doc: PlannedDocument;
+  /** Already recorded in `expedion_files`: only the object is written again. */
+  objectOnly?: boolean;
 }
 
 const stats = {
@@ -144,6 +150,11 @@ async function store(task: Task) {
   try {
     const bytes = await download(doc.attachment.url);
     await expedionStorageService.uploadAt(doc.objectKey, bytes, mime);
+    if (task.objectOnly) {
+      stats.stored += 1;
+      stats.bytes += bytes.length;
+      return;
+    }
     const id = nanoid();
     await db.insert(expedionFiles).values({
       id,
@@ -218,7 +229,7 @@ async function main() {
       for (const doc of plan) {
         stats.planned += 1;
         stats.byKind[doc.kind] = (stats.byKind[doc.kind] ?? 0) + 1;
-        if (stored.has(doc.objectKey)) {
+        if (stored.has(doc.objectKey) && !REUPLOAD) {
           stats.alreadyStored += 1;
           continue;
         }
@@ -230,6 +241,7 @@ async function main() {
           recordId: record.id,
           quote: { id: quote.id, firebaseUid: quote.firebaseUid, hasPrimary: Boolean(quote.bordereauDocUrl) },
           doc,
+          objectOnly: stored.has(doc.objectKey),
         });
       }
     }
