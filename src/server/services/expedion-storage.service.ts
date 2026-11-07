@@ -1,5 +1,6 @@
 import {
   S3Client,
+  HeadObjectCommand,
   PutObjectCommand,
   GetObjectCommand,
 } from "@aws-sdk/client-s3";
@@ -94,6 +95,19 @@ export const expedionStorageService = {
     );
 
     return key;
+  },
+
+  /** Whether the object exists in the bucket this process is configured for. */
+  async exists(key: string): Promise<boolean> {
+    const { client, bucket } = ensureClient();
+    try {
+      await client.send(new HeadObjectCommand({ Bucket: bucket, Key: key }));
+      return true;
+    } catch (error) {
+      const status = (error as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode;
+      if (status === 404) return false;
+      throw error;
+    }
   },
 
   /**

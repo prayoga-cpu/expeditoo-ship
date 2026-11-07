@@ -44,6 +44,11 @@ on:
         required: true
         type: boolean
         default: false
+      verify_storage:
+        description: Only check that the bucket CI writes to holds the stored files (read-only)
+        required: true
+        type: boolean
+        default: false
       include_identity:
         description: Also store identity documents (personal data — normally NO)
         required: true
@@ -92,8 +97,12 @@ jobs:
             fi
           done
 
+      - name: Verify storage
+        if: inputs.verify_storage
+        run: pnpm tsx src/scripts/verify-expedion-files.ts
+
       - name: Repair document links
-        if: inputs.repair_urls
+        if: inputs.repair_urls && !inputs.verify_storage
         run: |
           if [ "${{ inputs.dry_run }}" = "true" ]; then
             pnpm tsx src/scripts/repair-expedion-file-urls.ts
@@ -102,7 +111,7 @@ jobs:
           fi
 
       - name: Import quotes new in Airtable
-        if: inputs.import_new_quotes && !inputs.repair_urls
+        if: inputs.import_new_quotes && !inputs.repair_urls && !inputs.verify_storage
         run: |
           if [ "${{ inputs.dry_run }}" = "true" ]; then
             pnpm tsx src/scripts/import-airtable-quotes.ts
@@ -111,7 +120,7 @@ jobs:
           fi
 
       - name: Import documents
-        if: ${{ !inputs.repair_urls }}
+        if: ${{ !inputs.repair_urls && !inputs.verify_storage }}
         run: |
           flags=""
           if [ "${{ inputs.dry_run }}" != "true" ]; then flags="$flags --commit"; fi
