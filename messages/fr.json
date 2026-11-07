@@ -2677,6 +2677,7 @@
       "groups": { "operations": "Opérations", "people": "Personnes", "money": "Argent", "quality": "Qualité", "system": "Système" },
       "withdrawals": "Retraits",
       "expedionClients": "Clients Expedion",
+      "bordereaux": "Bordereaux",
       "incidents": "Incidents",
       "feedback": "Retours",
       "settings": "Paramètres"
@@ -3418,6 +3419,32 @@
       "pickup": "Retrait à partir du {date}",
       "budget": "Budget du demandeur",
       "proposeHint": "Ouvrez la demande pour proposer une offre au client : il paiera pour confirmer."
+    },
+    "bordereaux": {
+      "title": "Bordereaux",
+      "subtitle": "Chaque bordereau reçu : numéro, acheteur, contact, adresse de facturation, date de vente et description, avec le document. Exportable en CSV.",
+      "searchPlaceholder": "N° de bordereau, nom, e-mail, téléphone, ville, description…",
+      "export": "Exporter en CSV",
+      "loadFailed": "Les bordereaux n'ont pas pu être chargés",
+      "loadFailedHint": "La connexion ou le serveur n'a pas répondu. Rien n'est perdu.",
+      "empty": "Aucun bordereau pour l'instant",
+      "emptySearch": "Aucun bordereau ne correspond à cette recherche. Essayez un autre mot ou effacez la recherche.",
+      "emptyHint": "Les bordereaux apparaissent ici dès qu'un client en téléverse un ou que l'import Airtable a tourné.",
+      "table": {
+        "number": "N°",
+        "client": "Client",
+        "contact": "Contact",
+        "address": "Adresse de facturation",
+        "saleDate": "Date de vente",
+        "description": "Description",
+        "documents": "Documents"
+      },
+      "openSlip": "Ouvrir",
+      "documentsCount": "{count, plural, one {# document} other {# documents}}",
+      "count": "{total, plural, one {# bordereau} other {# bordereaux}}",
+      "pageOf": "Page {page} sur {totalPages}",
+      "previousPage": "Page précédente",
+      "nextPage": "Page suivante"
     },
     "expedionClients": {
       "title": "Clients Expedion",

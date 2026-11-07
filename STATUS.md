@@ -1002,12 +1002,22 @@ Airtable `CONTACTS`: **4,860 records**, 4,656 already in `expedion_quotes` (204 
 - `.github/workflows/import-airtable.yml` — dispatch with `import`; dry-run on by default; imports new quotes first, then documents. Needs repo secrets `AIRTABLE_PAT`, `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_EXPEDION_BUCKET_NAME` besides `POSTGRES_URL_PRODUCTION`.
 - `GET /api/admin/expedion/quotes/:id/documents` (staff) and a merged list in `QuoteDetailDialog`; files are still served by `/api/expedion/files/:id`, which authorises again.
 
+### Flat table (owner: « do the flat table as well »)
+
+`/admin/bordereaux` (`BordereauxTable`, nav entry under Operations): one row per quote with a slip (number, or document, or a filed file), server-paginated, searched over number / name / e-mail / phone / city / auction house / description. `GET /api/admin/expedion/bordereaux` and `/export` (CSV: `;`, BOM, formula-defusing, capped at 20,000 rows) are staff-only (`expedion-bordereaux.service.ts`). Tests: `csv.test.ts`, `expedion-bordereaux.service.test.ts`.
+
+### Run log
+
+- Secrets added by the owner; first dispatch (run 42361373386) failed in 27 s: the workflow passed an **empty** `AIRTABLE_BASE_ID` variable and `??` kept the empty string (Airtable 404). Fixed with `||` and by dropping the variable.
+- Dry run (run 42361566001): 4,860 records read, 4,554 with attachments, **7,983 files planned, 2.25 GB**, 186 records waiting on the quote import, 0 failures.
+- Real run dispatched (run 42361682567); its outcome is recorded below if this entry was amended, else check Actions.
+
 ### Not done / limits
 
-- **Nothing has been imported.** The code refuses to open the production database from a laptop (`assertNotProductionDatabase`), and I did not bypass it; the dry-run figures above come from Airtable directly plus the read-only mirror's record ids. The importer itself has not been run end to end against any database.
+- **Run from CI, not from a laptop:** the code refuses to open the production database from a laptop (`assertNotProductionDatabase`) and that guard was not bypassed.
 - No new table or migration: `expedion_files.kind` is free text.
 - The `Airtable` columns other than attachments were not re-compared with Postgres; only quotes missing from Postgres were counted.
-- A flat « Bordereaux » table with CSV export (owner's earlier idea) is not built.
+- The flat table lists quotes that have a slip; a quote with neither a number nor a document nor a filed file does not appear.
 
 ---
 

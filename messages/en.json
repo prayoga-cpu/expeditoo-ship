@@ -2677,6 +2677,7 @@
       "groups": { "operations": "Operations", "people": "People", "money": "Money", "quality": "Quality", "system": "System" },
       "withdrawals": "Withdrawals",
       "expedionClients": "Expedion clients",
+      "bordereaux": "Slips",
       "incidents": "Incidents",
       "feedback": "Feedback",
       "settings": "Settings"
@@ -3418,6 +3419,32 @@
       "pickup": "Pickup from {date}",
       "budget": "Requester's budget",
       "proposeHint": "Open the request to propose an offer to the client: they will pay to confirm."
+    },
+    "bordereaux": {
+      "title": "Slips",
+      "subtitle": "Every purchase slip received: number, buyer, contact, billing address, sale date and description, with the document. Exportable as CSV.",
+      "searchPlaceholder": "Slip number, name, email, phone, city, description…",
+      "export": "Export CSV",
+      "loadFailed": "The slips could not be loaded",
+      "loadFailedHint": "The connection or the server did not answer. Nothing was lost.",
+      "empty": "No slips yet",
+      "emptySearch": "No slip matches this search. Try another word or clear the search.",
+      "emptyHint": "Slips appear here as soon as a client uploads one or the Airtable import has run.",
+      "table": {
+        "number": "No.",
+        "client": "Client",
+        "contact": "Contact",
+        "address": "Billing address",
+        "saleDate": "Sale date",
+        "description": "Description",
+        "documents": "Documents"
+      },
+      "openSlip": "Open",
+      "documentsCount": "{count, plural, one {# document} other {# documents}}",
+      "count": "{total, plural, one {# slip} other {# slips}}",
+      "pageOf": "Page {page} of {totalPages}",
+      "previousPage": "Previous page",
+      "nextPage": "Next page"
     },
     "expedionClients": {
       "title": "Expedion clients",

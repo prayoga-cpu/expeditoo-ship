@@ -37,7 +37,12 @@ the first release below is the commit that began the transport pivot.
 - **Every document of a quote in one place.** The admin quote detail now lists
   the client's bordereau and, once the Airtable import has run, the second
   bordereau, invoices, powers of attorney and photos that sat in Airtable.
-  Nothing changes until the import is run.
+  The Airtable import has been run: the older slips, invoices and powers of
+  attorney are now beside the quotes they belong to.
+- **A « Bordereaux » table in the admin.** One row per slip — number, client,
+  e-mail, phone, billing address, sale date and description — with a search over
+  all of it, a link to the document, and a CSV export of whatever the search
+  matches. It replaces the spreadsheet kept in Airtable.
 
 ## [2.80.0] - 2026-11-07 · feat
 

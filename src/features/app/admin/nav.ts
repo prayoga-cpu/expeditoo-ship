@@ -2,6 +2,7 @@ import {
   AlertTriangle,
   Car,
   DollarSign,
+  FileSpreadsheet,
   FileText,
   Gavel,
   Headset,
@@ -51,6 +52,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     labelKey: "operations",
     items: [
       { href: "/admin/expedion", labelKey: "expedion", icon: LayoutDashboard, badges: ["expedion"] },
+      { href: "/admin/bordereaux", labelKey: "bordereaux", icon: FileSpreadsheet },
       { href: "/admin/awards", labelKey: "awards", icon: Gavel, badges: ["awards"] },
       { href: "/admin/listings", labelKey: "listing", icon: FileText, badges: ["listings"] },
       { href: "/admin/shipments", labelKey: "shipment", icon: Truck, badges: ["shipments"] },
