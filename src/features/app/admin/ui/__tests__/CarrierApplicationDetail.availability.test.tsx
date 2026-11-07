@@ -108,6 +108,22 @@ describe("CarrierApplicationDetail · availability", () => {
     expect(h.onDeregister).toHaveBeenCalledWith({ id: "c1", reason: "Fraude" });
   });
 
+  it("lets an admin restore driver access on an approved account that lost it", () => {
+    const h = renderDetail(app({ status: "approved" }));
+    fireEvent.click(screen.getByRole("button", { name: t.restoreAccess }));
+    expect(h.onApprove).toHaveBeenCalledWith("c1");
+  });
+
+  it.each(["draft", "rejected", "deregistered"] as const)(
+    "lets an admin approve a %s application directly, with no submission",
+    (status) => {
+      const h = renderDetail(app({ status }));
+      fireEvent.click(screen.getByRole("button", { name: t.approve }));
+      expect(h.onApprove).toHaveBeenCalledWith("c1");
+      expect(screen.queryByRole("button", { name: t.reject })).toBeNull();
+    }
+  );
+
   it("offers to reinstate a suspended driver", () => {
     const h = renderDetail(app({ status: "suspended" }));
     fireEvent.click(screen.getByRole("button", { name: t.reinstate }));

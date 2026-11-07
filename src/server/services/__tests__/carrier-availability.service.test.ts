@@ -7,6 +7,7 @@ const dal = vi.hoisted(() => ({
     getById: vi.fn(),
     getByUserId: vi.fn(),
     update: vi.fn(async (_id: string, data: object) => ({ id: "c1", ...data })),
+    upsertDriverLink: vi.fn().mockResolvedValue(undefined),
   },
   shipments: { countLiveForCarrier: vi.fn() },
   offers: { withdrawAllPendingForCarrier: vi.fn() },
@@ -14,6 +15,7 @@ const dal = vi.hoisted(() => ({
   users: {
     getUsersByRole: vi.fn(),
     getUserById: vi.fn(),
+    assignRoleIfMissing: vi.fn().mockResolvedValue(undefined),
   },
   email: { sendDriverApplicationSubmittedEmail: vi.fn().mockResolvedValue(true) },
 }));
@@ -158,7 +160,19 @@ describe("reinstate", () => {
   it("brings a suspended driver back", async () => {
     dal.carriers.getById.mockResolvedValue(carrier({ status: "suspended" }));
     await carrierService.reinstate(admin, "c1");
-    expect(dal.carriers.update).toHaveBeenCalledWith("c1", { status: "approved", suspensionReason: null });
+    expect(dal.carriers.update).toHaveBeenCalledWith(
+      "c1",
+      { status: "approved", suspensionReason: null },
+      expect.anything()
+    );
+  });
+
+  it("also restores the driver roles, so an account that lost them can bid again", async () => {
+    dal.carriers.getById.mockResolvedValue(carrier({ status: "suspended" }));
+    await carrierService.reinstate(admin, "c1");
+    expect(dal.users.assignRoleIfMissing).toHaveBeenCalledWith("driver", "carrier", "boss", expect.anything());
+    expect(dal.users.assignRoleIfMissing).toHaveBeenCalledWith("driver", "driver", "boss", expect.anything());
+    expect(dal.carriers.upsertDriverLink).toHaveBeenCalled();
   });
 });
 

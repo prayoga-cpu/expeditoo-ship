@@ -199,6 +199,15 @@ export function CarrierApplicationDetail({
     application.status === "submitted" ||
     application.status === "under_review";
   const canSuspend = application.status === "approved";
+  // Any state an admin may need to undo by hand: a draft, a refusal or a
+  // deregistration approved directly (no submission needed), and an approved
+  // account whose driver roles are missing re-approved to restore them
+  // (`carrierService.approve` is idempotent and is the backfill).
+  const canApproveDirect =
+    application.status === "draft" ||
+    application.status === "rejected" ||
+    application.status === "deregistered";
+  const canRestoreAccess = application.status === "approved";
   const absent = isAbsent(application);
   const notProvided = t("notProvided");
 
@@ -546,16 +555,28 @@ export function CarrierApplicationDetail({
                     {t("reinstate")}
                   </Button>
                 )}
-                {canReview && (
+                {canRestoreAccess && (
+                  <Button
+                    variant="outline"
+                    onClick={() => void runAction(() => onApprove(application.id))}
+                    disabled={isUpdating}
+                  >
+                    <RotateCcw className="w-4 h-4 mr-2" />
+                    {t("restoreAccess")}
+                  </Button>
+                )}
+                {(canReview || canApproveDirect) && (
                   <>
-                    <Button
-                      variant="destructive"
-                      onClick={() => setActionMode("reject")}
-                      disabled={isUpdating}
-                    >
-                      <X className="w-4 h-4 mr-2" />
-                      {t("reject")}
-                    </Button>
+                    {canReview && (
+                      <Button
+                        variant="destructive"
+                        onClick={() => setActionMode("reject")}
+                        disabled={isUpdating}
+                      >
+                        <X className="w-4 h-4 mr-2" />
+                        {t("reject")}
+                      </Button>
+                    )}
                     <Button
                       onClick={() =>
                         void runAction(() => onApprove(application.id))

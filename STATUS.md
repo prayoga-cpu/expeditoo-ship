@@ -962,6 +962,34 @@ than leaving it in a chat message.
 
 ---
 
+## ✅ 2026-11-07 — No Dead End on a Driver Account: Reinstate Restores the Roles, Approve From Any State, Deregister When Suspended (2.79.1)
+
+_The owner, testing with their own account: « I can't deregister and nothing from the admin side … I expect any case can be handled without code »._
+
+### Cause
+
+Read through `mirror_readonly`: the account held roles `shipper, admin` only, and its carrier row was `suspended` (reason typed as junk, a manual test). Three dead ends stacked. `reinstate` set `approved` but never ran `enrolAsOwnDriver`, so an account that never got the roles (approved before self-enrolment existed, or edited by hand) came back « approved, but driver access is off ». The admin dialog offered Approve only for `submitted`/`under_review`, and re-approving an approved row — the documented backfill — had no button. And the driver's own deregister lived in `AvailabilitySection`, rendered for `approved` only.
+
+### What changed
+
+- `carrierService.reinstate`: one transaction, status back to `approved` **and** `enrolAsOwnDriver` (idempotent).
+- `CarrierApplicationDetail`: Approve for `draft`/`rejected`/`deregistered` (no Reject there); « Rétablir l'accès chauffeur » on `approved` (calls the idempotent `approve`).
+- `AvailabilitySection` also renders for `suspended`: shows the suspension line and deregister, hides the away switch.
+- Tests: reinstate restores the roles; admin direct approve and restore-access; suspended driver can deregister.
+
+### Verification
+
+`npx tsc --noEmit` 0 errors · eslint 0 errors on touched dirs · carrier/admin suites pass.
+
+### Operator to-do
+
+**This does not change production data.** A laptop has no write path to production, by design. Once this is deployed: Admin → Drivers → open prayogadevelopment@gmail.com's application → « Réactiver » (it is suspended), which now also grants the carrier and driver roles. Sign out and in so the session picks the roles up.
+
+### Known limits
+
+- `approve` does not check that the file is complete; an admin approving a draft takes that call.
+- Not exercised in a browser against production.
+
 ## ✅ 2026-11-07 — A Driver Who Cannot See the Announcements: Mode Versus Role, Phone Switcher, and a New-Job Toast and Bell (2.79.0)
 
 _The client's contact Nicolas, through the owner on WhatsApp: « the driver can not see the announce. Maybe he need to switch to driver mode but it is not yet intuitive for him. » Then: give approved drivers a toast and a bell when a new job is launched, so they are triggered to open it._

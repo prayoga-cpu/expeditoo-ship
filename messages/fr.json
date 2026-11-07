@@ -3023,6 +3023,7 @@
         "endAbsence": "Fin d'absence",
         "deregister": "Désinscrire",
         "reinstate": "Réactiver",
+        "restoreAccess": "Rétablir l'accès chauffeur",
         "kindLabel": "Type de chauffeur",
         "kind": {
           "professional": "Professionnel",
@@ -3676,6 +3677,7 @@
         "absentKeeps": "Vos courses déjà réservées, votre argent et vos documents ne changent pas. Seules les nouvelles missions s'arrêtent.",
         "confirmAway": "Confirmer mon absence",
         "deregister": "Me désinscrire",
+        "suspended": "Votre compte chauffeur est suspendu : vous ne recevez plus de missions. Contactez un administrateur, ou désinscrivez-vous ci-dessous.",
         "deregisterWarning": "Vos offres en attente seront retirées et vous ne recevrez plus de missions. L'argent déjà gagné reste dû. Ce n'est pas possible tant qu'une course est en cours.",
         "deregisterReasonLabel": "Pourquoi partez-vous ? (facultatif)",
         "confirmDeregister": "Confirmer ma désinscription",

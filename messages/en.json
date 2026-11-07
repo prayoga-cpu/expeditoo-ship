@@ -3023,6 +3023,7 @@
         "endAbsence": "End absence",
         "deregister": "Deregister",
         "reinstate": "Reinstate",
+        "restoreAccess": "Restore driver access",
         "kindLabel": "Driver type",
         "kind": {
           "professional": "Professional",
@@ -3676,6 +3677,7 @@
         "absentKeeps": "Runs already booked, your money and your documents stay as they are. Only new jobs stop.",
         "confirmAway": "Confirm my absence",
         "deregister": "Deregister",
+        "suspended": "Your driver account is suspended: you receive no jobs. Contact an administrator, or deregister below.",
         "deregisterWarning": "Your pending offers will be withdrawn and you will no longer receive jobs. Money already earned is still owed to you. Not possible while a run is in progress.",
         "deregisterReasonLabel": "Why are you leaving? (optional)",
         "confirmDeregister": "Confirm deregistration",

@@ -38,7 +38,10 @@ export function AvailabilitySection({
   const [mode, setMode] = useState<"idle" | "absent" | "deregister">("idle");
   const [returnDay, setReturnDay] = useState("");
   const [reason, setReason] = useState("");
-  const absent = isAbsent(application);
+  // A suspended driver cannot take work, so « away » means nothing — but
+  // « deregister » must stay: it was the only way out, and it was hidden.
+  const suspended = application.status === "suspended";
+  const absent = !suspended && isAbsent(application);
 
   const reset = () => {
     setMode("idle");
@@ -51,7 +54,9 @@ export function AvailabilitySection({
       <div>
         <h2 className="font-semibold">{t("title")}</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          {absent
+          {suspended
+            ? t("suspended")
+            : absent
             ? application.absentUntil
               ? t("absentUntil", {
                   date: format.dateTime(new Date(application.absentUntil), {
@@ -120,7 +125,7 @@ export function AvailabilitySection({
               <LogOut className="mr-1.5 h-4 w-4" />
               {t("deregister")}
             </Button>
-            {absent ? (
+            {suspended ? null : absent ? (
               <Button
                 disabled={setAvailability.isPending}
                 onClick={() => setAvailability.mutate({ absent: false })}

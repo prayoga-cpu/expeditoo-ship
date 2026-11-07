@@ -80,7 +80,9 @@ function ApplicationFunnel({ application }: { application: CarrierApplication })
       {editable && <SubmitSection application={application} />}
       {status === "submitted" && <WithdrawSection />}
       {status === "approved" && <ApprovedActions />}
-      {status === "approved" && <AvailabilitySection application={application} />}
+      {(status === "approved" || status === "suspended") && (
+        <AvailabilitySection application={application} />
+      )}
     </div>
   );
 }

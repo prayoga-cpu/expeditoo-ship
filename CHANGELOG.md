@@ -14,6 +14,18 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.79.1] - 2026-11-07 · fix
+
+- **An admin can now repair any driver account from the screen.** Reactivating a
+  suspended driver also gives the driver access back, so « Approved, but driver
+  access is off » can no longer be the end of the road. An application that was
+  never submitted, was refused, or was closed by a deregistration can be
+  approved directly, and an approved account that lost its driver access has a
+  « Rétablir l'accès chauffeur » button.
+- **A suspended driver can leave.** The « Me désinscrire » option used to be
+  shown to approved drivers only, so a suspended one had no way out and no
+  explanation. It now shows, with a line saying the account is suspended.
+
 ## [2.79.0] - 2026-11-07 · feat
 
 - **A driver can now find the jobs.** Drivers who were on the « Utilisateur »

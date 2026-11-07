@@ -576,9 +576,18 @@ export const carrierService = {
     if (!carrier) throw err("CARRIER_NOT_FOUND", 404);
     if (carrier.status !== "suspended") throw err("NOT_SUSPENDED", 409);
 
-    return await carriersDal.update(carrierId, {
-      status: "approved",
-      suspensionReason: null,
+    // Suspension never removed the roles, but an account approved before
+    // self-enrolment existed (or one whose roles were edited by hand) holds
+    // none — and « approved, but driver access is off » is a dead end an admin
+    // could not repair from the screen. Both writes are idempotent.
+    return await db.transaction(async (tx) => {
+      const updated = await carriersDal.update(
+        carrierId,
+        { status: "approved", suspensionReason: null },
+        tx
+      );
+      await enrolAsOwnDriver(carrier, actor.userId, tx);
+      return updated;
     });
   },
 

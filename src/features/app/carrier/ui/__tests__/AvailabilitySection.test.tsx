@@ -80,4 +80,17 @@ describe("AvailabilitySection", () => {
 
     expect(hooks.deregister).toHaveBeenCalledWith("Retraite", expect.anything());
   });
+
+  it("lets a suspended driver deregister, and offers no away switch", () => {
+    // The only way out of a suspension used to be hidden: the card was shown
+    // for approved accounts alone.
+    renderCard(app({ status: "suspended" }));
+    expect(screen.getByText(copy.suspended)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: copy.goAway })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: copy.deregister }));
+    fireEvent.click(screen.getByRole("button", { name: copy.confirmDeregister }));
+
+    expect(hooks.deregister).toHaveBeenCalled();
+  });
 });
