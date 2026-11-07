@@ -7,7 +7,12 @@ import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 
 import { BrandMark } from "@/components/ui/brand-mark";
-import { setStoredAccessMode, type AccessMode } from "@/lib/active-access";
+import { useAuth } from "@/lib/auth-context";
+import {
+  hasDriverAccess,
+  setStoredAccessMode,
+  type AccessMode,
+} from "@/lib/active-access";
 
 /**
  * The first thing a brand-new account sees, right after signup — both the
@@ -23,11 +28,16 @@ import { setStoredAccessMode, type AccessMode } from "@/lib/active-access";
 export default function WelcomePage() {
   const router = useRouter();
   const t = useTranslations("auth.welcome");
+  const { user } = useAuth();
   const [pending, setPending] = useState<AccessMode | null>(null);
 
   const choose = (mode: AccessMode, destination: string) => {
     setPending(mode);
-    setStoredAccessMode(mode);
+    // Looking at « Expédier » must not park someone who already drives on a
+    // nav with no board: the hint is only stored when it cannot do that.
+    if (!(mode === "user" && hasDriverAccess(user?.roles ?? []))) {
+      setStoredAccessMode(mode);
+    }
     router.push(destination);
   };
 

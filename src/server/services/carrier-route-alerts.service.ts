@@ -67,11 +67,12 @@ export const carrierRouteAlertsService = {
    * Best-effort throughout: the candidate lookup runs inside the caller's own
    * `.catch()` (matching `sendListingPostedEmail`'s convention), and each
    * notification swallows its own failure so one bad row never stops the
-   * rest.
+   * rest. Returns the user ids it notified.
    */
-  async notifyMatchingCarriers(listing: Listing): Promise<void> {
+  async notifyMatchingCarriers(listing: Listing): Promise<string[]> {
+    const notified: string[] = [];
     const job = jobFor(listing);
-    if (!job) return;
+    if (!job) return notified;
 
     const now = new Date();
 
@@ -115,11 +116,21 @@ export const carrierRouteAlertsService = {
           title: "Une course correspond à votre trajet",
           message: `"${listing.title}" : ${listing.pickupCity} → ${listing.dropoffCity}.`,
           linkUrl: `/listing/${listing.id}`,
-          data: { listingId: listing.id, routeId: carrier.routeId },
+          data: {
+            listingId: listing.id,
+            routeId: carrier.routeId,
+            linkUrl: `/listing/${listing.id}`,
+          },
+        })
+        .then(() => {
+          notified.push(carrier.userId);
         })
         .catch((e) =>
           console.error("carrier_route_match notification failed", e)
         );
     }
+    // Who already heard about this job, so the board-wide alert
+    // (`driverAlertsService.onNewJob`) does not tell them twice.
+    return notified;
   },
 };

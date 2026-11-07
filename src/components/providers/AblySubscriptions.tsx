@@ -8,6 +8,10 @@ import { useActiveConversation } from "@/features/app/messages/context";
 import { AblyMessage } from "@/types/ably.types";
 import type { RealtimeChannel } from "ably";
 import { namespaced } from "@/lib/env";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { jobAlertFrom } from "@/lib/job-alert";
 
 /**
  * Global Ably Subscriptions Component
@@ -30,6 +34,13 @@ export function AblySubscriptions() {
   const queryClient = useQueryClient();
   const client = useAblyClientContext();
   const { activeConversationId } = useActiveConversation();
+  const router = useRouter();
+  const tBoard = useTranslations("jobBoard");
+
+  // Latest values for the long-lived subscription callback, same trick as
+  // `activeConversationRef` — the effect must not re-subscribe on each render.
+  const openJobRef = useRef({ router, label: tBoard("newJobToastAction") });
+  openJobRef.current = { router, label: tBoard("newJobToastAction") };
 
   // Use ref to access latest activeConversationId in callback without re-subscribing
   const activeConversationRef = useRef(activeConversationId);
@@ -86,6 +97,7 @@ export function AblySubscriptions() {
 
         case "notification:new":
           handleNotification();
+          handleJobAlert(message);
           break;
 
         default:
@@ -212,6 +224,23 @@ export function AblySubscriptions() {
       queryClient.refetchQueries({
         queryKey: ["notifications", "unread-count"],
         type: "all",
+      });
+    };
+
+    /**
+     * A new job reached the board (or fits this driver's trajet): a toast that
+     * opens it, beside the bell the refetch above already lights. Only
+     * approved, available drivers are ever sent these, so there is no role
+     * check here to get wrong.
+     */
+    const handleJobAlert = (message: AblyMessage) => {
+      const alert = jobAlertFrom(message.data);
+      if (!alert) return;
+      const { router: nav, label } = openJobRef.current;
+      toast(alert.title, {
+        description: alert.message,
+        duration: 15000,
+        action: { label, onClick: () => nav.push(alert.href) },
       });
     };
 

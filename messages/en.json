@@ -1985,6 +1985,11 @@
       }
     },
     "jobBoard": {
+    "pendingNotice": "You can browse requests now. You will be able to bid once your driver application is approved.",
+    "pendingNoticeAction": "View my application",
+    "newJobToastAction": "View the job",
+    "modeNotice": "You are in Requester mode. Switch to Driver mode to see your offers and runs.",
+    "modeNoticeAction": "Switch to Driver mode",
       "eyebrow": "OPEN RIGHT NOW",
       "title": "Today's board",
       "joinCta": "Join to see all 27 jobs →",

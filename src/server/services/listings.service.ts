@@ -6,6 +6,7 @@ import { shipmentsDal } from "@/server/dal/shipments.dal";
 import { offersService } from "@/server/services/offers.service";
 import { notificationsService } from "@/server/services/notifications.service";
 import { carrierRouteAlertsService } from "@/server/services/carrier-route-alerts.service";
+import { driverAlertsService } from "@/server/services/driver-alerts.service";
 import { emailService } from "@/server/services/email.service";
 import { isSystemAccount } from "@/server/services/account-policy";
 import {
@@ -288,10 +289,26 @@ async function goLive(
     await announceListingPosted(listing, shipperId);
   }
   if (options.notifyRouteMatches !== false) {
-    await carrierRouteAlertsService
-      .notifyMatchingCarriers(listing)
-      .catch((e) => console.error("carrier_route_match notify failed", e));
+    await alertBoard(listing);
   }
+}
+
+/**
+ * Tell the drivers a job is on the board: the ones whose trajet it fits get
+ * the specific « une course correspond à votre trajet », every other approved
+ * driver the general « nouvelle course disponible » — bell and toast, so a
+ * driver does not have to think to open the board.
+ */
+async function alertBoard(listing: Listing) {
+  const matched = await carrierRouteAlertsService
+    .notifyMatchingCarriers(listing)
+    .catch((e) => {
+      console.error("carrier_route_match notify failed", e);
+      return [] as string[];
+    });
+  await driverAlertsService
+    .onNewJob(listing, matched ?? [])
+    .catch((e) => console.error("new_job notify failed", e));
 }
 
 /**
@@ -743,9 +760,7 @@ export const listingsService = {
           data: { listingId: listing.id },
         })
         .catch((e) => console.error("listing_scheduled_published notification failed", e));
-      await carrierRouteAlertsService
-        .notifyMatchingCarriers(listing)
-        .catch((e) => console.error("carrier_route_match notify failed", e));
+      await alertBoard(listing);
       published++;
     }
 

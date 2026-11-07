@@ -6,6 +6,7 @@ import { PackagePlus, Search } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { useAuth } from "@/lib/auth-context";
+import { useCarrierApplication } from "@/features/app/carrier/hooks/useCarrier";
 import { cn } from "@/lib/utils";
 
 /**
@@ -24,7 +25,11 @@ import { cn } from "@/lib/utils";
  * an applicant who has not been approved yet is not shown jobs they cannot bid
  * on. `carrier` counts as `driver`: approval grants both (`carrier.service.ts`)
  * and they are one person here — the same collapse `primaryRole` makes.
- * Deliberately not `primaryRole` itself, which answers "which label do we
+ * An applicant whose file is in review also gets the board: they can read it
+ * (the API only asks for a session) and « Voir les demandes » is the answer to
+ * "what will I be bidding on", with `JobBoard` saying bidding opens on
+ * approval. A pending driver who finds no jobs anywhere reports « I cannot see
+ * the announcements ». Deliberately not `primaryRole` itself, which answers "which label do we
  * print" and would hide the board from an admin who is also an approved driver.
  */
 const ACTIONS = [
@@ -48,13 +53,15 @@ export function HeaderQuickActions() {
 
   const roles = user?.roles ?? [];
   const isDriver = roles.includes("driver") || roles.includes("carrier");
+  const { data: application } = useCarrierApplication({ enabled: !!user && !isDriver });
+  const canSeeBoard = isDriver || !!application;
 
   // Nothing while the session resolves, and nothing for a visitor: buttons that
   // appear a beat after the header paints shove the language toggle sideways
   // under the cursor.
   if (isLoading || !user) return null;
 
-  const actions = ACTIONS.filter(({ driverOnly }) => isDriver || !driverOnly);
+  const actions = ACTIONS.filter(({ driverOnly }) => canSeeBoard || !driverOnly);
 
   return (
     <>

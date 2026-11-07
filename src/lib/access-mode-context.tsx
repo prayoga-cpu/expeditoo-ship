@@ -13,6 +13,9 @@ import { useAuth } from "@/lib/auth-context";
 import {
   type AccessMode,
   getStoredAccessMode,
+  hasDriverAccess,
+  hasSeenDriverAccess,
+  markDriverAccessSeen,
   qualifiedAccessModes,
   resolveAccessMode,
   setStoredAccessMode,
@@ -50,6 +53,19 @@ export function AccessModeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setStored(getStoredAccessMode());
   }, []);
+
+  // The first time this browser sees the account with driver access — right
+  // after approval, typically — open it on Driver mode. A hint saved from
+  // before approval ("user", from the welcome page) would otherwise keep a
+  // newly approved driver on a nav with no board. Once only: after that the
+  // switcher's choice is theirs.
+  const driverAccess = hasDriverAccess(roles);
+  useEffect(() => {
+    if (!user || !driverAccess || hasSeenDriverAccess()) return;
+    markDriverAccessSeen();
+    setStoredAccessMode("carrier");
+    setStored("carrier");
+  }, [user, driverAccess]);
 
   const qualifiedModes = qualifiedAccessModes(roles);
   const mode = resolveAccessMode(roles, stored);

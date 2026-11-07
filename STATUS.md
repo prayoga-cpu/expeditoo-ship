@@ -962,6 +962,32 @@ than leaving it in a chat message.
 
 ---
 
+## ✅ 2026-11-07 — A Driver Who Cannot See the Announcements: Mode Versus Role, Phone Switcher, and a New-Job Toast and Bell (2.79.0)
+
+_The client's contact Nicolas, through the owner on WhatsApp: « the driver can not see the announce. Maybe he need to switch to driver mode but it is not yet intuitive for him. » Then: give approved drivers a toast and a bell when a new job is launched, so they are triggered to open it._
+
+### Cause
+
+The board API only asks for a session; the gate was navigation. **Mode** (a localStorage hint) decided which bar rendered, and `BottomNav` gave the board only to `mode === "carrier"`. The switcher lived only in the `xl` sidebar, so on a phone nobody could change or even see the mode. Three things parked drivers in the wrong one: the welcome page's « Expédier » stored `user`; an admin+driver account defaulted to Admin (`resolveAccessMode` ranked admin first) and `MainLayout` redirected to the back office; approval never moved the stored mode. A pending applicant had no board link anywhere on a phone.
+
+### What changed
+
+- `resolveAccessMode`: a driver-qualified account defaults to Driver over Admin. `AccessModeProvider` moves an account into Driver mode **once** on first sight of driver access (`expeditoo-driver-access-seen`), so a later choice of User is theirs. Welcome page skips storing `user` when roles already include driver access.
+- `BottomNav` applicant bar: the application slot becomes « Missions » for a driver role (mode picks the bar, roles decide the board). `MainLayout` header carries `AccessSwitcher` below `xl`. `HeaderQuickActions` shows the board to an applicant with an application. `JobBoard` shows a pending-applicant note and a « Passer en mode Chauffeur » note.
+- **New-job alert**: `listingsService.goLive` and `publishScheduled` call `alertBoard`: route-match first (`notifyMatchingCarriers` now returns the user ids it told), then `driverAlertsService.onNewJob` for every other approved, non-absent driver (`carriersDal.listAvailableUserIds`, typed operators, gotcha 23), excluding the requester. Type `new_job`, in-app only (no email or text per job: that would be a flood). `AblySubscriptions` turns `new_job` / `carrier_route_match` events into a sonner toast whose action opens `/listing/:id` (`lib/job-alert.ts`, in-app paths only). Unread-count query polls every 60 s as a floor under Ably.
+- Found on the way past: notification links were read from `data.linkUrl` while the server only wrote the `link_url` column, so route-match bell items linked to `/notifications`. Both alert types now put `linkUrl` in `data`.
+
+### Verification
+
+`npx tsc --noEmit` 0 errors · `pnpm lint` 0 errors on touched files · full unit suite green after updating the tests the new default changed (AccessSwitcher admin+driver default, welcome page needs the auth mock, header tests mock the application hook). New tests: BottomNav (driver in User mode, one-time move), active-access, job-alert, driver-alerts `onNewJob` (4), listings alert fan-out (2), header applicant case, welcome page.
+
+### Known limits
+
+- No per-driver mute for the new-job alert yet; it ignores `inApp.carrierRouteMatch`. Add a preference if drivers find it noisy.
+- The toast needs Ably connected (the bell does not, thanks to the poll). Not exercised in a real browser with two sessions; do that before telling the client it works.
+- Alerts go to every approved driver regardless of distance: fine at today's pool size, filter by region if the pool grows.
+- Ask Nicolas for the job reference and the driver's email if the problem persists: an unpublished, expired or draft job is still invisible by design.
+
 ## ✅ 2026-11-04 — A Refusal Is Not a Failed Load: the Dashboard Banner From 2.75.0 (2.77.1)
 
 _The owner, with a screenshot of « This did not load » over a 403 on

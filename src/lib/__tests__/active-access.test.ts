@@ -49,11 +49,16 @@ describe("qualifiedAccessModes", () => {
 
 describe("resolveAccessMode", () => {
   it("defaults to the strongest qualified mode with nothing stored", () => {
-    expect(resolveAccessMode(["shipper", "carrier", "admin"], null)).toBe(
-      "admin"
-    );
+    expect(resolveAccessMode(["shipper", "admin"], null)).toBe("admin");
     expect(resolveAccessMode(["shipper", "carrier"], null)).toBe("carrier");
     expect(resolveAccessMode(["shipper"], null)).toBe("user");
+  });
+
+  it("opens an admin who also drives on Driver mode, where the board is", () => {
+    expect(resolveAccessMode(["shipper", "carrier", "admin"], null)).toBe("carrier");
+    expect(resolveAccessMode(["shipper", "driver", "operator"], null)).toBe("carrier");
+    // …while an explicit choice of the back office is still honoured.
+    expect(resolveAccessMode(["shipper", "carrier", "admin"], "admin")).toBe("admin");
   });
 
   it("honours a stored preference the account still qualifies for", () => {

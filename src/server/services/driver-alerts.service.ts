@@ -1,6 +1,8 @@
 import { carriersDal } from "@/server/dal/carriers.dal";
 import { messagesDAL } from "@/server/dal/messages.dal";
 import { getUserById } from "@/server/dal/users.dal";
+import { notificationsService } from "@/server/services/notifications.service";
+import type { Listing } from "@/db/schema/listings";
 import { emailService } from "@/server/services/email.service";
 import { expedionSmsService } from "@/server/services/expedion-sms.service";
 import type { DriverAlertEmailProps } from "@/server/emails/DriverAlertEmail";
@@ -104,5 +106,40 @@ export const driverAlertsService = {
       `Expeditoo : votre offre pour « ${params.jobTitle} » a été acceptée. Détails : ${url}`,
       { kind: "accepted", jobTitle: params.jobTitle, url }
     );
+  },
+
+  /**
+   * A job just reached the board: every approved, available driver gets a bell
+   * notification (and, over Ably, a toast that opens the job). Best-effort — a
+   * failed write never fails the post, and one bad row never stops the rest.
+   *
+   * Not the requester (a driver posting their own job is not alerted to it)
+   * and not anyone in `alreadyNotified`, i.e. the drivers whose declared
+   * trajet matched and were told with the more specific message.
+   * In-app only: an email or text per published job would be a flood.
+   */
+  async onNewJob(listing: Listing, alreadyNotified: readonly string[] = []): Promise<number> {
+    const skip = new Set([listing.shipperId, ...alreadyNotified]);
+    const userIds = (await carriersDal.listAvailableUserIds()).filter((id) => !skip.has(id));
+
+    let sent = 0;
+    for (const userId of userIds) {
+      await notificationsService
+        .createNotification({
+          userId,
+          type: "new_job",
+          title: "Nouvelle course disponible",
+          message: `« ${listing.title} » : ${listing.pickupCity} → ${listing.dropoffCity}.`,
+          linkUrl: `/listing/${listing.id}`,
+          // `linkUrl` rides in `data` as well: that is what the bell and the
+          // toast read, and the Ably event carries `data`, not the column.
+          data: { listingId: listing.id, linkUrl: `/listing/${listing.id}` },
+        })
+        .then(() => {
+          sent++;
+        })
+        .catch((e) => console.error("new_job notification failed", e));
+    }
+    return sent;
   },
 };

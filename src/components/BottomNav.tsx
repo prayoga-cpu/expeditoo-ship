@@ -52,6 +52,11 @@ export function BottomNav() {
   const isCarrier = mode === "carrier" && roles.includes("carrier");
   const isDriver = mode === "carrier" && roles.includes("driver");
   const isApplicant = !isCarrier && !isDriver;
+  // Driver access with the mode set to User: the applicant bar below would
+  // hide the board from someone who can bid on it, so it swaps the
+  // application slot for « Missions ». Mode picks the bar; roles decide
+  // whether the board is on it.
+  const hasDriverRole = roles.includes("driver") || roles.includes("carrier");
   const [onboardingOpen, setOnboardingOpen] = useState(false);
   const { data: application } = useCarrierApplication({ enabled: isApplicant });
 
@@ -142,8 +147,11 @@ export function BottomNav() {
     },
     // Same rule as the sidebar's driver entry (become_driver_spec.md §3):
     // explain the path in a dialog until an application exists, then go
-    // straight to it.
-    application
+    // straight to it. An approved driver already finished that path, so the
+    // slot is the board instead.
+    hasDriverRole
+      ? { href: "/expedion", labelKey: "jobs", icon: <Plus className="w-5 h-5" /> }
+      : application
       ? {
           href: "/carrier/application",
           labelKey: "myApplication",

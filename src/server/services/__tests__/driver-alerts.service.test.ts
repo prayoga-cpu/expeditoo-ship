@@ -12,8 +12,15 @@ const m = vi.hoisted(() => ({
   send: vi.fn(),
   getUserById: vi.fn(),
   sendDriverAlertEmail: vi.fn(),
+  listAvailableUserIds: vi.fn(),
+  createNotification: vi.fn(),
 }));
-vi.mock("@/server/dal/carriers.dal", () => ({ carriersDal: { getByUserId: m.getByUserId } }));
+vi.mock("@/server/dal/carriers.dal", () => ({
+  carriersDal: { getByUserId: m.getByUserId, listAvailableUserIds: m.listAvailableUserIds },
+}));
+vi.mock("@/server/services/notifications.service", () => ({
+  notificationsService: { createNotification: m.createNotification },
+}));
 vi.mock("@/server/dal/messages.dal", () => ({
   messagesDAL: {
     getConversationById: m.getConversationById,
@@ -107,5 +114,56 @@ describe("driverAlertsService.onOfferAccepted", () => {
       "paul@example.com",
       expect.objectContaining({ kind: "accepted", url: expect.stringContaining("/listing/job-1") })
     );
+  });
+});
+
+describe("onNewJob", () => {
+  const listing = {
+    id: "job-1",
+    shipperId: "requester-1",
+    title: "Armoire",
+    pickupCity: "Lyon",
+    dropoffCity: "Paris",
+  } as never;
+
+  beforeEach(() => {
+    m.createNotification.mockResolvedValue({});
+    m.listAvailableUserIds.mockResolvedValue(["d1", "d2", "requester-1", "d3"]);
+  });
+
+  it("notifies every available driver, with a link that opens the job", async () => {
+    const sent = await driverAlertsService.onNewJob(listing, ["d3"]);
+
+    expect(sent).toBe(2);
+    expect(m.createNotification).toHaveBeenCalledTimes(2);
+    expect(m.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: "d1",
+        type: "new_job",
+        linkUrl: "/listing/job-1",
+        message: expect.stringContaining("Lyon → Paris"),
+        data: { listingId: "job-1", linkUrl: "/listing/job-1" },
+      })
+    );
+  });
+
+  it("skips the requester and drivers the route match already told", async () => {
+    await driverAlertsService.onNewJob(listing, ["d3"]);
+
+    const told = m.createNotification.mock.calls.map(([n]) => n.userId);
+    expect(told).toEqual(["d1", "d2"]);
+  });
+
+  it("does not let one failed notification stop the rest", async () => {
+    m.createNotification.mockRejectedValueOnce(new Error("db down"));
+
+    await expect(driverAlertsService.onNewJob(listing)).resolves.toBe(2);
+  });
+
+  it("sends nothing when no driver is available", async () => {
+    m.listAvailableUserIds.mockResolvedValue([]);
+
+    await expect(driverAlertsService.onNewJob(listing)).resolves.toBe(0);
+    expect(m.createNotification).not.toHaveBeenCalled();
   });
 });

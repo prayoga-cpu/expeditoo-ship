@@ -51,6 +51,10 @@ export function useNotifications() {
   const { data: unreadCountData } = useQuery({
     queryKey: ["notifications", "unread-count"],
     queryFn: getUnreadCount,
+    // Ably lights the bell the moment something arrives; this is the floor
+    // under it, so a driver whose realtime connection dropped still sees a
+    // new job's badge within the minute.
+    refetchInterval: 60_000,
     refetchOnWindowFocus: false,
     structuralSharing: true,
   });
@@ -205,6 +209,9 @@ function getIcon(type: string) {
       return Truck;
     case "job_reopened":
       return TrendingUp;
+    case "new_job":
+    case "carrier_route_match":
+      return Truck;
     case "review":
       return Star;
     case "payment":

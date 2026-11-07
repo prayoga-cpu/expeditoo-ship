@@ -14,6 +14,9 @@ vi.mock("@/server/services/notifications.service", () => ({
   notificationsService: {},
 }));
 vi.mock("@/server/services/email.service", () => ({ emailService: {} }));
+vi.mock("@/server/services/driver-alerts.service", () => ({
+  driverAlertsService: { onNewJob: vi.fn().mockResolvedValue(0) },
+}));
 vi.mock("@/server/services/carrier-route-alerts.service", () => ({
   carrierRouteAlertsService: {},
 }));

@@ -14,6 +14,25 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.79.0] - 2026-11-07 · feat
+
+- **A driver can now find the jobs.** Drivers who were on the « Utilisateur »
+  access could not see the job board from the phone bar at all. The bar now
+  keeps « Missions » for every approved driver, whichever access they are on.
+- **The access (Chauffeur / Utilisateur / Admin) can be changed from a phone.**
+  The switch used to exist only on a wide screen. It now sits beside the logo
+  at every size.
+- **A newly approved driver opens on Chauffeur access**, once. An admin who is
+  also a driver opens on Chauffeur too, instead of the back office with no
+  jobs. Choosing « Expédier » at sign-up no longer overrides a driver account.
+- **Applicants whose file is in review can browse the jobs**, with a note that
+  they can bid once approved. Drivers on User access get a one-tap
+  « Passer en mode Chauffeur » on the board.
+- **Every approved driver is alerted when a new job goes live**: the bell lights
+  up and a notice appears on screen with a button that opens the job. Drivers
+  whose declared trip fits the job get the same notice. The bell also refreshes
+  by itself every minute if the live connection drops.
+
 ## [2.77.1] - 2026-11-04 · fix
 
 - **The dashboard no longer says « This did not load » when the real answer is

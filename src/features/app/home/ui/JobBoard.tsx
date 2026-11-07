@@ -39,6 +39,10 @@ import { BoardMap } from "./BoardMap";
 import { AvailabilityField } from "./AvailabilityField";
 import { useTranslations } from "next-intl";
 import { useJobBoard } from "../hooks/useJobBoard";
+import { useAuth } from "@/lib/auth-context";
+import { useActiveAccessMode } from "@/lib/use-active-access-mode";
+import { hasDriverAccess } from "@/lib/active-access";
+import Link from "next/link";
 import type { BoardPane, JobSort, SearchMode } from "../types";
 
 const SORTS: { value: JobSort; labelKey: string }[] = [
@@ -73,6 +77,16 @@ export function JobBoard({ origin }: { origin?: "direct" | "expedion" } = {}) {
   } = useJobBoard({ origin });
 
   const router = useRouter();
+  const { user } = useAuth();
+  const { mode: accessMode, qualifiedModes, setMode: setAccessMode } = useActiveAccessMode();
+  const roles = user?.roles ?? [];
+  // Reading is open to any session; bidding is not. Say so, rather than let a
+  // pending applicant wonder why a board they can see has no way in.
+  const canBid = hasDriverAccess(roles);
+  const showPendingNotice = !!user && !canBid;
+  // A driver browsing in Requester mode: the board is here, their offers and
+  // runs are one switch away.
+  const showModeNotice = canBid && accessMode === "user" && qualifiedModes.includes("carrier");
 
   // Which shape the location filter wears. A deep link carrying an arrival
   // opens on the corridor it describes.
@@ -138,6 +152,23 @@ export function JobBoard({ origin }: { origin?: "direct" | "expedion" } = {}) {
               : t("count", { count: total })}
         </p>
       </header>
+
+      {showPendingNotice && (
+        <div role="status" className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-muted/50 p-3 text-sm">
+          <span>{t("pendingNotice")}</span>
+          <Button asChild size="sm" variant="outline">
+            <Link href="/carrier/application">{t("pendingNoticeAction")}</Link>
+          </Button>
+        </div>
+      )}
+      {showModeNotice && (
+        <div role="status" className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-success/30 bg-success/10 p-3 text-sm">
+          <span>{t("modeNotice")}</span>
+          <Button size="sm" variant="outline" onClick={() => setAccessMode("carrier")}>
+            {t("modeNoticeAction")}
+          </Button>
+        </div>
+      )}
 
       <RouteSearchBar
         mode={mode}

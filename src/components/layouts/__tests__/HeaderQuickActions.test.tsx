@@ -12,7 +12,11 @@ const auth: { user: { roles: string[] } | null; isLoading: boolean } = {
   isLoading: false,
 };
 let pathname = "/home";
+let application: { status: string } | null = null;
 
+vi.mock("@/features/app/carrier/hooks/useCarrier", () => ({
+  useCarrierApplication: () => ({ data: application }),
+}));
 vi.mock("@/lib/auth-context", () => ({ useAuth: () => auth }));
 vi.mock("next/navigation", () => ({ usePathname: () => pathname }));
 
@@ -37,6 +41,16 @@ describe("HeaderQuickActions", () => {
     auth.user = { roles: ["carrier"] };
     auth.isLoading = false;
     pathname = "/home";
+    application = null;
+  });
+
+  it("shows the board to an applicant whose file is in review, so they can see the jobs", () => {
+    auth.user = { roles: ["shipper"] };
+    application = { status: "pending" };
+
+    renderWith();
+
+    expect(screen.getByRole("link", { name: "Jobs" })).toHaveAttribute("href", "/expedion");
   });
 
   it("gives a driver both verbs, pointed at the posting form and the board", () => {

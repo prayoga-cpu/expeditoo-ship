@@ -12,6 +12,15 @@ export type AccessMode = "user" | "carrier" | "admin";
 
 export const ACTIVE_ACCESS_KEY = "expeditoo-active-access";
 
+/** Set once an account has been moved into Driver mode on gaining driver
+ * access, so that move happens once and never overrides a later choice. */
+export const DRIVER_ACCESS_SEEN_KEY = "expeditoo-driver-access-seen";
+
+/** Whether these roles carry driver access (`carrier` or `driver`). */
+export function hasDriverAccess(roles: readonly string[]): boolean {
+  return roles.some((role) => CARRIER_ROLES.includes(role));
+}
+
 /** Roles that qualify an account for each mode beyond the universal `user`. */
 const CARRIER_ROLES = ["carrier", "driver"];
 const ADMIN_ROLES = ["admin", "operator", "support", "finance"];
@@ -40,7 +49,13 @@ export function qualifiedAccessModes(
 
 /**
  * The mode to actually show: the stored preference if the account still
- * qualifies for it, otherwise the strongest mode it does qualify for.
+ * qualifies for it, otherwise Driver mode for anyone who holds driver access,
+ * otherwise the strongest mode it does qualify for.
+ *
+ * Driver outranks Admin as a *default*: an admin who is also an approved
+ * driver used to land in the back office with no board and no way to guess
+ * that a switch existed. Admin is one click away; a pure admin still opens
+ * on Admin because Driver is not among its qualified modes.
  *
  * A role revoked since the preference was stored (or a preference from
  * before this account held anything beyond `shipper`) never leaves the UI
@@ -52,6 +67,7 @@ export function resolveAccessMode(
 ): AccessMode {
   const qualified = qualifiedAccessModes(roles);
   if (stored && qualified.includes(stored)) return stored;
+  if (qualified.includes("carrier")) return "carrier";
   return qualified[0];
 }
 
@@ -76,5 +92,24 @@ export function setStoredAccessMode(mode: AccessMode): void {
   } catch {
     // Storage disabled. The choice just stops surviving a refresh;
     // resolveAccessMode still has a sane fallback every time.
+  }
+}
+
+/** Never throws. Whether the one-time move into Driver mode already ran. */
+export function hasSeenDriverAccess(): boolean {
+  if (typeof window === "undefined") return true;
+  try {
+    return window.localStorage.getItem(DRIVER_ACCESS_SEEN_KEY) === "1";
+  } catch {
+    return true;
+  }
+}
+
+export function markDriverAccessSeen(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(DRIVER_ACCESS_SEEN_KEY, "1");
+  } catch {
+    // Storage disabled: the move may repeat on a reload, which is harmless.
   }
 }

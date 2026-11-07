@@ -21,6 +21,9 @@ vi.mock("@/server/services/notifications.service", () => ({
 vi.mock("@/server/services/email.service", () => ({
   emailService: { sendListingPostedEmail: vi.fn().mockResolvedValue(true) },
 }));
+vi.mock("@/server/services/driver-alerts.service", () => ({
+  driverAlertsService: { onNewJob: vi.fn().mockResolvedValue(0) },
+}));
 vi.mock("@/server/services/carrier-route-alerts.service", () => ({
   carrierRouteAlertsService: {
     notifyMatchingCarriers: vi.fn().mockResolvedValue(undefined),
@@ -53,6 +56,7 @@ import { offersService } from "@/server/services/offers.service";
 import { notificationsService } from "@/server/services/notifications.service";
 import { emailService } from "@/server/services/email.service";
 import { carrierRouteAlertsService } from "@/server/services/carrier-route-alerts.service";
+import { driverAlertsService } from "@/server/services/driver-alerts.service";
 import { getUserById } from "@/server/dal/users.dal";
 import { hasAnyRole } from "@/server/services/user.service";
 import { carriersDal } from "@/server/dal/carriers.dal";
@@ -1123,6 +1127,31 @@ describe("publishScheduled", () => {
 
     await expect(listingsService.publishScheduled()).resolves.toBe(0);
     expect(carrierRouteAlertsService.notifyMatchingCarriers).not.toHaveBeenCalled();
+  });
+
+  it("alerts the rest of the board, skipping drivers the route match already told", async () => {
+    queue(due({ title: "Fresh job" }));
+    vi.mocked(carrierRouteAlertsService.notifyMatchingCarriers).mockResolvedValueOnce([
+      "driver-on-route",
+    ] as never);
+
+    await listingsService.publishScheduled();
+
+    expect(driverAlertsService.onNewJob).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Fresh job" }),
+      ["driver-on-route"]
+    );
+  });
+
+  it("still alerts the board when the route match throws", async () => {
+    queue(due());
+    vi.mocked(carrierRouteAlertsService.notifyMatchingCarriers).mockRejectedValueOnce(
+      new Error("db down")
+    );
+
+    await listingsService.publishScheduled();
+
+    expect(driverAlertsService.onNewJob).toHaveBeenCalledWith(expect.anything(), []);
   });
 
   it("does not let a notify failure stop the publish loop", async () => {

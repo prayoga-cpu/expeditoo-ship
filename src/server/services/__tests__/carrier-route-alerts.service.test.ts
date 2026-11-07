@@ -235,7 +235,11 @@ describe("notifyMatchingCarriers", () => {
       title: expect.any(String),
       message: expect.stringContaining("Angoulême"),
       linkUrl: "/listing/listing-1",
-      data: { listingId: "listing-1", routeId: "route-1" },
+      data: {
+        listingId: "listing-1",
+        routeId: "route-1",
+        linkUrl: "/listing/listing-1",
+      },
     });
   });
 
@@ -312,7 +316,7 @@ describe("notifyMatchingCarriers", () => {
 
     await expect(
       carrierRouteAlertsService.notifyMatchingCarriers(listing() as never)
-    ).resolves.toBeUndefined();
+    ).resolves.toEqual(["carrier-2-user"]);
 
     expect(notificationsService.createNotification).toHaveBeenCalledTimes(2);
   });

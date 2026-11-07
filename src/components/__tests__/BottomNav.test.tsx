@@ -7,6 +7,7 @@ import fr from "../../../messages/fr.json";
 
 import { BottomNav } from "../BottomNav";
 import { AccessModeProvider } from "@/lib/access-mode-context";
+import { ACTIVE_ACCESS_KEY, DRIVER_ACCESS_SEEN_KEY } from "@/lib/active-access";
 import type { CarrierApplication } from "@/features/app/carrier/api/carrier.api";
 
 /**
@@ -65,6 +66,7 @@ describe("BottomNav", () => {
     auth.user = { roles: ["shipper"] };
     pathname = "/home";
     application = null;
+    window.localStorage.clear();
     window.HTMLElement.prototype.hasPointerCapture ??= () => false;
     window.HTMLElement.prototype.scrollIntoView ??= () => {};
   });
@@ -101,6 +103,34 @@ describe("BottomNav", () => {
       expect(hrefs()).toContain("/expedion");
     }
   );
+
+  it.each(["driver", "carrier"])(
+    "keeps the board on the bar of an approved %s browsing in User mode",
+    (role) => {
+      // The report: a driver parked on the applicant bar could not find the
+      // announcements. They have chosen User mode before (seen already), so
+      // nothing moves them — the bar itself has to carry the board.
+      auth.user = { roles: ["shipper", role] };
+      window.localStorage.setItem(ACTIVE_ACCESS_KEY, "user");
+      window.localStorage.setItem(DRIVER_ACCESS_SEEN_KEY, "1");
+
+      renderWith();
+
+      expect(hrefs()).toContain("/expedion");
+      expect(hrefs()).toContain("/create");
+    }
+  );
+
+  it("moves a newly approved driver out of a stale User mode, once", () => {
+    auth.user = { roles: ["shipper", "carrier"] };
+    window.localStorage.setItem(ACTIVE_ACCESS_KEY, "user");
+
+    renderWith();
+
+    expect(hrefs()).toContain("/carrier/offers");
+    expect(window.localStorage.getItem(ACTIVE_ACCESS_KEY)).toBe("carrier");
+    expect(window.localStorage.getItem(DRIVER_ACCESS_SEEN_KEY)).toBe("1");
+  });
 
   it("agrees with the header rather than contradicting it", () => {
     // The regression this file exists for: the two bars disagreed, and on a

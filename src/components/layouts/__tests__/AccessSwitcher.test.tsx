@@ -91,8 +91,9 @@ describe("AccessSwitcher", () => {
 
     renderWith();
 
-    // Defaults to admin — the strongest qualified mode with nothing stored.
-    expect(screen.getByText("Admin")).toBeInTheDocument();
+    // Defaults to Driver for someone who drives: the board is there, and the
+    // back office is one click away in this very menu.
+    expect(screen.getByText("Driver")).toBeInTheDocument();
     expect(screen.getByRole("button")).toBeInTheDocument();
   });
 

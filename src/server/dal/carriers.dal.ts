@@ -10,7 +10,7 @@ import {
   type InsertVehicle,
   type CarrierStatus,
 } from "@/db/schema/carriers";
-import { and, desc, eq, lte } from "drizzle-orm";
+import { and, desc, eq, isNotNull, isNull, lte, or } from "drizzle-orm";
 
 type Executor = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -38,6 +38,28 @@ export const carriersDal = {
     return await tx.query.carriers.findFirst({
       where: eq(carriers.siret, siret),
     });
+  },
+
+  /**
+   * The user ids of drivers who may take new work right now: approved, and not
+   * absent (`mayTakeWork` in `carrier-availability.ts`, stated as SQL — an
+   * absence with no end, or one still ahead, excludes). Typed operators, not a
+   * raw `sql` Date (gotcha 23).
+   */
+  async listAvailableUserIds(now: Date = new Date(), tx: Executor = db) {
+    const rows = await tx
+      .select({ userId: carriers.userId })
+      .from(carriers)
+      .where(
+        and(
+          eq(carriers.status, "approved"),
+          or(
+            isNull(carriers.absentSince),
+            and(isNotNull(carriers.absentUntil), lte(carriers.absentUntil, now))
+          )
+        )
+      );
+    return rows.map((row) => row.userId);
   },
 
   /** Omitting the status returns every application, newest first. */

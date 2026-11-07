@@ -8,6 +8,7 @@ import { ThemeToggle } from "../ui/theme-toggle";
 import { LangToggle } from "../ui/lang-toggle";
 import { AppVersionLink } from "../ui/app-version";
 import { AppSidebarHeader } from "./AppSidebarHeader";
+import { AccessSwitcher } from "./AccessSwitcher";
 import { HeaderQuickActions } from "./HeaderQuickActions";
 import { HeaderAccount } from "./HeaderAccount";
 import { FeedbackLauncher } from "@/features/app/feedback/ui";
@@ -329,6 +330,10 @@ function Header() {
               <BrandWordmark size={24} />
             </Link>
           </div>
+          {/* The sidebar, where the switcher lives from `xl`, does not exist
+              on a phone — so a driver sitting in the wrong mode had no way to
+              see, let alone change, which one they were in. */}
+          <AccessSwitcher className="xl:hidden" />
           <AppVersionLink className="hidden md:inline-flex" />
         </div>
 

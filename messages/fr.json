@@ -2006,6 +2006,11 @@
       }
     },
     "jobBoard": {
+    "pendingNotice": "Vous pouvez parcourir les demandes dès maintenant. Vous pourrez faire une offre une fois votre dossier chauffeur approuvé.",
+    "pendingNoticeAction": "Voir mon dossier",
+    "newJobToastAction": "Voir la course",
+    "modeNotice": "Vous êtes en mode Demandeur. Passez en mode Chauffeur pour retrouver vos offres et courses.",
+    "modeNoticeAction": "Passer en mode Chauffeur",
       "eyebrow": "OUVERTES EN CE MOMENT",
       "title": "Le tableau du jour",
       "joinCta": "Rejoindre pour voir les 27 courses →",
