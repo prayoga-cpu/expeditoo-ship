@@ -43,6 +43,7 @@
       "browseJobs": "Voir les demandes",
       "myOffers": "Mes offres",
       "deliveries": "Livraisons",
+      "groups": { "requests": "Mes envois", "work": "Missions", "money": "Argent", "account": "Compte" },
       "myApplication": "Mon dossier",
       "becomeDriver": "Devenir chauffeur",
       "adminPanel": "Panneau d'administration",
@@ -350,6 +351,7 @@
       "adminSupport": "Chats de support",
       "driverSupport": "Support Chauffeur",
       "driverDashboard": "Tableau de bord chauffeur",
+      "driverApplication": "Mon dossier chauffeur",
       "becomeDriver": "Devenir chauffeur",
       "myInvoices": "Historique des transactions"
     },
@@ -2672,7 +2674,7 @@
       "profile": "Profil",
       "expedion": "Passerelle Expedion",
       "awards": "File d'attribution",
-      "applications": "Dossiers chauffeurs",
+      "groups": { "operations": "Opérations", "people": "Personnes", "money": "Argent", "quality": "Qualité", "system": "Système" },
       "withdrawals": "Retraits",
       "expedionClients": "Clients Expedion",
       "incidents": "Incidents",
@@ -2852,6 +2854,7 @@
       "backToList": "Toutes les annonces"
     },
     "drivers": {
+      "tabs": { "list": "Chauffeurs", "applications": "Dossiers" },
       "title": "Chauffeurs",
       "subtitle": "Gérer les chauffeurs et les candidatures",
       "createDialog": {
@@ -3742,7 +3745,8 @@
         "under_review": "En examen",
         "approved": "Approuvé",
         "rejected": "Refusé",
-        "suspended": "Suspendu"
+        "suspended": "Suspendu",
+        "deregistered": "Désinscrit"
       }
     },
     "fleet": {

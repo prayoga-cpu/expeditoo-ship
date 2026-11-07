@@ -6,22 +6,8 @@ import { HeaderToolbox } from "@/components/layouts/HeaderToolbox";
 import { AppVersionLink } from "@/components/ui/app-version";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import {
-  LayoutDashboard,
-  Users,
-  FileText,
-  ArrowLeft,
-  Truck,
-  Headset,
-  MessageSquarePlus,
-  AlertTriangle,
-  UsersRound,
-  DollarSign,
-  Gavel,
-  ClipboardCheck,
-  Wallet,
-  Settings,
-} from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import { ADMIN_NAV_GROUPS, badgeFor } from "../nav";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { AdminBottomNav } from "./AdminBottomNav";
@@ -94,100 +80,6 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     router.push("/profile");
   };
 
-  const sidebarItems: {
-    title: string;
-    href: string;
-    icon: typeof Users;
-    badge?: keyof AdminNavCounts;
-  }[] = [
-    {
-      // The whole-platform report. Was reachable only by typing the URL, and
-      // it has absorbed /admin/dashboard, so it takes the landing slot.
-      title: t("navigation.expedion"),
-      href: "/admin/expedion",
-      icon: LayoutDashboard,
-      badge: "expedion",
-    },
-    {
-      title: t("navigation.users"),
-      href: "/admin/users",
-      icon: Users,
-      badge: "users",
-    },
-    {
-      // Expedion's customers, who are mostly not in `/admin/users` and cannot
-      // be: they are quote owners, and the overwhelming majority have no
-      // account in this database. Sits next to Users because that is the
-      // screen an admin looks at first and does not find them on.
-      title: t("navigation.expedionClients"),
-      href: "/admin/expedion-clients",
-      icon: UsersRound,
-    },
-    {
-      title: t("navigation.awards"),
-      href: "/admin/awards",
-      icon: Gavel,
-      badge: "awards",
-    },
-    {
-      title: t("navigation.listing"),
-      href: "/admin/listings",
-      icon: FileText,
-      badge: "listings",
-    },
-    {
-      title: t("navigation.applications"),
-      href: "/admin/applications",
-      icon: ClipboardCheck,
-      badge: "applications",
-    },
-    {
-      title: t("navigation.driver"),
-      href: "/admin/drivers",
-      icon: Users,
-      badge: "drivers",
-    },
-    {
-      title: t("navigation.shipment"),
-      href: "/admin/shipments",
-      icon: Truck,
-      badge: "shipments",
-    },
-    {
-      title: t("navigation.payments"),
-      href: "/admin/payments",
-      icon: DollarSign,
-      badge: "payments",
-    },
-    {
-      title: t("navigation.withdrawals"),
-      href: "/admin/withdrawals",
-      icon: Wallet,
-    },
-    {
-      title: t("navigation.incidents"),
-      href: "/admin/incidents",
-      icon: AlertTriangle,
-    },
-    {
-      title: t("navigation.feedback"),
-      href: "/admin/feedback",
-      icon: MessageSquarePlus,
-      badge: "feedback",
-    },
-    {
-      title: t("navigation.supportChats"),
-      href: "/admin/support",
-      icon: Headset,
-      badge: "support",
-    },
-    {
-      title: t("navigation.settings"),
-      href: "/admin/settings",
-      icon: Settings,
-    },
-  ];
-
   const SidebarContent = () => (
     <div className="flex flex-col h-full pb-4">
       {/* No subtitle: the content header already reads "Admin Panel", and the
@@ -195,26 +87,38 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       <AppSidebarHeader href="/admin/expedion" />
       {/* p-4, not px-4: the removed subtitle's bottom padding had been standing
           in for the gap under the logo. Matches the app sidebar. */}
-      <nav className="flex-1 min-h-0 overflow-y-auto p-4 space-y-2">
-        {sidebarItems.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={cn(
-              "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors",
-              pathname === item.href
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
-            )}
-          >
-            <item.icon className="w-5 h-5" />
-            <span className="flex-1">{item.title}</span>
-            <NavBadge
-              count={item.badge ? counts?.[item.badge] : undefined}
-              tone={item.badge ? BADGE_TONE[item.badge] : "info"}
-              active={pathname === item.href}
-            />
-          </Link>
+      <nav className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
+        {ADMIN_NAV_GROUPS.map((group) => (
+          <div key={group.id} className="space-y-1" role="group" aria-label={t(`navigation.groups.${group.labelKey}`)}>
+            <p className="px-4 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/70">
+              {t(`navigation.groups.${group.labelKey}`)}
+            </p>
+            {group.items.map((item) => {
+              const active =
+                pathname === item.href || Boolean(pathname?.startsWith(`${item.href}/`));
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                    active
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  <item.icon className="w-5 h-5" />
+                  <span className="flex-1">{t(`navigation.${item.labelKey}`)}</span>
+                  <NavBadge
+                    count={badgeFor(counts, item)}
+                    tone={item.badges ? BADGE_TONE[item.badges[0]] : "info"}
+                    active={active}
+                  />
+                </Link>
+              );
+            })}
+          </div>
         ))}
       </nav>
     </div>

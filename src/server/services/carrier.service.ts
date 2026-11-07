@@ -659,7 +659,7 @@ async function alertAdminsOfApplication(carrier: Carrier) {
   const applicant = await usersDal.getUserById(carrier.userId);
   const applicantName = applicant?.name || carrier.companyName;
   const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://expeditoo.com";
-  const reviewUrl = `${base}/admin/applications`;
+  const reviewUrl = `${base}/admin/drivers?tab=applications`;
 
   await Promise.allSettled(
     admins.flatMap((admin) => [
@@ -668,7 +668,7 @@ async function alertAdminsOfApplication(carrier: Carrier) {
         type: "carrier_application",
         title: "New driver application",
         message: `${applicantName} · ${carrier.companyName} · ${carrier.city}`,
-        linkUrl: "/admin/applications",
+        linkUrl: "/admin/drivers?tab=applications",
       }),
       emailService.sendDriverApplicationSubmittedEmail(admin.email, {
         applicantName,

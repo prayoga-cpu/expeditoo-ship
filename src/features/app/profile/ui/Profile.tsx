@@ -22,6 +22,7 @@ import { Route,
   HelpCircle,
   Headset,
   Truck,
+  ClipboardList,
   LogOut,
   Camera,
   Trash2,
@@ -404,6 +405,14 @@ function QuickLinks({ userRoles }: { userRoles?: string[] }) {
       icon: Truck,
     });
     links.unshift({ href: "/carrier/trips", labelKey: "myTrips", icon: Route });
+    // The driver sidebar only carries « Mon dossier » while the file is not
+    // approved; once it is, the application (documents, availability, the way
+    // to deregister) is reached from here.
+    links.push({
+      href: "/carrier/application",
+      labelKey: "driverApplication",
+      icon: ClipboardList,
+    });
   } else {
     // Was /become-driver, a route that never existed. Becoming a driver is the
     // carrier application, which is also the "My application" nav entry.

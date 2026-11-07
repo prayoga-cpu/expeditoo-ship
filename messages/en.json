@@ -43,6 +43,7 @@
       "browseJobs": "Jobs",
       "myOffers": "My offers",
       "deliveries": "Deliveries",
+      "groups": { "requests": "My shipments", "work": "Work", "money": "Money", "account": "Account" },
       "myApplication": "My application",
       "becomeDriver": "Become a driver",
       "adminPanel": "Admin Panel",
@@ -350,6 +351,7 @@
       "adminSupport": "Support Chats",
       "driverSupport": "Driver Support",
       "driverDashboard": "Driver Dashboard",
+      "driverApplication": "My driver application",
       "becomeDriver": "Become a Driver",
       "myInvoices": "Transaction history"
     },
@@ -2672,7 +2674,7 @@
       "profile": "Profile",
       "expedion": "Expedion bridge",
       "awards": "Award queue",
-      "applications": "Driver applications",
+      "groups": { "operations": "Operations", "people": "People", "money": "Money", "quality": "Quality", "system": "System" },
       "withdrawals": "Withdrawals",
       "expedionClients": "Expedion clients",
       "incidents": "Incidents",
@@ -2852,6 +2854,7 @@
       "backToList": "All listings"
     },
     "drivers": {
+      "tabs": { "list": "Drivers", "applications": "Applications" },
       "title": "Drivers",
       "subtitle": "Manage drivers and applications",
       "createDialog": {
@@ -3742,7 +3745,8 @@
         "under_review": "Under review",
         "approved": "Approved",
         "rejected": "Rejected",
-        "suspended": "Suspended"
+        "suspended": "Suspended",
+        "deregistered": "Deregistered"
       }
     },
     "fleet": {

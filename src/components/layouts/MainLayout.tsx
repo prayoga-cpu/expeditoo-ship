@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { BottomNav } from "../BottomNav";
 import { NotificationBell } from "../NotificationBell";
 import { HeaderToolbox } from "./HeaderToolbox";
@@ -56,6 +56,9 @@ interface NavItem {
    * the one that leaves for the back office, `success` (the Driver badge's
    * colour) for the way into becoming a driver. */
   accent?: "destructive" | "success";
+  /** The sidebar heading this entry sits under (`common.navigation.groups`).
+   * Entries without one — Home — head the list. */
+  group?: "requests" | "work" | "money" | "account";
   /** Replaces the plain navigation: "My application" flips access mode
    * first, « Devenir chauffeur » opens the onboarding dialog instead. */
   onSelect?: () => void;
@@ -79,15 +82,20 @@ export function MainLayout({ children }: MainLayoutProps) {
   const pathname = usePathname();
   const { unreadCount } = useUnreadMessages();
   const t = useTranslations("common.navigation");
+  const tGroups = useTranslations("common.navigation.groups");
   const { user } = useAuth();
-  const isAdmin = (user?.roles ?? []).includes("admin");
+  const roles = user?.roles ?? [];
+  const isAdmin = roles.includes("admin");
+  const hasDriverRole = roles.includes("driver") || roles.includes("carrier");
   const { mode } = useActiveAccessMode();
   const applicationNav = useApplicationNav();
   const tStatus = useTranslations("carrier.onboarding.status");
   const [onboardingOpen, setOnboardingOpen] = useState(false);
-  // Only user mode renders the driver entry below; Driver mode reaches its
-  // application through `myApplication`, and Admin mode never gets here.
-  const { data: application } = useCarrierApplication({ enabled: mode === "user" });
+  // User mode renders the driver entry below. Driver mode carries « Mon dossier »
+  // only while the file is not approved: once it is, the application lives in
+  // Profile, and a suspended or deregistered driver — who still needs it, to
+  // deregister or apply again — gets the entry back. Admin mode never gets here.
+  const { data: application } = useCarrierApplication({ enabled: mode !== "admin" });
 
   // Admin is its own area (`AdminLayout`, a separate route segment) — a
   // MainLayout page (bookmarked, or landed on by a fresh sign-in that
@@ -139,18 +147,20 @@ export function MainLayout({ children }: MainLayoutProps) {
   /** Someone who has not (yet) moved past posting and applying. */
   const userNavItems: NavItem[] = [
     home,
-    { href: "/deliveries", label: t("shipmentTracking"), icon: Package },
-    // Same /expedion board as `jobs` below, but "Missions" reads as a
-    // driver's own work queue to someone who only posts. This audience
-    // already has "Mes demandes" two rows down for what they posted
-    // themselves, so this one is named for what it actually is: the open
-    // board, browsed rather than owned.
-    { href: "/expedion", label: t("browseJobs"), icon: PlusCircle },
-    { href: "/listings/me", label: t("myRequests"), icon: Boxes },
-    { href: "/create", label: t("requestTransport"), icon: PackagePlus },
-    messages,
-    profile,
-    driverEntry,
+    { href: "/create", label: t("requestTransport"), icon: PackagePlus, group: "requests" },
+    { href: "/listings/me", label: t("myRequests"), icon: Boxes, group: "requests" },
+    { href: "/deliveries", label: t("shipmentTracking"), icon: Package, group: "requests" },
+    // The open board is for people who can act on it. A requester has « Mes
+    // demandes » for their own jobs and cannot bid on anyone's, so it is
+    // offered once there is an application — an applicant may read it while
+    // the file is reviewed (`JobBoard` says bidding opens on approval) — and
+    // to a driver who is browsing as a requester.
+    ...(application || hasDriverRole
+      ? [{ href: "/expedion", label: t("browseJobs"), icon: PlusCircle, group: "account" as const }]
+      : []),
+    { ...messages, group: "account" },
+    { ...profile, group: "account" },
+    { ...driverEntry, group: "account" },
   ];
 
   /** `useApplicationNav` flips to Driver mode first for anyone who already
@@ -162,18 +172,22 @@ export function MainLayout({ children }: MainLayoutProps) {
     onSelect: applicationNav,
   };
 
+  /** « Mon dossier » while the file is not approved (suspended, refused,
+   * deregistered, in review): the driver surfaces' dead end otherwise. */
+  const needsApplication = !!application && application.status !== "approved";
+
   /** An approved carrier: bidding and earnings, not the posting tools it has
    * moved past — same split BottomNav.tsx already makes on mobile. */
   const carrierNavItems: NavItem[] = [
     home,
-    jobs,
-    { href: "/carrier/offers", label: t("myOffers"), icon: Gavel },
-    { href: "/carrier/trips", label: t("myTrips"), icon: Route },
-    { href: "/carrier/planner", label: t("planner"), icon: Navigation },
-    { href: "/carrier/withdrawals", label: t("myEarnings"), icon: Wallet },
-    myApplication,
-    messages,
-    profile,
+    { ...jobs, group: "work" },
+    { href: "/carrier/offers", label: t("myOffers"), icon: Gavel, group: "work" },
+    { href: "/carrier/trips", label: t("myTrips"), icon: Route, group: "work" },
+    { href: "/carrier/planner", label: t("planner"), icon: Navigation, group: "work" },
+    { href: "/carrier/withdrawals", label: t("myEarnings"), icon: Wallet, group: "money" },
+    ...(needsApplication ? [{ ...myApplication, group: "account" as const }] : []),
+    { ...messages, group: "account" },
+    { ...profile, group: "account" },
   ];
 
   /** A driver never bids or sees prices (roles_spec.md) — its second slot is
@@ -184,16 +198,15 @@ export function MainLayout({ children }: MainLayoutProps) {
    * from `/api/carrier/offers` rather than a price it must never see. */
   const driverNavItems: NavItem[] = [
     home,
-    jobs,
-    { href: "/carrier/trips", label: t("myTrips"), icon: Route },
-    { href: "/driver/shipments", label: t("deliveries"), icon: Truck },
-    { href: "/carrier/planner", label: t("planner"), icon: Navigation },
-    myApplication,
-    messages,
-    profile,
+    { ...jobs, group: "work" },
+    { href: "/carrier/trips", label: t("myTrips"), icon: Route, group: "work" },
+    { href: "/driver/shipments", label: t("deliveries"), icon: Truck, group: "work" },
+    { href: "/carrier/planner", label: t("planner"), icon: Navigation, group: "work" },
+    ...(needsApplication ? [{ ...myApplication, group: "account" as const }] : []),
+    { ...messages, group: "account" },
+    { ...profile, group: "account" },
   ];
 
-  const roles = user?.roles ?? [];
   const navItems: NavItem[] = [
     ...(mode === "carrier"
       ? roles.includes("carrier")
@@ -234,13 +247,24 @@ export function MainLayout({ children }: MainLayoutProps) {
         <AppSidebarHeader href="/home" />
 
         <nav className="flex-1 min-h-0 overflow-y-auto p-4 space-y-2">
-          {navItems.map((item) => {
+          {navItems.map((item, index) => {
+            // A heading where the group changes. The admin shortcut carries
+            // none and follows the last group, so it never gets a stray one.
+            const heading =
+              item.group && item.group !== navItems[index - 1]?.group
+                ? tGroups(item.group)
+                : null;
             const isActive =
               pathname === item.href ||
               (item.href !== "/home" && pathname?.startsWith(item.href));
             return (
+              <Fragment key={item.href}>
+                {heading && (
+                  <p className="px-4 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/70">
+                    {heading}
+                  </p>
+                )}
               <Link
-                key={item.href}
                 href={item.href}
                 onClick={
                   item.onSelect
@@ -274,6 +298,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                   </span>
                 )}
               </Link>
+              </Fragment>
             );
           })}
         </nav>

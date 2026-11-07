@@ -962,6 +962,31 @@ than leaving it in a chat message.
 
 ---
 
+## ✅ 2026-11-07 — One Navigation, Grouped: Applications Folded Into Drivers, Admin Phone Bar Reaches Every Page, Driver and Requester Sidebars by Task (2.81.0)
+
+_The owner, with a screenshot of the admin sidebar: « I think the driver application can be removed, cause inside of driver page it has a tab of the application, pls analyze every environment if it can be reorganized and grouped more properly on user, driver, admin pages »._
+
+### Cause
+
+`/admin/applications` and the Applications tab of `/admin/drivers` rendered the same `CarrierApplicationsList`. The admin sidebar and `AdminBottomNav` each kept their own item list and had drifted: the phone bar had no Awards, Withdrawals or Incidents, so those pages were desktop-only. Every sidebar was a flat list; « Mon dossier » sat in the driver menu for approved drivers although it is a status page.
+
+### What changed
+
+- `features/app/admin/nav.ts`: the admin navigation once (groups Operations / People / Money / Quality / System); `AdminLayout` and `AdminBottomNav` both read it, and a test fails if they diverge. `badgeFor` sums `applications + drivers` onto Drivers.
+- `/admin/applications` is a redirect to `/admin/drivers?tab=applications` (the URL is in sent emails and stored notifications); the new links in `carrier.service.ts` point at the tab. The tab is held in the URL (`useSearchParams` inside `Suspense`) and its labels are translated — they were hardcoded English.
+- `MainLayout`: items carry a `group`, the xl sidebar prints headings (Work / Money / Account for drivers, My shipments / Account for requesters). « Mon dossier » shows in Driver mode only while `application.status !== "approved"`: a suspended or deregistered driver needs it to deregister or apply again (2.79.1). Approved drivers reach it from Profile (`driverApplication`). The job board is offered to a requester only with an application or a driver role.
+- `carrier.onboarding.status.deregistered` was missing in both locales; the user-mode status pill would have shown a raw key.
+
+### Verification
+
+`npx tsc --noEmit` 0 errors · eslint 0 errors on touched dirs · new tests: admin nav config (no applications entry, one list, labels in en and fr, summed badge), phone bar parity with the sidebar, driver sidebar by application status and grouping, requester board visibility.
+
+### Known limits
+
+- The legacy `/driver/*` shell (own dashboard, shipments, messages, profile) still exists beside `/home`, `/deliveries`, `/messages`, `/profile`. It also serves driver-role-only accounts that must never see prices, so folding it is a separate, riskier change — not done here.
+- The phone bars for drivers and requesters were not regrouped (they are icon bars with no room for headings).
+- Not checked in a browser.
+
 ## ✅ 2026-11-07 — Nicolas's feedback of 4–6 November: the offer form, the request form, the phone chrome (2.80.0)
 
 _Owner request: « analyze this feedback, give me the context and a fix plan … solve everything and implement what you can handle », then « refer from epidom … pwa with toggle to install, fullscreen and unfullscreen toggle … minimalist mobile, remove profile from the bottom bar, glass floating rounded bottom navbar ». Spec: `docs/specs/client_feedback_2026_11_06_spec.md`._

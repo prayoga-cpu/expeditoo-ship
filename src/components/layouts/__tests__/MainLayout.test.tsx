@@ -164,4 +164,50 @@ describe("MainLayout sidebar", () => {
 
     expect(screen.queryByRole("link", { name: "Become a driver" })).not.toBeInTheDocument();
   });
+
+  // The regroup (2.81.0): « Mon dossier » is a status page, so the driver
+  // sidebar carries it only while there is something to resolve.
+  it("leaves « My application » out of an approved driver's sidebar", () => {
+    auth.user = { roles: ["carrier", "driver"] };
+    application = { status: "approved" } as CarrierApplication;
+    renderWith();
+
+    expect(sidebarHrefs()).not.toContain("/carrier/application");
+  });
+
+  it.each(["suspended", "deregistered", "rejected"] as const)(
+    "gives a %s driver « My application » back — it is their way to deregister or apply again",
+    (status) => {
+      auth.user = { roles: ["carrier", "driver"] };
+      application = { status } as CarrierApplication;
+      renderWith();
+
+      expect(sidebarHrefs()).toContain("/carrier/application");
+    }
+  );
+
+  it("does not offer the job board to a plain requester", () => {
+    auth.user = { roles: ["shipper"] };
+    renderWith();
+
+    expect(sidebarHrefs()).not.toContain("/expedion");
+  });
+
+  it("offers the board to an applicant whose file is in review", () => {
+    auth.user = { roles: ["shipper"] };
+    application = { status: "submitted" } as CarrierApplication;
+    renderWith();
+
+    expect(sidebarHrefs()).toContain("/expedion");
+  });
+
+  it("groups the driver sidebar under Work, Money and Account", () => {
+    auth.user = { roles: ["carrier", "driver"] };
+    renderWith();
+
+    const sidebar = within(screen.getByRole("complementary"));
+    for (const heading of ["Work", "Money", "Account"]) {
+      expect(sidebar.getByText(heading)).toBeInTheDocument();
+    }
+  });
 });

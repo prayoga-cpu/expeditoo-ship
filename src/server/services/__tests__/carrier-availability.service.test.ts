@@ -201,7 +201,7 @@ describe("submitApplication alerts the admins", () => {
 
     expect(dal.notify).toHaveBeenCalledTimes(2);
     expect(dal.notify).toHaveBeenCalledWith(
-      expect.objectContaining({ userId: "a1", linkUrl: "/admin/applications" })
+      expect.objectContaining({ userId: "a1", linkUrl: "/admin/drivers?tab=applications" })
     );
     expect(dal.email.sendDriverApplicationSubmittedEmail).toHaveBeenCalledWith(
       "admin2@example.com",
@@ -209,7 +209,7 @@ describe("submitApplication alerts the admins", () => {
         applicantName: "Paul Martin",
         companyName: "Paul Martin EI",
         city: "Lyon",
-        reviewUrl: expect.stringMatching(/\/admin\/applications$/),
+        reviewUrl: expect.stringMatching(/\/admin\/drivers\?tab=applications$/),
       })
     );
   });

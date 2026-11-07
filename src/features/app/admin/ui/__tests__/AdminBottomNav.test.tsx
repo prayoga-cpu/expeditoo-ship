@@ -6,6 +6,7 @@ import en from "../../../../../../messages/en.json";
 import fr from "../../../../../../messages/fr.json";
 
 import { AdminBottomNav } from "../AdminBottomNav";
+import { ADMIN_NAV_GROUPS } from "../../nav";
 
 let pathname = "/admin/expedion";
 
@@ -58,6 +59,15 @@ describe("AdminBottomNav", () => {
     expect(
       screen.getByRole("menuitem", { name: /Expedion clients/ })
     ).toHaveAttribute("href", "/admin/expedion-clients");
+  });
+
+  it("reaches every page the sidebar does, so none is desktop-only", () => {
+    // It lacked Awards, Withdrawals and Incidents: on a phone those pages could
+    // not be opened at all. Both read the same list now.
+    renderWith();
+
+    const hrefs = screen.getAllByRole("menuitem").map((el) => el.getAttribute("href"));
+    expect(hrefs).toEqual(ADMIN_NAV_GROUPS.flatMap((g) => g.items.map((i) => i.href)));
   });
 
   it("marks exactly one entry current when one route prefixes another", () => {

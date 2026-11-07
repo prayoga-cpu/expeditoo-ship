@@ -14,6 +14,24 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.81.0] - 2026-11-07 · ux
+
+- **Admin menu: « Driver applications » is gone as a separate entry.** The same
+  list was already a tab inside Drivers. Drivers now shows one badge for the
+  applications waiting for review and the paperwork about to lapse together,
+  and the old link (in emails and notifications) still lands on the right tab.
+- **The admin menu is grouped** — Operations, People, Money, Quality, System —
+  instead of one long list.
+- **On a phone, an admin can finally open Awards, Withdrawals and Incidents.**
+  The phone bar was missing them; it now shows exactly the pages the sidebar does.
+- **Driver menu, grouped** into Work, Money and Account. « Mon dossier » only
+  shows while the file is not approved (in review, refused, suspended or
+  deregistered); once approved it lives in Profile as « Mon dossier chauffeur ».
+- **Requester menu, grouped** around shipping: Request transport, My requests,
+  Tracking. The job board is no longer offered to someone who cannot bid on it,
+  but stays for applicants and drivers.
+- A deregistered driver's status now reads « Désinscrit » instead of a blank.
+
 ## [2.80.0] - 2026-11-07 · feat
 
 - **« Envoyer l'offre » says why it is dark.** A driver with one suitable

@@ -3,31 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRef, useEffect } from "react";
-import {
-  LayoutDashboard,
-  Users,
-  FileText,
-  Truck,
-  Settings,
-  DollarSign,
-  Headset,
-  Car,
-  UsersRound,
-  MessageSquarePlus,
-} from "lucide-react";
+import { ADMIN_NAV_GROUPS, badgeFor } from "../nav";
 import { cn } from "@/lib/utils";
 import { FLOATING_NAV_CAPSULE, FLOATING_NAV_OUTER } from "@/components/layouts/FloatingNav";
 import { useTranslations } from "next-intl";
 import { useAdminNavCounts } from "../hooks/useAdminNavCounts";
-import type { AdminNavCounts } from "@/server/services/admin-nav.service";
-
-interface NavItem {
-  href: string;
-  label: string;
-  icon: React.ReactNode;
-  /** Which sidebar count rides on this entry; see `BADGE_TONE` in AdminLayout. */
-  badge?: keyof AdminNavCounts;
-}
 
 /**
  * Whether this entry owns the current path.
@@ -49,67 +29,14 @@ export function AdminBottomNav() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const activeRef = useRef<HTMLAnchorElement>(null);
 
-  // All navigation items
-  const navItems: NavItem[] = [
-    {
-      href: "/admin/expedion",
-      label: t("expedion"),
-      icon: <LayoutDashboard className="w-5 h-5" />,
-      badge: "expedion",
-    },
-    {
-      href: "/admin/users",
-      label: t("users"),
-      icon: <Users className="w-5 h-5" />,
-      badge: "users",
-    },
-    {
-      href: "/admin/expedion-clients",
-      label: t("expedionClients"),
-      icon: <UsersRound className="w-5 h-5" />,
-    },
-    {
-      href: "/admin/listings",
-      label: t("listing"),
-      icon: <FileText className="w-5 h-5" />,
-      badge: "listings",
-    },
-    {
-      href: "/admin/drivers",
-      label: t("driver"),
-      icon: <Car className="w-5 h-5" />,
-      badge: "drivers",
-    },
-    {
-      href: "/admin/shipments",
-      label: t("shipment"),
-      icon: <Truck className="w-5 h-5" />,
-      badge: "shipments",
-    },
-    {
-      href: "/admin/payments",
-      label: t("payments"),
-      icon: <DollarSign className="w-5 h-5" />,
-      badge: "payments",
-    },
-    {
-      href: "/admin/feedback",
-      label: t("feedback"),
-      icon: <MessageSquarePlus className="w-5 h-5" />,
-      badge: "feedback",
-    },
-    {
-      href: "/admin/support",
-      label: t("supportChats"),
-      icon: <Headset className="w-5 h-5" />,
-      badge: "support",
-    },
-    {
-      href: "/admin/settings",
-      label: t("settings"),
-      icon: <Settings className="w-5 h-5" />,
-    },
-  ];
+  // The same groups as the sidebar, flattened: one list, so a page cannot be
+  // reachable on a desktop and not on a phone.
+  const navItems = ADMIN_NAV_GROUPS.flatMap((group) => group.items).map((entry) => ({
+    href: entry.href,
+    label: t(entry.labelKey),
+    icon: <entry.icon className="w-5 h-5" />,
+    badge: badgeFor(counts, entry),
+  }));
 
   // Auto-scroll to active item on mount
   useEffect(() => {
@@ -137,7 +64,7 @@ export function AdminBottomNav() {
       >
         {navItems.map((item) => {
           const isActive = isCurrent(pathname, item.href);
-          const badge = item.badge ? counts?.[item.badge] : undefined;
+          const badge = item.badge;
           return (
             <Link
               key={item.href}

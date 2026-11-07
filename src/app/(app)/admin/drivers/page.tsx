@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Users, FileText, Truck, Plus } from "lucide-react";
 
@@ -14,11 +15,31 @@ import { useTranslations } from "next-intl";
 import { useAuth } from "@/lib/auth-context";
 import { PublicProfile } from "@/features/app/profile/ui/PublicProfile";
 
+// `Suspense` is load-bearing: the tab is held in the URL, and a client page
+// that reads `useSearchParams` without one fails `next build`.
 export default function DriversPage() {
+  return (
+    <Suspense fallback={<PageLoader />}>
+      <DriversPageContent />
+    </Suspense>
+  );
+}
+
+function DriversPageContent() {
   const { drivers, isLoading, handleRemoveDriver, refetchDrivers, createDriver, isCreating } =
     useAdminDrivers();
 
-  const [activeTab, setActiveTab] = useState("list");
+  // The tab lives in the URL: « Driver applications » used to be its own
+  // sidebar entry, and the application emails and bell link straight to
+  // `?tab=applications`.
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const activeTab = searchParams.get("tab") === "applications" ? "applications" : "list";
+  const setActiveTab = (tab: string) =>
+    router.replace(tab === "applications" ? `${pathname}?tab=applications` : pathname, {
+      scroll: false,
+    });
   const [isMounted, setIsMounted] = useState(false);
   const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -78,7 +99,6 @@ export default function DriversPage() {
       )}
 
       <Tabs
-        defaultValue="list"
         value={activeTab}
         onValueChange={setActiveTab}
         className="space-y-4"
@@ -86,11 +106,11 @@ export default function DriversPage() {
         <TabsList>
           <TabsTrigger value="list" className="gap-2">
             <Users className="w-4 h-4" />
-            Drivers List
+            {t("tabs.list")}
           </TabsTrigger>
           <TabsTrigger value="applications" className="gap-2">
             <FileText className="w-4 h-4" />
-            Applications
+            {t("tabs.applications")}
           </TabsTrigger>
         </TabsList>
 
