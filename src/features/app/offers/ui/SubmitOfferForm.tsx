@@ -68,7 +68,10 @@ export function SubmitOfferForm({ job }: SubmitOfferFormProps) {
   // The requester's weekdays and times of day for the pickup, right where the
   // carrier picks slots. A preference: a flexible job still takes slots
   // outside it (request_availability_spec.md §6–7).
-  const pickupPreference = useAvailabilityText(job.pickupDays, job.pickupPeriods);
+  const pickupPreference = useAvailabilityText(job.pickupDays, job.pickupPeriods, {
+    from: job.pickupTimeFrom,
+    to: job.pickupTimeTo,
+  });
 
   if (isLoading) return null;
 

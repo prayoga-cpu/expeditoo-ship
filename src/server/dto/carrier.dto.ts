@@ -134,6 +134,9 @@ export const carrierAvailabilitySchema = z.discriminatedUnion("absent", [
   z.object({ absent: z.literal(false) }),
 ]);
 
+/** « Contact confirmé » — an operator records they have reached the applicant. */
+export const carrierContactConfirmedSchema = z.object({ confirmed: z.boolean() });
+
 export type CarrierAvailabilityInput = z.infer<typeof carrierAvailabilitySchema>;
 
 /** « Me désinscrire » — a reason is optional for the driver, required of an admin. */

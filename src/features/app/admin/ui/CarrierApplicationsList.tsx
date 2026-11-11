@@ -47,6 +47,7 @@ export function CarrierApplicationsList({
     rejectApplication,
     suspendCarrierAccount,
     setAvailability,
+    setContactConfirmed,
     deregisterCarrierAccount,
     reinstateCarrierAccount,
     isUpdating,
@@ -263,6 +264,7 @@ export function CarrierApplicationsList({
               onReject={rejectApplication}
               onSuspend={suspendCarrierAccount}
               onSetAvailability={setAvailability}
+              onSetContactConfirmed={setContactConfirmed}
               onDeregister={deregisterCarrierAccount}
               onReinstate={reinstateCarrierAccount}
               onDone={handleDetailDone}

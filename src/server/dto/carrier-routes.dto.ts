@@ -17,12 +17,16 @@ export const MAX_ROUTES_PER_CARRIER = 20;
 /** A single occasional trip cannot enumerate more dates than this. */
 export const MAX_ROUTE_DATES = 60;
 
+// The street line is optional (client feedback 2026-11-06, B03): a trip is
+// declared by town and postcode. A pin the caller did not send is looked up from
+// them by the service (`carrierRoutesService`), so every stored trip still has
+// one and the matching never meets a trip without coordinates.
 const endpointSchema = z.object({
-  address: z.string().min(3).max(300),
+  address: z.string().max(300).default(""),
   city: z.string().min(1).max(120),
   postalCode: z.string().regex(POSTAL_CODE_PATTERN, "INVALID_POSTAL_CODE"),
-  lat: z.number().min(-90).max(90),
-  lng: z.number().min(-180).max(180),
+  lat: z.number().min(-90).max(90).optional(),
+  lng: z.number().min(-180).max(180).optional(),
 });
 
 const dayOfWeekSchema = z.number().int().min(1).max(7);

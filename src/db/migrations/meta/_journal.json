@@ -323,6 +323,13 @@
       "when": 1788778800000,
       "tag": "0046_access_height",
       "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1788865200000,
+      "tag": "0047_time_windows_contact_confirmed",
+      "breakpoints": true
     }
   ]
 }

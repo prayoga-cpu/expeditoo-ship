@@ -61,13 +61,13 @@ describe("navbar", () => {
 });
 
 describe("CTA band", () => {
-  it("sells verification to a signed-out visitor", () => {
+  it("invites a signed-out visitor to apply, without promising a verification time", () => {
     renderWithMessages(<LandingCTA />);
 
     expect(screen.getByText("Become a carrier")).toBeInTheDocument();
-    expect(
-      screen.getByText(/upload three documents/)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/upload your documents/)).toBeInTheDocument();
+    // « Verified in 24 hours » was a promise nobody keeps (client feedback 2026-11-06, U01).
+    expect(screen.queryByText(/24 hours/)).not.toBeInTheDocument();
   });
 
   it("points a signed-in visitor at their profile instead", () => {

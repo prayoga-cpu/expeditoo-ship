@@ -194,7 +194,10 @@ describe("Profile — the saved addresses card", () => {
     ...over,
   });
   const card = async () => {
-    const title = await screen.findByText(en.profile.address.title);
+    // The section heading says the same word as the card's own title
+    // (client feedback 2026-11-06, U04); the card is the one inside a card.
+    const titles = await screen.findAllByText(en.profile.address.title);
+    const title = titles.find((el) => el.closest("[data-slot=card]")) as HTMLElement;
     return title.closest("[data-slot=card]") as HTMLElement;
   };
 
@@ -257,5 +260,37 @@ describe("Profile — the saved addresses card", () => {
     expect(
       within(addresses).getAllByRole("link", { name: en.profile.address.addNew }).length
     ).toBeGreaterThan(0);
+  });
+});
+
+// client feedback 2026-11-06, U04 — five headings, every link kept.
+import { quickLinkGroups } from "../Profile";
+
+describe("quickLinkGroups", () => {
+  const hrefs = (links: { href: string }[]) => links.map((l) => l.href);
+
+  it("gives a plain account no driver section, and « become a driver » under Account", () => {
+    const groups = quickLinkGroups({ roles: ["shipper"], pathname: "/profile", hasApplication: false });
+    expect(groups.driver).toEqual([]);
+    expect(hrefs(groups.account)).toContain("/carrier/application");
+    expect(hrefs(groups.account)).toEqual(
+      expect.arrayContaining(["/profile/reviews", "/profile/payment-methods", "/profile/invoices", "/help"])
+    );
+  });
+
+  it("shows an applicant a driver section with their file", () => {
+    const groups = quickLinkGroups({ roles: ["shipper"], pathname: "/profile", hasApplication: true });
+    expect(hrefs(groups.driver)).toEqual(["/carrier/application"]);
+    expect(hrefs(groups.account)).not.toContain("/carrier/application");
+  });
+
+  it("gives a driver the dashboard, the trips and the file under Driver", () => {
+    const groups = quickLinkGroups({ roles: ["shipper", "driver"], pathname: "/profile", hasApplication: false });
+    expect(hrefs(groups.driver)).toEqual(["/driver/dashboard", "/carrier/trips", "/carrier/application"]);
+  });
+
+  it("keeps the admin links for staff", () => {
+    const groups = quickLinkGroups({ roles: ["shipper", "admin"], pathname: "/profile", hasApplication: false });
+    expect(hrefs(groups.account)).toEqual(expect.arrayContaining(["/admin/expedion", "/admin/support"]));
   });
 });

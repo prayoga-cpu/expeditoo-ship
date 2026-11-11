@@ -35,6 +35,7 @@ import { PickupPublicationNotice } from "./PublicationNotice";
 import { SavedAddressPicker } from "./SavedAddressPicker";
 import { AddressLabelField } from "@/features/app/profile/ui/AddressLabelField";
 import { PackagingField } from "./PackagingField";
+import { IllustrationField } from "./IllustrationField";
 import { ToggleRow } from "./ToggleRow";
 import { FloorFields } from "./FloorFields";
 import { JobKindLink, MovingFields } from "./MovingFields";
@@ -284,6 +285,9 @@ function WhatStep({
           {t("photosHint")}
         </p>
         <PhotoDropzone photos={photos} onPhotosChange={onPhotosChange} />
+        <div className="mt-3">
+          <IllustrationField form={form} photos={photos} />
+        </div>
       </div>
     </div>
   );
@@ -638,6 +642,24 @@ function WhenStep({
         dropoffDaysError={errors.dropoffDays?.message}
         pickupClampedFrom={pickupClampedFrom}
         publication={publication}
+        hours={{
+          pickup: {
+            from: (form.watch("pickupTimeFrom") as string | undefined) ?? "",
+            to: (form.watch("pickupTimeTo") as string | undefined) ?? "",
+          },
+          dropoff: {
+            from: (form.watch("dropoffTimeFrom") as string | undefined) ?? "",
+            to: (form.watch("dropoffTimeTo") as string | undefined) ?? "",
+          },
+        }}
+        onHoursChange={(side, next) => {
+          form.setValue(`${side}TimeFrom`, next.from, { shouldValidate: true });
+          form.setValue(`${side}TimeTo`, next.to, { shouldValidate: true });
+        }}
+        hoursError={{
+          pickup: errors.pickupTimeFrom?.message ?? errors.pickupTimeTo?.message,
+          dropoff: errors.dropoffTimeFrom?.message ?? errors.dropoffTimeTo?.message,
+        }}
       />
     </div>
   );

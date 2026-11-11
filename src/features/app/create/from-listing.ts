@@ -269,6 +269,11 @@ export function fromListing(job: DraftJob, { locale, now }: FromListingOptions):
 
   const values: Partial<JobFormValues> = {
     title: job.title,
+    illustration: job.illustration ?? "",
+    pickupTimeFrom: job.pickupTimeFrom ?? "",
+    pickupTimeTo: job.pickupTimeTo ?? "",
+    dropoffTimeFrom: job.dropoffTimeFrom ?? "",
+    dropoffTimeTo: job.dropoffTimeTo ?? "",
     accessHeightCm:
       job.accessHeightCm == null ? "" : numberToInput(job.accessHeightCm, 1, locale),
     ...splitFragileNote(job.description, job.isFragile),

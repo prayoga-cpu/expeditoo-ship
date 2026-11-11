@@ -1,5 +1,6 @@
 import { carrierRoutesDal, type CarrierRouteRow } from "@/server/dal/carrier-routes.dal";
 import { carrierService } from "@/server/services/carrier.service";
+import { locate } from "@/server/services/listing-pins.service";
 import {
   createCarrierRouteSchema,
   MAX_ROUTES_PER_CARRIER,
@@ -37,7 +38,45 @@ export {
 // Mapping
 // ========================================
 
-function toColumns(input: CreateCarrierRouteInput, carrierId: string) {
+type PinnedEndpoint = Omit<CreateCarrierRouteInput["origin"], "lat" | "lng"> & {
+  lat: number;
+  lng: number;
+};
+type PinnedRouteInput = Omit<CreateCarrierRouteInput, "origin" | "destination"> & {
+  origin: PinnedEndpoint;
+  destination: PinnedEndpoint;
+};
+
+/**
+ * Every stored trip has a pin: the one the caller sent, or one looked up from
+ * its postcode and town (the street too, when it was given). A place that
+ * cannot be found is refused, not stored without coordinates.
+ */
+async function withPins(input: CreateCarrierRouteInput): Promise<PinnedRouteInput> {
+  const place = async (
+    endpoint: CreateCarrierRouteInput["origin"],
+    country: string
+  ): Promise<PinnedEndpoint> => {
+    if (endpoint.lat !== undefined && endpoint.lng !== undefined) {
+      return { ...endpoint, lat: endpoint.lat, lng: endpoint.lng };
+    }
+    const hit = await locate(
+      endpoint.address,
+      endpoint.postalCode,
+      endpoint.city,
+      /^france$/i.test(country.trim()) ? "fr" : null
+    );
+    if (!hit) throw err("ROUTE_LOCATION_NOT_FOUND", 422);
+    return { ...endpoint, lat: hit.lat, lng: hit.lng };
+  };
+  const [origin, destination] = await Promise.all([
+    place(input.origin, input.originCountry),
+    place(input.destination, input.destinationCountry),
+  ]);
+  return { ...input, origin, destination };
+}
+
+function toColumns(input: PinnedRouteInput, carrierId: string) {
   return {
     carrierId,
     label: input.label ?? null,
@@ -137,8 +176,9 @@ export const carrierRoutesService = {
 
     assertOwnVehicle(carrier.vehicles, input.vehicleId);
 
+    const pinned = await withPins(input);
     const created = await carrierRoutesDal.create(
-      toColumns(input, carrier.id),
+      toColumns(pinned, carrier.id),
       input.dates ?? []
     );
     if (!created) throw err("ROUTE_CREATE_FAILED", 500);
@@ -186,9 +226,10 @@ export const carrierRoutesService = {
 
     assertOwnVehicle(carrier.vehicles, merged.vehicleId);
 
+    const pinned = await withPins(merged);
     const updated = await carrierRoutesDal.update(
       routeId,
-      toColumns(merged, carrier.id),
+      toColumns(pinned, carrier.id),
       merged.dates ?? []
     );
     if (!updated) throw err("ROUTE_NOT_FOUND", 404);

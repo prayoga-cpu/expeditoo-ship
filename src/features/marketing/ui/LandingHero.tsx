@@ -8,30 +8,6 @@ import { LandingGatedButton } from "./LandingGatedButton";
 import { LandingStats } from "./LandingStats";
 import { LP_ANCHOR_OFFSET, LP_BTN_GHOST, LP_BTN_PRIMARY } from "./styles";
 
-const STEPS = ["step1", "step2", "step3"] as const;
-
-function HeroSteps() {
-  const t = useTranslations("marketing.hero");
-
-  return (
-    <div className="flex flex-wrap items-stretch gap-y-2.5 rounded-[14px] border border-[var(--lp-line)] bg-[var(--lp-chip)] px-[18px] py-3.5">
-      {STEPS.map((step, i) => (
-        <div key={step} className="flex items-center">
-          {i > 0 && <span className="pr-4 text-[var(--lp-faint)]">→</span>}
-          <div className="flex items-center gap-2.5 pr-4">
-            <span className="font-mono text-xs text-[var(--lp-bluelink)]">
-              {`0${i + 1}`}
-            </span>
-            <span className="text-[13.5px] text-[var(--lp-muted)]">
-              {t(step)}
-            </span>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 export function LandingHero() {
   const t = useTranslations("marketing.hero");
   const { isAuthenticated } = useAuth();
@@ -63,8 +39,6 @@ export function LandingHero() {
             {t("subtitle")}
           </p>
 
-          <HeroSteps />
-
           <div className="flex flex-wrap items-center gap-3">
             <LandingGatedButton
               intent="carrier"
@@ -72,7 +46,7 @@ export function LandingHero() {
               className={`${LP_BTN_PRIMARY} px-[26px] py-[15px] text-base`}
             />
             <Link
-              href="/#courses"
+              href="/#how"
               className={`${LP_BTN_GHOST} px-[26px] py-[15px] text-base`}
             >
               {t("secondaryCta")}
@@ -80,10 +54,16 @@ export function LandingHero() {
           </div>
         </div>
 
-        <LandingBidCard />
+        {/* A decoration, not the message: below `lg` the first screen is the
+            headline and one button. */}
+        <div className="hidden lg:block">
+          <LandingBidCard />
+        </div>
       </div>
 
-      <LandingStats />
+      <div className="hidden lg:block">
+        <LandingStats />
+      </div>
     </section>
   );
 }

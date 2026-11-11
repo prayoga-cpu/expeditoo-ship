@@ -32,6 +32,33 @@ the first release below is the commit that began the transport pivot.
   but stays for applicants and drivers.
 - A deregistered driver's status now reads « Désinscrit » instead of a blank.
 
+## [2.83.0] - 2026-11-11 · feat
+
+- **A driver can declare a trip with towns and dates only.** The trip form no
+  longer waits for a street address and a map pin: town, postcode and the days
+  are enough, and the form says what is still missing instead of staying grey.
+  The pin is found from the postcode and town.
+- **Applicants hear which documents are missing.** On submitting a driver file,
+  an applicant who lacks required documents gets an email (in French and
+  English) and a notification naming them; a complete file gets none.
+- **Exact hours on a request.** At pickup and at delivery a request can now
+  also say « de 09:00 à 12:00 », beside morning, afternoon and evening. It shows
+  on the job page and in the offer form. Without hours nothing changes.
+- **« Contact confirmé » for driver applications.** An operator ticks it once
+  they have reached the applicant; it shows who and when. It does not change the
+  approval, which stays a manual decision.
+- **A request with no photo can carry an illustration.** Four generic pictures
+  (furniture, parcel, pallet, vehicle) are offered, never applied unless the
+  requester ticks the box, and labelled « Illustration » wherever they appear.
+- **A shorter, friendlier homepage.** One message and one button on a phone,
+  three steps, two reasons to stay, one closing button. The « verified in 24
+  hours » promise is gone.
+- **The profile in five parts.** Identity, Contact, Addresses, Driver and
+  Account; every existing link is still there. The Driver part appears only for
+  drivers and applicants.
+- **The offer calendar says why days are closed.** It now shows the dates the
+  request runs from and to.
+
 ## [2.82.2] - 2026-11-07 · infra
 
 - Nothing you can see changes yet. This adds the tools to finish the Airtable

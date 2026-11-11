@@ -174,6 +174,15 @@ export function OfferSlotsField({
                 ? t("noMoreDays")
                 : t("dayLimit", { count: MAX_OFFER_SLOT_DAYS })}
             </p>
+            {/* Why days are closed: the job's own window. */}
+            {!window.isFlexible && (
+              <p className="text-muted-foreground mt-1 text-sm">
+                {t("windowHint", {
+                  from: format(window.from, "d MMM", { locale: dateLocale }),
+                  until: format(window.until, "d MMM", { locale: dateLocale }),
+                })}
+              </p>
+            )}
           </PopoverContent>
         </Popover>
       </div>

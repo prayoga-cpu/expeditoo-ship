@@ -1,5 +1,7 @@
 "use client";
 
+import { IllustrationImage } from "@/components/ui/illustration-image";
+import type { IllustrationKind } from "@/lib/illustrations";
 import { useState } from "react";
 import Link from "next/link";
 import { format, isSameDay } from "date-fns";
@@ -68,7 +70,15 @@ function leadPhotoUrl(photos: BoardJob["photos"]): string | undefined {
  * read (`src/app/api/expedion/files/[id]/route.ts`). A driver's browser gets a
  * 404 for those, and this is what keeps a broken-image icon off the card.
  */
-function JobThumbnail({ url, title }: { url?: string; title: string }) {
+function JobThumbnail({
+  url,
+  title,
+  illustration,
+}: {
+  url?: string;
+  title: string;
+  illustration?: IllustrationKind | null;
+}) {
   const [failed, setFailed] = useState(false);
 
   return (
@@ -82,6 +92,8 @@ function JobThumbnail({ url, title }: { url?: string; title: string }) {
           onError={() => setFailed(true)}
           className="h-full w-full object-cover"
         />
+      ) : illustration ? (
+        <IllustrationImage kind={illustration} compact className="h-full w-full" />
       ) : (
         <div className="flex h-full w-full items-center justify-center text-muted-foreground">
           <Package className="h-6 w-6" aria-hidden="true" />
@@ -128,7 +140,11 @@ export function JobCard({ job, isHighlighted = false }: JobCardProps) {
         )}
       >
         <div className="flex items-start gap-3 sm:gap-4">
-          <JobThumbnail url={leadPhotoUrl(job.photos)} title={job.title} />
+          <JobThumbnail
+            url={leadPhotoUrl(job.photos)}
+            title={job.title}
+            illustration={job.illustration}
+          />
 
           <div className="min-w-0 flex-1">
             <h3 className="truncate text-base font-semibold">{job.title}</h3>

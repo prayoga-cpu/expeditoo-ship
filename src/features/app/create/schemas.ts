@@ -1,3 +1,4 @@
+import { ILLUSTRATION_KINDS } from "@/lib/illustrations";
 import { z } from "zod";
 import { isValidPhoneNumber } from "libphonenumber-js/min";
 
@@ -150,6 +151,12 @@ export type PublishMode = (typeof PUBLISH_MODES)[number];
 const optionalDatetimeLocal = z.preprocess(
   blankToUndefined,
   z.string().pipe(z.coerce.date()).optional()
+);
+
+/** « 09:00 », or blank for none. */
+const clockText = z.preprocess(
+  blankToUndefined,
+  z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "create.validation.timeInvalid").optional()
 );
 
 const optionalPositive = z.preprocess(
@@ -381,6 +388,12 @@ export const jobFormSchema = z
     pickupPeriods: z.array(z.enum(TIME_SLOTS)),
     dropoffDays: z.array(z.number().int().min(1).max(7)),
     dropoffPeriods: z.array(z.enum(TIME_SLOTS)),
+    // Optional exact hours at each end, typed as « HH:MM » (client feedback
+    // 2026-11-06, A01); blank means none. A pair, end after start — below.
+    pickupTimeFrom: clockText,
+    pickupTimeTo: clockText,
+    dropoffTimeFrom: clockText,
+    dropoffTimeTo: clockText,
 
     // Held as the text the box shows (« 40,5 »), seeded "" rather than left
     // unset: blank reads as 0 and fails `.positive()` as an ordinary issue,
@@ -397,6 +410,9 @@ export const jobFormSchema = z
         .max(BUDGET_EUROS.max, "create.validation.budgetMax")
     ),
     photos: z.array(z.string().url()).max(10).default([]),
+    // The built-in illustration the requester accepted, « » for none; only
+    // sent when no photo is attached (client feedback 2026-11-06, A07).
+    illustration: z.preprocess(blankToUndefined, z.enum(ILLUSTRATION_KINDS).optional()),
 
     publishMode: z.enum(PUBLISH_MODES).default("now"),
     scheduledPublishAt: optionalDatetimeLocal,
@@ -425,6 +441,24 @@ export const jobFormSchema = z
           code: z.ZodIssueCode.custom,
           message: "create.validation.weightRequired",
           path: ["weightBracket"],
+        });
+      }
+    }
+
+    for (const side of ["pickup", "dropoff"] as const) {
+      const from = data[`${side}TimeFrom`];
+      const to = data[`${side}TimeTo`];
+      if ((from === undefined) !== (to === undefined)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "create.validation.timeWindowIncomplete",
+          path: [from === undefined ? `${side}TimeFrom` : `${side}TimeTo`],
+        });
+      } else if (from !== undefined && to !== undefined && to <= from) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "create.validation.timeWindowOrder",
+          path: [`${side}TimeTo`],
         });
       }
     }
@@ -585,6 +619,10 @@ export const STEP_FIELDS = [
     "dropoffUntil",
     "pickupDays",
     "dropoffDays",
+    "pickupTimeFrom",
+    "pickupTimeTo",
+    "dropoffTimeFrom",
+    "dropoffTimeTo",
   ],
   ["pickup", "dropoff"],
   ["budgetEuros", "publishMode", "scheduledPublishAt"],

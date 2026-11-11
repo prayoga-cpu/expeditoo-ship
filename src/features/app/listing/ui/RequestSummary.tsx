@@ -22,6 +22,10 @@ type SummaryJob = Pick<
   | "pickupPeriods"
   | "dropoffDays"
   | "dropoffPeriods"
+  | "pickupTimeFrom"
+  | "pickupTimeTo"
+  | "dropoffTimeFrom"
+  | "dropoffTimeTo"
   | "packagingLevel"
   | "needsProtection"
   | "needsPackaging"
@@ -128,11 +132,19 @@ export function RequestSummary({
       <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
         <SummaryItem icon={CalendarClock} label={t("pickup")}>
           {range(job.pickupFrom, job.pickupUntil)}
-          <AvailabilityLine days={job.pickupDays} periods={job.pickupPeriods} />
+          <AvailabilityLine
+              days={job.pickupDays}
+              periods={job.pickupPeriods}
+              hours={{ from: job.pickupTimeFrom, to: job.pickupTimeTo }}
+            />
         </SummaryItem>
         <SummaryItem icon={CalendarClock} label={t("dropoff")}>
           {range(job.dropoffFrom, job.dropoffUntil)}
-          <AvailabilityLine days={job.dropoffDays} periods={job.dropoffPeriods} />
+          <AvailabilityLine
+              days={job.dropoffDays}
+              periods={job.dropoffPeriods}
+              hours={{ from: job.dropoffTimeFrom, to: job.dropoffTimeTo }}
+            />
         </SummaryItem>
         <SummaryItem icon={ShieldCheck} label={t("protection")}>
           {protection}

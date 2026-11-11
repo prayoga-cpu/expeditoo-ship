@@ -180,6 +180,15 @@ export const listings = pgTable(
       .$type<TimeSlot[]>()
       .default([...TIME_SLOTS])
       .notNull(),
+    // Optional exact hours at each end, « HH:MM » (0047). Given as a pair or not
+    // at all; null means no exact hours stated. The periods above stay.
+    // The built-in illustration the requester accepted for a request with no
+    // photo (0047, A07); null means none. Always labelled « Illustration ».
+    illustration: text("illustration").$type<"furniture" | "parcel" | "pallet" | "vehicle">(),
+    pickupTimeFrom: text("pickup_time_from"),
+    pickupTimeTo: text("pickup_time_to"),
+    dropoffTimeFrom: text("dropoff_time_from"),
+    dropoffTimeTo: text("dropoff_time_to"),
 
     // ---- Money ----
     // The shipper's expectation, not a cap. Carriers may bid above it.

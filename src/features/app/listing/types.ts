@@ -105,6 +105,13 @@ export interface Job {
   pickupPeriods?: TimeSlot[];
   dropoffDays?: IsoWeekday[];
   dropoffPeriods?: TimeSlot[];
+  /** The built-in illustration standing in for a photo, when the requester accepted one. */
+  illustration?: "furniture" | "parcel" | "pallet" | "vehicle" | null;
+  /** Optional exact hours at each end, « HH:MM »; null when none were stated. */
+  pickupTimeFrom?: string | null;
+  pickupTimeTo?: string | null;
+  dropoffTimeFrom?: string | null;
+  dropoffTimeTo?: string | null;
 
   budgetCents: number;
   /** Owner and staff only: absent from anyone else's view (listing_privacy_spec.md §2). */

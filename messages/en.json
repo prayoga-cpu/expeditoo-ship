@@ -314,6 +314,13 @@
     }
   },
   "profile": {
+    "sections": {
+      "identity": "Identity",
+      "contact": "Contact",
+      "addresses": "Addresses",
+      "driver": "Driver",
+      "account": "Account"
+    },
     "public": {
       "notFound": "User Not Found",
       "notFoundDesc": "The user you are looking for does not exist.",
@@ -1053,6 +1060,7 @@
         "dayLimit": "{count} days maximum.",
         "dayLimitReached": "{count} days maximum. Remove one to propose another.",
         "noMoreDays": "Every day this request can take is already chosen.",
+        "windowHint": "This request runs from {from} to {until}: other days are closed.",
         "empty": "Add at least one day when you can do this job.",
         "removeDay": "Remove this day",
         "slot": {
@@ -1146,6 +1154,19 @@
     }
   },
   "create": {
+    "illustration": {
+      "title": "No photo? An illustration can stand in.",
+      "hint": "A generic picture of the kind of item, not a photo of yours. It is always labelled « Illustration ».",
+      "choose": "Choose the illustration",
+      "consent": "I accept using this illustrative image in place of a photo.",
+      "kind": {
+        "furniture": "Furniture",
+        "parcel": "Parcel",
+        "pallet": "Pallet",
+        "vehicle": "Vehicle"
+      },
+      "label": "Illustration"
+    },
     "title": "Request transport",
     "subtitle": "Carriers respond to your request, so make it as precise as possible. Check your item dimensions and access, and who's available at pickup and delivery (days of the week and times of day).",
     "steps": {
@@ -1404,6 +1425,11 @@
       "auction_house": "Auction house"
     },
     "when": {
+      "hoursRange": "{from}–{to}",
+      "hoursLabel": "Exact hours (optional)",
+      "hoursFrom": "From",
+      "hoursTo": "To",
+      "hoursHint": "Leave empty if the periods above are enough.",
       "modeLabel": "How firm are your dates?",
       "mode": {
         "exact": "Exact",
@@ -1485,6 +1511,9 @@
       "tooMany": "Only {count} photos were added — the limit is {max}."
     },
     "validation": {
+      "timeWindowIncomplete": "Give both the start and the end time, or neither.",
+      "timeWindowOrder": "The end time must come after the start time.",
+      "timeInvalid": "Invalid time (use 09:00).",
       "titleShort": "At least 2 characters",
       "descriptionShort": "At least 5 characters",
       "fragileNoteMax": "300 characters or fewer",
@@ -1962,12 +1991,12 @@
       "badge": "The carrier network of the Expedion group",
       "titleLine1": "The jobs come to you.",
       "titleLine2": "You set the price.",
-      "subtitle": "When Expedion's own fleet is full, the job is posted here automatically. Bid your price, win the run, deliver, get paid by bank transfer. No prospecting, ever.",
+      "subtitle": "When Expedion's own fleet is full, the job is posted here. Bid your price, drive, get paid by bank transfer. No prospecting.",
       "step1": "A job opens",
       "step2": "You underbid",
       "step3": "Deliver, get paid",
       "primaryCta": "Join the network",
-      "secondaryCta": "See open jobs",
+      "secondaryCta": "How it works",
       "primaryCtaAuthed": "Open your profile"
     },
     "bidCard": {
@@ -1994,8 +2023,8 @@
     },
     "howItWorks": {
       "eyebrow": "HOW IT WORKS",
-      "title": "One source of jobs: Expedion orders",
-      "intro": "No marketplace to browse, no goods auctions. Every job is a real, packed, insured Expedion shipment that our own fleet could not take.",
+      "title": "Three steps, that's all",
+      "intro": "Every job is a real Expedion delivery our own fleet could not take.",
       "step1": {
         "title": "A job is posted automatically",
         "desc": "A client ordered on Expedion and no pool driver is free. Route, size, photos and deadline are already in the listing."
@@ -2095,8 +2124,8 @@
       }
     },
     "cta": {
-      "title": "Verified in 24 hours. Bidding the same day.",
-      "subtitle": "SIRET, insurance, licence: upload three documents and open your first board.",
+      "title": "Ready to drive? Join the network.",
+      "subtitle": "SIRET, insurance, licence: upload your documents and, once your file is approved, you can bid.",
       "primary": "Become a carrier",
       "primaryAuthed": "Open your profile",
       "subtitleAuthed": "You are already signed in. Your documents, your vehicle and your verification all live in your profile."
@@ -2999,6 +3028,12 @@
         "absent": "Away"
       },
       "detail": {
+        "contactConfirmed": {
+          "label": "Contact confirmed",
+          "hint": "Tick once you have reached the applicant. It does not change the approval.",
+          "confirmedOn": "Confirmed on {date} by {by}.",
+          "you": "you"
+        },
         "title": "Carrier Application",
         "applicant": "Applicant",
         "submissionDate": "Submission date",
@@ -3421,6 +3456,8 @@
       "proposeHint": "Open the request to propose an offer to the client: they will pay to confirm."
     },
     "bordereaux": {
+      "clearSearch": "Clear the search",
+      "openBridge": "Open the Expedion bridge",
       "title": "Slips",
       "subtitle": "Every purchase slip received: number, buyer, contact, billing address, sale date and description, with the document. Exportable as CSV.",
       "searchPlaceholder": "Slip number, name, email, phone, city, description…",
@@ -3940,6 +3977,12 @@
         "notFound": "That trip no longer exists."
       },
       "form": {
+        "missing": {
+          "origin": "Enter the town and postcode you leave from.",
+          "destination": "Enter the town and postcode you arrive at.",
+          "days": "Choose at least one weekday.",
+          "dates": "Add at least one date."
+        },
         "createTitle": "New trip",
         "editTitle": "Edit trip",
         "description": "Where you go, how often, and what you can carry. You choose below who can see it.",

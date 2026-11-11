@@ -9,11 +9,13 @@ import { api, toQuery } from "@/lib/fetcher";
 export type CarrierRouteKind = "recurring" | "occasional";
 
 export interface CarrierRouteEndpointInput {
-  address: string;
+  /** Optional: a trip is declared by town and postcode. */
+  address?: string;
   city: string;
   postalCode: string;
-  lat: number;
-  lng: number;
+  /** Sent when the map gave a pin; otherwise the server looks one up. */
+  lat?: number;
+  lng?: number;
 }
 
 export interface CarrierRouteDate {

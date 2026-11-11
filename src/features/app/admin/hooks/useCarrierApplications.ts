@@ -8,6 +8,7 @@ import {
     rejectCarrierApplication,
     suspendCarrier,
     setCarrierAvailability,
+    setCarrierContactConfirmed,
     deregisterCarrier,
     reinstateCarrier,
     fetchDocumentViewUrl,
@@ -68,6 +69,16 @@ export function useCarrierApplications(status: CarrierApplicationFilter) {
     });
 
     // Actif / Absent / Désinscrit (client_feedback_2026_10_29_spec.md §REQ-02).
+    // « Contact confirmé » — informational; approval stays manual.
+    const contactConfirmedMutation = useMutation({
+        mutationFn: ({ id, confirmed }: { id: string; confirmed: boolean }) =>
+            setCarrierContactConfirmed(id, confirmed),
+        onSuccess: () => invalidate(),
+        onError: (error) => {
+            toast.error(t("actionFailed", { message: error.message }));
+        },
+    });
+
     const availabilityMutation = useMutation({
         mutationFn: ({
             id,
@@ -121,6 +132,7 @@ export function useCarrierApplications(status: CarrierApplicationFilter) {
         rejectApplication: rejectMutation.mutateAsync,
         suspendCarrierAccount: suspendMutation.mutateAsync,
         setAvailability: availabilityMutation.mutateAsync,
+        setContactConfirmed: contactConfirmedMutation.mutateAsync,
         deregisterCarrierAccount: deregisterMutation.mutateAsync,
         reinstateCarrierAccount: reinstateMutation.mutateAsync,
         isUpdating:

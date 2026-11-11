@@ -1,5 +1,37 @@
 # STATUS.md
 
+## Client feedback monitor — Nicolas's feedback of 4–6 November 2026 (the remaining tickets)
+
+_Owner: this section is for you. Spec: `docs/specs/client_feedback_2026_11_11_spec.md`; plan:
+`docs/plans/plan_client_feedback_2026_11_11.md`. Shipped in **2.83.0**; the part before it in 2.80.0–2.82.2._
+
+| Ticket | State |
+|---|---|
+| B03 Add trip greyed | **Shipped** — trips by town + postcode, a reason under the button |
+| B05 Missing-documents email | **Shipped** — at submission; not on every later upload |
+| A01 Exact hours | **Shipped** (migration 0047) — periods stay |
+| C02 Contact confirmed | **Shipped** (checkbox); auto-approval **deliberately not built** |
+| A07 Illustration | **Shipped** (four generic pictures, labelled); message-thread header not covered |
+| U01 Homepage | **Shipped** as an assumption |
+| U04 Profile | **Shipped** as an assumption |
+| D01 Airtable slips | Imported and previewable (2.82.x); AI auto-fill for new slips belongs to the Expedion rebuild |
+
+### Decisions taken without the client — please confirm or overrule
+
+- **A01** — both kept: periods by default, optional exact hours at each end. Offers stay on periods.
+- **C02** — the checkbox is admin-side and informational; approval stays manual because every driver carries goods for hire and « individual » is undefined.
+- **A07** — generic labelled illustrations or nothing; no AI image, no provider, no cost.
+- **U01** — one focused pass without a reference: hero, three steps, two reasons, one button. Cross-sell banner, job-board preview, platform tour and testimonials are no longer on the page.
+- **U04** — five headings, no new data: Identity · Contact · Addresses · Driver · Account.
+- **B05** — the email goes out at submission only, French then English in one message.
+- **B03** — a trip needs a town and a postcode; the street and the pin are optional (the pin is looked up).
+
+### Operator to-do
+
+- [ ] **Run Actions → "Migrate database" on the release branch before `main` moves** — `0047_time_windows_contact_confirmed` (seven nullable columns). New code on an unmigrated database fails every read of `listings` and `carriers`.
+
+---
+
 ## Client feedback monitor — WhatsApp batch of 31 October 2026 (the request form)
 
 _Owner: this section is for you. One row per message the client forwarded on
@@ -457,7 +489,7 @@ than leaving it in a chat message.
       after the deploy. See « Remove the published test quote » above.
       Claude was refused both the dispatch (« Production Deploy ») and, on
       30 October, `gh variable set` (« Account & Standing-Rule Changes »).
-- [ ] **Run Actions → "Migrate database" before `main` moves past `d842bbb`**
+- [x] ~~**Run Actions → "Migrate database" before `main` moves past `d842bbb`**~~ — done: 2.71.0 shipped `0042`–`0044` and the owner applied them on 2026-10-30 (see « State on 2026-10-31 » above). Kept for history:
       — on the newest `release/2.6x.0` branch (it carries every migration
       below), environment `production`, confirm `migrate`, and change « Use
       workflow from » off `main`. Pending: `0042_carrier_absence_deregistration`
@@ -987,6 +1019,31 @@ _The owner, with a screenshot of the admin sidebar: « I think the driver applic
 - The phone bars for drivers and requesters were not regrouped (they are icon bars with no room for headings).
 - Not checked in a browser.
 
+## ✅ 2026-11-11 — Nicolas's remaining tickets: trips by town, missing-documents mail, exact hours, contact confirmed, illustrations, homepage, profile (2.83.0)
+
+_Owner request: « go ahead to finish up the rest feedbacks to get it done, then report me back »; the answers adopted are the PDF's « Open Tickets with Suggested Answers » of 11 Nov. Spec `client_feedback_2026_11_11_spec.md`._
+
+### What changed
+
+See the spec; in one line each: **B03** `carrier-routes` DTO/service (`withPins`) + `TripRouteFormDialog` (`missingFor`); **B05** `tellApplicantWhatIsMissing` + `MissingDocumentsEmail`; **A01** four `listings` text columns through DTO, service, view, form and display; **C02** `setContactConfirmed` + route + `ContactConfirmedField`; **A07** `listings.illustration`, `IllustrationField`, `IllustrationImage`; **U04** `quickLinkGroups`; **U01** marketing page. **Migration `0047`** carries A01, A07 and C02 (journal `when` 1788865200000).
+
+### Found on the way
+
+- The trips dialog demanded street, town, postcode **and** a map pin: a driver who typed towns could never press « Créer », and nothing said why.
+- `Profile.test.tsx` and `LandingSessionCtas.test.tsx` pinned copy that changed (a duplicate « Addresses » heading; the « upload three documents » line) — both updated.
+- The « Bordereaux » table (2.82.0) drew an empty state with nothing to press, so `no-dead-ends.test.ts` — and the Gates workflow — would have been red on `main`; it now offers « Effacer la recherche » or a link to the Expedion bridge.
+- Two stale STATUS lines fixed: the 2.80.0 « Known limits » and the `0042`/`0043` operator to-do.
+
+### Verification
+
+`npx tsc --noEmit` 0 errors at the last run; the touched trees' unit tests pass (see the run in the session). Not run: a real-browser check, `pnpm build`; **the migration has not been applied to production.** The email path was unit-tested with the email service mocked — no real mail was sent.
+
+### Known limits
+
+Auto-approval (C02) is not built. The illustration does not reach the message-thread header. The missing-documents email goes out at submission only. Nothing from 2.80.0–2.83.0 has been looked at in a real browser by the author.
+
+---
+
 ## ✅ 2026-11-07 — Slip documents « NoSuchKey »: the import wrote to the dev bucket (2.82.2)
 
 _Owner: « still not able to view/open — analyze the root cause, fix immediately »._
@@ -1100,7 +1157,7 @@ _Owner request: « analyze this feedback, give me the context and a fix plan …
 
 ### Known limits
 
-A02 (form order), A04 (explicit buttons — the existing `Select` already offers « new address »), A07, C01/C02/C05, B02, B05, U01, U04, D01 are not done — see the owner's follow-up list.
+~~A02 (form order), A04 (explicit buttons), A07, C01/C02/C05, B02, B05, U01, U04, D01 are not done~~ — **superseded**: A02, A04 and B02 shipped in 2.80.0 itself; C05 in 2.80.0; the rest in 2.83.0 below, D01 in 2.82.x.
 
 ---
 

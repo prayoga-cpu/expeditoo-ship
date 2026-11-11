@@ -192,6 +192,11 @@ function toColumns(data: CreateListingInput, expiresAt: Date, now: Date) {
     pickupPeriods: data.pickupPeriods ?? [...TIME_SLOTS],
     dropoffDays: data.dropoffDays ?? [...ISO_WEEKDAYS],
     dropoffPeriods: data.dropoffPeriods ?? [...TIME_SLOTS],
+    illustration: data.illustration ?? null,
+    pickupTimeFrom: data.pickupTimeFrom ?? null,
+    pickupTimeTo: data.pickupTimeTo ?? null,
+    dropoffTimeFrom: data.dropoffTimeFrom ?? null,
+    dropoffTimeTo: data.dropoffTimeTo ?? null,
 
     budgetCents: data.budgetCents,
     expiresAt,

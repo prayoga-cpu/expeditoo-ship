@@ -66,7 +66,13 @@ export const carriersDal = {
   async listByStatus(status: CarrierStatus | undefined, tx: Executor = db) {
     return await tx.query.carriers.findMany({
       where: status ? eq(carriers.status, status) : undefined,
-      with: { documents: true, vehicles: true, user: true },
+      with: {
+        documents: true,
+        vehicles: true,
+        user: true,
+        // Who ticked « Contact confirmé », by name only (0047).
+        contactConfirmer: { columns: { id: true, name: true } },
+      },
       orderBy: desc(carriers.createdAt),
     });
   },

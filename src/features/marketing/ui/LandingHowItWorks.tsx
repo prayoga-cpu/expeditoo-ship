@@ -5,7 +5,6 @@ import {
   LP_CARD,
   LP_CONTAINER,
   LP_EYEBROW,
-  LP_GRID_4,
   LP_H2,
   LP_SECTION,
 } from "./styles";
@@ -14,7 +13,6 @@ const STEPS = [
   { key: "step1", index: "01", tone: "text-[var(--lp-ambertext)]" },
   { key: "step2", index: "02", tone: "text-[var(--lp-bluelink)]" },
   { key: "step3", index: "03", tone: "text-[var(--lp-bluelink)]" },
-  { key: "step4", index: "04", tone: "text-[var(--lp-green)]" },
 ] as const;
 
 export function LandingHowItWorks() {
@@ -33,7 +31,7 @@ export function LandingHowItWorks() {
           </p>
         </div>
 
-        <div className={LP_GRID_4}>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           {STEPS.map((step) => (
             <div key={step.key} className={`${LP_CARD} box-border gap-3`}>
               <span className={`font-mono text-xs ${step.tone}`}>

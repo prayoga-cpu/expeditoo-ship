@@ -84,7 +84,19 @@ export function BordereauxTable() {
           icon={FileSpreadsheet}
           title={t("empty")}
           description={debouncedQuery ? t("emptySearch") : t("emptyHint")}
-        />
+        >
+          {/* Where the next slip comes from: a search to clear, or the bridge
+              where quotes arrive (no_dead_ends_spec.md). */}
+          {debouncedQuery ? (
+            <Button variant="outline" onClick={() => setSearchQuery("")}>
+              {t("clearSearch")}
+            </Button>
+          ) : (
+            <Button asChild variant="outline">
+              <Link href="/admin/expedion">{t("openBridge")}</Link>
+            </Button>
+          )}
+        </CenteredEmptyState>
       ) : (
         <>
           <Card className="overflow-hidden p-0">

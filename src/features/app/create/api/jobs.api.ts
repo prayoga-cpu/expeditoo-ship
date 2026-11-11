@@ -130,9 +130,15 @@ export function toCreatePayload(values: JobFormOutput, publish: boolean) {
     pickupPeriods: values.pickupPeriods,
     dropoffDays: values.dropoffDays,
     dropoffPeriods: values.dropoffPeriods,
+    pickupTimeFrom: values.pickupTimeFrom,
+    pickupTimeTo: values.pickupTimeTo,
+    dropoffTimeFrom: values.dropoffTimeFrom,
+    dropoffTimeTo: values.dropoffTimeTo,
     // The form works in euros; the API is cents throughout.
     budgetCents: Math.round(values.budgetEuros * 100),
     photos: values.photos,
+    // An illustration only ever stands in for a photo.
+    illustration: values.photos.length === 0 ? values.illustration : undefined,
     publish,
     // A draft keeps no schedule: nothing publishes a draft at its scheduled
     // time (publication_timing_spec.md §2).

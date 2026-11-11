@@ -90,6 +90,9 @@ export interface CarrierApplication {
     absenceReason: string | null;
     deregisteredAt: string | null;
     deregistrationReason: string | null;
+    /** « Contact confirmé » (0047): when an operator reached the applicant, and who. */
+    contactConfirmedAt?: string | null;
+    contactConfirmer?: { id: string; name: string } | null;
     averageRating: number;
     totalRatings: number;
     completedJobs: number;
@@ -225,6 +228,10 @@ export const setCarrierAvailability = (
     id: string,
     input: CarrierAvailabilityRequest,
 ) => postCarrierAction(`/api/admin/carriers/${id}/availability`, "PUT", input);
+
+/** « Contact confirmé » ticked or unticked (client feedback 2026-11-06, C02). */
+export const setCarrierContactConfirmed = (id: string, confirmed: boolean) =>
+    postCarrierAction(`/api/admin/carriers/${id}/contact-confirmed`, "PUT", { confirmed });
 
 /** « Désinscrire » (§REQ-02). */
 export const deregisterCarrier = (id: string, reason: string) =>

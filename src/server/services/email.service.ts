@@ -1,6 +1,7 @@
 import { resend, sendViaResend, EMAIL_FROM } from "@/lib/email";
 import { SendEmailSchema, type SendEmailInput } from "@/server/dto/email.dto";
 import { WelcomeEmail } from "@/server/emails/WelcomeEmail";
+import { MissingDocumentsEmail } from "@/server/emails/MissingDocumentsEmail";
 import { PaymentReceiptEmail } from "@/server/emails/PaymentReceiptEmail";
 import { ShipmentAssignedEmail } from "@/server/emails/ShipmentAssignedEmail";
 import { OrderConfirmationEmail } from "@/server/emails/OrderConfirmationEmail";
@@ -266,6 +267,25 @@ export const emailService = {
     return this.sendEmail({
       to,
       subject: `Nouveau dossier chauffeur : ${params.applicantName}`,
+      html: emailHtml,
+    });
+  },
+
+  /** An applicant is told which required documents their file still lacks. */
+  async sendMissingDocumentsEmail(
+    to: string,
+    params: {
+      applicantName: string;
+      missingFr: string[];
+      missingEn: string[];
+      applicationUrl: string;
+    }
+  ) {
+    const emailHtml = await render(MissingDocumentsEmail(params));
+
+    return this.sendEmail({
+      to,
+      subject: "Il manque des documents à votre dossier chauffeur · Documents missing",
       html: emailHtml,
     });
   },

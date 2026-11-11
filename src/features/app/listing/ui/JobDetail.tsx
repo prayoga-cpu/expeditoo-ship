@@ -1,5 +1,6 @@
 "use client";
 
+import { IllustrationImage } from "@/components/ui/illustration-image";
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -439,6 +440,9 @@ function JobLoad({ job }: { job: Job }) {
         {t("load")}
       </h2>
       <Separator />
+      {job.illustration && (
+        <IllustrationImage kind={job.illustration} className="h-28 w-28 rounded-lg border" />
+      )}
       <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:grid-cols-3">
         <Detail label={t("weight")} value={`${job.weightKg} kg`} />
         <Detail label={t("quantity")} value={String(job.quantity)} />
@@ -622,6 +626,7 @@ function JobRoute({ job }: { job: Job }) {
             until={job.pickupUntil}
             days={job.pickupDays}
             periods={job.pickupPeriods}
+            hours={{ from: job.pickupTimeFrom, to: job.pickupTimeTo }}
           />
         </EndpointSlide>
         <EndpointSlide>
@@ -635,6 +640,7 @@ function JobRoute({ job }: { job: Job }) {
             until={job.dropoffUntil}
             days={job.dropoffDays}
             periods={job.dropoffPeriods}
+            hours={{ from: job.dropoffTimeFrom, to: job.dropoffTimeTo }}
           />
         </EndpointSlide>
       </div>
@@ -707,6 +713,7 @@ function Endpoint({
   until,
   days,
   periods,
+  hours,
 }: {
   title: string;
   address?: string;
@@ -718,6 +725,7 @@ function Endpoint({
   until: string;
   days?: Job["pickupDays"];
   periods?: Job["pickupPeriods"];
+  hours?: { from?: string | null; to?: string | null };
 }) {
   // The /create form already names every location type; reusing its catalogue
   // keeps one vocabulary for the enum instead of two that can disagree.
@@ -757,6 +765,7 @@ function Endpoint({
       <AvailabilityLine
         days={days}
         periods={periods}
+        hours={hours}
         className="block pl-5 text-sm text-muted-foreground"
       />
     </div>

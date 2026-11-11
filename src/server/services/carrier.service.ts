@@ -4,6 +4,7 @@ import { carriersDal } from "@/server/dal/carriers.dal";
 import * as usersDal from "@/server/dal/users.dal";
 import { offersDal } from "@/server/dal/offers.dal";
 import { shipmentsDal } from "@/server/dal/shipments.dal";
+import { DOCUMENT_LABELS, missingRequiredDocuments } from "@/lib/carrier-missing-documents";
 import { notificationsService } from "@/server/services/notifications.service";
 import { emailService } from "@/server/services/email.service";
 import { last4 } from "@/lib/french-identifiers";
@@ -277,6 +278,11 @@ export const carrierService = {
     await alertAdminsOfApplication(carrier).catch((e) =>
       console.error("driver application alert failed", e)
     );
+    // The applicant hears what their file still lacks (client feedback
+    // 2026-11-06, B05); nothing is sent when it is complete.
+    await tellApplicantWhatIsMissing(carrier).catch((e) =>
+      console.error("missing documents notice failed", e)
+    );
 
     return submitted;
   },
@@ -394,6 +400,24 @@ export const carrierService = {
   async listVehicles(userId: string) {
     const carrier = await this.requireOwnCarrier(userId);
     return await carriersDal.listVehicles(carrier.id);
+  },
+
+  /**
+   * « Contact confirmé »: an operator records that they reached the applicant.
+   * A timestamp and who — informational, it gates nothing: approval is still a
+   * manual decision (client feedback 2026-11-06, C02).
+   */
+  async setContactConfirmed(actor: Viewer, carrierId: string, confirmed: boolean) {
+    if (!actor.isAdmin && !actor.isOperator) {
+      throw err("FORBIDDEN_ROLE", 403, "Admin or operator access required");
+    }
+    const carrier = await carriersDal.getById(carrierId);
+    if (!carrier) throw err("CARRIER_NOT_FOUND", 404);
+
+    return await carriersDal.update(carrierId, {
+      contactConfirmedAt: confirmed ? new Date() : null,
+      contactConfirmedBy: confirmed ? actor.userId : null,
+    });
   },
 
   // ---- Admin review ----
@@ -679,6 +703,41 @@ async function alertAdminsOfApplication(carrier: Carrier) {
       }),
     ])
   );
+}
+
+/**
+ * The required documents an applicant has not uploaded, by email and in the app
+ * — the in-app notice is the one that cannot bounce. Silent when the file is
+ * complete.
+ */
+async function tellApplicantWhatIsMissing(carrier: Carrier) {
+  const missing = missingRequiredDocuments(
+    ((carrier as { documents?: { kind: string }[] }).documents ?? []).map((d) => d.kind)
+  );
+  if (missing.length === 0) return;
+
+  const labels = missing.map((kind) => DOCUMENT_LABELS[kind]);
+  const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://expeditoo.com";
+
+  await Promise.allSettled([
+    notificationsService.createNotification({
+      userId: carrier.userId,
+      type: "carrier_documents_missing",
+      title: "Documents manquants · Documents missing",
+      message: labels.map((l) => l.fr).join(", "),
+      linkUrl: "/carrier/application",
+    }),
+    (async () => {
+      const applicant = await usersDal.getUserById(carrier.userId);
+      if (!applicant?.email) return;
+      await emailService.sendMissingDocumentsEmail(applicant.email, {
+        applicantName: applicant.name || carrier.companyName,
+        missingFr: labels.map((l) => l.fr),
+        missingEn: labels.map((l) => l.en),
+        applicationUrl: `${base}/carrier/application`,
+      });
+    })(),
+  ]);
 }
 
 async function notifyCarrier(userId: string, title: string, message: string) {

@@ -28,6 +28,11 @@ vi.mock("@/server/dal/carrier-routes.dal", () => ({
   },
 }));
 
+const locate = vi.fn();
+vi.mock("@/server/services/listing-pins.service", () => ({
+  locate: (...args: unknown[]) => locate(...args),
+}));
+
 vi.mock("@/server/services/carrier.service", () => ({
   carrierService: { requireOwnCarrier: vi.fn() },
   CarrierError: class extends Error {},
@@ -502,5 +507,68 @@ describe("CarrierRouteError", () => {
     const error = new CarrierRouteError("ROUTE_NOT_FOUND", 404);
     expect(error.code).toBe("ROUTE_NOT_FOUND");
     expect(error.status).toBe(404);
+  });
+});
+
+// ========================================
+// A trip by town and postcode — client feedback 2026-11-06, B03
+// ========================================
+
+describe("a trip declared without a street or a pin", () => {
+  const TOWN_ONLY = (city: string, postalCode: string) => ({ city, postalCode });
+
+  it("accepts a town and a postcode alone", () => {
+    expect(() =>
+      createCarrierRouteSchema.parse({
+        kind: "recurring",
+        origin: TOWN_ONLY("Paris", "75001"),
+        destination: TOWN_ONLY("Lyon", "69002"),
+        daysOfWeek: [2],
+      })
+    ).not.toThrow();
+  });
+
+  it("looks the pins up from the postcode and town before storing", async () => {
+    locate.mockResolvedValueOnce({ lat: 48.86, lng: 2.34 }).mockResolvedValueOnce({ lat: 45.76, lng: 4.83 });
+    vi.mocked(carrierRoutesDal.create).mockResolvedValue({ id: "route-1" } as never);
+
+    await carrierRoutesService.create(
+      "user-1",
+      createCarrierRouteSchema.parse({
+        kind: "recurring",
+        origin: TOWN_ONLY("Paris", "75001"),
+        destination: TOWN_ONLY("Lyon", "69002"),
+        daysOfWeek: [2],
+      })
+    );
+
+    expect(locate).toHaveBeenCalledWith("", "75001", "Paris", "fr");
+    expect(vi.mocked(carrierRoutesDal.create).mock.calls[0][0]).toMatchObject({
+      originLat: 48.86,
+      destinationLng: 4.83,
+      originAddress: "",
+    });
+  });
+
+  it("keeps a pin the map gave instead of looking one up", async () => {
+    vi.mocked(carrierRoutesDal.create).mockResolvedValue({ id: "route-1" } as never);
+    await carrierRoutesService.create("user-1", recurringInput());
+    expect(locate).not.toHaveBeenCalled();
+  });
+
+  it("refuses a place that cannot be found, rather than store a trip with no coordinates", async () => {
+    locate.mockResolvedValue(null);
+    await expect(
+      carrierRoutesService.create(
+        "user-1",
+        createCarrierRouteSchema.parse({
+          kind: "recurring",
+          origin: TOWN_ONLY("Nulle-Part", "99999"),
+          destination: LYON,
+          daysOfWeek: [2],
+        })
+      )
+    ).rejects.toMatchObject({ code: "ROUTE_LOCATION_NOT_FOUND", status: 422 });
+    expect(carrierRoutesDal.create).not.toHaveBeenCalled();
   });
 });

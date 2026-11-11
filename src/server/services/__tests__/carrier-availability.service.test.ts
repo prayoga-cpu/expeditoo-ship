@@ -17,7 +17,10 @@ const dal = vi.hoisted(() => ({
     getUserById: vi.fn(),
     assignRoleIfMissing: vi.fn().mockResolvedValue(undefined),
   },
-  email: { sendDriverApplicationSubmittedEmail: vi.fn().mockResolvedValue(true) },
+  email: {
+    sendDriverApplicationSubmittedEmail: vi.fn().mockResolvedValue(true),
+    sendMissingDocumentsEmail: vi.fn().mockResolvedValue(true),
+  },
 }));
 
 vi.mock("@/db", () => ({
@@ -199,7 +202,10 @@ describe("submitApplication alerts the admins", () => {
   it("notifies and emails every admin, naming the applicant and the company only", async () => {
     await carrierService.submitApplication("driver");
 
-    expect(dal.notify).toHaveBeenCalledTimes(2);
+    const adminNotices = dal.notify.mock.calls.filter(
+      ([n]) => (n as { type: string }).type === "carrier_application"
+    );
+    expect(adminNotices).toHaveLength(2);
     expect(dal.notify).toHaveBeenCalledWith(
       expect.objectContaining({ userId: "a1", linkUrl: "/admin/drivers?tab=applications" })
     );
@@ -218,5 +224,100 @@ describe("submitApplication alerts the admins", () => {
     dal.users.getUsersByRole.mockRejectedValue(new Error("down"));
     const result = await carrierService.submitApplication("driver");
     expect(result).toMatchObject({ status: "submitted" });
+  });
+});
+
+/** client feedback 2026-11-06, B05 */
+describe("submitApplication tells the applicant what is missing", () => {
+  const files = (...kinds: string[]) => kinds.map((kind) => ({ kind }));
+
+  beforeEach(() => {
+    dal.users.getUsersByRole.mockResolvedValue([]);
+    dal.users.getUserById.mockResolvedValue({ id: "driver", name: "Paul Martin", email: "paul@example.com" });
+  });
+
+  it("emails and notifies the applicant the half of the file that is missing", async () => {
+    dal.carriers.getByUserId.mockResolvedValue(
+      carrier({
+        status: "draft",
+        companyName: "Paul Martin EI",
+        city: "Lyon",
+        documents: files("cni_recto", "cni_verso"),
+      })
+    );
+
+    await carrierService.submitApplication("driver");
+
+    expect(dal.email.sendMissingDocumentsEmail).toHaveBeenCalledWith(
+      "paul@example.com",
+      expect.objectContaining({
+        missingFr: ["Permis de conduire", "Attestation d'assurance", "RIB"],
+        missingEn: ["Driving licence", "Insurance certificate", "Bank details (RIB)"],
+      })
+    );
+    expect(dal.notify).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: "driver", type: "carrier_documents_missing" })
+    );
+  });
+
+  it("sends nothing when the file is complete", async () => {
+    dal.carriers.getByUserId.mockResolvedValue(
+      carrier({
+        status: "draft",
+        companyName: "Paul Martin EI",
+        city: "Lyon",
+        documents: files("cni_recto", "cni_verso", "driving_licence", "insurance_certificate", "rib"),
+      })
+    );
+
+    await carrierService.submitApplication("driver");
+
+    expect(dal.email.sendMissingDocumentsEmail).not.toHaveBeenCalled();
+  });
+});
+
+/** client feedback 2026-11-06, C02 — « Contact confirmé » */
+describe("setContactConfirmed", () => {
+  const operator = { userId: "ops", isOperator: true };
+
+  it("records who ticked it and when, for an admin or an operator", async () => {
+    await carrierService.setContactConfirmed(admin as never, "c1", true);
+    expect(dal.carriers.update).toHaveBeenCalledWith("c1", {
+      contactConfirmedAt: expect.any(Date),
+      contactConfirmedBy: "boss",
+    });
+    await carrierService.setContactConfirmed(operator as never, "c1", true);
+    expect(dal.carriers.update).toHaveBeenLastCalledWith("c1", {
+      contactConfirmedAt: expect.any(Date),
+      contactConfirmedBy: "ops",
+    });
+  });
+
+  it("clears both when unticked", async () => {
+    await carrierService.setContactConfirmed(admin as never, "c1", false);
+    expect(dal.carriers.update).toHaveBeenCalledWith("c1", {
+      contactConfirmedAt: null,
+      contactConfirmedBy: null,
+    });
+  });
+
+  it("never touches the approval", async () => {
+    await carrierService.setContactConfirmed(admin as never, "c1", true);
+    const patch = dal.carriers.update.mock.calls.at(-1)![1] as Record<string, unknown>;
+    expect(Object.keys(patch).sort()).toEqual(["contactConfirmedAt", "contactConfirmedBy"]);
+  });
+
+  it("refuses anyone who is not staff", async () => {
+    await expect(
+      carrierService.setContactConfirmed(stranger as never, "c1", true)
+    ).rejects.toMatchObject({ status: 403 });
+    expect(dal.carriers.update).not.toHaveBeenCalled();
+  });
+
+  it("answers not found for a driver that does not exist", async () => {
+    dal.carriers.getById.mockResolvedValue(undefined);
+    await expect(
+      carrierService.setContactConfirmed(admin as never, "nope", true)
+    ).rejects.toMatchObject({ status: 404 });
   });
 });

@@ -314,6 +314,13 @@
     }
   },
   "profile": {
+    "sections": {
+      "identity": "Identité",
+      "contact": "Contact",
+      "addresses": "Adresses",
+      "driver": "Chauffeur",
+      "account": "Compte"
+    },
     "public": {
       "notFound": "Utilisateur non trouvé",
       "notFoundDesc": "L'utilisateur que vous recherchez n'existe pas.",
@@ -1053,6 +1060,7 @@
         "dayLimit": "{count} jours maximum.",
         "dayLimitReached": "{count} jours maximum. Retirez-en un pour en proposer un autre.",
         "noMoreDays": "Tous les jours possibles pour cette demande sont déjà choisis.",
+        "windowHint": "Cette demande se fait du {from} au {until} : les autres jours sont fermés.",
         "empty": "Ajoutez au moins un jour où vous pouvez faire cette course.",
         "removeDay": "Retirer ce jour",
         "slot": {
@@ -1146,6 +1154,19 @@
     }
   },
   "create": {
+    "illustration": {
+      "title": "Pas de photo ? Une illustration peut la remplacer.",
+      "hint": "Une image générique du type d'objet, pas une photo du vôtre. Elle est toujours signalée « Illustration ».",
+      "choose": "Choisir l'illustration",
+      "consent": "J'accepte d'utiliser cette image illustrative à la place d'une photo.",
+      "kind": {
+        "furniture": "Meuble",
+        "parcel": "Colis",
+        "pallet": "Palette",
+        "vehicle": "Véhicule"
+      },
+      "label": "Illustration"
+    },
     "title": "Demander un transport",
     "subtitle": "Les transporteurs répondent à votre demande qui doit être la plus précise possible. Vérifiez vos dimensions d'objets et d'accès ainsi que la disponibilité des personnes intervenant au retrait et à la livraison (jours de la semaine et tranches horaires).",
     "steps": {
@@ -1404,6 +1425,11 @@
       "auction_house": "Commissaire-priseur"
     },
     "when": {
+      "hoursRange": "{from}–{to}",
+      "hoursLabel": "Plage horaire précise (facultatif)",
+      "hoursFrom": "De",
+      "hoursTo": "À",
+      "hoursHint": "Laissez vide si les périodes ci-dessus suffisent.",
       "modeLabel": "Vos dates sont-elles fixes ?",
       "mode": {
         "exact": "Date précise",
@@ -1485,6 +1511,9 @@
       "tooMany": "Seules {count} photos ont été ajoutées — la limite est de {max}."
     },
     "validation": {
+      "timeWindowIncomplete": "Indiquez l'heure de début et l'heure de fin, ou aucune des deux.",
+      "timeWindowOrder": "L'heure de fin doit venir après l'heure de début.",
+      "timeInvalid": "Heure invalide (format 09:00).",
       "titleShort": "Au moins 2 caractères",
       "descriptionShort": "Au moins 5 caractères",
       "fragileNoteMax": "300 caractères maximum",
@@ -1983,12 +2012,12 @@
       "badge": "Le réseau de transporteurs du groupe Expedion",
       "titleLine1": "Les courses viennent à vous.",
       "titleLine2": "Vous fixez le prix.",
-      "subtitle": "Quand la flotte d'Expedion est complète, la course est publiée ici automatiquement. Enchérissez votre prix, remportez le trajet, livrez, soyez payé par virement. Zéro prospection.",
+      "subtitle": "Quand la flotte d'Expedion est complète, la course est publiée ici. Proposez votre prix, roulez, soyez payé par virement. Sans prospection.",
       "step1": "Une course se libère",
       "step2": "Vous enchérissez à la baisse",
       "step3": "Livrez, soyez payé",
       "primaryCta": "Rejoindre le réseau",
-      "secondaryCta": "Voir les courses ouvertes",
+      "secondaryCta": "Comment ça marche",
       "primaryCtaAuthed": "Ouvrir votre profil"
     },
     "bidCard": {
@@ -2015,8 +2044,8 @@
     },
     "howItWorks": {
       "eyebrow": "COMMENT ÇA MARCHE",
-      "title": "Une seule source de courses : les commandes Expedion",
-      "intro": "Pas de place de marché à écumer, pas d'enchères d'objets. Chaque course est une expédition Expedion réelle, emballée et assurée, que notre flotte n'a pas pu prendre.",
+      "title": "Trois étapes, c'est tout",
+      "intro": "Chaque course est une vraie livraison Expedion que notre flotte n'a pas pu prendre.",
       "step1": {
         "title": "Une course est publiée automatiquement",
         "desc": "Un client a commandé sur Expedion et aucun chauffeur du réseau n'est libre. Trajet, gabarit, photos et échéance sont déjà dans l'annonce."
@@ -2116,8 +2145,8 @@
       }
     },
     "cta": {
-      "title": "Vérifié en 24 heures. En course le jour même.",
-      "subtitle": "SIRET, assurance, licence : trois documents à déposer et votre premier tableau s'ouvre.",
+      "title": "Prêt à rouler ? Rejoignez le réseau.",
+      "subtitle": "SIRET, assurance, permis : déposez vos documents et, une fois votre dossier validé, vous pouvez proposer vos prix.",
       "primary": "Devenir transporteur",
       "primaryAuthed": "Ouvrir votre profil",
       "subtitleAuthed": "Vous êtes déjà connecté. Vos documents, votre véhicule et votre vérification sont dans votre profil."
@@ -2999,6 +3028,12 @@
         "absent": "Absent"
       },
       "detail": {
+        "contactConfirmed": {
+          "label": "Contact confirmé",
+          "hint": "Cochez quand vous avez joint le candidat. Cela ne change pas l'approbation.",
+          "confirmedOn": "Confirmé le {date} par {by}.",
+          "you": "vous"
+        },
         "title": "Candidature transporteur",
         "applicant": "Candidat",
         "submissionDate": "Date de soumission",
@@ -3421,6 +3456,8 @@
       "proposeHint": "Ouvrez la demande pour proposer une offre au client : il paiera pour confirmer."
     },
     "bordereaux": {
+      "clearSearch": "Effacer la recherche",
+      "openBridge": "Ouvrir le pont Expedion",
       "title": "Bordereaux",
       "subtitle": "Chaque bordereau reçu : numéro, acheteur, contact, adresse de facturation, date de vente et description, avec le document. Exportable en CSV.",
       "searchPlaceholder": "N° de bordereau, nom, e-mail, téléphone, ville, description…",
@@ -3940,6 +3977,12 @@
         "notFound": "Ce trajet n'existe plus."
       },
       "form": {
+        "missing": {
+          "origin": "Indiquez la ville et le code postal du départ.",
+          "destination": "Indiquez la ville et le code postal de l'arrivée.",
+          "days": "Choisissez au moins un jour de la semaine.",
+          "dates": "Ajoutez au moins une date."
+        },
         "createTitle": "Nouveau trajet",
         "editTitle": "Modifier le trajet",
         "description": "Où vous allez, à quelle fréquence, et ce que vous pouvez charger. Vous choisissez plus bas qui peut le voir.",

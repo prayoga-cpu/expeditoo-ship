@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ILLUSTRATION_KINDS } from "@/lib/illustrations";
 import {
   ISO_WEEKDAYS,
   MAX_AVAILABILITY_DAYS,
@@ -154,6 +155,9 @@ const weekdaySet = z
     ISO_WEEKDAYS.filter((day) => days.includes(day))
   );
 
+/** A time of day as « HH:MM », 24 h. */
+export const clockTime = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "INVALID_TIME");
+
 const periodSet = z
   .array(z.enum(TIME_SLOTS))
   .min(1)
@@ -226,6 +230,13 @@ const baseListingSchema = z.object({
   pickupPeriods: periodSet.optional(),
   dropoffDays: weekdaySet.optional(),
   dropoffPeriods: periodSet.optional(),
+  // Optional exact hours, « 09:00 » — see the refinement on `createListingSchema`.
+  /** A built-in illustration the requester accepted; only for a request with no photo. */
+  illustration: z.enum(ILLUSTRATION_KINDS).optional(),
+  pickupTimeFrom: clockTime.optional(),
+  pickupTimeTo: clockTime.optional(),
+  dropoffTimeFrom: clockTime.optional(),
+  dropoffTimeTo: clockTime.optional(),
 
   budgetCents: z.number().int().min(MIN_BUDGET_CENTS).max(MAX_BUDGET_CENTS),
   photos: z.array(z.string().url()).max(10).default([]),
@@ -240,6 +251,34 @@ const baseListingSchema = z.object({
 });
 
 export const createListingSchema = baseListingSchema.superRefine((data, ctx) => {
+  // An illustration stands in for a photo; it never sits beside one.
+  if (data.illustration && data.photos.length > 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "ILLUSTRATION_WITH_PHOTOS",
+      path: ["illustration"],
+    });
+  }
+  // Exact hours at an end are a pair, and the end comes after the start
+  // (client feedback 2026-11-06, A01). « HH:MM » compares as text.
+  for (const side of ["pickup", "dropoff"] as const) {
+    const from = data[`${side}TimeFrom`];
+    const to = data[`${side}TimeTo`];
+    if ((from === undefined) !== (to === undefined)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "TIME_WINDOW_INCOMPLETE",
+        path: [from === undefined ? `${side}TimeFrom` : `${side}TimeTo`],
+      });
+    } else if (from !== undefined && to !== undefined && to <= from) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "TIME_WINDOW_ORDER",
+        path: [`${side}TimeTo`],
+      });
+    }
+  }
+
   // Dimensions are all-or-nothing: a half-described box cannot be matched to a
   // vehicle, so partial input is rejected rather than silently ignored.
   const dims = [data.lengthCm, data.widthCm, data.heightCm];
@@ -391,8 +430,12 @@ export const MATERIAL_FIELDS = [
   "isFlexible",
   "pickupDays",
   "pickupPeriods",
+  "pickupTimeFrom",
+  "pickupTimeTo",
   "dropoffDays",
   "dropoffPeriods",
+  "dropoffTimeFrom",
+  "dropoffTimeTo",
 ] as const satisfies readonly (keyof UpdateListingInput)[];
 
 /** A comma-separated query parameter, as the URL carries it. */

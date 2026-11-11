@@ -43,6 +43,10 @@ interface TimingFieldProps {
   /** The derived pickup start, when passed slots pushed it later. */
   pickupClampedFrom?: string | null;
   publication: PublicationIssues;
+  /** Optional exact hours at each end (client feedback 2026-11-06, A01). */
+  hours?: Record<"pickup" | "dropoff", { from: string; to: string }>;
+  onHoursChange?: (side: "pickup" | "dropoff", next: { from: string; to: string }) => void;
+  hoursError?: Partial<Record<"pickup" | "dropoff", string | undefined>>;
 }
 
 /**
@@ -63,6 +67,9 @@ export function TimingField({
   dropoffDaysError,
   pickupClampedFrom,
   publication,
+  hours,
+  onHoursChange,
+  hoursError,
 }: TimingFieldProps) {
   const t = useTranslations("create.when");
   const format = useFormatter();
@@ -101,6 +108,9 @@ export function TimingField({
         onChange={(pickup) => onChange({ ...timing, pickup })}
         error={pickupError}
         daysError={pickupDaysError}
+        hours={hours?.pickup}
+        onHoursChange={onHoursChange && ((next) => onHoursChange("pickup", next))}
+        hoursError={hoursError?.pickup}
       >
         {pickupClampedFrom && !publication.pickup && (
           <p className="text-xs text-muted-foreground">
@@ -120,6 +130,9 @@ export function TimingField({
         onChange={(dropoff) => onChange({ ...timing, dropoff })}
         error={dropoffError}
         daysError={dropoffDaysError}
+        hours={hours?.dropoff}
+        onHoursChange={onHoursChange && ((next) => onHoursChange("dropoff", next))}
+        hoursError={hoursError?.dropoff}
       />
     </div>
   );
@@ -134,6 +147,9 @@ function EndpointTimingFields({
   onChange,
   error,
   daysError,
+  hours,
+  onHoursChange,
+  hoursError,
   children,
 }: {
   side: "pickup" | "dropoff";
@@ -144,6 +160,9 @@ function EndpointTimingFields({
   onChange: (next: EndpointTiming) => void;
   error?: string;
   daysError?: string;
+  hours?: { from: string; to: string };
+  onHoursChange?: (next: { from: string; to: string }) => void;
+  hoursError?: string;
   children?: ReactNode;
 }) {
   const t = useTranslations("create.when");
@@ -246,6 +265,38 @@ function EndpointTimingFields({
             onChange={(periods) => onChange({ ...value, periods })}
           />
         </>
+      )}
+
+      {hours && onHoursChange && (
+        <div>
+          <Label>{t("hoursLabel")}</Label>
+          <div className="mt-1 grid grid-cols-2 gap-3">
+            <div>
+              <Label htmlFor={`${side}-time-from`} className="text-xs font-normal text-muted-foreground">
+                {t("hoursFrom")}
+              </Label>
+              <Input
+                id={`${side}-time-from`}
+                type="time"
+                value={hours.from}
+                onChange={(e) => onHoursChange({ ...hours, from: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label htmlFor={`${side}-time-to`} className="text-xs font-normal text-muted-foreground">
+                {t("hoursTo")}
+              </Label>
+              <Input
+                id={`${side}-time-to`}
+                type="time"
+                value={hours.to}
+                onChange={(e) => onHoursChange({ ...hours, to: e.target.value })}
+              />
+            </div>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">{t("hoursHint")}</p>
+          <FieldError message={hoursError} />
+        </div>
       )}
 
       <FieldError message={error} />

@@ -48,7 +48,7 @@ const EMPTY_POINT: LocationPickerValue = {
 const NO_VEHICLE = "none";
 const ISO_WEEKDAYS = [1, 2, 3, 4, 5, 6, 7];
 
-interface FormState {
+export interface FormState {
   label: string;
   kind: CarrierRouteKind;
   origin: LocationPickerValue;
@@ -66,7 +66,7 @@ interface FormState {
   isDiscoverable: boolean;
 }
 
-const blankForm = (): FormState => ({
+export const blankForm = (): FormState => ({
   label: "",
   kind: "recurring",
   origin: EMPTY_POINT,
@@ -114,14 +114,18 @@ function formFromRoute(route: CarrierRoute): FormState {
   };
 }
 
-/** The picker leaves lat/lng null until a pin drops; the API will not. */
-function isComplete(form: FormState): boolean {
-  const pinned = (point: LocationPickerValue) =>
-    Boolean(point.address && point.city && point.postalCode && point.lat !== null);
-
-  if (!pinned(form.origin) || !pinned(form.destination)) return false;
-  if (form.kind === "recurring") return form.daysOfWeek.length > 0;
-  return form.dates.length > 0;
+/**
+ * What still stands between the form and « Créer », or null when nothing does.
+ * A trip is a town and a postcode at each end plus when; the street and the pin
+ * are optional (the server finds a pin), and a button that stays grey without a
+ * reason reads as broken (client feedback 2026-11-06, B03).
+ */
+export function missingFor(form: FormState): "origin" | "destination" | "days" | "dates" | null {
+  const placed = (point: LocationPickerValue) => Boolean(point.city && point.postalCode);
+  if (!placed(form.origin)) return "origin";
+  if (!placed(form.destination)) return "destination";
+  if (form.kind === "recurring") return form.daysOfWeek.length > 0 ? null : "days";
+  return form.dates.length > 0 ? null : "dates";
 }
 
 function toInput(form: FormState): CarrierRouteInput {
@@ -129,8 +133,8 @@ function toInput(form: FormState): CarrierRouteInput {
     address: value.address,
     city: value.city,
     postalCode: value.postalCode,
-    lat: value.lat as number,
-    lng: value.lng as number,
+    // Only a pin the map actually gave; the server looks one up otherwise.
+    ...(value.lat !== null && value.lng !== null ? { lat: value.lat, lng: value.lng } : {}),
   });
 
   const capacity = Number.parseFloat(form.capacityKg);
@@ -183,6 +187,7 @@ export function TripRouteFormDialog({
   const t = useTranslations("carrier.trips.form");
   const [form, setForm] = useState<FormState>(blankForm);
   const [pendingDate, setPendingDate] = useState("");
+  const missing = missingFor(form);
 
   // Reopening for a different trip must not show the previous one's answers.
   useEffect(() => {
@@ -370,12 +375,18 @@ export function TripRouteFormDialog({
           </div>
         </div>
 
+        {missing && (
+          <p className="text-muted-foreground text-sm" role="status">
+            {t(`missing.${missing}`)}
+          </p>
+        )}
+
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             {t("cancel")}
           </Button>
           <Button
-            disabled={!isComplete(form) || isSaving}
+            disabled={missing !== null || isSaving}
             onClick={() => onSubmit(toInput(form))}
           >
             {route ? t("save") : t("create")}

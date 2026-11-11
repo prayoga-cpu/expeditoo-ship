@@ -39,6 +39,7 @@ import { RequestActivityCard } from "./RequestActivityCard";
 import type { LucideIcon } from "lucide-react";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { useUserRoles } from "../hooks/useUserRoles";
+import { useCarrierApplication } from "@/features/app/carrier/hooks/useCarrier";
 import { PageLoader } from "@/components/ui/page-loader";
 import { PageWrapper } from "@/components/ui/page-wrapper";
 import { LottieLoader } from "@/components/ui/lottie-loader";
@@ -59,6 +60,17 @@ export function Profile() {
   const { user: authUser } = useAuth();
 
   const t = useTranslations("profile");
+  const pathname = usePathname();
+  const isDriverRole =
+    userRoles?.includes("carrier") || userRoles?.includes("driver") || false;
+  // An applicant whose file is in review has a driver section too; someone with
+  // no application and no driver role does not (client feedback 2026-11-06, U04).
+  const { data: application } = useCarrierApplication({ enabled: !isDriverRole });
+  const groups = quickLinkGroups({
+    roles: userRoles,
+    pathname,
+    hasApplication: Boolean(application),
+  });
 
   // File input ref for profile picture
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -111,8 +123,11 @@ export function Profile() {
         className="hidden"
       />
 
-      {/* Profile Header */}
-      <Card className="mb-6">
+      {/* Profile Header — « Identité » */}
+      <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+        {t("sections.identity")}
+      </h2>
+      <Card className="mb-8">
         <CardContent className="p-6 md:p-8">
           <div className="flex flex-col md:flex-row gap-6 items-center md:items-center">
             <div className="relative">
@@ -217,26 +232,30 @@ export function Profile() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column - Quick Navigation */}
-        <div className="lg:col-span-1">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">{t("quickLinks.title")}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <QuickLinks userRoles={userRoles} />
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Right Column - Details */}
-        <div className="lg:col-span-2 space-y-6">
-          {authUser?.id ? <RequestActivityCard userId={authUser.id} /> : null}
-
+      {/* Five headings, in the order someone looks for things: who you are, how
+          to reach you, where you are, what you drive, and your account
+          (client feedback 2026-11-06, U04). The header card above is « Identité ». */}
+      <div className="space-y-8">
+        <ProfileSection title={t("sections.contact")}>
           <ContactDetailsCard />
+        </ProfileSection>
 
+        <ProfileSection title={t("sections.addresses")}>
           <SavedAddressesCard />
+        </ProfileSection>
+
+        {groups.driver.length > 0 && (
+          <ProfileSection title={t("sections.driver")}>
+            <Card>
+              <CardContent className="space-y-2 p-4">
+                <QuickLinks links={groups.driver} />
+              </CardContent>
+            </Card>
+          </ProfileSection>
+        )}
+
+        <ProfileSection title={t("sections.account")}>
+          {authUser?.id ? <RequestActivityCard userId={authUser.id} /> : null}
 
           {/* Payment Methods (For Buyers) */}
           <Card>
@@ -258,175 +277,139 @@ export function Profile() {
             </CardContent>
           </Card>
 
+          {groups.account.length > 0 && (
+            <Card>
+              <CardContent className="space-y-2 p-4">
+                <QuickLinks links={groups.account} />
+              </CardContent>
+            </Card>
+          )}
+
           {/* A "Configuration des virements" card used to sit here, telling
               every user — drivers or not — to connect a Stripe account to be
               paid "for items you sell or deliveries you make". Goods-marketplace
               copy, and untrue: drivers are paid through Mes gains, and the
               Connect account it opened is paid into by nothing. The routes
               behind it are kept (payout_safety_spec.md §5). */}
-        </div>
+        </ProfileSection>
       </div>
     </PageWrapper>
   );
 }
 
+type QuickLink = {
+  href: string;
+  labelKey: string;
+  icon: LucideIcon;
+  /** The general profile tags its links so the page behind can offer « back ». */
+  fromProfile?: boolean;
+};
+
 // /my-auctions, /my-bids and /earnings used to live here. None of the three
 // routes ever existed, so every user was shown three links that 404 — they were
 // v1 goods-marketplace leftovers. Bids now live at /carrier/offers, which the
 // nav already carries.
-const baseQuickLinks: { href: string; labelKey: string; icon: LucideIcon }[] = [
-  {
-    href: "/profile/reviews",
-    labelKey: "myReviews",
-    icon: Star,
-  },
-  {
-    href: "/profile/payment-methods",
-    labelKey: "paymentMethods",
-    icon: CreditCard,
-  },
+const ACCOUNT_LINKS: QuickLink[] = [
+  { href: "/profile/reviews", labelKey: "myReviews", icon: Star },
+  { href: "/profile/payment-methods", labelKey: "paymentMethods", icon: CreditCard },
   // /profile/invoices existed but was linked from nowhere except an email
   // body, so the only way in was to know the URL.
-  {
-    href: "/profile/invoices",
-    labelKey: "myInvoices",
-    icon: Receipt,
-  },
-  {
-    href: "/help",
-    labelKey: "contactHelp",
-    icon: HelpCircle,
-  },
+  { href: "/profile/invoices", labelKey: "myInvoices", icon: Receipt },
+  { href: "/help", labelKey: "contactHelp", icon: HelpCircle },
 ];
 
-function QuickLinks({ userRoles }: { userRoles?: string[] }) {
-  const t = useTranslations("profile.quickLinks");
-  const pathname = usePathname();
-  const isAdmin = userRoles?.includes("admin");
-  const isDriver =
-    userRoles?.includes("carrier") || userRoles?.includes("driver");
+/**
+ * Which links go under « Chauffeur » and which under « Compte », for this
+ * page and this person. Pure, so the page can ask whether a section exists
+ * before it draws its heading.
+ */
+export function quickLinkGroups({
+  roles,
+  pathname,
+  hasApplication,
+}: {
+  roles?: string[];
+  pathname?: string | null;
+  hasApplication: boolean;
+}): { driver: QuickLink[]; account: QuickLink[] } {
+  const isAdmin = roles?.includes("admin");
+  const isCarrier = roles?.includes("carrier");
+  const isDriver = isCarrier || roles?.includes("driver");
 
-  const isAdminProfile = pathname?.startsWith("/admin");
-  const isDriverProfile = pathname?.startsWith("/driver");
-
-  // If we are on the Admin Profile page, show ONLY relevant admin links that aren't in the bottom nav
-  if (isAdminProfile && isAdmin) {
-    const adminLinks = [
-      {
-        href: "/admin/users",
-        labelKey: "adminUsers",
-        icon: Users,
-      },
-      {
-        href: "/admin/payments",
-        labelKey: "adminPayments",
-        icon: DollarSign,
-      },
-      {
-        href: "/admin/support",
-        labelKey: "adminSupport",
-        icon: Headset,
-      },
-    ];
-
-    return (
-      <>
-        {adminLinks.map((link) => (
-          <Link key={link.href} href={link.href}>
-            <Button variant="ghost" className="w-full justify-start gap-3 h-12 group">
-              <link.icon className="w-5 h-5 text-primary group-hover:text-accent-foreground" />
-              <span>{t(link.labelKey)}</span>
-            </Button>
-          </Link>
-        ))}
-      </>
-    );
+  // On the Admin profile, only the admin links that are not in the bottom nav.
+  if (pathname?.startsWith("/admin") && isAdmin) {
+    return {
+      driver: [],
+      account: [
+        { href: "/admin/users", labelKey: "adminUsers", icon: Users },
+        { href: "/admin/payments", labelKey: "adminPayments", icon: DollarSign },
+        { href: "/admin/support", labelKey: "adminSupport", icon: Headset },
+      ],
+    };
   }
 
-  // If we are on the Driver Profile page, show ONLY relevant driver links that aren't in the bottom nav
-  if (isDriverProfile && isDriver) {
-    const driverLinks = [
-      // Earnings live at « Mes gains »; `/earnings` never existed. A carrier
-      // who also drives keeps the link; a driver who is not a carrier is never
-      // shown pay.
-      ...(userRoles?.includes("carrier")
-        ? [{ href: "/carrier/withdrawals", labelKey: "earnings", icon: TrendingUp }]
-        : []),
-      {
-        href: "/profile/reviews",
-        labelKey: "myReviews",
-        icon: Star,
-      },
-      // Trips are added, edited and deleted here (client feedback 2026-11-06, C05).
-      { href: "/carrier/trips", labelKey: "myTrips", icon: Route },
-      {
-        href: "/driver/help",
-        labelKey: "driverSupport",
-        icon: HelpCircle,
-      },
-    ];
-
-    return (
-      <>
-        {driverLinks.map((link) => (
-          <Link key={link.href} href={link.href}>
-            <Button variant="ghost" className="w-full justify-start gap-3 h-12 group">
-              <link.icon className="w-5 h-5 text-primary group-hover:text-accent-foreground" />
-              <span>{t(link.labelKey)}</span>
-            </Button>
-          </Link>
-        ))}
-      </>
-    );
+  // On the Driver profile, only the driver links that are not in the bottom nav.
+  if (pathname?.startsWith("/driver") && isDriver) {
+    return {
+      account: [],
+      driver: [
+        // Earnings live at « Mes gains »; `/earnings` never existed. A carrier
+        // who also drives keeps the link; a driver who is not a carrier is never
+        // shown pay.
+        ...(isCarrier
+          ? [{ href: "/carrier/withdrawals", labelKey: "earnings", icon: TrendingUp }]
+          : []),
+        { href: "/profile/reviews", labelKey: "myReviews", icon: Star },
+        // Trips are added, edited and deleted here (client feedback 2026-11-06, C05).
+        { href: "/carrier/trips", labelKey: "myTrips", icon: Route },
+        { href: "/driver/help", labelKey: "driverSupport", icon: HelpCircle },
+      ],
+    };
   }
 
-  // Standard Profile Logic for general user profile page
-  const links = [...baseQuickLinks];
-
+  const account = ACCOUNT_LINKS.map((link) => ({ ...link, fromProfile: true }));
   if (isAdmin) {
-    links.unshift({
-      href: "/admin/expedion",
-      labelKey: "adminDashboard",
-      icon: Shield,
-    });
-    links.push({
-      href: "/admin/support",
-      labelKey: "adminSupport",
-      icon: Headset,
-    });
+    account.unshift({ href: "/admin/expedion", labelKey: "adminDashboard", icon: Shield, fromProfile: true });
+    account.push({ href: "/admin/support", labelKey: "adminSupport", icon: Headset, fromProfile: true });
   }
 
-  // Driver Logic - only add Link to Dashboard if we are on generic profile
-  // If we are on generic profile (not /driver/...) but are a driver, we show link to dashboard.
+  const driver: QuickLink[] = [];
   if (isDriver) {
-    links.unshift({
-      href: "/driver/dashboard",
-      labelKey: "driverDashboard",
-      icon: Truck,
-    });
-    links.unshift({ href: "/carrier/trips", labelKey: "myTrips", icon: Route });
-    // The driver sidebar only carries « Mon dossier » while the file is not
-    // approved; once it is, the application (documents, availability, the way
-    // to deregister) is reached from here.
-    links.push({
-      href: "/carrier/application",
-      labelKey: "driverApplication",
-      icon: ClipboardList,
-    });
+    driver.push(
+      { href: "/driver/dashboard", labelKey: "driverDashboard", icon: Truck, fromProfile: true },
+      { href: "/carrier/trips", labelKey: "myTrips", icon: Route, fromProfile: true },
+      // The driver sidebar only carries « Mon dossier » while the file is not
+      // approved; once it is, the application (documents, availability, the way
+      // to deregister) is reached from here.
+      { href: "/carrier/application", labelKey: "driverApplication", icon: ClipboardList, fromProfile: true }
+    );
+  } else if (hasApplication) {
+    driver.push({ href: "/carrier/application", labelKey: "driverApplication", icon: ClipboardList, fromProfile: true });
   } else {
-    // Was /become-driver, a route that never existed. Becoming a driver is the
-    // carrier application, which is also the "My application" nav entry.
-    links.push({
-      href: "/carrier/application",
-      labelKey: "becomeDriver",
-      icon: Truck,
-    });
+    // Becoming a driver is the carrier application, which is also the
+    // "My application" nav entry; with no application yet it is an account link.
+    account.push({ href: "/carrier/application", labelKey: "becomeDriver", icon: Truck, fromProfile: true });
   }
+
+  return { driver, account };
+}
+
+function ProfileSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="space-y-3">
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{title}</h2>
+      {children}
+    </section>
+  );
+}
+
+function QuickLinks({ links }: { links: QuickLink[] }) {
+  const t = useTranslations("profile.quickLinks");
 
   return (
     <>
       {links.map((link) => (
-        <Link key={link.href} href={`${link.href}?from=profile`}>
+        <Link key={link.href} href={link.fromProfile ? `${link.href}?from=profile` : link.href}>
           <Button variant="ghost" className="w-full justify-start gap-3 h-12 group">
             <link.icon className="w-5 h-5 text-primary group-hover:text-accent-foreground" />
             <span>{t(link.labelKey)}</span>

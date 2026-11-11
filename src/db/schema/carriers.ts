@@ -104,6 +104,12 @@ export const carriers = pgTable(
     approvedBy: text("approved_by").references(() => user.id, {
       onDelete: "set null",
     }),
+    // « Contact confirmé » (0047): an operator reached the applicant. Informational —
+    // approval does not read it.
+    contactConfirmedAt: timestamp("contact_confirmed_at"),
+    contactConfirmedBy: text("contact_confirmed_by").references(() => user.id, {
+      onDelete: "set null",
+    }),
     rejectionReason: text("rejection_reason"),
     suspensionReason: text("suspension_reason"),
 
@@ -250,6 +256,11 @@ export const carriersRelations = relations(carriers, ({ one, many }) => ({
     fields: [carriers.approvedBy],
     references: [user.id],
     relationName: "approverToCarriers",
+  }),
+  contactConfirmer: one(user, {
+    fields: [carriers.contactConfirmedBy],
+    references: [user.id],
+    relationName: "contactConfirmerToCarriers",
   }),
   documents: many(carrierDocuments),
   vehicles: many(vehicles),

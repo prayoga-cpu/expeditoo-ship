@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/dialog";
 import { LottieLoader } from "@/components/ui/lottie-loader";
 import { CarrierStatusBadge } from "./CarrierStatusBadge";
+import { ContactConfirmedField } from "./ContactConfirmedField";
 import { useCarrierDocumentViewer } from "../hooks/useCarrierApplications";
 import type {
   CarrierApplication,
@@ -48,6 +49,8 @@ interface CarrierApplicationDetailProps {
   }) => Promise<unknown>;
   onDeregister: (input: { id: string; reason: string }) => Promise<unknown>;
   onReinstate: (id: string) => Promise<unknown>;
+  /** « Contact confirmé » — informational (client feedback 2026-11-06, C02). */
+  onSetContactConfirmed?: (input: { id: string; confirmed: boolean }) => Promise<unknown>;
   /** Called after an action succeeded; the list closes the dialog. */
   onDone: () => void;
   onClose: () => void;
@@ -180,6 +183,7 @@ export function CarrierApplicationDetail({
   onSetAvailability,
   onDeregister,
   onReinstate,
+  onSetContactConfirmed,
   onDone,
   onClose,
 }: CarrierApplicationDetailProps) {
@@ -296,6 +300,13 @@ export function CarrierApplicationDetail({
               </p>
             )}
           </div>
+        )}
+        {onSetContactConfirmed && (
+          <ContactConfirmedField
+            application={application}
+            onSet={onSetContactConfirmed}
+            disabled={isUpdating}
+          />
         )}
         {application.status === "deregistered" && (
           <div className="rounded-md border p-3">
