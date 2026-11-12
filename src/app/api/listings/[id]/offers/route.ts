@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { offersService } from "@/server/services/offers.service";
+import { threadOffersService } from "@/server/services/thread-offers.service";
 import {
   createOfferSchema,
   listOffersQuerySchema,
@@ -64,6 +65,23 @@ export async function POST(req: Request, { params }: RouteParams) {
       listingId,
       data
     );
+
+    // The bid is the fact; the card in Messages is its mirror, so a failure here
+    // never refuses a bid that already committed.
+    await threadOffersService
+      .announceBid(
+        session.user.id,
+        {
+          id: offer.id,
+          listingId,
+          priceCents: offer.priceCents,
+          vehicleId: offer.vehicleId ?? null,
+          message: offer.message ?? null,
+        },
+        { slots: data.slots, deliveryLeadDays: data.deliveryLeadDays, tzOffset: data.tzOffset },
+        { name: session.user.name, image: session.user.image ?? null }
+      )
+      .catch((e) => console.error("[offers] announcing the bid in Messages failed", e));
 
     return ok(offer, 201);
   } catch (error) {

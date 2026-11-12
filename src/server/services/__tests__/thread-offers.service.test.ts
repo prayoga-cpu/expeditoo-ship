@@ -8,6 +8,7 @@ import { messagesDAL } from "@/server/dal/messages.dal";
 import { threadOffersDal } from "@/server/dal/thread-offers.dal";
 import { carriersDal } from "@/server/dal/carriers.dal";
 import { offersDal } from "@/server/dal/offers.dal";
+import { listingsDal } from "@/server/dal/listings.dal";
 import { offersService } from "../offers.service";
 import { paymentsService } from "../payments.service";
 import * as userService from "../user.service";
@@ -21,8 +22,14 @@ vi.mock("@/server/services/listing-pins.service", () => ({
   listingPinsService: { ensurePins: async <T,>(listing: T) => listing },
 }));
 vi.mock("@/server/dal/messages.dal", () => ({
-  messagesDAL: { getConversationById: vi.fn(), createMessage: vi.fn() },
+  messagesDAL: {
+    getConversationById: vi.fn(),
+    createMessage: vi.fn(),
+    findConversation: vi.fn(),
+    createConversation: vi.fn(),
+  },
 }));
+vi.mock("@/server/dal/listings.dal", () => ({ listingsDal: { getById: vi.fn() } }));
 
 vi.mock("@/server/dal/thread-offers.dal", () => ({
   threadOffersDal: {
@@ -615,5 +622,118 @@ describe("responding", () => {
       "withdrawn",
       null
     );
+  });
+});
+
+// ========================================
+// announceBid — client feedback 2026-11-12
+// ========================================
+
+describe("announceBid — a bid sent from the job page appears in Messages", () => {
+  const bid = {
+    id: "offer-9",
+    listingId: "listing-1",
+    priceCents: 17500,
+    vehicleId: "veh-1",
+    message: null as string | null,
+  };
+  const slots = (...days: string[]) =>
+    days.map((day) => ({ day, slot: "morning" as const }));
+
+  beforeEach(() => {
+    vi.mocked(listingsDal.getById).mockResolvedValue(openListing() as never);
+    vi.mocked(messagesDAL.findConversation).mockResolvedValue({ id: "conv-9" } as never);
+  });
+
+  it("posts a card that points at the real bid, in the thread with the requester", async () => {
+    const result = await threadOffersService.announceBid(ME, bid, {
+      slots: slots(tomorrow()),
+      deliveryLeadDays: 1,
+      tzOffset: 0,
+    });
+
+    expect(threadOffersDal.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        conversationId: "conv-9",
+        senderId: ME,
+        priceCents: 17500,
+        offerId: "offer-9",
+        vehicleId: "veh-1",
+      })
+    );
+    expect(messagesDAL.createMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        conversationId: "conv-9",
+        senderId: ME,
+        threadOfferId: expect.any(String),
+      })
+    );
+    expect(publishNewMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ recipientId: THEM, conversationId: "conv-9" })
+    );
+    expect(result).not.toBeNull();
+  });
+
+  it("opens the conversation when the two have not spoken yet", async () => {
+    vi.mocked(messagesDAL.findConversation).mockResolvedValue(null as never);
+    vi.mocked(messagesDAL.createConversation).mockResolvedValue({ id: "conv-new" } as never);
+
+    await threadOffersService.announceBid(ME, bid, {
+      slots: slots(tomorrow()),
+      deliveryLeadDays: 0,
+      tzOffset: 0,
+    });
+
+    expect(messagesDAL.createConversation).toHaveBeenCalledWith(
+      expect.objectContaining({ listingId: "listing-1" }),
+      [ME, THEM]
+    );
+    expect(threadOffersDal.create).toHaveBeenCalledWith(
+      expect.objectContaining({ conversationId: "conv-new" })
+    );
+  });
+
+  it("carries the earliest of several slots, and the sender's own words when there are some", async () => {
+    const d1 = tomorrow();
+    const d2 = new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10);
+
+    await threadOffersService.announceBid(
+      ME,
+      { ...bid, message: "Transport fiable" },
+      { slots: slots(d2, d1), deliveryLeadDays: 0, tzOffset: 0 }
+    );
+
+    expect(threadOffersDal.create).toHaveBeenCalledWith(
+      expect.objectContaining({ pickupDay: d1, note: "Transport fiable" })
+    );
+    expect(messagesDAL.createMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ content: "Transport fiable" })
+    );
+  });
+
+  it("stays out of an escalated job: its owner is a system account nobody reads", async () => {
+    vi.mocked(listingsDal.getById).mockResolvedValue(openListing({ origin: "expedion" }) as never);
+
+    const result = await threadOffersService.announceBid(ME, bid, {
+      slots: slots(tomorrow()),
+      deliveryLeadDays: 0,
+      tzOffset: 0,
+    });
+
+    expect(result).toBeNull();
+    expect(messagesDAL.createMessage).not.toHaveBeenCalled();
+  });
+
+  it("posts nothing when the sender already has a live card in the thread", async () => {
+    vi.mocked(threadOffersDal.getPendingBySender).mockResolvedValue({ id: "to-old" } as never);
+
+    const result = await threadOffersService.announceBid(ME, bid, {
+      slots: slots(tomorrow()),
+      deliveryLeadDays: 0,
+      tzOffset: 0,
+    });
+
+    expect(result).toBeNull();
+    expect(threadOffersDal.create).not.toHaveBeenCalled();
   });
 });

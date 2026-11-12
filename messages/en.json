@@ -801,6 +801,11 @@
       "fleetErrorTitle": "Could not load your vehicles",
       "fleetErrorDescription": "An offer names the vehicle that will do the job, so we need your fleet first.",
       "card": {
+        "slots": "Slots",
+        "slotsProposed": "{count, plural, one {# slot proposed} other {# slots proposed}}",
+        "chooseSlot": "View the offer and choose a slot",
+        "awaitingRequester": "Waiting for the requester, who chooses and confirms the offer.",
+        "awaitingOther": "Waiting for the other person's answer.",
         "title": "Offer",
         "pickup": "Pickup",
         "delivery": "Delivery",
@@ -1095,7 +1100,7 @@
       },
       "toast": {
         "submitted": "Offer sent",
-        "submittedDescription": "The requester has been told. You will find it under « My trips ».",
+        "submittedDescription": "The requester has been told and will answer. You will find it under « My offers » and in your messages.",
         "submitFailed": "Could not send the offer. Try again.",
         "withdrawn": "Offer withdrawn",
         "withdrawFailed": "Could not withdraw the offer. Try again."

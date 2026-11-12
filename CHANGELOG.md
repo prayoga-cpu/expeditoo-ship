@@ -32,6 +32,20 @@ the first release below is the commit that began the transport pivot.
   but stays for applicants and drivers.
 - A deregistered driver's status now reads « Désinscrit » instead of a blank.
 
+## [2.83.1] - 2026-11-12 · fix
+
+- **A quote sent from a job now shows in Messages.** The price, the pickup day
+  and the vehicle appear as an offer card in the conversation with the person
+  who posted the job, so the two can talk about it. Before, only a quote typed
+  inside the chat made a card.
+- **A quote that proposes several days says so.** The requester is sent to the
+  job to choose a day, instead of accepting blindly from the message.
+- **« En attente » says whose answer it is.** A sent quote now reads « En attente
+  de la réponse du demandeur, qui choisit et valide l'offre ». It is the
+  requester who decides, not an Expeditoo validation.
+- **The « Offre envoyée » message pointed to the wrong place.** It now says the
+  quote is in « Mes offres » and in the messages.
+
 ## [2.83.0] - 2026-11-11 · feat
 
 - **A driver can declare a trip with towns and dates only.** The trip form no

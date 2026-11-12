@@ -259,3 +259,42 @@ describe("ThreadOfferBubble, against the job's budget", () => {
     expect(container.textContent).not.toContain("Budget du demandeur");
   });
 });
+
+// client feedback 2026-11-12 — a bid sent from the job page shows up here.
+describe("a bid that came from the job page", () => {
+  const several = offer({
+    offer: {
+      id: "offer-1",
+      listingId: "listing-1",
+      status: "pending",
+      slots: [{ id: "s1" }, { id: "s2" }, { id: "s3" }],
+    },
+  });
+
+  it("sends the requester to the job page to choose among several slots, not to accept blind", () => {
+    renderBubble({ offer: several, viewerCanAward: true });
+
+    expect(screen.getByText(/3 créneaux proposés/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: fr.messages.offer.card.accept })).toBeNull();
+    expect(
+      screen.getByRole("link", { name: fr.messages.offer.card.chooseSlot })
+    ).toHaveAttribute("href", "/listing/listing-1");
+  });
+
+  it("still accepts in the bubble when the bid proposes a single slot", () => {
+    renderBubble({
+      offer: offer({
+        offer: { id: "offer-1", listingId: "listing-1", status: "pending", slots: [{ id: "s1" }] },
+      }),
+      viewerCanAward: true,
+    });
+
+    expect(screen.getByRole("button", { name: fr.messages.offer.card.accept })).toBeInTheDocument();
+  });
+
+  it("tells the sender who the offer is waiting for", () => {
+    renderBubble({ isOwn: true });
+
+    expect(screen.getByText(fr.messages.offer.card.awaitingRequester)).toBeInTheDocument();
+  });
+});

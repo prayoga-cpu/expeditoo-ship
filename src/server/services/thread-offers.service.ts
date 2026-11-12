@@ -5,6 +5,7 @@ import { messagesDAL } from "@/server/dal/messages.dal";
 import { threadOffersDal } from "@/server/dal/thread-offers.dal";
 import { carriersDal } from "@/server/dal/carriers.dal";
 import { offersDal } from "@/server/dal/offers.dal";
+import { listingsDal } from "@/server/dal/listings.dal";
 import { offersService } from "./offers.service";
 import { paymentsService } from "./payments.service";
 import * as userService from "./user.service";
@@ -249,6 +250,91 @@ export const threadOffersService = {
       conversationId,
       senderId: userId,
       recipientId: otherParticipant(conversation, userId),
+      message,
+      content,
+      senderInfo,
+      threadOfferId: threadOffer.id,
+    });
+
+    return { threadOffer, message };
+  },
+
+  /**
+   * A bid sent from the job page also appears in the conversation with the
+   * requester (client feedback 2026-11-12: « the price proposal is not
+   * displayed in the messages »).
+   *
+   * Until now only a quote typed in the chat made a card; a quote sent from the
+   * offer form made a bid and a notification and nothing in Messages, so the
+   * two people who had just exchanged a price had no thread to talk about it
+   * in. The card is the same one the chat makes — a `thread_offers` row pointing
+   * at the real bid, read from the bid at render time — so awarding at the job
+   * page, here or at /admin/awards flips it for free.
+   *
+   * Best-effort, and called by the route rather than by `submitOffer`: the bid
+   * is the fact and the card is its mirror, so a failure here must never undo
+   * or refuse a bid that already committed (the same order `submit` keeps).
+   *
+   * Not for an escalated job: its owner is a system account nobody reads, and an
+   * operator awards from /admin/awards. Not when this sender already has a live
+   * card in the thread. The card carries the **earliest** slot; a bid with
+   * several slots says so, and its requester picks one on the job page instead
+   * of accepting blind in the bubble.
+   */
+  async announceBid(
+    userId: string,
+    offer: { id: string; listingId: string; priceCents: number; vehicleId: string | null; message: string | null },
+    input: { slots: { day: string; slot: "morning" | "afternoon" | "evening" }[]; deliveryLeadDays: number; tzOffset: number },
+    senderInfo?: { name: string; image: string | null }
+  ) {
+    const listing = await listingsDal.getById(offer.listingId);
+    if (!listing || listing.origin === "expedion" || listing.shipperId === userId) return null;
+
+    const existing = await messagesDAL.findConversation(userId, listing.shipperId, listing.id);
+    const conversationId =
+      existing?.id ??
+      (
+        await messagesDAL.createConversation({ id: nanoid(), listingId: listing.id }, [
+          userId,
+          listing.shipperId,
+        ])
+      ).id;
+
+    if (await threadOffersDal.getPendingBySender(conversationId, userId)) return null;
+
+    const [first] = resolveOfferSlots(input.slots, input.deliveryLeadDays, input.tzOffset);
+    if (!first) return null;
+
+    const threadOffer = await threadOffersDal.create({
+      id: nanoid(),
+      conversationId,
+      senderId: userId,
+      priceCents: offer.priceCents,
+      pickupDay: first.day,
+      pickupSlot: first.slot,
+      deliveryLeadDays: input.deliveryLeadDays,
+      tzOffset: input.tzOffset,
+      pickupAt: first.startsAt,
+      deliveryAt: first.deliveryAt,
+      note: offer.message ?? null,
+      vehicleId: offer.vehicleId,
+      offerId: offer.id,
+    });
+
+    const content =
+      offer.message?.trim() || `${formatCurrency(offer.priceCents)} · ${first.day}`;
+    const message = await messagesDAL.createMessage({
+      id: nanoid(),
+      conversationId,
+      senderId: userId,
+      content,
+      threadOfferId: threadOffer.id,
+    });
+
+    publishNewMessage({
+      conversationId,
+      senderId: userId,
+      recipientId: listing.shipperId,
       message,
       content,
       senderInfo,

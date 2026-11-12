@@ -63,6 +63,8 @@ export interface ThreadOfferView {
     id: string;
     listingId: string;
     status: "pending" | "accepted" | "rejected" | "withdrawn" | "expired";
+    /** Which slots the bid proposes; absent where a projection does not load them. */
+    slots?: { id: string }[];
   } | null;
   vehicle: {
     id: string;

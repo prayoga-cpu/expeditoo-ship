@@ -225,7 +225,12 @@ export const messagesDAL = {
         // awarded offer renders its current state with no message rewrite.
         threadOffer: {
           with: {
-            offer: { columns: { id: true, listingId: true, status: true } },
+            // `slots` so the card can tell a one-slot bid (accepted in the bubble)
+            // from a several-slot one (a slot is chosen on the job page).
+            offer: {
+              columns: { id: true, listingId: true, status: true },
+              with: { slots: { columns: { id: true } } },
+            },
             vehicle: {
               columns: { id: true, type: true, make: true, model: true },
             },

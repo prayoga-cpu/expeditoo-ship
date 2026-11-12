@@ -801,6 +801,11 @@
       "fleetErrorTitle": "Impossible de charger vos véhicules",
       "fleetErrorDescription": "Une offre nomme le véhicule qui fera le transport : il nous faut d'abord votre flotte.",
       "card": {
+        "slots": "Créneaux",
+        "slotsProposed": "{count, plural, one {# créneau proposé} other {# créneaux proposés}}",
+        "chooseSlot": "Voir l'offre et choisir un créneau",
+        "awaitingRequester": "En attente de la réponse du demandeur, qui choisit et valide l'offre.",
+        "awaitingOther": "En attente de la réponse de votre interlocuteur.",
         "title": "Offre",
         "pickup": "Enlèvement",
         "delivery": "Livraison",
@@ -1095,7 +1100,7 @@
       },
       "toast": {
         "submitted": "Offre envoyée",
-        "submittedDescription": "Le demandeur est prévenu. Vous la retrouvez dans « Mes trajets ».",
+        "submittedDescription": "Le demandeur est prévenu et vous répondra. Vous la retrouvez dans « Mes offres » et dans vos messages.",
         "submitFailed": "Impossible d'envoyer l'offre. Réessayez.",
         "withdrawn": "Offre retirée",
         "withdrawFailed": "Impossible de retirer l'offre. Réessayez."

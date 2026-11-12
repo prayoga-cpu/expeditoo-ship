@@ -114,6 +114,11 @@ export function ThreadOfferBubble({
   // The recipient decides. On the job lane awarding also has to be theirs to
   // do, which mirrors acceptOffer's own owner/operator fork.
   const canRespond = isPending && !isOwn && (!isJobLane || viewerCanAward);
+  // A bid sent from the job page can propose several slots. The bubble books
+  // the earliest still ahead and shows only that one, so for those the requester
+  // chooses on the job page rather than accepting blind here.
+  const slotCount = offer.offer?.slots?.length ?? 1;
+  const severalSlots = isJobLane && slotCount > 1;
   const busy = accept.isPending || decline.isPending || withdraw.isPending;
 
   return (
@@ -171,6 +176,14 @@ export function ThreadOfferBubble({
                 — {tSlots(`slot.${offer.pickupSlot}`)}
               </dd>
             </div>
+            {severalSlots && (
+              <div className="flex justify-between gap-3">
+                <dt className="text-muted-foreground">{t("card.slots")}</dt>
+                <dd className="text-right text-foreground">
+                  {t("card.slotsProposed", { count: slotCount })}
+                </dd>
+              </div>
+            )}
             <div className="flex justify-between gap-3">
               <dt className="text-muted-foreground">{t("card.delivery")}</dt>
               <dd className="text-right text-foreground">
@@ -205,21 +218,27 @@ export function ThreadOfferBubble({
 
           {canRespond && (
             <div className="flex gap-2 pt-1">
-              <Button
-                size="sm"
-                className="flex-1"
-                disabled={busy}
-                // On the job lane accepting awards a real bid and may take a
-                // payment, so it goes through the same dialog as the job page.
-                // A standalone offer moves no money and needs no step.
-                onClick={() =>
-                  offer.offer
-                    ? setPaying(true)
-                    : accept.mutate({ threadOfferId: offer.id })
-                }
-              >
-                {t("card.accept")}
-              </Button>
+              {severalSlots && offer.offer ? (
+                <Button asChild size="sm" className="flex-1">
+                  <Link href={`/listing/${offer.offer.listingId}`}>{t("card.chooseSlot")}</Link>
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  className="flex-1"
+                  disabled={busy}
+                  // On the job lane accepting awards a real bid and may take a
+                  // payment, so it goes through the same dialog as the job page.
+                  // A standalone offer moves no money and needs no step.
+                  onClick={() =>
+                    offer.offer
+                      ? setPaying(true)
+                      : accept.mutate({ threadOfferId: offer.id })
+                  }
+                >
+                  {t("card.accept")}
+                </Button>
+              )}
               <Button
                 size="sm"
                 variant="outline"
@@ -235,6 +254,15 @@ export function ThreadOfferBubble({
           {isPending && !isOwn && isJobLane && !viewerCanAward && (
             <p className="text-xs text-muted-foreground">
               {t("card.operatorDecides")}
+            </p>
+          )}
+
+          {/* « En attente » of whom: said once, on the sender's own card — the
+              reader should never wonder whether an operator has to « validate »
+              a quote (client feedback 2026-11-12). */}
+          {isPending && isOwn && (
+            <p className="text-xs text-muted-foreground">
+              {isJobLane ? t("card.awaitingRequester") : t("card.awaitingOther")}
             </p>
           )}
 

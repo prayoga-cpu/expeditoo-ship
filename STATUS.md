@@ -1019,6 +1019,30 @@ _The owner, with a screenshot of the admin sidebar: « I think the driver applic
 - The phone bars for drivers and requesters were not regrouped (they are icon bars with no room for headings).
 - Not checked in a browser.
 
+## ✅ 2026-11-12 — A quote sent from the job page now appears in Messages (2.83.1)
+
+_Nicolas, 12 Nov, 4.10–4.13 PM: « the price proposal of the advertisement is not displayed in the messages »; « when a driver responds with a price quote, a message says validation is pending — is this validation by the client who posted the ad, or something else? »._
+
+### Cause
+
+- `offersService.submitOffer` (the job page's form, `POST /api/listings/:id/offers`) wrote an `offers` row and an `offer_received` notification and **nothing in a conversation**; only `threadOffersService.submit` (the chat's own « Faire une offre ») wrote the `thread_offers` + `messages` pair. So two people who had just exchanged a price had no thread to discuss it in.
+- « Validation pending » is no string in the app. The two waits a driver can read: the **driver's own file** (« Votre dossier … n'est pas encore validé », `CARRIER_NOT_APPROVED` — an Expeditoo operator approves it, before any quote can be sent) and, once a quote is sent, the badge **« En attente »**, which is the **requester's** decision (an operator only on an escalated job). No third validation exists.
+- The success toast said the quote could be found under « Mes trajets » (the trips page); it lives in « Mes offres ».
+
+### What changed
+
+`threadOffersService.announceBid` (best-effort, called by the route after the bid commits): finds or opens the conversation with the listing's owner and posts the same card the chat makes, pointing at the real bid (`offerId`), carrying the **earliest** slot. Not for an escalated job (system-account owner), not when the sender already has a live card. `ThreadOfferBubble`: a bid proposing several slots shows « N créneaux proposés » and links to the job page instead of an Accept button (the bubble books the earliest slot ahead); the sender's own pending card says whose answer it waits for. The messages DAL's offer join now loads the slot ids. Toast corrected.
+
+### Verification
+
+`tsc` 0 errors; `thread-offers.service.test.ts` (+5), `ThreadOfferBubble.test.tsx` (+3) and the messages suites pass. Not run: a real-browser check; no migration.
+
+### Known limits
+
+Bids made **before** this release have no card (no backfill). The card shows the price the bid was sent at: a later counter-price changes the bid, not the card.
+
+---
+
 ## ✅ 2026-11-11 — Nicolas's remaining tickets: trips by town, missing-documents mail, exact hours, contact confirmed, illustrations, homepage, profile (2.83.0)
 
 _Owner request: « go ahead to finish up the rest feedbacks to get it done, then report me back »; the answers adopted are the PDF's « Open Tickets with Suggested Answers » of 11 Nov. Spec `client_feedback_2026_11_11_spec.md`._
