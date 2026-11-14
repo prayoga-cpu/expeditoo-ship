@@ -13,6 +13,7 @@ import { offersService } from "../offers.service";
 import { paymentsService } from "../payments.service";
 import * as userService from "../user.service";
 import { publishNewMessage } from "../message-publish";
+import { requesterAlertsService } from "../requester-alerts.service";
 
 // Covers docs/specs/thread_offer_spec.md §5, §7 and §12.
 
@@ -675,6 +676,19 @@ describe("announceBid — a bid sent from the job page appears in Messages", () 
       expect.objectContaining({ recipientId: THEM, conversationId: "conv-9" })
     );
     expect(result).not.toBeNull();
+  });
+
+  // requester_message_alert_spec.md §3: the bell alone is not enough.
+  it("mails the requester, who would otherwise only get the in-app bell", async () => {
+    await threadOffersService.announceBid(ME, bid, {
+      slots: slots(tomorrow()),
+      deliveryLeadDays: 1,
+      tzOffset: 0,
+    });
+
+    expect(requesterAlertsService.onDriverMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ conversationId: "conv-9", senderId: ME, recipientId: THEM })
+    );
   });
 
   it("opens the conversation when the two have not spoken yet", async () => {

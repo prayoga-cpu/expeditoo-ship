@@ -14,6 +14,13 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.84.1] - 2026-11-15 · fix
+
+- **You now also get an email when a driver sends you a price quote from your
+  request's page.** The email arrives like any other driver message. Before, a
+  quote sent that way only rang the bell inside the app, so you heard nothing
+  while the app was closed.
+
 ## [2.84.0] - 2026-11-14 · feat
 
 - **You now get an email when a driver writes to you.** It names your request and

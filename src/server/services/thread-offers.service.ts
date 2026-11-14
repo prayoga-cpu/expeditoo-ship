@@ -257,9 +257,8 @@ export const threadOffersService = {
       threadOfferId: threadOffer.id,
     });
 
-    // A quote typed in the chat is a message to the requester too. The one sent
-    // from the job page (`announceBid`) is not alerted here: it already raised
-    // its own « offer received » notification.
+    // A quote typed in the chat is a message to the requester too — as is the
+    // one sent from the job page, alerted in `announceBid` below.
     void requesterAlertsService
       .onDriverMessage({
         conversationId,
@@ -353,6 +352,18 @@ export const threadOffersService = {
       senderInfo,
       threadOfferId: threadOffer.id,
     });
+
+    // The requester's only other signal for this bid is the in-app
+    // « offer received » bell, which nobody reads with the app closed. The card
+    // above is a message from the driver, so it is mailed like one.
+    void requesterAlertsService
+      .onDriverMessage({
+        conversationId,
+        senderId: userId,
+        recipientId: listing.shipperId,
+        sentAt: message.createdAt ? new Date(message.createdAt) : new Date(),
+      })
+      .catch((e) => console.error("requester message alert failed", e));
 
     return { threadOffer, message };
   },

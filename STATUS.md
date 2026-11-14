@@ -1019,6 +1019,30 @@ _The owner, with a screenshot of the admin sidebar: « I think the driver applic
 - The phone bars for drivers and requesters were not regrouped (they are icon bars with no room for headings).
 - Not checked in a browser.
 
+## ✅ 2026-11-15 — A quote sent from the job page now emails the requester too (2.84.1)
+
+_Nicolas, 14–15 Nov: « Please add also to send email to the asker when received message from the driver. »_ — sent after 2.84.0 was live, so I read it as a gap, not a repeat, and went looking for the path 2.84.0 still left silent.
+
+### Cause
+
+2.84.0 mailed a driver's chat message and a quote typed in the chat, and **deliberately skipped `threadOffersService.announceBid`** — the card a quote sent from the job page posts in Messages (2.83.1) — on the stated ground that the bid already raises `offer_received`. That was wrong: `notificationsService.createNotification` is an in-app bell (it contains no mail at all), so a requester with the app closed heard nothing of the most common way a driver reaches them.
+
+### What changed
+
+`announceBid` now calls `requesterAlertsService.onDriverMessage` after posting the card, with the same rules and the same 30-minute window as every other driver message (a bid right after a chat message is one email, not two). Stale comment in `submit` and spec §3 corrected.
+
+### Verification
+
+`thread-offers.service.test.ts` (+1) asserts the alert is called with the conversation, the driver and the requester; the escalated and already-pending cases still post nothing. `tsc` 0 errors, eslint clean on the two files, full suite 3,448 passing, `changelog:check` ok. `pnpm build` was not re-run (no route, config or schema touched). Not driven in a browser or against a database this time — the path is the same `onDriverMessage` that was.
+
+### Known limits
+
+- A second bid while a card from the same driver is still pending posts no card (existing behaviour) and so mails nothing.
+- Escalated jobs still mail nobody: their owner is the system account; an operator awards from `/admin/awards`.
+- If « the asker » meant something else — an Expedion client reached by SMS, or a thread with no job — that is not covered and needs its own decision.
+
+---
+
 ## ✅ 2026-11-14 — A driver's message now reaches the requester by email (2.84.0)
 
 _Nicolas, 14 Nov, 1.47 AM: « Ok, checked. Should receive an email when a driver send a message »._

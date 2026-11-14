@@ -36,8 +36,13 @@ driver's alerts never carry the client's.
 
 - `messagesService.sendMessage` — every ordinary message.
 - `threadOffersService.submit` — a quote typed in the chat is a message too.
-- **Not** `announceBid`: a quote sent from the job page already raises its own
-  « offer received » notification, so mailing it again would be two for one.
+- `threadOffersService.announceBid` — a quote sent from the job page posts a
+  card in the thread (2.83.1), which is a message from the driver. Added in
+  2.84.1: 2.84.0 left it out on the belief that the « offer received »
+  notification covered it, but that is an in-app bell only, so a requester with
+  the app closed heard nothing of a quote sent from the job page.
+  When a card from the same sender is already pending, `announceBid` posts
+  nothing and so mails nothing; the bid itself still rings the bell.
 
 Best-effort throughout: `void …catch(console.error)`, so a failed email never
 fails the message.
@@ -55,5 +60,5 @@ fails the message.
 
 `requester-alerts.service.test.ts` (each row of §2, the quiet window both
 sides, no message text in the mail), `messages.service.test.ts` (the hook is
-called with the pair), and the existing `thread-offers.service.test.ts` stays
-green with the alert stubbed.
+called with the pair), and `thread-offers.service.test.ts` (the alert is called
+from `submit` and from `announceBid`, with the alert itself stubbed).
