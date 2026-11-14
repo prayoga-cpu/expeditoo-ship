@@ -14,6 +14,7 @@ import { RequestsDigest } from "@/features/app/listing/ui/RequestViews";
 import { useDriverDashboard } from "../hooks/useDriverDashboard";
 import { useMyRequestStatus } from "../hooks/useMyRequestStatus";
 import { CardConnectBanner } from "./CardConnectBanner";
+import { routeStops } from "@/lib/route-label";
 import type { Shipment } from "@/features/app/deliveries/api/deliveries.api";
 
 /**
@@ -52,6 +53,7 @@ function StatTile({
 /** The run the driver is physically doing, if there is one. */
 function CurrentRunCard({ run }: { run: Shipment }) {
   const t = useTranslations("dashboard");
+  const { from, to } = routeStops(run);
 
   return (
     <Card className="p-5">
@@ -67,7 +69,7 @@ function CurrentRunCard({ run }: { run: Shipment }) {
       {/* Route, wrapped rather than truncated: an address the driver cannot
           read in full is worse than one that takes two lines. */}
       <p className="mt-1 text-sm break-words text-muted-foreground">
-        {run.pickupAddress} → {run.dropoffAddress}
+        {from} → {to}
       </p>
 
       <Button asChild className="mt-4 w-full sm:w-auto">

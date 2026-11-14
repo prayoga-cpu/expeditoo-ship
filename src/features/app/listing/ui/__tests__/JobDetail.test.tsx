@@ -41,6 +41,7 @@ vi.mock("../../hooks/useListingCarriers", () => ({
   useListingCarriers: () => ({ data: undefined }),
 }));
 vi.mock("../JobBidSection", () => ({ JobBidSection: () => null }));
+vi.mock("../RequestActions", () => ({ RequestActions: () => null }));
 vi.mock("../DraftActions", () => ({ DraftActions: () => <div data-testid="draft-actions" /> }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
@@ -98,10 +99,10 @@ const JOB: Job = {
   createdAt: "2026-09-30T00:00:00.000Z",
 };
 
-const render = () =>
+const render = (viewerId: string | null = null) =>
   rtlRender(
     <NextIntlClientProvider locale="fr" messages={fr}>
-      <JobDetail listingId="job_1" viewerId={null} />
+      <JobDetail listingId="job_1" viewerId={viewerId} />
     </NextIntlClientProvider>
   );
 
@@ -140,6 +141,28 @@ describe("JobDetail, as a viewer who may not read everything", () => {
 
     expect(screen.getAllByText(fr.myJobs.detail.addressHidden)).toHaveLength(2);
     expect(screen.getByText("14000 Caen")).toBeInTheDocument();
+  });
+
+  // route_towns_and_blank_streets_spec.md §3: the street is optional, and
+  // « never typed » is not « withheld ».
+  it("does not call a street nobody typed a hidden one, and tells the owner how to add it", () => {
+    hooks.job = { ...JOB, dropoffAddress: "" };
+    render("user_1");
+
+    expect(screen.queryByText(fr.myJobs.detail.addressHidden)).toBeNull();
+    expect(screen.getByText(fr.myJobs.detail.addressMissingEditable)).toBeInTheDocument();
+    // The street that was typed still shows.
+    expect(screen.getByText("1 rue de la Gare")).toBeInTheDocument();
+    expect(screen.getByText("35000 Rennes")).toBeInTheDocument();
+  });
+
+  it("says a street nobody typed is not given, without pointing a carrier at « Modifier »", () => {
+    hooks.job = { ...JOB, dropoffAddress: "" };
+    render();
+
+    expect(screen.getByText(fr.myJobs.detail.addressMissing)).toBeInTheDocument();
+    expect(screen.queryByText(fr.myJobs.detail.addressMissingEditable)).toBeNull();
+    expect(screen.queryByText(fr.myJobs.detail.addressHidden)).toBeNull();
   });
 
   it("says a request cannot be found instead of loading forever", () => {

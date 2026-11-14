@@ -25,7 +25,7 @@ export function DeliveryCard({ delivery }: { delivery: DeliverySummaryView }) {
             <p className="mt-1.5 flex items-center gap-1.5 text-sm text-muted-foreground">
               <MapPin className="h-4 w-4 shrink-0" />
               <span className="truncate">
-                {delivery.pickupAddress} → {delivery.dropoffAddress}
+                {delivery.pickupTown} → {delivery.dropoffTown}
               </span>
             </p>
           </div>

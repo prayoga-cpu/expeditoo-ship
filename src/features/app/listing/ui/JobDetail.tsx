@@ -237,7 +237,7 @@ function JobDetailsTab({
       {isOwner && !unpublished && (
         <RequestActions job={job} confirming={confirming} onConfirmingChange={setConfirming} />
       )}
-      <JobRoute job={job} />
+      <JobRoute job={job} canEdit={canEdit} />
       <JobLoad job={job} />
       {!unpublished && (
         <>
@@ -594,7 +594,7 @@ function OfferSort({
   );
 }
 
-function JobRoute({ job }: { job: Job }) {
+function JobRoute({ job, canEdit }: { job: Job; canEdit: boolean }) {
   const t = useTranslations("myJobs.detail");
   const text = useEndpointText();
 
@@ -619,6 +619,7 @@ function JobRoute({ job }: { job: Job }) {
           <Endpoint
             title={t("pickup")}
             address={job.pickupAddress}
+            canEdit={canEdit}
             city={text.town(job.pickupPostalCode, job.pickupCity, job.pickupCountry)}
             locationType={job.pickupLocationType}
             floor={text.floor(job.pickupFloor, job.pickupHasLift)}
@@ -633,6 +634,7 @@ function JobRoute({ job }: { job: Job }) {
           <Endpoint
             title={t("dropoff")}
             address={job.dropoffAddress}
+            canEdit={canEdit}
             city={text.town(job.dropoffPostalCode, job.dropoffCity, job.dropoffCountry)}
             locationType={job.dropoffLocationType}
             floor={text.floor(job.dropoffFloor, job.dropoffHasLift)}
@@ -706,6 +708,7 @@ function JobLoadFailed({ onRetry }: { onRetry: () => void }) {
 function Endpoint({
   title,
   address,
+  canEdit,
   city,
   locationType,
   floor,
@@ -716,7 +719,14 @@ function Endpoint({
   hours,
 }: {
   title: string;
+  /**
+   * Three states, and they must not be merged: `undefined` is a street the
+   * viewer's audience may not read; `""` is a street nobody typed (it is
+   * optional since 2026-11-06); text is the street.
+   */
   address?: string;
+  /** The owner can still change an open direct request. */
+  canEdit: boolean;
   city: string;
   locationType: string;
   /** « 3ᵉ étage · sans ascenseur »; null where none was given. */
@@ -739,10 +749,14 @@ function Endpoint({
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
         {title}
       </p>
-      {address ? (
-        <p className="font-medium">{address}</p>
-      ) : (
+      {address === undefined ? (
         <p className="text-sm text-muted-foreground">{tDetail("addressHidden")}</p>
+      ) : address.trim() === "" ? (
+        <p className="text-sm text-muted-foreground">
+          {tDetail(canEdit ? "addressMissingEditable" : "addressMissing")}
+        </p>
+      ) : (
+        <p className="font-medium">{address}</p>
       )}
       <p className="text-sm text-muted-foreground">{city}</p>
       <Badge variant="outline" className="mt-1">

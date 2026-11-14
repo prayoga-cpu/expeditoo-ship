@@ -27,6 +27,7 @@ import {
   pickupDate,
   sortShipments,
 } from "../lib/shipment-list";
+import { routeTowns } from "@/lib/route-label";
 import { useDriverShipments } from "../hooks/useDriverShipments";
 import { PageLoader } from "@/components/ui/page-loader";
 import { CenteredEmptyState } from "@/components/ui/centered-empty-state";
@@ -198,11 +199,11 @@ export function MyShipments() {
                         <div className="flex items-center gap-2 text-sm">
                           <MapPin className="w-4 h-4 text-muted-foreground shrink-0" />
                           <span className="font-medium truncate">
-                            {shipment.pickupAddress}
+                            {routeTowns(shipment).from}
                           </span>
                           <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0" />
                           <span className="font-medium truncate">
-                            {shipment.dropoffAddress}
+                            {routeTowns(shipment).to}
                           </span>
                         </div>
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground pl-6">

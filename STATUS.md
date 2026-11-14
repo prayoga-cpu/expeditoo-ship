@@ -1019,6 +1019,39 @@ _The owner, with a screenshot of the admin sidebar: « I think the driver applic
 - The phone bars for drivers and requesters were not regrouped (they are icon bars with no room for headings).
 - Not checked in a browser.
 
+## ✅ 2026-11-14 — Pickup and delivery towns on the cards, and a blank street no longer reads « hidden » (2.83.2)
+
+_Nicolas, 14 Nov, 3.55–3.58 PM: « picking and delivery cities are missing in this screen » (the dashboard's « Course en cours ») and « delivery address missing » (the job page, reached from « Voir l'offre »)._
+
+### Cause
+
+Both are one fact: since 2026-11-06 (A03) the **street line is optional**, so `listings.dropoff_address` can be `""`, and a shipment copies **only that line** at award — never the town.
+
+- The dashboard card printed `shipments.pickup_address → dropoff_address`: no town, and nothing at all for a request posted without a street. For a pure `driver` the listing was no help: `DRIVER_LISTING_FIELDS` carried no town, postal code, country, floor or lift (the client type declared them; the server never sent them — so `/driver/shipments/[id]` read `undefined` for its country and floors).
+- `JobDetail`'s `Endpoint` was `address ? street : « Adresse exacte communiquée aux transporteurs vérifiés »` — it merged *withheld* (field absent) with *never typed* (`""`), and told an owner their own request hid its address from them. The pickup street rendering beside it is the proof: both streets sit in the same `VETTED_LISTING_FIELDS`, so a privacy redaction would have hidden both. **Inferred from the code and the screenshots; job 100018's row was not read.**
+
+### What changed
+
+- `src/lib/route-label.ts` — one composer: `routeTowns` (truncating rows), `routeStops` (wrapping card), `stopLine`/`townLine`. Used by the dashboard card, driver `ActiveShipments`/`MyShipments`, the requester's `DeliveryCard`, the driver shipment page and the shipment-update email (which would otherwise have read « , Bayonne »).
+- `DRIVER_LISTING_FIELDS` gained the six town/country fields plus floor and lift — public listing columns, no commercial term. `leakedKeysIn` still finds nothing.
+- `Endpoint` is three-state: absent → « communiquée aux transporteurs vérifiés »; `""` → « Adresse précise non renseignée. », plus « Ajoutez-la avec « Modifier » » for the owner of an open direct request; text → the street.
+- Spec: `docs/specs/route_towns_and_blank_streets_spec.md`.
+
+### Decision taken without the client
+
+An award is **not** blocked for want of a delivery street. A03 made it optional on purpose; the carrier still has the town. Overrule it if a driver arriving with no street is not acceptable.
+
+### Verification
+
+`tsc` 0 errors; new `route-label.test.ts` (+6) and cases in `JobDetail`, `DeliveryCard` and `shipment.service` tests. Also checked in Chromium against a scratch database (seeded: a request with no delivery street, a run in transit with a street, one without): the owner, an approved driver and an outsider each read the right sentence on the job page; the dashboard card read « 13 RUE DU DEPART, 13000 MARSEILLE → 15 quai Francois Ier, 98000 MONACO » and, for the blank-street run, « 2 rue Haute, 44000 NANTES → 35000 rennes » with no dangling arrow; a pure `driver` account's run page and list showed the towns; the requester's `/deliveries` read « NANTES → rennes ». Then repeated in dark and light, French and English, at 1280 px and 390 px: the card and the job page read the same, the theme class was confirmed on `<html>`, and neither page scrolls sideways at 390 px. On a phone the job page's two ends are the swipeable cards, so the delivery card is partly off-screen by design. No migration.
+
+### Known limits
+
+- `MyShipments`/`ActiveShipments` now show towns, not streets — the street is one tap away on the shipment.
+- Surfaces I did not read that may still print `*_address` alone: the admin and carrier-trip cards already fall back to the city; the requester's `DeliveryDetail` was not touched.
+
+---
+
 ## ✅ 2026-11-12 — A quote sent from the job page now appears in Messages (2.83.1)
 
 _Nicolas, 12 Nov, 4.10–4.13 PM: « the price proposal of the advertisement is not displayed in the messages »; « when a driver responds with a price quote, a message says validation is pending — is this validation by the client who posted the ad, or something else? »._

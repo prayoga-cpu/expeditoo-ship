@@ -34,6 +34,7 @@ import { useTranslations } from "next-intl";
 import { PageLoader } from "@/components/ui/page-loader";
 import { LoadErrorState } from "@/components/ui/load-error-state";
 import { ApiError } from "@/lib/fetcher";
+import { stopLine } from "@/lib/route-label";
 import Link from "next/link";
 
 /**
@@ -175,7 +176,10 @@ function RouteCard({ shipment }: { shipment: DriverShipmentDetail }) {
           <RouteStop
             colorClass="bg-blue-500"
             label={t("pickup")}
-            address={withCountry(shipment.pickupAddress, text.country(listing?.pickupCountry))}
+            address={withCountry(
+              stopLine(shipment.pickupAddress, listing?.pickupPostalCode, listing?.pickupCity),
+              text.country(listing?.pickupCountry)
+            )}
             floor={text.floor(listing?.pickupFloor, listing?.pickupHasLift)}
             note={shipment.pickupNote}
             contactName={shipment.pickupContactName}
@@ -186,7 +190,10 @@ function RouteCard({ shipment }: { shipment: DriverShipmentDetail }) {
           <RouteStop
             colorClass="bg-green-500"
             label={t("dropoff")}
-            address={withCountry(shipment.dropoffAddress, text.country(listing?.dropoffCountry))}
+            address={withCountry(
+              stopLine(shipment.dropoffAddress, listing?.dropoffPostalCode, listing?.dropoffCity),
+              text.country(listing?.dropoffCountry)
+            )}
             floor={text.floor(listing?.dropoffFloor, listing?.dropoffHasLift)}
             note={shipment.dropoffNote}
             contactName={shipment.dropoffContactName}

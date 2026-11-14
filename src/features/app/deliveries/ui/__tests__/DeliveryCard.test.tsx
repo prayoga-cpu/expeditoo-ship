@@ -15,6 +15,8 @@ const DELIVERY: DeliverySummaryView = {
   status: "ASSIGNED",
   pickupAddress: "1 rue de la Gare, Caen",
   dropoffAddress: "2 place du Marché, Rennes",
+  pickupTown: "Caen",
+  dropoffTown: "Rennes",
   priceCents: 25_000,
   counterpartName: "Camille",
   dateLabel: "5 oct. 08:00",
@@ -39,6 +41,13 @@ describe("DeliveryCard", () => {
 
     expect(container.textContent).not.toMatch(/Réf\./);
     expect(container.textContent).not.toContain("ship_1");
+  });
+
+  it("shows the towns of the run, not its street lines", () => {
+    const { container } = render(DELIVERY);
+
+    expect(container.textContent).toContain("Caen → Rennes");
+    expect(container.textContent).not.toContain("rue de la Gare");
   });
 
   it("puts no button inside the card's link", () => {

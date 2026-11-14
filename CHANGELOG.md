@@ -14,6 +14,17 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.83.2] - 2026-11-14 · fix
+
+- **The pickup and delivery towns now show on the home screen's current delivery,
+  and on your delivery and driver lists.** They used to show only the street, and
+  nothing at all when no street had been given.
+- **A request posted without a delivery street no longer says the address is
+  "shared with verified carriers".** It says no exact address was given, and, on
+  your own open request, that you can add it with « Modifier ».
+- **A driver now sees the towns, floors and lift of a run** on the run's page, and
+  the « Livraison à » line of the update email no longer starts with a stray comma.
+
 ## [2.81.0] - 2026-11-07 · ux
 
 - **Admin menu: « Driver applications » is gone as a separate entry.** The same

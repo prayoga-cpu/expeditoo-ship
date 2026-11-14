@@ -35,6 +35,16 @@ export interface ShipmentListing {
   reference: number;
   title: string;
   status: string;
+  /**
+   * The towns of the two ends. The shipment itself holds only each street
+   * line, which may be empty, so a card reads its route from here
+   * (route_towns_and_blank_streets_spec.md). Optional: a projection from
+   * before 2.83.2 omits them, and `@/lib/route-label` falls back to the street.
+   */
+  pickupCity?: string;
+  pickupPostalCode?: string;
+  dropoffCity?: string;
+  dropoffPostalCode?: string;
 }
 
 /** The accepted offer's terms. Absent when the viewer is the driver. */

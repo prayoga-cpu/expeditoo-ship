@@ -25,6 +25,7 @@ import {
   type ListingAudience,
 } from "@/server/services/listing-view";
 import { confirmationUrl } from "@/lib/confirmation-token";
+import { stopLine } from "@/lib/route-label";
 import type { ConfirmableMilestone } from "@/lib/confirmation-token";
 import type {
   ShipmentStatusType,
@@ -129,6 +130,21 @@ const DRIVER_LISTING_FIELDS = [
   "needsHelp",
   "needsProtection",
   "needsPackaging",
+  // Where the run starts and ends, as towns. Public listing columns, not a
+  // commercial term — and the shipment itself carries only each street line,
+  // optional since 2026-11-06, so without these a driver's card has no town
+  // (route_towns_and_blank_streets_spec.md). Floors and lifts are what the
+  // driver screen already reads at the door.
+  "pickupCity",
+  "pickupPostalCode",
+  "pickupCountry",
+  "pickupFloor",
+  "pickupHasLift",
+  "dropoffCity",
+  "dropoffPostalCode",
+  "dropoffCountry",
+  "dropoffFloor",
+  "dropoffHasLift",
 ] as const;
 
 /** A party reduced to what an avatar and a name need, nothing more. */
@@ -555,7 +571,7 @@ async function emailShipmentUpdate(
       listing.title,
       shipmentId,
       status as EmailableStage,
-      `${listing.dropoffAddress}, ${listing.dropoffCity}`
+      stopLine(listing.dropoffAddress, listing.dropoffPostalCode, listing.dropoffCity)
     );
   } catch (e) {
     console.error("shipment_update email failed", e);

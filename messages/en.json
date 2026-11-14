@@ -1703,6 +1703,8 @@
       },
       "reopened": "Back on the board",
       "addressHidden": "Exact address shared with verified carriers.",
+      "addressMissing": "No exact address given.",
+      "addressMissingEditable": "No exact address given. Add it with “Edit”.",
       "notFound": "Request not found",
       "notFoundDesc": "It may have been removed, or you don't have access to it.",
       "backHome": "Back to home",

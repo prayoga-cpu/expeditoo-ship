@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MapPin, Calendar, ArrowRight, Truck } from "lucide-react";
 import Link from "next/link";
+import { routeTowns } from "@/lib/route-label";
 import { useDriverShipments } from "../hooks/useDriverShipments";
 import { ShipmentStatusBadge } from "./ShipmentStatusBadge";
 import { useTranslations } from "next-intl";
@@ -61,11 +62,11 @@ export function ActiveShipments() {
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <MapPin className="w-3 h-3" />
                     <span className="truncate max-w-[150px]">
-                      {shipment.pickupAddress}
+                      {routeTowns(shipment).from}
                     </span>
                     <ArrowRight className="w-3 h-3" />
                     <span className="truncate max-w-[150px]">
-                      {shipment.dropoffAddress}
+                      {routeTowns(shipment).to}
                     </span>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">

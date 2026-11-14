@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { useTranslations } from "next-intl";
 import { useTabState } from "@/features/app/common/hooks";
 import { useAuth } from "@/lib/auth-context";
+import { routeTowns } from "@/lib/route-label";
 import { deliveriesApi, type Shipment } from "../api/deliveries.api";
 import type { DeliveryTab, DeliverySummaryView } from "../types";
 
@@ -56,6 +57,7 @@ function toSummary(
   viewerId: string | null,
   t: ReturnType<typeof useTranslations>
 ): DeliverySummaryView {
+  const towns = routeTowns(shipment);
   const counterpart =
     viewerId === shipment.shipperId ? shipment.carrier : shipment.shipper;
 
@@ -66,6 +68,8 @@ function toSummary(
     status: shipment.status,
     pickupAddress: shipment.pickupAddress,
     dropoffAddress: shipment.dropoffAddress,
+    pickupTown: towns.from,
+    dropoffTown: towns.to,
     priceCents: shipment.priceCents,
     counterpartName: counterpart.name,
     dateLabel: shipment.scheduledPickup

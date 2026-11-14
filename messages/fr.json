@@ -1703,6 +1703,8 @@
       },
       "reopened": "Remise en ligne",
       "addressHidden": "Adresse exacte communiquée aux transporteurs vérifiés.",
+      "addressMissing": "Adresse précise non renseignée.",
+      "addressMissingEditable": "Adresse précise non renseignée. Ajoutez-la avec « Modifier ».",
       "notFound": "Demande introuvable",
       "notFoundDesc": "Elle a peut-être été retirée, ou vous n'y avez pas accès.",
       "backHome": "Retour à l'accueil",

@@ -98,6 +98,12 @@ const shipmentRow = (over: Record<string, unknown> = {}) => ({
     needsHelp: true,
     needsProtection: true,
     needsPackaging: false,
+    pickupCity: "Paris",
+    pickupPostalCode: "75012",
+    pickupCountry: "FR",
+    dropoffCity: "Marseille",
+    dropoffPostalCode: "13002",
+    dropoffCountry: "FR",
     budgetCents: 50000,
     shipperId: "shipper-1",
   },
@@ -189,6 +195,22 @@ describe("shipmentService.getShipmentDetail (driver viewer)", () => {
       id: "shipper-1",
       name: "Sofia Shipper",
       image: null,
+    });
+  });
+
+  // route_towns_and_blank_streets_spec.md §2: the shipment holds a street
+  // line only, optional since 2026-11-06, so the town must come with the listing.
+  it("carries the towns of both ends, which are not a commercial term", async () => {
+    const detail = (await shipmentService.getShipmentDetail(
+      "ship-1",
+      driver
+    )) as unknown as Record<string, Record<string, unknown>>;
+
+    expect(detail.listing).toMatchObject({
+      pickupCity: "Paris",
+      pickupPostalCode: "75012",
+      dropoffCity: "Marseille",
+      dropoffPostalCode: "13002",
     });
   });
 
@@ -547,6 +569,22 @@ describe("shipmentService.updateStatus — the email half", () => {
       "ship-1",
       "PICKED_UP",
       "3 quai du Port, Marseille"
+    );
+  });
+
+  it("names the town, with no dangling comma, when the delivery street was never typed", async () => {
+    vi.mocked(listingsDal.getById).mockResolvedValue(
+      listing({ dropoffAddress: "", dropoffPostalCode: "13002" }) as never
+    );
+    await move("ASSIGNED", "PICKED_UP");
+
+    expect(emailService.sendShipmentUpdateEmail).toHaveBeenCalledWith(
+      "sofia@example.com",
+      "Sofia Shipper",
+      "Pallet to Marseille",
+      "ship-1",
+      "PICKED_UP",
+      "13002 Marseille"
     );
   });
 

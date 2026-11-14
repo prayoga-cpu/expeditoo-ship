@@ -19,6 +19,9 @@ export interface DeliverySummaryView {
   status: ShipmentStatus;
   pickupAddress: string;
   dropoffAddress: string;
+  /** Each end as a town (the street where the listing has none) — what a row shows. */
+  pickupTown: string;
+  dropoffTown: string;
   /** Undefined when the service stripped it (driver viewer). */
   priceCents?: number;
   /** The other party's name, relative to the viewer. */
