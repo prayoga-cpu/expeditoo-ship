@@ -10,6 +10,7 @@ import { offersService } from "./offers.service";
 import { paymentsService } from "./payments.service";
 import * as userService from "./user.service";
 import { publishNewMessage } from "./message-publish";
+import { requesterAlertsService } from "./requester-alerts.service";
 import { resolveOfferSlots } from "@/lib/offer-slots";
 import { formatCurrency } from "@/lib/currency";
 import type { CreateThreadOfferInput } from "@/server/dto/thread-offers.dto";
@@ -255,6 +256,18 @@ export const threadOffersService = {
       senderInfo,
       threadOfferId: threadOffer.id,
     });
+
+    // A quote typed in the chat is a message to the requester too. The one sent
+    // from the job page (`announceBid`) is not alerted here: it already raised
+    // its own « offer received » notification.
+    void requesterAlertsService
+      .onDriverMessage({
+        conversationId,
+        senderId: userId,
+        recipientId: otherParticipant(conversation, userId),
+        sentAt: message.createdAt ? new Date(message.createdAt) : new Date(),
+      })
+      .catch((e) => console.error("requester message alert failed", e));
 
     return { threadOffer, message };
   },

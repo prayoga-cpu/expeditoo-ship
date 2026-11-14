@@ -10,6 +10,7 @@ import { nanoid } from "nanoid";
 import { publishNewMessage } from "./message-publish";
 import { threadOffersService } from "./thread-offers.service";
 import { driverAlertsService } from "./driver-alerts.service";
+import { requesterAlertsService } from "./requester-alerts.service";
 
 export const messagesService = {
   /**
@@ -99,6 +100,18 @@ export const messagesService = {
         sentAt: message.createdAt ? new Date(message.createdAt) : new Date(),
       })
       .catch((e) => console.error("driver message alert failed", e));
+
+    // And the other way round: the requester hears when a driver writes to
+    // them (requester_message_alert_spec.md). Each service answers only its own
+    // direction, so calling both is how a message reaches the right one.
+    void requesterAlertsService
+      .onDriverMessage({
+        conversationId: conversationId!,
+        senderId,
+        recipientId,
+        sentAt: message.createdAt ? new Date(message.createdAt) : new Date(),
+      })
+      .catch((e) => console.error("requester message alert failed", e));
 
     return {
       message,

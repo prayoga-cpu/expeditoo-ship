@@ -7,7 +7,7 @@ import {
   type InsertConversation,
   type InsertMessage,
 } from "@/db/schema/messages";
-import { eq, and, sql, inArray, gt, lt, asc } from "drizzle-orm";
+import { eq, and, sql, inArray, gt, lt, asc, max } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 export const messagesDAL = {
@@ -301,7 +301,12 @@ export const messagesDAL = {
     before: Date
   ): Promise<Date | null> {
     const [row] = await db
-      .select({ at: sql<Date | null>`max(${messages.createdAt})` })
+      // `max()` of the column, not a raw `sql` template: the raw value is the
+      // string « 2026-11-14 22:27:57 » with no zone, which `new Date()` reads
+      // in the *server's* zone — an 8-hour error on a UTC+8 host, which made
+      // every message look hours old and defeated the quiet window. The column's
+      // own decoder reads it as the UTC it is.
+      .select({ at: max(messages.createdAt) })
       .from(messages)
       .where(
         and(
@@ -310,7 +315,7 @@ export const messagesDAL = {
           lt(messages.createdAt, before)
         )
       );
-    return row?.at ? new Date(row.at) : null;
+    return row?.at ?? null;
   },
 
   /**

@@ -10,6 +10,7 @@ import { ConfirmationRequestEmail } from "@/server/emails/ConfirmationRequestEma
 import { TransportRequestReceivedEmail } from "@/server/emails/TransportRequestReceivedEmail";
 import { DriverApplicationSubmittedEmail } from "@/server/emails/DriverApplicationSubmittedEmail";
 import { PayoutEmail, type PayoutEmailProps } from "@/server/emails/PayoutEmail";
+import { RequesterMessageEmail, type RequesterMessageEmailProps } from "@/server/emails/RequesterMessageEmail";
 import { DriverAlertEmail, type DriverAlertEmailProps } from "@/server/emails/DriverAlertEmail";
 import { render } from "@react-email/components";
 
@@ -234,6 +235,16 @@ export const emailService = {
         params.kind === "message"
           ? `Nouveau message au sujet de « ${params.jobTitle} »`
           : `Offre acceptée : « ${params.jobTitle} »`,
+      html: emailHtml,
+    });
+  },
+
+  /** The requester is told a driver wrote to them (requester_message_alert_spec.md). */
+  async sendRequesterMessageEmail(to: string, params: RequesterMessageEmailProps) {
+    const emailHtml = await render(RequesterMessageEmail(params));
+    return this.sendEmail({
+      to,
+      subject: `Un transporteur vous a écrit au sujet de « ${params.jobTitle} »`,
       html: emailHtml,
     });
   },

@@ -69,6 +69,9 @@ vi.mock("../payments.service", () => ({
 
 vi.mock("../user.service", () => ({ hasRole: vi.fn() }));
 vi.mock("../message-publish", () => ({ publishNewMessage: vi.fn() }));
+vi.mock("../requester-alerts.service", () => ({
+  requesterAlertsService: { onDriverMessage: vi.fn().mockResolvedValue({ email: false }) },
+}));
 
 // ========================================
 // Fixtures

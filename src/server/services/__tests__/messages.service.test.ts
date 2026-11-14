@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { requesterAlertsService } from '@/server/services/requester-alerts.service';
 import { messagesService } from '../messages.service';
 import { messagesDAL } from '@/server/dal/messages.dal';
 import * as userService from '@/server/services/user.service';
@@ -60,6 +61,13 @@ vi.mock('@/server/services/reviews.service', () => ({
   }
 }));
 
+vi.mock('@/server/services/requester-alerts.service', () => ({
+  requesterAlertsService: { onDriverMessage: vi.fn().mockResolvedValue({ email: false }) },
+}));
+vi.mock('@/server/services/driver-alerts.service', () => ({
+  driverAlertsService: { onNewMessage: vi.fn().mockResolvedValue({ sms: false, email: false }) },
+}));
+
 vi.mock('nanoid', () => ({
   nanoid: () => 'nano-id',
 }));
@@ -89,6 +97,21 @@ describe('messagesService', () => {
             expect(messagesDAL.createConversation).toHaveBeenCalled();
             expect(result.conversationId).toBe('conv-1');
             // expect(ablyServer.publishMessage).toHaveBeenCalled(); // Disabled in service for now
+        });
+
+        it('offers the message to the requester alert, which decides whether it is theirs', async () => {
+            vi.mocked(messagesDAL.findConversation).mockResolvedValue({ id: 'conv-exist' } as any);
+            vi.mocked(messagesDAL.createMessage).mockResolvedValue({ id: 'msg-1', createdAt: new Date() } as any);
+
+            await messagesService.sendMessage('driver-1', {
+                recipientId: 'requester-1',
+                content: 'Hello',
+                conversationId: undefined
+            });
+
+            expect(requesterAlertsService.onDriverMessage).toHaveBeenCalledWith(
+                expect.objectContaining({ conversationId: 'conv-exist', senderId: 'driver-1', recipientId: 'requester-1' })
+            );
         });
 
         it('should use existing conversation', async () => {

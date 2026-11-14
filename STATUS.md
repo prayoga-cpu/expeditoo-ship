@@ -1019,6 +1019,37 @@ _The owner, with a screenshot of the admin sidebar: « I think the driver applic
 - The phone bars for drivers and requesters were not regrouped (they are icon bars with no room for headings).
 - Not checked in a browser.
 
+## ✅ 2026-11-14 — A driver's message now reaches the requester by email (2.84.0)
+
+_Nicolas, 14 Nov, 1.47 AM: « Ok, checked. Should receive an email when a driver send a message »._
+
+### Cause
+
+Not a bug: a direction nobody built. `driverAlertsService.onNewMessage` returns `NOT_FROM_REQUESTER` unless the sender is the job's requester, and its doc comment says a driver writing to the requester « alerts nobody » — the 29 October spec (§N7) only asked for requester→driver.
+
+### What changed
+
+- `requester-alerts.service.ts` (`onDriverMessage`) + `RequesterMessageEmail` + `emailService.sendRequesterMessageEmail`. One French email naming the job and linking to `/messages/<id>`; never the driver's words. Same 30-minute quiet window as the driver's alert (`MESSAGE_ALERT_QUIET_MS`, imported, not copied).
+- Fired from `messagesService.sendMessage` and from `threadOffersService.submit` (a quote typed in the chat). **Not** from `announceBid`: that path already raises `offer_received`, and a second mail for the same quote is noise.
+- Silent for: the requester writing, support threads, **escalated jobs** (their owner is the system account — a mail there goes to nobody), a sender with no carrier profile, a recipient who is not the requester.
+- Spec: `docs/specs/requester_message_alert_spec.md`.
+
+### Verification
+
+`requester-alerts.service.test.ts` (+10), `messages.service.test.ts` (+1); `thread-offers.service.test.ts` and `driver-alerts.service.test.ts` unchanged and green. Also driven in Chromium + a scratch Postgres (all 47 migrations applied, `RESEND_API_KEY` empty so the mail logs instead of sending): a driver's message produced the requester mail, a second one seconds later did not, one 31 minutes later did, and a chat-typed quote produced it too; the requester's own reply produced only the driver's mail. One **real** send went through `emailService.sendRequesterMessageEmail` with the production sender (`no-reply@prionation.io`) and the local key, redirected by `EMAIL_DEV_RECIPIENT` (the non-production guard in `sendViaResend`) to the owner's own address: Resend accepted it (no error). **Arrival in the inbox was not confirmed** — the Gmail connector was not authorised in the session — so check for « Un transporteur vous a écrit au sujet de « TEST 2.84.0 — canape deux places » ».
+
+### Found on the way past
+
+`messagesDAL.lastMessageAtBefore` read `max(created_at)` through a raw `sql` template, which returns the zone-less string « 2026-11-14 22:27:57 »; `new Date()` reads that in the **server's** zone. On a UTC+8 laptop every message looked 8 h old, so the 30-minute quiet window never held — for the driver's alert as well as the new one. Production runs in UTC and was never affected. Now `max(messages.createdAt)`, which the column decodes as UTC. Only visible against a real database (the unit tests mock the DAL) — same family as gotcha 23.
+
+### Known limits
+
+- **No opt-out.** `emailNotificationPreferencesSchema` has no `messages` key; adding one is a schema, a default migration and a settings row. The driver's alerts have none either.
+- **Email only** — the requester's phone is in `user_contact_details`; a text per message would be a flood.
+- A message on an escalated job reaches nobody by mail; who answers there (an operator) is a separate question.
+
+---
+
 ## ✅ 2026-11-14 — Pickup and delivery towns on the cards, and a blank street no longer reads « hidden » (2.83.2)
 
 _Nicolas, 14 Nov, 3.55–3.58 PM: « picking and delivery cities are missing in this screen » (the dashboard's « Course en cours ») and « delivery address missing » (the job page, reached from « Voir l'offre »)._

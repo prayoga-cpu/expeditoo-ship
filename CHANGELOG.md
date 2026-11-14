@@ -14,6 +14,12 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.84.0] - 2026-11-14 · feat
+
+- **You now get an email when a driver writes to you.** It names your request and
+  links to the conversation. If a driver sends several messages in a row you get
+  one email, not one per message. The email never repeats what the driver wrote.
+
 ## [2.83.2] - 2026-11-14 · fix
 
 - **The pickup and delivery towns now show on the home screen's current delivery,
