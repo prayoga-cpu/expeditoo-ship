@@ -749,6 +749,14 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
   schedule, because production holds an active Connect account and a schedule
   would move real money; `carriers.kind` (`0044`, everyone `professional`);
   driver alerts go by **email and text** (`driver-alerts.service.ts`).
+- **Request assistant** (2.86.0, `request_assistant_spec.md`): a box on
+  `/create` step « Quoi » reads a typed or dictated sentence into form values —
+  item, size, weight bracket, a town at each end — through
+  `requestAssistantService` (OpenAI, `OPENAI_API_KEY`; no key, no box).
+  **It fills the form and never posts**: its answer has no date, price, pin or
+  `origin`, and the service must not grow a path to `listingsService`. The
+  postal code is the person's or the map's, never the model's. Once it fills
+  an end, the address book stops auto-filling (`addressesPrefilled`).
 
 **Not done**
 - **`EXPEDION_APP_ORIGINS` is set in Vercel Production but not in `.env.local`**,

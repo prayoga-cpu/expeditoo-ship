@@ -1164,6 +1164,56 @@
     }
   },
   "create": {
+    "assistant": {
+      "title": "Describe your request and the form fills itself",
+      "hint": "Say in one sentence what you need moved, from where and to where. You check everything before posting.",
+      "label": "Your request",
+      "placeholder": "Example: a 3-seater sofa from Lyon to Bordeaux",
+      "read": "Read it",
+      "reading": "Reading…",
+      "add": "Add",
+      "record": "Dictate",
+      "stopRecording": "Stop",
+      "transcribing": "Transcribing…",
+      "understood": "Here is what we understood:",
+      "nothing": "We did not recognise a transport request. Tell us what to move, from where and to where.",
+      "fields": {
+        "title": "Item",
+        "size": "Size",
+        "weight": "Weight",
+        "pickup": "Pickup",
+        "dropoff": "Delivery"
+      },
+      "toSpecify": "To be specified",
+      "outOfArea": "Country not served yet",
+      "quantity": "{title} × {count}",
+      "dimensions": "{lengthCm} × {widthCm} × {heightCm} cm",
+      "kilograms": "{kg} kg",
+      "ask": {
+        "title": "What do you need moved?",
+        "size": "How big is it? Its dimensions, or something of a similar size.",
+        "weight": "Roughly how much does it weigh?",
+        "pickup": "Which town should it be collected from?",
+        "dropoff": "Which town should it be delivered to?"
+      },
+      "askMore": "Anything else to add or correct?",
+      "fill": "Fill in the form",
+      "restart": "Start over",
+      "checkNote": "Size and weight are estimates, and the postal code is the town centre's: correct them in the form if needed.",
+      "applied": "Form filled in.",
+      "appliedHint": "Check each step: nothing is posted without you.",
+      "describeAgain": "Describe again",
+      "privacy": "Your text or dictation is read by an artificial intelligence service (OpenAI) to fill in the form. Nothing is posted without your confirmation.",
+      "error": {
+        "failed": "We could not read your request. Try again, or fill in the form below directly.",
+        "rateLimited": "Too many attempts in a row. Wait a minute, or fill in the form below directly.",
+        "micDenied": "The microphone is not allowed. Allow it in your browser, or type your request.",
+        "micFailed": "Dictation did not work. Try again, or type your request."
+      },
+      "toast": {
+        "filled": "Form filled in. Check each step."
+      }
+    },
     "illustration": {
       "title": "No photo? An illustration can stand in.",
       "hint": "A generic picture of the kind of item, not a photo of yours. It is always labelled « Illustration ».",
@@ -2552,6 +2602,7 @@
             "Vehicle data — registration, type and capacity of the vehicle you bid with",
             "Activity data — bids submitted, jobs awarded, collection and delivery timestamps, proof of delivery",
             "Messages exchanged through the platform, including support conversations",
+            "A request described to the assistant — if you use “Describe your request”, your text or dictation is sent to our artificial intelligence provider, OpenAI, for as long as it takes to fill in the form; the recording is not kept on our servers",
             "Payment data — a client's card details are processed by our payment provider, Stripe, and never stored on our servers. Of the IBAN and BIC a carrier enters, we keep only the last four characters, so they can recognise their account; the bank details document (RIB) they upload is kept with their compliance documents",
             "Technical data — IP address and device information, used for security and abuse prevention"
           ]

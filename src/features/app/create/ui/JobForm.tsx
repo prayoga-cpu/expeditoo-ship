@@ -40,6 +40,7 @@ import { ToggleRow } from "./ToggleRow";
 import { FloorFields } from "./FloorFields";
 import { JobKindLink, MovingFields } from "./MovingFields";
 import { EstimateCard, HowItWorks } from "./EstimateCard";
+import { RequestAssistant } from "./RequestAssistant";
 import { LOCATION_TYPES, sameEndpoint, type LocationType } from "../schemas";
 import { useAddressBook, type Address } from "../hooks/useAddressBook";
 import { applySavedAddress, matchSavedAddress, type Side } from "../address-book";
@@ -87,6 +88,8 @@ export function JobForm(props: JobFormApi) {
     handleNext,
     handlePrev,
     prefillAddresses,
+    applyAssistant,
+    assistantFills,
     setJobKind,
     publish,
     saveDraft,
@@ -109,9 +112,17 @@ export function JobForm(props: JobFormApi) {
         currentStep={currentStep}
       />
 
+      {/* A shortcut onto a blank items request, never onto one being finished:
+          a saved draft is the requester's own words already. */}
+      {currentStep === 0 && !isResuming && !isMoving && (
+        <RequestAssistant onApply={applyAssistant} />
+      )}
+
       <Card className="p-4 sm:p-6">
         {currentStep === 0 && (
           <WhatStep
+            // Remounted when the assistant fills the form (`applyAssistant`).
+            key={assistantFills}
             form={form}
             photos={photos}
             onPhotosChange={handlePhotosChange}

@@ -26,6 +26,7 @@ import { CompanyIdentityError } from "@/server/services/company-identity.service
 import { StripeStatusError } from "@/server/services/stripe-status.service";
 import { CronHealthError } from "@/server/services/cron-health.service";
 import { RoutePlanError } from "@/server/services/route-planner.service";
+import { RequestAssistantError } from "@/server/services/request-assistant.service";
 
 /**
  * Shared response shape for the REST layer.
@@ -82,7 +83,8 @@ export function handleError(error: unknown, context: string) {
     error instanceof CompanyIdentityError ||
     error instanceof StripeStatusError ||
     error instanceof CronHealthError ||
-    error instanceof RoutePlanError
+    error instanceof RoutePlanError ||
+    error instanceof RequestAssistantError
   ) {
     return fail(error.code, error.message, error.status);
   }

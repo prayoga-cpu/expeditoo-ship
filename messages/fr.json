@@ -1164,6 +1164,56 @@
     }
   },
   "create": {
+    "assistant": {
+      "title": "Décrivez votre demande, le formulaire se remplit",
+      "hint": "Dites en une phrase ce que vous faites transporter, d'où et vers où. Vous vérifiez tout avant de publier.",
+      "label": "Votre demande",
+      "placeholder": "Exemple : un canapé 3 places de Lyon à Bordeaux",
+      "read": "Analyser",
+      "reading": "Analyse en cours…",
+      "add": "Ajouter",
+      "record": "Dicter",
+      "stopRecording": "Arrêter",
+      "transcribing": "Transcription…",
+      "understood": "Voici ce que nous avons compris :",
+      "nothing": "Nous n'avons pas reconnu de demande de transport. Dites-nous quoi transporter, d'où et vers où.",
+      "fields": {
+        "title": "Objet",
+        "size": "Taille",
+        "weight": "Poids",
+        "pickup": "Enlèvement",
+        "dropoff": "Livraison"
+      },
+      "toSpecify": "À préciser",
+      "outOfArea": "Pays non desservi pour le moment",
+      "quantity": "{title} × {count}",
+      "dimensions": "{lengthCm} × {widthCm} × {heightCm} cm",
+      "kilograms": "{kg} kg",
+      "ask": {
+        "title": "Que faites-vous transporter ?",
+        "size": "Quelle est sa taille ? Ses dimensions, ou un objet de taille comparable.",
+        "weight": "Combien pèse-t-il, à peu près ?",
+        "pickup": "Dans quelle ville faut-il l'enlever ?",
+        "dropoff": "Dans quelle ville faut-il le livrer ?"
+      },
+      "askMore": "Autre chose à préciser ou à corriger ?",
+      "fill": "Remplir le formulaire",
+      "restart": "Recommencer",
+      "checkNote": "La taille et le poids sont des estimations, et le code postal est celui du centre-ville : corrigez-les dans le formulaire si besoin.",
+      "applied": "Formulaire pré-rempli.",
+      "appliedHint": "Vérifiez chaque étape : rien n'est publié sans vous.",
+      "describeAgain": "Décrire à nouveau",
+      "privacy": "Votre texte ou votre dictée est lu par un service d'intelligence artificielle (OpenAI) pour remplir le formulaire. Rien n'est publié sans votre validation.",
+      "error": {
+        "failed": "Nous n'avons pas pu lire votre demande. Réessayez, ou remplissez directement le formulaire ci-dessous.",
+        "rateLimited": "Trop d'essais à la suite. Patientez une minute, ou remplissez directement le formulaire ci-dessous.",
+        "micDenied": "Le micro n'est pas autorisé. Autorisez-le dans votre navigateur, ou écrivez votre demande.",
+        "micFailed": "La dictée n'a pas fonctionné. Réessayez, ou écrivez votre demande."
+      },
+      "toast": {
+        "filled": "Formulaire pré-rempli. Vérifiez chaque étape."
+      }
+    },
     "illustration": {
       "title": "Pas de photo ? Une illustration peut la remplacer.",
       "hint": "Une image générique du type d'objet, pas une photo du vôtre. Elle est toujours signalée « Illustration ».",
@@ -2573,6 +2623,7 @@
             "Données de véhicule — immatriculation, type et capacité du véhicule avec lequel vous enchérissez",
             "Données d'activité — offres soumises, courses attribuées, horodatages d'enlèvement et de livraison, preuve de livraison",
             "Messages échangés via la plateforme, y compris les conversations de support",
+            "Demande décrite à l'assistant — si vous utilisez « Décrivez votre demande », votre texte ou votre dictée est transmis à notre prestataire d'intelligence artificielle, OpenAI, le temps de remplir le formulaire ; l'enregistrement n'est pas conservé sur nos serveurs",
             "Données de paiement — les données de carte d'un client sont traitées par notre prestataire de paiement, Stripe, et ne sont jamais conservées sur nos serveurs. De l'IBAN et du BIC qu'un transporteur saisit, nous ne conservons que les quatre derniers caractères, pour qu'il reconnaisse son compte ; le RIB qu'il dépose est conservé avec ses documents de conformité",
             "Données techniques — adresse IP et informations d'appareil, utilisées pour la sécurité et la prévention des abus"
           ]

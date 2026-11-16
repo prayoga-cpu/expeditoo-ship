@@ -16,6 +16,8 @@ import {
 } from "@/features/app/profile/api/addresses.api";
 import { addressBookKeys } from "./useAddressBook";
 import { applySavedAddress, autoPickAddresses } from "../address-book";
+import { applyRequestDraft } from "../assistant";
+import type { RequestDraft } from "@/server/dto/request-assistant.dto";
 import { draftRefusal } from "@/features/app/listing/hooks/useDraftActions";
 import { jobKeys } from "@/features/app/listing/hooks/useJobDetail";
 import type { DraftJob } from "@/features/app/listing/types";
@@ -193,6 +195,8 @@ export function useJobForm(seed: JobFormSeed = {}) {
   // unmounts on every step change and would fill again an end the requester
   // had cleared. A resumed request is never filled.
   const addressesPrefilled = useRef(resumed !== null);
+  // How many times the assistant has filled the form: the What step's key.
+  const [assistantFills, setAssistantFills] = useState(0);
 
   const form = useForm<JobFormValues>({
     resolver: zodResolver(jobFormSchema),
@@ -372,6 +376,25 @@ export function useJobForm(seed: JobFormSeed = {}) {
       }
     },
     [form]
+  );
+
+  /**
+   * The request assistant's reading, written onto the form
+   * (request_assistant_spec.md §4). An end it filled is the requester's own
+   * answer, so the address book no longer fills the ends by itself: it reads
+   * an end with a town and no street as empty, and would write over it.
+   */
+  const applyAssistant = useCallback(
+    (draft: RequestDraft) => {
+      const filled = applyRequestDraft(form.setValue, draft, locale);
+      if (filled.pickup || filled.dropoff) addressesPrefilled.current = true;
+      form.clearErrors();
+      // The What step keeps text of its own (item rows, numeric boxes): it is
+      // remounted so every box starts from the values just written.
+      setAssistantFills((n) => n + 1);
+      toast.success(t("assistant.toast.filled"));
+    },
+    [form, locale, t]
   );
 
   const handlePhotosChange = useCallback(
@@ -632,6 +655,8 @@ export function useJobForm(seed: JobFormSeed = {}) {
     handleNext,
     handlePrev,
     prefillAddresses,
+    applyAssistant,
+    assistantFills,
     setJobKind,
     goToStep: showStep,
     publish: () => submit(true),

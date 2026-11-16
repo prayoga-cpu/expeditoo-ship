@@ -425,6 +425,14 @@ adversarial verification pass — treat their detail as slightly less certain.
 Work that needs a human hand outside the codebase. Add to this list rather
 than leaving it in a chat message.
 
+- [ ] **(2.86.0, request assistant) Check `OPENAI_API_KEY` is set in Vercel → Production.** Without it the
+  box simply does not appear. It could not be checked from here: production
+  variables are Sensitive.
+- [ ] **Dictate one request on a phone once it is deployed** — the microphone
+  button is the one part not exercised in a real browser.
+- [ ] **Tell the client the text goes to OpenAI**, and ask whether their lawyer
+  wants OpenAI named as a sub-processor beyond the line added to the privacy
+  page.
 - [x] ~~Run Actions → « Migrate database » for `0045_request_form_feedback`
       before 2.76.0 deploys~~. **Done by the owner by 2026-11-02**, dispatched on
       `release/2.76.0`. Confirmed through `mirror_readonly` before `main`
@@ -991,6 +999,105 @@ than leaving it in a chat message.
       after approval (the 2.61.0 entry, "What was wrong" item 4). To restore them, open
       `/admin/users`, then the roles dialog for that account, and add both.
       Until then its application page says driver access is off.
+
+---
+
+## ✅ 2026-11-16 — Request assistant: describe a request, the form fills itself (2.86.0)
+
+*« Could we use an Ai tool about talk to it for adding a new add (when customer
+is connected) with the name and size of the item and also picking and deivery
+cities? … implement go ahead everything as your suggestion/recommended »*
+
+Spec: `docs/specs/request_assistant_spec.md`. Plan:
+`docs/plans/plan_request_assistant.md`. No migration.
+
+**What changed.** A box at the top of `/create`, step « Quoi »
+(`create/ui/RequestAssistant.tsx`). A signed-in requester types or dictates a
+sentence; `POST /api/listings/assist` answers a `RequestDraft` — title,
+quantity, weight bracket, size preset or stated dimensions, a town with postal
+code and country at each end, plus what is `missing` — and « Remplir le
+formulaire » writes it onto the form through `useJobForm.applyAssistant`
+(`create/assistant.ts`). `POST /api/listings/assist/transcribe` turns a
+recording of up to 60 s into text for the same box. `GET /api/listings/assist`
+says whether a key is configured, and the box renders only when it is.
+
+**Why it is shaped this way.**
+- **The AI was already here.** `openai` and `OPENAI_API_KEY` were in the repo
+  for bordereau extraction; this reuses `src/lib/ai/openai.ts`. No new
+  provider, no new dependency. The model is `gpt-4o-mini`, dictation
+  `gpt-4o-mini-transcribe`.
+- **It fills the form and never posts.** The answer's shape has no date, price,
+  street, pin or `origin`, and the service has no path to `listingsService`. So
+  the publish path stays one, and a wrong reading costs a correction.
+- **The model reads; the map decides the postal code.** A request needs a town
+  and a postal code. The code is the one the person gave, or the one Nominatim
+  gives for the town centre (`searchAddress` then `reverseGeocode`) — never the
+  model's memory. France is searched first, then every `JOB_COUNTRIES` country.
+- **Estimates use the form's own vocabulary and its own direction.** With no
+  stated weight the model may pick a bracket for an everyday object, the
+  heavier of two — the direction `resolveWeightKg` already rounds in, because
+  `TakeJobPanel` matches a vehicle on `maxWeightKg >= weightKg`. A stated
+  weight goes through `bracketForWeight`, exactly as a resumed draft does.
+- **Stateless.** A follow-up answer is sent with everything said before it and
+  the whole is read again. Nothing is stored: no conversation, no recording.
+- **A country outside `JOB_COUNTRIES` fills nothing.** The model may answer
+  `OTHER`; the end comes back null and listed in `outOfArea`. Without it,
+  « London » was looked up in France first.
+
+**Judgment calls.**
+- The assistant is offered on a new items request only — not on a move
+  (`?type=moving`), not on a resumed draft.
+- Once the assistant fills an end, the address book stops auto-filling the ends
+  (`addressesPrefilled`): `autoPickAddresses` reads an end with a town and no
+  street as empty and would have written the saved home address over « Lyon ».
+  The saved-address picker still works by hand.
+- No pin is written for a town; `listingPinsService` places a pinless request.
+- The What step is remounted after a fill (`assistantFills` as its key), because
+  `ItemField` and the numeric boxes keep text of their own (gotcha 18).
+- The routes check the session with `auth.api.getSession`, as
+  `POST /api/listings` does, rather than `resolveViewer`, which reads two role
+  rows this endpoint has no use for.
+
+**Found on the way.** The first prompt left weight null for a sofa, a piano and
+a washing machine, and title-cased « Canapé 3 Places ». Both fixed in the prompt
+and re-checked against the real model. `FormData`'s file is not `instanceof
+File` under jsdom, so the transcribe route tests for "not a string" instead.
+
+**Verification.**
+- `npx tsc --noEmit`: 0 errors, run after the last code edit.
+- `eslint` on every file touched: 0 problems. (`pnpm lint` over the whole repo
+  was not run: another session's unreleased 2.85.0 is in this tree.)
+- `vitest run`: 281 files, 3,541 tests pass, with that 2.85.0 in the tree.
+  New: 32 service, 13 route, 11 form-fill, 13 box — 69 tests.
+- Real model, five sentences through the service: sofa Lyon → Bordeaux; two
+  boxes of books with stated size, weight and postal code to Bruxelles (found in
+  Belgium, 1000); a piano to London (`outOfArea`); a sentence trying to instruct
+  the model (every field null); a washing machine with one town.
+- Chromium against a scratch database and the real model, signed in as a
+  throwaway account: read, follow-up question, second reading, fill, title and
+  the weight and size cards selected, the Where step showing « 69002 Lyon » in
+  typing mode; a 390 px dark view and a 390 px English view; signed out, both
+  routes answer 401.
+- Dictation, server side: a spoken French sentence (synthesised with `say`,
+  16 kHz WAV) through the real transcription model came back word for word, and
+  its reading filled all five fields.
+- **Not verified: the microphone button in a browser.** Recording with
+  `MediaRecorder` and the upload it makes have not been exercised with a real
+  microphone. `pnpm build` was not run.
+
+**Known limits.**
+- The postal code for a big town is its centre's (Lyon → 69002). The box says
+  so; the requester corrects it on « Où ».
+- The rate limits (10 readings and 6 dictations a minute per user) are
+  in-process, so they hold per server instance.
+- Dates, budget and photos are not read from the sentence. Moves are not
+  covered.
+- Readings vary a little run to run (« 2 cartons de livres » came back once as
+  « Livres × 2 »).
+
+Operator to-do: three items, in the list at the top of the release log
+(the `OPENAI_API_KEY` check, one dictation on a phone, the OpenAI
+sub-processor question).
 
 ---
 

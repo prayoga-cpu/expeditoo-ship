@@ -14,6 +14,26 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.86.0] - 2026-11-16 · feat
+
+- **You can now describe your request in a sentence and the form fills itself.**
+  At the top of « Demander un transport », type or dictate what you need moved,
+  from where and to where — « un canapé 3 places de Lyon à Bordeaux » — and you
+  are shown what was understood: the item, its size, its weight, the pickup town
+  and the delivery town. « Remplir le formulaire » puts it all in the form.
+- **If something is missing, you are asked for it.** Say only « un canapé à
+  prendre à Lyon » and the box asks which town it goes to; your answer is added
+  to what you already said.
+- **Nothing is posted for you.** The assistant only fills the form. You still
+  check each step — dates, addresses, budget — and press « Publier » yourself.
+  Size and weight are estimates you can correct, and the postal code is the town
+  centre's until you give your own.
+- **A town in a country we do not serve yet is said as such**, instead of being
+  put in the form wrongly.
+- The box appears for signed-in customers on a new request. Your text or
+  dictation is read by an artificial intelligence service (OpenAI); the privacy
+  page now says so.
+
 ## [2.85.0] - 2026-11-16 · ux
 
 - **An admin now sees who has applied to be a driver, right in the Users list.**
