@@ -1,4 +1,5 @@
 import * as usersDAL from "@/server/dal/users.dal";
+import { carriersDal } from "@/server/dal/carriers.dal";
 import { UserPreferences, defaultPreferences } from "@/db/schema";
 import { userRoleEnum } from "@/db/schema/users";
 import {
@@ -33,6 +34,9 @@ function canonicalRoles(rows: { role: string }[]): string[] {
   const allowed = new Set<string>(userRoleEnum.enumValues);
   return rows.map((r) => r.role).filter((role) => allowed.has(role));
 }
+
+/** The two roles KYC approval grants together (`role-groups.ts`). */
+const DRIVER_ROLES = new Set<string>(["carrier", "driver"]);
 
 // ========================================
 // Preference Utilities
@@ -152,6 +156,20 @@ export async function assignRole(
     throw new Error("Target user not found");
   }
 
+  // Driver access is earned by an approved application, never granted by hand:
+  // a `carrier` role with no file behind it is a driver nobody has vetted, who
+  // could bid on work (client feedback 2026-11-16, « Jean Masson »).
+  if (DRIVER_ROLES.has(validated.role)) {
+    const carrier = await carriersDal.getByUserId(validated.userId);
+    if (carrier?.status !== "approved") {
+      return {
+        success: false,
+        message:
+          "Driver access comes from approving the driver application, not from the role list.",
+      };
+    }
+  }
+
   // Assign role
   try {
     if (validated.replace) {
@@ -258,6 +276,12 @@ export async function getUsers(query: unknown, adminId: string): Promise<UserLis
     sortOrder: validated.sortOrder,
   });
 
+  // Where each account stands with its driver application, so the admin sees
+  // « candidature à examiner » beside an account that holds no role yet.
+  const applications = await carriersDal.statusesByUserIds(
+    result.users.map((user) => user.id)
+  );
+
   // Transform to DTO format
   return {
     users: result.users.map((user) => ({
@@ -275,6 +299,7 @@ export async function getUsers(query: unknown, adminId: string): Promise<UserLis
       lastLoginAt: user.lastLoginAt,
       alias: user.alias ?? null,
       origin: user.origin,
+      driverApplication: applications.get(user.id) ?? null,
       impersonateBlocked: impersonationRefusal(adminId, user)?.code ?? null,
       deleteBlocked: deletionRefusal(adminId, user)?.code ?? null,
       suspendBlocked: suspensionRefusal(adminId, user)?.code ?? null,

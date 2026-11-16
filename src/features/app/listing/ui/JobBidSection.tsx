@@ -1,8 +1,9 @@
 "use client";
 
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useMutationState } from "@tanstack/react-query";
-import { FileClock, Gavel, Truck, type LucideIcon } from "lucide-react";
+import { FileClock, Gavel, Info, Truck, type LucideIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -15,6 +16,7 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { ApiError } from "@/lib/fetcher";
 import type { Job, Offer } from "../types";
+import { OFFER_ANCHOR } from "../offer-anchor";
 
 interface JobBidSectionProps {
   job: Job;
@@ -60,8 +62,19 @@ export function JobBidSection({ job, viewerId }: JobBidSectionProps) {
     (offer) => offer.listingId === job.id && offer.status === "pending"
   );
 
-  if (!bidding || isLoading) return null;
+  if (isLoading) return null;
 
+  // Say why there is no form rather than show nothing: the requester is the
+  // one person on this page who cannot bid, and a page that ends without a
+  // word reads as a missing button (client feedback 2026-11-16).
+  if (isOwner && job.status === "open") return <OwnJobCard />;
+  if (!bidding) return null;
+
+  // Staff hold no driver role by default, and « Devenir transporteur » is the
+  // wrong thing to tell an operator who is only looking at the job.
+  if (!isCarrier && (roles.includes("admin") || roles.includes("operator"))) {
+    return <StaffCard />;
+  }
   if (!isCarrier) return <BecomeCarrierCard />;
   if (notApprovedSubmits.length > 0) return <NotApprovedCard />;
   if (mine) return <MyOfferCard offer={mine} />;
@@ -75,10 +88,98 @@ export function JobBidSection({ job, viewerId }: JobBidSectionProps) {
   // — and it opens on the budget, so offering the posted price is still one
   // vehicle and a slot away. `takeJob` refuses it too, TAKE_NOT_AVAILABLE.
   return (
-    <div className="space-y-4">
-      {job.origin === "expedion" && <TakeJobPanel job={job} />}
-      <SubmitOfferForm job={job} />
-    </div>
+    <OfferAnchor floating>
+      <div className="space-y-4">
+        {job.origin === "expedion" && <TakeJobPanel job={job} />}
+        <SubmitOfferForm job={job} />
+      </div>
+    </OfferAnchor>
+  );
+}
+
+/**
+ * Marks where the offer form is, and makes it reachable from anywhere on the
+ * page.
+ *
+ * The form is the last block of a long page, and on a tablet it sat below the
+ * fold with nothing pointing at it: a driver looked for « Faire une offre » and
+ * found none (client feedback 2026-11-16). So a link to `#offer` scrolls to it
+ * once it has rendered, and a floating button does the same below `xl`, where
+ * the page is one column and long. The button goes away while the form is on
+ * screen — it would only cover it.
+ */
+function OfferAnchor({
+  floating = false,
+  children,
+}: {
+  floating?: boolean;
+  children: ReactNode;
+}) {
+  const t = useTranslations("listing.bid");
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (window.location.hash === `#${OFFER_ANCHOR}`) {
+      ref.current?.scrollIntoView({ block: "start" });
+    }
+  }, []);
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!floating || !node || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(([entry]) =>
+      setVisible(entry.isIntersecting)
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [floating]);
+
+  return (
+    <>
+      <div id={OFFER_ANCHOR} ref={ref} className="scroll-mt-24">
+        {children}
+      </div>
+      {floating && !visible && (
+        <Button
+          type="button"
+          onClick={() => ref.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+          className="fixed right-4 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-40 rounded-full shadow-lg xl:hidden"
+        >
+          <Gavel className="mr-1.5 h-4 w-4" aria-hidden="true" />
+          {t("makeOffer")}
+        </Button>
+      )}
+    </>
+  );
+}
+
+/** Shown to the person who posted the job: they receive offers, never send one. */
+function OwnJobCard() {
+  const t = useTranslations("listing.bid");
+  return (
+    <Card className="flex items-start gap-3 p-4 sm:p-5">
+      <div className="rounded-full bg-muted p-2.5">
+        <Info className="h-5 w-5 text-muted-foreground" />
+      </div>
+      <div>
+        <p className="font-semibold">{t("ownJobTitle")}</p>
+        <p className="mt-0.5 text-sm text-muted-foreground">{t("ownJobDescription")}</p>
+      </div>
+    </Card>
+  );
+}
+
+function StaffCard() {
+  const t = useTranslations("listing.bid");
+  return (
+    <BidPromptCard
+      icon={Info}
+      tone="default"
+      title={t("staffTitle")}
+      description={t("staffDescription")}
+      cta={t("becomeCarrierCta")}
+    />
   );
 }
 

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { userRoleEnum } from "@/db/schema/users";
+import { carrierStatusEnum } from "@/db/schema/carriers";
 
 // ========================================
 // User Role Enum
@@ -58,6 +59,10 @@ export const userListItemSchema = z.object({
   // Which product the account was created in, so the table can label an
   // Expedion client apart from an EXPEDITOO driver.
   origin: z.enum(["expeditoo", "expedion"]),
+  // Where the account's driver application stands, or null when it never
+  // started one. An applicant holds no driver role until approval, so without
+  // this the role column of an account waiting on staff reads blank.
+  driverApplication: z.enum(carrierStatusEnum.enumValues).nullable(),
   // Why the server would refuse this action on this row, or null when it would
   // accept it — decided by account-policy.ts, so the menu cannot drift out of
   // step with the endpoints. A *code*, not a sentence: the table is FR/EN and

@@ -19,6 +19,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LottieLoader } from "@/components/ui/lottie-loader";
+import Link from "next/link";
 import { X } from "lucide-react";
 import type { User } from "../types";
 import { useTranslations } from "next-intl";
@@ -54,7 +55,14 @@ export function RoleManagementDialog({
   const { toast } = useToast();
 
   const held = user ? chipsHeld(user.roles) : [];
-  const addable = MANAGEABLE_ROLES.filter((role) => !held.includes(role));
+  // « Chauffeur » is not offered here: driver access is granted by approving the
+  // application, which vets the person. Granting it from this list made a
+  // driver with no file (client feedback 2026-11-16), and the server refuses it
+  // too (`assignRole`).
+  const addable = MANAGEABLE_ROLES.filter(
+    (role) => role !== "driver" && !held.includes(role)
+  );
+  const canBecomeDriver = !held.includes("driver");
 
   const handleOpenChange = (newOpen: boolean) => {
     if (!isUpdating) {
@@ -171,6 +179,19 @@ export function RoleManagementDialog({
                 </Button>
               </div>
             </div>
+          )}
+
+          {canBecomeDriver && (
+            <p className="text-xs text-muted-foreground">
+              {t("driverViaApplication")}{" "}
+              <Link
+                href="/admin/drivers?tab=applications"
+                className="font-medium text-primary underline-offset-2 hover:underline"
+                onClick={() => onOpenChange(false)}
+              >
+                {t("openApplications")}
+              </Link>
+            </p>
           )}
         </div>
 

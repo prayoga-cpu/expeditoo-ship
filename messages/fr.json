@@ -1155,7 +1155,12 @@
         "notCarrier": "Les offres sont réservées aux transporteurs validés",
         "notCarrierDesc": "Ce compte n'a pas l'accès transporteur. Consultez votre dossier ; s'il est déjà approuvé, déconnectez-vous puis reconnectez-vous, sinon contactez le support.",
         "application": "Mon dossier transporteur"
-      }
+      },
+      "makeOffer": "Faire une offre",
+      "ownJobTitle": "C'est votre demande",
+      "ownJobDescription": "Les transporteurs vous envoient leurs offres ci-dessus : vous choisissez celle qui vous convient. Vous ne pouvez pas faire d'offre sur votre propre demande.",
+      "staffTitle": "Un compte opérateur ou admin ne propose pas de prix",
+      "staffDescription": "Pour faire une offre, il faut un compte chauffeur approuvé. Sur une course Expedion, l'attribution se fait depuis la « File d'attribution »."
     }
   },
   "create": {
@@ -2768,7 +2773,13 @@
         "joinDate": "Inscription",
         "role": "Rôle",
         "actions": "Actions",
-        "removeRole": "Retirer {role}"
+        "removeRole": "Retirer {role}",
+        "application": {
+          "draft": "Dossier chauffeur non envoyé",
+          "submitted": "Candidature chauffeur · à examiner",
+          "under_review": "Candidature chauffeur · en cours d'examen",
+          "open": "Ouvrir les candidatures chauffeur"
+        }
       },
       "status": {
         "active": "actif",
@@ -2965,7 +2976,9 @@
       "driver": "Chauffeur",
       "operator": "Opérateur",
       "support": "Support",
-      "finance": "Finance"
+      "finance": "Finance",
+      "driverViaApplication": "Le rôle Chauffeur s'obtient en approuvant une candidature, pas depuis cette liste.",
+      "openApplications": "Ouvrir les candidatures"
     },
     "payments": {
       "title": "Paiements",
@@ -4267,7 +4280,8 @@
       "needsProtection": "À protéger",
       "needsPackaging": "À emballer",
       "sizeTitle": "Taille {size}",
-      "moving": "Déménagement"
+      "moving": "Déménagement",
+      "makeOffer": "Faire une offre"
     },
     "map": {
       "openJob": "Ouvrir la mission « {title} »",

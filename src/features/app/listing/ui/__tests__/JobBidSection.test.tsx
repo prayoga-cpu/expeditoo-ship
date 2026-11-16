@@ -116,3 +116,51 @@ describe("JobBidSection — taking a job is for escalated jobs only", () => {
     ]);
   });
 });
+
+describe("JobBidSection — nobody is left with a page that ends in silence", () => {
+  const text = (job: Job, viewerId: string | null = "carrier-1") => {
+    const { container } = render(
+      <QueryClientProvider client={new QueryClient()}>
+        <NextIntlClientProvider locale="fr" messages={fr}>
+          <JobBidSection job={job} viewerId={viewerId} />
+        </NextIntlClientProvider>
+      </QueryClientProvider>
+    );
+    return container;
+  };
+
+  it("anchors the offer form, so a card can link to it", () => {
+    const container = text(JOB);
+
+    const anchor = container.querySelector("#offer");
+    expect(anchor).not.toBeNull();
+    expect(anchor?.querySelector("[data-testid='submit-offer-form']")).not.toBeNull();
+  });
+
+  it("says why the requester has no form on their own request", () => {
+    const container = text(JOB, "requester-1");
+
+    expect(container).toHaveTextContent("C'est votre demande");
+    expect(container.querySelector("[data-testid]")).toBeNull();
+  });
+
+  it("tells an operator without a driver account why there is no form", () => {
+    auth.user = { roles: ["operator"] };
+    const container = text(JOB);
+
+    expect(container).toHaveTextContent("ne propose pas de prix");
+    expect(container.querySelector("[data-testid]")).toBeNull();
+  });
+
+  it("still invites an ordinary account to become a transporter", () => {
+    auth.user = { roles: ["shipper"] };
+    const container = text(JOB);
+
+    expect(container).toHaveTextContent("Devenir transporteur");
+  });
+
+  it("shows a signed-out visitor nothing", () => {
+    expect(text(JOB, null)).toBeEmptyDOMElement();
+  });
+});
+

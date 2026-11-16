@@ -244,3 +244,32 @@ describe("JobCard detail", () => {
     expect(screen.queryByText(fr.jobBoard.card.needsPackaging)).toBeNull();
   });
 });
+
+describe("JobCard offer action", () => {
+  it("has no button on its own, so a card elsewhere is just a way into the job", () => {
+    render(<JobCard job={JOB} />);
+
+    expect(screen.queryByRole("link", { name: "Faire une offre" })).toBeNull();
+  });
+
+  it("offers « Faire une offre », straight to the offer form of that job", () => {
+    render(<JobCard job={JOB} offerAction />);
+
+    expect(screen.getByRole("link", { name: "Faire une offre" })).toHaveAttribute(
+      "href",
+      "/listing/job_1#offer"
+    );
+  });
+
+  it("keeps the card itself a link to the job, and never nests one link in another", () => {
+    const { container } = render(<JobCard job={JOB} offerAction />);
+
+    const links = Array.from(container.querySelectorAll("a"));
+    expect(links.map((a) => a.getAttribute("href"))).toEqual([
+      "/listing/job_1",
+      "/listing/job_1#offer",
+    ]);
+    expect(container.querySelector("a a")).toBeNull();
+  });
+});
+

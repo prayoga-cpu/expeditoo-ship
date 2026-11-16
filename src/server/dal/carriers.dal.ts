@@ -10,7 +10,7 @@ import {
   type InsertVehicle,
   type CarrierStatus,
 } from "@/db/schema/carriers";
-import { and, desc, eq, isNotNull, isNull, lte, or } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, lte, or } from "drizzle-orm";
 
 type Executor = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -25,6 +25,20 @@ export const carriersDal = {
       where: eq(carriers.userId, userId),
       with: { documents: true, vehicles: true },
     });
+  },
+
+  /**
+   * The application status of each of these accounts, keyed by user id. An
+   * account that never started an application has no entry. One query for the
+   * whole page of the admin users table, not one per row.
+   */
+  async statusesByUserIds(userIds: string[], tx: Executor = db) {
+    if (userIds.length === 0) return new Map<string, CarrierStatus>();
+    const rows = await tx
+      .select({ userId: carriers.userId, status: carriers.status })
+      .from(carriers)
+      .where(inArray(carriers.userId, userIds));
+    return new Map(rows.map((row) => [row.userId, row.status]));
   },
 
   async getById(id: string, tx: Executor = db) {

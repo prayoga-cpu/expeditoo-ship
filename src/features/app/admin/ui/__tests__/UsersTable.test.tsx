@@ -32,6 +32,7 @@ const SHIPPER_ONLY: User = {
   joinDate: "2026-01-01",
   lastLoginAt: null,
   origin: "expeditoo",
+  driverApplication: null,
   impersonateBlocked: null,
   deleteBlocked: null,
   suspendBlocked: null,
@@ -121,5 +122,48 @@ describe("UsersTable role column", () => {
     renderTable([MULTI]);
 
     expect(screen.queryByLabelText(/Remove/)).not.toBeInTheDocument();
+  });
+
+  describe("driver application chip", () => {
+    const applicant = (driverApplication: User["driverApplication"]): User => ({
+      ...SHIPPER_ONLY,
+      id: "u9",
+      name: "Jean Masson",
+      email: "jean@example.com",
+      driverApplication,
+    });
+
+    it("says an applicant is waiting for review, and links to the list", () => {
+      renderTable([applicant("submitted")]);
+
+      const chip = screen.getByText("Driver application · to review");
+      expect(chip.closest("a")).toHaveAttribute(
+        "href",
+        "/admin/drivers?tab=applications"
+      );
+    });
+
+    it("says a file under review is under review", () => {
+      renderTable([applicant("under_review")]);
+
+      expect(
+        screen.getByText("Driver application · under review")
+      ).toBeInTheDocument();
+    });
+
+    it("shows a started but unsent file, quietly", () => {
+      renderTable([applicant("draft")]);
+
+      expect(screen.getByText("Driver file not sent")).toBeInTheDocument();
+    });
+
+    it.each(["approved", "rejected", "suspended", "deregistered", null] as const)(
+      "shows no chip for %s",
+      (state) => {
+        renderTable([applicant(state)]);
+
+        expect(screen.queryByText(/Driver application|Driver file/)).toBeNull();
+      }
+    );
   });
 });

@@ -22,6 +22,16 @@ export interface PendingDelivery {
   requesterName: string | null;
 }
 
+/** `carrier_status` — the same seven words the application list filters on. */
+export type DriverApplicationStatus =
+  | "draft"
+  | "submitted"
+  | "under_review"
+  | "approved"
+  | "rejected"
+  | "suspended"
+  | "deregistered";
+
 export interface User {
   id: string;
   name: string;
@@ -42,6 +52,12 @@ export interface User {
   alias?: string | null;
   /** Which app the account was created in. */
   origin: "expeditoo" | "expedion";
+  /**
+   * Where the account's driver application stands, null when it never started
+   * one. An applicant holds no driver role until approval, so the role column
+   * reads this to say « candidature à examiner » instead of staying blank.
+   */
+  driverApplication: DriverApplicationStatus | null;
   /**
    * Why the server would refuse each action on this row, or null when it would
    * accept it — decided once in account-policy.ts. The menu shows every action

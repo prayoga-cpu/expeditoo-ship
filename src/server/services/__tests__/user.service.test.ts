@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as userService from '../user.service';
 import * as usersDAL from '@/server/dal/users.dal';
+import { carriersDal } from '@/server/dal/carriers.dal';
 
 
 // Mock dependencies
@@ -12,6 +13,14 @@ vi.mock('@/server/dal/users.dal', () => ({
   removeRole: vi.fn(),
   userHasRole: vi.fn(),
   getUserRoles: vi.fn(),
+  getUsers: vi.fn(),
+}));
+
+vi.mock('@/server/dal/carriers.dal', () => ({
+  carriersDal: {
+    getByUserId: vi.fn(),
+    statusesByUserIds: vi.fn(),
+  },
 }));
 
 describe('userService', () => {
@@ -72,10 +81,41 @@ describe('userService', () => {
                 .mockResolvedValueOnce({ roles: [{ role: 'admin' }] } as any) // Admin query
                 .mockResolvedValueOnce({ id: 'target' } as any); // Target query
 
-            const result = await userService.assignRole({ userId: 'target', role: 'carrier' }, 'admin-id');
+            const result = await userService.assignRole({ userId: 'target', role: 'operator' }, 'admin-id');
 
             expect(result.success).toBe(true);
-            expect(usersDAL.assignRole).toHaveBeenCalledWith('target', 'carrier', 'admin-id');
+            expect(usersDAL.assignRole).toHaveBeenCalledWith('target', 'operator', 'admin-id');
+        });
+
+        it.each(['carrier', 'driver'])(
+            'grants %s only when an approved driver application backs it',
+            async (role) => {
+                vi.mocked(usersDAL.getUserById)
+                    .mockResolvedValueOnce({ roles: [{ role: 'admin' }] } as any)
+                    .mockResolvedValueOnce({ id: 'target' } as any);
+                vi.mocked(carriersDal.getByUserId).mockResolvedValue({ status: 'approved' } as any);
+
+                const result = await userService.assignRole({ userId: 'target', role }, 'admin-id');
+
+                expect(result.success).toBe(true);
+                expect(usersDAL.assignRole).toHaveBeenCalledWith('target', role, 'admin-id');
+            }
+        );
+
+        it.each([
+            ['no application at all', undefined],
+            ['a submitted application', { status: 'submitted' }],
+            ['a rejected application', { status: 'rejected' }],
+        ])('refuses a driver role for %s', async (_label, carrier) => {
+            vi.mocked(usersDAL.getUserById)
+                .mockResolvedValueOnce({ roles: [{ role: 'admin' }] } as any)
+                .mockResolvedValueOnce({ id: 'target' } as any);
+            vi.mocked(carriersDal.getByUserId).mockResolvedValue(carrier as any);
+
+            const result = await userService.assignRole({ userId: 'target', role: 'carrier' }, 'admin-id');
+
+            expect(result.success).toBe(false);
+            expect(usersDAL.assignRole).not.toHaveBeenCalled();
         });
 
         it('should throw if not admin', async () => {
@@ -83,6 +123,32 @@ describe('userService', () => {
              
              await expect(userService.assignRole({ userId: 'target', role: 'carrier' }, 'user-id'))
                 .rejects.toThrow('Unauthorized: Admin role required');
+        });
+    });
+
+    describe('getUsers', () => {
+        it('reports where each account stands with its driver application', async () => {
+            vi.mocked(usersDAL.getUserById).mockResolvedValue({ roles: [{ role: 'admin' }] } as any);
+            const row = (id: string) => ({
+                id, email: `${id}@example.com`, name: id, image: null,
+                emailVerified: true, isVerified: false, banned: false,
+                roles: [], createdAt: new Date(), lastLoginAt: null, alias: null, origin: 'expeditoo',
+            });
+            vi.mocked(usersDAL.getUsers).mockResolvedValue({
+                users: [row('applicant'), row('plain')],
+                total: 2, page: 1, pageSize: 50, totalPages: 1,
+            } as any);
+            vi.mocked(carriersDal.statusesByUserIds).mockResolvedValue(
+                new Map([['applicant', 'submitted']]) as any
+            );
+
+            const result = await userService.getUsers({}, 'admin-id');
+
+            expect(carriersDal.statusesByUserIds).toHaveBeenCalledWith(['applicant', 'plain']);
+            expect(result.users.map((u) => [u.id, u.driverApplication])).toEqual([
+                ['applicant', 'submitted'],
+                ['plain', null],
+            ]);
         });
     });
 });

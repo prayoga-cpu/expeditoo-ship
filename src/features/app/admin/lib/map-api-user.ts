@@ -16,6 +16,7 @@ export interface ApiUser {
   lastLoginAt?: string | null;
   alias?: string | null;
   origin?: "expeditoo" | "expedion";
+  driverApplication?: User["driverApplication"];
   impersonateBlocked?: string | null;
   deleteBlocked?: string | null;
   suspendBlocked?: string | null;
@@ -53,6 +54,7 @@ export function mapApiUser(user: ApiUser): User {
     lastLoginAt: user.lastLoginAt ?? null,
     alias: user.alias ?? null,
     origin: user.origin ?? "expeditoo",
+    driverApplication: user.driverApplication ?? null,
     // Undefined means an endpoint that does not send these yet, which is not
     // the same as "refused" — leave the action enabled and let the server have
     // the last word, since it always does.

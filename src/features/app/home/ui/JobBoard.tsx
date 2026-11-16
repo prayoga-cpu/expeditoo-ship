@@ -43,7 +43,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useActiveAccessMode } from "@/lib/use-active-access-mode";
 import { hasDriverAccess } from "@/lib/active-access";
 import Link from "next/link";
-import type { BoardPane, JobSort, SearchMode } from "../types";
+import type { BoardJob, BoardPane, JobSort, SearchMode } from "../types";
 
 const SORTS: { value: JobSort; labelKey: string }[] = [
   { value: "created_desc", labelKey: "newest" },
@@ -362,7 +362,11 @@ export function JobBoard({ origin }: { origin?: "direct" | "expedion" } = {}) {
                 onMouseEnter={() => setHighlightedId(job.id)}
                 onMouseLeave={() => setHighlightedId(null)}
               >
-                <JobCard job={job} isHighlighted={job.id === highlightedId} />
+                <JobCard
+                  job={job}
+                  isHighlighted={job.id === highlightedId}
+                  offerAction={!(job as BoardJob).hasBid && job.shipperId !== user?.id}
+                />
               </div>
             ))}
           </div>

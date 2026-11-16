@@ -14,6 +14,25 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.85.0] - 2026-11-16 · ux
+
+- **An admin now sees who has applied to be a driver, right in the Users list.**
+  Until now, someone who had applied had a blank « Rôle » cell and nothing said
+  they were waiting. They now carry an orange « Candidature chauffeur · à examiner »
+  tag (or « Dossier chauffeur non envoyé » if they started and never sent it),
+  and clicking it opens the applications. The « Dossiers » tab shows how many are
+  waiting, and each file's status is now the third column, so it is no longer
+  hidden off the edge of a tablet screen.
+- **« Chauffeur » can no longer be handed out from the role list.** It used to
+  create a driver with no file and no checks. Driver access now comes only from
+  approving an application, and the role window says so and links there.
+- **A driver can now find where to send a price.** Every request on the job board
+  has a « Faire une offre » button that goes straight to the offer form, and on a
+  tablet or phone a « Faire une offre » button stays on screen while the form is
+  out of sight. The person who posted a request is told why they cannot offer on
+  it, and an operator or admin without a driver account is told why there is no
+  form, instead of an empty space.
+
 ## [2.84.1] - 2026-11-15 · fix
 
 - **You now also get an email when a driver sends you a price quote from your

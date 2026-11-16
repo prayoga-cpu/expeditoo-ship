@@ -1019,6 +1019,31 @@ _The owner, with a screenshot of the admin sidebar: « I think the driver applic
 - The phone bars for drivers and requesters were not regrouped (they are icon bars with no room for headings).
 - Not checked in a browser.
 
+## ✅ 2026-11-16 — Applicants visible to admins, Driver role no longer hand-grantable, « Faire une offre » on the board (2.85.0)
+
+_Nicolas, 16 Nov (WhatsApp, with iPad photos): « When I send an ask to be shipper, I find it in user and nothing appear to ask to the admin to take care of this. I think it should appear in column role as a new driver waiting for validation. » · « Case Jean Masson role is empty » · « I don't find any button about answer to this ad (iPad page) except immédiat but I want to send an offer with price » · and, not built, « two types must be distinguished: the private driver … and the professional driver »._
+
+### Cause
+
+- **Empty role cell.** An applicant holds no `carrier`/`driver` role until `approveApplication`, and the role column prints `chipsHeld(user.roles)`, so a person waiting on staff read as a blank. The data was all there in `/admin/drivers?tab=applications` (the bell and the email already point at it) but nothing on `/admin/users` joined the two. In the « Dossiers » table the status column was **last** — on the iPad it sat past the right edge, so I first misread the table as having no status column.
+- **Hand-grantable Driver.** The role dialog's Driver option called `assignRole` twice (`carrier`, `driver`) with no check that a carrier row existed. Jean Masson's dialog offered exactly that.
+- **No button.** `JobCard` was one `<Link>`; « Immédiat » (`UrgencyBadge`) was its only coloured element. The offer form is the last block of `JobDetail`. `JobBidSection` returned nothing for the owner and « Devenir transporteur » for an operator, so whichever of those Nicolas was on that job, the page ended without a word. **I could not tell which from the photos** (the 5 € couch may be his own test job, or his account may hold no `carrier` role).
+
+### What changed
+
+`carriersDal.statusesByUserIds` (one query per page) → `getUsers` returns `driverApplication` → `UsersTable` `ApplicationChip`. `RoleManagementDialog` no longer offers Driver and links to the applications; `assignRole` refuses `carrier`/`driver` without an `approved` carrier row (returns `{success:false, message}`, same shape as its other refusal). Drivers page: count badge on the tab from `useAdminNavCounts().applications`. `JobCard` `offerAction` (set by `JobBoard`) + `JobBidSection` `#offer` anchor (`listing/offer-anchor.ts`), scroll-on-hash, floating button below `xl`, `OwnJobCard`, `StaffCard`. Spec `docs/specs/client_feedback_2026_11_16_spec.md`, plan `docs/plans/plan_client_feedback_2026_11_16.md`.
+
+### Verification
+
+`tsc` 0 errors; eslint 0 errors on the changed files (the 14 warnings are `as any` in `user.service.test.ts`, the file's existing style); the five touched suites pass (55 tests, ~16 new); FR/EN parity ok (spliced with `tools/apply_i18n_lenient.py` because the older splicer asserts on the inline `{…}` objects another session added). Full suite 3,472 passing, 0 failing; `changelog:check` ok. **Not run: `pnpm build`, a real browser, a real iPad** — the floating button's position and the hash scroll are untested outside jsdom.
+
+### Known limits
+
+- **F1 (private vs professional) is not built.** `carriers.kind` is still never set, `siret` is still `NOT NULL`. It needs the client's field list per type first; the plan lists the steps.
+- **`BoardJob.hasBid` is never sent by the board endpoint**, so « Vous avez enchéri » has never shown and « Faire une offre » is offered on jobs the driver already bid on (they land on their own offer card). Worth fixing, separately.
+- An operator or admin who is not a driver still cannot offer; the new card explains it and points to the award queue. If Nicolas expects staff to bid, that is a product decision.
+- The Users chip appears for `draft`, `submitted`, `under_review` only; `rejected` and the closed states show nothing there.
+
 ## ✅ 2026-11-15 — A quote sent from the job page now emails the requester too (2.84.1)
 
 _Nicolas, 14–15 Nov: « Please add also to send email to the asker when received message from the driver. »_ — sent after 2.84.0 was live, so I read it as a gap, not a repeat, and went looking for the path 2.84.0 still left silent.

@@ -109,6 +109,21 @@ export function CarrierApplicationsList({
         ),
         enableSorting: false,
       },
+      // Straight after the applicant, not last: on a tablet this table scrolls
+      // sideways and the status — the one thing an admin came for — sat past the
+      // edge, so a pending file looked like it had no status at all.
+      {
+        accessorKey: "status",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title={t("table.status")} />
+        ),
+        cell: ({ row }) => (
+          <CarrierStatusBadge
+            status={row.original.status}
+            absent={isAbsent(row.original)}
+          />
+        ),
+      },
       {
         accessorKey: "city",
         header: ({ column }) => (
@@ -157,18 +172,6 @@ export function CarrierApplicationsList({
           </span>
         ),
         filterFn: dateRangeFilterFn<CarrierApplication>(),
-      },
-      {
-        accessorKey: "status",
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} title={t("table.status")} />
-        ),
-        cell: ({ row }) => (
-          <CarrierStatusBadge
-            status={row.original.status}
-            absent={isAbsent(row.original)}
-          />
-        ),
       },
       {
         id: "actions",

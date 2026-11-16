@@ -33,6 +33,7 @@ const ONE_MANAGEABLE: User = {
   joinDate: "2026-01-01",
   lastLoginAt: null,
   origin: "expeditoo",
+  driverApplication: null,
   impersonateBlocked: null,
   deleteBlocked: null,
   suspendBlocked: null,
@@ -120,6 +121,25 @@ describe("RoleManagementDialog", () => {
 
     expect(
       screen.queryByText("Select new role to assign")
+    ).not.toBeInTheDocument();
+  });
+
+  it("points to the applications instead of granting Driver by hand", () => {
+    renderDialog({ user: { ...ONE_MANAGEABLE, roles: ["shipper"] } });
+
+    expect(
+      screen.getByText(/granted by approving an application/)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Open applications" })
+    ).toHaveAttribute("href", "/admin/drivers?tab=applications");
+  });
+
+  it("does not repeat that pointer for someone who already drives", () => {
+    renderDialog({ user: ONE_MANAGEABLE });
+
+    expect(
+      screen.queryByText(/granted by approving an application/)
     ).not.toBeInTheDocument();
   });
 });

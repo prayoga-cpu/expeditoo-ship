@@ -1155,7 +1155,12 @@
         "notCarrier": "Offers are for approved carriers",
         "notCarrierDesc": "This account does not have carrier access. Check your application; if it is already approved, sign out and back in, otherwise contact support.",
         "application": "My carrier application"
-      }
+      },
+      "makeOffer": "Make an offer",
+      "ownJobTitle": "This is your request",
+      "ownJobDescription": "Carriers send you their offers above, and you pick the one that suits you. You can't make an offer on your own request.",
+      "staffTitle": "An operator or admin account does not offer a price",
+      "staffDescription": "To make an offer you need an approved driver account. On an Expedion job, awarding is done from the « Award queue »."
     }
   },
   "create": {
@@ -2768,7 +2773,13 @@
         "joinDate": "Join Date",
         "role": "Role",
         "actions": "Actions",
-        "removeRole": "Remove {role}"
+        "removeRole": "Remove {role}",
+        "application": {
+          "draft": "Driver file not sent",
+          "submitted": "Driver application · to review",
+          "under_review": "Driver application · under review",
+          "open": "Open the driver applications"
+        }
       },
       "status": {
         "active": "active",
@@ -2965,7 +2976,9 @@
       "driver": "Driver",
       "operator": "Operator",
       "support": "Support",
-      "finance": "Finance"
+      "finance": "Finance",
+      "driverViaApplication": "The Driver role is granted by approving an application, not from this list.",
+      "openApplications": "Open applications"
     },
     "payments": {
       "title": "Payments",
@@ -4267,7 +4280,8 @@
       "needsProtection": "Needs protection",
       "needsPackaging": "Needs packaging",
       "sizeTitle": "Size {size}",
-      "moving": "Move"
+      "moving": "Move",
+      "makeOffer": "Make an offer"
     },
     "map": {
       "openJob": "Open the “{title}” job",

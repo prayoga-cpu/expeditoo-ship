@@ -20,7 +20,9 @@ import {
 import { useTranslations, useLocale } from "next-intl";
 import { enUS, fr } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { UrgencyBadge } from "@/features/app/listing/ui/UrgencyBadge";
+import { OFFER_ANCHOR } from "@/features/app/listing/offer-anchor";
 import { useEndpointText } from "@/features/app/listing/hooks/useEndpointText";
 import { Card } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/currency";
@@ -33,6 +35,12 @@ interface JobCardProps {
   job: BoardJob;
   /** True while the matching map pin is hovered, so the pair reads as one. */
   isHighlighted?: boolean;
+  /**
+   * Draw « Faire une offre » under the card. The board sets it for a job the
+   * viewer can bid on (not their own, not one they already bid on); anywhere
+   * else a card is only a way into the job, as before.
+   */
+  offerAction?: boolean;
 }
 
 const euros = (cents: number) => formatCurrency(cents, { fractionDigits: 0 });
@@ -112,7 +120,11 @@ function JobThumbnail({
  * whether "Chaise" is a dining chair or an armchair, and the answer decides
  * whether the rest is worth reading.
  */
-export function JobCard({ job, isHighlighted = false }: JobCardProps) {
+export function JobCard({
+  job,
+  isHighlighted = false,
+  offerAction = false,
+}: JobCardProps) {
   const t = useTranslations("jobBoard.card");
   const locale = useLocale();
   const dateLocale = locale === "fr" ? fr : enUS;
@@ -131,14 +143,22 @@ export function JobCard({ job, isHighlighted = false }: JobCardProps) {
   );
 
   return (
-    <Link href={`/listing/${job.id}`} className="group block">
-      <Card
-        className={cn(
-          "p-4 transition-colors duration-200",
-          "hover:border-primary/40 group-focus-visible:border-primary",
-          isHighlighted && "border-primary"
-        )}
-      >
+    <Card
+      className={cn(
+        "group p-4 transition-colors duration-200",
+        "hover:border-primary/40 focus-within:border-primary",
+        isHighlighted && "border-primary"
+      )}
+    >
+      {/*
+        The link wraps the card's content, not the card: « Faire une offre »
+        below is a second link, and a link inside a link is invalid and eats
+        the inner click. Nothing on a card used to say a driver could bid —
+        the whole card was one link and « Immédiat » was the only coloured
+        thing on it, so a tester took it for the button (client feedback
+        2026-11-16).
+      */}
+      <Link href={`/listing/${job.id}`} className="block">
         <div className="flex items-start gap-3 sm:gap-4">
           <JobThumbnail
             url={leadPhotoUrl(job.photos)}
@@ -252,8 +272,19 @@ export function JobCard({ job, isHighlighted = false }: JobCardProps) {
             </Badge>
           )}
         </div>
-      </Card>
-    </Link>
+      </Link>
+
+      {offerAction && (
+        <div className="mt-3 flex justify-end">
+          <Button asChild size="sm" className="w-full sm:w-auto">
+            <Link href={`/listing/${job.id}#${OFFER_ANCHOR}`}>
+              <Gavel className="mr-1.5 h-4 w-4" aria-hidden="true" />
+              {t("makeOffer")}
+            </Link>
+          </Button>
+        </div>
+      )}
+    </Card>
   );
 }
 

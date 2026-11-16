@@ -10,6 +10,8 @@ import { UsersTable } from "@/features/app/admin/ui/UsersTable";
 import { CarrierApplicationsList } from "@/features/app/admin/ui/CarrierApplicationsList";
 import { CreateDriverDialog } from "@/features/app/admin/ui/CreateDriverDialog";
 import { useAdminDrivers } from "@/features/app/admin/hooks/useAdminDrivers";
+import { useAdminNavCounts } from "@/features/app/admin/hooks/useAdminNavCounts";
+import { Badge } from "@/components/ui/badge";
 import { PageLoader } from "@/components/ui/page-loader";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/lib/auth-context";
@@ -44,6 +46,10 @@ function DriversPageContent() {
   const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const t = useTranslations("admin.drivers");
+  // The applications waiting for a decision, from the same count as the
+  // sidebar badge: the tab has to say it has something to do, because an
+  // applicant holds no role and shows nowhere else.
+  const waiting = useAdminNavCounts()?.applications ?? 0;
   // Support and finance reach this page too; the API would refuse them.
   const roles = useAuth().user?.roles ?? [];
   const canCreate = roles.includes("admin") || roles.includes("operator");
@@ -111,6 +117,11 @@ function DriversPageContent() {
           <TabsTrigger value="applications" className="gap-2">
             <FileText className="w-4 h-4" />
             {t("tabs.applications")}
+            {waiting > 0 && (
+              <Badge className="ml-1 bg-orange-500 font-mono text-white hover:bg-orange-500">
+                {waiting}
+              </Badge>
+            )}
           </TabsTrigger>
         </TabsList>
 

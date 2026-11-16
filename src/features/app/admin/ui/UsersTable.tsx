@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ColumnDef } from "@tanstack/react-table";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -128,6 +129,7 @@ function RoleBadges({
 
   return (
     <div className="flex flex-wrap gap-1">
+      <ApplicationChip user={user} />
       {roles.map((role) => {
         const label = t.has(role) ? t(role) : role;
         return (
@@ -148,6 +150,47 @@ function RoleBadges({
         );
       })}
     </div>
+  );
+}
+
+/** The application states in which a file is on its way to a decision. */
+const OPEN_APPLICATION = ["draft", "submitted", "under_review"] as const;
+
+/**
+ * « Candidature chauffeur — à examiner », for an account that applied.
+ *
+ * An applicant holds no driver role until approval, so the role column of
+ * someone waiting on staff used to be blank and the only trace was a tab on
+ * another page (client feedback 2026-11-16). The chip names the state and
+ * opens the applications list. A draft is shown too, in a quieter tone: the
+ * person started a file and has not sent it, which is also something an admin
+ * may want to chase.
+ */
+function ApplicationChip({ user }: { user: User }) {
+  const t = useTranslations("admin.users.table.application");
+  const status = user.driverApplication;
+  if (!status || !OPEN_APPLICATION.includes(status as (typeof OPEN_APPLICATION)[number])) {
+    return null;
+  }
+  const waiting = status !== "draft";
+
+  return (
+    <Link
+      href="/admin/drivers?tab=applications"
+      title={t("open")}
+      className="inline-flex"
+    >
+      <Badge
+        variant="outline"
+        className={
+          waiting
+            ? "border-orange-500/50 bg-orange-500/10 text-xs text-orange-700 hover:bg-orange-500/20 dark:text-orange-400"
+            : "text-xs text-muted-foreground"
+        }
+      >
+        {t(status as (typeof OPEN_APPLICATION)[number])}
+      </Badge>
+    </Link>
   );
 }
 
