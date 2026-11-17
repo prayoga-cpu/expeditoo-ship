@@ -428,6 +428,9 @@ than leaving it in a chat message.
 - [ ] **(2.87.0, driver types) Run Actions → « Migrate database » on the release branch before `main` moves** —
   `0048_in_house_driver_no_siret` drops `NOT NULL` on `carriers.siret`. New code on an unmigrated database
   500s every in-house file creation (« Gérer le rôle », the in-house form, the application tick).
+- [ ] **(2.90.0) Give us the real operations phone number.** `driver/help` shows « +1 (987) 654-321 » as the
+  24/7 emergency line and `(main)/help` « +1 (234) 567-890 »: both are placeholders. A driver who calls
+  one reaches nobody. Until there is a number, consider hiding the emergency card.
 - [ ] **(2.87.0)** Ask Nicolas: should an in-house driver get a payout row at all, and should existing drivers
   who hold both roles be split? (Known limits in the 2.87.0 entry.)
 - [ ] **(2.86.0, request assistant) Check `OPENAI_API_KEY` is set in Vercel → Production.** Without it the
@@ -1006,6 +1009,53 @@ than leaving it in a chat message.
       Until then its application page says driver access is off.
 
 ---
+
+## ✅ 2026-11-17 — Known gaps closed: untranslated screens, in-house chat quotes, live runs (2.90.0)
+
+*« finish up the known gaps that still open ».*
+
+No migration, no new spec (each item is a documented gap of 2.87.0 / 2.88.0 / 2.89.0).
+
+**Closed.**
+- **The chat-quote lane refuses an in-house driver** (2.87.0 limit). `threadOffersService.contextFor`
+  answers `blockedBy: "IN_HOUSE_DRIVER"` on the job lane (the button disappears) and `submit` throws
+  `IN_HOUSE_DIRECT_ASSIGN_ONLY` before `submitOffer`, so no bid and no card exist. **The standalone
+  lane is deliberately left alone**: its spec (§5.2) says it applies no job rule and does no carrier
+  lookup, a test pins that, and it moves no money.
+- **Live runs in a driver's file** (2.88.0 limit). `shipmentsDal.countLiveByCarriers` is one grouped
+  query; `listForReview` puts `liveRuns` on every row (not N+1). The file shows it, and the removal
+  step warns when it is above 0 — the service still refuses (`CARRIER_HAS_LIVE_RUNS`), so this is
+  information, not the gate.
+- **Untranslated screens** (2.89.0 limit): `driver/help` (now `driver.help.*`; the FAQ names the real menu
+  entries and no longer says « Available Shipments », a tab that does not exist), `verify-email` and
+  `forgot-password` (zod messages built inside the component so they follow the language),
+  `global-error` (no providers there, so the two sentences live in the file and `navigator.language`
+  picks, French by default), `ShipmentRouteMap`, `AdminBottomNav`'s aria-labels, `PageLoader`'s
+  aria-label, and the toasts of `useAdminListings`, `useAdminPayments`, `useCreateReview`,
+  `useSettings`. `admin/listings` showed red text with nothing to press when its read failed (the
+  exact shape gotcha 24 forbids); it uses `LoadErrorState` now.
+  `payout-claims.test.ts` rendered the help page without a provider and asserted English; it now reads
+  the FAQ answer in both languages through the same claims filter.
+
+**Not closed, and why.**
+- **Both help pages carry a placeholder phone number** — `driver/help` « +1 (987) 654-321 » (an
+  « Emergency line, 24/7 ») and `(main)/help` « +1 (234) 567-890 ». They are not real lines. I did not
+  invent one; added to the Operator to-do, with a `TODO(EXPEDITOO-LEGAL)` marker on the driver page.
+- **Staff cannot upload documents or enter banking for a driver** (2.87.0). Documents go through the
+  private KYC storage and the IBAN rule (only the last four characters are kept) — a feature with its own
+  spec, not a patch.
+- **The drivers file is still a dialog, not a side sheet** (2.88.0): a restyle, no behaviour behind it.
+- **Existing accounts holding both roles; whether an in-house driver gets a payout row** (2.87.0): the
+  client's decision (Operator to-do already asks).
+- **`(main)/help` still teaches the goods marketplace** (« how do auctions work », « committing to buy
+  the item ») — stale pre-pivot copy, to be rewritten rather than translated.
+- Format placeholders (plate « AB-123-CD », IBAN, « Renault ») are examples, not copy.
+
+**Verification.** `npx tsc --noEmit` 0 errors · eslint 0 findings on every changed file · full suite
+3,629 pass / 0 fail at a 30 s timeout (new: 2 thread-offers, 2 drivers-file, 1 live-run service,
+3 global-error, `payout-claims` now runs both languages; `i18n-keys.test.ts` covers every new key) ·
+`pnpm changelog:check` run below. Not run: `pnpm build`, a real-browser pass of the pages above, a real
+verification or reset email.
 
 ## ✅ 2026-11-17 — Job card footer on one line, and the lost « jobBoard » copy (2.89.0)
 

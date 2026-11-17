@@ -30,7 +30,7 @@ export default function HelpPage() {
       router.push(`/messages/${data.chatRoomId}`);
     } catch (error) {
       console.error("Error creating support chat:", error);
-      toast.error("Failed to start chat. Please try again.");
+      toast.error(t("chatFailed"));
     } finally {
       setIsCreatingChat(false);
     }

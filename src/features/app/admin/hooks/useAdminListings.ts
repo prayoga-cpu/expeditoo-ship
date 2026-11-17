@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import type { ListingStatus } from "@/features/app/listing/types";
 import {
   adminListingsApi,
@@ -68,6 +69,7 @@ export function toAdminListing(row: AdminListingRow): AdminListing {
 
 export function useAdminListings() {
   const queryClient = useQueryClient();
+  const t = useTranslations("admin.listings.toasts");
 
   // Refetched on every mount. This used to keep a five-minute cache with
   // `refetchOnMount: false`, so an admin who had opened Annonces before a
@@ -85,10 +87,10 @@ export function useAdminListings() {
     onSuccess: () => {
       // Prefix match: also refreshes Supervision's direct-requests panel.
       queryClient.invalidateQueries({ queryKey: adminListingKeys.all });
-      toast.success("Listing deleted successfully");
+      toast.success(t("deleted"));
     },
     onError: (error) => {
-      toast.error(`Failed to delete listing: ${error.message}`);
+      toast.error(t("deleteFailed", { message: error.message }));
     },
   });
 

@@ -17,6 +17,14 @@ import { user } from "@/db/schema/users";
 
 type Executor = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
 
+/** A run still owed to somebody: it blocks a driver leaving (`deregister`). */
+const LIVE_RUN_STATUSES: ShipmentStatusType[] = [
+  "PENDING",
+  "ASSIGNED",
+  "PICKED_UP",
+  "IN_TRANSIT",
+];
+
 /**
  * Everything a cancellation records beyond the status itself. `byUserId` and
  * `byRef` are mutually exclusive: an Expedion quote owner has no `user` row, so
@@ -155,15 +163,30 @@ export const shipmentsDal = {
       .where(
         and(
           eq(shipments.carrierId, carrierUserId),
-          inArray(shipments.status, [
-            "PENDING",
-            "ASSIGNED",
-            "PICKED_UP",
-            "IN_TRANSIT",
-          ])
+          inArray(shipments.status, LIVE_RUN_STATUSES)
         )
       );
     return Number(row?.n ?? 0);
+  },
+
+  /**
+   * Live runs for many carriers at once, as `userId → count` (a carrier with
+   * none is absent). One grouped query for the admin drivers list, rather than
+   * one `countLiveForCarrier` per row.
+   */
+  async countLiveByCarriers(carrierUserIds: string[], tx: Executor = db) {
+    if (carrierUserIds.length === 0) return new Map<string, number>();
+    const rows = await tx
+      .select({ carrierId: shipments.carrierId, n: count(shipments.id) })
+      .from(shipments)
+      .where(
+        and(
+          inArray(shipments.carrierId, carrierUserIds),
+          inArray(shipments.status, LIVE_RUN_STATUSES)
+        )
+      )
+      .groupBy(shipments.carrierId);
+    return new Map(rows.map((row) => [row.carrierId, Number(row.n)]));
   },
 
   async getByDriverId(driverId: string, tx: Executor = db) {

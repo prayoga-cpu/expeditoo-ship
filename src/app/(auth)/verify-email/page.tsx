@@ -51,7 +51,7 @@ function VerifyEmailContent() {
       router.push("/welcome");
     } else {
       setState("error");
-      setErrorMessage(result.error || "Email verification failed");
+      setErrorMessage(result.error || t("failedFallback"));
     }
   };
 
@@ -93,10 +93,9 @@ function VerifyEmailContent() {
 
               <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 mb-6">
                 <p className="text-primary text-sm">
-                  <strong>Didn't receive the email?</strong>
+                  <strong>{t("didntReceive")}</strong>
                   <br />
-                  Check your spam folder or wait a few minutes for the email to
-                  arrive.
+                  {t("checkSpam")}
                 </p>
               </div>
 
@@ -119,10 +118,10 @@ function VerifyEmailContent() {
               </div>
 
               <h1 className="text-2xl font-bold text-foreground mb-2 text-center">
-                Verifying Email
+                {t("verifyingTitle")}
               </h1>
               <p className="text-muted-foreground text-center">
-                Please wait while we verify your email address...
+                {t("verifyingBody")}
               </p>
             </>
           )}
@@ -137,16 +136,15 @@ function VerifyEmailContent() {
               </div>
 
               <h1 className="text-2xl font-bold text-foreground mb-2 text-center">
-                Email Verified!
+                {t("successTitle")}
               </h1>
               <p className="text-muted-foreground mb-6 text-center">
-                Your email has been successfully verified. You're being signed
-                in...
+                {t("successBody")}
               </p>
 
               <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 mb-6">
                 <p className="text-primary text-sm text-center">
-                  Redirecting to dashboard...
+                  {t("redirecting")}
                 </p>
               </div>
 
@@ -154,7 +152,7 @@ function VerifyEmailContent() {
                 onClick={() => router.push("/welcome")}
                 className="w-full rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground py-6 font-semibold transition-colors"
               >
-                Go to Dashboard
+                {t("continue")}
               </Button>
             </>
           )}
@@ -169,11 +167,10 @@ function VerifyEmailContent() {
               </div>
 
               <h1 className="text-2xl font-bold text-foreground mb-2 text-center">
-                Verification Failed
+                {t("failedTitle")}
               </h1>
               <p className="text-muted-foreground mb-6 text-center">
-                We couldn't verify your email address. The verification link may
-                have expired or is invalid.
+                {t("failedBody")}
               </p>
 
               {errorMessage && (
@@ -189,7 +186,7 @@ function VerifyEmailContent() {
                   onClick={() => router.push("/signup")}
                   className="w-full rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground py-6 font-semibold transition-colors"
                 >
-                  Try Signing Up Again
+                  {t("signUpAgain")}
                 </Button>
 
                 <Button
@@ -206,12 +203,12 @@ function VerifyEmailContent() {
 
         {/* Help Text */}
         <p className="text-center text-muted-foreground text-sm mt-6">
-          Need help?{" "}
+          {t("needHelp")}{" "}
           <a
             href="mailto:support@expeditoo.fr"
             className="text-primary hover:text-primary/80 font-medium"
           >
-            Contact Support
+            {t("contactSupport")}
           </a>
         </p>
       </motion.div>
@@ -220,8 +217,10 @@ function VerifyEmailContent() {
 }
 
 export default function VerifyEmailPage() {
+  const t = useTranslations("auth.verifyEmail");
+
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<div>{t("loading")}</div>}>
       <VerifyEmailContent />
     </Suspense>
   );

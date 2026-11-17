@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,14 +13,13 @@ import { useAuthActions } from "@/features/auth/hooks/useAuthActions";
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 
-const forgotPasswordSchema = z.object({
-  email: z
-    .string()
-    .min(1, "Email is required")
-    .email("Please enter a valid email"),
-});
+// Built inside the component so its messages follow the visitor's language.
+const buildSchema = (message: { required: string; invalid: string }) =>
+  z.object({
+    email: z.string().min(1, message.required).email(message.invalid),
+  });
 
-type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
+type ForgotPasswordFormData = z.infer<ReturnType<typeof buildSchema>>;
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
@@ -33,6 +32,11 @@ export default function ForgotPasswordPage() {
   const [submittedEmail, setSubmittedEmail] = useState("");
   const [serverError, setServerError] = useState<string | null>(null);
   const t = useTranslations("auth.forgotPassword");
+  const forgotPasswordSchema = useMemo(
+    () =>
+      buildSchema({ required: t("emailRequired"), invalid: t("emailInvalid") }),
+    [t]
+  );
 
   const {
     register,
@@ -138,14 +142,13 @@ export default function ForgotPasswordPage() {
                   <span className="text-2xl text-primary">✓</span>
                 </div>
                 <h1 className="text-2xl font-bold text-foreground mb-2">
-                  Check Your Email
+                  {t("sentTitle")}
                 </h1>
                 <p className="text-muted-foreground mb-6">
-                  We've sent a password reset link to {submittedEmail}
+                  {t("sentBody", { email: submittedEmail })}
                 </p>
                 <p className="text-sm text-muted-foreground mb-6">
-                  The link expires in 1 hour. Check your spam folder if you
-                  don't see it.
+                  {t("sentHint")}
                 </p>
 
                 <Button

@@ -32,6 +32,11 @@ export class ThreadOfferError extends Error {
 
 const err = (code: string, status: number) => new ThreadOfferError(code, status);
 
+/** An in-house Expeditoo driver (`carriers.kind = 'private'`). */
+async function isInHouse(userId: string): Promise<boolean> {
+  return (await carriersDal.getByUserId(userId))?.kind === "private";
+}
+
 // ========================================
 // Context
 // ========================================
@@ -39,6 +44,7 @@ const err = (code: string, status: number) => new ThreadOfferError(code, status)
 export type ThreadOfferBlock =
   | "NOT_A_CARRIER"
   | "NOT_APPROVED"
+  | "IN_HOUSE_DRIVER"
   | "CARRIER_ABSENT"
   | "OWN_LISTING"
   | "LISTING_NOT_OPEN"
@@ -144,6 +150,8 @@ export const threadOffersService = {
     // `suspended` still holds the `carrier` role, so a role-only gate would
     // have offered a suspended carrier a form they can only fail.
     if (carrier.status !== "approved") return no("NOT_APPROVED");
+    // Given work, never bids: the same rule `takeJob` states, for the chat lane.
+    if (carrier.kind === "private") return no("IN_HOUSE_DRIVER");
     if (!mayTakeWork(carrier)) return no("CARRIER_ABSENT");
 
     // The carrier's one slot on this listing may already be spent - from this
@@ -207,6 +215,10 @@ export const threadOffersService = {
     // a card with no bid would promise an award that cannot happen.
     let offerId: string | null = null;
     if (listingId) {
+      // The context hides the button from an in-house driver; this refuses a
+      // request that did not come through it. Job lane only: the standalone
+      // quote creates no bid and moves no money, and applies no job rule (§5.2).
+      if (await isInHouse(userId)) throw err("IN_HOUSE_DIRECT_ASSIGN_ONLY", 403);
       const offer = await offersService.submitOffer(userId, listingId, {
         vehicleId: input.vehicleId ?? "",
         priceCents: input.priceCents,

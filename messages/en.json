@@ -202,7 +202,8 @@
       "dark": "Dark",
       "system": "Same as my device"
     },
-    "verifiedUser": "Verified user"
+    "verifiedUser": "Verified user",
+    "loadingContent": "Loading content"
   },
   "auth": {
     "login": {
@@ -268,7 +269,12 @@
       "email": "Email address",
       "submit": "Send reset link",
       "backToLogin": "Back to login",
-      "success": "Check your email for a reset link"
+      "success": "Check your email for a reset link",
+      "emailRequired": "Please enter your email address",
+      "emailInvalid": "Please enter a valid email address",
+      "sentTitle": "Check your email",
+      "sentBody": "We've sent a password reset link to {email}.",
+      "sentHint": "The link expires in 1 hour. Check your spam folder if you don't see it."
     },
     "resetPassword": {
       "title": "Reset password",
@@ -301,7 +307,22 @@
       "resend": "Resend verification email",
       "resending": "Sending...",
       "resent": "Verification email sent!",
-      "backToLogin": "Back to login"
+      "backToLogin": "Back to login",
+      "didntReceive": "Didn't receive the email?",
+      "checkSpam": "Check your spam folder, or wait a few minutes for it to arrive.",
+      "verifyingTitle": "Verifying your email",
+      "verifyingBody": "Please wait while we check your email address…",
+      "successTitle": "Email verified",
+      "successBody": "Your email address is confirmed. We're signing you in…",
+      "redirecting": "Taking you to your account…",
+      "continue": "Continue",
+      "failedTitle": "We couldn't verify your email",
+      "failedBody": "The link may have expired or already been used.",
+      "failedFallback": "Email verification failed.",
+      "signUpAgain": "Create my account again",
+      "needHelp": "Need help?",
+      "contactSupport": "Contact support",
+      "loading": "Loading…"
     },
     "intent": {
       "bid": "You were about to place an offer.",
@@ -763,7 +784,9 @@
         "cancel": "Cancel",
         "delete": "Delete"
       }
-    }
+    },
+    "updated": "Settings saved",
+    "updateFailed": "We couldn't save your settings."
   },
   "messages": {
     "title": "Messages",
@@ -2038,6 +2061,47 @@
       "IN_TRANSIT": "Out for delivery",
       "DELIVERED": "Delivered",
       "CANCELLED": "Cancelled"
+    },
+    "help": {
+      "title": "Driver support",
+      "subtitle": "Resources and support for our transport partners.",
+      "operations": {
+        "title": "Operations team",
+        "description": "A problem with a current run or your vehicle? Write to the operations team directly."
+      },
+      "emergency": {
+        "title": "Emergency line",
+        "description": "For accidents or urgent delivery problems only. Available 24/7."
+      },
+      "faq": {
+        "title": "Driver FAQ",
+        "paid": {
+          "question": "How do I get paid?",
+          "answer": "Your earnings for a job are credited to your balance when the delivery is recorded. Nothing is transferred automatically: request a withdrawal in “My earnings” once your balance reaches the minimum. An operator then makes the bank transfer by hand, to the account on your RIB, so it is not instant. If you change banks, upload a new RIB in “My application”."
+        },
+        "absent": {
+          "question": "What if the recipient is not home?",
+          "answer": "Try calling the recipient through the app. If there is no answer after 10 minutes, contact the operations team for instructions. Do not leave goods unattended unless the requester said you could."
+        },
+        "accept": {
+          "question": "How do I take a new job?",
+          "answer": "Open “Jobs”, choose a request and press “Make an offer” with your price and the time slots that suit you. You are notified as soon as the requester picks you. In-house Expeditoo drivers do not bid: runs are assigned to them and appear under “Deliveries”."
+        },
+        "vehicle": {
+          "question": "Can I update my vehicle details?",
+          "answer": "Yes, from “My application”. Changing vehicles may mean your documents have to be checked again."
+        }
+      },
+      "report": {
+        "title": "Need to report an issue?",
+        "description": "Use your messages to report a non-urgent problem or to send feedback.",
+        "action": "Open my messages"
+      }
+    },
+    "routeMap": {
+      "invalid": "Location coordinates are missing or invalid.",
+      "origin": "Origin",
+      "destination": "Destination"
     }
   },
   "marketing": {
@@ -2734,7 +2798,8 @@
       "title": "Still need help?",
       "description": "Our support team is always ready to assist you with any issues you may encounter.",
       "chatButton": "Chat with Support"
-    }
+    },
+    "chatFailed": "We couldn't open the chat. Please try again."
   },
   "notifications": {
     "title": "Notifications",
@@ -2784,7 +2849,9 @@
       "bordereaux": "Slips",
       "incidents": "Incidents",
       "feedback": "Feedback",
-      "settings": "Settings"
+      "settings": "Settings",
+      "bottomLabel": "Admin navigation",
+      "bottomMenu": "Admin menu — scroll sideways for more"
     },
     "table": {
       "total": "total",
@@ -2963,7 +3030,11 @@
         "delete": "Delete",
         "processing": "Deleting..."
       },
-      "backToList": "All listings"
+      "backToList": "All listings",
+      "toasts": {
+        "deleted": "Listing deleted",
+        "deleteFailed": "Could not delete the listing: {message}"
+      }
     },
     "drivers": {
       "tabs": { "list": "Drivers", "applications": "Applications" },
@@ -3086,6 +3157,10 @@
         "cancel": "Cancel",
         "processing": "Processing...",
         "confirm": "Confirm Refund"
+      },
+      "toasts": {
+        "refunded": "Refund processed",
+        "refundFailed": "The refund failed: {message}"
       }
     },
     "carriers": {
@@ -3211,7 +3286,9 @@
         "ratingValue": "{rating}/5 · {count, plural, one {# review} other {# reviews}}",
         "noRatingYet": "No rating yet",
         "suspendHelp": "Blocks new bids and new runs. Runs already in progress carry on. You can reactivate the driver at any time.",
-        "removeHelp": "The driver leaves the platform: pending bids are withdrawn and earned payouts stay payable. Not possible while a run is in progress. They can apply again later."
+        "removeHelp": "The driver leaves the platform: pending bids are withdrawn and earned payouts stay payable. Not possible while a run is in progress. They can apply again later.",
+        "liveRuns": "Runs in progress",
+        "liveRunsBlock": "{count, plural, one {This driver has # run in progress.} other {This driver has # runs in progress.}} Removing them is refused until every run is delivered or cancelled."
       },
       "vehicleTypes": {
         "little_car": "Little car",
@@ -3802,7 +3879,8 @@
         "ratingRequired": "Please select at least 1 star",
         "commentTooLong": "Comment is too long"
       }
-    }
+    },
+    "posted": "Thank you, your review has been posted."
   },
   "carrier": {
     "application": {

@@ -99,6 +99,8 @@ export interface CarrierApplication {
      * approved file is what « Réparer l'accès » is for; absent = assume fine.
      */
     hasDriverAccess?: boolean;
+    /** Runs still owed to somebody; `deregister` refuses while this is above 0. */
+    liveRuns?: number;
     averageRating: number;
     totalRatings: number;
     completedJobs: number;

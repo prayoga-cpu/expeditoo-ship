@@ -1,13 +1,20 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 /**
  * Last-resort boundary: catches a crash in the root layout itself, which
  * `error.tsx` cannot (it renders *inside* that layout). Deliberately
  * dependency-free — no i18n, no design-system components — since whatever
- * broke the layout may have broken the providers those rely on too.
+ * broke the layout may have broken the providers those rely on too — so the
+ * two sentences are written out here in both languages, and the visitor's
+ * browser picks one, rather than going through next-intl.
  */
+const COPY = {
+  fr: { message: "Une erreur est survenue.", retry: "Réessayer" },
+  en: { message: "Something went wrong.", retry: "Try again" },
+} as const;
+
 export default function GlobalError({
   error,
   reset,
@@ -15,12 +22,19 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  // French first (the product's primary language), switched on the client so
+  // the server's markup and the first client render agree.
+  const [lang, setLang] = useState<"fr" | "en">("fr");
+
   useEffect(() => {
     console.error("[app] unhandled root layout error", error);
+    setLang(navigator.language?.toLowerCase().startsWith("en") ? "en" : "fr");
   }, [error]);
 
+  const copy = COPY[lang];
+
   return (
-    <html lang="en">
+    <html lang={lang}>
       <body
         style={{
           display: "flex",
@@ -34,7 +48,7 @@ export default function GlobalError({
       >
         <div>
           <p style={{ fontSize: "1rem", marginBottom: "1rem" }}>
-            Something went wrong.
+            {copy.message}
           </p>
           <button
             onClick={() => reset()}
@@ -46,7 +60,7 @@ export default function GlobalError({
               cursor: "pointer",
             }}
           >
-            Try again
+            {copy.retry}
           </button>
         </div>
       </body>

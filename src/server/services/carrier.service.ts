@@ -605,14 +605,21 @@ export const carrierService = {
   /** No status means the whole queue, every state included. */
   async listForReview(status?: Carrier["status"]) {
     const rows = await carriersDal.listByStatus(status);
+    // One grouped query for every row's live runs, not one per driver: the
+    // number an admin needs before removing someone (`CARRIER_HAS_LIVE_RUNS`).
+    const liveRuns = await shipmentsDal.countLiveByCarriers(
+      rows.map((row) => row.userId)
+    );
     // `hasDriverAccess`: does the owner hold the role this file's kind earns?
     // An approved file without it is the one case « Repair access » is for.
     // The role rows stay here — the screen needs the answer, not the list.
     return rows.map(({ user, ...row }) => {
-      if (!user) return { ...row, user, hasDriverAccess: false };
+      const live = liveRuns.get(row.userId) ?? 0;
+      if (!user) return { ...row, user, liveRuns: live, hasDriverAccess: false };
       const { roles, ...owner } = user;
       return {
         ...row,
+        liveRuns: live,
         user: owner,
         hasDriverAccess: roles.some((r) => r.role === ROLE_FOR_KIND[row.kind]),
       };

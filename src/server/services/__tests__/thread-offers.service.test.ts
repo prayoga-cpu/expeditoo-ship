@@ -236,6 +236,22 @@ describe("contextFor — job lane", () => {
     expect(ctx.blockedBy).toBe("NOT_A_CARRIER");
   });
 
+  it("blocks an in-house driver: they are given work and never bid (driver_types_spec.md §6)", async () => {
+    vi.mocked(carriersDal.getByUserId).mockResolvedValue({
+      id: "carrier-1",
+      status: "approved",
+      kind: "private",
+    } as never);
+
+    const ctx = await threadOffersService.contextFor(
+      ME,
+      conversation() as never
+    );
+
+    expect(ctx.canOffer).toBe(false);
+    expect(ctx.blockedBy).toBe("IN_HOUSE_DRIVER");
+  });
+
   it("blocks a suspended carrier, who still holds the role", async () => {
     vi.mocked(carriersDal.getByUserId).mockResolvedValue({
       id: "carrier-1",
@@ -359,6 +375,22 @@ describe("submit", () => {
 
     expect(missing).toBe("CONVERSATION_NOT_FOUND");
     expect(outsider).toBe("CONVERSATION_NOT_FOUND");
+  });
+
+  it("refuses an in-house driver on the job lane before any bid or card exists", async () => {
+    vi.mocked(carriersDal.getByUserId).mockResolvedValue({
+      id: "carrier-1",
+      status: "approved",
+      kind: "private",
+    } as never);
+
+    const code = await codeFrom(
+      threadOffersService.submit(ME, "conv-1", validInput() as never)
+    );
+
+    expect(code).toBe("IN_HOUSE_DIRECT_ASSIGN_ONLY");
+    expect(offersService.submitOffer).not.toHaveBeenCalled();
+    expect(threadOffersDal.create).not.toHaveBeenCalled();
   });
 
   it("takes the listing from the conversation, never from the body", async () => {

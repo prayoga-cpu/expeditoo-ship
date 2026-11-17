@@ -202,7 +202,8 @@
       "dark": "Sombre",
       "system": "Comme mon appareil"
     },
-    "verifiedUser": "Utilisateur vérifié"
+    "verifiedUser": "Utilisateur vérifié",
+    "loadingContent": "Chargement du contenu"
   },
   "auth": {
     "login": {
@@ -268,7 +269,12 @@
       "email": "Adresse e-mail",
       "submit": "Envoyer le lien",
       "backToLogin": "Retour à la connexion",
-      "success": "Vérifiez votre email pour le lien de réinitialisation"
+      "success": "Vérifiez votre email pour le lien de réinitialisation",
+      "emailRequired": "Veuillez saisir votre adresse email",
+      "emailInvalid": "Veuillez saisir une adresse email valide",
+      "sentTitle": "Vérifiez votre email",
+      "sentBody": "Nous avons envoyé un lien de réinitialisation à {email}.",
+      "sentHint": "Le lien expire dans 1 heure. Pensez à vérifier vos courriers indésirables."
     },
     "resetPassword": {
       "title": "Réinitialiser le mot de passe",
@@ -301,7 +307,22 @@
       "resend": "Renvoyer l'email de vérification",
       "resending": "Envoi en cours...",
       "resent": "Email de vérification envoyé !",
-      "backToLogin": "Retour à la connexion"
+      "backToLogin": "Retour à la connexion",
+      "didntReceive": "Vous n'avez pas reçu l'email ?",
+      "checkSpam": "Vérifiez vos courriers indésirables ou patientez quelques minutes.",
+      "verifyingTitle": "Vérification de votre email",
+      "verifyingBody": "Veuillez patienter, nous vérifions votre adresse email…",
+      "successTitle": "Email vérifié",
+      "successBody": "Votre adresse email est confirmée. Nous vous connectons…",
+      "redirecting": "Nous vous redirigeons vers votre compte…",
+      "continue": "Continuer",
+      "failedTitle": "Nous n'avons pas pu vérifier votre email",
+      "failedBody": "Le lien a peut-être expiré ou a déjà été utilisé.",
+      "failedFallback": "La vérification de l'email a échoué.",
+      "signUpAgain": "Recréer mon compte",
+      "needHelp": "Besoin d'aide ?",
+      "contactSupport": "Contacter le support",
+      "loading": "Chargement…"
     },
     "intent": {
       "bid": "Vous étiez sur le point de placer une offre.",
@@ -763,7 +784,9 @@
         "cancel": "Annuler",
         "delete": "Supprimer"
       }
-    }
+    },
+    "updated": "Réglages enregistrés",
+    "updateFailed": "Impossible d'enregistrer vos réglages."
   },
   "messages": {
     "title": "Messages",
@@ -2038,6 +2061,47 @@
       "IN_TRANSIT": "En cours de livraison",
       "DELIVERED": "Livrée",
       "CANCELLED": "Annulée"
+    },
+    "help": {
+      "title": "Assistance chauffeur",
+      "subtitle": "Ressources et assistance pour nos partenaires transporteurs.",
+      "operations": {
+        "title": "Équipe d'exploitation",
+        "description": "Un souci avec une course en cours ou votre véhicule ? Écrivez directement à l'équipe d'exploitation."
+      },
+      "emergency": {
+        "title": "Ligne d'urgence",
+        "description": "Uniquement pour un accident ou un problème de livraison urgent. Disponible 24 h/24, 7 j/7."
+      },
+      "faq": {
+        "title": "Questions fréquentes des chauffeurs",
+        "paid": {
+          "question": "Comment suis-je payé ?",
+          "answer": "Vos gains pour une mission sont crédités sur votre solde lorsque la livraison est enregistrée. Rien n'est viré automatiquement : demandez un retrait dans « Mes gains » dès que votre solde atteint le minimum. Un opérateur effectue ensuite le virement à la main, sur le compte de votre RIB, ce n'est donc pas instantané. Si vous changez de banque, déposez un nouveau RIB dans « Mon dossier »."
+        },
+        "absent": {
+          "question": "Que faire si le destinataire est absent ?",
+          "answer": "Essayez de l'appeler depuis l'application. Sans réponse au bout de 10 minutes, contactez l'équipe d'exploitation pour savoir quoi faire. Ne laissez pas la marchandise sans surveillance, sauf si le demandeur l'a autorisé."
+        },
+        "accept": {
+          "question": "Comment prendre une nouvelle mission ?",
+          "answer": "Ouvrez « Missions », choisissez une demande et appuyez sur « Faire une offre » avec votre prix et les créneaux qui vous conviennent. Vous êtes prévenu dès que le demandeur vous choisit. Les chauffeurs internes Expeditoo ne font pas d'offres : les courses leur sont attribuées et apparaissent dans « Livraisons »."
+        },
+        "vehicle": {
+          "question": "Puis-je modifier les informations de mon véhicule ?",
+          "answer": "Oui, depuis « Mon dossier ». Changer de véhicule peut nécessiter une nouvelle vérification de vos documents."
+        }
+      },
+      "report": {
+        "title": "Un problème à signaler ?",
+        "description": "Utilisez votre messagerie pour signaler un problème non urgent ou envoyer un retour.",
+        "action": "Ouvrir mes messages"
+      }
+    },
+    "routeMap": {
+      "invalid": "Les coordonnées du lieu sont manquantes ou invalides.",
+      "origin": "Départ",
+      "destination": "Arrivée"
     }
   },
   "notifications": {
@@ -2763,7 +2827,8 @@
       "title": "Besoin d'aide ?",
       "description": "Notre équipe support est toujours prête à vous aider avec tout problème que vous pourriez rencontrer.",
       "chatButton": "Discuter avec le Support"
-    }
+    },
+    "chatFailed": "Impossible d'ouvrir la discussion. Veuillez réessayer."
   },
   "admin": {
     "panelTitle": "Panneau d'administration",
@@ -2784,7 +2849,9 @@
       "bordereaux": "Bordereaux",
       "incidents": "Incidents",
       "feedback": "Retours",
-      "settings": "Paramètres"
+      "settings": "Paramètres",
+      "bottomLabel": "Navigation d'administration",
+      "bottomMenu": "Menu d'administration — faites défiler pour voir la suite"
     },
     "table": {
       "rowsSelected": "{count} sur {total} ligne(s) sélectionnée(s)",
@@ -2963,7 +3030,11 @@
         "delete": "Supprimer",
         "processing": "Suppression..."
       },
-      "backToList": "Toutes les annonces"
+      "backToList": "Toutes les annonces",
+      "toasts": {
+        "deleted": "Annonce supprimée",
+        "deleteFailed": "Impossible de supprimer l'annonce : {message}"
+      }
     },
     "drivers": {
       "tabs": { "list": "Chauffeurs", "applications": "Dossiers" },
@@ -3086,6 +3157,10 @@
         "cancel": "Annuler",
         "processing": "Traitement...",
         "confirm": "Confirmer le remboursement"
+      },
+      "toasts": {
+        "refunded": "Remboursement effectué",
+        "refundFailed": "Le remboursement a échoué : {message}"
       }
     },
     "carriers": {
@@ -3211,7 +3286,9 @@
         "ratingValue": "{rating}/5 · {count, plural, one {# avis} other {# avis}}",
         "noRatingYet": "Pas encore de note",
         "suspendHelp": "Bloque les nouvelles offres et courses. Les courses déjà en cours continuent. Vous pouvez réactiver le chauffeur à tout moment.",
-        "removeHelp": "Le chauffeur quitte la plateforme : ses offres en attente sont retirées et les gains acquis restent payables. Impossible tant qu'une course est en cours. Il pourra se réinscrire."
+        "removeHelp": "Le chauffeur quitte la plateforme : ses offres en attente sont retirées et les gains acquis restent payables. Impossible tant qu'une course est en cours. Il pourra se réinscrire.",
+        "liveRuns": "Courses en cours",
+        "liveRunsBlock": "{count, plural, one {Ce chauffeur a # course en cours.} other {Ce chauffeur a # courses en cours.}} La désinscription est refusée tant que chaque course n'est pas livrée ou annulée."
       },
       "vehicleTypes": {
         "little_car": "Petite voiture",
@@ -3727,7 +3804,8 @@
         "ratingRequired": "Veuillez sélectionner au moins 1 étoile",
         "commentTooLong": "Le commentaire est trop long"
       }
-    }
+    },
+    "posted": "Merci, votre avis a été publié."
   },
   "shipments": {
     "title": "Gestion des expéditions",

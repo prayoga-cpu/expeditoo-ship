@@ -54,11 +54,11 @@ export function AdminBottomNav() {
   }, [pathname]);
 
   return (
-    <nav aria-label="Admin navigation" className={FLOATING_NAV_OUTER}>
+    <nav aria-label={t("bottomLabel")} className={FLOATING_NAV_OUTER}>
       <div 
         ref={scrollRef}
         role="menubar"
-        aria-label="Admin menu - scroll horizontally for more options"
+        aria-label={t("bottomMenu")}
         className={cn(FLOATING_NAV_CAPSULE, "flex overflow-x-auto scrollbar-hide scroll-smooth sm:justify-center")}
         style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
       >

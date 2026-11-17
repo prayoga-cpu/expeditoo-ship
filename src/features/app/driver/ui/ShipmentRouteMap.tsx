@@ -7,6 +7,7 @@ import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useTheme } from "next-themes";
 import { MapPin } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { getMapStyle } from "@/lib/map-styles";
 import { getRoute } from "@/lib/routing";
 
@@ -40,6 +41,7 @@ export function ShipmentRouteMap({
   origin,
   destination,
 }: ShipmentRouteMapProps) {
+  const t = useTranslations("driver.routeMap");
   const mapRef = useRef<MapRef>(null);
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
@@ -127,12 +129,12 @@ export function ShipmentRouteMap({
       <div className="w-full h-[400px] flex items-center justify-center bg-muted/10 text-muted-foreground p-4 text-center">
         <div>
           <MapPin className="w-8 h-8 mx-auto mb-2 opacity-50" />
-          <p>Location coordinates are missing or invalid.</p>
+          <p>{t("invalid")}</p>
           <p className="text-xs mt-1">
-            Origin: {origin.lat}, {origin.lng}
+            {t("origin")} : {origin.lat}, {origin.lng}
           </p>
           <p className="text-xs">
-            Destination: {destination.lat}, {destination.lng}
+            {t("destination")} : {destination.lat}, {destination.lng}
           </p>
         </div>
       </div>

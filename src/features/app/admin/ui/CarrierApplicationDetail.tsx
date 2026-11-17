@@ -412,7 +412,11 @@ export function CarrierApplicationDetail({
           </div>
         )}
         {showActivity && (
-          <div className="grid grid-cols-3 gap-4 rounded-md border p-3">
+          <div className="grid grid-cols-2 gap-4 rounded-md border p-3 sm:grid-cols-4">
+            <Field
+              label={t("liveRuns")}
+              value={String(application.liveRuns ?? 0)}
+            />
             <Field
               label={t("completedRuns")}
               value={String(application.completedJobs)}
@@ -602,6 +606,13 @@ export function CarrierApplicationDetail({
               {(actionMode === "suspend" || actionMode === "deregister") && (
                 <p className="text-xs text-muted-foreground">
                   {actionMode === "suspend" ? t("suspendHelp") : t("removeHelp")}
+                </p>
+              )}
+              {/* The service refuses this (CARRIER_HAS_LIVE_RUNS); say so
+                  before the click rather than after it. */}
+              {actionMode === "deregister" && (application.liveRuns ?? 0) > 0 && (
+                <p className="rounded-md border border-amber-500/50 bg-amber-500/10 p-2 text-xs">
+                  {t("liveRunsBlock", { count: application.liveRuns ?? 0 })}
                 </p>
               )}
               <Textarea

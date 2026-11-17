@@ -14,6 +14,30 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.90.0] - 2026-11-17 · ux
+
+- **The driver help page is in French.** « Assistance chauffeur » — the operations
+  team, the emergency line card, and four answers: how you are paid, what to do
+  when the recipient is not home, how to take a new job (and that in-house drivers
+  are assigned runs rather than bidding), and how to update your vehicle. It now
+  names the real menu entries (« Missions », « Mes gains », « Mon dossier »).
+- **Signing up and password reset speak your language.** The email-verification
+  page (waiting, verifying, verified, failed), the « Check your email » screen
+  after a reset request and its validation messages are translated. The
+  verified screen no longer promises « Go to Dashboard »: it takes you on to your
+  account, and says so.
+- **A crash screen you can read.** If the whole page breaks, the message and the
+  « Réessayer » button now follow your browser's language.
+- **A driver's file shows the runs in progress**, and removing a driver warns you
+  before you press, instead of refusing afterwards.
+- **An in-house driver can no longer put a price on the table from a conversation.**
+  The quote button no longer appears for them in a job's chat, and a request sent
+  anyway is refused. They are given work, they do not bid.
+- **Smaller things that were in English:** the notices when a refund is processed,
+  a review is posted or settings are saved; the « could not open the chat » notice;
+  the admin listings page now offers « Réessayer » when it fails to load; the
+  admin menu bar and the shipment map's « coordinates missing » line.
+
 ## [2.89.0] - 2026-11-17 · ux
 
 - **« Faire une offre » now sits on the same line as the card's badges.** On a

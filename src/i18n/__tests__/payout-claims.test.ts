@@ -126,12 +126,25 @@ describe("payout claims hardcoded outside the catalogue", () => {
     expect(errors).toEqual([]);
   });
 
-  it("answers « How do I get paid? » on /driver/help with no schedule", () => {
-    render(createElement(DriverHelpPage));
-    fireEvent.click(screen.getByRole("button", { name: "How do I get paid?" }));
-    const answer = screen.getByRole("region", { name: "How do I get paid?" }).textContent ?? "";
+  it.each([
+    ["en", en, /request a withdrawal/i],
+    ["fr", fr, /demandez un retrait/i],
+  ] as const)(
+    "answers « How do I get paid? » on /driver/help with no schedule (%s)",
+    (locale, messages, asksForWithdrawal) => {
+      const question = messages.driver.help.faq.paid.question;
+      render(
+        createElement(NextIntlClientProvider, {
+          locale,
+          messages,
+          children: createElement(DriverHelpPage),
+        })
+      );
+      fireEvent.click(screen.getByRole("button", { name: question }));
+      const answer = screen.getByRole("region", { name: question }).textContent ?? "";
 
-    expect(claimsIn(answer)).toEqual([]);
-    expect(answer).toMatch(/request a withdrawal/i);
-  });
+      expect(claimsIn(answer)).toEqual([]);
+      expect(answer).toMatch(asksForWithdrawal);
+    }
+  );
 });

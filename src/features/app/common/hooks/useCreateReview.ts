@@ -3,6 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import type { CreateReviewInput } from "@/server/dto/reviews.dto";
 
 async function createReview(data: CreateReviewInput) {
@@ -25,12 +26,13 @@ async function createReview(data: CreateReviewInput) {
 
 export function useCreateReview() {
     const queryClient = useQueryClient();
+    const t = useTranslations("reviews");
     const router = useRouter();
 
     return useMutation({
         mutationFn: createReview,
         onSuccess: () => {
-            toast.success("Review posted successfully");
+            toast.success(t("posted"));
             queryClient.invalidateQueries({ queryKey: ["reviews"] });
             queryClient.invalidateQueries({ queryKey: ["my-reviews"] });
             // Invalidate listing reviews if needed

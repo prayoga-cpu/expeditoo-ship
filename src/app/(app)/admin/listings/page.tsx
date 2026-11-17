@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { ListingsTable } from "@/features/app/admin/ui/ListingsTable";
-import { AlertCircle, ArrowLeft, Package } from "lucide-react";
+import { ArrowLeft, Package } from "lucide-react";
+import { LoadErrorState } from "@/components/ui/load-error-state";
 import { Suspense, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAdminListings } from "@/features/app/admin/hooks/useAdminListings";
@@ -26,6 +27,7 @@ function ListingsPageContent() {
     data: listings,
     isLoading,
     error,
+    refetch,
     deleteListing,
   } = useAdminListings();
   const router = useRouter();
@@ -68,12 +70,8 @@ function ListingsPageContent() {
   }
 
   if (error) {
-    return (
-      <div className="flex items-center justify-center py-12 text-destructive">
-        <AlertCircle className="h-6 w-6 mr-2" />
-        <span>Failed to load listings</span>
-      </div>
-    );
+    // Retry and a way back, never red text alone (no_dead_ends_spec.md §4).
+    return <LoadErrorState onRetry={() => void refetch()} />;
   }
 
   return (

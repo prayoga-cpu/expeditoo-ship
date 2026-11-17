@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { LottieLoader } from "./lottie-loader";
 
@@ -52,11 +53,12 @@ export function PageLoader({
     className = "",
 }: PageLoaderProps) {
     const { width, height } = sizeMap[size];
+    const t = useTranslations("common");
 
     return (
         <div
             role="status"
-            aria-label="Loading content"
+            aria-label={t("loadingContent")}
             aria-busy="true"
             className={cn(
                 "flex flex-col items-center justify-center w-full",

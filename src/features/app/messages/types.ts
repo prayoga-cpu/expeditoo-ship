@@ -83,7 +83,8 @@ export type ThreadOfferBlock =
   | "LISTING_NOT_OPEN"
   | "LISTING_EXPIRED"
   | "OFFER_LIVE"
-  | "OFFER_SLOT_BURNT";
+  | "OFFER_SLOT_BURNT"
+  | "IN_HOUSE_DRIVER";
 
 export interface ThreadOfferJob {
   id: string;

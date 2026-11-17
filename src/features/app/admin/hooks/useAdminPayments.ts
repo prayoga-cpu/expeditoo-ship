@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 // ========================================
 // Types
@@ -76,6 +77,7 @@ async function processRefundApi(
 
 export function useAdminPayments() {
     const queryClient = useQueryClient();
+    const t = useTranslations("admin.payments.toasts");
 
     const query = useQuery({
         queryKey: ["admin", "payments"],
@@ -93,10 +95,10 @@ export function useAdminPayments() {
         }) => processRefundApi(paymentId, reason),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["admin", "payments"] });
-            toast.success("Refund processed successfully");
+            toast.success(t("refunded"));
         },
         onError: (error) => {
-            toast.error(`Refund failed: ${error.message}`);
+            toast.error(t("refundFailed", { message: error.message }));
         },
     });
 

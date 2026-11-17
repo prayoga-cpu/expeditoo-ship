@@ -166,6 +166,20 @@ describe("CarrierApplicationDetail · what the footer offers", () => {
     expect(h.onDeregister).toHaveBeenCalledWith({ id: "c1", reason: "Fraude" });
   });
 
+  it("warns, before the click, that removing is refused while runs are in progress", () => {
+    renderDetail(app({ liveRuns: 2 }));
+    openMenu();
+    fireEvent.click(item(t.deregister));
+    expect(screen.getByText(/2 courses en cours/)).toBeInTheDocument();
+  });
+
+  it("says nothing about live runs when the driver has none", () => {
+    renderDetail(app({ liveRuns: 0 }));
+    openMenu();
+    fireEvent.click(item(t.deregister));
+    expect(screen.queryByText(/Ce chauffeur a \d+ course/)).toBeNull();
+  });
+
   it.each([
     ["draft", () => t.approve],
     ["rejected", () => t.approveAnyway],

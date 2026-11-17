@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { UserPreferences } from "@/db/schema/users";
 
@@ -67,6 +68,7 @@ async function updatePreferences(
 export function useSettings() {
   const { theme, setTheme } = useTheme();
   const queryClient = useQueryClient();
+  const t = useTranslations("settings");
 
   const { data: preferencesData, isLoading, isError, refetch } = useQuery({
     queryKey: ["preferences"],
@@ -78,10 +80,10 @@ export function useSettings() {
     mutationFn: updatePreferences,
     onSuccess: (data) => {
       queryClient.setQueryData(["preferences"], data);
-      toast.success("Settings updated");
+      toast.success(t("updated"));
     },
     onError: (error: Error) => {
-      toast.error(error.message || "Failed to update settings");
+      toast.error(error.message || t("updateFailed"));
     },
   });
 
