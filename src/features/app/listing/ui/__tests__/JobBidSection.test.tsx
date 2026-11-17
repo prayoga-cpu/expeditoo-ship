@@ -152,6 +152,21 @@ describe("JobBidSection — nobody is left with a page that ends in silence", ()
     expect(container.querySelector("[data-testid]")).toBeNull();
   });
 
+  it("tells an in-house driver their runs are assigned, with no form and no invitation to apply", () => {
+    auth.user = { roles: ["driver"] };
+    const container = text(JOB);
+
+    expect(container).toHaveTextContent("Vos courses vous sont attribuées");
+    expect(container).not.toHaveTextContent("Devenir transporteur");
+    expect(container.querySelector("[data-testid]")).toBeNull();
+  });
+
+  it("still gives a carrier the offer form", () => {
+    auth.user = { roles: ["carrier"] };
+
+    expect(text(JOB).querySelector("[data-testid='submit-offer-form']")).not.toBeNull();
+  });
+
   it("still invites an ordinary account to become a transporter", () => {
     auth.user = { roles: ["shipper"] };
     const container = text(JOB);

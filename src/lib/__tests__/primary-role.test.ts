@@ -24,9 +24,14 @@ describe("primaryRole", () => {
     expect(primaryRole(["shipper", "operator", "driver"])).toBe("operator");
   });
 
-  it("collapses carrier onto driver, because they are one person here", () => {
-    expect(primaryRole(["carrier"])).toBe("driver");
-    expect(primaryRole(["carrier", "shipper"])).toBe("driver");
+  it("keeps carrier and driver apart: the outside driver is not the in-house one", () => {
+    expect(primaryRole(["carrier"])).toBe("carrier");
+    expect(primaryRole(["driver"])).toBe("driver");
+    expect(primaryRole(["carrier", "shipper"])).toBe("carrier");
+  });
+
+  it("ranks carrier above driver for an account approved before the split", () => {
+    expect(primaryRole(["shipper", "driver", "carrier"])).toBe("carrier");
   });
 
   it("keeps shipper visible when it is the only role granted", () => {

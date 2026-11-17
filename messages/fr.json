@@ -195,7 +195,14 @@
       "withoutLift": "sans ascenseur",
       "surface": "Logement de {surface, number} m²",
       "volume": "Volume de {volume, number} m³"
-    }
+    },
+    "theme": {
+      "toggle": "Changer de thème",
+      "light": "Clair",
+      "dark": "Sombre",
+      "system": "Comme mon appareil"
+    },
+    "verifiedUser": "Utilisateur vérifié"
   },
   "auth": {
     "login": {
@@ -1160,7 +1167,9 @@
       "ownJobTitle": "C'est votre demande",
       "ownJobDescription": "Les transporteurs vous envoient leurs offres ci-dessus : vous choisissez celle qui vous convient. Vous ne pouvez pas faire d'offre sur votre propre demande.",
       "staffTitle": "Un compte opérateur ou admin ne propose pas de prix",
-      "staffDescription": "Pour faire une offre, il faut un compte chauffeur approuvé. Sur une course Expedion, l'attribution se fait depuis la « File d'attribution »."
+      "staffDescription": "Pour faire une offre, il faut un compte chauffeur approuvé. Sur une course Expedion, l'attribution se fait depuis la « File d'attribution ».",
+      "inHouseTitle": "Vos courses vous sont attribuées",
+      "inHouseDescription": "En tant que chauffeur interne Expeditoo, vous ne répondez pas aux annonces : l'équipe vous confie les courses."
     }
   },
   "create": {
@@ -2050,6 +2059,14 @@
       "shipment_cancelled": "Transport annulé",
       "shipment_withdrawn": "Transporteur désisté",
       "job_reopened": "Course de nouveau disponible"
+    },
+    "popover": {
+      "unreadMessages": "{count, plural, one {# message non lu} other {# messages non lus}}",
+      "tapToView": "Touchez pour ouvrir vos messages",
+      "viewAll": "Voir toutes les notifications"
+    },
+    "bell": {
+      "unread": "{count, plural, one {# notification non lue} other {# notifications non lues}}"
     }
   },
   "marketing": {
@@ -2126,11 +2143,6 @@
       }
     },
     "jobBoard": {
-    "pendingNotice": "Vous pouvez parcourir les demandes dès maintenant. Vous pourrez faire une offre une fois votre dossier chauffeur approuvé.",
-    "pendingNoticeAction": "Voir mon dossier",
-    "newJobToastAction": "Voir la course",
-    "modeNotice": "Vous êtes en mode Demandeur. Passez en mode Chauffeur pour retrouver vos offres et courses.",
-    "modeNoticeAction": "Passer en mode Chauffeur",
       "eyebrow": "OUVERTES EN CE MOMENT",
       "title": "Le tableau du jour",
       "joinCta": "Rejoindre pour voir les 27 courses →",
@@ -2787,7 +2799,8 @@
       "clearFilters": "Effacer les filtres",
       "sortBy": "Trier par",
       "sortAscending": "Croissant",
-      "sortDescending": "Décroissant"
+      "sortDescending": "Décroissant",
+      "noResults": "Aucun résultat pour cette recherche. Essayez d'autres mots ou effacez les filtres."
     },
     "dashboard": {
       "title": "Tableau de bord",
@@ -2959,14 +2972,11 @@
       "createDialog": {
         "trigger": "Ajouter un chauffeur interne",
         "title": "Ajouter un chauffeur interne",
-        "description": "Un chauffeur employé par Expeditoo, approuvé dès l'enregistrement — aucune candidature à examiner. Un nouvel e-mail reçoit un compte et un lien pour définir son mot de passe ; un e-mail qui a déjà un compte est converti.",
+        "description": "Un chauffeur de l'équipe Expeditoo, approuvé dès l'enregistrement — aucune candidature à examiner. Choisissez s'il a déjà un compte ou si vous l'invitez par e-mail.",
         "fields": {
           "name": "Nom complet",
           "email": "E-mail",
-          "companyName": "Nom de l'entreprise",
-          "siret": "SIRET",
           "contactPhone": "Téléphone de contact",
-          "legalForm": "Forme juridique",
           "addressLine": "Adresse",
           "city": "Ville",
           "postalCode": "Code postal",
@@ -2981,7 +2991,19 @@
         "submit": "Ajouter le chauffeur",
         "toasts": {
           "created": "Chauffeur ajouté. Il recevra un e-mail pour définir son mot de passe.",
-          "converted": "{email} est désormais chauffeur interne."
+          "converted": "{email} est désormais chauffeur interne.",
+          "invited": "Chauffeur ajouté. Une invitation a été envoyée à {email}."
+        },
+        "mode": {
+          "legend": "Cette personne a-t-elle déjà un compte ?",
+          "invite": {
+            "label": "Pas encore inscrite — l'inviter",
+            "help": "Un compte est créé et elle reçoit une invitation par e-mail pour choisir son mot de passe."
+          },
+          "existing": {
+            "label": "Déjà inscrite",
+            "help": "Son compte actuel devient chauffeur interne, sans e-mail."
+          }
         }
       }
     },
@@ -3023,13 +3045,14 @@
       "assigning": "Attribution...",
       "assignRole": "Attribuer le rôle",
       "shipper": "Expéditeur",
-      "carrier": "Chauffeur",
-      "driver": "Chauffeur",
+      "carrier": "Transporteur",
+      "driver": "Chauffeur interne",
       "operator": "Opérateur",
       "support": "Support",
       "finance": "Finance",
-      "driverViaApplication": "Le rôle Chauffeur s'obtient en approuvant une candidature, pas depuis cette liste.",
-      "openApplications": "Ouvrir les candidatures"
+      "openApplications": "Ouvrir les candidatures",
+      "inHouseHint": "Chauffeur interne Expeditoo : crée (ou approuve) son dossier, il apparaît dans la liste des chauffeurs et reçoit les courses que vous lui attribuez. Il ne répond pas aux annonces et ne voit pas les prix. Complétez ensuite ses informations dans",
+      "carrierHint": "Transporteur externe : crée (ou approuve) son dossier, il apparaît dans la liste des chauffeurs et peut répondre aux annonces. Complétez ensuite ses informations dans"
     },
     "payments": {
       "title": "Paiements",
@@ -3066,8 +3089,8 @@
       }
     },
     "carriers": {
-      "title": "Candidatures transporteurs",
-      "subtitle": "Examinez les candidatures et gérez les comptes des transporteurs",
+      "title": "Chauffeurs",
+      "subtitle": "Examinez les candidatures et gérez tous les comptes chauffeurs",
       "table": {
         "company": "Entreprise",
         "applicant": "Candidat",
@@ -3080,13 +3103,22 @@
         "status": "Statut",
         "actions": "Actions",
         "searchPlaceholder": "Rechercher par entreprise, SIRET ou candidat...",
-        "filterLabel": "Filtrer par statut",
-        "filterAll": "Tous les statuts",
         "empty": {
-          "title": "Aucune candidature",
-          "description": "Aucune candidature de transporteur avec ce statut.",
-          "descriptionAll": "Aucune candidature de transporteur pour le moment."
-        }
+          "title": "Aucun chauffeur ici",
+          "description": "Aucun chauffeur ne correspond à ces filtres.",
+          "descriptionAll": "Aucun chauffeur n'a encore candidaté."
+        },
+        "inHouse": "Chauffeur interne Expeditoo",
+        "type": "Type",
+        "contact": "Contact",
+        "reached": "Joint",
+        "notReached": "Pas encore",
+        "notReachedOnly": "Pas encore joints",
+        "kindFilterLabel": "Filtrer par type de chauffeur",
+        "kindAll": "Tous les types",
+        "documentProgress": "{accepted}/{total} validés",
+        "open": "Ouvrir le dossier",
+        "resetFilters": "Afficher tous les chauffeurs"
       },
       "status": {
         "draft": "Brouillon",
@@ -3100,12 +3132,12 @@
       },
       "detail": {
         "contactConfirmed": {
-          "label": "Contact confirmé",
-          "hint": "Cochez quand vous avez joint le candidat. Cela ne change pas l'approbation.",
+          "label": "Candidat joint",
+          "hint": "Cochez quand vous avez parlé au candidat. C'est une simple note : l'approbation reste une étape à part.",
           "confirmedOn": "Confirmé le {date} par {by}.",
           "you": "vous"
         },
-        "title": "Candidature transporteur",
+        "title": "Dossier chauffeur",
         "applicant": "Candidat",
         "submissionDate": "Date de soumission",
         "currentStatus": "Statut actuel",
@@ -3137,7 +3169,7 @@
         "suspensionReason": "Motif de la suspension",
         "approve": "Approuver",
         "reject": "Refuser",
-        "suspend": "Suspendre",
+        "suspend": "Suspendre le compte",
         "close": "Fermer",
         "cancel": "Annuler",
         "confirmReject": "Confirmer le refus",
@@ -3158,14 +3190,28 @@
         "confirmDeregister": "Confirmer la désinscription",
         "markAbsent": "Marquer absent",
         "endAbsence": "Fin d'absence",
-        "deregister": "Désinscrire",
+        "deregister": "Désinscrire le chauffeur",
         "reinstate": "Réactiver",
-        "restoreAccess": "Rétablir l'accès chauffeur",
         "kindLabel": "Type de chauffeur",
         "kind": {
-          "professional": "Professionnel",
-          "private": "Particulier"
-        }
+          "professional": "Transporteur (externe)",
+          "private": "Chauffeur interne Expeditoo"
+        },
+        "incomplete": "Il manque des informations (téléphone, véhicule…). Vous pouvez compléter le dossier à la place de la personne.",
+        "editHint": "Corriger ou compléter le dossier à la place de la personne.",
+        "completeFile": "Compléter le dossier",
+        "moreActions": "Plus d'actions",
+        "approveAnyway": "Approuver quand même",
+        "reactivateRemoved": "Réactiver le chauffeur",
+        "accessMissingTitle": "L'accès chauffeur est manquant",
+        "accessMissingBody": "Ce chauffeur est approuvé, mais son compte n'a pas le rôle chauffeur : il ne voit et ne prend aucune course. La réparation le lui accorde, rien d'autre ne change.",
+        "repairAccess": "Réparer l'accès",
+        "completedRuns": "Courses terminées",
+        "rating": "Note",
+        "ratingValue": "{rating}/5 · {count, plural, one {# avis} other {# avis}}",
+        "noRatingYet": "Pas encore de note",
+        "suspendHelp": "Bloque les nouvelles offres et courses. Les courses déjà en cours continuent. Vous pouvez réactiver le chauffeur à tout moment.",
+        "removeHelp": "Le chauffeur quitte la plateforme : ses offres en attente sont retirées et les gains acquis restent payables. Impossible tant qu'une course est en cours. Il pourra se réinscrire."
       },
       "vehicleTypes": {
         "little_car": "Petite voiture",
@@ -3197,7 +3243,42 @@
         "deregistered": "Chauffeur désinscrit, ses offres en cours retirées",
         "reinstated": "Chauffeur réactivé",
         "hasLiveRuns": "Impossible : ce chauffeur a encore une course en cours. Elle doit être livrée ou annulée d'abord.",
-        "actionFailed": "Échec : {message}"
+        "actionFailed": "Échec : {message}",
+        "fileSaved": "Dossier enregistré",
+        "vehicleAdded": "Véhicule ajouté"
+      },
+      "editor": {
+        "title": "Compléter le dossier",
+        "description": "Vous renseignez le dossier de {name} à sa place. Les documents et le RIB restent à la personne.",
+        "inHouse": "Chauffeur interne Expeditoo",
+        "inHouseHelp": "Aucune société, SIRET ni document : la personne conduit pour Expeditoo.",
+        "kindLocked": "Le type ne peut plus changer une fois le dossier approuvé.",
+        "companyName": "Raison sociale",
+        "siret": "SIRET",
+        "vatNumber": "Numéro de TVA (optionnel)",
+        "legalForm": "Forme juridique (optionnelle)",
+        "contactPhone": "Téléphone de contact",
+        "addressLine": "Adresse",
+        "city": "Ville",
+        "postalCode": "Code postal",
+        "bio": "Note (optionnelle)",
+        "vehicle": "Ajouter un véhicule",
+        "vehicleHelp": "{count, plural, =0 {Aucun véhicule au dossier : il en faut un pour attribuer une course.} one {# véhicule au dossier.} other {# véhicules au dossier.}}",
+        "vehicleType": "Type",
+        "vehicleTypePlaceholder": "Choisir un type",
+        "maxWeightKg": "Charge max. (kg)",
+        "plateNumber": "Immatriculation",
+        "addVehicle": "Ajouter",
+        "cancel": "Fermer",
+        "save": "Enregistrer le dossier"
+      },
+      "tabs": {
+        "review": "À examiner",
+        "active": "Actifs",
+        "paused": "Absents ou suspendus",
+        "closed": "Clôturés",
+        "draft": "Non soumis",
+        "all": "Tous"
       }
     },
     "expedion": {
@@ -3753,6 +3834,14 @@
           "addressLine": "L'adresse est requise",
           "city": "La ville est requise",
           "postalCode": "5 chiffres"
+        },
+        "inHouse": {
+          "label": "Je suis chauffeur interne Expeditoo",
+          "help": "Cochez si vous conduisez pour Expeditoo même : pas de société, de SIRET ni de documents. Un administrateur validera votre dossier.",
+          "title": "Vos coordonnées",
+          "description": "Quelques informations suffisent pour un chauffeur interne.",
+          "bio": "Une précision pour l'équipe (optionnelle)",
+          "bioPlaceholder": "Votre responsable, votre zone, vos disponibilités…"
         }
       },
       "banner": {
@@ -3790,7 +3879,9 @@
         "company": "Société",
         "siret": "SIRET",
         "phone": "Téléphone",
-        "address": "Adresse"
+        "address": "Adresse",
+        "type": "Type",
+        "inHouse": "Chauffeur interne Expeditoo"
       },
       "documents": {
         "title": "Justificatifs",
@@ -4343,7 +4434,12 @@
       "list": "Liste",
       "map": "Carte"
     },
-    "retry": "Réessayer"
+    "retry": "Réessayer",
+    "pendingNotice": "Vous pouvez parcourir les missions dès maintenant. Vous pourrez faire une offre une fois votre dossier chauffeur approuvé.",
+    "pendingNoticeAction": "Voir mon dossier",
+    "newJobToastAction": "Voir la mission",
+    "modeNotice": "Vous parcourez en tant que demandeur. Passez en mode Chauffeur pour faire des offres et suivre vos courses.",
+    "modeNoticeAction": "Passer en mode Chauffeur"
   },
   "impersonation": {
     "viewingAs": "Connecté en tant que",

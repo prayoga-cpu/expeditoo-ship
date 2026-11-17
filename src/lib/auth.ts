@@ -10,6 +10,8 @@ import {
   recordLogin,
   rejectIfBanned,
   sendPasswordResetEmail,
+  sendDriverInvitationEmail,
+  isDriverInvitation,
   sendVerificationEmail,
 } from "@/server/services/auth.service";
 import { getProfile, getUserRoles } from "@/server/services/user.service";
@@ -78,6 +80,12 @@ const options = {
       // Reset has its own mail path: the verification one sends a "verify your
       // account" subject and overwrites `callbackURL` with `/signin`, which
       // would take the user anywhere but the reset form.
+      // An admin adding an in-house driver asks for this link with `invite=driver`:
+      // same link and token, but a mail that says why it arrived.
+      if (isDriverInvitation(url)) {
+        await sendDriverInvitationEmail(user.email, url);
+        return;
+      }
       await sendPasswordResetEmail(user.email, url);
     },
   },

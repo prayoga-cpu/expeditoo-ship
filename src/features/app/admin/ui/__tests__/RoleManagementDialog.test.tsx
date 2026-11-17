@@ -26,9 +26,8 @@ const ONE_MANAGEABLE: User = {
   name: "Approved Carrier",
   email: "carrier@example.com",
   role: "carrier",
-  // KYC approval grants both together (carrier.service.ts) — this is the
-  // shape every approved account actually has.
-  roles: ["shipper", "carrier", "driver"],
+  // Approval grants the one role the file's kind earns (driver_types_spec.md §2).
+  roles: ["shipper", "carrier"],
   status: "active",
   joinDate: "2026-01-01",
   lastLoginAt: null,
@@ -75,12 +74,12 @@ function renderDialog({
 }
 
 describe("RoleManagementDialog", () => {
-  it("merges carrier and driver into one Driver chip and hides shipper", () => {
+  it("shows the carrier chip and hides shipper", () => {
     renderDialog({ user: ONE_MANAGEABLE });
 
-    expect(screen.getAllByText("Driver")).toHaveLength(1);
+    expect(screen.getAllByText("Carrier")).toHaveLength(1);
     expect(screen.queryByText("Shipper")).not.toBeInTheDocument();
-    expect(screen.queryByText("Carrier")).not.toBeInTheDocument();
+    expect(screen.queryByText("In-house driver")).not.toBeInTheDocument();
   });
 
   it("offers no remove control when only one manageable role is held", () => {
@@ -92,21 +91,21 @@ describe("RoleManagementDialog", () => {
     expect(screen.queryByLabelText(/Remove/)).not.toBeInTheDocument();
   });
 
-  it("removing the Driver chip calls back with the merged role", async () => {
+  it("removing the Carrier chip calls back with that role", async () => {
     const onRemoveRole = vi
       .fn()
       .mockResolvedValue({ success: true, message: "" });
     renderDialog({ user: MULTI, onRemoveRole });
 
-    fireEvent.click(screen.getByLabelText("Remove Driver"));
+    fireEvent.click(screen.getByLabelText("Remove Carrier"));
 
-    expect(onRemoveRole).toHaveBeenCalledWith(MULTI, "driver");
+    expect(onRemoveRole).toHaveBeenCalledWith(MULTI, "carrier");
   });
 
   it("offers only roles the account does not already hold", () => {
     renderDialog({ user: MULTI });
 
-    // MULTI already holds "driver" and "admin" — the add dropdown's
+    // MULTI already holds "carrier" and "admin" — the add dropdown's
     // placeholder is still the only assignable-role text on screen, since
     // Radix only renders the option list once the select is opened.
     expect(screen.getByText("Select new role to assign")).toBeInTheDocument();
@@ -124,22 +123,36 @@ describe("RoleManagementDialog", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("points to the applications instead of granting Driver by hand", () => {
-    renderDialog({ user: { ...ONE_MANAGEABLE, roles: ["shipper"] } });
+  it("says an in-house driver is created with a file, once that role is picked", async () => {
+    // Radix renders the option list only when opened, so pick through the select.
+    const onUpdateRole = vi.fn();
+    renderDialog({ user: { ...ONE_MANAGEABLE, roles: ["shipper"] }, onUpdateRole });
 
-    expect(
-      screen.getByText(/granted by approving an application/)
-    ).toBeInTheDocument();
+    fireEvent.keyDown(screen.getByRole("combobox"), { key: "Enter" });
+    fireEvent.click(await screen.findByRole("option", { name: "In-house driver" }));
+
+    expect(screen.getByText(/in-house driver: creates/i)).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "Open applications" })
     ).toHaveAttribute("href", "/admin/drivers?tab=applications");
+
+    fireEvent.click(screen.getByRole("button", { name: "Assign Role" }));
+    expect(onUpdateRole).toHaveBeenCalledWith("driver");
   });
 
-  it("does not repeat that pointer for someone who already drives", () => {
-    renderDialog({ user: ONE_MANAGEABLE });
+  it("offers both driver roles, and the others, to someone with none", async () => {
+    renderDialog({ user: { ...ONE_MANAGEABLE, roles: ["shipper"] } });
 
-    expect(
-      screen.queryByText(/granted by approving an application/)
-    ).not.toBeInTheDocument();
+    fireEvent.keyDown(screen.getByRole("combobox"), { key: "Enter" });
+
+    for (const name of ["In-house driver", "Carrier", "Operator", "Admin"]) {
+      expect(await screen.findByRole("option", { name })).toBeInTheDocument();
+    }
+  });
+
+  it("shows no driver-file hint before a driver role is picked", () => {
+    renderDialog({ user: { ...ONE_MANAGEABLE, roles: ["shipper"] } });
+
+    expect(screen.queryByRole("link", { name: "Open applications" })).not.toBeInTheDocument();
   });
 });

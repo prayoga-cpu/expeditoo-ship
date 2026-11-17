@@ -34,7 +34,7 @@ export async function GET(req: Request) {
     const buffer = await renderToBuffer(
       EarningsStatementPDF({
         companyName: carrier.companyName,
-        siret: carrier.siret,
+        siret: carrier.siret ?? "",
         periodLabel: periodLabel(period, "Toutes périodes"),
         generatedAt: new Date().toLocaleDateString("fr-FR"),
         currency: "EUR",

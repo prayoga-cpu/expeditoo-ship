@@ -857,6 +857,22 @@ describe("offersService.takeJob", () => {
     expect(code).toBe("TAKE_NOT_AVAILABLE");
   });
 
+  it("refuses an in-house driver, who is given work and never takes it", async () => {
+    Object.assign(carriersDal, {
+      getByUserId: vi.fn().mockResolvedValue({ id: "c-1", kind: "private", status: "approved" }),
+    });
+    const submit = vi.spyOn(offersService, "submitOffer");
+
+    const code = await codeFrom(() =>
+      offersService.takeJob("carrier-1", "job-1", { vehicleId: "veh-1" })
+    );
+
+    expect(code).toBe("IN_HOUSE_DIRECT_ASSIGN_ONLY");
+    expect(submit).not.toHaveBeenCalled();
+    expect(offersDal.create).not.toHaveBeenCalled();
+    submit.mockRestore();
+  });
+
   it("refuses a job that is no longer open, which is the two-drivers race", async () => {
     vi.mocked(listingsDal).getById = vi
       .fn()

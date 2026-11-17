@@ -14,6 +14,83 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.89.0] - 2026-11-17 · ux
+
+- **« Faire une offre » now sits on the same line as the card's badges.** On a
+  tablet and a computer, the badges (« Immédiat », « Urgent »…) and the size (« L »)
+  are together on the left and the button is on the right, instead of the button
+  dropping under them. On a phone, or when the line is too tight, the button
+  takes its own full-width line.
+- **The floating menu no longer covers the last job.** On a tablet and a small
+  laptop the bottom bar hid the last card and its « Faire une offre » button, and
+  the map's credits. The list and the map now stop above it.
+- **Five notices on the jobs board were showing as code** (« jobBoard.modeNotice »
+  and « jobBoard.modeNoticeAction ») — the Driver-mode reminder, the
+  « application pending » notice and its button, and the « View the job » button
+  of the new-job alert. They read as sentences again, in French and in English.
+- **Some of the app's own labels were still in English for French users.** The
+  notifications bell (title, « Tout marquer comme lu », unread messages, « Voir
+  toutes les notifications », the empty state), the theme switch (Clair / Sombre /
+  Comme mon appareil), the verified badge and the empty result of an admin table
+  are translated, and say what pressing them does.
+
+## [2.88.0] - 2026-11-17 · ux
+
+- **The drivers page now shows who needs you first.** It opens on « À examiner »
+  (or « Actifs » when nothing is waiting), with tabs for Active, Away or
+  suspended, Closed and Not submitted, and a count on each. You can also filter
+  by driver type (in-house or outside) and by « Pas encore joints ».
+- **Every driver file opens with the person, not the company.** The list leads
+  with the driver's name, then their status and type, and shows the contact
+  state and how many documents are validated (« 2/3 »). An active driver's file
+  shows completed runs, rating and vehicles; an in-house driver's file no longer
+  shows bank details they do not have.
+- **No more cropped buttons in a driver's file.** The footer shows only what
+  makes sense for the driver's state — Approve and Reject for a new application,
+  End absence or Reactivate when it applies — and everything else is under
+  « Plus d'actions ».
+- **Each serious action now says what it does before you confirm it.** Suspending
+  blocks new bids and runs, lets runs in progress carry on, and can be undone.
+  Removing a driver (« Désinscrire ») withdraws their pending bids, keeps earned
+  payouts payable, is refused while a run is in progress, and lets them apply
+  again.
+- **« Candidat joint » is now clearly a note.** It records that someone spoke to
+  the applicant and never approves anything; it shows only while an application
+  waits for a decision.
+- **« Restore driver access » is gone from healthy drivers.** An approved driver
+  whose account really lacks the driver role now gets a warning with
+  « Réparer l'accès »; everyone else sees nothing. A refused or removed driver is
+  approved again with « Approuver quand même » / « Réactiver le chauffeur ».
+
+## [2.87.0] - 2026-11-17 · feat
+
+- **There are now two kinds of driver, with two separate roles.** An **in-house
+  driver** drives for Expeditoo itself: they are given the runs, they do not
+  answer ads, and they never see a price. A **carrier** is an outside driver who
+  passed the full application: they answer ads and are paid. Until now both
+  roles came together; each person now gets only the one that fits them.
+  Accounts approved before this keep what they have.
+- **Becoming a driver: one tick for an in-house driver.** On the driver
+  application, « Je suis chauffeur interne Expeditoo » replaces the company
+  questions with just a phone number and an address — no company, no SIRET, no
+  documents. An administrator still approves the file.
+- **Add an in-house driver from the admin, registered or not.** The form no
+  longer asks for a company, SIRET or legal form. You choose between someone who
+  already has an account (turned into a driver, nothing sent) and someone who
+  does not (an account is created and they get an email inviting them to choose
+  their password).
+- **« Gérer le rôle » can now add an in-house driver or a carrier.** The person
+  immediately appears in the Drivers list with the right role. If they had a
+  pending application, it is approved at the same time.
+- **An administrator can finish a driver's file for them.** « Compléter le
+  dossier », on any driver file, lets you fill in the contact details and
+  company, switch the type while the file is not yet approved, and add a vehicle
+  — so a pending application no longer has to wait on the person. Documents and
+  bank details stay with them.
+- On the job page, an in-house driver is told their runs are assigned to them
+  instead of being invited to apply. In the « assign a driver » list, in-house
+  drivers appear by name.
+
 ## [2.86.0] - 2026-11-16 · feat
 
 - **You can now describe your request in a sentence and the form fills itself.**

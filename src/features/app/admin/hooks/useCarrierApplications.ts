@@ -11,10 +11,14 @@ import {
     setCarrierContactConfirmed,
     deregisterCarrier,
     reinstateCarrier,
+    updateCarrierFile,
+    addCarrierVehicle,
     fetchDocumentViewUrl,
     type CarrierApplicationFilter,
     type CarrierAvailabilityRequest,
+    type CarrierFileInput,
 } from "../api/carriers.api";
+import type { VehicleType } from "@/lib/carrier-constants";
 
 export function useCarrierApplications(status: CarrierApplicationFilter) {
     const queryClient = useQueryClient();
@@ -123,6 +127,36 @@ export function useCarrierApplications(status: CarrierApplicationFilter) {
         },
     });
 
+    // Staff finishing a file for the applicant (driver_types_spec.md §7).
+    const fileMutation = useMutation({
+        mutationFn: ({ id, data }: { id: string; data: CarrierFileInput }) =>
+            updateCarrierFile(id, data),
+        onSuccess: () => {
+            invalidate();
+            toast.success(t("fileSaved"));
+        },
+        onError: (error) => {
+            toast.error(t("actionFailed", { message: error.message }));
+        },
+    });
+
+    const vehicleMutation = useMutation({
+        mutationFn: ({
+            id,
+            vehicle,
+        }: {
+            id: string;
+            vehicle: { type: VehicleType; maxWeightKg: number; plateNumber: string };
+        }) => addCarrierVehicle(id, vehicle),
+        onSuccess: () => {
+            invalidate();
+            toast.success(t("vehicleAdded"));
+        },
+        onError: (error) => {
+            toast.error(t("actionFailed", { message: error.message }));
+        },
+    });
+
     return {
         applications,
         isLoading,
@@ -135,13 +169,17 @@ export function useCarrierApplications(status: CarrierApplicationFilter) {
         setContactConfirmed: contactConfirmedMutation.mutateAsync,
         deregisterCarrierAccount: deregisterMutation.mutateAsync,
         reinstateCarrierAccount: reinstateMutation.mutateAsync,
+        saveFile: fileMutation.mutateAsync,
+        addVehicle: vehicleMutation.mutateAsync,
         isUpdating:
             approveMutation.isPending ||
             rejectMutation.isPending ||
             suspendMutation.isPending ||
             availabilityMutation.isPending ||
             deregisterMutation.isPending ||
-            reinstateMutation.isPending,
+            reinstateMutation.isPending ||
+            fileMutation.isPending ||
+            vehicleMutation.isPending,
     };
 }
 

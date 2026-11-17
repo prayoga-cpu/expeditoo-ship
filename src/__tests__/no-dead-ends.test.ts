@@ -35,8 +35,6 @@ const EMPTY_WITHOUT_ACTION: Record<string, string> = {
   'features/app/admin/expedion/ui/RecentDirectRequestsPanel.tsx :: t("empty")':
     "staff panel: no new direct request is nothing to act on",
   'features/app/admin/ui/AwardQueue.tsx :: t("empty.title")': "an empty award queue is the goal",
-  'features/app/admin/ui/CarrierApplicationsList.tsx :: t("table.empty.title")':
-    "staff queue; the status filter above is the way on",
   "features/app/feedback/ui/FeedbackConsole.tsx :: hasFilters":
     "staff queue; the filters above are the way on",
   'features/app/feedback/ui/FeedbackDialog.tsx :: t("history.emptyTitle")':

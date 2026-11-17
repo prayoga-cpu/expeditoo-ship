@@ -4,6 +4,7 @@ import type { User } from "../types";
 import { mapApiUser } from "../lib/map-api-user";
 import { assignRole, fetchUsers, removeRole } from "../api/users.api";
 import { dbRolesFor } from "../lib/role-groups";
+import { useToast } from "@/hooks/use-toast";
 
 /**
  * The admin users table.
@@ -13,6 +14,7 @@ import { dbRolesFor } from "../lib/role-groups";
  * so suspending or deleting somebody left the row on screen unchanged.
  */
 export function useAdmin() {
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTab, setSelectedTab] = useState("users");
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
@@ -45,12 +47,10 @@ export function useAdmin() {
    * every existing role until this changed, one `replace: true` away from
    * the copy right beside it in the dialog promising the opposite.
    *
-   * `role` is a manageable chip, not always a raw `user_roles` value —
-   * `dbRolesFor` expands "driver" to both `carrier` and `driver` so the pair
-   * is always granted together, the same way KYC approval already does
-   * (`carrier.service.ts`). The two calls run in sequence, not in parallel,
-   * so a real failure on the first stops the second rather than leaving the
-   * pair half-granted. */
+   * « In-house driver » and « Carrier » are granted here too: the server
+   * creates or approves the driver file that earns the role, so the person
+   * shows up in the Drivers list at once (driver_types_spec.md §5). A refusal
+   * (a suspended file, say) comes back as `success: false` and is shown. */
   const handleUpdateRole = useCallback(
     async (role: string) => {
       if (!selectedUser) return;
@@ -58,28 +58,32 @@ export function useAdmin() {
       setIsUpdatingRole(true);
       try {
         for (const dbRole of dbRolesFor(role)) {
-          await assignRole(selectedUser.id, dbRole);
+          const result = await assignRole(selectedUser.id, dbRole);
+          if (!result.success) {
+            toast({ description: result.message, variant: "destructive" });
+            return;
+          }
         }
         await refetch();
         setRoleDialogOpen(false);
       } catch (error) {
         console.error("Failed to update role:", error);
+        toast({
+          description: error instanceof Error ? error.message : String(error),
+          variant: "destructive",
+        });
       } finally {
         setIsUpdatingRole(false);
       }
     },
-    [selectedUser, refetch]
+    [selectedUser, refetch, toast]
   );
 
   /** The server refuses to take an account's last role, and answers with a
    * message rather than an HTTP error for that case — surfaced by the
    * caller, not swallowed here.
    *
-   * Removing the "driver" chip removes both `carrier` and `driver`. The
-   * dialog and the table only offer this when another manageable chip is
-   * still held, so the second call should not itself be a user's last role
-   * — but if a race makes it one anyway, that failure (not the first call's
-   * success) is what the caller needs to see. */
+   * Removing a chip removes only that role; the driver file stays as it is. */
   const handleRemoveRole = useCallback(
     async (userId: string, role: string) => {
       let result = { success: true, message: "" };

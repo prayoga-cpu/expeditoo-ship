@@ -4,11 +4,12 @@ import { headers } from "next/headers";
 import { db } from "@/db";
 import { DriverLayout } from "@/features/app/driver/ui";
 
-// Helper to check driver role
+// Runs are executed by both kinds of driver: the in-house `driver`, and the
+// outside `carrier`, who reaches their deliveries here too (driver_types_spec.md §6).
 async function isDriver(userId: string) {
   const role = await db.query.userRoles.findFirst({
-    where: (roles, { and, eq }) =>
-      and(eq(roles.userId, userId), eq(roles.role, "driver")),
+    where: (roles, { and, eq, inArray }) =>
+      and(eq(roles.userId, userId), inArray(roles.role, ["driver", "carrier"])),
   });
   return !!role;
 }

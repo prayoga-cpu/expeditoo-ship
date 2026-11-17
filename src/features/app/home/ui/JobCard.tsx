@@ -25,6 +25,7 @@ import { UrgencyBadge } from "@/features/app/listing/ui/UrgencyBadge";
 import { OFFER_ANCHOR } from "@/features/app/listing/offer-anchor";
 import { useEndpointText } from "@/features/app/listing/hooks/useEndpointText";
 import { Card } from "@/components/ui/card";
+import { isImmediate, isUrgent } from "@/lib/urgency";
 import { formatCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 import { cargoSizeLabel } from "@/lib/cargo-size";
@@ -135,6 +136,19 @@ export function JobCard({
   const size = cargoSizeLabel(job);
   const text = useEndpointText();
   const isMoving = job.jobKind === "moving";
+  const now = new Date();
+  // Whether the footer has anything of its own to show beside the button.
+  const hasBadges =
+    job.hasBid ||
+    isImmediate(job, now) ||
+    isUrgent(job, now) ||
+    Boolean(size) ||
+    isMoving ||
+    closingSoon ||
+    job.isFragile ||
+    job.needsHelp ||
+    job.needsProtection ||
+    job.needsPackaging;
   const pickupWindow = describeWindow(
     job.pickupFrom,
     job.pickupUntil,
@@ -226,62 +240,76 @@ export function JobCard({
             <p className="text-muted-foreground text-xs">{t("budget")}</p>
           </div>
         </div>
-
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          {job.hasBid && (
-            <Badge className="border-success/30 bg-success/15 text-success">
-              <CheckCircle2 className="mr-1 h-3 w-3" />
-              {t("youBid")}
-            </Badge>
-          )}
-          {/* The pickup is close (§B5). Distinct from the badge after it,
-              which is about the bidding closing, not the transport. */}
-          <UrgencyBadge job={job} />
-          {isMoving && (
-            <Badge variant="outline" className="border-primary/40 text-primary">
-              <Truck className="mr-1 h-3 w-3" />
-              {t("moving")}
-            </Badge>
-          )}
-          {closingSoon && (
-            <Badge className="border-warning/30 bg-warning/15 text-warning">
-              <AlertTriangle className="mr-1 h-3 w-3" />
-              {t("urgent")}
-            </Badge>
-          )}
-          {job.isFragile && <Badge variant="outline">{t("fragile")}</Badge>}
-          {job.needsHelp && <Badge variant="outline">{t("needsHelp")}</Badge>}
-          {job.needsProtection && (
-            <Badge variant="outline">{t("needsProtection")}</Badge>
-          )}
-          {job.needsPackaging && (
-            <Badge variant="outline">{t("needsPackaging")}</Badge>
-          )}
-
-          {/*
-            Size sits where the price does — hard right — because the two
-            together are what a driver matches against their van.
-          */}
-          {size && (
-            <Badge
-              variant="outline"
-              title={t("sizeTitle", { size: size.toUpperCase() })}
-              className="ml-auto font-mono"
-            >
-              {size.toUpperCase()}
-            </Badge>
-          )}
-        </div>
       </Link>
 
-      {offerAction && (
-        <div className="mt-3 flex justify-end">
-          <Button asChild size="sm" className="w-full sm:w-auto">
-            <Link href={`/listing/${job.id}#${OFFER_ANCHOR}`}>
-              <Gavel className="mr-1.5 h-4 w-4" aria-hidden="true" />
-              {t("makeOffer")}
-            </Link>
-          </Button>
+      {/*
+        One footer row on every width that has room (client feedback
+        2026-11-17): the badges lead on the left — the size right beside
+        « Immédiat », since the two are read together — and « Faire une offre »
+        sits hard right on the same line. When the row is too tight (a phone, or
+        a long run of badges) the button drops to its own full-width line
+        instead of overlapping.
+
+        The badges are a second link to the job, not a second tab stop: the
+        first link already names it, and a pointer user may tap anywhere along
+        the row.
+      */}
+      {(hasBadges || offerAction) && (
+        <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-2.5">
+          <Link
+            href={`/listing/${job.id}`}
+            tabIndex={-1}
+            aria-hidden="true"
+            className="flex min-w-0 flex-auto flex-wrap items-center gap-2"
+          >
+            {job.hasBid && (
+              <Badge className="border-success/30 bg-success/15 text-success">
+                <CheckCircle2 className="mr-1 h-3 w-3" />
+                {t("youBid")}
+              </Badge>
+            )}
+            {/* The pickup is close (§B5). Distinct from the badge after it,
+                which is about the bidding closing, not the transport. */}
+            <UrgencyBadge job={job} />
+            {size && (
+              <Badge
+                variant="outline"
+                title={t("sizeTitle", { size: size.toUpperCase() })}
+                className="ml-0.5 font-mono"
+              >
+                {size.toUpperCase()}
+              </Badge>
+            )}
+            {isMoving && (
+              <Badge variant="outline" className="border-primary/40 text-primary">
+                <Truck className="mr-1 h-3 w-3" />
+                {t("moving")}
+              </Badge>
+            )}
+            {closingSoon && (
+              <Badge className="border-warning/30 bg-warning/15 text-warning">
+                <AlertTriangle className="mr-1 h-3 w-3" />
+                {t("urgent")}
+              </Badge>
+            )}
+            {job.isFragile && <Badge variant="outline">{t("fragile")}</Badge>}
+            {job.needsHelp && <Badge variant="outline">{t("needsHelp")}</Badge>}
+            {job.needsProtection && (
+              <Badge variant="outline">{t("needsProtection")}</Badge>
+            )}
+            {job.needsPackaging && (
+              <Badge variant="outline">{t("needsPackaging")}</Badge>
+            )}
+          </Link>
+
+          {offerAction && (
+            <Button asChild size="sm" className="w-full sm:ml-auto sm:w-auto">
+              <Link href={`/listing/${job.id}#${OFFER_ANCHOR}`}>
+                <Gavel className="mr-1.5 h-4 w-4" aria-hidden="true" />
+                {t("makeOffer")}
+              </Link>
+            </Button>
+          )}
         </div>
       )}
     </Card>

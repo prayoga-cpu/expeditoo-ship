@@ -170,12 +170,19 @@ describe("reinstate", () => {
     );
   });
 
-  it("also restores the driver roles, so an account that lost them can bid again", async () => {
-    dal.carriers.getById.mockResolvedValue(carrier({ status: "suspended" }));
+  it("restores the role the file's kind earns, so an account that lost it can work again", async () => {
+    dal.carriers.getById.mockResolvedValue(carrier({ status: "suspended", kind: "professional" }));
     await carrierService.reinstate(admin, "c1");
+    expect(dal.users.assignRoleIfMissing).toHaveBeenCalledTimes(1);
     expect(dal.users.assignRoleIfMissing).toHaveBeenCalledWith("driver", "carrier", "boss", expect.anything());
-    expect(dal.users.assignRoleIfMissing).toHaveBeenCalledWith("driver", "driver", "boss", expect.anything());
     expect(dal.carriers.upsertDriverLink).toHaveBeenCalled();
+  });
+
+  it("restores only the driver role to an in-house driver, never carrier", async () => {
+    dal.carriers.getById.mockResolvedValue(carrier({ status: "suspended", kind: "private" }));
+    await carrierService.reinstate(admin, "c1");
+    expect(dal.users.assignRoleIfMissing).toHaveBeenCalledTimes(1);
+    expect(dal.users.assignRoleIfMissing).toHaveBeenCalledWith("driver", "driver", "boss", expect.anything());
   });
 });
 

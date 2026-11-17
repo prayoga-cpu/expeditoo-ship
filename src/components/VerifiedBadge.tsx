@@ -1,6 +1,7 @@
 "use client";
 
 import { Check } from "lucide-react";
+import { useTranslations } from "next-intl";
 import {
   Tooltip,
   TooltipContent,
@@ -15,6 +16,8 @@ interface VerifiedBadgeProps {
 }
 
 export function VerifiedBadge({ className, size = 16 }: VerifiedBadgeProps) {
+  const t = useTranslations("common");
+
   return (
     <TooltipProvider delayDuration={300}>
       <Tooltip>
@@ -25,7 +28,7 @@ export function VerifiedBadge({ className, size = 16 }: VerifiedBadgeProps) {
               className
             )}
             style={{ width: size, height: size }}
-            aria-label="Verified User"
+            aria-label={t("verifiedUser")}
           >
             <Check
               strokeWidth={4}
@@ -37,7 +40,7 @@ export function VerifiedBadge({ className, size = 16 }: VerifiedBadgeProps) {
           side="top"
           className="text-xs bg-foreground text-background"
         >
-          <p>Verified User</p>
+          <p>{t("verifiedUser")}</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>

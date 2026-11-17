@@ -141,7 +141,13 @@ export function JobBoard({ origin }: { origin?: "direct" | "expedion" } = {}) {
         The search and the results scroll; the map does not. On a phone the two
         are alternatives, chosen by the switch below the filters.
       */}
-      <div className="w-full space-y-4 p-4 sm:p-6 lg:max-w-2xl lg:shrink-0 lg:overflow-y-auto">
+      {/*
+        From `lg` the board is a fixed-height pane that scrolls on its own, so
+        the shell's bottom padding does not reach it — and the floating nav
+        (shown until `xl`) sat over the last card and its « Faire une offre »
+        on a tablet. The pane clears the nav itself.
+      */}
+      <div className="w-full space-y-4 p-4 sm:p-6 lg:max-w-2xl lg:shrink-0 lg:overflow-y-auto lg:pb-[calc(88px_+_env(safe-area-inset-bottom))] xl:pb-6">
       <header className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
         <p className="text-sm text-muted-foreground">
@@ -410,6 +416,8 @@ export function JobBoard({ origin }: { origin?: "direct" | "expedion" } = {}) {
           // minimum resolves to zero. On a desktop the flex row supplies the
           // height instead.
           "h-[70vh] w-full border-t lg:h-auto lg:flex-1 lg:border-t-0 lg:border-l",
+          // The map's attribution sits on its bottom edge; keep it above the nav.
+          "lg:pb-[calc(88px_+_env(safe-area-inset-bottom))] xl:pb-0",
           pane === "list" && "hidden lg:block"
         )}
       >

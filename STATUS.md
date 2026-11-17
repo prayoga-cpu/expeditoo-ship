@@ -425,6 +425,11 @@ adversarial verification pass — treat their detail as slightly less certain.
 Work that needs a human hand outside the codebase. Add to this list rather
 than leaving it in a chat message.
 
+- [ ] **(2.87.0, driver types) Run Actions → « Migrate database » on the release branch before `main` moves** —
+  `0048_in_house_driver_no_siret` drops `NOT NULL` on `carriers.siret`. New code on an unmigrated database
+  500s every in-house file creation (« Gérer le rôle », the in-house form, the application tick).
+- [ ] **(2.87.0)** Ask Nicolas: should an in-house driver get a payout row at all, and should existing drivers
+  who hold both roles be split? (Known limits in the 2.87.0 entry.)
 - [ ] **(2.86.0, request assistant) Check `OPENAI_API_KEY` is set in Vercel → Production.** Without it the
   box simply does not appear. It could not be checked from here: production
   variables are Sensitive.
@@ -1001,6 +1006,134 @@ than leaving it in a chat message.
       Until then its application page says driver access is off.
 
 ---
+
+## ✅ 2026-11-17 — Job card footer on one line, and the lost « jobBoard » copy (2.89.0)
+
+*« any suggestion for the card of jobs layout? … on the ipad and desktop the make an offer button is supposed to be on the same line with immediate/size(L), move the L near immediate with a bit of margin and put make an offer on the right side in the same line … in tablet it's overlapped · the jobBoard.... is the lost string copy, pls analyze the whole codebase and finish up the copies properly and friendly to user to recognize the action ».*
+
+No migration. No new spec: a layout change and a copy fix, both covered by tests.
+
+**The lost copy.** `jobBoard.pendingNotice`, `pendingNoticeAction`, `modeNotice`,
+`modeNoticeAction` and `newJobToastAction` had been spliced into **`marketing.jobBoard`** (the
+landing page's block, same name, 4-space indent) instead of the top-level `jobBoard` the board
+reads, so next-intl printed the raw key. Moved in both languages; wording tightened (« Voir la
+mission » rather than « course », « Vous parcourez en tant que demandeur… »). A scan of every
+`useTranslations`/`getTranslations` call against both files found **no other missing key**;
+dynamic ones (`t(\`x.${y}\`)`) were checked up to their static prefix.
+`src/__tests__/i18n-keys.test.ts` now does that scan on every run, plus EN/FR leaf parity and
+empty messages, so a misfiled key fails the build instead of reaching a driver.
+
+**The card.** `JobCard`'s footer is one wrapping row: a link holding the badges (« Immédiat » /
+« Urgent », then the size badge with a small margin, then the rest) with `flex-auto`, and the
+button `w-full sm:ml-auto sm:w-auto`. The size badge lost its `ml-auto`. The badge link is
+`tabIndex=-1 aria-hidden` — a pointer-only second way into the job, so the card still opens from
+anywhere on the row without a duplicate tab stop. No footer is drawn when there is no badge and
+no button. Wide enough, the button sits right on the same line; too tight, it wraps to its own
+full-width line instead of overlapping.
+
+**The overlap on a tablet.** From `lg` the board is a fixed-height pane that scrolls inside
+`<main>`, so the shell's `pb-[88px+safe-area]` never reached it, while the floating nav shows until
+`xl`. The list pane and the map now carry `lg:pb-[calc(88px+env(safe-area-inset-bottom))] xl:…0`.
+
+**Copy found on the way past.** A scan for literal English in components turned up the shell's own
+widgets, fixed here: `NotificationPopover` and `NotificationBell` (a `notifications` namespace
+already existed and was unused), `ThemeToggle`, `VerifiedBadge`, and the data table's « No results. ».
+
+**Verification.** `npx tsc --noEmit` 0 errors · eslint 0 findings on the 9 touched source files ·
+full suite 3,620 pass / 0 fail (8 new JobCard/i18n tests among them) · `pnpm changelog:check` run
+below. Not run: a real-browser pass on an iPad width (the layout is reasoned from the classes and
+the tests, not seen), `pnpm build`.
+
+**Known limits — still English.** The scan lists, and this release does not fix: the driver help
+page (`app/(app)/driver/help/page.tsx`, a whole FAQ), the auth pages `verify-email` and
+`forgot-password`, `global-error.tsx`, `ShipmentRouteMap`'s missing-coordinates line, the admin
+bottom nav's aria-labels, `PageLoader`'s `aria-label` (used in tests without an intl provider),
+`admin/listings`' load error, and the PDF headers that are already French-only by design. Each is
+a screen of its own to translate and read.
+
+---
+
+## ✅ 2026-11-17 — The drivers page, managed by state (2.88.0)
+
+*« what is the thick contact confirmed, would it approve automatically the submission? or just as a note · some buttons on the modal is cropped, pls reorganize layout properly · we don't get what is the deregister, and the restore driver access while the status is active, pls make all of the button and copy more familiar and better functional · analyze then give suggestion to improve and remanage properly the drivers page. » — then « go ahead with your suggestion ».*
+
+Spec: `docs/specs/driver_page_management_spec.md`. No migration. Built beside the 2.87.0
+driver-types work in the same two files; its parts (file editor, in-house/SIRET handling,
+status next to the applicant) are untouched.
+
+**What was wrong.**
+1. « Contact confirmed » gates nothing (`ContactConfirmedField`, spec C02) but showed on every file,
+   including active ones, with a hint that read like a warning.
+2. The dialog footer put up to six buttons in one `flex-row justify-end` with no wrap, inside a
+   `max-w-2xl` dialog that clips — Close and « Mark as away » were cut off.
+3. « Restore driver access » was `status === "approved"` → `onApprove`, i.e. the idempotent role and
+   fleet backfill of `carrierService.approve`, offered on every healthy driver. Away, Suspend and
+   Deregister were three equal buttons with no statement of what each does.
+
+**What changed.**
+- `admin/lib/carrier-actions.ts`: one table (`actionsFor`) from state to primary / secondary /
+  menu, plus `tabOf`, `matchesFilters`, `tabCounts`, `defaultTab`, `documentProgress`. The dialog's
+  `canSuspend`/`canApproveDirect`/`canRestoreAccess` booleans are gone.
+- `CarrierApplicationDetail`: footer is Close · secondary · « Plus d'actions » menu · primary and
+  wraps. A reason step now says what it will do (`suspendHelp`, `removeHelp`). The contact tick
+  shows only while a file awaits a decision. Active/suspended files show completed runs, rating and
+  vehicles; banking is hidden for an in-house driver. « Réparer l'accès » is a banner, shown only
+  when `hasDriverAccess === false` on an approved file.
+- `GET /api/admin/carrier-applications` rows gain `hasDriverAccess` (computed in
+  `carrierService.listForReview` from the owner's roles and `ROLE_FOR_KIND`); `user.roles` is read
+  by the DAL and **stripped** before the payload leaves the service.
+- `CarrierApplicationsList`: one unfiltered fetch, client-side tabs (To review · Active · Away or
+  suspended · Closed · Not submitted · All) with counts, a driver-type filter, « Pas encore
+  joints », new Type and Contact columns, `accepted/total` documents. The empty state now offers
+  « Afficher tous les chauffeurs », so its `no-dead-ends` allowlist entry was removed.
+- Copy (EN + FR, parity checked by key diff): the page is « Chauffeurs ». **FR keeps the client's
+  own words** (« Désinscrit », « Désinscrire le chauffeur »; REQ-02's field-test vocabulary); EN says
+  « Removed » / « Remove driver », since « Deregister » was the part admins could not read.
+
+**Judgment calls.** Reject stays a visible button next to Approve (a review is two decisions; the
+spec's first sketch had it in the menu). The dialog stays a dialog — a side sheet is a restyle for
+later. A live-run count would need a per-row query and was not added.
+
+**Found on the way past.** The 2.87.0 `siret: string | null` change left the list's search filter
+calling `toLowerCase()` on a possible null; 2.87.0's own edits already guard it, and it is kept.
+
+**Verification.** `npx tsc --noEmit` 0 errors · eslint 0 findings on the 8 touched source files ·
+37 new/rewritten tests pass (carrier-actions 17, detail dialog 16, review-list service 4) ·
+`pnpm changelog:check` ok · full suite 3,602 pass / 1 fail — the failure is
+`carrier-availability.service.test.ts:176` (« reinstate also restores the driver roles »), broken by
+the 2.87.0 `ROLE_FOR_KIND` change (its fixture has no `kind`), not by this release; reported to that
+session. `no-dead-ends` passes. Not run: `pnpm build`, a real-browser pass (the cropped footer was
+reproduced from the screenshot and from the source, not re-observed after the fix).
+
+**Known limits.** No live-run count in the file; the dialog is not a sheet; the DAL still joins the
+owner's whole `user` row (as before); the 2.87.0 test above must be fixed before the suite is green.
+
+---
+
+## ✅ 2026-11-17 — Two kinds of driver: in-house `driver`, outside `carrier`; admin completes files; invitations (2.87.0)
+
+_Nicolas, 17 Nov: « the private driver is the in-house type of driver … so it doesn't need the general submission, just the tick on the driver application, then the admin will approve » · « separate the role: driver is the in-house Expeditoo driver, carrier is the outside driver with complete form details » · « in the admin add driver, give the option to add the driver from a registered or non-registered email (send an invitation) … update the carrier or driver in-house option on the onboarding » · « add as in-house driver or carrier from manage roles, then automatically sort on the drivers list » · « give possibility from admin to finish up or complete the pending from the user's side »._
+
+### Cause
+
+`approve`, `reinstate` and the admin onboarding all called one `enrolAsOwnDriver`, which granted `carrier` **and** `driver` together, and the admin UI (`role-groups.ts`, `primaryRole`) folded them into one « Chauffeur » chip. `carriers.kind` (`professional` | `private`, 0044) existed but nothing set it, and `siret` was `NOT NULL`, so an in-house driver — who has no company — could only enter through the admin form with a made-up SIRET.
+
+### What changed
+
+Spec `docs/specs/driver_types_spec.md`, plan `docs/plans/plan_driver_types.md`. **Migration `0048_in_house_driver_no_siret`** drops `NOT NULL` on `carriers.siret` (still UNIQUE). `kind = 'private'` **is** the in-house driver: company « Expeditoo », no SIRET, role `driver`; `professional` is the outside carrier, role `carrier`. One grant (`enrolAsOwnDriver`) now takes the role from the kind. `upsertCarrierSchema` is a discriminated union on `kind` (a body without one is `professional`); `KIND_LOCKED` once approved. The application form has the tick (`CarrierProfileForm`), hides documents and banking for an in-house file, and `tellApplicantWhatIsMissing` skips it. The admin « Add in-house driver » dialog has a `mode`: `existing` (convert; `ACCOUNT_NOT_FOUND` if none) or `invite` (create + `DriverInvitationEmail`; `ACCOUNT_EXISTS` if one exists). The invitation rides the reset-password flow: `redirectTo=/reset-password?invite=driver` ends up in the link's `callbackURL`, and `lib/auth.ts` sends the invitation template instead of the reset one when it sees it (`isDriverInvitation`). **« Gérer le rôle » reverses the 2.85.0 guard**: `assignRole('driver'|'carrier')` → `carrierService.grantRole` creates or approves the file that earns the role (suspended → refused), so the Drivers list (`GET /api/admin/users?role=carrier,driver`) picks the person up with no further step. Staff complete a file with `PATCH /api/admin/carriers/:id` and `POST …/vehicles` (`CarrierFileEditor`). `/driver/*` now accepts `carrier` or `driver`; `takeJob` refuses a `private` file; the pool picker names in-house drivers (`Nom · Chauffeur interne`) because their company is « Expeditoo » for all of them.
+
+### Verification
+
+Full suite 3,610 passing, 0 failing, on the shared tree with another session's 2.88.0 work in it; `changelog:check` ok. `tsc` 0 errors and eslint 0 errors on the changed files; FR/EN parity ok (spliced with `tools/apply_i18n_lenient.py`, which now also updates and deletes). New and rewritten tests cover the grant by kind, `grantRole`'s four cases, `KIND_LOCKED`, both onboarding modes and their refusals, the admin edit methods, the DTOs, `takeJob`, the invitation link and mail, the form (what is sent for each kind), both dialogs and the job-page note. **Not run: `pnpm build`, a real browser, a real invitation email through Resend.**
+
+### Known limits
+
+- **Accounts that already hold both roles are left as they are** (every driver approved before 2.87.0). An admin can remove one chip by hand; nothing migrates them.
+- **« Gérer le rôle » on someone with no file creates one with empty contact details** — usable at once, completed afterwards with « Compléter le dossier ».
+- **An in-house driver still gets a `payouts` row at delivery** (`settleDelivery` does not look at `kind`). They have no screen that shows it; whether Expeditoo pays them through the app is the client's call.
+- **The chat-quote lane (`thread-offers`) does not refuse an in-house driver**; only `takeJob`, the offers routes (`carrier` role) and the job page do.
+- Documents and banking are not editable by staff on someone's behalf.
+- The `bio` field is labelled « Note » for in-house files; it is stored in the same column.
 
 ## ✅ 2026-11-16 — Request assistant: describe a request, the form fills itself (2.86.0)
 

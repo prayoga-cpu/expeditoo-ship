@@ -29,7 +29,13 @@ export async function GET() {
     // which would shuffle the dropdown between loads.
     return ok(
       carriers
-        .map(({ id, companyName }) => ({ id, companyName }))
+        // An in-house driver's company is « Expeditoo » for all of them, which
+        // would make the picker unreadable: they go by name.
+        .map(({ id, companyName, kind, user }) => ({
+          id,
+          companyName:
+            kind === "private" ? `${user?.name ?? companyName} · Chauffeur interne` : companyName,
+        }))
         .sort((a, b) => a.companyName.localeCompare(b.companyName))
     );
   } catch (error) {

@@ -31,10 +31,10 @@ export const carrierStatusEnum = pgEnum("carrier_status", [
 ]);
 
 /**
- * Professional or private (REQ-01, migration 0044). Every driver is
- * `professional` today and onboarding stays professional-only; `private`
- * opens when the client defines what a private driver provides instead of a
- * SIRET (client_feedback_2026_10_29_spec.md §REQ-01).
+ * Professional or private (REQ-01, migration 0044). `professional` is the
+ * outside carrier with the full file and the `carrier` role; `private` is the
+ * in-house Expeditoo driver — no company, no SIRET, the `driver` role
+ * (driver_types_spec.md, 2.87.0).
  */
 export const carrierKindEnum = pgEnum("carrier_kind", ["professional", "private"]);
 
@@ -82,7 +82,8 @@ export const carriers = pgTable(
 
     // Company identity
     companyName: text("company_name").notNull(),
-    siret: text("siret").notNull().unique(),
+    // Null for an in-house driver (`kind = 'private'`): they are not a business.
+    siret: text("siret").unique(),
     vatNumber: text("vat_number"),
     legalForm: text("legal_form"),
     contactPhone: text("contact_phone").notNull(),

@@ -70,7 +70,8 @@ export interface CarrierApplication {
         image: string | null;
     };
     companyName: string;
-    siret: string;
+    /** Null for an in-house driver. */
+    siret: string | null;
     vatNumber: string | null;
     legalForm: string | null;
     contactPhone: string;
@@ -78,7 +79,7 @@ export interface CarrierApplication {
     city: string;
     postalCode: string;
     status: CarrierApplicationStatus;
-    /** REQ-01 (migration 0044): every driver is `professional` for now. */
+    /** `private` is the in-house Expeditoo driver, `professional` the outside carrier. */
     kind: "professional" | "private";
     ibanLast4: string | null;
     bicLast4: string | null;
@@ -93,6 +94,11 @@ export interface CarrierApplication {
     /** « Contact confirmé » (0047): when an operator reached the applicant, and who. */
     contactConfirmedAt?: string | null;
     contactConfirmer?: { id: string; name: string } | null;
+    /**
+     * Whether the owner holds the role this file's kind earns. `false` on an
+     * approved file is what « Réparer l'accès » is for; absent = assume fine.
+     */
+    hasDriverAccess?: boolean;
     averageRating: number;
     totalRatings: number;
     completedJobs: number;
@@ -105,12 +111,11 @@ export interface CarrierApplication {
 
 /** Mirrors `createDriverSchema` (src/server/dto/carrier.dto.ts). */
 export interface CreateDriverInput {
-    name: string;
+    /** `existing`: the email already has an account. `invite`: it does not, and is mailed an invitation. */
+    mode: "existing" | "invite";
+    /** Required for `invite`; an existing account keeps its own name. */
+    name?: string;
     email: string;
-    companyName: string;
-    siret: string;
-    vatNumber?: string;
-    legalForm?: string;
     contactPhone: string;
     addressLine: string;
     city: string;
@@ -209,7 +214,7 @@ export type CarrierAvailabilityRequest =
 
 async function postCarrierAction(
     path: string,
-    method: "POST" | "PUT",
+    method: "POST" | "PUT" | "PATCH",
     body?: unknown,
 ): Promise<void> {
     const res = await fetch(path, {
@@ -240,6 +245,38 @@ export const deregisterCarrier = (id: string, reason: string) =>
 /** « Réactiver » a suspended driver (§REQ-02). */
 export const reinstateCarrier = (id: string) =>
     postCarrierAction(`/api/admin/carriers/${id}/reinstate`, "POST");
+
+/** Mirrors `upsertCarrierSchema`: staff complete a driver's file for them. */
+export type CarrierFileInput =
+    | {
+          kind: "professional";
+          companyName: string;
+          siret: string;
+          vatNumber?: string;
+          legalForm?: string;
+          contactPhone: string;
+          addressLine: string;
+          city: string;
+          postalCode: string;
+          bio?: string;
+      }
+    | {
+          kind: "private";
+          contactPhone: string;
+          addressLine: string;
+          city: string;
+          postalCode: string;
+          bio?: string;
+      };
+
+export const updateCarrierFile = (id: string, input: CarrierFileInput) =>
+    postCarrierAction(`/api/admin/carriers/${id}`, "PATCH", input);
+
+/** A vehicle added to a driver's file by staff. */
+export const addCarrierVehicle = (
+    id: string,
+    input: { type: VehicleType; maxWeightKg: number; plateNumber: string },
+) => postCarrierAction(`/api/admin/carriers/${id}/vehicles`, "POST", input);
 
 export async function createDriver(
     data: CreateDriverInput,

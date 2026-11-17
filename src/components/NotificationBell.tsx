@@ -12,6 +12,7 @@ import { useNotifications } from "@/features/app/notifications/hooks";
 import { useUnreadMessages } from "@/features/app/messages/hooks";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "./ui/button";
 
 interface NotificationBellProps {
@@ -19,6 +20,7 @@ interface NotificationBellProps {
 }
 
 export function NotificationBell({ className }: NotificationBellProps) {
+  const t = useTranslations("notifications");
   const [open, setOpen] = useState(false);
   const {
     notifications,
@@ -41,7 +43,7 @@ export function NotificationBell({ className }: NotificationBellProps) {
             "relative inline-flex items-center justify-center",
             className
           )}
-          aria-label="Notifications"
+          aria-label={t("title")}
           aria-expanded={open}
           aria-haspopup="dialog"
         >
@@ -49,7 +51,7 @@ export function NotificationBell({ className }: NotificationBellProps) {
           {totalUnreadCount > 0 && (
             <Badge
               className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
-              aria-label={`${totalUnreadCount} unread notifications`}
+              aria-label={t("bell.unread", { count: totalUnreadCount })}
             >
               {totalUnreadCount > 9 ? "9+" : totalUnreadCount}
             </Badge>

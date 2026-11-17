@@ -265,11 +265,70 @@ describe("JobCard offer action", () => {
     const { container } = render(<JobCard job={JOB} offerAction />);
 
     const links = Array.from(container.querySelectorAll("a"));
+    // The card, the badge row (a pointer-only second way in, out of the tab
+    // order and the accessibility tree) and the button.
     expect(links.map((a) => a.getAttribute("href"))).toEqual([
+      "/listing/job_1",
       "/listing/job_1",
       "/listing/job_1#offer",
     ]);
+    expect(links[1]).toHaveAttribute("aria-hidden", "true");
     expect(container.querySelector("a a")).toBeNull();
   });
 });
 
+
+/**
+ * The footer row (client feedback 2026-11-17): badges on the left with the size
+ * beside them, « Faire une offre » on the same row on the right — so on a
+ * tablet the button no longer lands under the badges and over the nav.
+ */
+describe("JobCard footer row", () => {
+  const sized = { ...JOB, photos: [], lengthCm: 180, widthCm: 80, heightCm: 120 };
+
+  it("puts the size badge and « Faire une offre » in one row", () => {
+    render(<JobCard job={sized} offerAction />);
+
+    const size = screen.getByText("L");
+    const button = screen.getByRole("link", { name: "Faire une offre" });
+    // The badges link and the button are siblings of one wrapping row.
+    expect(size.closest("a")?.parentElement).toBe(button.closest("div"));
+  });
+
+  it("keeps the size next to the other badges rather than pushed to the far edge", () => {
+    render(<JobCard job={{ ...sized, isFragile: true }} offerAction />);
+
+    const size = screen.getByText("L");
+    const fragile = screen.getByText(fr.jobBoard.card.fragile);
+    expect(size.className).not.toMatch(/ml-auto/);
+    // Size first, then the rest: the two that are matched against a van lead.
+    expect(
+      size.compareDocumentPosition(fragile) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+  });
+
+  it("lets the button wrap to its own full-width line when the row is tight", () => {
+    render(<JobCard job={sized} offerAction />);
+
+    const button = screen.getByRole("link", { name: "Faire une offre" }).closest("a")!;
+    expect(button.className).toMatch(/w-full/);
+    expect(button.className).toMatch(/sm:ml-auto/);
+  });
+
+  it("does not add a second tab stop for the badge row", () => {
+    render(<JobCard job={sized} offerAction />);
+
+    const badgesLink = screen.getByText("L").closest("a")!;
+    expect(badgesLink).toHaveAttribute("tabindex", "-1");
+    expect(badgesLink).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("draws no empty footer when there is nothing to show", () => {
+    // JOB is fragile, which is a badge; take it away and nothing is left.
+    const { container } = render(
+      <JobCard job={{ ...JOB, photos: [], isFragile: false }} />
+    );
+
+    expect(container.querySelectorAll("a")).toHaveLength(1);
+  });
+});

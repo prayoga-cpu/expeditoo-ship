@@ -361,3 +361,35 @@ describe('a send Resend refuses (client_feedback_2026_10_21_spec.md §C4)', () =
     consoleError.mockRestore();
   });
 });
+
+describe('driver invitation (driver_types_spec.md §4)', () => {
+  it('recognises a reset link issued as an invitation', () => {
+    expect(
+      authService.isDriverInvitation(
+        'https://app.test/api/auth/reset-password/tok?callbackURL=%2Freset-password%3Finvite%3Ddriver'
+      )
+    ).toBe(true);
+  });
+
+  it('does not take an ordinary reset link for one', () => {
+    expect(
+      authService.isDriverInvitation(
+        'https://app.test/api/auth/reset-password/tok?callbackURL=%2Freset-password'
+      )
+    ).toBe(false);
+    expect(authService.isDriverInvitation('https://app.test/reset')).toBe(false);
+    expect(authService.isDriverInvitation('not a url')).toBe(false);
+  });
+
+  it('sends the invitation, with the set-password link, in French', async () => {
+    mocks.send.mockClear();
+    vi.mocked(usersDAL.getUserByEmail).mockResolvedValue(namedUser('Jane Driver'));
+
+    await authService.sendDriverInvitationEmail('jane@example.com', 'https://app.test/set?x=1');
+
+    const sent = mocks.send.mock.calls[0][0];
+    expect(sent.to).toBe('jane@example.com');
+    expect(sent.subject).toBe('Vous êtes invité à rejoindre les chauffeurs EXPEDITOO');
+    expect(textOf(sent.react).join(' ')).toContain('https://app.test/set?x=1');
+  });
+});

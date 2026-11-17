@@ -195,7 +195,14 @@
       "withoutLift": "no lift",
       "surface": "{surface, number} m² home",
       "volume": "{volume, number} m³"
-    }
+    },
+    "theme": {
+      "toggle": "Change theme",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "Same as my device"
+    },
+    "verifiedUser": "Verified user"
   },
   "auth": {
     "login": {
@@ -1160,7 +1167,9 @@
       "ownJobTitle": "This is your request",
       "ownJobDescription": "Carriers send you their offers above, and you pick the one that suits you. You can't make an offer on your own request.",
       "staffTitle": "An operator or admin account does not offer a price",
-      "staffDescription": "To make an offer you need an approved driver account. On an Expedion job, awarding is done from the « Award queue »."
+      "staffDescription": "To make an offer you need an approved driver account. On an Expedion job, awarding is done from the « Award queue ».",
+      "inHouseTitle": "Your runs are assigned to you",
+      "inHouseDescription": "As an Expeditoo in-house driver you do not answer ads: the team gives you the runs."
     }
   },
   "create": {
@@ -2105,11 +2114,6 @@
       }
     },
     "jobBoard": {
-    "pendingNotice": "You can browse requests now. You will be able to bid once your driver application is approved.",
-    "pendingNoticeAction": "View my application",
-    "newJobToastAction": "View the job",
-    "modeNotice": "You are in Requester mode. Switch to Driver mode to see your offers and runs.",
-    "modeNoticeAction": "Switch to Driver mode",
       "eyebrow": "OPEN RIGHT NOW",
       "title": "Today's board",
       "joinCta": "Join to see all 27 jobs →",
@@ -2751,6 +2755,14 @@
       "shipment_cancelled": "Transport cancelled",
       "shipment_withdrawn": "Carrier withdrew",
       "job_reopened": "Job available again"
+    },
+    "popover": {
+      "unreadMessages": "{count, plural, one {# unread message} other {# unread messages}}",
+      "tapToView": "Tap to open your messages",
+      "viewAll": "See all notifications"
+    },
+    "bell": {
+      "unread": "{count, plural, one {# unread notification} other {# unread notifications}}"
     }
   },
   "admin": {
@@ -2787,7 +2799,8 @@
       "rowsSelected": "{selected} of {total} row(s) selected",
       "sortBy": "Sort by",
       "sortAscending": "Ascending",
-      "sortDescending": "Descending"
+      "sortDescending": "Descending",
+      "noResults": "Nothing matches this search. Try other words, or clear the filters."
     },
     "dashboard": {
       "title": "Dashboard",
@@ -2959,14 +2972,11 @@
       "createDialog": {
         "trigger": "Add in-house driver",
         "title": "Add an in-house driver",
-        "description": "A driver employed by Expeditoo, approved as soon as you save — no application to review. A new email gets an account and a link to set a password; an email that already has an account is converted instead.",
+        "description": "A driver on the Expeditoo team, approved as soon as you save — no application to review. Choose whether they already have an account or you invite them by email.",
         "fields": {
           "name": "Full name",
           "email": "Email",
-          "companyName": "Company name",
-          "siret": "SIRET",
           "contactPhone": "Contact phone",
-          "legalForm": "Legal form",
           "addressLine": "Address",
           "city": "City",
           "postalCode": "Postal code",
@@ -2981,7 +2991,19 @@
         "submit": "Add driver",
         "toasts": {
           "created": "Driver added. They'll receive an email to set their password.",
-          "converted": "{email} is now an in-house driver."
+          "converted": "{email} is now an in-house driver.",
+          "invited": "Driver added. An invitation was sent to {email}."
+        },
+        "mode": {
+          "legend": "Does this person already have an account?",
+          "invite": {
+            "label": "Not registered yet — invite them",
+            "help": "An account is created and they receive an email invitation to choose their password."
+          },
+          "existing": {
+            "label": "Already registered",
+            "help": "Their current account becomes an in-house driver, with no email."
+          }
         }
       }
     },
@@ -3023,13 +3045,14 @@
       "assigning": "Assigning...",
       "assignRole": "Assign Role",
       "shipper": "Shipper",
-      "carrier": "Driver",
-      "driver": "Driver",
+      "carrier": "Carrier",
+      "driver": "In-house driver",
       "operator": "Operator",
       "support": "Support",
       "finance": "Finance",
-      "driverViaApplication": "The Driver role is granted by approving an application, not from this list.",
-      "openApplications": "Open applications"
+      "openApplications": "Open applications",
+      "inHouseHint": "Expeditoo in-house driver: creates (or approves) their file, they appear in the Drivers list and receive the runs you assign. They do not answer ads and see no prices. Then complete their details in",
+      "carrierHint": "Outside carrier: creates (or approves) their file, they appear in the Drivers list and can answer ads. Then complete their details in"
     },
     "payments": {
       "title": "Payments",
@@ -3066,8 +3089,8 @@
       }
     },
     "carriers": {
-      "title": "Carrier Applications",
-      "subtitle": "Review carrier applications and manage carrier accounts",
+      "title": "Drivers",
+      "subtitle": "Review applications and manage every driver account",
       "table": {
         "company": "Company",
         "applicant": "Applicant",
@@ -3080,13 +3103,22 @@
         "status": "Status",
         "actions": "Actions",
         "searchPlaceholder": "Search by company, SIRET or applicant...",
-        "filterLabel": "Filter by status",
-        "filterAll": "All statuses",
         "empty": {
-          "title": "No applications",
-          "description": "There are no carrier applications with this status.",
-          "descriptionAll": "No carrier applications yet."
-        }
+          "title": "No drivers here",
+          "description": "No driver matches these filters.",
+          "descriptionAll": "No driver has applied yet."
+        },
+        "inHouse": "Expeditoo in-house driver",
+        "type": "Type",
+        "contact": "Contact",
+        "reached": "Reached",
+        "notReached": "Not yet",
+        "notReachedOnly": "Not reached yet",
+        "kindFilterLabel": "Filter by driver type",
+        "kindAll": "All types",
+        "documentProgress": "{accepted}/{total} accepted",
+        "open": "Open file",
+        "resetFilters": "Show all drivers"
       },
       "status": {
         "draft": "Draft",
@@ -3095,17 +3127,17 @@
         "approved": "Active",
         "rejected": "Rejected",
         "suspended": "Suspended",
-        "deregistered": "Deregistered",
+        "deregistered": "Removed",
         "absent": "Away"
       },
       "detail": {
         "contactConfirmed": {
-          "label": "Contact confirmed",
-          "hint": "Tick once you have reached the applicant. It does not change the approval.",
+          "label": "Applicant reached",
+          "hint": "Tick once you have spoken to the applicant. This is a note only: approving is a separate step.",
           "confirmedOn": "Confirmed on {date} by {by}.",
           "you": "you"
         },
-        "title": "Carrier Application",
+        "title": "Driver file",
         "applicant": "Applicant",
         "submissionDate": "Submission date",
         "currentStatus": "Current status",
@@ -3137,7 +3169,7 @@
         "suspensionReason": "Suspension reason",
         "approve": "Approve",
         "reject": "Reject",
-        "suspend": "Suspend",
+        "suspend": "Suspend account",
         "close": "Close",
         "cancel": "Cancel",
         "confirmReject": "Confirm rejection",
@@ -3148,24 +3180,38 @@
         "documentOpenFailed": "Could not open the document",
         "absentUntil": "Away until {date}",
         "absentOpenEnded": "Away until further notice",
-        "deregisteredOn": "Deregistered on {date}",
-        "deregisteredTitle": "Deregistered",
+        "deregisteredOn": "Removed on {date}",
+        "deregisteredTitle": "Removed",
         "returnDayLabel": "Back on (optional)",
         "returnDayHint": "With no date, the absence lasts until someone ends it. Runs already booked carry on as normal.",
         "absenceReasonLabel": "Reason (optional)",
-        "deregisterReasonLabel": "Reason for deregistering",
+        "deregisterReasonLabel": "Reason for removing the driver",
         "confirmAbsent": "Mark as away",
-        "confirmDeregister": "Confirm deregistration",
+        "confirmDeregister": "Confirm removal",
         "markAbsent": "Mark as away",
         "endAbsence": "End absence",
-        "deregister": "Deregister",
-        "reinstate": "Reinstate",
-        "restoreAccess": "Restore driver access",
+        "deregister": "Remove driver",
+        "reinstate": "Reactivate",
         "kindLabel": "Driver type",
         "kind": {
-          "professional": "Professional",
-          "private": "Private"
-        }
+          "professional": "Carrier (outside)",
+          "private": "Expeditoo in-house driver"
+        },
+        "incomplete": "Some details are missing (phone, vehicle…). You can complete the file on the person's behalf.",
+        "editHint": "Correct or complete the file on the person's behalf.",
+        "completeFile": "Complete the file",
+        "moreActions": "More actions",
+        "approveAnyway": "Approve anyway",
+        "reactivateRemoved": "Reactivate driver",
+        "accessMissingTitle": "Driver access is missing",
+        "accessMissingBody": "This driver is approved, but their account does not carry the driver role, so they cannot see or take runs. Repairing grants it; nothing else changes.",
+        "repairAccess": "Repair access",
+        "completedRuns": "Completed runs",
+        "rating": "Rating",
+        "ratingValue": "{rating}/5 · {count, plural, one {# review} other {# reviews}}",
+        "noRatingYet": "No rating yet",
+        "suspendHelp": "Blocks new bids and new runs. Runs already in progress carry on. You can reactivate the driver at any time.",
+        "removeHelp": "The driver leaves the platform: pending bids are withdrawn and earned payouts stay payable. Not possible while a run is in progress. They can apply again later."
       },
       "vehicleTypes": {
         "little_car": "Little car",
@@ -3194,10 +3240,45 @@
         "suspendFailed": "Failed to suspend: {message}",
         "markedAbsent": "Driver marked as away",
         "absenceEnded": "Absence ended: the driver is active again",
-        "deregistered": "Driver deregistered, their pending offers withdrawn",
+        "deregistered": "Driver removed, their pending offers withdrawn",
         "reinstated": "Driver reinstated",
         "hasLiveRuns": "Not possible: this driver still has a run in progress. It must be delivered or cancelled first.",
-        "actionFailed": "Failed: {message}"
+        "actionFailed": "Failed: {message}",
+        "fileSaved": "File saved",
+        "vehicleAdded": "Vehicle added"
+      },
+      "editor": {
+        "title": "Complete the file",
+        "description": "You are filling in {name}'s file for them. Documents and bank details stay with the person.",
+        "inHouse": "Expeditoo in-house driver",
+        "inHouseHelp": "No company, SIRET or documents: the person drives for Expeditoo.",
+        "kindLocked": "The type can no longer change once the file is approved.",
+        "companyName": "Company name",
+        "siret": "SIRET",
+        "vatNumber": "VAT number (optional)",
+        "legalForm": "Legal form (optional)",
+        "contactPhone": "Contact phone",
+        "addressLine": "Address",
+        "city": "City",
+        "postalCode": "Postal code",
+        "bio": "Note (optional)",
+        "vehicle": "Add a vehicle",
+        "vehicleHelp": "{count, plural, =0 {No vehicle on file: one is needed to assign a run.} one {# vehicle on file.} other {# vehicles on file.}}",
+        "vehicleType": "Type",
+        "vehicleTypePlaceholder": "Choose a type",
+        "maxWeightKg": "Max load (kg)",
+        "plateNumber": "Plate number",
+        "addVehicle": "Add",
+        "cancel": "Close",
+        "save": "Save the file"
+      },
+      "tabs": {
+        "review": "To review",
+        "active": "Active",
+        "paused": "Away or suspended",
+        "closed": "Closed",
+        "draft": "Not submitted",
+        "all": "All"
       }
     },
     "expedion": {
@@ -3753,6 +3834,14 @@
           "addressLine": "Address is required",
           "city": "City is required",
           "postalCode": "5 digits"
+        },
+        "inHouse": {
+          "label": "I am an Expeditoo in-house driver",
+          "help": "Tick if you drive for Expeditoo itself: no company, SIRET or documents. An administrator will validate your file.",
+          "title": "Your details",
+          "description": "A few details are enough for an in-house driver.",
+          "bio": "Anything for the team (optional)",
+          "bioPlaceholder": "Your manager, your area, your availability…"
         }
       },
       "banner": {
@@ -3790,7 +3879,9 @@
         "company": "Company",
         "siret": "SIRET",
         "phone": "Phone",
-        "address": "Address"
+        "address": "Address",
+        "type": "Type",
+        "inHouse": "Expeditoo in-house driver"
       },
       "documents": {
         "title": "Documents",
@@ -4343,7 +4434,12 @@
       "list": "List",
       "map": "Map"
     },
-    "retry": "Try again"
+    "retry": "Try again",
+    "pendingNotice": "You can browse jobs now. You'll be able to make offers once your driver application is approved.",
+    "pendingNoticeAction": "View my application",
+    "newJobToastAction": "View the job",
+    "modeNotice": "You're browsing as a requester. Switch to Driver mode to make offers and follow your runs.",
+    "modeNoticeAction": "Switch to Driver mode"
   },
   "impersonation": {
     "viewingAs": "Viewing as",

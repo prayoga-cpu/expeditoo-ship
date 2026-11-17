@@ -9,6 +9,7 @@ vi.mock("@/server/dal/shipments.dal", () => ({ shipmentsDal: {} }));
 vi.mock("@/server/dal/users.dal", () => ({
   assignRoleIfMissing: vi.fn(),
   getUserByEmail: vi.fn(),
+  getUserById: vi.fn(),
   verifyUserEmail: vi.fn(),
   deleteUser: vi.fn(),
 }));
@@ -237,7 +238,7 @@ describe("approve", () => {
 });
 
 // ========================================
-// createInHouseDriver — in_house_drivers_spec.md §6
+// createInHouseDriver — driver_types_spec.md §4
 // ========================================
 
 describe("createInHouseDriver", () => {
@@ -252,16 +253,17 @@ describe("createInHouseDriver", () => {
   const operator = { userId: "op-1", isAdmin: false, isOperator: true };
 
   const input = {
+    mode: "invite" as const,
     name: "Jane Driver",
     email: "jane@example.com",
-    companyName: "Jane Transport",
-    siret: "73282932000074",
     contactPhone: "0612345678",
     addressLine: "12 rue Exemple",
     city: "Lyon",
     postalCode: "69000",
     vehicle: { type: "van" as const, maxWeightKg: 1200, plateNumber: "ab-123-cd" },
   };
+
+  const registered = { ...input, mode: "existing" as const };
 
   const existingAccount = (roles: string[]) => ({
     id: "user-existing",
@@ -296,7 +298,7 @@ describe("createInHouseDriver", () => {
     });
   });
 
-  it("creates an account and writes an approved carrier, a vehicle and the in-house roles", async () => {
+  it("creates an account and writes an approved in-house file, a vehicle and the driver role", async () => {
     const result = await carrierService.createInHouseDriver(admin, input);
 
     expect(signUpEmailMock).toHaveBeenCalledWith({
@@ -306,6 +308,9 @@ describe("createInHouseDriver", () => {
     expect(carriersDal.create).toHaveBeenCalledWith(
       expect.objectContaining({
         userId: "user-new",
+        kind: "private",
+        companyName: "Expeditoo",
+        siret: null,
         status: "approved",
         approvedBy: "admin-1",
       }),
@@ -319,12 +324,12 @@ describe("createInHouseDriver", () => {
       }),
       expect.anything()
     );
-    expect(grantedRoles()).toEqual(
-      expect.arrayContaining(["carrier", "driver", "shipper"])
-    );
+    // The in-house driver is a `driver` — not a carrier, and no longer marked `shipper`.
+    expect(grantedRoles()).toEqual(["driver"]);
     expect(carriersDal.upsertDriverLink).toHaveBeenCalled();
+    // The invitation: a set-password link whose mail says why it arrived.
     expect(requestPasswordResetMock).toHaveBeenCalledWith({
-      body: { email: input.email, redirectTo: "/reset-password" },
+      body: { email: input.email, redirectTo: "/reset-password?invite=driver" },
     });
     expect(result).toEqual({
       carrierId: "carrier-1",
@@ -368,7 +373,7 @@ describe("createInHouseDriver", () => {
   it("converts an existing account without creating or emailing one", async () => {
     getUserByEmailMock.mockResolvedValue(existingAccount(["shipper"]) as never);
 
-    const result = await carrierService.createInHouseDriver(admin, input);
+    const result = await carrierService.createInHouseDriver(admin, registered);
 
     expect(signUpEmailMock).not.toHaveBeenCalled();
     expect(verifyUserEmailMock).not.toHaveBeenCalled();
@@ -390,7 +395,7 @@ describe("createInHouseDriver", () => {
     );
 
     await expect(
-      carrierService.createInHouseDriver(admin, input)
+      carrierService.createInHouseDriver(admin, registered)
     ).rejects.toMatchObject({ code: "ALREADY_DRIVER", status: 409 });
 
     expect(carriersDal.create).not.toHaveBeenCalled();
@@ -403,22 +408,30 @@ describe("createInHouseDriver", () => {
     });
 
     await expect(
-      carrierService.createInHouseDriver(admin, input)
+      carrierService.createInHouseDriver(admin, registered)
     ).rejects.toMatchObject({ code: "CARRIER_PROFILE_EXISTS", status: 409 });
 
     expect(carriersDal.create).not.toHaveBeenCalled();
   });
 
-  it("refuses a SIRET already registered, before creating any account", async () => {
-    Object.assign(carriersDal, {
-      getBySiret: vi.fn().mockResolvedValue({ id: "carrier-2" }),
-    });
+  it("refuses « registered » for an email with no account, creating nothing", async () => {
+    await expect(
+      carrierService.createInHouseDriver(admin, registered)
+    ).rejects.toMatchObject({ code: "ACCOUNT_NOT_FOUND", status: 404 });
+
+    expect(signUpEmailMock).not.toHaveBeenCalled();
+    expect(carriersDal.create).not.toHaveBeenCalled();
+  });
+
+  it("refuses an invitation to an email that already has an account", async () => {
+    getUserByEmailMock.mockResolvedValue(existingAccount(["shipper"]) as never);
 
     await expect(
       carrierService.createInHouseDriver(admin, input)
-    ).rejects.toMatchObject({ code: "SIRET_ALREADY_REGISTERED", status: 409 });
+    ).rejects.toMatchObject({ code: "ACCOUNT_EXISTS", status: 409 });
 
     expect(signUpEmailMock).not.toHaveBeenCalled();
+    expect(requestPasswordResetMock).not.toHaveBeenCalled();
   });
 
   it("deletes an account it just created when the writes fail, and sends no email", async () => {
@@ -441,7 +454,7 @@ describe("createInHouseDriver", () => {
     });
 
     await expect(
-      carrierService.createInHouseDriver(admin, input)
+      carrierService.createInHouseDriver(admin, registered)
     ).rejects.toThrow("db down");
 
     expect(deleteUserMock).not.toHaveBeenCalled();
@@ -456,5 +469,253 @@ describe("createInHouseDriver", () => {
     expect(result.accountCreated).toBe(true);
     expect(deleteUserMock).not.toHaveBeenCalled();
     quiet.mockRestore();
+  });
+});
+
+// ========================================
+// Two kinds of driver — driver_types_spec.md
+// ========================================
+
+describe("two kinds of driver", () => {
+  const assignRoleMock = vi.mocked(usersDal.assignRoleIfMissing);
+  const getUserByIdMock = vi.mocked(usersDal.getUserById);
+  const granted = () => assignRoleMock.mock.calls.map((call) => call[1]);
+
+  const file = (over: Record<string, unknown> = {}) => ({
+    id: "carrier-1",
+    userId: "user-1",
+    kind: "professional",
+    status: "submitted",
+    siret: "73282932000074",
+    ...over,
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getUserByIdMock.mockResolvedValue({ id: "user-1", name: "Jean Masson" } as never);
+    Object.assign(carriersDal, {
+      getById: vi.fn(),
+      getByUserId: vi.fn().mockResolvedValue(undefined),
+      getBySiret: vi.fn().mockResolvedValue(undefined),
+      create: vi.fn(async (data: Record<string, unknown>) => ({ id: "carrier-new", ...data })),
+      update: vi.fn(async (_id: string, data: Record<string, unknown>) => ({ ...file(), ...data })),
+      setAllDocumentsAccepted: vi.fn().mockResolvedValue(undefined),
+      upsertDriverLink: vi.fn().mockResolvedValue(undefined),
+      createVehicle: vi.fn().mockResolvedValue({ id: "vehicle-1" }),
+    });
+  });
+
+  describe("approval grants the role the kind earns", () => {
+    it("gives an outside carrier the carrier role and no other", async () => {
+      Object.assign(carriersDal, { getById: vi.fn().mockResolvedValue(file()) });
+
+      await carrierService.approve("admin-1", "carrier-1");
+
+      expect(granted()).toEqual(["carrier"]);
+      expect(carriersDal.upsertDriverLink).toHaveBeenCalled();
+    });
+
+    it("gives an in-house driver the driver role and no other", async () => {
+      Object.assign(carriersDal, {
+        getById: vi.fn().mockResolvedValue(file({ kind: "private", siret: null })),
+      });
+
+      await carrierService.approve("admin-1", "carrier-1");
+
+      expect(granted()).toEqual(["driver"]);
+    });
+  });
+
+  describe("upsertApplication", () => {
+    const inHouse = {
+      kind: "private" as const,
+      contactPhone: "0612345678",
+      addressLine: "12 rue Exemple",
+      city: "Lyon",
+      postalCode: "69000",
+    };
+
+    it("stores an in-house file with Expeditoo as the company and no SIRET", async () => {
+      await carrierService.upsertApplication("user-1", inHouse);
+
+      expect(carriersDal.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: "user-1",
+          kind: "private",
+          companyName: "Expeditoo",
+          siret: null,
+        })
+      );
+      // No SIRET to collide on.
+      expect(carriersDal.getBySiret).not.toHaveBeenCalled();
+    });
+
+    it("refuses to change the kind of an approved file", async () => {
+      Object.assign(carriersDal, {
+        getByUserId: vi.fn().mockResolvedValue(file({ status: "approved" })),
+      });
+
+      await expect(
+        carrierService.upsertApplication("user-1", inHouse)
+      ).rejects.toMatchObject({ code: "KIND_LOCKED", status: 409 });
+    });
+
+    it("lets a draft switch kind", async () => {
+      Object.assign(carriersDal, {
+        getByUserId: vi.fn().mockResolvedValue(file({ status: "draft" })),
+      });
+
+      await carrierService.upsertApplication("user-1", inHouse);
+
+      expect(carriersDal.update).toHaveBeenCalledWith(
+        "carrier-1",
+        expect.objectContaining({ kind: "private", siret: null, status: "draft" })
+      );
+    });
+  });
+
+  describe("grantRole — « Gérer le rôle »", () => {
+    it("creates an approved in-house file for someone with none", async () => {
+      await carrierService.grantRole("admin-1", "user-1", "driver");
+
+      expect(carriersDal.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: "user-1",
+          kind: "private",
+          companyName: "Expeditoo",
+          status: "approved",
+          approvedBy: "admin-1",
+        }),
+        expect.anything()
+      );
+      expect(granted()).toEqual(["driver"]);
+    });
+
+    it("creates an approved carrier file named after the account", async () => {
+      await carrierService.grantRole("admin-1", "user-1", "carrier");
+
+      expect(carriersDal.create).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: "professional", companyName: "Jean Masson", status: "approved" }),
+        expect.anything()
+      );
+      expect(granted()).toEqual(["carrier"]);
+    });
+
+    it("approves a pending application, setting its kind to the role picked", async () => {
+      Object.assign(carriersDal, {
+        getByUserId: vi.fn().mockResolvedValue(file({ status: "submitted" })),
+      });
+
+      await carrierService.grantRole("admin-1", "user-1", "driver");
+
+      expect(carriersDal.create).not.toHaveBeenCalled();
+      expect(carriersDal.update).toHaveBeenCalledWith(
+        "carrier-1",
+        expect.objectContaining({ kind: "private", status: "approved" }),
+        expect.anything()
+      );
+      expect(granted()).toEqual(["driver"]);
+    });
+
+    it("only adds the role to an already approved file", async () => {
+      Object.assign(carriersDal, {
+        getByUserId: vi.fn().mockResolvedValue(file({ status: "approved" })),
+      });
+
+      await carrierService.grantRole("admin-1", "user-1", "driver");
+
+      expect(carriersDal.create).not.toHaveBeenCalled();
+      expect(carriersDal.update).not.toHaveBeenCalled();
+      expect(granted()).toEqual(["driver"]);
+    });
+
+    it("refuses a suspended file — reinstate it first", async () => {
+      Object.assign(carriersDal, {
+        getByUserId: vi.fn().mockResolvedValue(file({ status: "suspended" })),
+      });
+
+      await expect(
+        carrierService.grantRole("admin-1", "user-1", "carrier")
+      ).rejects.toMatchObject({ code: "CARRIER_SUSPENDED", status: 409 });
+      expect(granted()).toEqual([]);
+    });
+  });
+
+  describe("completing a file on the applicant's behalf", () => {
+    const admin = { userId: "admin-1", isAdmin: true, isOperator: false };
+    const details = {
+      kind: "private" as const,
+      contactPhone: "0612345678",
+      addressLine: "12 rue Exemple",
+      city: "Lyon",
+      postalCode: "69000",
+    };
+
+    it("updates a submitted file, which the applicant themselves can no longer edit", async () => {
+      Object.assign(carriersDal, {
+        getById: vi.fn().mockResolvedValue(file({ kind: "private", status: "submitted" })),
+      });
+
+      await carrierService.adminUpdateApplication(admin, "carrier-1", details);
+
+      expect(carriersDal.update).toHaveBeenCalledWith(
+        "carrier-1",
+        expect.objectContaining({ contactPhone: "0612345678", companyName: "Expeditoo" })
+      );
+    });
+
+    it("refuses anyone who is neither admin nor operator", async () => {
+      await expect(
+        carrierService.adminUpdateApplication(
+          { userId: "u", isAdmin: false, isOperator: false },
+          "carrier-1",
+          details
+        )
+      ).rejects.toMatchObject({ code: "FORBIDDEN_ROLE", status: 403 });
+    });
+
+    it("refuses another carrier's SIRET", async () => {
+      Object.assign(carriersDal, {
+        getById: vi.fn().mockResolvedValue(file()),
+        getBySiret: vi.fn().mockResolvedValue({ id: "carrier-other" }),
+      });
+
+      await expect(
+        carrierService.adminUpdateApplication(admin, "carrier-1", {
+          kind: "professional",
+          companyName: "Jane Transport",
+          siret: "73282932000074",
+          contactPhone: "0612345678",
+          addressLine: "12 rue Exemple",
+          city: "Lyon",
+          postalCode: "69000",
+        })
+      ).rejects.toMatchObject({ code: "SIRET_ALREADY_REGISTERED", status: 409 });
+    });
+
+    it("refuses to change the kind of an approved file", async () => {
+      Object.assign(carriersDal, {
+        getById: vi.fn().mockResolvedValue(file({ status: "approved" })),
+      });
+
+      await expect(
+        carrierService.adminUpdateApplication(admin, "carrier-1", details)
+      ).rejects.toMatchObject({ code: "KIND_LOCKED", status: 409 });
+    });
+
+    it("adds a vehicle to the file", async () => {
+      Object.assign(carriersDal, { getById: vi.fn().mockResolvedValue(file()) });
+
+      await carrierService.adminAddVehicle(admin, "carrier-1", {
+        type: "van",
+        maxWeightKg: 1200,
+        plateNumber: "ab-123-cd",
+        features: [],
+      });
+
+      expect(carriersDal.createVehicle).toHaveBeenCalledWith(
+        expect.objectContaining({ carrierId: "carrier-1", plateNumber: "AB-123-CD" })
+      );
+    });
   });
 });

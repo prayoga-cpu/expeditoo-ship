@@ -10,16 +10,17 @@ import { userRoleEnum, type UserRoleEnum } from "@/db/schema/users";
  * order that array arrives in is whatever the join returned.
  *
  * Ordered most-privileged first, so the label names the strongest access the
- * account actually has. `carrier` and `driver` collapse to one label because
- * this product has one: an individual driver (see CLAUDE.md, "Data Model").
+ * account actually has. `carrier` (the outside driver who bids and is paid)
+ * outranks `driver` (the in-house Expeditoo driver, who sees no money); they
+ * are two roles, not one person under two names (driver_types_spec.md §1).
  */
 const PRECEDENCE = [
   "admin",
   "finance",
   "support",
   "operator",
-  "driver",
   "carrier",
+  "driver",
   "shipper",
 ] as const satisfies readonly UserRoleEnum[];
 
@@ -40,12 +41,7 @@ export const ALL_ROLES: readonly UserRoleEnum[] = userRoleEnum.enumValues;
 
 /**
  * The strongest role held, or `user` when none is.
- *
- * `carrier` maps to `driver`: the two are the same person here, and a screen
- * that prints both makes them look like different kinds of account.
  */
 export function primaryRole(roles: readonly string[]): PrimaryRole {
-  const held = PRECEDENCE.find((role) => roles.includes(role));
-  if (!held) return NO_ROLE_LABEL;
-  return held === "carrier" ? "driver" : held;
+  return PRECEDENCE.find((role) => roles.includes(role)) ?? NO_ROLE_LABEL;
 }

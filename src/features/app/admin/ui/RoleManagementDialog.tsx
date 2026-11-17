@@ -24,7 +24,12 @@ import { X } from "lucide-react";
 import type { User } from "../types";
 import { useTranslations } from "next-intl";
 import { useToast } from "@/hooks/use-toast";
-import { MANAGEABLE_ROLES, chipsHeld } from "../lib/role-groups";
+import {
+  DRIVER_FILE_ROLES,
+  MANAGEABLE_ROLES,
+  chipsHeld,
+  type ManageableRole,
+} from "../lib/role-groups";
 
 interface RoleManagementDialogProps {
   open: boolean;
@@ -55,14 +60,11 @@ export function RoleManagementDialog({
   const { toast } = useToast();
 
   const held = user ? chipsHeld(user.roles) : [];
-  // « Chauffeur » is not offered here: driver access is granted by approving the
-  // application, which vets the person. Granting it from this list made a
-  // driver with no file (client feedback 2026-11-16), and the server refuses it
-  // too (`assignRole`).
-  const addable = MANAGEABLE_ROLES.filter(
-    (role) => role !== "driver" && !held.includes(role)
-  );
-  const canBecomeDriver = !held.includes("driver");
+  const addable = MANAGEABLE_ROLES.filter((role) => !held.includes(role));
+  // « Chauffeur interne » and « Transporteur » come with a driver file: picking
+  // one creates or approves it, and the person lands in the Drivers list. Said
+  // here because the file is what an admin then completes (driver_types_spec.md §5).
+  const picksDriverFile = DRIVER_FILE_ROLES.includes(selectedRole as ManageableRole);
 
   const handleOpenChange = (newOpen: boolean) => {
     if (!isUpdating) {
@@ -181,9 +183,9 @@ export function RoleManagementDialog({
             </div>
           )}
 
-          {canBecomeDriver && (
+          {picksDriverFile && (
             <p className="text-xs text-muted-foreground">
-              {t("driverViaApplication")}{" "}
+              {t(selectedRole === "driver" ? "inHouseHint" : "carrierHint")}{" "}
               <Link
                 href="/admin/drivers?tab=applications"
                 className="font-medium text-primary underline-offset-2 hover:underline"

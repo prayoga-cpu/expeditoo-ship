@@ -148,7 +148,13 @@ export const getUserQuerySchema = z.object({
   page: z.coerce.number().int().positive().default(1),
   pageSize: z.coerce.number().int().positive().max(100).default(20),
   search: z.string().optional(),
-  role: userRoleSchema.optional(),
+  // One role, or several separated by commas (« carrier,driver »): the Drivers
+  // list is whoever holds either.
+  role: z
+    .string()
+    .transform((value) => value.split(",").map((part) => part.trim()).filter(Boolean))
+    .pipe(z.array(userRoleSchema).min(1))
+    .optional(),
   emailVerified: z.enum(["true", "false"]).optional(),
   sortBy: z.enum(["createdAt", "name", "email"]).default("createdAt"),
   sortOrder: z.enum(["asc", "desc"]).default("desc"),

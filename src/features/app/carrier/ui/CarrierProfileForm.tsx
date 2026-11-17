@@ -4,7 +4,7 @@ import { useForm, type Control } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useTranslations } from "next-intl";
-import { Building2 } from "lucide-react";
+import { Building2, UserRound } from "lucide-react";
 import {
   isValidSiret,
   normalizeSiret,
@@ -28,6 +28,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useSaveCarrierProfile } from "../hooks/useCarrier";
@@ -38,23 +39,37 @@ type Translate = (key: string) => string;
 /**
  * Client-side mirror of `upsertCarrierSchema` with translated messages.
  * The REST layer revalidates against the server DTO regardless.
+ *
+ * One schema for both kinds: an in-house driver (`inHouse`) is asked only how
+ * to reach them, an outside carrier is asked for the company as well
+ * (driver_types_spec.md §3).
  */
 function buildSchema(t: Translate) {
-  return z.object({
-    companyName: z.string().min(2, t("errors.companyName")).max(200),
-    siret: z.string().transform(normalizeSiret).refine(isValidSiret, t("errors.siret")),
-    vatNumber: z
-      .string()
-      .regex(VAT_PATTERN, t("errors.vat"))
-      .or(z.literal(""))
-      .optional(),
-    legalForm: z.string().max(100).optional(),
-    contactPhone: z.string().refine(isValidFrenchPhone, t("errors.phone")),
-    addressLine: z.string().min(1, t("errors.addressLine")).max(300),
-    city: z.string().min(1, t("errors.city")).max(120),
-    postalCode: z.string().regex(POSTAL_CODE_PATTERN, t("errors.postalCode")),
-    bio: z.string().max(2000).optional(),
-  });
+  return z
+    .object({
+      inHouse: z.boolean(),
+      companyName: z.string().max(200),
+      siret: z.string(),
+      vatNumber: z.string().optional(),
+      legalForm: z.string().max(100).optional(),
+      contactPhone: z.string().refine(isValidFrenchPhone, t("errors.phone")),
+      addressLine: z.string().min(1, t("errors.addressLine")).max(300),
+      city: z.string().min(1, t("errors.city")).max(120),
+      postalCode: z.string().regex(POSTAL_CODE_PATTERN, t("errors.postalCode")),
+      bio: z.string().max(2000).optional(),
+    })
+    .superRefine((values, ctx) => {
+      if (values.inHouse) return;
+      if (values.companyName.trim().length < 2) {
+        ctx.addIssue({ code: "custom", path: ["companyName"], message: t("errors.companyName") });
+      }
+      if (!isValidSiret(normalizeSiret(values.siret))) {
+        ctx.addIssue({ code: "custom", path: ["siret"], message: t("errors.siret") });
+      }
+      if (values.vatNumber && !VAT_PATTERN.test(values.vatNumber)) {
+        ctx.addIssue({ code: "custom", path: ["vatNumber"], message: t("errors.vat") });
+      }
+    });
 }
 
 type ProfileFormValues = z.infer<ReturnType<typeof buildSchema>>;
@@ -71,7 +86,8 @@ export function CarrierProfileForm({ application }: CarrierProfileFormProps) {
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(buildSchema(t)),
     defaultValues: {
-      companyName: application?.companyName ?? "",
+      inHouse: application?.kind === "private",
+      companyName: application?.kind === "private" ? "" : (application?.companyName ?? ""),
       siret: application?.siret ?? "",
       vatNumber: application?.vatNumber ?? "",
       legalForm: application?.legalForm ?? "",
@@ -84,33 +100,55 @@ export function CarrierProfileForm({ application }: CarrierProfileFormProps) {
   });
 
   function onSubmit(values: ProfileFormValues) {
-    save.mutate({
-      companyName: values.companyName,
-      siret: values.siret,
-      vatNumber: values.vatNumber || undefined,
-      legalForm: values.legalForm || undefined,
+    const contact = {
       contactPhone: values.contactPhone,
       addressLine: values.addressLine,
       city: values.city,
       postalCode: values.postalCode,
       bio: values.bio || undefined,
-    });
+    };
+    save.mutate(
+      values.inHouse
+        ? { kind: "private", ...contact }
+        : {
+            kind: "professional",
+            companyName: values.companyName,
+            siret: normalizeSiret(values.siret),
+            vatNumber: values.vatNumber || undefined,
+            legalForm: values.legalForm || undefined,
+            ...contact,
+          }
+    );
   }
+
+  const inHouse = form.watch("inHouse");
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Building2 className="h-5 w-5 text-primary" />
-          {t("title")}
+          {inHouse ? (
+            <UserRound className="h-5 w-5 text-primary" />
+          ) : (
+            <Building2 className="h-5 w-5 text-primary" />
+          )}
+          {inHouse ? t("inHouse.title") : t("title")}
         </CardTitle>
-        <CardDescription>{t("description")}</CardDescription>
+        <CardDescription>
+          {inHouse ? t("inHouse.description") : t("description")}
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <CompanyFields control={form.control} t={t} />
-            <AddressFields control={form.control} t={t} />
+            <InHouseToggle control={form.control} t={t} />
+            {!inHouse && <CompanyFields control={form.control} t={t} />}
+            {inHouse && (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <PhoneField control={form.control} name="contactPhone" label={t("contactPhone")} />
+              </div>
+            )}
+            <AddressFields control={form.control} t={t} inHouse={inHouse} />
             <div className="flex justify-end">
               <Button type="submit" disabled={save.isPending}>
                 {save.isPending ? t("saving") : t("save")}
@@ -262,7 +300,42 @@ function PhoneField({
   );
 }
 
-function AddressFields({ control, t }: FieldGroupProps) {
+/**
+ * « Chauffeur interne Expeditoo »: the person drives for Expeditoo itself, so
+ * the company questions fall away. Nothing here approves anything — an admin
+ * reads the file and decides (driver_types_spec.md §3).
+ */
+function InHouseToggle({ control, t }: FieldGroupProps) {
+  return (
+    <FormField
+      control={control}
+      name="inHouse"
+      render={({ field }) => (
+        <FormItem className="flex items-start gap-3 rounded-lg border p-4">
+          <FormControl>
+            <Checkbox
+              checked={field.value}
+              onCheckedChange={(checked) => field.onChange(checked === true)}
+              className="mt-0.5"
+            />
+          </FormControl>
+          <div className="space-y-1">
+            <FormLabel className="cursor-pointer text-sm font-semibold">
+              {t("inHouse.label")}
+            </FormLabel>
+            <p className="text-sm text-muted-foreground">{t("inHouse.help")}</p>
+          </div>
+        </FormItem>
+      )}
+    />
+  );
+}
+
+function AddressFields({
+  control,
+  t,
+  inHouse,
+}: FieldGroupProps & { inHouse: boolean }) {
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
       <div className="md:col-span-2">
@@ -276,9 +349,13 @@ function AddressFields({ control, t }: FieldGroupProps) {
           name="bio"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t("bio")}</FormLabel>
+              <FormLabel>{inHouse ? t("inHouse.bio") : t("bio")}</FormLabel>
               <FormControl>
-                <Textarea className="min-h-[80px]" placeholder={t("bioPlaceholder")} {...field} />
+                <Textarea
+                  className="min-h-[80px]"
+                  placeholder={inHouse ? t("inHouse.bioPlaceholder") : t("bioPlaceholder")}
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -291,7 +368,7 @@ function AddressFields({ control, t }: FieldGroupProps) {
 
 interface TextFieldProps {
   control: Control<ProfileFormValues>;
-  name: keyof ProfileFormValues;
+  name: Exclude<keyof ProfileFormValues, "inHouse">;
   label: string;
   placeholder?: string;
   maxLength?: number;

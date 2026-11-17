@@ -1,7 +1,7 @@
 import { db } from "@/db";
 import { user, userRoles, listings, shipments } from "@/db/schema";
 import { payments } from "@/db/schema/payments";
-import { eq, sql, and, ne, gte, lt, desc, or } from "drizzle-orm";
+import { eq, sql, and, ne, gte, lt, desc, or, inArray } from "drizzle-orm";
 
 // ========================================
 // KPI Queries
@@ -41,7 +41,7 @@ export async function getActiveDriversCount(): Promise<number> {
   const result = await db
     .select({ count: sql<number>`count(DISTINCT ${userRoles.userId})` })
     .from(userRoles)
-    .where(eq(userRoles.role, "carrier"));
+    .where(inArray(userRoles.role, ["carrier", "driver"]));
 
   return Number(result[0]?.count) || 0;
 }
@@ -166,11 +166,11 @@ export async function getMonthlyNewDriversCount(
   const endDate = new Date(year, month, 1);
 
   const result = await db
-    .select({ count: sql<number>`count(*)` })
+    .select({ count: sql<number>`count(DISTINCT ${userRoles.userId})` })
     .from(userRoles)
     .where(
       and(
-        eq(userRoles.role, "carrier"),
+        inArray(userRoles.role, ["carrier", "driver"]),
         gte(userRoles.assignedAt, startDate),
         lt(userRoles.assignedAt, endDate)
       )

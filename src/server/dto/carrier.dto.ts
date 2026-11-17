@@ -34,17 +34,46 @@ export {
   MAX_DOCUMENT_BYTES,
 } from "@/lib/carrier-constants";
 
-export const upsertCarrierSchema = z.object({
-  companyName: z.string().min(2).max(200),
-  siret: z.string().transform(normalizeSiret).refine(isValidSiret, "INVALID_SIRET"),
-  vatNumber: z.string().regex(VAT_PATTERN, "INVALID_VAT").optional(),
-  legalForm: z.string().max(100).optional(),
+const contactFields = {
   contactPhone: z.string().refine(isValidFrenchPhone, "INVALID_PHONE"),
   addressLine: z.string().min(1).max(300),
   city: z.string().min(1).max(120),
   postalCode: z.string().regex(POSTAL_CODE_PATTERN, "INVALID_POSTAL_CODE"),
   bio: z.string().max(2000).optional(),
+};
+
+/** The outside carrier: the full file, `carrier` role on approval. */
+const professionalApplicationSchema = z.object({
+  kind: z.literal("professional"),
+  companyName: z.string().min(2).max(200),
+  siret: z.string().transform(normalizeSiret).refine(isValidSiret, "INVALID_SIRET"),
+  vatNumber: z.string().regex(VAT_PATTERN, "INVALID_VAT").optional(),
+  legalForm: z.string().max(100).optional(),
+  ...contactFields,
 });
+
+/**
+ * The in-house Expeditoo driver: a person, not a business, so no company, SIRET
+ * or legal form — just how to reach them. `driver` role on approval
+ * (driver_types_spec.md §3).
+ */
+const inHouseApplicationSchema = z.object({
+  kind: z.literal("private"),
+  ...contactFields,
+});
+
+/**
+ * `kind` is how the form says which of the two it is. A body without one is a
+ * professional application, which is what every client sent before the two
+ * kinds existed.
+ */
+export const upsertCarrierSchema = z.preprocess(
+  (value) =>
+    value && typeof value === "object" && !("kind" in value)
+      ? { ...value, kind: "professional" }
+      : value,
+  z.discriminatedUnion("kind", [professionalApplicationSchema, inHouseApplicationSchema])
+);
 
 export type UpsertCarrierInput = z.infer<typeof upsertCarrierSchema>;
 
@@ -76,21 +105,27 @@ export const createVehicleSchema = z.object({
 export type CreateVehicleInput = z.infer<typeof createVehicleSchema>;
 
 /**
- * in_house_drivers_spec.md §6. Unlike the public flow the vehicle is required:
- * an in-house driver only ever gets work through direct assignment, and
- * `assignDirect` refuses a carrier with no vehicle on file.
+ * driver_types_spec.md §4. The vehicle is required: an in-house driver only ever
+ * gets work through direct assignment, and `assignDirect` refuses a carrier with
+ * no vehicle on file. `mode` says whether the email already has an account
+ * (`existing`, converted) or not (`invite`, created and mailed an invitation).
  */
 export const createDriverSchema = z
   .object({
-    name: z.string().min(2).max(200),
+    mode: z.enum(["existing", "invite"]),
+    name: z.string().trim().min(2).max(200).optional(),
     email: z.string().email(),
     vehicle: createVehicleSchema.pick({
       type: true,
       maxWeightKg: true,
       plateNumber: true,
     }),
+    ...contactFields,
   })
-  .merge(upsertCarrierSchema);
+  .refine((data) => data.mode === "existing" || Boolean(data.name), {
+    path: ["name"],
+    message: "NAME_REQUIRED",
+  });
 
 export type CreateDriverInput = z.infer<typeof createDriverSchema>;
 

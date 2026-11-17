@@ -534,6 +534,10 @@ export const offersService = {
     // nobody anticipated is refused rather than let through.
     if (listing.origin !== "expedion") throw err("TAKE_NOT_AVAILABLE", 409);
 
+    // An in-house driver is given work, never takes it (driver_types_spec.md §6).
+    const own = await carriersDal.getByUserId(carrierUserId);
+    if (own?.kind === "private") throw err("IN_HOUSE_DIRECT_ASSIGN_ONLY", 403);
+
     const offer = await this.submitOffer(carrierUserId, listingId, {
       vehicleId: data.vehicleId,
       priceCents: listing.budgetCents,

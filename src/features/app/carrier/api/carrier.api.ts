@@ -34,8 +34,11 @@ export interface CarrierDocument {
 
 export interface CarrierApplication {
   id: string;
+  /** `private` is the in-house Expeditoo driver; `professional` the outside carrier. */
+  kind: "professional" | "private";
   companyName: string;
-  siret: string;
+  /** Null for an in-house driver. */
+  siret: string | null;
   vatNumber: string | null;
   legalForm: string | null;
   contactPhone: string;
@@ -57,17 +60,28 @@ export interface CarrierApplication {
   vehicles: Vehicle[];
 }
 
-export interface CarrierProfileInput {
-  companyName: string;
-  siret: string;
-  vatNumber?: string;
-  legalForm?: string;
-  contactPhone: string;
-  addressLine: string;
-  city: string;
-  postalCode: string;
-  bio?: string;
-}
+/** Mirrors `upsertCarrierSchema` (src/server/dto/carrier.dto.ts). */
+export type CarrierProfileInput =
+  | {
+      kind: "professional";
+      companyName: string;
+      siret: string;
+      vatNumber?: string;
+      legalForm?: string;
+      contactPhone: string;
+      addressLine: string;
+      city: string;
+      postalCode: string;
+      bio?: string;
+    }
+  | {
+      kind: "private";
+      contactPhone: string;
+      addressLine: string;
+      city: string;
+      postalCode: string;
+      bio?: string;
+    };
 
 export interface VehicleInput {
   type: string;

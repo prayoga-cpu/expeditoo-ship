@@ -265,7 +265,8 @@ interface GetUsersOptions {
   page?: number;
   pageSize?: number;
   search?: string;
-  role?: string;
+  /** Holds any of these. */
+  roles?: string[];
   emailVerified?: boolean;
   sortBy?: "createdAt" | "name" | "email";
   sortOrder?: "asc" | "desc";
@@ -279,7 +280,7 @@ export async function getUsers(options: GetUsersOptions = {}) {
     page = 1,
     pageSize = 20,
     search,
-    role,
+    roles,
     emailVerified,
     sortBy = "createdAt",
     sortOrder = "desc",
@@ -307,11 +308,11 @@ export async function getUsers(options: GetUsersOptions = {}) {
     }
   }
 
-  if (role) {
+  if (roles?.length) {
     const subQuery = db
       .select({ userId: userRoles.userId })
       .from(userRoles)
-      .where(eq(userRoles.role, role as UserRoleEnum));
+      .where(inArray(userRoles.role, roles as UserRoleEnum[]));
 
     whereConditions.push(inArray(user.id, subQuery));
   }

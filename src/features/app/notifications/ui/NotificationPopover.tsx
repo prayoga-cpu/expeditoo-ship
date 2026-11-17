@@ -3,6 +3,7 @@
 import React, { useMemo } from "react";
 import Link from "next/link";
 import { Bell, MessageCircle } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { NotificationItemCompact } from "./NotificationItemCompact";
 import type { Notification } from "../types";
@@ -36,6 +37,7 @@ export function NotificationPopover({
   onMarkAsRead,
   onClose,
 }: NotificationPopoverProps) {
+  const t = useTranslations("notifications");
   // Get 5 most recent notifications
   const recentNotifications = useMemo(() => {
     return notifications.slice(0, 5);
@@ -46,7 +48,7 @@ export function NotificationPopover({
       {/* Header */}
       <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 border-b bg-background">
         <h3 className="text-base font-semibold text-foreground">
-          Notifications
+          {t("title")}
         </h3>
         {unreadCount > 0 && (
           <Button
@@ -55,7 +57,7 @@ export function NotificationPopover({
             onClick={onMarkAllAsRead}
             className="h-auto py-1 px-2 text-xs font-medium hover:bg-primary/10 hover:text-primary"
           >
-            Mark all read
+            {t("markAllRead")}
           </Button>
         )}
       </div>
@@ -69,9 +71,9 @@ export function NotificationPopover({
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-foreground">
-                {messageUnreadCount} unread message{messageUnreadCount > 1 ? "s" : ""}
+                {t("popover.unreadMessages", { count: messageUnreadCount })}
               </p>
-              <p className="text-xs text-muted-foreground">Tap to view</p>
+              <p className="text-xs text-muted-foreground">{t("popover.tapToView")}</p>
             </div>
           </div>
         </Link>
@@ -97,10 +99,10 @@ export function NotificationPopover({
               <Bell className="w-6 h-6 text-muted-foreground/50" />
             </div>
             <h4 className="text-base font-semibold text-foreground mb-1">
-              No notifications yet
+              {t("empty.title")}
             </h4>
             <p className="text-sm text-muted-foreground max-w-[240px] mx-auto">
-              We'll notify you when something important happens.
+              {t("empty.description")}
             </p>
           </div>
         ) : null}
@@ -114,7 +116,7 @@ export function NotificationPopover({
               variant="ghost"
               className="w-full text-sm font-medium hover:bg-primary/10 hover:text-primary"
             >
-              View All
+              {t("popover.viewAll")}
             </Button>
           </Link>
         </div>

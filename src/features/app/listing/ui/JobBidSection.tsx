@@ -75,6 +75,8 @@ export function JobBidSection({ job, viewerId }: JobBidSectionProps) {
   if (!isCarrier && (roles.includes("admin") || roles.includes("operator"))) {
     return <StaffCard />;
   }
+  // An in-house driver is given work by Expeditoo and does not bid.
+  if (!isCarrier && roles.includes("driver")) return <InHouseCard />;
   if (!isCarrier) return <BecomeCarrierCard />;
   if (notApprovedSubmits.length > 0) return <NotApprovedCard />;
   if (mine) return <MyOfferCard offer={mine} />;
@@ -165,6 +167,21 @@ function OwnJobCard() {
       <div>
         <p className="font-semibold">{t("ownJobTitle")}</p>
         <p className="mt-0.5 text-sm text-muted-foreground">{t("ownJobDescription")}</p>
+      </div>
+    </Card>
+  );
+}
+
+function InHouseCard() {
+  const t = useTranslations("listing.bid");
+  return (
+    <Card className="flex items-start gap-3 p-4 sm:p-5">
+      <div className="rounded-full bg-muted p-2.5">
+        <Info className="h-5 w-5 text-muted-foreground" />
+      </div>
+      <div>
+        <p className="font-semibold">{t("inHouseTitle")}</p>
+        <p className="mt-0.5 text-sm text-muted-foreground">{t("inHouseDescription")}</p>
       </div>
     </Card>
   );

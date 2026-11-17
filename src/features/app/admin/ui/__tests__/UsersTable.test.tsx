@@ -44,9 +44,8 @@ const ONE_MANAGEABLE: User = {
   name: "Approved Carrier",
   email: "carrier@example.com",
   role: "carrier",
-  // KYC approval grants both together (carrier.service.ts) — this is the
-  // shape every approved account actually has.
-  roles: ["shipper", "carrier", "driver"],
+  // Approval grants the one role the file's kind earns (driver_types_spec.md §2).
+  roles: ["shipper", "carrier"],
 };
 
 const MULTI: User = {
@@ -84,17 +83,20 @@ describe("UsersTable role column", () => {
     expect(screen.queryByText("Shipper")).not.toBeInTheDocument();
   });
 
-  it("merges carrier and driver into a single Driver chip", () => {
-    renderTable([ONE_MANAGEABLE]);
+  it("shows the in-house driver and the carrier as two different chips", () => {
+    renderTable([
+      { ...ONE_MANAGEABLE, roles: ["shipper", "driver"] },
+      { ...ONE_MANAGEABLE, id: "u4", email: "c@example.com", roles: ["shipper", "carrier"] },
+    ]);
 
-    expect(screen.getAllByText("Driver")).toHaveLength(1);
-    expect(screen.queryByText("Carrier")).not.toBeInTheDocument();
+    expect(screen.getByText("In-house driver")).toBeInTheDocument();
+    expect(screen.getByText("Carrier")).toBeInTheDocument();
   });
 
   it("shows every manageable role the account holds", () => {
     renderTable([MULTI]);
 
-    expect(screen.getByText("Driver")).toBeInTheDocument();
+    expect(screen.getByText("Carrier")).toBeInTheDocument();
     expect(screen.getByText("Admin")).toBeInTheDocument();
   });
 
@@ -107,15 +109,15 @@ describe("UsersTable role column", () => {
     expect(screen.queryByLabelText(/Remove/)).not.toBeInTheDocument();
   });
 
-  it("removing the Driver chip calls back with the merged role", async () => {
+  it("removing the Carrier chip calls back with that role", async () => {
     const onRemoveRole = vi
       .fn()
       .mockResolvedValue({ success: true, message: "" });
     renderTable([MULTI], onRemoveRole);
 
-    fireEvent.click(screen.getByLabelText("Remove Driver"));
+    fireEvent.click(screen.getByLabelText("Remove Carrier"));
 
-    expect(onRemoveRole).toHaveBeenCalledWith(MULTI, "driver");
+    expect(onRemoveRole).toHaveBeenCalledWith(MULTI, "carrier");
   });
 
   it("does not offer a remove control when no handler is passed", () => {

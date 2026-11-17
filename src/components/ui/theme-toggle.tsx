@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Moon, Sun, Monitor } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +25,7 @@ export function ThemeToggle({
   size = "icon",
   className,
 }: ThemeToggleProps) {
+  const t = useTranslations("common.theme");
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = React.useState(false);
 
@@ -36,7 +38,7 @@ export function ThemeToggle({
     return (
       <Button variant={variant} size={size} className={className} disabled>
         <Sun className="h-5 w-5" />
-        <span className="sr-only">Toggle theme</span>
+        <span className="sr-only">{t("toggle")}</span>
       </Button>
     );
   }
@@ -63,7 +65,7 @@ export function ThemeToggle({
           className={cn("transition-all duration-200", className)}
         >
           {getCurrentIcon()}
-          <span className="sr-only">Toggle theme</span>
+          <span className="sr-only">{t("toggle")}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-40">
@@ -72,7 +74,7 @@ export function ThemeToggle({
           className="cursor-pointer"
         >
           <Sun className="mr-2 h-4 w-4" />
-          <span>Light</span>
+          <span>{t("light")}</span>
           {theme === "light" && (
             <span className="ml-auto text-primary">✓</span>
           )}
@@ -82,7 +84,7 @@ export function ThemeToggle({
           className="cursor-pointer"
         >
           <Moon className="mr-2 h-4 w-4" />
-          <span>Dark</span>
+          <span>{t("dark")}</span>
           {theme === "dark" && <span className="ml-auto text-primary">✓</span>}
         </DropdownMenuItem>
         <DropdownMenuItem
@@ -90,7 +92,7 @@ export function ThemeToggle({
           className="cursor-pointer"
         >
           <Monitor className="mr-2 h-4 w-4" />
-          <span>System</span>
+          <span>{t("system")}</span>
           {theme === "system" && (
             <span className="ml-auto text-primary">✓</span>
           )}

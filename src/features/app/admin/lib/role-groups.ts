@@ -1,27 +1,21 @@
 /**
  * Roles this admin UI offers to add or remove.
  *
- * `carrier` and `driver` are granted together and only together — KYC
- * approval assigns both in the same call (`carrier.service.ts`) — and mean
- * one person in this product, not a company and its employees: see
- * CLAUDE.md "Data Model" and `src/lib/primary-role.ts`, which already
- * collapses the pair to a single "driver" label for the sidebar badge (the
- * French copy for both is literally the same word, "Chauffeur"). Offering
- * them as two separate chips here let an admin grant one without the other,
- * a state the rest of the app never produces and dashboard counts
- * (`admin.dal.ts` `getActiveDriversCount`) don't expect.
+ * `driver` and `carrier` are two roles, not one person under two names
+ * (driver_types_spec.md §1): `driver` is the **in-house Expeditoo driver** —
+ * runs what Expeditoo assigns, bids on nothing, sees no money — and `carrier`
+ * is the **outside driver** who bids and is paid. Granting either from the role
+ * dialog goes through the carrier service, which creates or approves the file
+ * that earns it, so the person lands in the Drivers list straight away.
  *
- * `shipper` is granted to every signup automatically
- * (`assignDefaultRole`) and gates nothing — there is no
- * `assertRole(session, "shipper")` anywhere in the service layer, and no
- * shipper-facing surface exists to gate. It is left out of both lists: not
- * offered to add (there is nothing to grant) and not offered to remove
- * (there is nothing removing it would change).
+ * `shipper` is granted to every signup automatically (`assignDefaultRole`) and
+ * gates nothing — there is no `assertRole(session, "shipper")` anywhere in the
+ * service layer. It is left out of both lists: not offered to add (there is
+ * nothing to grant) and not offered to remove (removing it changes nothing).
  */
-export const DRIVER_ROLE_GROUP = ["carrier", "driver"] as const;
-
 export const MANAGEABLE_ROLES = [
   "driver",
+  "carrier",
   "operator",
   "support",
   "finance",
@@ -30,14 +24,15 @@ export const MANAGEABLE_ROLES = [
 
 export type ManageableRole = (typeof MANAGEABLE_ROLES)[number];
 
-/** The raw `user_roles` values a manageable chip stands for. */
+/** The raw `user_roles` values a manageable chip stands for — one each. */
 export function dbRolesFor(role: string): readonly string[] {
-  return role === "driver" ? DRIVER_ROLE_GROUP : [role];
+  return [role];
 }
 
 /** Which manageable chips an account's raw `roles` currently light up. */
 export function chipsHeld(roles: readonly string[]): ManageableRole[] {
-  return MANAGEABLE_ROLES.filter((chip) =>
-    dbRolesFor(chip).some((dbRole) => roles.includes(dbRole))
-  );
+  return MANAGEABLE_ROLES.filter((chip) => roles.includes(chip));
 }
+
+/** The roles that open a driver file, and so come with one. */
+export const DRIVER_FILE_ROLES: readonly ManageableRole[] = ["driver", "carrier"];

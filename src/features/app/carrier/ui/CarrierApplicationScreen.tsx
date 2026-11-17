@@ -62,6 +62,7 @@ function ApplicationFunnel({ application }: { application: CarrierApplication })
   const editable =
     status === "draft" || status === "rejected" || status === "deregistered";
   const locked = status === "submitted" || status === "under_review";
+  const inHouse = application.kind === "private";
 
   return (
     <div className="space-y-6">
@@ -73,9 +74,13 @@ function ApplicationFunnel({ application }: { application: CarrierApplication })
         <ApplicationSummary application={application} />
       )}
 
-      <DocumentChecklist documents={application.documents} canUpload={!locked} />
+      {/* An in-house driver is not a company and is paid by Expeditoo: no
+          documents to collect, no bank account to keep (driver_types_spec.md §3). */}
+      {!inHouse && (
+        <DocumentChecklist documents={application.documents} canUpload={!locked} />
+      )}
 
-      {!locked && <BankingSection application={application} />}
+      {!locked && !inHouse && <BankingSection application={application} />}
 
       {editable && <SubmitSection application={application} />}
       {status === "submitted" && <WithdrawSection />}
@@ -90,9 +95,14 @@ function ApplicationFunnel({ application }: { application: CarrierApplication })
 function ApplicationSummary({ application }: { application: CarrierApplication }) {
   const t = useTranslations("carrier.application.summary");
 
+  const inHouse = application.kind === "private";
   const rows: [string, string][] = [
-    [t("company"), application.companyName],
-    [t("siret"), application.siret],
+    ...(inHouse
+      ? ([[t("type"), t("inHouse")]] as [string, string][])
+      : ([
+          [t("company"), application.companyName],
+          [t("siret"), application.siret ?? "—"],
+        ] as [string, string][])),
     [t("phone"), application.contactPhone],
     [
       t("address"),
@@ -125,15 +135,20 @@ function SubmitSection({ application }: { application: CarrierApplication }) {
   const submit = useSubmitApplication();
 
   const present = new Set(application.documents.map((doc) => doc.kind));
+  const inHouse = application.kind === "private";
   const items: { label: string; done: boolean }[] = [
-    {
-      label: t("documents"),
-      done: REQUIRED_DOCUMENT_KINDS.every((kind) => present.has(kind)),
-    },
-    {
-      label: t("banking"),
-      done: Boolean(application.ibanLast4 && application.bicLast4),
-    },
+    ...(inHouse
+      ? []
+      : [
+          {
+            label: t("documents"),
+            done: REQUIRED_DOCUMENT_KINDS.every((kind) => present.has(kind)),
+          },
+          {
+            label: t("banking"),
+            done: Boolean(application.ibanLast4 && application.bicLast4),
+          },
+        ]),
     { label: t("vehicle"), done: application.vehicles.length > 0 },
   ];
 

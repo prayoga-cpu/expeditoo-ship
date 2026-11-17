@@ -8,6 +8,7 @@ import { expedionOrigins, type AppOrigin } from "@/lib/app-origins";
 
 import { VerificationEmail } from "@/server/emails/VerificationEmail";
 import { PasswordResetEmail } from "@/server/emails/PasswordResetEmail";
+import { DriverInvitationEmail } from "@/server/emails/DriverInvitationEmail";
 
 // ========================================
 // Sign Up Service
@@ -332,6 +333,42 @@ export async function sendPasswordResetEmail(email: string, resetUrl: string) {
   } catch (error) {
     console.error("[Auth Service] Failed to send password reset email:", error);
     // Don't throw - a mail failure must not surface whether the account exists
+  }
+}
+
+/**
+ * Whether a reset link was issued as a driver invitation. The admin onboarding
+ * asks for a reset with `redirectTo=/reset-password?invite=driver`, and Better
+ * Auth carries that into the link's `callbackURL`.
+ */
+export function isDriverInvitation(resetUrl: string): boolean {
+  try {
+    const callback = new URL(resetUrl).searchParams.get("callbackURL") ?? "";
+    return callback.includes("invite=driver");
+  } catch {
+    return false;
+  }
+}
+
+/** The invitation an admin-added in-house driver receives instead of a reset mail. */
+export async function sendDriverInvitationEmail(email: string, inviteUrl: string) {
+  try {
+    const user = await usersDAL.getUserByEmail(email);
+    const brand = brandingFor(user?.origin);
+
+    const sent = await sendViaResend({
+      from: EMAIL_FROM,
+      to: email,
+      subject: `Vous êtes invité à rejoindre les chauffeurs ${brand.productName}`,
+      react: DriverInvitationEmail({
+        inviteUrl,
+        userName: user?.name?.split(" ")[0] || undefined,
+        productName: brand.productName,
+      }),
+    });
+    assertSent(sent, "driver invitation email");
+  } catch (error) {
+    console.error("[Auth Service] Failed to send driver invitation email:", error);
   }
 }
 

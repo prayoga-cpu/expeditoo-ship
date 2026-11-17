@@ -83,7 +83,9 @@ export const carriersDal = {
       with: {
         documents: true,
         vehicles: true,
-        user: true,
+        // Roles ride along so the service can tell whether the owner holds the
+        // role their file earns; they never leave the service (`listForReview`).
+        user: { with: { roles: true } },
         // Who ticked « Contact confirmé », by name only (0047).
         contactConfirmer: { columns: { id: true, name: true } },
       },

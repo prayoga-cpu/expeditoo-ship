@@ -43,23 +43,30 @@ const err = (code: string, status: number, message?: string) =>
   new CarrierError(code, status, message);
 
 /**
- * Enrols a carrier's owner as a driver in their own fleet.
+ * Grants the role a file's kind earns, and enrols its owner in their own fleet.
  *
- * In this market most carriers drive themselves, and without both the driver
- * role and the fleet link the carrier who wins a job can neither reach
- * `/driver` nor pass `assignDriver`'s fleet check. Every write here is
- * idempotent, so approving twice enrols once.
+ * An in-house driver (`private`) is a `driver`; an outside carrier
+ * (`professional`) is a `carrier` — never both (driver_types_spec.md §2). The
+ * fleet link is what lets the owner pass `assignDriver`'s fleet check and be
+ * assigned a run. Every write here is idempotent, so approving twice enrols
+ * once.
  */
 // TODO(EXPEDITOO-TESTING): solo-carrier self-assignment — for real multi-driver
 // fleets, replace this with a driver invite flow that grants the role and the
 // fleet link to the invitee, and stop enrolling the owner automatically.
+const ROLE_FOR_KIND = { private: "driver", professional: "carrier" } as const;
+const KIND_FOR_ROLE = { driver: "private", carrier: "professional" } as const;
+
+/** What an in-house driver's company reads as: the one they drive for. */
+const IN_HOUSE_COMPANY = "Expeditoo";
+
 async function enrolAsOwnDriver(
   carrier: Carrier,
   adminId: string,
-  tx: Parameters<Parameters<typeof db.transaction>[0]>[0]
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  role: "driver" | "carrier" = ROLE_FOR_KIND[carrier.kind]
 ) {
-  await usersDal.assignRoleIfMissing(carrier.userId, "carrier", adminId, tx);
-  await usersDal.assignRoleIfMissing(carrier.userId, "driver", adminId, tx);
+  await usersDal.assignRoleIfMissing(carrier.userId, role, adminId, tx);
   await carriersDal.upsertDriverLink(
     {
       id: nanoid(),
@@ -88,12 +95,14 @@ async function carrierFor(actor: Viewer, carrierId: string | null) {
   return carrier;
 }
 
-/** The account an in-house onboarding may convert, or null to create one. */
-async function findConvertibleAccount(email: string) {
-  const existing = await usersDal.getUserByEmail(email);
-  if (!existing) return null;
-
-  if (existing.roles.some((r) => r.role === "driver")) {
+/**
+ * An in-house onboarding by email: the account that holds it, or null. Whether
+ * that is allowed depends on the mode (`createInHouseDriver`).
+ */
+async function assertConvertible(
+  existing: NonNullable<Awaited<ReturnType<typeof usersDal.getUserByEmail>>>
+) {
+  if (existing.roles.some((r) => r.role === "driver" || r.role === "carrier")) {
     throw err("ALREADY_DRIVER", 409, "This account is already a driver.");
   }
   if (await carriersDal.getByUserId(existing.id)) {
@@ -103,8 +112,6 @@ async function findConvertibleAccount(email: string) {
       "This account already has a driver application on file. Review it under Applications instead."
     );
   }
-
-  return existing;
 }
 
 /**
@@ -133,11 +140,25 @@ async function createDriverAccount(name: string, email: string) {
   }
 }
 
-/** Carrier row, vehicle and role grants: all four land, or none do. */
+/** The in-house file: a person, so no company, SIRET or legal form. */
+function inHouseFields(data: Pick<CreateDriverInput, "contactPhone" | "addressLine" | "city" | "postalCode" | "bio">) {
+  return {
+    kind: "private" as const,
+    companyName: IN_HOUSE_COMPANY,
+    siret: null,
+    contactPhone: data.contactPhone,
+    addressLine: data.addressLine,
+    city: data.city,
+    postalCode: data.postalCode,
+    bio: data.bio,
+  };
+}
+
+/** Carrier row, vehicle and the `driver` grant: all three land, or none do. */
 async function writeInHouseDriver(
   userId: string,
   actorId: string,
-  fields: UpsertCarrierInput,
+  fields: ReturnType<typeof inHouseFields>,
   vehicle: CreateDriverInput["vehicle"]
 ) {
   return await db.transaction(async (tx) => {
@@ -162,21 +183,57 @@ async function writeInHouseDriver(
       tx
     );
     await enrolAsOwnDriver(carrier, actorId, tx);
-    // A no-op while every signup still defaults to `shipper`; once that
-    // default goes (spec §2), this grant is what marks the driver in-house.
-    await usersDal.assignRoleIfMissing(userId, "shipper", actorId, tx);
 
     return carrier.id;
   });
 }
 
-/** Never fails the onboarding: Admin → Users can resend a reset link. */
-async function sendSetPasswordEmail(email: string) {
+/**
+ * The invitation: a set-password link, in a mail that says who is inviting
+ * whom (`invite=driver` in the link is what makes the reset callback pick that
+ * template — `lib/auth.ts`). Never fails the onboarding: Admin → Users can
+ * resend a reset link.
+ */
+async function sendInvitationEmail(email: string) {
   const { auth } = await import("@/lib/auth");
 
   await auth.api
-    .requestPasswordReset({ body: { email, redirectTo: "/reset-password" } })
-    .catch((e) => console.error("set-password email failed", e));
+    .requestPasswordReset({
+      body: { email, redirectTo: "/reset-password?invite=driver" },
+    })
+    .catch((e) => console.error("driver invitation email failed", e));
+}
+
+function assertStaff(viewer: Viewer) {
+  if (!viewer.isAdmin && !viewer.isOperator) {
+    throw err("FORBIDDEN_ROLE", 403, "Admin or operator access required");
+  }
+}
+
+/**
+ * An application as the columns hold it. An in-house file stores the company
+ * it drives for and no SIRET, so nothing downstream reads a missing company.
+ */
+function carrierFields(data: UpsertCarrierInput) {
+  const { kind, contactPhone, addressLine, city, postalCode, bio } = data;
+  const contact = { kind, contactPhone, addressLine, city, postalCode, bio };
+
+  if (data.kind === "private") {
+    return {
+      ...contact,
+      companyName: IN_HOUSE_COMPANY,
+      siret: null,
+      vatNumber: null,
+      legalForm: null,
+    };
+  }
+  return {
+    ...contact,
+    companyName: data.companyName,
+    siret: data.siret,
+    vatNumber: data.vatNumber ?? null,
+    legalForm: data.legalForm ?? null,
+  };
 }
 
 // ========================================
@@ -184,30 +241,41 @@ async function sendSetPasswordEmail(email: string) {
 // ========================================
 
 export const carrierService = {
-  /** Create or update the draft. SIRET is unique across carriers. */
+  /**
+   * Create or update the draft. SIRET is unique across carriers; an in-house
+   * file has none. The kind can change while the file is a draft, rejected or
+   * deregistered, never once it is approved or suspended (`KIND_LOCKED`).
+   */
   async upsertApplication(userId: string, data: UpsertCarrierInput) {
     const existing = await carriersDal.getByUserId(userId);
+    const fields = carrierFields(data);
 
-    const bySiret = await carriersDal.getBySiret(data.siret);
+    const bySiret = fields.siret ? await carriersDal.getBySiret(fields.siret) : null;
     if (bySiret && bySiret.userId !== userId) {
       throw err("SIRET_ALREADY_REGISTERED", 409);
     }
 
     if (!existing) {
-      return await carriersDal.create({ id: nanoid(), userId, ...data });
+      return await carriersDal.create({ id: nanoid(), userId, ...fields });
     }
 
     if (existing.status === "submitted" || existing.status === "under_review") {
       throw err("APPLICATION_LOCKED", 409);
     }
+    if (
+      existing.kind !== fields.kind &&
+      (existing.status === "approved" || existing.status === "suspended")
+    ) {
+      throw err("KIND_LOCKED", 409);
+    }
 
     // Changing the legal or banking identity after approval requires a fresh
     // look, so the carrier drops back into review and bidding pauses.
     const identityChanged =
-      existing.status === "approved" && existing.siret !== data.siret;
+      existing.status === "approved" && existing.siret !== fields.siret;
 
     return await carriersDal.update(existing.id, {
-      ...data,
+      ...fields,
       status: identityChanged ? "under_review" : existing.status,
     });
   },
@@ -300,33 +368,34 @@ export const carrierService = {
   // ---- Admin: in-house drivers (in_house_drivers_spec.md §6) ----
 
   /**
-   * An admin or operator onboarding a driver who works for Expeditoo itself.
-   * An email with no account gets one created here; an existing account is
-   * converted, unless it already drives (`ALREADY_DRIVER`) or already has an
-   * application on file (`CARRIER_PROFILE_EXISTS` -- review it instead).
+   * An admin or operator onboarding a driver who works for Expeditoo itself
+   * (driver_types_spec.md §4). `existing`: the email already has an account and
+   * is converted — nothing is mailed, and the account is never deleted on
+   * failure. `invite`: no account yet, so one is created here and the person is
+   * mailed an invitation with a set-password link once the transaction commits.
    *
    * The account is the only write outside the transaction, because Better
    * Auth owns it: if the rest fails, an account created by this call is
-   * deleted again so a retry does not collide on the email. A pre-existing
-   * account is never deleted.
+   * deleted again so a retry does not collide on the email.
    */
   async createInHouseDriver(viewer: Viewer, data: CreateDriverInput) {
     if (!viewer.isAdmin && !viewer.isOperator) {
       throw err("FORBIDDEN_ROLE", 403, "Admin or operator access required");
     }
 
-    const { name, email, vehicle, ...carrierFields } = data;
-    const existing = await findConvertibleAccount(email);
-
-    if (await carriersDal.getBySiret(carrierFields.siret)) {
+    const existing = await usersDal.getUserByEmail(data.email);
+    if (data.mode === "existing") {
+      if (!existing) throw err("ACCOUNT_NOT_FOUND", 404, "No account has this email.");
+      await assertConvertible(existing);
+    } else if (existing) {
       throw err(
-        "SIRET_ALREADY_REGISTERED",
+        "ACCOUNT_EXISTS",
         409,
-        "That SIRET already belongs to another carrier account."
+        "This email already has an account — add it as a registered account."
       );
     }
 
-    const userId = existing?.id ?? (await createDriverAccount(name, email));
+    const userId = existing?.id ?? (await createDriverAccount(data.name ?? "", data.email));
 
     let carrierId: string;
     try {
@@ -335,23 +404,134 @@ export const carrierService = {
       carrierId = await writeInHouseDriver(
         userId,
         viewer.userId,
-        carrierFields,
-        vehicle
+        inHouseFields(data),
+        data.vehicle
       );
     } catch (error) {
       if (!existing) await usersDal.deleteUser(userId).catch(() => {});
       throw error;
     }
 
-    if (!existing) await sendSetPasswordEmail(email);
+    if (!existing) await sendInvitationEmail(data.email);
 
     return {
       carrierId,
       userId,
-      name: existing?.name ?? name,
-      email,
+      name: existing?.name ?? data.name ?? "",
+      email: data.email,
       accountCreated: !existing,
     };
+  },
+
+  /**
+   * « Gérer le rôle » → In-house driver or Carrier. The role comes with the file
+   * that earns it, so the person is usable at once and shows in the Drivers
+   * list: no file → an approved one is created (contact details empty, to be
+   * completed); an open file → its kind is set to match and it is approved; an
+   * approved file → the role is simply added. A suspended file is refused —
+   * reinstate it first.
+   */
+  async grantRole(adminId: string, userId: string, role: "driver" | "carrier") {
+    const kind = KIND_FOR_ROLE[role];
+    const account = await usersDal.getUserById(userId);
+    if (!account) throw err("USER_NOT_FOUND", 404);
+    const existing = await carriersDal.getByUserId(userId);
+    if (existing?.status === "suspended") throw err("CARRIER_SUSPENDED", 409);
+
+    const approvedNow = { status: "approved" as const, approvedAt: new Date(), approvedBy: adminId };
+
+    await db.transaction(async (tx) => {
+      let carrier: Carrier | undefined = existing;
+      if (!carrier) {
+        carrier = await carriersDal.create(
+          {
+            id: nanoid(),
+            userId,
+            kind,
+            companyName: kind === "private" ? IN_HOUSE_COMPANY : account.name,
+            siret: null,
+            contactPhone: "",
+            addressLine: "",
+            city: "",
+            postalCode: "",
+            ...approvedNow,
+          },
+          tx
+        );
+      } else if (carrier.status !== "approved") {
+        carrier = await carriersDal.update(
+          carrier.id,
+          {
+            kind,
+            ...approvedNow,
+            rejectionReason: null,
+            deregisteredAt: null,
+            deregistrationReason: null,
+          },
+          tx
+        );
+        await carriersDal.setAllDocumentsAccepted(carrier.id, tx);
+      }
+      await enrolAsOwnDriver(carrier, adminId, tx, role);
+    });
+
+    if (!existing || existing.status !== "approved") {
+      await notifyCarrier(
+        userId,
+        role === "driver" ? "You are now an Expeditoo driver" : "Carrier application approved",
+        role === "driver"
+          ? "Expeditoo will assign you runs."
+          : "You can now bid on transport jobs."
+      );
+    }
+  },
+
+  // ---- Admin: completing a file on the applicant's behalf ----
+
+  /**
+   * An admin or operator fills in or corrects a driver's file for them — the
+   * pending application (or the empty file « Gérer le rôle » creates) is finished
+   * from the back office instead of waiting on the person. Not locked by
+   * `submitted`: the point is to act on a file that is waiting. The kind may
+   * change until the file is approved (`KIND_LOCKED`). Documents and banking
+   * are not edited here: they are the person's own.
+   */
+  async adminUpdateApplication(
+    viewer: Viewer,
+    carrierId: string,
+    data: UpsertCarrierInput
+  ) {
+    assertStaff(viewer);
+    const carrier = await carriersDal.getById(carrierId);
+    if (!carrier) throw err("CARRIER_NOT_FOUND", 404);
+
+    const fields = carrierFields(data);
+    const bySiret = fields.siret ? await carriersDal.getBySiret(fields.siret) : null;
+    if (bySiret && bySiret.id !== carrierId) {
+      throw err("SIRET_ALREADY_REGISTERED", 409);
+    }
+    if (
+      carrier.kind !== fields.kind &&
+      (carrier.status === "approved" || carrier.status === "suspended")
+    ) {
+      throw err("KIND_LOCKED", 409);
+    }
+
+    return await carriersDal.update(carrierId, fields);
+  },
+
+  /** A vehicle added to a driver's file by staff — assignment needs one. */
+  async adminAddVehicle(viewer: Viewer, carrierId: string, data: CreateVehicleInput) {
+    assertStaff(viewer);
+    const carrier = await carriersDal.getById(carrierId);
+    if (!carrier) throw err("CARRIER_NOT_FOUND", 404);
+
+    return await carriersDal.createVehicle({
+      id: nanoid(),
+      carrierId,
+      ...data,
+      plateNumber: data.plateNumber.toUpperCase(),
+    });
   },
 
   // ---- Vehicles ----
@@ -424,15 +604,27 @@ export const carrierService = {
 
   /** No status means the whole queue, every state included. */
   async listForReview(status?: Carrier["status"]) {
-    return await carriersDal.listByStatus(status);
+    const rows = await carriersDal.listByStatus(status);
+    // `hasDriverAccess`: does the owner hold the role this file's kind earns?
+    // An approved file without it is the one case « Repair access » is for.
+    // The role rows stay here — the screen needs the answer, not the list.
+    return rows.map(({ user, ...row }) => {
+      if (!user) return { ...row, user, hasDriverAccess: false };
+      const { roles, ...owner } = user;
+      return {
+        ...row,
+        user: owner,
+        hasDriverAccess: roles.some((r) => r.role === ROLE_FOR_KIND[row.kind]),
+      };
+    });
   },
 
   /**
-   * Approving unlocks bidding *and* execution. Beyond the carrier role it
-   * enrols the owner as a driver in their own fleet: in this market most
-   * carriers drive themselves, and without that pair the carrier who wins a
-   * job can neither reach /driver nor pass the fleet check on assignment.
-   * Idempotent: a second approval is a no-op rather than a duplicate grant.
+   * Approving grants the role the file's kind earns — `carrier` (bids and runs
+   * the work) for an outside carrier, `driver` (runs what Expeditoo assigns) for
+   * an in-house file — and enrols the owner in their own fleet so they can be
+   * assigned a run. Idempotent: a second approval is a no-op rather than a
+   * duplicate grant.
    */
   async approve(adminId: string, carrierId: string) {
     const carrier = await carriersDal.getById(carrierId);
@@ -466,7 +658,9 @@ export const carrierService = {
     await notifyCarrier(
       carrier.userId,
       "Carrier application approved",
-      "You can now bid on transport jobs."
+      carrier.kind === "private"
+        ? "You are now an Expeditoo driver: Expeditoo will assign you runs."
+        : "You can now bid on transport jobs."
     );
 
     return approved;
@@ -698,7 +892,7 @@ async function alertAdminsOfApplication(carrier: Carrier) {
         applicantName,
         companyName: carrier.companyName,
         city: carrier.city,
-        kindLabel: carrier.kind === "private" ? "Particulier" : "Professionnel",
+        kindLabel: carrier.kind === "private" ? "Chauffeur interne" : "Transporteur",
         reviewUrl,
       }),
     ])
@@ -711,6 +905,8 @@ async function alertAdminsOfApplication(carrier: Carrier) {
  * complete.
  */
 async function tellApplicantWhatIsMissing(carrier: Carrier) {
+  // An in-house file has no documents to ask for (driver_types_spec.md §3).
+  if (carrier.kind === "private") return;
   const missing = missingRequiredDocuments(
     ((carrier as { documents?: { kind: string }[] }).documents ?? []).map((d) => d.kind)
   );

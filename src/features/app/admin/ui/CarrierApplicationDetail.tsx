@@ -1,20 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState, type ReactNode } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { format } from "date-fns";
 import { enUS, fr } from "date-fns/locale";
 import {
   Check,
+  ChevronDown,
   ExternalLink,
   LogOut,
   Plane,
   RotateCcw,
   ShieldOff,
   UserCheck,
+  Wrench,
   X,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { actionsFor, type DriverAction } from "../lib/carrier-actions";
 import { isAbsent } from "@/lib/carrier-availability";
 import { parseLocalISO, todayLocalISO, addDaysLocalISO } from "@/lib/utils/date-range";
 import { Button } from "@/components/ui/button";
@@ -34,7 +44,10 @@ import type {
   CarrierApplicationDocument,
   CarrierApplicationVehicle,
   CarrierAvailabilityRequest,
+  CarrierFileInput,
 } from "../api/carriers.api";
+import type { VehicleType } from "@/lib/carrier-constants";
+import { CarrierFileEditor } from "./CarrierFileEditor";
 
 interface CarrierApplicationDetailProps {
   application: CarrierApplication;
@@ -51,12 +64,28 @@ interface CarrierApplicationDetailProps {
   onReinstate: (id: string) => Promise<unknown>;
   /** « Contact confirmé » — informational (client feedback 2026-11-06, C02). */
   onSetContactConfirmed?: (input: { id: string; confirmed: boolean }) => Promise<unknown>;
+  /** Staff finish the file on the applicant's behalf (driver_types_spec.md §7). */
+  onSaveFile?: (input: { id: string; data: CarrierFileInput }) => Promise<unknown>;
+  onAddVehicle?: (input: {
+    id: string;
+    vehicle: { type: VehicleType; maxWeightKg: number; plateNumber: string };
+  }) => Promise<unknown>;
   /** Called after an action succeeded; the list closes the dialog. */
   onDone: () => void;
   onClose: () => void;
 }
 
 type ReasonAction = "reject" | "suspend" | "deregister" | "absent";
+
+const ACTION_ICONS: Record<DriverAction, ReactNode> = {
+  approve: <Check className="w-4 h-4 mr-2" />,
+  reject: <X className="w-4 h-4 mr-2" />,
+  markAbsent: <Plane className="w-4 h-4 mr-2" />,
+  endAbsence: <UserCheck className="w-4 h-4 mr-2" />,
+  suspend: <ShieldOff className="w-4 h-4 mr-2" />,
+  reactivate: <RotateCcw className="w-4 h-4 mr-2" />,
+  remove: <LogOut className="w-4 h-4 mr-2" />,
+};
 
 function Field({
   label,
@@ -184,9 +213,12 @@ export function CarrierApplicationDetail({
   onDeregister,
   onReinstate,
   onSetContactConfirmed,
+  onSaveFile,
+  onAddVehicle,
   onDone,
   onClose,
 }: CarrierApplicationDetailProps) {
+  const [editing, setEditing] = useState(false);
   const [actionMode, setActionMode] = useState<ReasonAction | null>(null);
   const [reason, setReason] = useState("");
   // « Retour le » for an absence; "" is "until someone ends it".
@@ -202,17 +234,20 @@ export function CarrierApplicationDetail({
   const canReview =
     application.status === "submitted" ||
     application.status === "under_review";
-  const canSuspend = application.status === "approved";
-  // Any state an admin may need to undo by hand: a draft, a refusal or a
-  // deregistration approved directly (no submission needed), and an approved
-  // account whose driver roles are missing re-approved to restore them
-  // (`carrierService.approve` is idempotent and is the backfill).
-  const canApproveDirect =
-    application.status === "draft" ||
-    application.status === "rejected" ||
-    application.status === "deregistered";
-  const canRestoreAccess = application.status === "approved";
+  // What is offered, by state (driver_page_management_spec.md §2): the footer
+  // shows the primary and secondary; the rest sits in « Plus d'actions ».
+  const actions = actionsFor(application);
+  // An approved file whose owner lacks the role it earns: re-approving is the
+  // idempotent backfill (`carrierService.approve`), now offered only here.
+  const needsRepair =
+    application.status === "approved" && application.hasDriverAccess === false;
+  const showActivity =
+    application.status === "approved" || application.status === "suspended";
   const absent = isAbsent(application);
+  const inHouse = application.kind === "private";
+  // What the person has not given yet: the empty file « Gérer le rôle » creates,
+  // or an application started and never finished. Staff can fill it in.
+  const incomplete = application.contactPhone === "" || application.vehicles.length === 0;
   const notProvided = t("notProvided");
 
   const runAction = async (action: () => Promise<unknown>) => {
@@ -221,6 +256,51 @@ export function CarrierApplicationDetail({
       onDone();
     } catch {
       // Failure toast already raised by the mutation hook.
+    }
+  };
+
+  // « Approve » is also how a refusal or a removal is undone, so it says so.
+  const actionLabel = (action: DriverAction) => {
+    switch (action) {
+      case "approve":
+        return application.status === "rejected"
+          ? t("approveAnyway")
+          : application.status === "deregistered"
+            ? t("reactivateRemoved")
+            : t("approve");
+      case "reject":
+        return t("reject");
+      case "markAbsent":
+        return t("markAbsent");
+      case "endAbsence":
+        return t("endAbsence");
+      case "suspend":
+        return t("suspend");
+      case "reactivate":
+        return t("reinstate");
+      case "remove":
+        return t("deregister");
+    }
+  };
+
+  const perform = (action: DriverAction) => {
+    switch (action) {
+      case "approve":
+        return void runAction(() => onApprove(application.id));
+      case "reject":
+        return setActionMode("reject");
+      case "markAbsent":
+        return setActionMode("absent");
+      case "endAbsence":
+        return void runAction(() =>
+          onSetAvailability({ id: application.id, input: { absent: false } }),
+        );
+      case "suspend":
+        return setActionMode("suspend");
+      case "reactivate":
+        return void runAction(() => onReinstate(application.id));
+      case "remove":
+        return setActionMode("deregister");
     }
   };
 
@@ -283,6 +363,17 @@ export function CarrierApplicationDetail({
           <Field label={t("kindLabel")} value={t(`kind.${application.kind ?? "professional"}`)} />
         </div>
 
+        {onSaveFile && onAddVehicle && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-dashed p-3">
+            <p className="text-sm text-muted-foreground">
+              {incomplete ? t("incomplete") : t("editHint")}
+            </p>
+            <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
+              {t("completeFile")}
+            </Button>
+          </div>
+        )}
+
         {absent && (
           <div className="rounded-md border border-amber-500/50 bg-amber-500/10 p-3">
             <h4 className="text-sm font-medium mb-1">
@@ -301,7 +392,51 @@ export function CarrierApplicationDetail({
             )}
           </div>
         )}
-        {onSetContactConfirmed && (
+        {needsRepair && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-amber-500/50 bg-amber-500/10 p-3">
+            <div className="min-w-0 space-y-0.5">
+              <h4 className="text-sm font-medium">{t("accessMissingTitle")}</h4>
+              <p className="text-muted-foreground text-xs">
+                {t("accessMissingBody")}
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void runAction(() => onApprove(application.id))}
+              disabled={isUpdating}
+            >
+              <Wrench className="w-4 h-4 mr-2" />
+              {t("repairAccess")}
+            </Button>
+          </div>
+        )}
+        {showActivity && (
+          <div className="grid grid-cols-3 gap-4 rounded-md border p-3">
+            <Field
+              label={t("completedRuns")}
+              value={String(application.completedJobs)}
+            />
+            <Field
+              label={t("rating")}
+              value={
+                application.totalRatings > 0
+                  ? t("ratingValue", {
+                      rating: application.averageRating.toFixed(1),
+                      count: application.totalRatings,
+                    })
+                  : t("noRatingYet")
+              }
+            />
+            <Field
+              label={t("fleet")}
+              value={String(application.vehicles.length)}
+            />
+          </div>
+        )}
+        {/* A tick that gates nothing only means something while the file waits
+            for a decision; afterwards it is just clutter. */}
+        {canReview && onSetContactConfirmed && (
           <ContactConfirmedField
             application={application}
             onSet={onSetContactConfirmed}
@@ -349,18 +484,22 @@ export function CarrierApplicationDetail({
         <div className="border-t pt-4 space-y-4">
           <h3 className="font-semibold">{t("company")}</h3>
           <div className="grid grid-cols-2 gap-4">
-            <Field label={t("companyName")} value={application.companyName} />
-            <Field label={t("siret")} value={application.siret} mono />
-            <Field
-              label={t("vatNumber")}
-              value={application.vatNumber ?? notProvided}
-              mono={application.vatNumber !== null}
-            />
-            <Field
-              label={t("legalForm")}
-              value={application.legalForm ?? notProvided}
-            />
-            <Field label={t("contactPhone")} value={application.contactPhone} />
+            {!inHouse && (
+              <>
+                <Field label={t("companyName")} value={application.companyName} />
+                <Field label={t("siret")} value={application.siret ?? notProvided} mono={application.siret !== null} />
+                <Field
+                  label={t("vatNumber")}
+                  value={application.vatNumber ?? notProvided}
+                  mono={application.vatNumber !== null}
+                />
+                <Field
+                  label={t("legalForm")}
+                  value={application.legalForm ?? notProvided}
+                />
+              </>
+            )}
+            <Field label={t("contactPhone")} value={application.contactPhone || notProvided} />
             <Field
               label={t("address")}
               value={`${application.addressLine}, ${application.postalCode} ${application.city}`}
@@ -368,29 +507,32 @@ export function CarrierApplicationDetail({
           </div>
         </div>
 
-        <div className="border-t pt-4 space-y-4">
-          <h3 className="font-semibold">{t("banking")}</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <Field
-              label={t("iban")}
-              value={
-                application.ibanLast4
-                  ? `•••• ${application.ibanLast4}`
-                  : notProvided
-              }
-              mono={application.ibanLast4 !== null}
-            />
-            <Field
-              label={t("bic")}
-              value={
-                application.bicLast4
-                  ? `•••• ${application.bicLast4}`
-                  : notProvided
-              }
-              mono={application.bicLast4 !== null}
-            />
+        {/* Expeditoo pays an in-house driver as staff: no bank details to show. */}
+        {!inHouse && (
+          <div className="border-t pt-4 space-y-4">
+            <h3 className="font-semibold">{t("banking")}</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <Field
+                label={t("iban")}
+                value={
+                  application.ibanLast4
+                    ? `•••• ${application.ibanLast4}`
+                    : notProvided
+                }
+                mono={application.ibanLast4 !== null}
+              />
+              <Field
+                label={t("bic")}
+                value={
+                  application.bicLast4
+                    ? `•••• ${application.bicLast4}`
+                    : notProvided
+                }
+                mono={application.bicLast4 !== null}
+              />
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="border-t pt-4 space-y-3">
           <h3 className="font-semibold">{t("fleet")}</h3>
@@ -456,6 +598,12 @@ export function CarrierApplicationDetail({
                       ? t("absenceReasonLabel")
                       : t("suspendReasonLabel")}
               </label>
+              {/* What this will do, before it is done. */}
+              {(actionMode === "suspend" || actionMode === "deregister") && (
+                <p className="text-xs text-muted-foreground">
+                  {actionMode === "suspend" ? t("suspendHelp") : t("removeHelp")}
+                </p>
+              )}
               <Textarea
                 id="carrier-action-reason"
                 value={reason}
@@ -466,7 +614,7 @@ export function CarrierApplicationDetail({
               />
             </div>
           )}
-          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <div className="flex flex-col-reverse flex-wrap gap-2 sm:flex-row sm:justify-end">
             {actionMode ? (
               <>
                 <Button
@@ -510,105 +658,77 @@ export function CarrierApplicationDetail({
                 <Button variant="outline" onClick={onClose}>
                   {t("close")}
                 </Button>
-                {canSuspend &&
-                  (absent ? (
-                    <Button
-                      variant="outline"
-                      onClick={() =>
-                        void runAction(() =>
-                          onSetAvailability({
-                            id: application.id,
-                            input: { absent: false },
-                          }),
-                        )
-                      }
-                      disabled={isUpdating}
-                    >
-                      <UserCheck className="w-4 h-4 mr-2" />
-                      {t("endAbsence")}
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      onClick={() => setActionMode("absent")}
-                      disabled={isUpdating}
-                    >
-                      <Plane className="w-4 h-4 mr-2" />
-                      {t("markAbsent")}
-                    </Button>
-                  ))}
-                {canSuspend && (
+                {actions.secondary && (
                   <Button
                     variant="destructive"
-                    onClick={() => setActionMode("suspend")}
+                    onClick={() => perform(actions.secondary!)}
                     disabled={isUpdating}
                   >
-                    <ShieldOff className="w-4 h-4 mr-2" />
-                    {t("suspend")}
+                    {ACTION_ICONS[actions.secondary]}
+                    {actionLabel(actions.secondary)}
                   </Button>
                 )}
-                {(canSuspend || application.status === "suspended") && (
-                  <Button
-                    variant="destructive"
-                    onClick={() => setActionMode("deregister")}
-                    disabled={isUpdating}
-                  >
-                    <LogOut className="w-4 h-4 mr-2" />
-                    {t("deregister")}
-                  </Button>
-                )}
-                {application.status === "suspended" && (
-                  <Button
-                    onClick={() => void runAction(() => onReinstate(application.id))}
-                    disabled={isUpdating}
-                  >
-                    <RotateCcw className="w-4 h-4 mr-2" />
-                    {t("reinstate")}
-                  </Button>
-                )}
-                {canRestoreAccess && (
-                  <Button
-                    variant="outline"
-                    onClick={() => void runAction(() => onApprove(application.id))}
-                    disabled={isUpdating}
-                  >
-                    <RotateCcw className="w-4 h-4 mr-2" />
-                    {t("restoreAccess")}
-                  </Button>
-                )}
-                {(canReview || canApproveDirect) && (
-                  <>
-                    {canReview && (
-                      <Button
-                        variant="destructive"
-                        onClick={() => setActionMode("reject")}
-                        disabled={isUpdating}
-                      >
-                        <X className="w-4 h-4 mr-2" />
-                        {t("reject")}
+                {actions.menu.length > 0 && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" disabled={isUpdating}>
+                        {t("moreActions")}
+                        <ChevronDown className="w-4 h-4 ml-2" />
                       </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      {actions.menu.map((action, index) => (
+                        <Fragment key={action}>
+                          {/* The two actions that take a driver off the work
+                              sit apart from the temporary one. */}
+                          {index > 0 && action === "suspend" && actions.menu[0] === "markAbsent" && (
+                            <DropdownMenuSeparator />
+                          )}
+                          <DropdownMenuItem
+                            variant={action === "suspend" || action === "remove" ? "destructive" : "default"}
+                            onSelect={() => perform(action)}
+                          >
+                            {ACTION_ICONS[action]}
+                            {actionLabel(action)}
+                          </DropdownMenuItem>
+                        </Fragment>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+                {actions.primary && (
+                  <Button
+                    onClick={() => perform(actions.primary!)}
+                    disabled={isUpdating}
+                    className={
+                      actions.primary === "approve"
+                        ? "bg-green-600 hover:bg-green-700 text-white"
+                        : undefined
+                    }
+                  >
+                    {isUpdating && actions.primary === "approve" ? (
+                      <LottieLoader width={20} height={20} />
+                    ) : (
+                      ACTION_ICONS[actions.primary]
                     )}
-                    <Button
-                      onClick={() =>
-                        void runAction(() => onApprove(application.id))
-                      }
-                      disabled={isUpdating}
-                      className="bg-green-600 hover:bg-green-700 text-white"
-                    >
-                      {isUpdating ? (
-                        <LottieLoader width={20} height={20} />
-                      ) : (
-                        <Check className="w-4 h-4 mr-2" />
-                      )}
-                      {t("approve")}
-                    </Button>
-                  </>
+                    {actionLabel(actions.primary)}
+                  </Button>
                 )}
               </>
             )}
           </div>
         </div>
       </DialogFooter>
+      {onSaveFile && onAddVehicle && editing && (
+        <CarrierFileEditor
+          open={editing}
+          onOpenChange={setEditing}
+          application={application}
+          onSave={onSaveFile}
+          onAddVehicle={onAddVehicle}
+          isSaving={isUpdating}
+        />
+      )}
     </div>
   );
 }

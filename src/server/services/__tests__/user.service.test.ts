@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as userService from '../user.service';
 import * as usersDAL from '@/server/dal/users.dal';
 import { carriersDal } from '@/server/dal/carriers.dal';
+import { carrierService, CarrierError } from '@/server/services/carrier.service';
 
 
 // Mock dependencies
@@ -15,6 +16,15 @@ vi.mock('@/server/dal/users.dal', () => ({
   getUserRoles: vi.fn(),
   getUsers: vi.fn(),
 }));
+
+vi.mock('@/server/services/carrier.service', () => {
+  class CarrierError extends Error {
+    constructor(readonly code: string, readonly status: number, message?: string) {
+      super(message ?? code);
+    }
+  }
+  return { CarrierError, carrierService: { grantRole: vi.fn() } };
+});
 
 vi.mock('@/server/dal/carriers.dal', () => ({
   carriersDal: {
@@ -87,35 +97,31 @@ describe('userService', () => {
             expect(usersDAL.assignRole).toHaveBeenCalledWith('target', 'operator', 'admin-id');
         });
 
-        it.each(['carrier', 'driver'])(
-            'grants %s only when an approved driver application backs it',
+        it.each(['carrier', 'driver'] as const)(
+            'grants %s through the carrier service, which creates or approves the file',
             async (role) => {
                 vi.mocked(usersDAL.getUserById)
                     .mockResolvedValueOnce({ roles: [{ role: 'admin' }] } as any)
                     .mockResolvedValueOnce({ id: 'target' } as any);
-                vi.mocked(carriersDal.getByUserId).mockResolvedValue({ status: 'approved' } as any);
 
                 const result = await userService.assignRole({ userId: 'target', role }, 'admin-id');
 
                 expect(result.success).toBe(true);
-                expect(usersDAL.assignRole).toHaveBeenCalledWith('target', role, 'admin-id');
+                expect(carrierService.grantRole).toHaveBeenCalledWith('admin-id', 'target', role);
+                // The service writes the role with its file; the DAL is not asked to.
+                expect(usersDAL.assignRole).not.toHaveBeenCalled();
             }
         );
 
-        it.each([
-            ['no application at all', undefined],
-            ['a submitted application', { status: 'submitted' }],
-            ['a rejected application', { status: 'rejected' }],
-        ])('refuses a driver role for %s', async (_label, carrier) => {
+        it('reports a refusal from the carrier service instead of throwing', async () => {
             vi.mocked(usersDAL.getUserById)
                 .mockResolvedValueOnce({ roles: [{ role: 'admin' }] } as any)
                 .mockResolvedValueOnce({ id: 'target' } as any);
-            vi.mocked(carriersDal.getByUserId).mockResolvedValue(carrier as any);
+            vi.mocked(carrierService.grantRole).mockRejectedValueOnce(new CarrierError('CARRIER_SUSPENDED', 409));
 
-            const result = await userService.assignRole({ userId: 'target', role: 'carrier' }, 'admin-id');
+            const result = await userService.assignRole({ userId: 'target', role: 'driver' }, 'admin-id');
 
-            expect(result.success).toBe(false);
-            expect(usersDAL.assignRole).not.toHaveBeenCalled();
+            expect(result).toEqual({ success: false, message: 'CARRIER_SUSPENDED' });
         });
 
         it('should throw if not admin', async () => {
@@ -149,6 +155,18 @@ describe('userService', () => {
                 ['applicant', 'submitted'],
                 ['plain', null],
             ]);
+        });
+
+        it('filters on several roles at once, for the Drivers list', async () => {
+            vi.mocked(usersDAL.getUserById).mockResolvedValue({ roles: [{ role: 'admin' }] } as any);
+            vi.mocked(usersDAL.getUsers).mockResolvedValue({ users: [], total: 0, page: 1, pageSize: 50, totalPages: 0 } as any);
+            vi.mocked(carriersDal.statusesByUserIds).mockResolvedValue(new Map() as any);
+
+            await userService.getUsers({ role: 'carrier,driver' }, 'admin-id');
+
+            expect(usersDAL.getUsers).toHaveBeenCalledWith(
+                expect.objectContaining({ roles: ['carrier', 'driver'] })
+            );
         });
     });
 });

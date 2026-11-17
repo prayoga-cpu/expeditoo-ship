@@ -1,5 +1,6 @@
 import * as usersDAL from "@/server/dal/users.dal";
 import { carriersDal } from "@/server/dal/carriers.dal";
+import { carrierService, CarrierError } from "@/server/services/carrier.service";
 import { UserPreferences, defaultPreferences } from "@/db/schema";
 import { userRoleEnum } from "@/db/schema/users";
 import {
@@ -35,7 +36,7 @@ function canonicalRoles(rows: { role: string }[]): string[] {
   return rows.map((r) => r.role).filter((role) => allowed.has(role));
 }
 
-/** The two roles KYC approval grants together (`role-groups.ts`). */
+/** The two roles a driver file earns: `driver` (in-house) and `carrier` (outside). */
 const DRIVER_ROLES = new Set<string>(["carrier", "driver"]);
 
 // ========================================
@@ -156,17 +157,18 @@ export async function assignRole(
     throw new Error("Target user not found");
   }
 
-  // Driver access is earned by an approved application, never granted by hand:
-  // a `carrier` role with no file behind it is a driver nobody has vetted, who
-  // could bid on work (client feedback 2026-11-16, « Jean Masson »).
+  // Driver and carrier come with the file that earns them, so granting either
+  // here goes through the carrier service: it creates or approves the matching
+  // file (driver_types_spec.md §5), and the person lands in the Drivers list.
   if (DRIVER_ROLES.has(validated.role)) {
-    const carrier = await carriersDal.getByUserId(validated.userId);
-    if (carrier?.status !== "approved") {
-      return {
-        success: false,
-        message:
-          "Driver access comes from approving the driver application, not from the role list.",
-      };
+    try {
+      await carrierService.grantRole(adminId, validated.userId, validated.role as "driver" | "carrier");
+      return { success: true, message: `Role '${validated.role}' assigned to user successfully` };
+    } catch (error) {
+      if (error instanceof CarrierError) {
+        return { success: false, message: error.message };
+      }
+      throw error;
     }
   }
 
@@ -270,7 +272,7 @@ export async function getUsers(query: unknown, adminId: string): Promise<UserLis
     page: validated.page,
     pageSize: validated.pageSize,
     search: validated.search,
-    role: validated.role,
+    roles: validated.role,
     emailVerified: validated.emailVerified === "true" ? true : validated.emailVerified === "false" ? false : undefined,
     sortBy: validated.sortBy,
     sortOrder: validated.sortOrder,

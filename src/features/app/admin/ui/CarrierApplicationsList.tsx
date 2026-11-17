@@ -4,7 +4,9 @@ import { LoadErrorState } from "@/components/ui/load-error-state";
 import { useState, useMemo, useCallback } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
-import { Eye, Inbox } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Check, Eye, Inbox } from "lucide-react";
 import { CarrierApplicationDetail } from "./CarrierApplicationDetail";
 import { CarrierStatusBadge } from "./CarrierStatusBadge";
 import { isAbsent } from "@/lib/carrier-availability";
@@ -23,10 +25,17 @@ import {
 import { useCarrierApplications } from "../hooks/useCarrierApplications";
 import {
   ALL_STATUSES,
-  CARRIER_APPLICATION_STATUSES,
   type CarrierApplication,
-  type CarrierApplicationFilter,
 } from "../api/carriers.api";
+import {
+  DRIVER_TABS,
+  defaultTab,
+  documentProgress,
+  matchesFilters,
+  tabCounts,
+  type DriverTab,
+  type KindFilter,
+} from "../lib/carrier-actions";
 import { useTranslations, useLocale } from "next-intl";
 import { DataTable, DataTableColumnHeader, dateRangeFilterFn } from "./data-table";
 
@@ -35,9 +44,11 @@ export function CarrierApplicationsList({
 }: {
   tableMinHeight?: string;
 }) {
-  // Unfiltered by default: an admin lands on the whole queue and narrows it
-  // themselves, rather than on a slice that hides applications.
-  const [status, setStatus] = useState<CarrierApplicationFilter>(ALL_STATUSES);
+  // One unfiltered fetch; the tabs and filters narrow it here, so every tab can
+  // show its count (driver_page_management_spec.md §3).
+  const [tab, setTab] = useState<DriverTab | null>(null);
+  const [kind, setKind] = useState<KindFilter>("all");
+  const [notReachedOnly, setNotReachedOnly] = useState(false);
   const {
     applications,
     isLoading,
@@ -50,13 +61,33 @@ export function CarrierApplicationsList({
     setContactConfirmed,
     deregisterCarrierAccount,
     reinstateCarrierAccount,
+    saveFile,
+    addVehicle,
     isUpdating,
-  } = useCarrierApplications(status);
+  } = useCarrierApplications(ALL_STATUSES);
   const [selectedApplication, setSelectedApplication] =
     useState<CarrierApplication | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const t = useTranslations("admin.carriers");
   const locale = useLocale();
+
+  const counts = useMemo(() => tabCounts(applications, kind), [applications, kind]);
+  // Land on what waits for a decision, else on the working pool — until the
+  // admin picks a tab themselves.
+  const activeTab = tab ?? defaultTab(counts);
+  const visible = useMemo(
+    () =>
+      applications.filter((application) =>
+        matchesFilters(application, { tab: activeTab, kind, notReachedOnly })
+      ),
+    [applications, activeTab, kind, notReachedOnly]
+  );
+  const filtersActive = kind !== "all" || notReachedOnly || activeTab !== "all";
+  const resetFilters = () => {
+    setTab("all");
+    setKind("all");
+    setNotReachedOnly(false);
+  };
 
   const dateLocale = locale === "fr" ? fr : enUS;
 
@@ -73,27 +104,7 @@ export function CarrierApplicationsList({
   // Column definitions for TanStack Table
   const columns: ColumnDef<CarrierApplication>[] = useMemo(
     () => [
-      {
-        accessorKey: "companyName",
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} title={t("table.company")} />
-        ),
-        cell: ({ row }) => (
-          <div>
-            <div className="font-medium">{row.original.companyName}</div>
-            <div className="text-xs font-mono text-muted-foreground">
-              {row.original.siret}
-            </div>
-          </div>
-        ),
-        filterFn: (row, id, filterValue) => {
-          const value = (filterValue as string).toLowerCase();
-          const { companyName, siret, user } = row.original;
-          return [companyName, siret, user.name, user.email].some((field) =>
-            field.toLowerCase().includes(value)
-          );
-        },
-      },
+      // The person leads: it is a driver the admin is managing, not a company.
       {
         accessorKey: "user",
         header: ({ column }) => (
@@ -125,6 +136,63 @@ export function CarrierApplicationsList({
         ),
       },
       {
+        accessorKey: "kind",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title={t("table.type")} />
+        ),
+        cell: ({ row }) => (
+          <Badge variant="outline">{t(`detail.kind.${row.original.kind}`)}</Badge>
+        ),
+      },
+      {
+        accessorKey: "companyName",
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title={t("table.company")} />
+        ),
+        cell: ({ row }) => (
+          <div>
+            {/* An in-house driver has no company and no SIRET: say what they are. */}
+            <div className="font-medium">
+              {row.original.kind === "private"
+                ? t("table.inHouse")
+                : row.original.companyName}
+            </div>
+            <div className="text-xs font-mono text-muted-foreground">
+              {row.original.siret ?? ""}
+            </div>
+          </div>
+        ),
+        filterFn: (row, id, filterValue) => {
+          const value = (filterValue as string).toLowerCase();
+          const { companyName, siret, user } = row.original;
+          return [companyName, siret ?? "", user.name, user.email].some((field) =>
+            field.toLowerCase().includes(value)
+          );
+        },
+      },
+      {
+        id: "contact",
+        header: () => t("table.contact"),
+        cell: ({ row }) => {
+          // Only meaningful while the file waits for a decision.
+          const waiting =
+            row.original.status === "submitted" ||
+            row.original.status === "under_review";
+          if (!waiting) return <span className="text-muted-foreground">—</span>;
+          return row.original.contactConfirmedAt ? (
+            <span className="inline-flex items-center gap-1 text-sm text-green-600 dark:text-green-500">
+              <Check className="w-4 h-4" />
+              {t("table.reached")}
+            </span>
+          ) : (
+            <span className="text-sm text-amber-600 dark:text-amber-500">
+              {t("table.notReached")}
+            </span>
+          );
+        },
+        enableSorting: false,
+      },
+      {
         accessorKey: "city",
         header: ({ column }) => (
           <DataTableColumnHeader column={column} title={t("table.city")} />
@@ -152,11 +220,14 @@ export function CarrierApplicationsList({
         header: ({ column }) => (
           <DataTableColumnHeader column={column} title={t("table.documents")} />
         ),
-        cell: ({ row }) => (
-          <span>
-            {t("table.documentCount", { count: row.original.documents.length })}
-          </span>
-        ),
+        cell: ({ row }) => {
+          const { accepted, total } = documentProgress(row.original);
+          return total === 0 ? (
+            <span className="text-muted-foreground">—</span>
+          ) : (
+            <span>{t("table.documentProgress", { accepted, total })}</span>
+          );
+        },
         enableSorting: false,
       },
       {
@@ -181,6 +252,7 @@ export function CarrierApplicationsList({
             <Button
               variant="ghost"
               size="icon"
+              aria-label={t("table.open")}
               onClick={(e) => {
                 // The row itself opens the same detail on click; without this
                 // the button's own click would bubble up and fire it twice.
@@ -209,45 +281,68 @@ export function CarrierApplicationsList({
 
   return (
     <div className="space-y-4">
-      <Select
-        value={status}
-        onValueChange={(value) => setStatus(value as CarrierApplicationFilter)}
-      >
-        <SelectTrigger
-          className="w-[200px]"
-          aria-label={t("table.filterLabel")}
-        >
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value={ALL_STATUSES}>{t("table.filterAll")}</SelectItem>
-          {CARRIER_APPLICATION_STATUSES.map((value) => (
-            <SelectItem key={value} value={value}>
-              {t(`status.${value}`)}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        {/* One scrolling row: six tabs do not fit a phone. */}
+        <div className="overflow-x-auto">
+          <Tabs value={activeTab} onValueChange={(v) => setTab(v as DriverTab)}>
+            <TabsList>
+              {DRIVER_TABS.map((value) => (
+                <TabsTrigger key={value} value={value} className="gap-2 px-3">
+                  {t(`tabs.${value}`)}
+                  <span className="text-muted-foreground text-xs tabular-nums">
+                    {counts[value]}
+                  </span>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Select value={kind} onValueChange={(v) => setKind(v as KindFilter)}>
+            <SelectTrigger className="w-[180px]" aria-label={t("table.kindFilterLabel")}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t("table.kindAll")}</SelectItem>
+              <SelectItem value="private">{t("detail.kind.private")}</SelectItem>
+              <SelectItem value="professional">{t("detail.kind.professional")}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            variant={notReachedOnly ? "default" : "outline"}
+            aria-pressed={notReachedOnly}
+            onClick={() => setNotReachedOnly((on) => !on)}
+          >
+            {t("table.notReachedOnly")}
+          </Button>
+        </div>
+      </div>
 
       {isLoading ? (
         <PageLoader />
       ) : error ? (
         <LoadErrorState onRetry={() => void refetch()} />
-      ) : applications.length === 0 ? (
+      ) : visible.length === 0 ? (
         <CenteredEmptyState
           icon={Inbox}
           title={t("table.empty.title")}
           description={
-            status === ALL_STATUSES
+            applications.length === 0
               ? t("table.empty.descriptionAll")
               : t("table.empty.description")
           }
           variant="page"
-        />
+        >
+          {applications.length > 0 && filtersActive && (
+            <Button variant="outline" onClick={resetFilters}>
+              {t("table.resetFilters")}
+            </Button>
+          )}
+        </CenteredEmptyState>
       ) : (
         <DataTable
           columns={columns}
-          data={applications}
+          data={visible}
           searchKey="companyName"
           searchPlaceholder={t("table.searchPlaceholder")}
           tableMinHeight={tableMinHeight}
@@ -268,6 +363,8 @@ export function CarrierApplicationsList({
               onSuspend={suspendCarrierAccount}
               onSetAvailability={setAvailability}
               onSetContactConfirmed={setContactConfirmed}
+              onSaveFile={saveFile}
+              onAddVehicle={addVehicle}
               onDeregister={deregisterCarrierAccount}
               onReinstate={reinstateCarrierAccount}
               onDone={handleDetailDone}
