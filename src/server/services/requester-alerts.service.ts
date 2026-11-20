@@ -1,3 +1,4 @@
+import { appUrl } from "@/lib/app-url";
 import { carriersDal } from "@/server/dal/carriers.dal";
 import { messagesDAL } from "@/server/dal/messages.dal";
 import { getUserById } from "@/server/dal/users.dal";
@@ -15,7 +16,6 @@ import { MESSAGE_ALERT_QUIET_MS } from "@/server/services/driver-alerts.service"
  * never fails the message that triggered it.
  */
 
-const appUrl = () => process.env.NEXT_PUBLIC_APP_URL ?? "https://expeditoo.com";
 
 export interface RequesterAlertResult {
   email: boolean;

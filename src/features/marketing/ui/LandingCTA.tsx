@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import { LandingGatedButton } from "./LandingGatedButton";
 import { LP_BTN_GHOST, LP_BTN_PRIMARY, LP_CONTAINER, LP_SECTION } from "./styles";
 
-const CARRIER_EMAIL = "transporteurs@expeditoo.com";
+const CARRIER_EMAIL = "transporteurs@expeditop.fr";
 
 export function LandingCTA() {
   const t = useTranslations("marketing.cta");

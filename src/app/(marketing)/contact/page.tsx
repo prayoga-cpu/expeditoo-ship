@@ -15,9 +15,9 @@ import {
  * and gave a visitor without one no way through at all.
  */
 const CHANNELS = [
-  { key: "support", address: "support@expeditoo.com" },
-  { key: "carriers", address: "transporteurs@expeditoo.com" },
-  { key: "privacy", address: "privacy@expeditoo.com" },
+  { key: "support", address: "support@expeditop.fr" },
+  { key: "carriers", address: "transporteurs@expeditop.fr" },
+  { key: "privacy", address: "privacy@expeditop.fr" },
 ] as const;
 
 export default function ContactPage() {

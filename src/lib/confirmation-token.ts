@@ -1,3 +1,4 @@
+import { appUrl } from "@/lib/app-url";
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 /**
@@ -135,6 +136,6 @@ export function confirmationUrl(
   const token = mintConfirmationToken(shipmentId, milestone);
   if (!token) return null;
 
-  const base = process.env.NEXT_PUBLIC_APP_URL || "https://expeditoo.com";
+  const base = appUrl();
   return `${base.replace(/\/$/, "")}/confirm/${token}`;
 }

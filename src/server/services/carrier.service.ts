@@ -1,3 +1,4 @@
+import { appUrl } from "@/lib/app-url";
 import { nanoid } from "nanoid";
 import { db } from "@/db";
 import { carriersDal } from "@/server/dal/carriers.dal";
@@ -883,7 +884,7 @@ async function alertAdminsOfApplication(carrier: Carrier) {
   const admins = (await usersDal.getUsersByRole("admin")).filter(Boolean);
   const applicant = await usersDal.getUserById(carrier.userId);
   const applicantName = applicant?.name || carrier.companyName;
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://expeditoo.com";
+  const base = appUrl();
   const reviewUrl = `${base}/admin/drivers?tab=applications`;
 
   await Promise.allSettled(
@@ -920,7 +921,7 @@ async function tellApplicantWhatIsMissing(carrier: Carrier) {
   if (missing.length === 0) return;
 
   const labels = missing.map((kind) => DOCUMENT_LABELS[kind]);
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://expeditoo.com";
+  const base = appUrl();
 
   await Promise.allSettled([
     notificationsService.createNotification({

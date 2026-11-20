@@ -148,7 +148,7 @@ describe('GET /api/expedion/files/:id', () => {
         // No bearer token at all: the admin dialog renders `<img>`/`<iframe>`
         // same-origin, and cannot attach a header to either.
         getSessionMock.mockResolvedValue({
-            user: { id: 'operator_9', email: 'ops@expeditoo.com', emailVerified: true },
+            user: { id: 'operator_9', email: 'ops@expeditop.fr', emailVerified: true },
         } as never);
         const usersDal = await import('@/server/dal/users.dal');
         vi.mocked(usersDal.userHasRole).mockResolvedValue(true as never);

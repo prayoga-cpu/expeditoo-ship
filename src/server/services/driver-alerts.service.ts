@@ -1,3 +1,4 @@
+import { appUrl } from "@/lib/app-url";
 import { carriersDal } from "@/server/dal/carriers.dal";
 import { messagesDAL } from "@/server/dal/messages.dal";
 import { getUserById } from "@/server/dal/users.dal";
@@ -22,7 +23,6 @@ import type { DriverAlertEmailProps } from "@/server/emails/DriverAlertEmail";
 /** A burst of messages is one alert: none within this long of the last. */
 export const MESSAGE_ALERT_QUIET_MS = 30 * 60 * 1000;
 
-const appUrl = () => process.env.NEXT_PUBLIC_APP_URL ?? "https://expeditoo.com";
 
 export interface AlertResult {
   sms: boolean;

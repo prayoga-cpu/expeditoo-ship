@@ -90,7 +90,7 @@ function PlatformPreview() {
         ))}
         <span className="ml-2.5 flex h-[22px] flex-1 items-center rounded-md border border-[var(--lp-line)] bg-[var(--lp-chip)] px-2.5">
           <span className="font-mono text-[10px] text-[var(--lp-faint)]">
-            expeditoo.com/courses
+            expeditop.fr/courses
           </span>
         </span>
       </div>

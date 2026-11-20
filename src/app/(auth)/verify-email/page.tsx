@@ -205,7 +205,7 @@ function VerifyEmailContent() {
         <p className="text-center text-muted-foreground text-sm mt-6">
           {t("needHelp")}{" "}
           <a
-            href="mailto:support@expeditoo.fr"
+            href="mailto:support@expeditop.fr"
             className="text-primary hover:text-primary/80 font-medium"
           >
             {t("contactSupport")}

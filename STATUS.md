@@ -1010,6 +1010,51 @@ than leaving it in a chat message.
 
 ---
 
+## ✅ 2026-11-20 — Production moves to www.expeditop.fr (2.90.1)
+
+*« we just got the new domain, setup, configure and rename everything … especially the auth and any env on production ».*
+
+Spec `docs/specs/domain_expeditop_fr_spec.md`, plan `docs/plans/plan_domain_expeditop_fr.md`. No migration.
+
+**What was found.** The domain is **expeditop.fr** (Cloudflare DNS) — *not* the `expeditoo.fr` / `expeditoo.com`
+the code and copy named, which belong to third parties (OVH). Vercel was already wired when this started:
+`www.expeditop.fr` production, apex and `expeditop.com` 308 to it, **`expeditoo-ship-five.vercel.app` 307s to it**.
+The linked `.vercel/project.json` id (`prj_WeefNii…`) is not visible to the connected Vercel account; the
+project is `prj_emKQW31…` in team Epidom, so that file is stale. The CLI session is logged out
+(`Not authorized`); the Vercel MCP did the work instead.
+
+**Changed.** `src/lib/app-url.ts` is the one owner of the origin; twelve files that pasted
+`NEXT_PUBLIC_APP_URL || "https://expeditoo.com"` use `appUrl()`. Mailboxes and the site name are renamed in code and
+FR/EN copy. `auth-preflight.mjs`, the route-planner User-Agent and `.env.example` point at the new host. The
+brand « Expeditoo » is unchanged. Production: Vercel `NEXT_PUBLIC_APP_URL` → `https://www.expeditop.fr`
+(production + preview; it is **Sensitive**, so it cannot be read back — verify by behaviour after the redeploy),
+GitHub `APP_URL` → the same. `EMAIL_FROM` and `EXPEDION_APP_ORIGINS` deliberately untouched (spec §3).
+
+**Auth, why the variable matters.** Better Auth builds the Google redirect URI and the e-mailed verify/reset
+links from `baseURL`; `VERCEL_PROJECT_PRODUCTION_URL` is Vercel's pick among the domains and may be a redirecting
+one. The browser client already uses `window.location.origin`. Sessions are host-only on `www`, so everyone signs
+in once more.
+
+### Operator to-do — in this order, **before** the redeploy
+
+- [ ] **Google Cloud Console** → OAuth client → add redirect URI `https://www.expeditop.fr/api/auth/callback/google`
+      and JS origin `https://www.expeditop.fr`. Otherwise Google sign-in fails with `redirect_uri_mismatch` on the new build.
+- [ ] **Stripe** → webhook endpoint → `https://www.expeditop.fr/api/stripe/webhook`; register the new host for Apple Pay.
+      **Already failing today if the endpoint still names the `.vercel.app` host:** Stripe does not follow the 307.
+      (Alternative until then: set `expeditoo-ship-five.vercel.app` to serve Production instead of redirecting.)
+- [ ] **Redeploy Production** (`NEXT_PUBLIC_APP_URL` is inlined at build), then sign in with e-mail **and** Google on
+      `www.expeditop.fr`, and run Actions → *Auth preflight*.
+- [ ] **Resend** → verify `expeditop.fr` (records in Cloudflare), then `EMAIL_FROM` = `Expeditoo <no-reply@expeditop.fr>`.
+- [ ] **Mailboxes** → give `support@`, `drivers@`, `transporteurs@`, `privacy@`, `contact@`, `facturation@expeditop.fr`
+      a destination (Cloudflare Email Routing), or mail to them bounces.
+- [ ] **`expedion_encheres`** → its payment server's `EXPEDION_API_BASE_URL` and the release default in
+      `lib/backend/expedion_api/expedion_config.dart` still say `expeditoo-ship-five.vercel.app`.
+- [ ] Re-link the CLI: `vercel login`, then `vercel link --project expeditoo-ship --scope epidom` (replaces the stale `.vercel/project.json`).
+
+Gates: `tsc --noEmit` 0 errors · 2,389 unit tests in `src/lib`, `src/server`, `src/app`, `src/features/marketing` pass.
+
+---
+
 ## ✅ 2026-11-17 — Known gaps closed: untranslated screens, in-house chat quotes, live runs (2.90.0)
 
 *« finish up the known gaps that still open ».*

@@ -72,7 +72,7 @@ export default function HelpPage() {
               {t("emailSupport.description")}
             </p>
             <Button variant="outline" className="w-full" asChild>
-              <a href="mailto:support@expeditoo.com">support@expeditoo.com</a>
+              <a href="mailto:support@expeditop.fr">support@expeditop.fr</a>
             </Button>
           </CardContent>
         </Card>

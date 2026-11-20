@@ -1,3 +1,4 @@
+import { appUrl } from "@/lib/app-url";
 import { resend, sendViaResend, EMAIL_FROM } from "@/lib/email";
 import { SendEmailSchema, type SendEmailInput } from "@/server/dto/email.dto";
 import { WelcomeEmail } from "@/server/emails/WelcomeEmail";
@@ -95,7 +96,7 @@ export const emailService = {
     orderId: string,
     deliveryAddress: string
   ) {
-    const paymentUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://expeditoo.com"}/deliveries/${orderId}`;
+    const paymentUrl = `${appUrl()}/deliveries/${orderId}`;
 
     const emailHtml = await render(
       OrderConfirmationEmail({

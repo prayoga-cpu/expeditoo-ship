@@ -14,6 +14,20 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.90.1] - 2026-11-20 · infra
+
+- **EXPEDITOO now lives at www.expeditop.fr.** The address is ours: links in
+  e-mails and notifications (receipts, shipment updates, offers, payouts, the
+  welcome message, the confirmation link sent to a client) open there, and
+  expeditop.fr takes you to the same place. Signing in works from the new
+  address, so you will be asked to sign in once more.
+- **Contact addresses follow the domain.** Support, drivers, carriers, privacy
+  and billing now read `…@expeditop.fr` on the help pages, the contact page, the
+  legal notice, the terms and the privacy notice, in French and English.
+- **A link can no longer point at someone else's site.** When the app's address
+  was not configured, e-mail links fell back to a domain that was never ours;
+  they now fall back to expeditop.fr.
+
 ## [2.90.0] - 2026-11-17 · ux
 
 - **The driver help page is in French.** « Assistance chauffeur » — the operations

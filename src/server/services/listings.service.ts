@@ -1,3 +1,4 @@
+import { appUrl } from "@/lib/app-url";
 import { nanoid } from "nanoid";
 import { listingPinsService } from "@/server/services/listing-pins.service";
 import { db } from "@/db";
@@ -897,7 +898,7 @@ async function sendListingPostedEmail(listing: Listing, shipperId: string) {
     pickupCity: listing.pickupCity,
     dropoffCity: listing.dropoffCity,
     budgetLabel: formatCurrency(listing.budgetCents),
-    listingUrl: `${process.env.NEXT_PUBLIC_APP_URL ?? "https://expeditoo.com"}/listing/${listing.id}`,
+    listingUrl: `${appUrl()}/listing/${listing.id}`,
   });
 }
 

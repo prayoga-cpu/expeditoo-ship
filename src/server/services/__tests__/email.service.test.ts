@@ -88,7 +88,7 @@ describe('emailService', () => {
                 pickupCity: 'Lyon',
                 dropoffCity: 'Marseille',
                 budgetLabel: '250,00 €',
-                listingUrl: 'https://expeditoo.com/listing/job-1',
+                listingUrl: 'https://www.expeditop.fr/listing/job-1',
             });
 
             expect(mocks.render).toHaveBeenCalled();

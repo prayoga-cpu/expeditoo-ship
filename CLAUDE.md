@@ -282,7 +282,11 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
   once per day). Repo variable `APP_URL` and secret `CRON_SECRET` set on 2026-10-30;
   **running in production since then** (Admin → Paramètres → « Tâches planifiées »).
 - **Mail** goes out from `no-reply@prionation.io` (owner's domain, verified in Resend,
-  `EMAIL_FROM` in Vercel Production since 2026-10-30) until the client buys expeditoo.fr.
+  `EMAIL_FROM` in Vercel Production since 2026-10-30) until Resend verifies the client's
+  domain. **The domain is `expeditop.fr` (bought 2026-11-20), served at `https://www.expeditop.fr`** —
+  not `expeditoo.fr`/`.com`, which belong to third parties. `appUrl()` in `src/lib/app-url.ts`
+  owns the origin; `NEXT_PUBLIC_APP_URL` (Vercel, Sensitive) must name it
+  (`docs/specs/domain_expeditop_fr_spec.md`).
 - Theme-aware loader (light/dark `.lottie` cuts, picked by `resolvedTheme`); one shared
   `BrandWordmark` lockup across sidebar, mobile header and marketing
 - FR/EN parity exact, verified by key diff rather than by eye (a leaf count is

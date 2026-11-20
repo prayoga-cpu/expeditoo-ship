@@ -2412,8 +2412,8 @@
         "message": "Message",
         "send": "Send message",
         "sending": "Sending…",
-        "failed": "Your message could not be sent. Please try again, or write to support@expeditoo.com directly.",
-        "rateLimited": "Too many messages from this connection. Please wait a few minutes and try again, or write to support@expeditoo.com directly.",
+        "failed": "Your message could not be sent. Please try again, or write to support@expeditop.fr directly.",
+        "rateLimited": "Too many messages from this connection. Please wait a few minutes and try again, or write to support@expeditop.fr directly.",
         "privacyNote": "We use your address to reply and nothing else.",
         "successTitle": "Message sent",
         "successBody": "Thank you — we have it. We will reply to {email}, usually within one working day. If you have an Expeditoo account, the message is also in your support thread inside the app.",
@@ -2440,14 +2440,14 @@
     "legalNotice": {
       "eyebrow": "LEGAL NOTICE",
       "title": "Legal notice",
-      "intro": "Publication and hosting information for expeditoo.com, as required by French law.",
+      "intro": "Publication and hosting information for expeditop.fr, as required by French law.",
       "identityTitle": "Publisher",
       "pendingNote": "The values shown as placeholders above have not yet been supplied. This page is not complete until every one of them is replaced with the registered details.",
       "lastUpdated": "LAST UPDATED — 22 AUGUST 2026",
       "identity": [
         {
           "label": "Site",
-          "value": "expeditoo.com"
+          "value": "expeditop.fr"
         },
         {
           "label": "Publisher",
@@ -2499,7 +2499,7 @@
         },
         {
           "label": "Contact",
-          "value": "contact@expeditoo.com"
+          "value": "contact@expeditop.fr"
         },
         {
           "label": "Host",
@@ -2512,7 +2512,7 @@
         {
           "title": "Purpose of the site",
           "paragraphs": [
-            "expeditoo.com is the carrier-side platform of the Expedion group. It lets verified individual carriers bid on transport jobs escalated from Expedion, and lets operators award those jobs.",
+            "expeditop.fr is the carrier-side platform of the Expedion group. It lets verified individual carriers bid on transport jobs escalated from Expedion, and lets operators award those jobs.",
             "The site does not sell goods and hosts no auction of goods. The only auction it operates is a reverse auction on the price of a transport job, between carriers."
           ]
         },
@@ -2527,7 +2527,7 @@
           "title": "Personal data",
           "paragraphs": [
             "Processing of personal data is described in the privacy policy, which sets out what is collected, why, how long it is kept and how to exercise your rights under the GDPR.",
-            "Requests relating to your data go to privacy@expeditoo.com."
+            "Requests relating to your data go to privacy@expeditop.fr."
           ]
         },
         {
@@ -2557,13 +2557,13 @@
     "terms": {
       "eyebrow": "TERMS",
       "title": "Terms of service",
-      "intro": "The rules that govern the use of expeditoo.com by carriers, operators and anyone else who accesses it.",
+      "intro": "The rules that govern the use of expeditop.fr by carriers, operators and anyone else who accesses it.",
       "lastUpdated": "LAST UPDATED — 22 AUGUST 2026",
       "sections": [
         {
           "title": "Acceptance",
           "paragraphs": [
-            "Using expeditoo.com means accepting these terms in full. If you do not accept them, do not use the platform.",
+            "Using expeditop.fr means accepting these terms in full. If you do not accept them, do not use the platform.",
             "We may change these terms. Continuing to use the platform after a change means accepting the amended version."
           ]
         },
@@ -2644,7 +2644,7 @@
           "title": "Governing law",
           "paragraphs": [
             "These terms are governed by French law, and any dispute falls to the competent French courts.",
-            "Questions about these terms go to support@expeditoo.com."
+            "Questions about these terms go to support@expeditop.fr."
           ]
         }
       ]
@@ -2659,7 +2659,7 @@
           "title": "Who is responsible",
           "paragraphs": [
             "The publisher named in the legal notice is the data controller for the processing described here.",
-            "For any question or request about your data, write to privacy@expeditoo.com."
+            "For any question or request about your data, write to privacy@expeditop.fr."
           ]
         },
         {
@@ -2721,7 +2721,7 @@
             "Under the GDPR you may ask for access to your data, correction of it, its deletion, a portable copy of it, restriction of processing, or you may object to processing based on our legitimate interest."
           ],
           "items": [
-            "Write to privacy@expeditoo.com; we answer within one month",
+            "Write to privacy@expeditop.fr; we answer within one month",
             "You may also complain to the CNIL, the French data protection authority",
             "Deletion is subject to records we are legally obliged to keep, such as accounting records for a completed delivery"
           ]

@@ -36,7 +36,7 @@ await resend.emails.send({
   to: "user@example.com",
   subject: "Verify your EXPEDITOO account",
   react: VerificationEmail({
-    verificationUrl: "https://expeditoo.com/verify?token=...",
+    verificationUrl: "https://www.expeditop.fr/verify?token=...",
     userName: "John",
   }),
 });
@@ -47,7 +47,7 @@ await resend.emails.send({
   to: "user@example.com",
   subject: "Reset your EXPEDITOO password",
   react: PasswordResetEmail({
-    resetUrl: "https://expeditoo.com/reset?token=...",
+    resetUrl: "https://www.expeditop.fr/reset?token=...",
     userName: "John",
   }),
 });

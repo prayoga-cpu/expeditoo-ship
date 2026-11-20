@@ -89,7 +89,7 @@ export function LandingFooter() {
               {t("tagline")}
             </span>
             <span className="font-mono text-[11px] tracking-[0.14em] text-[var(--lp-faint)]">
-              EXPEDITOO.COM
+              EXPEDITOP.FR
             </span>
           </div>
           {COLUMNS.map((column) => (

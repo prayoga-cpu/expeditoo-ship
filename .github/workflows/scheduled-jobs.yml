@@ -7,7 +7,7 @@ name: Scheduled jobs
 # `src/lib/cron-auth.ts` expects from Vercel Cron.
 #
 # Requires, in repo Settings:
-#   - Variables → APP_URL       e.g. https://expeditoo.vercel.app  (no trailing slash)
+#   - Variables → APP_URL       e.g. https://www.expeditop.fr  (no trailing slash)
 #   - Secrets   → CRON_SECRET   the same value set in the Vercel project env
 #
 # Caveat: GitHub delays scheduled runs under load (minutes, occasionally more),

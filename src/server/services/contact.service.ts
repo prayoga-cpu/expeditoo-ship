@@ -34,7 +34,7 @@ export interface ContactContext {
 
 /** Where enquiries land. Overridable so a preview deploy can point elsewhere. */
 function contactInbox(): string {
-  return process.env.CONTACT_INBOX_EMAIL || "support@expeditoo.com";
+  return process.env.CONTACT_INBOX_EMAIL || "support@expeditop.fr";
 }
 
 function threadUrl(conversationId: string): string | undefined {

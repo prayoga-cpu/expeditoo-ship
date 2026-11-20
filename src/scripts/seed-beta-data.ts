@@ -62,7 +62,7 @@ const SHIPPER_EMAIL =
   process.env.BETA_SHIPPER_EMAIL ?? "prayogadevelopment+expeditootest@gmail.com";
 const CARRIER_EMAIL =
   process.env.BETA_CARRIER_EMAIL ?? "prayogadevelopment+expeditoocarrier2@gmail.com";
-const SYSTEM_EMAIL = process.env.BETA_SYSTEM_EMAIL ?? "system+expedion@expeditoo.com";
+const SYSTEM_EMAIL = process.env.BETA_SYSTEM_EMAIL ?? "system+expedion@expeditop.fr";
 
 type UserRow = typeof user.$inferSelect;
 type ListingRow = typeof listings.$inferSelect;

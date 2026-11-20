@@ -56,7 +56,7 @@ describe('expedionFileIdFromUrl', () => {
     // primary-key lookup, so a miss is a 404 and nothing is traversed.
     it('resolves dot segments to a plain id', () => {
         expect(
-            expedionFileIdFromUrl('https://expeditoo.com/api/expedion/files/abc/../x')
+            expedionFileIdFromUrl('https://www.expeditop.fr/api/expedion/files/abc/../x')
         ).toBe('x');
     });
 
@@ -84,9 +84,9 @@ describe('expedionFileUrl', () => {
     });
 
     it('does not double a trailing slash on the configured base', () => {
-        vi.stubEnv('NEXT_PUBLIC_APP_URL', 'https://expeditoo.com/');
+        vi.stubEnv('NEXT_PUBLIC_APP_URL', 'https://www.expeditop.fr/');
         expect(expedionFileUrl('abc123')).toBe(
-            'https://expeditoo.com/api/expedion/files/abc123'
+            'https://www.expeditop.fr/api/expedion/files/abc123'
         );
     });
 });

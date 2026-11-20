@@ -1,3 +1,4 @@
+import { appUrl } from "@/lib/app-url";
 import { render } from "@react-email/components";
 
 import type { InvoiceIssuer } from "@/lib/invoice-issuer";
@@ -59,7 +60,7 @@ export async function invoiceDocumentEmail(
       isCreditNote,
       jobTitle: invoice.payment?.listing?.title ?? null,
       correctsDocumentNumber: props.correctsDocumentNumber ?? null,
-      invoicesUrl: `${process.env.NEXT_PUBLIC_APP_URL ?? "https://expeditoo.com"}/profile/invoices`,
+      invoicesUrl: `${appUrl()}/profile/invoices`,
     })
   );
 

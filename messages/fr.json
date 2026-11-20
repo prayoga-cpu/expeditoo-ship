@@ -2441,8 +2441,8 @@
         "message": "Message",
         "send": "Envoyer le message",
         "sending": "Envoi…",
-        "failed": "Votre message n'a pas pu être envoyé. Réessayez, ou écrivez directement à support@expeditoo.com.",
-        "rateLimited": "Trop de messages depuis cette connexion. Patientez quelques minutes avant de réessayer, ou écrivez directement à support@expeditoo.com.",
+        "failed": "Votre message n'a pas pu être envoyé. Réessayez, ou écrivez directement à support@expeditop.fr.",
+        "rateLimited": "Trop de messages depuis cette connexion. Patientez quelques minutes avant de réessayer, ou écrivez directement à support@expeditop.fr.",
         "privacyNote": "Nous utilisons votre adresse pour vous répondre, rien d'autre.",
         "successTitle": "Message envoyé",
         "successBody": "Merci, nous l'avons bien reçu. Nous répondrons à {email}, en général sous un jour ouvré. Si vous avez un compte Expeditoo, le message figure aussi dans votre fil de support dans l'application.",
@@ -2469,14 +2469,14 @@
     "legalNotice": {
       "eyebrow": "MENTIONS LÉGALES",
       "title": "Mentions légales",
-      "intro": "Informations relatives à l'édition et à l'hébergement de expeditoo.com, conformément à la loi française.",
+      "intro": "Informations relatives à l'édition et à l'hébergement de expeditop.fr, conformément à la loi française.",
       "identityTitle": "Éditeur",
       "pendingNote": "Les valeurs affichées ci-dessus comme à compléter n'ont pas encore été fournies. Cette page n'est pas complète tant que chacune n'a pas été remplacée par les informations d'immatriculation réelles.",
       "lastUpdated": "DERNIÈRE MISE À JOUR — 22 AOÛT 2026",
       "identity": [
         {
           "label": "Site",
-          "value": "expeditoo.com"
+          "value": "expeditop.fr"
         },
         {
           "label": "Éditeur",
@@ -2528,7 +2528,7 @@
         },
         {
           "label": "Contact",
-          "value": "contact@expeditoo.com"
+          "value": "contact@expeditop.fr"
         },
         {
           "label": "Hébergeur",
@@ -2541,7 +2541,7 @@
         {
           "title": "Objet du site",
           "paragraphs": [
-            "expeditoo.com est la plateforme transporteurs du groupe Expedion. Elle permet à des transporteurs indépendants vérifiés d'enchérir sur des courses escaladées depuis Expedion, et à des opérateurs de les attribuer.",
+            "expeditop.fr est la plateforme transporteurs du groupe Expedion. Elle permet à des transporteurs indépendants vérifiés d'enchérir sur des courses escaladées depuis Expedion, et à des opérateurs de les attribuer.",
             "Le site ne vend aucune marchandise et n'héberge aucune vente aux enchères de biens. La seule enchère qu'il opère est une enchère inversée sur le prix d'une course, entre transporteurs."
           ]
         },
@@ -2556,7 +2556,7 @@
           "title": "Données personnelles",
           "paragraphs": [
             "Le traitement des données personnelles est décrit dans la politique de confidentialité, qui précise ce qui est collecté, pourquoi, pendant combien de temps, et comment exercer vos droits au titre du RGPD.",
-            "Les demandes relatives à vos données sont à adresser à privacy@expeditoo.com."
+            "Les demandes relatives à vos données sont à adresser à privacy@expeditop.fr."
           ]
         },
         {
@@ -2586,13 +2586,13 @@
     "terms": {
       "eyebrow": "CONDITIONS",
       "title": "Conditions générales d'utilisation",
-      "intro": "Les règles qui encadrent l'utilisation de expeditoo.com par les transporteurs, les opérateurs et toute personne y accédant.",
+      "intro": "Les règles qui encadrent l'utilisation de expeditop.fr par les transporteurs, les opérateurs et toute personne y accédant.",
       "lastUpdated": "DERNIÈRE MISE À JOUR — 22 AOÛT 2026",
       "sections": [
         {
           "title": "Acceptation",
           "paragraphs": [
-            "Utiliser expeditoo.com vaut acceptation pleine et entière des présentes conditions. Si vous ne les acceptez pas, n'utilisez pas la plateforme.",
+            "Utiliser expeditop.fr vaut acceptation pleine et entière des présentes conditions. Si vous ne les acceptez pas, n'utilisez pas la plateforme.",
             "Nous pouvons modifier ces conditions. Continuer à utiliser la plateforme après une modification vaut acceptation de la version modifiée."
           ]
         },
@@ -2673,7 +2673,7 @@
           "title": "Droit applicable",
           "paragraphs": [
             "Les présentes conditions sont régies par le droit français, et tout litige relève des juridictions françaises compétentes.",
-            "Les questions relatives aux présentes conditions sont à adresser à support@expeditoo.com."
+            "Les questions relatives aux présentes conditions sont à adresser à support@expeditop.fr."
           ]
         }
       ]
@@ -2688,7 +2688,7 @@
           "title": "Qui est responsable",
           "paragraphs": [
             "L'éditeur désigné dans les mentions légales est le responsable de traitement pour les traitements décrits ici.",
-            "Pour toute question ou demande relative à vos données, écrivez à privacy@expeditoo.com."
+            "Pour toute question ou demande relative à vos données, écrivez à privacy@expeditop.fr."
           ]
         },
         {
@@ -2750,7 +2750,7 @@
             "Au titre du RGPD, vous pouvez demander l'accès à vos données, leur rectification, leur effacement, une copie portable, la limitation du traitement, ou vous opposer à un traitement fondé sur notre intérêt légitime."
           ],
           "items": [
-            "Écrivez à privacy@expeditoo.com ; nous répondons sous un mois",
+            "Écrivez à privacy@expeditop.fr ; nous répondons sous un mois",
             "Vous pouvez également saisir la CNIL, l'autorité française de protection des données",
             "L'effacement s'entend sous réserve des enregistrements que la loi nous oblige à conserver, comme la comptabilité d'une livraison réalisée"
           ]

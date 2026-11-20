@@ -21,7 +21,7 @@ describe("resolveIdentityRows", () => {
     expect(byField.legalName).toMatchObject({ value: "Atout Global Services", pending: false });
     expect(byField.siret).toMatchObject({ value: "12345678900012", pending: false });
     expect(byField.capital.pending).toBe(true);
-    expect(byField.Site.value).toBe("expeditoo.com");
+    expect(byField.Site.value).toBe("expeditop.fr");
   });
 
   it("changes nothing when the identity could not be read", () => {

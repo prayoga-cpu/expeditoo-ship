@@ -38,7 +38,7 @@ export class RoutePlanError extends Error {
 const DEFAULT_ROUTE_URL = "https://valhalla1.openstreetmap.de/route";
 const TIMEOUT_MS = 20_000;
 /** FOSSGIS asks every caller to name itself. */
-const USER_AGENT = "Expeditoo route planner (+https://expeditoo-ship-five.vercel.app)";
+const USER_AGENT = "Expeditoo route planner (+https://www.expeditop.fr)";
 
 /** The endpoint, with the hosted provider's key when there is one. */
 export function routeEndpoint(): string {

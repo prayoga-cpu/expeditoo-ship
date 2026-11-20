@@ -1,3 +1,4 @@
+import { appUrl } from "@/lib/app-url";
 import {
     Body,
     Container,
@@ -92,7 +93,7 @@ export const PaymentReceiptEmail = ({
 
                         <Section className="text-center mt-[32px] mb-[32px]">
                             <Link
-                                href={`${process.env.NEXT_PUBLIC_APP_URL || "https://expeditoo.com"}/deliveries`}
+                                href={`${appUrl()}/deliveries`}
                                 className="bg-[#000000] rounded text-white text-[12px] font-semibold no-underline text-center px-5 py-3"
                             >
                                 Track Your Order

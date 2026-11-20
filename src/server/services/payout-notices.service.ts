@@ -1,3 +1,4 @@
+import { appUrl } from "@/lib/app-url";
 import { getUserById } from "@/server/dal/users.dal";
 import { emailService } from "@/server/services/email.service";
 import { notificationsService } from "@/server/services/notifications.service";
@@ -13,7 +14,7 @@ import { formatCurrency } from "@/lib/currency";
  */
 
 const earningsUrl = () =>
-  `${process.env.NEXT_PUBLIC_APP_URL ?? "https://expeditoo.com"}/carrier/withdrawals`;
+  `${appUrl()}/carrier/withdrawals`;
 
 async function send(
   carrierUserId: string,

@@ -148,7 +148,7 @@ describe("the covering email", () => {
         amountLabel: "180.00 €",
         isCreditNote: false,
         jobTitle: "Palette Lyon → Paris",
-        invoicesUrl: "https://expeditoo.com/profile/invoices",
+        invoicesUrl: "https://www.expeditop.fr/profile/invoices",
       })
     );
 
@@ -166,7 +166,7 @@ describe("the covering email", () => {
         amountLabel: "− 180.00 €",
         isCreditNote: true,
         jobTitle: null,
-        invoicesUrl: "https://expeditoo.com/profile/invoices",
+        invoicesUrl: "https://www.expeditop.fr/profile/invoices",
       })
     );
 

@@ -110,7 +110,7 @@ export function invoiceIssuer(stored?: StoredIssuer | null): InvoiceIssuer {
     vatNumber,
     email:
       either(stored?.billingEmail, env.INVOICE_ISSUER_EMAIL) ??
-      "facturation@expeditoo.com",
+      "facturation@expeditop.fr",
     vatRate,
     isComplete,
   };

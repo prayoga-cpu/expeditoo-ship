@@ -99,7 +99,7 @@
 const DEFAULT_FIREBASE_API_KEY = "AIzaSyBMZXXpMihGop4tOZi65rTKht88pyKpDdI";
 
 /** The production Next.js deployment that serves Better Auth. */
-const DEFAULT_SHIP = "https://expeditoo-ship-five.vercel.app";
+const DEFAULT_SHIP = "https://www.expeditop.fr";
 
 /**
  * An origin that must never be trusted, used as the negative control.

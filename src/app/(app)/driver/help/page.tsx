@@ -42,7 +42,7 @@ export default function DriverHelpPage() {
               {t("operations.description")}
             </p>
             <Button variant="outline" className="w-full" asChild>
-              <a href="mailto:drivers@expeditoo.com">drivers@expeditoo.com</a>
+              <a href="mailto:drivers@expeditop.fr">drivers@expeditop.fr</a>
             </Button>
           </CardContent>
         </Card>

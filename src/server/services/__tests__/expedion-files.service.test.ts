@@ -67,7 +67,7 @@ describe('bordereauDataUrl', () => {
 
     it('reads a ship file straight out of R2, never over HTTP', async () => {
         const result = await bordereauDataUrl(
-            'https://expeditoo.com/api/expedion/files/file_1',
+            'https://www.expeditop.fr/api/expedion/files/file_1',
             'owner_1'
         );
 
@@ -88,7 +88,7 @@ describe('bordereauDataUrl', () => {
      */
     it("refuses a file that belongs to someone other than the quote's owner", async () => {
         const result = await bordereauDataUrl(
-            'https://expeditoo.com/api/expedion/files/file_1',
+            'https://www.expeditop.fr/api/expedion/files/file_1',
             'someone_else'
         );
 
@@ -112,7 +112,7 @@ describe('bordereauDataUrl', () => {
 
         expect(
             await bordereauDataUrl(
-                'https://expeditoo.com/api/expedion/files/gone',
+                'https://www.expeditop.fr/api/expedion/files/gone',
                 'owner_1'
             )
         ).toBeNull();
@@ -137,8 +137,8 @@ describe('attachUploadedFilesToQuote', () => {
      */
     it('scopes the update to the quote owner', async () => {
         await attachUploadedFilesToQuote('quote_1', 'owner_1', [
-            'https://expeditoo.com/api/expedion/files/file_1',
-            'https://expeditoo.com/api/expedion/files/file_2',
+            'https://www.expeditop.fr/api/expedion/files/file_1',
+            'https://www.expeditop.fr/api/expedion/files/file_2',
         ]);
 
         expect(attachMock).toHaveBeenCalledWith(
@@ -166,7 +166,7 @@ describe('attachUploadedFilesToQuote', () => {
         // outcome than the provenance column it was trying to write.
         await expect(
             attachUploadedFilesToQuote('quote_1', 'owner_1', [
-                'https://expeditoo.com/api/expedion/files/file_1',
+                'https://www.expeditop.fr/api/expedion/files/file_1',
             ])
         ).resolves.toBeUndefined();
     });

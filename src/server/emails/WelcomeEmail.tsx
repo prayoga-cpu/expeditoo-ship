@@ -1,3 +1,4 @@
+import { appUrl } from "@/lib/app-url";
 import {
   Body,
   Container,
@@ -38,7 +39,7 @@ export const WelcomeEmail = ({ name }: WelcomeEmailProps) => {
             </Text>
             <Section className="text-center mt-[32px] mb-[32px]">
               <Link
-                href="https://expeditoo.com"
+                href={appUrl()}
                 className="bg-[#000000] rounded text-white text-[12px] font-semibold no-underline text-center px-5 py-3"
               >
                 Get Started
