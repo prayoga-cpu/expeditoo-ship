@@ -18,6 +18,7 @@ import {
   LogOut,
   Copy,
   X,
+  MessagesSquare,
 } from "lucide-react";
 import { LottieLoader } from "@/components/ui/lottie-loader";
 import {
@@ -330,6 +331,16 @@ function UserActions({
         <DropdownMenuItem onClick={() => onViewProfile?.(user)}>
           <Eye className="w-4 h-4 mr-2" />
           {t("viewProfile")}
+        </DropdownMenuItem>
+
+        {/* A link, not a callback: the view is a route of its own, so it
+            works from both tables without either page wiring anything, and
+            Back returns here (admin_user_management_spec.md §7). */}
+        <DropdownMenuItem asChild>
+          <Link href={`/admin/users/${user.id}/activity`}>
+            <MessagesSquare className="w-4 h-4 mr-2" />
+            {t("activity")}
+          </Link>
         </DropdownMenuItem>
 
         {viewMode === "users" && onManageRole && (

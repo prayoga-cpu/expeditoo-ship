@@ -55,7 +55,9 @@ the dialog shows what it knows (§4).
 |---|---|---|---|
 | Access switcher row | an account with more than one mode and no Driver mode (unchanged rule) | « Devenir chauffeur », opens the dialog | « Mon dossier chauffeur » + status, opens the dialog |
 | Desktop sidebar, user mode | everyone in user mode | « Devenir chauffeur », green accent, opens the dialog | « Mon dossier » + status pill, green accent, goes to the page |
-| Mobile bar, applicant bar | everyone not in Driver mode | « Devenir chauffeur », opens the dialog | « Mon dossier », goes to the page |
+| Mobile bar | nobody since 2.91.0 (§3.1) | — | — |
+| `/profile`, account links | everyone without driver access | « Devenir chauffeur », goes to the page | « Mon dossier chauffeur », goes to the page |
+| `/home` | everyone | the « get started » card, only while the account has posted no request (`showsDriverInvite`) | `ApplicationStatusBanner` |
 
 - The sidebar entry sits last among the ordinary entries, directly above
   « Panneau d'administration », and uses the `success` token (the Driver
@@ -65,6 +67,33 @@ the dialog shows what it knows (§4).
   is never an "add admin" row (both unchanged).
 - The dialog is rendered beside the dropdown, not inside it, and opened from
   the item's `onSelect`, so the menu closes before the dialog takes focus.
+
+### 3.1 The mobile bar no longer carries the entry (2.91.0)
+
+Client feedback: the bar's third slot should be the person's own requests.
+The requester bar (everyone not in Driver mode) is now, in order: « Accueil »
+`/home`, « Demander » `/create`, **« Mes demandes » `/listings/me`**,
+« Suivi » `/deliveries`, « Messages ». An account that holds `driver` or
+`carrier` and browses in User mode keeps « Missions » `/expedion` in that
+slot, as before. `BottomNav` no longer reads the application at all.
+
+The labels are the bar's own, under `common.navigation.bar.*`: five items
+share a phone's width, and the sidebar's « Demander un transport » does not
+fit at 12px. The sidebar's labels are unchanged.
+
+What this costs, stated plainly: below `xl` the sidebar does not exist, so a
+phone reaches « Devenir chauffeur » / « Mon dossier » through
+
+- the header avatar → `/profile` → the account link (always there, two taps,
+  and it goes straight to `/carrier/application` without the dialog);
+- `/home`: the « get started » card for an account that has posted nothing,
+  the status banner once an application exists;
+- the access switcher row in the header's tools popover — **multi-mode
+  accounts only** (unchanged rule above).
+
+An account that has posted a request and has no application therefore has
+exactly one way in on a phone: the profile link. The onboarding dialog is not
+reachable from a phone for a single-mode account any more.
 
 ## 4. The dialog
 
@@ -111,7 +140,9 @@ re-approving, which re-runs `enrolAsOwnDriver`); this spec does not add one.
 
 FR and EN at parity, verified by key diff. `common.accessSwitcher.
 addCarrierAccess` is removed (its only reader is the switcher) and replaced
-by `becomeDriver` / `myApplication`. New `common.navigation.becomeDriver`.
+by `becomeDriver` / `myApplication`. New `common.navigation.becomeDriver`
+(read by the sidebar only since 2.91.0; the mobile bar reads
+`common.navigation.bar.*`).
 New block `carrier.onboarding`. New `carrier.application.banner.
 approvedInactive`.
 
@@ -131,8 +162,10 @@ approvedInactive`.
 - `MainLayout`: user mode shows « Devenir chauffeur » with no application and
   « Mon dossier » plus status with one; the first opens the dialog, the
   second links to `/carrier/application`; carrier and driver lists unchanged.
-- `BottomNav`: the applicant slot's label and behaviour follow the
-  application, in EN and FR.
+- `BottomNav`: the third slot is « Mes demandes » → `/listings/me` for a
+  plain account and for an applicant alike, in EN and FR; « Missions » for a
+  `driver` or `carrier` browsing in User mode; `/carrier/application` is on
+  no bar.
 - `ApplicationStatusBanner`: approved + no driver roles shows
   `approvedInactive`; approved + `carrier` shows the approved copy.
 - Chromium: the reported click (Admin mode, admin sidebar, switcher row,

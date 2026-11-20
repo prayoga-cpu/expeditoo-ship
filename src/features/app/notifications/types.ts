@@ -10,6 +10,7 @@ export type NotificationType =
   | "offer_received"
   | "offer_accepted"
   | "offer_rejected"
+  | "offer_declined"
   | "offer_invalidated"
   | "listing_expired"
   | "listing_posted"

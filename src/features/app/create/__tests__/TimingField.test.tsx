@@ -267,3 +267,59 @@ describe("TimingField — the order of the two modes", () => {
     expect(modes).toEqual(["Flexible", "Date précise"]);
   });
 });
+
+describe("TimingField — « N'importe quand » on an exact day", () => {
+  const exact = (pickup: Partial<EndpointTiming> = {}): TimingState => ({
+    mode: "exact",
+    pickup: endpoint(pickup),
+    dropoff: endpoint({ date: "2030-01-13" }),
+  });
+
+  it("is offered beside the three times of day, at both ends", () => {
+    renderField({ initial: exact() });
+
+    expect(screen.getAllByRole("radio", { name: "N'importe quand" })).toHaveLength(2);
+    expect(screen.getAllByRole("radio", { name: "Matin" })).toHaveLength(2);
+  });
+
+  it("takes the hour away while it is chosen, at that end only", () => {
+    renderField({ initial: exact() });
+    expect(screen.getAllByLabelText("Heure précise")).toHaveLength(2);
+
+    fireEvent.click(screen.getAllByRole("radio", { name: "N'importe quand" })[0]);
+
+    expect(screen.getAllByLabelText("Heure précise")).toHaveLength(1);
+    expect(screen.getAllByRole("radio", { name: "N'importe quand" })[0]).toHaveAttribute(
+      "aria-checked",
+      "true"
+    );
+  });
+
+  it("brings the hour back with a time of day", () => {
+    renderField({ initial: exact({ slot: "any" }) });
+    expect(screen.getAllByLabelText("Heure précise")).toHaveLength(1);
+
+    fireEvent.click(screen.getAllByRole("radio", { name: "Soir" })[0]);
+
+    expect(screen.getAllByLabelText("Heure précise")).toHaveLength(2);
+  });
+
+  it("still offers the optional exact hours under it", () => {
+    const onHoursChange = vi.fn();
+    render(
+      <NextIntlClientProvider locale="fr" messages={fr} timeZone="Europe/Paris">
+        <TimingField
+          timing={exact({ slot: "any" })}
+          onChange={vi.fn()}
+          publication={NONE}
+          hours={{ pickup: { from: "", to: "" }, dropoff: { from: "", to: "" } }}
+          onHoursChange={onHoursChange}
+        />
+      </NextIntlClientProvider>
+    );
+
+    fireEvent.change(screen.getAllByLabelText("De")[0], { target: { value: "09:00" } });
+
+    expect(onHoursChange).toHaveBeenCalledWith("pickup", { from: "09:00", to: "" });
+  });
+});

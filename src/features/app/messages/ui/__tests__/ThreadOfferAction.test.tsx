@@ -49,6 +49,7 @@ const ctx = (overrides: Partial<ThreadOfferContext> = {}): ThreadOfferContext =>
   blockedBy: null,
   job,
   viewerCanAward: false,
+  canCounter: false,
   ...overrides,
 });
 
@@ -111,6 +112,18 @@ describe("ThreadOfferNotice", () => {
     );
 
     expect(container.textContent).toContain(fr.messages.offer.alreadyBid);
+  });
+
+  // thread_offer_spec.md §13: the card says « refusée » and carries the way
+  // out, so the notice may not go on calling it a live offer.
+  it("does not contradict a card the requester refused", () => {
+    const { container } = wrap(
+      <ThreadOfferNotice context={ctx({ blockedBy: "OFFER_LIVE" })} refused />
+    );
+
+    expect(container.textContent).not.toContain(fr.messages.offer.alreadyBid);
+    expect(container.textContent).not.toBe("");
+    expect(container.querySelector('a[href="/carrier/offers"]')).toBeNull();
   });
 
   it("points a burnt slot at the job it was spent on", () => {

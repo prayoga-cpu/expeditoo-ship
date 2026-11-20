@@ -16,7 +16,8 @@ import {
 } from "@/features/app/profile/api/addresses.api";
 import { addressBookKeys } from "./useAddressBook";
 import { applySavedAddress, autoPickAddresses } from "../address-book";
-import { applyRequestDraft } from "../assistant";
+import { applyRequestDraft, timingFromDraft } from "../assistant";
+import { useCargoChoices } from "./useCargoChoices";
 import type { RequestDraft } from "@/server/dto/request-assistant.dto";
 import { draftRefusal } from "@/features/app/listing/hooks/useDraftActions";
 import { jobKeys } from "@/features/app/listing/hooks/useJobDetail";
@@ -197,6 +198,18 @@ export function useJobForm(seed: JobFormSeed = {}) {
   const addressesPrefilled = useRef(resumed !== null);
   // How many times the assistant has filled the form: the What step's key.
   const [assistantFills, setAssistantFills] = useState(0);
+  // A saved request's weight and size are the requester's own answers; a
+  // title suggestion never writes over them (client feedback 2026-11-19, #21).
+  const cargoChoices = useCargoChoices(
+    resumed
+      ? {
+          weight: true,
+          size:
+            resumed.values.sizeMode === "exact" ||
+            resumed.values.sizePreset !== undefined,
+        }
+      : undefined
+  );
 
   const form = useForm<JobFormValues>({
     resolver: zodResolver(jobFormSchema),
@@ -388,13 +401,26 @@ export function useJobForm(seed: JobFormSeed = {}) {
     (draft: RequestDraft) => {
       const filled = applyRequestDraft(form.setValue, draft, locale);
       if (filled.pickup || filled.dropoff) addressesPrefilled.current = true;
+      // The reading was shown and « Remplir » pressed: what it wrote is the
+      // requester's answer now, and a title suggestion leaves it alone.
+      if (draft.weightBracket !== null) cargoChoices.mark("weight");
+      if (draft.sizePreset !== null || draft.dimensions !== null) {
+        cargoChoices.mark("size");
+      }
+      // The days it read, onto the When step — never a resumed request's,
+      // whose dates are the ones it was saved with (spec §4.6).
+      const dated = resumed ? null : timingFromDraft(timing, draft);
+      if (dated) {
+        setTiming(dated);
+        syncTiming(dated, new Date(), false);
+      }
       form.clearErrors();
       // The What step keeps text of its own (item rows, numeric boxes): it is
       // remounted so every box starts from the values just written.
       setAssistantFills((n) => n + 1);
       toast.success(t("assistant.toast.filled"));
     },
-    [form, locale, t]
+    [cargoChoices, form, locale, resumed, syncTiming, t, timing]
   );
 
   const handlePhotosChange = useCallback(
@@ -452,9 +478,12 @@ export function useJobForm(seed: JobFormSeed = {}) {
         form.setValue(field as keyof typeof left, value as never);
       }
       form.setValue("jobKind", kind);
+      // The answers went with the fields: nothing is chosen by hand any more.
+      cargoChoices.mark("weight", false);
+      cargoChoices.mark("size", false);
       form.clearErrors();
     },
-    [form]
+    [cargoChoices, form]
   );
 
   /**
@@ -657,6 +686,7 @@ export function useJobForm(seed: JobFormSeed = {}) {
     prefillAddresses,
     applyAssistant,
     assistantFills,
+    cargoChoices,
     setJobKind,
     goToStep: showStep,
     publish: () => submit(true),

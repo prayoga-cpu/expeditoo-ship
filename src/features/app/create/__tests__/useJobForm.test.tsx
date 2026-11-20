@@ -346,6 +346,39 @@ describe("useJobForm — finishing a saved request", () => {
     ]);
   });
 
+  it("never lets the assistant's days onto a request being finished", () => {
+    const { result } = renderHook(() => useJobForm({ draft: saved }), { wrapper });
+    const before = result.current.timing;
+
+    act(() =>
+      result.current.applyAssistant({
+        title: null,
+        quantity: null,
+        weightBracket: null,
+        exactWeightKg: null,
+        sizePreset: null,
+        dimensions: null,
+        pickup: null,
+        dropoff: null,
+        pickupDate: "2031-03-20",
+        deliveryDate: "2031-03-22",
+        missing: [],
+        outOfArea: [],
+      })
+    );
+
+    expect(result.current.timing).toBe(before);
+    expect(result.current.form.getValues("isFlexible")).toBe(false);
+  });
+
+  it("takes a saved request's weight for the requester's own answer", () => {
+    const { result } = renderHook(() => useJobForm({ draft: saved }), { wrapper });
+
+    expect(result.current.cargoChoices.isByHand("weight")).toBe(true);
+    // No size was saved: a title suggestion may still offer one.
+    expect(result.current.cargoChoices.isByHand("size")).toBe(false);
+  });
+
   // An exact request saved before the one-hour window: 09:00–17:00.
   const savedAllDay = {
     ...(saved as object),

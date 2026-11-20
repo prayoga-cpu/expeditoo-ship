@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { useLocale, useTranslations } from "next-intl";
+import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { CheckCircle2, Loader2, Mic, Sparkles, Square } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import {
   type AssistantField,
   type RequestDraft,
 } from "@/server/dto/request-assistant.dto";
+import { ASSISTANT_TIMEOUT } from "../api/assistant.api";
 import { hasFindings } from "../assistant";
 import { useRequestAssistant } from "../hooks/useRequestAssistant";
 import { useVoiceInput } from "../hooks/useVoiceInput";
@@ -57,10 +58,9 @@ export function RequestAssistant({ onApply }: RequestAssistantProps) {
   const busy = assistant.isReading || voice.state !== "idle";
   const nextQuestion = draft?.missing[0];
 
-  const read = () => {
-    assistant.say(text);
-    setText("");
-  };
+  // The sentence stays in the box until it has been read: a call that fails
+  // or runs out of time leaves it there, ready to be sent again.
+  const read = () => assistant.say(text, () => setText(""));
 
   const fill = () => {
     if (!draft) return;
@@ -139,7 +139,13 @@ export function RequestAssistant({ onApply }: RequestAssistantProps) {
           {assistant.isReading && (
             <Loader2 className="size-4 animate-spin" aria-hidden="true" />
           )}
-          {assistant.isReading ? t("reading") : draft ? t("add") : t("read")}
+          {assistant.isReading
+            ? t("reading")
+            : assistant.error
+              ? t("retry")
+              : draft
+                ? t("add")
+                : t("read")}
         </Button>
         {voice.supported && <MicButton voice={voice} disabled={assistant.isReading} />}
         {draft && (
@@ -197,11 +203,14 @@ function Problem({
   voice: "denied" | "failed" | null;
 }) {
   const t = useTranslations("create.assistant");
+  const code = error instanceof ApiError ? error.code : null;
   const message = error
     ? t(
-        error instanceof ApiError && error.code === "RATE_LIMITED"
+        code === "RATE_LIMITED"
           ? "error.rateLimited"
-          : "error.failed"
+          : code === ASSISTANT_TIMEOUT
+            ? "error.timeout"
+            : "error.failed"
       )
     : voice
       ? t(voice === "denied" ? "error.micDenied" : "error.micFailed")
@@ -214,11 +223,25 @@ function Problem({
   );
 }
 
-/** The reading, field by field, with what is still to be said marked as such. */
-function Reading({ draft }: { draft: RequestDraft }) {
+/** A calendar day as a person reads it: « vendredi 20 novembre ». */
+function useDayText() {
+  const format = useFormatter();
+  // Noon UTC, shown in UTC: the day is a day, whatever the browser's zone.
+  return (day: string) =>
+    format.dateTime(new Date(`${day}T12:00:00Z`), {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      timeZone: "UTC",
+    });
+}
+
+/** What the reading holds for each field, in words; `null` where it holds nothing. */
+function useReadingValues(draft: RequestDraft): Record<AssistantField, string | null> {
   const t = useTranslations("create.assistant");
   const tWhat = useTranslations("create.what");
   const locale = useLocale();
+  const dayText = useDayText();
 
   const end = (place: AssistantEnd | null) =>
     place &&
@@ -230,8 +253,9 @@ function Reading({ draft }: { draft: RequestDraft }) {
       .join(", ");
 
   const cm = (value: number) => numberToInput(value, 1, locale);
+  const { pickupDate, deliveryDate } = draft;
 
-  const values: Record<AssistantField, string | null> = {
+  return {
     title:
       draft.title && draft.quantity && draft.quantity > 1
         ? t("quantity", { title: draft.title, count: draft.quantity })
@@ -249,7 +273,21 @@ function Reading({ draft }: { draft: RequestDraft }) {
         : draft.weightBracket && tWhat(`weightBrackets.${draft.weightBracket}.label`),
     pickup: end(draft.pickup),
     dropoff: end(draft.dropoff),
+    when:
+      pickupDate && deliveryDate
+        ? t("dates.both", { pickup: dayText(pickupDate), delivery: dayText(deliveryDate) })
+        : pickupDate
+          ? t("dates.pickup", { date: dayText(pickupDate) })
+          : deliveryDate && t("dates.delivery", { date: dayText(deliveryDate) }),
   };
+}
+
+/** The reading, field by field, with what is still to be said marked as such. */
+function Reading({ draft }: { draft: RequestDraft }) {
+  const t = useTranslations("create.assistant");
+  const values = useReadingValues(draft);
+  const outOfArea = (field: AssistantField) =>
+    (field === "pickup" || field === "dropoff") && draft.outOfArea.includes(field);
 
   return (
     <div className="space-y-2 rounded-md border bg-background p-3">
@@ -261,11 +299,7 @@ function Reading({ draft }: { draft: RequestDraft }) {
           <div key={field} className="contents">
             <dt className="text-muted-foreground">{t(`fields.${field}`)}</dt>
             <dd className={values[field] ? "font-medium" : "text-muted-foreground"}>
-              {values[field] ??
-                (field !== "title" && field !== "size" && field !== "weight" &&
-                draft.outOfArea.includes(field)
-                  ? t("outOfArea")
-                  : t("toSpecify"))}
+              {values[field] ?? (outOfArea(field) ? t("outOfArea") : t("toSpecify"))}
             </dd>
           </div>
         ))}

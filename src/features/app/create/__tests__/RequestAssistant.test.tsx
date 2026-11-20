@@ -15,7 +15,8 @@ import fr from "../../../../../messages/fr.json";
  */
 const availability = vi.fn();
 const understand = vi.fn();
-vi.mock("../api/assistant.api", () => ({
+vi.mock("../api/assistant.api", async (original) => ({
+  ...(await original<typeof import("../api/assistant.api")>()),
   assistantApi: {
     availability: () => availability(),
     understand: (text: string) => understand(text),
@@ -48,6 +49,8 @@ const draft = (over: Partial<RequestDraft> = {}): RequestDraft => ({
   dimensions: null,
   pickup: { city: "Lyon", postalCode: "69002", country: "FR" },
   dropoff: { city: "Bruxelles", postalCode: "1000", country: "BE" },
+  pickupDate: "2026-11-24",
+  deliveryDate: null,
   missing: [],
   outOfArea: [],
   ...over,
@@ -152,7 +155,8 @@ describe("RequestAssistant", () => {
         sizePreset: null,
         pickup: null,
         dropoff: null,
-        missing: ["title", "size", "weight", "pickup", "dropoff"],
+        pickupDate: null,
+        missing: ["title", "size", "weight", "pickup", "dropoff", "when"],
       })
     );
     renderBox();
@@ -172,9 +176,106 @@ describe("RequestAssistant", () => {
     await say("un canapé de Lyon à Bruxelles");
     expect(await screen.findByRole("alert")).toHaveTextContent(t.error.failed);
 
-    await say("un canapé de Lyon à Bruxelles");
+    // The sentence is still in the box: trying again is one press, no retyping.
+    expect(await box()).toHaveValue("un canapé de Lyon à Bruxelles");
+    fireEvent.click(screen.getByRole("button", { name: t.retry }));
+
     expect(await screen.findByText("Lyon (69002)")).toBeInTheDocument();
+    expect(understand).toHaveBeenLastCalledWith("un canapé de Lyon à Bruxelles");
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    // Read at last: the box lets go of it.
+    expect(await box()).toHaveValue("");
+  });
+
+  it("keeps the sentence in the box while it is being read", async () => {
+    understand.mockReturnValue(new Promise(() => {}));
+    renderBox();
+
+    await say("un canapé de Lyon à Bruxelles");
+
+    expect(await screen.findByRole("button", { name: t.reading })).toBeDisabled();
+    expect(await box()).toHaveValue("un canapé de Lyon à Bruxelles");
+    expect(await box()).toBeDisabled();
+  });
+
+  it("keeps a follow-up answer too when its reading fails, and what came before it", async () => {
+    understand
+      .mockResolvedValueOnce(draft({ dropoff: null, missing: ["dropoff"] }))
+      .mockRejectedValueOnce(new ApiError("ASSISTANT_FAILED", "x", 502))
+      .mockResolvedValueOnce(draft());
+    renderBox();
+    await say("un canapé à prendre à Lyon");
+    await screen.findByLabelText(t.ask.dropoff);
+
+    await say("à Bruxelles", t.add);
+    await screen.findByRole("alert");
+
+    expect(await box()).toHaveValue("à Bruxelles");
+    // The earlier reading is still on screen, and still fillable.
+    expect(screen.getByText("Lyon (69002)")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: t.retry }));
+    await waitFor(() =>
+      expect(understand).toHaveBeenLastCalledWith("un canapé à prendre à Lyon\nà Bruxelles")
+    );
+  });
+
+  it("says the reading ran out of time, and keeps the sentence", async () => {
+    understand.mockRejectedValue(new ApiError("ASSISTANT_TIMEOUT", "x", 408));
+    renderBox();
+
+    await say("un canapé de Lyon à Bruxelles");
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(t.error.timeout);
+    expect(await box()).toHaveValue("un canapé de Lyon à Bruxelles");
+    expect(screen.getByRole("button", { name: t.retry })).toBeEnabled();
+  });
+
+  it("shows the days it read, in words", async () => {
+    understand.mockResolvedValue(
+      draft({ pickupDate: "2026-11-20", deliveryDate: "2026-11-22" })
+    );
+    renderBox();
+
+    await say("un canapé de Lyon à Bruxelles, enlèvement le 20, livraison le 22");
+
+    expect(
+      await screen.findByText("Enlèvement vendredi 20 novembre · livraison dimanche 22 novembre")
+    ).toBeInTheDocument();
+  });
+
+  it("shows a pickup day stated alone, or a delivery day alone", async () => {
+    understand
+      .mockResolvedValueOnce(draft({ pickupDate: "2026-11-20" }))
+      .mockResolvedValueOnce(
+        draft({ pickupDate: null, deliveryDate: "2026-11-22", missing: ["when"] })
+      );
+    renderBox();
+
+    await say("un canapé de Lyon à Bruxelles le 20");
+    expect(await screen.findByText("Enlèvement vendredi 20 novembre")).toBeInTheDocument();
+
+    await say("non, livré le 22", t.add);
+    expect(await screen.findByText("Livraison dimanche 22 novembre")).toBeInTheDocument();
+  });
+
+  it("asks when last, and never holds « Remplir » for it", async () => {
+    understand.mockResolvedValue(draft({ pickupDate: null, missing: ["when"] }));
+    renderBox();
+
+    await say("un canapé de Lyon à Bruxelles");
+
+    expect(await screen.findByLabelText(t.ask.when)).toBeInTheDocument();
+    expect(screen.getByText(t.toSpecify)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: t.fill })).toBeEnabled();
+  });
+
+  it("asks for everything else before the days", async () => {
+    understand.mockResolvedValue(draft({ dropoff: null, missing: ["dropoff", "when"] }));
+    renderBox();
+
+    await say("un canapé à prendre à Lyon");
+
+    expect(await screen.findByLabelText(t.ask.dropoff)).toBeInTheDocument();
   });
 
   it("says to wait when the limit is reached", async () => {
@@ -208,6 +309,8 @@ describe("RequestAssistant", () => {
         dimensions: { lengthCm: 210, widthCm: 95, heightCm: 80 },
         exactWeightKg: 24,
         dropoff: null,
+        pickupDate: "2026-11-20",
+        deliveryDate: "2026-11-22",
         missing: ["dropoff"],
       })
     );

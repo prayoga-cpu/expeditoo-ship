@@ -214,6 +214,24 @@ export interface ItemSuggestion {
   sizePreset?: SizePresetId;
 }
 
+/** The two answers a title suggestion comes with a guess for. */
+export type CargoChoice = "weight" | "size";
+
+/**
+ * What a suggestion may write beside the title: its guess, for each answer the
+ * person has not given themselves (client feedback 2026-11-19, #21). An answer given
+ * by hand is theirs — a later suggestion changes the title and nothing else.
+ */
+export function suggestionFill(
+  suggestion: ItemSuggestion,
+  byHand: Record<CargoChoice, boolean>
+): { weightBracket?: WeightBracketId; sizePreset?: SizePresetId } {
+  return {
+    weightBracket: byHand.weight ? undefined : suggestion.weightBracket,
+    sizePreset: byHand.size ? undefined : suggestion.sizePreset,
+  };
+}
+
 export const ITEM_SUGGESTIONS = [
   { id: "watch", weightBracket: "upTo5", sizePreset: "xs" },
   { id: "parcel", weightBracket: "upTo5", sizePreset: "s" },

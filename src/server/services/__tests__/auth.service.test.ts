@@ -6,8 +6,15 @@ const mocks = vi.hoisted(() => {
   return {
     send: vi.fn().mockResolvedValue({ id: 'email-id' }),
     execute: vi.fn().mockResolvedValue([]),
+    welcome: vi.fn().mockResolvedValue(true),
   }
 })
+
+// The welcome's own rendering and send are email.service's business; what is
+// tested here is when auth.service asks for one, and that it survives a no.
+vi.mock('@/server/services/email.service', () => ({
+  emailService: { sendWelcomeEmail: mocks.welcome },
+}));
 
 // Mock dependencies
 vi.mock('@/lib/email', async () => ({
@@ -112,6 +119,7 @@ describe('authService', () => {
         delete process.env.EXPEDION_APP_ORIGINS;
         vi.mocked(usersDAL.getUserById).mockResolvedValue(verifiedUser(false));
         mocks.execute.mockResolvedValue([]);
+        mocks.welcome.mockResolvedValue(true);
     });
 
     describe('handlePostSignup', () => {
@@ -141,6 +149,88 @@ describe('authService', () => {
             expect(sqlParamsOf(mocks.execute.mock.calls[0][0])).toContain(
                 'test@mail.com'
             );
+        });
+
+        // The welcome follows the same fact. A password signup is greeted when
+        // its link is clicked, so greeting it here too would be a second mail.
+        it('should not welcome a signup whose address is unverified', async () => {
+            vi.mocked(usersDAL.getUserById).mockResolvedValue(verifiedUser(false));
+
+            await authService.handlePostSignup('user-1', 'test@mail.com');
+
+            expect(mocks.welcome).not.toHaveBeenCalled();
+        });
+
+        it('should welcome, once, a signup that arrives already verified', async () => {
+            vi.mocked(usersDAL.getUserById).mockResolvedValue(verifiedUser(true));
+            vi.mocked(usersDAL.getUserByEmail).mockResolvedValue(namedUser('Jeanne Martin'));
+
+            await authService.handlePostSignup('user-1', 'jeanne@mail.com');
+
+            expect(mocks.welcome).toHaveBeenCalledTimes(1);
+            expect(mocks.welcome).toHaveBeenCalledWith('jeanne@mail.com', 'Jeanne');
+        });
+
+        it('should finish the signup when the welcome cannot be sent', async () => {
+            const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+            vi.mocked(usersDAL.getUserById).mockResolvedValue(verifiedUser(true));
+            vi.mocked(usersDAL.getUserByEmail).mockResolvedValue(namedUser('Jeanne Martin'));
+            mocks.welcome.mockRejectedValueOnce(new Error('Resend is down'));
+
+            await expect(
+                authService.handlePostSignup('user-1', 'jeanne@mail.com')
+            ).resolves.toMatchObject({ success: true });
+            consoleError.mockRestore();
+        });
+    });
+
+    describe('sendWelcomeEmail', () => {
+        it('should greet by first name and say a mail was handed over', async () => {
+            vi.mocked(usersDAL.getUserByEmail).mockResolvedValue(namedUser('  Jean  Dupont'));
+
+            await expect(authService.sendWelcomeEmail('jean@mail.com')).resolves.toBe(true);
+
+            expect(mocks.welcome).toHaveBeenCalledWith('jean@mail.com', 'Jean');
+        });
+
+        // The mail describes EXPEDITOP to somebody who signed up in another app.
+        it('should not greet an Expedion account', async () => {
+            vi.mocked(usersDAL.getUserByEmail).mockResolvedValue(
+                namedUser('Test User', 'expedion')
+            );
+
+            await expect(authService.sendWelcomeEmail('test@mail.com')).resolves.toBe(false);
+
+            expect(mocks.welcome).not.toHaveBeenCalled();
+        });
+
+        it('should send nothing for an address with no account', async () => {
+            vi.mocked(usersDAL.getUserByEmail).mockResolvedValue(undefined as unknown as UserRow);
+
+            await expect(authService.sendWelcomeEmail('ghost@mail.com')).resolves.toBe(false);
+
+            expect(mocks.welcome).not.toHaveBeenCalled();
+        });
+
+        // Called from `afterEmailVerification`: a throw here would fail a
+        // verification that has already been written.
+        it('should contain a send that fails', async () => {
+            const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+            vi.mocked(usersDAL.getUserByEmail).mockResolvedValue(namedUser('Jean Dupont'));
+            mocks.welcome.mockRejectedValueOnce(new Error('Resend refused'));
+
+            await expect(authService.sendWelcomeEmail('jean@mail.com')).resolves.toBe(false);
+
+            expect(consoleError).toHaveBeenCalledTimes(1);
+            consoleError.mockRestore();
+        });
+
+        it('should contain a lookup that fails', async () => {
+            const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+            vi.mocked(usersDAL.getUserByEmail).mockRejectedValueOnce(new Error('db down'));
+
+            await expect(authService.sendWelcomeEmail('jean@mail.com')).resolves.toBe(false);
+            consoleError.mockRestore();
         });
     });
 
@@ -214,10 +304,65 @@ describe('authService', () => {
         it('should send email using Resend', async () => {
             vi.mocked(usersDAL.getUserByEmail).mockResolvedValue(namedUser('Test User'));
 
-            await authService.sendVerificationEmail('test@mail.com');
+            const sent = await authService.sendVerificationEmail(
+                'test@mail.com',
+                'https://app.test/api/auth/verify-email?token=abc'
+            );
 
+            expect(sent).toBe(true);
             expect(usersDAL.getUserByEmail).toHaveBeenCalledWith('test@mail.com');
             expect(mocks.send).toHaveBeenCalled();
+        });
+
+        it('should be written in French and greet by first name', async () => {
+            vi.mocked(usersDAL.getUserByEmail).mockResolvedValue(namedUser('Jean Dupont'));
+
+            await authService.sendVerificationEmail(
+                'test@mail.com',
+                'https://app.test/api/auth/verify-email?token=abc'
+            );
+
+            const body = textOf(sentEmail().react).join(' ');
+            expect(body).toContain('Bonjour Jean,');
+            expect(body).toContain('Confirmer mon adresse e-mail');
+            expect(body).not.toMatch(/Verify|Welcome|Hi /);
+        });
+
+        // The whole point of the return value: Resend *returns* its refusal,
+        // and the screen used to say « envoyé » whatever came back.
+        it('should answer false, and never throw, when Resend refuses', async () => {
+            const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+            vi.mocked(usersDAL.getUserByEmail).mockResolvedValue(namedUser('Test User'));
+            mocks.send.mockResolvedValueOnce({
+                data: null,
+                error: { name: 'validation_error', message: 'The domain is not verified.' },
+            });
+
+            await expect(
+                authService.sendVerificationEmail(
+                    'test@mail.com',
+                    'https://app.test/api/auth/verify-email?token=abc'
+                )
+            ).resolves.toBe(false);
+
+            expect(String(consoleError.mock.calls[0][1])).toContain(
+                'Resend refused the verification email'
+            );
+            consoleError.mockRestore();
+        });
+
+        it('should answer false when the send itself throws', async () => {
+            const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+            vi.mocked(usersDAL.getUserByEmail).mockResolvedValue(namedUser('Test User'));
+            mocks.send.mockRejectedValueOnce(new Error('RESEND_API_KEY is not set'));
+
+            await expect(
+                authService.sendVerificationEmail(
+                    'test@mail.com',
+                    'https://app.test/api/auth/verify-email?token=abc'
+                )
+            ).resolves.toBe(false);
+            consoleError.mockRestore();
         });
 
         it('should point the callback at signin, so a verified user lands there', async () => {
@@ -229,7 +374,7 @@ describe('authService', () => {
             );
 
             const sent = sentEmail();
-            expect(sent.subject).toBe('Verify your EXPEDITOP account');
+            expect(sent.subject).toBe('Confirmez votre adresse e-mail EXPEDITOP');
             expect(textOf(sent.react).join(' ')).toContain(
                 'callbackURL=%2Fsignin%3Fverified%3Dtrue'
             );
@@ -249,7 +394,7 @@ describe('authService', () => {
             );
 
             const sent = sentEmail();
-            expect(sent.subject).toBe('Verify your Expedion account');
+            expect(sent.subject).toBe('Confirmez votre adresse e-mail Expedion');
             const body = textOf(sent.react).join(' ');
             expect(body).toContain(
                 `callbackURL=${encodeURIComponent(`${EXPEDION_ORIGIN}/seConnecter?verified=true`)}`
@@ -271,10 +416,36 @@ describe('authService', () => {
             );
 
             const sent = sentEmail();
-            expect(sent.subject).toBe('Verify your EXPEDITOP account');
+            expect(sent.subject).toBe('Confirmez votre adresse e-mail EXPEDITOP');
             expect(textOf(sent.react).join(' ')).toContain(
                 'callbackURL=%2Fsignin%3Fverified%3Dtrue'
             );
+        });
+    });
+
+    // Only an explicit resend may fail on a mail that did not leave: sign-up
+    // and sign-in call the same callback with other things riding on them.
+    describe('isVerificationResend', () => {
+        it('should recognise the resend endpoint', () => {
+            expect(
+                authService.isVerificationResend({
+                    url: 'https://app.test/api/auth/send-verification-email',
+                })
+            ).toBe(true);
+        });
+
+        it.each([
+            'https://app.test/api/auth/sign-up/email',
+            'https://app.test/api/auth/sign-in/email',
+            'https://app.test/api/auth/verify-email?token=abc',
+            'not a url',
+        ])('should not take %s for one', (url) => {
+            expect(authService.isVerificationResend({ url })).toBe(false);
+        });
+
+        // `auth.api.signUpEmail` (in-house driver onboarding) hands no request.
+        it('should not take a server-side call for one', () => {
+            expect(authService.isVerificationResend(undefined)).toBe(false);
         });
     });
 

@@ -1,5 +1,5 @@
 import { useMemo, useState, useCallback, useEffect } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useDebounce } from "use-debounce";
 import { toast } from "sonner";
@@ -9,9 +9,7 @@ import { listingsApi } from "@/features/app/listing/api/listings.api";
 import { myRequestKeys } from "@/features/app/listing/hooks/useMyRequests";
 import { activeRequests } from "@/features/app/dashboard/myRequestStatus";
 import type { Job } from "@/features/app/listing/types";
-
-const routeOf = (from?: string | null, to?: string | null) =>
-  from && to ? `${from} → ${to}` : null;
+import { jobDates, routeOf } from "../lib/job-summary";
 
 /**
  * The jobs the search offers as filters (§D5): every job the viewer has a
@@ -60,6 +58,7 @@ export function useMessages() {
   const [listingFilter, setListingFilter] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const t = useTranslations("messages");
+  const locale = useLocale();
 
   // Mark all messages as seen when page loads
   // This clears the unread badge from the notification bell
@@ -201,10 +200,17 @@ export function useMessages() {
         snippet: conv.lastMessage || "",
         timestamp: conv.lastMessageAt ? formatTimestamp(conv.lastMessageAt) : "",
         unread: conv.isUnread,
+        type: conv.type,
         listingId: conv.listing?.id,
+        route:
+          routeOf(conv.listing?.pickupCity, conv.listing?.dropoffCity) ??
+          undefined,
+        dates:
+          jobDates(conv.listing?.pickupFrom, conv.listing?.dropoffUntil, locale) ??
+          undefined,
       }))
       .filter((message) => !listingFilter || message.listingId === listingFilter),
-    [conversations, t, formatTimestamp, listingFilter]
+    [conversations, t, formatTimestamp, listingFilter, locale]
   );
 
 

@@ -222,7 +222,7 @@ without an `sk_live_` key, so an accept there takes real money.
 Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before shipping.
 
 **Gates — all green.** `npx tsc --noEmit` 0 errors · `pnpm lint` 0 errors ·
-3,323 unit tests pass (2.77.1) · `pnpm build` succeeds.
+3,862 unit tests pass (2.91.0) · `pnpm build` succeeds.
 
 **Done**
 - Schema remodelled to the transport model; one clean initial migration
@@ -757,10 +757,27 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
   `/create` step « Quoi » reads a typed or dictated sentence into form values —
   item, size, weight bracket, a town at each end — through
   `requestAssistantService` (OpenAI, `OPENAI_API_KEY`; no key, no box).
-  **It fills the form and never posts**: its answer has no date, price, pin or
-  `origin`, and the service must not grow a path to `listingsService`. The
+  **It fills the form and never posts**: its answer has no price, pin or
+  `origin`, and the service must not grow a path to `listingsService`. Since
+  2.91.0 it does read a pickup and a delivery **date** — validated in the
+  service against today in Europe/Paris, never clamped, never in
+  `jobFormSchema` (gotcha 15). The
   postal code is the person's or the map's, never the model's. Once it fills
   an end, the address book stops auto-filling (`addressesPrefilled`).
+- **The client's feedback of 19 November** (2.91.0), 38 points monitored at
+  the top of `STATUS.md`; `client_feedback_2026_11_19_spec.md`. Verification
+  mail can be resent and an unverified sign-in lands on `/verify-email`
+  (a failed send is visible **on the resend only** — sign-up and sign-in
+  swallow it on purpose); a French welcome mail follows verification. A title
+  suggestion on `/create` never overrides a weight or size chosen by hand
+  (`useCargoChoices`). « Date précise » has « N'importe quand » (that day,
+  06:00–22:00, not flexible). Refusing a chat offer tells the transporter and
+  leaves both sides a next step (`thread_offer_spec.md` §13).
+  `/admin/users/[id]/activity` is **read-only** — GET routes, selects only —
+  and must stay so. The phone's bottom bar carries « Mes demandes »;
+  « Devenir chauffeur » lives in the access badge's menu. The town search
+  covers `JOB_COUNTRIES`. `globals.css` has a fallback block for browsers
+  without `color-mix()` (iOS 15–16.1), matched on whole class tokens.
 
 **Not done**
 - **`EXPEDION_APP_ORIGINS` is set in Vercel Production but not in `.env.local`**,

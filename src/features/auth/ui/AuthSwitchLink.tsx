@@ -24,16 +24,23 @@ export function AuthSwitchLink({
   to,
   prompt,
   action,
+  className = "text-center text-muted-foreground mt-6",
 }: {
   to: "/signin" | "/signup";
   prompt: string;
   action: string;
+  /**
+   * Placement is the page's call. Both auth pages now put this line under
+   * the subtitle: as the last element of the card it fell below the fold on a
+   * 768px-high laptop, and somebody without an account never saw it.
+   */
+  className?: string;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   return (
-    <p className="text-center text-muted-foreground mt-6">
+    <p className={className}>
       {prompt}{" "}
       <button
         type="button"

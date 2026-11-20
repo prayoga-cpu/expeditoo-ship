@@ -14,6 +14,55 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.91.0] - 2026-11-20 · feat
+
+The client's feedback of 19 November, the points that needed nobody's answer.
+
+- **Signing in.** « Pas encore de compte ? S'inscrire » is now at the top of
+  the sign-in page, under the title, with no scrolling. The sign-up page says
+  what an account is for: ask for a transport right away, and apply to drive
+  from inside the app.
+- **The confirmation e-mail can be sent again.** The « Vérifiez votre email »
+  page has a « Renvoyer l'email » button and says so plainly when a send
+  fails. Signing in with an address that is not confirmed yet takes you to
+  that page and sends a new link, instead of an error in English. The e-mail
+  is in French.
+- **A welcome e-mail** arrives once your address is confirmed.
+- **The assistant reads your dates.** « Enlèvement le 20, livraison le 22 »
+  now fills the dates of your request. If a reading fails, your sentence is
+  kept and you can try again; it no longer waits forever.
+- **Your weight stays your weight.** Choosing a suggested title no longer
+  replaces the weight or the size you had already chosen — a request posted
+  as « 5 – 30 kg » could read 100 kg.
+- **« N'importe quand » on a precise date**, for pickup and for delivery: that
+  day, at any time.
+- The pickup and delivery address labels are larger and bolder.
+- **Drivers: towns outside France.** The search on the missions board and in
+  the planner finds Brussels, Geneva, Turin and every country we serve.
+- **Drivers: « Mes offres » says which job.** Each offer shows the title, the
+  reference, the towns and the requested dates.
+- **Messages name the request.** Each conversation shows the towns and the
+  dates, and inside a conversation the request stays at the top of the screen
+  while you scroll.
+- **After a refused offer, a next step.** The person who refused can propose
+  another price; the transporter is told, and can withdraw and send a new
+  price in one tap.
+- **Your requests in the bottom bar** on a phone, in place of « Devenir
+  chauffeur », which is now under the access badge at the top and on your
+  profile. The bar's labels are larger and no longer cut.
+- On a request's page the title is no longer cut, and shows the towns and the
+  pickup date.
+- **Older iPhones.** The selected button of the bottom bar showed as a black
+  block with no label, and coloured badges could be unreadable. Both are
+  corrected for those phones; we could not test on one, so tell us what you
+  see.
+- **Operators: « Message » works.** From a user's profile in the admin panel
+  the button now opens the conversation; it used to bring you back to the
+  panel.
+- **Operators: « Demandes et messages ».** From the users list, see the
+  requests a person posted, the offers they made and their conversations, to
+  read only.
+
 ## [2.90.2] - 2026-11-20 · ux
 
 - **The platform is now called EXPEDITOP.** The name changes everywhere you read

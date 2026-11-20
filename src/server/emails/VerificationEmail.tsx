@@ -29,32 +29,35 @@ interface VerificationEmailProps {
 
 export function VerificationEmail({
   verificationUrl,
-  userName = "there",
+  userName,
   productName = "EXPEDITOP",
 }: VerificationEmailProps) {
   return (
-    <Html>
+    <Html lang="fr">
       <Head />
-      <Preview>Verify your {productName} account</Preview>
+      <Preview>Confirmez votre adresse e-mail {productName}</Preview>
       <Body style={main}>
         <Container style={container}>
-          <Heading style={h1}>Welcome to {productName}!</Heading>
-          <Text style={text}>Hi {userName},</Text>
+          {/* French, like the reset mail: the people who sign up here are
+              French clients and drivers. */}
+          <Heading style={h1}>Confirmez votre adresse e-mail</Heading>
+          <Text style={text}>{userName ? `Bonjour ${userName},` : "Bonjour,"}</Text>
           <Text style={text}>
-            Thank you for signing up. Please verify your email address to get
-            started with {productName}.
+            Merci de votre inscription sur {productName}. Il reste une étape :
+            confirmer que cette adresse est bien la vôtre.
           </Text>
           <Section style={buttonContainer}>
             <Button style={button} href={verificationUrl}>
-              Verify Email Address
+              Confirmer mon adresse e-mail
             </Button>
           </Section>
+          <Text style={footer}>Ce lien expire dans 1 heure.</Text>
           <Text style={footer}>
-            If you didn't create an account with {productName}, you can safely
-            ignore this email.
+            Si vous n’avez pas créé de compte {productName}, ignorez simplement
+            cet e-mail.
           </Text>
           <Text style={footer}>
-            Or copy and paste this link: {verificationUrl}
+            Ou copiez ce lien dans votre navigateur : {verificationUrl}
           </Text>
         </Container>
       </Body>

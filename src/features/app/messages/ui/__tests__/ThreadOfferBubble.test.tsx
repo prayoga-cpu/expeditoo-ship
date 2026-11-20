@@ -76,6 +76,21 @@ function renderBubble(
 
 beforeEach(() => onError.mockClear());
 
+/**
+ * Copy this release adds, read from the catalogue - or, until its patch is
+ * spliced into `messages/*.json`, the path next-intl prints for a missing key.
+ */
+const copy = (path: string): string => {
+  const found = path
+    .split(".")
+    .reduce<unknown>(
+      (node, key) => (node as Record<string, unknown> | undefined)?.[key],
+      fr
+    );
+  return typeof found === "string" ? found : path;
+};
+const AFTER = "messages.offer.card.afterDecline";
+
 describe.each([
   ["fr", fr as typeof en],
   ["en", en],
@@ -221,13 +236,95 @@ describe("ThreadOfferBubble — after the recipient declined here", () => {
       .toBeNull();
   });
 
-  it("leaves the sender's card as it was — their bid is still live", () => {
+  // thread_offer_spec.md §13. The sender's card used to go on reading
+  // « En attente » under a price the requester had turned down.
+  it("shows the sender the refusal, not a bid still waiting", () => {
     const { container } = renderBubble({ offer: declined(), isOwn: true });
 
-    expect(container.textContent).toContain(fr.messages.offer.card.status.pending);
-    expect(
-      screen.getByRole("button", { name: fr.messages.offer.card.withdraw })
-    ).toBeTruthy();
+    expect(container.textContent).toContain(fr.messages.offer.card.status.declined);
+    expect(container.textContent).not.toContain(
+      fr.messages.offer.card.awaitingRequester
+    );
+    expect(container.textContent).toContain(copy(`${AFTER}.refusedBidLive`));
+  });
+
+  it("takes the sender's bid back, then opens the offer dialog", async () => {
+    const withdraw = vi
+      .spyOn(messagesApi, "withdrawOffer")
+      .mockResolvedValue({ threadOffer: declined() });
+    const onRepropose = vi.fn();
+    renderBubble({ offer: declined(), isOwn: true, onRepropose });
+
+    fireEvent.click(
+      screen.getByRole("button", { name: copy(`${AFTER}.withdrawAndRepropose`) })
+    );
+
+    await waitFor(() => expect(onRepropose).toHaveBeenCalledTimes(1));
+    expect(withdraw).toHaveBeenCalledWith("to-1");
+  });
+
+  it("does not open the dialog when the withdrawal fails", async () => {
+    vi.spyOn(messagesApi, "withdrawOffer").mockRejectedValue(new Error("no"));
+    const onRepropose = vi.fn();
+    renderBubble({ offer: declined(), isOwn: true, onRepropose });
+
+    fireEvent.click(
+      screen.getByRole("button", { name: copy(`${AFTER}.withdrawAndRepropose`) })
+    );
+
+    await waitFor(() =>
+      expect(messagesApi.withdrawOffer).toHaveBeenCalledTimes(1)
+    );
+    expect(onRepropose).not.toHaveBeenCalled();
+  });
+
+  it("sends a requester who may counter to the job page, at that offer", () => {
+    const { container } = renderBubble({ offer: declined(), canCounter: true });
+
+    expect(container.textContent).toContain(copy(`${AFTER}.youCanCounter`));
+    const link = screen.getByRole("link", { name: copy(`${AFTER}.counter`) });
+    expect(link.getAttribute("href")).toBe("/listing/listing-1#offer-offer-1");
+  });
+
+  it("tells a recipient who cannot counter that the carrier moves next", () => {
+    const { container } = renderBubble({ offer: declined(), canCounter: false });
+
+    expect(container.textContent).toContain(copy(`${AFTER}.youCarrierNext`));
+    expect(screen.queryByRole("link", { name: copy(`${AFTER}.counter`) })).toBeNull();
+  });
+
+  it("offers no counter-price on a thread with no job, even to someone who could", () => {
+    const { container } = renderBubble({
+      offer: offer({ offer: null, status: "declined" }),
+      canCounter: true,
+    });
+
+    expect(container.textContent).toContain(copy(`${AFTER}.youOtherNext`));
+    expect(screen.queryByRole("link", { name: copy(`${AFTER}.counter`) })).toBeNull();
+  });
+
+  it("lets the sender of a refused standalone offer send another, on their latest card only", () => {
+    const standalone = offer({ offer: null, status: "declined" });
+    const onRepropose = vi.fn();
+    const { unmount } = renderBubble({
+      offer: standalone,
+      isOwn: true,
+      onRepropose,
+      canRepropose: true,
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: copy(`${AFTER}.repropose`) }));
+    expect(onRepropose).toHaveBeenCalledTimes(1);
+    unmount();
+
+    const { container } = renderBubble({
+      offer: standalone,
+      isOwn: true,
+      onRepropose,
+      canRepropose: false,
+    });
+    expect(container.textContent).toContain(copy(`${AFTER}.refused`));
+    expect(screen.queryByRole("button", { name: copy(`${AFTER}.repropose`) })).toBeNull();
   });
 
   it("still follows the bid once somebody has decided it", () => {

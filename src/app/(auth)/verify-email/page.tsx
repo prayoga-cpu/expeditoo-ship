@@ -9,6 +9,8 @@ import { useAuthActions } from "@/features/auth/hooks/useAuthActions";
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { InlineLoader } from "@/components/ui/page-loader";
+import { ResendVerification } from "@/features/auth/ui";
+import { mailbox } from "@/lib/app-url";
 
 type VerificationState = "idle" | "verifying" | "success" | "error";
 
@@ -22,6 +24,15 @@ function VerifyEmailContent() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const token = searchParams.get("token");
+  // Sign-up and a refused sign-in both hand the address over, so the resend
+  // button works without asking for it again.
+  const email = searchParams.get("email")?.trim() || undefined;
+  // A sign-in refused for an unconfirmed address: Better Auth mailed a fresh
+  // link on the way out (`sendOnSignIn`, src/lib/auth.ts).
+  const fromSignIn = searchParams.get("from") === "signin";
+  // The mail's link was followed and verified nothing (expired, already
+  // used); the sign-in page forwards that here.
+  const linkFailed = searchParams.get("linkError") !== null;
 
   useEffect(() => {
     if (token) {
@@ -51,7 +62,8 @@ function VerifyEmailContent() {
       router.push("/welcome");
     } else {
       setState("error");
-      setErrorMessage(result.error || t("failedFallback"));
+      // Never Better Auth's own sentence: it is English and names a token.
+      setErrorMessage(t("failedFallback"));
     }
   };
 
@@ -79,33 +91,55 @@ function VerifyEmailContent() {
           {state === "idle" && !token && (
             <>
               <div className="flex justify-center mb-6">
-                <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center">
-                  <Mail className="w-8 h-8 text-primary" />
+                <div
+                  className={`w-16 h-16 rounded-full flex items-center justify-center ${linkFailed ? "bg-destructive/20" : "bg-primary/20"}`}
+                >
+                  {linkFailed ? (
+                    <XCircle className="w-10 h-10 text-destructive" />
+                  ) : (
+                    <Mail className="w-8 h-8 text-primary" />
+                  )}
                 </div>
               </div>
 
               <h1 className="text-2xl font-bold text-foreground mb-2 text-center">
-                {t("title")}
+                {linkFailed ? t("failedTitle") : t("title")}
               </h1>
-              <p className="text-muted-foreground mb-6 text-center">
-                {t("subtitle")}
+              <p className="text-muted-foreground mb-6 text-center break-words">
+                {linkFailed
+                  ? t("linkFailedBody")
+                  : email
+                    ? t("subtitleWithEmail", { email })
+                    : t("subtitle")}
               </p>
 
-              <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 mb-6">
-                <p className="text-primary text-sm">
-                  <strong>{t("didntReceive")}</strong>
-                  <br />
-                  {t("checkSpam")}
-                </p>
-              </div>
+              {fromSignIn && !linkFailed && (
+                <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 mb-4">
+                  <p className="text-foreground text-sm">{t("fromSignIn")}</p>
+                </div>
+              )}
 
-              <Button
-                onClick={() => router.push("/signin")}
-                variant="outline"
-                className="w-full rounded-xl border-border/50 hover:bg-muted/50 text-foreground py-6 font-semibold transition-colors"
-              >
-                {t("backToLogin")}
-              </Button>
+              {!linkFailed && (
+                <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 mb-6">
+                  <p className="text-primary text-sm">
+                    <strong>{t("didntReceive")}</strong>
+                    <br />
+                    {t("checkSpam")}
+                  </p>
+                </div>
+              )}
+
+              <div className="space-y-3">
+                <ResendVerification initialEmail={email} />
+
+                <Button
+                  onClick={() => router.push("/signin")}
+                  variant="outline"
+                  className="w-full rounded-xl border-border/50 hover:bg-muted/50 text-foreground font-semibold transition-colors"
+                >
+                  {t("backToLogin")}
+                </Button>
+              </div>
             </>
           )}
 
@@ -181,13 +215,10 @@ function VerifyEmailContent() {
                 </div>
               )}
 
+              {/* Another link, not another account: the account exists, and
+                  signing up again with the same address is refused. */}
               <div className="space-y-3">
-                <Button
-                  onClick={() => router.push("/signup")}
-                  className="w-full rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground py-6 font-semibold transition-colors"
-                >
-                  {t("signUpAgain")}
-                </Button>
+                <ResendVerification initialEmail={email} />
 
                 <Button
                   onClick={() => router.push("/signin")}
@@ -205,7 +236,7 @@ function VerifyEmailContent() {
         <p className="text-center text-muted-foreground text-sm mt-6">
           {t("needHelp")}{" "}
           <a
-            href="mailto:support@expeditop.fr"
+            href={`mailto:${mailbox("support")}`}
             className="text-primary hover:text-primary/80 font-medium"
           >
             {t("contactSupport")}

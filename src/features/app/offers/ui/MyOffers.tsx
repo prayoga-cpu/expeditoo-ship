@@ -1,7 +1,7 @@
 "use client";
 
-import { useFormatter, useTranslations } from "next-intl";
-import { Gavel, Truck } from "lucide-react";
+import { useFormatter, useLocale, useTranslations } from "next-intl";
+import { CalendarClock, Gavel, MapPin, Truck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -11,7 +11,9 @@ import { isRefusal } from "@/lib/fetcher";
 import { PageLoader } from "@/components/ui/page-loader";
 import Link from "next/link";
 import { useMyOffers, useWithdrawOffer } from "../hooks/useCarrierOffers";
-import type { Offer, OfferStatus } from "@/features/app/listing/types";
+import { ListingReference } from "@/features/app/listing/ui/ListingReference";
+import type { Offer, OfferListing, OfferStatus } from "@/features/app/listing/types";
+import { DEFAULT_COUNTRY, countryName } from "@/lib/countries";
 import { formatCurrency } from "@/lib/currency";
 
 const euros = formatCurrency;
@@ -91,6 +93,50 @@ export function MyOffers() {
   );
 }
 
+const DAY = { day: "numeric", month: "short" } as const;
+
+/** « Bruxelles (Belgique) » — the country only when it is not the home one. */
+function town(city: string, country: string | undefined, locale: string) {
+  if (!country || country === DEFAULT_COUNTRY) return city;
+  return `${city} (${countryName(country, locale)})`;
+}
+
+/**
+ * What the bid is *on*: the job's title, its number, its two towns and the
+ * dates the requester asked for. The list showed a status, a price and the
+ * driver's own slot, so three pending bids were three prices with nothing to
+ * tell them apart (client feedback, 2.91.0 #24).
+ */
+function OfferJob({ listing }: { listing: OfferListing }) {
+  const t = useTranslations("listing.bid.myOffers");
+  const format = useFormatter();
+  const locale = useLocale();
+  const range = (from: string, until: string) =>
+    format.dateTimeRange(new Date(from), new Date(until), DAY);
+
+  return (
+    <div className="space-y-1">
+      <p className="font-medium break-words">{listing.title}</p>
+      <p className="flex items-start gap-1.5 text-sm">
+        <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+        <span className="min-w-0 break-words">
+          {town(listing.pickupCity, listing.pickupCountry, locale)} →{" "}
+          {town(listing.dropoffCity, listing.dropoffCountry, locale)}
+        </span>
+      </p>
+      <p className="flex items-start gap-1.5 text-sm text-muted-foreground">
+        <CalendarClock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+        <span className="min-w-0">
+          <span className="font-medium text-foreground">{t("jobDates")}</span>{" "}
+          {t("jobPickup", { dates: range(listing.pickupFrom, listing.pickupUntil) })}
+          {" · "}
+          {t("jobDelivery", { dates: range(listing.dropoffFrom, listing.dropoffUntil) })}
+        </span>
+      </p>
+    </div>
+  );
+}
+
 function OfferRow({ offer }: { offer: Offer }) {
   const t = useTranslations("listing.bid.myOffers");
   const tCard = useTranslations("listing.bid.offerCard");
@@ -104,19 +150,32 @@ function OfferRow({ offer }: { offer: Offer }) {
   });
 
   return (
-    <Card className="p-4">
+    <Card className="p-4" data-testid="my-offer">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <Badge className={STATUS_TONE[offer.status]}>{t(`status.${offer.status}`)}</Badge>
-          <p className="mt-2 font-mono text-lg font-semibold">{euros(offer.priceCents)}</p>
-          <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
-            <Truck className="h-3.5 w-3.5" />
-            {t("pickup", { date: pickup })}
-            {/* Only the earliest is shown above, so a driver who proposed
-                several needs telling the others were kept — otherwise the
-                list reads as if the form dropped them. */}
-            {offer.slots.length > 1 &&
-              ` · ${tCard("otherSlots", { count: offer.slots.length - 1 })}`}
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <Badge className={STATUS_TONE[offer.status]}>{t(`status.${offer.status}`)}</Badge>
+            {offer.listing && <ListingReference reference={offer.listing.reference} />}
+          </div>
+          {offer.listing ? (
+            <OfferJob listing={offer.listing} />
+          ) : (
+            // The row outlived its job. The bid is still the driver's record,
+            // so it stays — and says why it names nothing.
+            <p className="text-sm text-muted-foreground">{t("jobUnavailable")}</p>
+          )}
+          <p className="font-mono text-lg font-semibold">{euros(offer.priceCents)}</p>
+          <p className="flex items-start gap-1.5 text-sm text-muted-foreground">
+            <Truck className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+            <span className="min-w-0">
+              <span className="font-medium text-foreground">{t("yourSlot")}</span>{" "}
+              {t("slotPickup", { date: pickup })}
+              {/* Only the earliest is shown above, so a driver who proposed
+                  several needs telling the others were kept — otherwise the
+                  list reads as if the form dropped them. */}
+              {offer.slots.length > 1 &&
+                ` · ${tCard("otherSlots", { count: offer.slots.length - 1 })}`}
+            </span>
           </p>
         </div>
 

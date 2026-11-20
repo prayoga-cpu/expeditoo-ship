@@ -161,3 +161,22 @@ Partial-failure behaviour is unchanged: whatever uploaded is kept.
 - every bracket and preset label resolves in both catalogues (no raw key text)
 - choosing `over1000` reveals the figure input; choosing another hides it
 - switching to `exact` shows the three centimetre inputs and hides the cards
+
+---
+
+## Addendum (2.91.0) — a suggestion never overrides an answer given by hand
+
+Client feedback of 19 November 2026, #21: a request posted as « 5 – 30 kg »
+read 100 kg. Clicking a title suggestion (« Table… ») wrote its own bracket
+over the one the person had chosen.
+
+- A suggestion fills weight and size only while the person has not chosen
+  them (`suggestionFill`, `cargo.ts`).
+- « Chosen by hand » is tracked explicitly in `useCargoChoices`, never
+  inferred from a value: picking a bracket, typing a weight, choosing a size
+  mode or preset, typing a dimension, or an assistant fill each mark it.
+- A resumed draft starts with weight by hand, and size by hand when one was
+  saved. Switching the job kind resets both.
+- When a suggestion does set the bracket, `exactWeightKg` is cleared.
+
+Tests: `WhatStep.test.tsx`, `cargo.test.ts`, `useJobForm.test.tsx`.

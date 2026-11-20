@@ -6,6 +6,16 @@ import { authClient } from "@/lib/auth-client";
 import { useQueryClient } from "@tanstack/react-query";
 import { composeName } from "@/lib/person-name";
 
+/** Better Auth's code for a sign-in refused because the address is unconfirmed. */
+const EMAIL_NOT_VERIFIED = "EMAIL_NOT_VERIFIED";
+
+/** `/verify-email`, carrying the address its resend button needs. */
+export function verifyEmailPath(email: string, from?: "signin"): string {
+  const query = new URLSearchParams({ email: email.trim() });
+  if (from) query.set("from", from);
+  return `/verify-email?${query.toString()}`;
+}
+
 /**
  * Hook for authentication actions (signin, signup, signout, etc.)
  * Uses better-auth client under the hood
@@ -35,6 +45,14 @@ export function useAuthActions() {
       });
 
       if (result.error) {
+        // An unconfirmed address is not an error to print: Better Auth has
+        // just mailed a fresh link (`sendOnSignIn`), and the verify screen is
+        // where the resend button lives if that one does not arrive either.
+        if (result.error.code === EMAIL_NOT_VERIFIED) {
+          router.push(verifyEmailPath(email, "signin"));
+          return { success: false };
+        }
+
         setError(result.error.message || "Sign in failed");
         return { success: false, error: result.error.message };
       }
@@ -84,8 +102,10 @@ export function useAuthActions() {
         return { success: false, error: result.error.message };
       }
 
-      // Redirect to verification page
-      router.push("/verify-email");
+      // The account exists from here on, whether or not its first mail left
+      // (the server never fails a sign-up on the mail). The verify screen is
+      // told the address so its resend button works without asking for it.
+      router.push(verifyEmailPath(email));
 
       return { success: true };
     } catch (err) {

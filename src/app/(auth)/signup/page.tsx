@@ -88,12 +88,28 @@ export default function SignupPage() {
           <h1 className="text-2xl font-bold text-foreground mb-2">
             {t("title")}
           </h1>
-          <p className="text-muted-foreground mb-6">
+          <p className="text-muted-foreground mb-1">
             {t("subtitle")}
           </p>
 
           {/* Both of these read the query, which would otherwise opt this
               route out of static rendering. */}
+          <Suspense fallback={null}>
+            <AuthSwitchLink
+              to="/signin"
+              prompt={t("hasAccount")}
+              action={t("signIn")}
+              className="text-sm text-muted-foreground mb-4"
+            />
+          </Suspense>
+
+          {/* What the account is for. Nothing is chosen here: every account
+              can post a request, and driving is applied for from inside the
+              app — a role is never something a sign-up form sets. */}
+          <p className="mb-5 rounded-lg border border-border/50 bg-muted/40 p-3 text-xs leading-relaxed text-muted-foreground">
+            {t("accountNote")}
+          </p>
+
           <Suspense fallback={null}>
             <AuthIntentNote />
           </Suspense>
@@ -314,14 +330,6 @@ export default function SignupPage() {
             </svg>
             {t("signUpWithGoogle")}
           </Button>
-
-          <Suspense fallback={null}>
-            <AuthSwitchLink
-              to="/signin"
-              prompt={t("hasAccount")}
-              action={t("signIn")}
-            />
-          </Suspense>
 
           <p className="text-xs text-muted-foreground text-center mt-4">
             {t("terms")}{" "}

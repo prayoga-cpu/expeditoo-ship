@@ -366,21 +366,43 @@ function JobHeader({ job }: { job: Job }) {
  * The requester is named on a direct request only: an escalated job's owner
  * is the Expedion system account, which is nobody's name. The name is the
  * `shipper` party every audience of the view already receives.
+ *
+ * The title wraps to two lines rather than ending on « … » — on an iPad the
+ * one truncated line was all the requester had to recognise their request by
+ * (2.91.0 #37) — and one small line under it says where and when: the two
+ * towns and the pickup dates, which every audience of the view reads. It
+ * wraps too, rather than hiding the dates behind a long town name.
  */
 function JobIdentityBar({ job }: { job: Job }) {
   const t = useTranslations("myJobs.detail");
+  const format = useFormatter();
   const requester = job.origin === "direct" ? job.shipper?.name : null;
+  const pickupDates = format.dateTimeRange(
+    new Date(job.pickupFrom),
+    new Date(job.pickupUntil),
+    { day: "numeric", month: "short" }
+  );
 
   return (
     <div
       data-testid="job-identity-bar"
-      className="sticky top-0 z-20 -mx-4 border-b bg-background px-4 py-2.5 sm:-mx-6 sm:px-6"
+      className="sticky top-0 z-20 -mx-4 border-b bg-background px-4 py-2 sm:-mx-6 sm:px-6 sm:py-2.5"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 space-y-0.5">
-          <h1 className="truncate text-xl font-semibold tracking-tight sm:text-2xl">
+          <h1 className="line-clamp-2 text-lg leading-snug font-semibold tracking-tight break-words sm:text-2xl">
             {job.title}
           </h1>
+          <p
+            data-testid="job-identity-route"
+            className="flex flex-wrap gap-x-1.5 text-xs text-muted-foreground sm:text-sm"
+          >
+            <span className="font-medium text-foreground">
+              {job.pickupCity} → {job.dropoffCity}
+            </span>
+            <span aria-hidden>·</span>
+            <span>{t("pickupDates", { dates: pickupDates })}</span>
+          </p>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
             <ListingReference reference={job.reference} copyable />
             {requester ? (

@@ -41,6 +41,15 @@ function SignInContent() {
 
   // Check for email verification success
   useEffect(() => {
+    // The mail's link comes back here either way: Better Auth appends
+    // `error=token_expired` (or `invalid_token`) to the same callback when the
+    // link did not verify anything. That used to toast « vérifié » regardless.
+    // The verify screen is where another link can be asked for.
+    if (searchParams.get("error")) {
+      router.replace("/verify-email?linkError=1");
+      return;
+    }
+
     if (searchParams.get("verified") === "true") {
       toast.success(t("emailVerified"), {
         description: t("emailVerifiedDesc"),
@@ -87,7 +96,7 @@ function SignInContent() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-primary/10 via-background to-background py-8 px-4 overflow-hidden relative">
+    <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-primary/10 via-background to-background py-6 px-4 overflow-hidden relative">
       {/* Animated gradient orbs */}
       <div className="absolute top-20 left-10 w-72 h-72 bg-primary/20 rounded-full blur-3xl animate-pulse" />
       <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse" />
@@ -99,19 +108,28 @@ function SignInContent() {
         className="relative z-10 w-full max-w-md"
       >
         {/* Logo */}
-        <div className="flex items-center justify-center gap-2 mb-8">
+        <div className="flex items-center justify-center gap-2 mb-6">
           <BrandMark size={40} />
           <span className="text-2xl font-bold text-foreground">EXPEDITOP</span>
         </div>
 
         {/* Login Card */}
-        <div className="bg-card/50 backdrop-blur-sm rounded-2xl border border-border/50 p-8">
+        <div className="bg-card/50 backdrop-blur-sm rounded-2xl border border-border/50 p-6 sm:p-8">
           <h1 className="text-2xl font-bold text-foreground mb-2">
             {t("title")}
           </h1>
-          <p className="text-muted-foreground mb-6">
+          <p className="text-muted-foreground mb-1">
             {t("subtitle")}
           </p>
+
+          {/* Directly under the subtitle, not after the Google button: at the
+              bottom of the card it sat below the fold on a 768px-high laptop. */}
+          <AuthSwitchLink
+            to="/signup"
+            prompt={t("noAccount")}
+            action={t("signUp")}
+            className="text-sm text-muted-foreground mb-5"
+          />
 
           <AuthIntentNote />
 
@@ -209,7 +227,7 @@ function SignInContent() {
           </form>
 
           {/* Divider */}
-          <div className="relative my-6">
+          <div className="relative my-5">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-border/50"></div>
             </div>
@@ -248,12 +266,6 @@ function SignInContent() {
             </svg>
             {t("signInWithGoogle")}
           </Button>
-
-          <AuthSwitchLink
-            to="/signup"
-            prompt={t("noAccount")}
-            action={t("signUp")}
-          />
         </div>
       </motion.div>
     </div>

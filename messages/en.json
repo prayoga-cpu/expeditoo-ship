@@ -53,7 +53,18 @@
       "myEarnings": "My earnings",
       "language": "Language",
       "feedback": "Send feedback",
-      "planner": "Planner"
+      "planner": "Planner",
+      "bar": {
+        "home": "Home",
+        "requestTransport": "Request",
+        "myRequests": "My requests",
+        "shipments": "Tracking",
+        "messages": "Messages",
+        "jobs": "Jobs",
+        "myOffers": "My offers",
+        "myTrips": "My trips",
+        "deliveries": "Deliveries"
+      }
     },
     "categories": {
       "electronics": "Electronics",
@@ -229,7 +240,7 @@
     },
     "register": {
       "title": "Create your account",
-      "subtitle": "Join EXPEDITOP to start shipping and bidding",
+      "subtitle": "One account to have your goods carried — or to carry them.",
       "email": "Email address",
       "password": "Password",
       "confirmPassword": "Confirm password",
@@ -261,7 +272,8 @@
       "aliasHint": "The name you'd like to appear under. For now, only you can see it.",
       "placeholderFirstName": "Jean",
       "placeholderLastName": "Dupont",
-      "placeholderAlias": "Jeannot"
+      "placeholderAlias": "Jeannot",
+      "accountNote": "With this account you can request a transport right away. To carry jobs as a driver, file your application from inside the app after signing up (“Become a driver”)."
     },
     "forgotPassword": {
       "title": "Forgot password?",
@@ -304,7 +316,7 @@
     "verifyEmail": {
       "title": "Verify your email",
       "subtitle": "We've sent a verification link to your email",
-      "resend": "Resend verification email",
+      "resend": "Resend the email",
       "resending": "Sending...",
       "resent": "Verification email sent!",
       "backToLogin": "Back to login",
@@ -319,10 +331,19 @@
       "failedTitle": "We couldn't verify your email",
       "failedBody": "The link may have expired or already been used.",
       "failedFallback": "Email verification failed.",
-      "signUpAgain": "Create my account again",
       "needHelp": "Need help?",
       "contactSupport": "Contact support",
-      "loading": "Loading…"
+      "loading": "Loading…",
+      "subtitleWithEmail": "We've sent a verification link to {email}",
+      "fromSignIn": "Your email address is not confirmed yet. We have just sent you a new link: open it to activate your account. If it does not arrive, resend it below.",
+      "linkFailedBody": "The link may have expired or already been used. Ask for a new one below.",
+      "resentHint": "It can take a few minutes to arrive.",
+      "resendIn": "Resend in {seconds} s",
+      "resendFailed": "The email could not be sent. Try again in a moment; if it keeps failing, write to us at {support}.",
+      "resendRateLimited": "Too many requests in a row. Wait a minute before trying again.",
+      "emailLabel": "Your email address",
+      "emailPlaceholder": "you@example.com",
+      "emailInvalid": "Please enter a valid email address"
     },
     "intent": {
       "bid": "You were about to place an offer.",
@@ -732,7 +753,8 @@
     },
     "activity": {
       "posted": "Requests published",
-      "taken": "Taken by a transporter"
+      "taken": "Taken by a transporter",
+      "viewDetails": "See the requests and messages"
     }
   },
   "settings": {
@@ -802,13 +824,13 @@
     },
     "detail": {
       "noRatings": "No ratings yet",
-      "aboutListing": "About Listing",
       "newMessage": "New message",
       "typeMessage": "Type a message...",
       "loading": "Loading...",
       "unknown": "Unknown",
       "you": "You",
-      "backToInbox": "Back to messages"
+      "backToInbox": "Back to messages",
+      "openListing": "View the job"
     },
     "offer": {
       "button": "Make an offer",
@@ -856,7 +878,17 @@
         "budget": "Requester's budget: {amount}",
         "gapBelow": "{percent}% below",
         "gapAbove": "{percent}% above",
-        "gapEqual": "same price"
+        "gapEqual": "same price",
+        "afterDecline": {
+          "youCanCounter": "You declined this price. You can send the carrier your own from the job page.",
+          "counter": "Offer another price",
+          "youCarrierNext": "You declined this price. The carrier can send you a new offer.",
+          "youOtherNext": "You declined this price. The other person can send you a new offer.",
+          "refusedBidLive": "The requester declined this price. Your offer stays on the job until you withdraw it.",
+          "withdrawAndRepropose": "Withdraw and offer another price",
+          "refused": "The other person declined this price. You can send them a new offer.",
+          "repropose": "Offer another price"
+        }
       },
       "errors": {
         "CONVERSATION_HAS_NO_LISTING": "This conversation is not about a job.",
@@ -872,10 +904,12 @@
         "PAYMENT_NOT_AUTHORISED": "The payment was not confirmed. Please try again.",
         "COORDINATES_REQUIRED": "We could not place the pickup or delivery address on the map, not even its town. Correct the request's address, then try again.",
         "generic": "Could not send this offer. Please try again."
-      }
+      },
+      "refusedNotice": "The requester declined your price. To offer another, withdraw the offer from its card above."
     },
     "item": {
-      "noListing": "No listing"
+      "noListing": "No listing",
+      "support": "Support"
     },
     "time": {
       "today": "Today",
@@ -1174,7 +1208,6 @@
         "findAnother": "Find another job",
         "viewJob": "View the job",
         "withdraw": "Withdraw",
-        "pickup": "Pickup {date}",
         "status": {
           "pending": "Pending",
           "accepted": "Selected",
@@ -1184,7 +1217,13 @@
         },
         "notCarrier": "Offers are for approved carriers",
         "notCarrierDesc": "This account does not have carrier access. Check your application; if it is already approved, sign out and back in, otherwise contact support.",
-        "application": "My carrier application"
+        "application": "My carrier application",
+        "jobDates": "Requested dates:",
+        "jobPickup": "pickup {dates}",
+        "jobDelivery": "delivery {dates}",
+        "yourSlot": "Your slot:",
+        "slotPickup": "pickup {date}",
+        "jobUnavailable": "This request is no longer available."
       },
       "makeOffer": "Make an offer",
       "ownJobTitle": "This is your request",
@@ -1198,9 +1237,9 @@
   "create": {
     "assistant": {
       "title": "Describe your request and the form fills itself",
-      "hint": "Say in one sentence what you need moved, from where and to where. You check everything before posting.",
+      "hint": "Say in one sentence what you need moved, from where, to where and when. You check everything before posting.",
       "label": "Your request",
-      "placeholder": "Example: a 3-seater sofa from Lyon to Bordeaux",
+      "placeholder": "Example: a 3-seater sofa from Lyon to Bordeaux, pickup on the 20th",
       "read": "Read it",
       "reading": "Reading…",
       "add": "Add",
@@ -1214,7 +1253,8 @@
         "size": "Size",
         "weight": "Weight",
         "pickup": "Pickup",
-        "dropoff": "Delivery"
+        "dropoff": "Delivery",
+        "when": "Dates"
       },
       "toSpecify": "To be specified",
       "outOfArea": "Country not served yet",
@@ -1226,7 +1266,8 @@
         "size": "How big is it? Its dimensions, or something of a similar size.",
         "weight": "Roughly how much does it weigh?",
         "pickup": "Which town should it be collected from?",
-        "dropoff": "Which town should it be delivered to?"
+        "dropoff": "Which town should it be delivered to?",
+        "when": "Which day should it be collected, and delivered?"
       },
       "askMore": "Anything else to add or correct?",
       "fill": "Fill in the form",
@@ -1237,13 +1278,20 @@
       "describeAgain": "Describe again",
       "privacy": "Your text or dictation is read by an artificial intelligence service (OpenAI) to fill in the form. Nothing is posted without your confirmation.",
       "error": {
-        "failed": "We could not read your request. Try again, or fill in the form below directly.",
+        "failed": "We could not read your request. Your text is kept: try again, or fill in the form below directly.",
         "rateLimited": "Too many attempts in a row. Wait a minute, or fill in the form below directly.",
         "micDenied": "The microphone is not allowed. Allow it in your browser, or type your request.",
-        "micFailed": "Dictation did not work. Try again, or type your request."
+        "micFailed": "Dictation did not work. Try again, or type your request.",
+        "timeout": "Reading is taking too long. Your text is kept: try again, or fill in the form below directly."
       },
       "toast": {
         "filled": "Form filled in. Check each step."
+      },
+      "retry": "Try again",
+      "dates": {
+        "both": "Pickup {pickup} · delivery {delivery}",
+        "pickup": "Pickup {date}",
+        "delivery": "Delivery {date}"
       }
     },
     "illustration": {
@@ -1525,7 +1573,7 @@
       "modeLabel": "How firm are your dates?",
       "mode": {
         "exact": "Exact",
-        "exactHint": "Pick a precise pickup and delivery time.",
+        "exactHint": "Pick the pickup and delivery day, and a time if you have one.",
         "flexible": "Flexible",
         "flexibleHint": "Give a date range — carriers can propose times outside it too."
       },
@@ -1808,7 +1856,8 @@
       "noPackaging": "No protection or packaging",
       "moveSize": "Size",
       "estimatedWeight": "Estimated weight",
-      "approxKg": "≈ {weight, number} kg"
+      "approxKg": "≈ {weight, number} kg",
+      "pickupDates": "Pickup {dates}"
     },
     "carriers": {
       "tab": "Available carriers",
@@ -2927,7 +2976,8 @@
         "removeDriver": "Remove driver",
         "activate": "Activate",
         "suspend": "Suspend",
-        "delete": "Delete account"
+        "delete": "Delete account",
+        "activity": "Requests and messages"
       },
       "dialogs": {
         "cancel": "Cancel",
@@ -3782,6 +3832,73 @@
         "picked_up": "Picked up",
         "delivered": "Delivered",
         "cancelled": "Cancelled"
+      }
+    },
+    "userActivity": {
+      "title": "Requests and messages",
+      "back": "Back",
+      "backToUsers": "Back to users",
+      "readOnly": "Read-only: nothing is marked as read, and the person is not told you looked.",
+      "loadMore": "Show more",
+      "openJob": "View the request",
+      "pickupOn": "Pickup on {date}",
+      "offeredOn": "Offered on {date}",
+      "offersCount": "{count, plural, =0 {No offers} one {# offer} other {# offers}}",
+      "unavailable": {
+        "title": "Activity unavailable",
+        "description": "This account no longer exists, or your role does not allow reading its requests and messages."
+      },
+      "tabs": {
+        "requests": "Requests posted ({count})",
+        "offers": "Offers made ({count})",
+        "conversations": "Conversations ({count})"
+      },
+      "requests": {
+        "emptyTitle": "No requests posted",
+        "emptyDescription": "This account has not posted a transport request yet."
+      },
+      "offers": {
+        "emptyTitle": "No offers made",
+        "emptyDescription": "This account has not answered any request as a transporter."
+      },
+      "conversations": {
+        "emptyTitle": "No conversations",
+        "emptyDescription": "This account has not exchanged any messages yet.",
+        "with": "With {names}",
+        "support": "Conversation with support",
+        "unknownParty": "Other party whose account no longer exists",
+        "noJob": "No request attached",
+        "read": "Read the messages",
+        "messageCount": "{count, plural, =0 {No messages} one {# message} other {# messages}}",
+        "lastMessage": "Last message on {date}",
+        "noMessage": "Conversation opened, no message yet"
+      },
+      "thread": {
+        "back": "Back to conversations",
+        "emptyTitle": "No messages",
+        "emptyDescription": "This conversation was opened, but nobody has written in it yet.",
+        "loadOlder": "Show earlier messages",
+        "offerLine": "Offer — {price} — {status}",
+        "attachment": "Attachment",
+        "deletedSender": "Deleted account"
+      },
+      "listingStatus": {
+        "draft": "Draft",
+        "scheduled": "Scheduled",
+        "open": "Open",
+        "awarded": "Awarded",
+        "in_progress": "In progress",
+        "completed": "Completed",
+        "cancelled": "Cancelled",
+        "expired": "Expired"
+      },
+      "offerStatus": {
+        "pending": "Pending",
+        "accepted": "Accepted",
+        "rejected": "Rejected",
+        "declined": "Declined",
+        "withdrawn": "Withdrawn",
+        "expired": "Expired"
       }
     }
   },

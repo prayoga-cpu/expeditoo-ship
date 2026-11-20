@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { MapPin, X } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { LottieLoader } from "@/components/ui/lottie-loader";
+import { DEFAULT_COUNTRY, JOB_COUNTRIES, countryName } from "@/lib/countries";
 import { searchAddress } from "@/lib/geocoding";
 
 /** A place chosen from the suggestions — a name and the coordinates behind it. */
@@ -14,6 +15,32 @@ export interface CityValue {
   label: string;
   lat: number;
   lng: number;
+}
+
+/**
+ * Where a town is looked for: every country a job can start or end in, as
+ * Nominatim's `countrycodes`. Derived from the one list (`countries.ts`), so a
+ * country added there is searchable here the same day. It was France alone,
+ * and « Bruxelles » answered with French hamlets while the board carried jobs
+ * to Belgium.
+ */
+export const CITY_SEARCH_COUNTRIES = JOB_COUNTRIES.map((code) =>
+  code.toLowerCase()
+).join(",");
+
+/** A suggestion also knows its country; the picked value does not need to. */
+interface Suggestion extends CityValue {
+  countryCode?: string;
+}
+
+/**
+ * The country to print beside a suggestion, or null for the home country:
+ * naming France on every French town would be noise, naming Belgium is the
+ * difference between two places with one name.
+ */
+export function foreignCountry(code: string | undefined, locale: string): string | null {
+  if (!code || code === DEFAULT_COUNTRY) return null;
+  return countryName(code, locale);
 }
 
 interface CityFieldProps {
@@ -49,9 +76,10 @@ export function CityField({
   className,
 }: CityFieldProps) {
   const t = useTranslations("common.cityField");
+  const locale = useLocale();
 
   const [text, setText] = useState(value?.label ?? "");
-  const [results, setResults] = useState<CityValue[]>([]);
+  const [results, setResults] = useState<Suggestion[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
@@ -101,12 +129,13 @@ export function CityField({
       timeoutRef.current = setTimeout(async () => {
         setIsSearching(true);
         try {
-          const found = await searchAddress(query, "fr", 5);
+          const found = await searchAddress(query, CITY_SEARCH_COUNTRIES, 5);
           setResults(
             found.map((result) => ({
               label: result.place_name,
               lat: result.center[1],
               lng: result.center[0],
+              countryCode: result.countryCode,
             }))
           );
           setIsOpen(true);
@@ -171,22 +200,32 @@ export function CityField({
 
       {isOpen && results.length > 0 ? (
         <ul className="bg-popover absolute top-full right-0 left-0 z-50 mt-1 max-h-56 overflow-y-auto rounded-md border shadow-lg">
-          {results.map((result) => (
-            <li key={`${result.lat},${result.lng}`}>
-              <button
-                type="button"
-                className="hover:bg-accent focus-visible:bg-accent w-full px-3 py-2 text-left text-sm outline-none"
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => {
-                  onChange(result);
-                  setText(result.label);
-                  setIsOpen(false);
-                }}
-              >
-                {result.label}
-              </button>
-            </li>
-          ))}
+          {results.map((result) => {
+            const country = foreignCountry(result.countryCode, locale);
+            return (
+              <li key={`${result.lat},${result.lng}`}>
+                <button
+                  type="button"
+                  className="hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground flex w-full items-start justify-between gap-2 px-3 py-2 text-left text-sm outline-none"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => {
+                    // The parent gets a place and nothing else: the country is
+                    // for telling suggestions apart, not for the board's URL.
+                    onChange({ label: result.label, lat: result.lat, lng: result.lng });
+                    setText(result.label);
+                    setIsOpen(false);
+                  }}
+                >
+                  <span className="min-w-0">{result.label}</span>
+                  {country ? (
+                    <span className="bg-muted text-muted-foreground shrink-0 rounded px-1.5 py-0.5 text-xs font-medium">
+                      {country}
+                    </span>
+                  ) : null}
+                </button>
+              </li>
+            );
+          })}
         </ul>
       ) : null}
     </div>

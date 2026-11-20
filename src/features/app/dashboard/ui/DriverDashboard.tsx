@@ -20,6 +20,10 @@ import type { Shipment } from "@/features/app/deliveries/api/deliveries.api";
 /**
  * A single number with somewhere to go. Whole tile is the link, so the target
  * is reachable by tapping anywhere on it rather than only the label.
+ *
+ * Type on this page is one step up from the app's usual (2.91.0 #4/#28):
+ * labels and body copy at 16px rather than 14px, card titles at 18px. It is
+ * the first screen a driver reads on a phone, often at arm's length.
  */
 function StatTile({
   href,
@@ -44,7 +48,7 @@ function StatTile({
         <p className="mt-3 font-mono text-2xl leading-none font-semibold tabular-nums">
           {isLoading ? "—" : value}
         </p>
-        <p className="mt-1 text-sm text-muted-foreground">{label}</p>
+        <p className="mt-1 text-base text-muted-foreground">{label}</p>
       </Card>
     </Link>
   );
@@ -59,7 +63,7 @@ function CurrentRunCard({ run }: { run: Shipment }) {
     <Card className="p-5">
       <div className="flex items-center gap-2">
         <Truck className="h-5 w-5 text-primary" aria-hidden />
-        <h2 className="font-semibold">{t("currentRun.title")}</h2>
+        <h2 className="text-lg font-semibold">{t("currentRun.title")}</h2>
       </div>
 
       <p className="mt-3 font-medium">
@@ -68,7 +72,7 @@ function CurrentRunCard({ run }: { run: Shipment }) {
 
       {/* Route, wrapped rather than truncated: an address the driver cannot
           read in full is worse than one that takes two lines. */}
-      <p className="mt-1 text-sm break-words text-muted-foreground">
+      <p className="mt-1 text-base break-words text-muted-foreground">
         {from} → {to}
       </p>
 
@@ -119,14 +123,14 @@ export function DriverDashboard() {
       <BackButton fallbackHref="/profile" className="-mb-2" />
       <header className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
-        <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
+        <p className="text-base text-muted-foreground">{t("subtitle")}</p>
       </header>
 
       {loadFailed && <LoadErrorState variant="inline" onRetry={retry} />}
 
       {canSwitchToDriver && (
         <Card className="flex flex-wrap items-center justify-between gap-3 border-success/30 bg-success/10 p-4">
-          <p className="flex items-center gap-2 text-sm font-medium">
+          <p className="flex items-center gap-2 text-base font-medium">
             <Repeat className="h-4 w-4 shrink-0 text-success" aria-hidden />
             {t("switchToDriver.text")}
           </p>
@@ -138,7 +142,7 @@ export function DriverDashboard() {
 
       {newJobCount > 0 && (
         <Card className="flex flex-wrap items-center justify-between gap-3 p-4">
-          <p className="flex items-center gap-2 text-sm font-medium">
+          <p className="flex items-center gap-2 text-base font-medium">
             <Megaphone className="h-4 w-4 shrink-0 text-primary" aria-hidden />
             {t("newJobs.text", { count: newJobCount, capped: newJobsCapped ? "yes" : "no" })}
           </p>
@@ -160,9 +164,9 @@ export function DriverDashboard() {
         <Card className="p-5">
           <div className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-primary" aria-hidden />
-            <h2 className="font-semibold">{t("getStarted.title")}</h2>
+            <h2 className="text-lg font-semibold">{t("getStarted.title")}</h2>
           </div>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <p className="mt-2 text-base text-muted-foreground">
             {t("getStarted.description")}
           </p>
           <Button asChild className="mt-4 w-full sm:w-auto">

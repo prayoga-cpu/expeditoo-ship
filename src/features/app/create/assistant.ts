@@ -7,13 +7,15 @@ import type {
   RequestDraft,
 } from "@/server/dto/request-assistant.dto";
 import type { JobFormValues } from "./schemas";
+import { addDays, defaultEndpointTiming, type TimingState } from "./timing";
 
 /**
  * The request assistant's answer, written onto the form
  * (docs/specs/request_assistant_spec.md §4).
  *
  * Only what the assistant found is written: a field it left null keeps
- * whatever the person had already typed. Nothing is validated here on purpose
+ * whatever the person had already typed. The days it read are the When step's,
+ * which holds a state of its own: `timingFromDraft` below. Nothing is validated here on purpose
  * — the values land exactly as if they had been typed, and each step's own
  * rules read them when « Suivant » is pressed.
  */
@@ -34,7 +36,9 @@ export function hasFindings(draft: RequestDraft): boolean {
     draft.sizePreset !== null ||
     draft.dimensions !== null ||
     draft.pickup !== null ||
-    draft.dropoff !== null
+    draft.dropoff !== null ||
+    draft.pickupDate !== null ||
+    draft.deliveryDate !== null
   );
 }
 
@@ -82,6 +86,50 @@ function applySize(
     setValue("sizeMode", "preset");
     setValue("sizePreset", draft.sizePreset);
   }
+}
+
+/**
+ * The When step with the days the assistant read, or `null` when it read none
+ * and the step is to be left exactly as it is (request_assistant_spec.md
+ * §4.6).
+ *
+ * A stated day is a one-day flexible range — « Du » and « Au » the same day,
+ * every weekday and time of day allowed: the person named a day, not an hour,
+ * and flexible is the form's own default. The end that was not stated keeps
+ * what it held, moved only as far as it takes to stay on the right side of the
+ * other: a delivery never before its pickup (the day after it, the shape the
+ * form's defaults have), a pickup never after its delivery (that same day).
+ *
+ * Pure: the form's state goes in and comes out, and the caller derives the
+ * four instants from it as it does for a change made by hand.
+ */
+export function timingFromDraft(
+  current: TimingState,
+  draft: Pick<RequestDraft, "pickupDate" | "deliveryDate">
+): TimingState | null {
+  const { pickupDate, deliveryDate } = draft;
+  if (!pickupDate && !deliveryDate) return null;
+
+  let pickup = pickupDate ? defaultEndpointTiming(pickupDate) : current.pickup;
+  let dropoff = deliveryDate ? defaultEndpointTiming(deliveryDate) : current.dropoff;
+
+  if (!deliveryDate && dropoff.date < pickup.date) {
+    dropoff = defaultEndpointTiming(addDays(pickup.date, 1));
+  }
+  if (!pickupDate && pickup.date > dropoff.date) {
+    pickup = defaultEndpointTiming(dropoff.date);
+  }
+  return { mode: "flexible", pickup: wholeRange(pickup), dropoff: wholeRange(dropoff) };
+}
+
+/**
+ * An end kept from « Date précise » has an « Au » nobody was shown; a range
+ * that ends before it starts is not what the person chose.
+ */
+function wholeRange(endpoint: TimingState["pickup"]): TimingState["pickup"] {
+  return endpoint.dateUntil < endpoint.date
+    ? { ...endpoint, dateUntil: endpoint.date }
+    : endpoint;
 }
 
 /**

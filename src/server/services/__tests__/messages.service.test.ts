@@ -191,6 +191,71 @@ describe('messagesService', () => {
         });
     });
 
+    // client feedback #25/#31: the row names its job, at town level only.
+    describe('getInbox listing projection', () => {
+        const row = (listing: unknown, type = 'LISTING') => ([{
+            id: 'conv-1',
+            type,
+            participants: [{ user: { id: 'user-1' } }, { user: { id: 'user-2' } }],
+            lastMessageAt: null,
+            messages: [],
+            listing,
+        }] as never);
+
+        it('carries the towns, the dates and the status of the job', async () => {
+            vi.mocked(messagesDAL.getUserConversations).mockResolvedValue(row({
+                id: 'l-1', title: 'Canapé', reference: 100042, status: 'open',
+                pickupCity: 'Paris', dropoffCity: 'Lyon',
+                pickupFrom: new Date('2026-11-20T08:00:00Z'),
+                pickupUntil: new Date('2026-11-20T18:00:00Z'),
+                dropoffFrom: new Date('2026-11-22T08:00:00Z'),
+                dropoffUntil: new Date('2026-11-22T18:00:00Z'),
+                photos: [{ id: 'p', url: 'https://img/1.jpg', order: 0 }],
+            }));
+
+            const { items } = await messagesService.getInbox('user-1', { page: 1, limit: 10 });
+
+            expect(items[0].type).toBe('LISTING');
+            expect(items[0].listing).toEqual({
+                id: 'l-1', title: 'Canapé', reference: 100042, status: 'open',
+                pickupCity: 'Paris', dropoffCity: 'Lyon',
+                pickupFrom: '2026-11-20T08:00:00.000Z',
+                pickupUntil: '2026-11-20T18:00:00.000Z',
+                dropoffFrom: '2026-11-22T08:00:00.000Z',
+                dropoffUntil: '2026-11-22T18:00:00.000Z',
+                photos: [{ url: 'https://img/1.jpg' }],
+            });
+        });
+
+        it('lets nothing else through, whatever the read returns', async () => {
+            vi.mocked(messagesDAL.getUserConversations).mockResolvedValue(row({
+                id: 'l-1', title: 'Canapé', reference: 100042, status: 'open',
+                pickupCity: 'Paris', dropoffCity: 'Lyon',
+                pickupFrom: new Date(), pickupUntil: new Date(),
+                dropoffFrom: new Date(), dropoffUntil: new Date(),
+                photos: [],
+                pickupAddress: '12 rue de la Paix', pickupPostalCode: '75002',
+                pickupLat: 48.86, shipperId: 'user-2', budgetCents: 20000,
+            }));
+
+            const { items } = await messagesService.getInbox('user-1', { page: 1, limit: 10 });
+
+            expect(Object.keys(items[0].listing ?? {}).sort()).toEqual([
+                'dropoffCity', 'dropoffFrom', 'dropoffUntil', 'id', 'photos',
+                'pickupCity', 'pickupFrom', 'pickupUntil', 'reference', 'status', 'title',
+            ]);
+        });
+
+        it('says a support thread is one, and has no job', async () => {
+            vi.mocked(messagesDAL.getUserConversations).mockResolvedValue(row(null, 'SUPPORT'));
+
+            const { items } = await messagesService.getInbox('user-1', { page: 1, limit: 10 });
+
+            expect(items[0].type).toBe('SUPPORT');
+            expect(items[0].listing).toBeNull();
+        });
+    });
+
     describe('getThread read receipts', () => {
         beforeEach(() => {
             vi.mocked(messagesDAL.getConversationById).mockResolvedValue({

@@ -9,10 +9,13 @@ import { listingsDal } from "@/server/dal/listings.dal";
 import { offersService } from "./offers.service";
 import { paymentsService } from "./payments.service";
 import * as userService from "./user.service";
+import { notificationsService } from "./notifications.service";
 import { publishNewMessage } from "./message-publish";
 import { requesterAlertsService } from "./requester-alerts.service";
 import { resolveOfferSlots } from "@/lib/offer-slots";
 import { formatCurrency } from "@/lib/currency";
+import { ablyServer } from "@/lib/ably-server";
+import { namespaced } from "@/lib/env";
 import type { CreateThreadOfferInput } from "@/server/dto/thread-offers.dto";
 
 // ========================================
@@ -71,6 +74,12 @@ export interface ThreadOfferContext {
   blockedBy: ThreadOfferBlock | null;
   job: ThreadOfferJob | null;
   viewerCanAward: boolean;
+  /**
+   * Whether this viewer may answer a bid with a counter-price on the job page
+   * - the requester, on a direct request still open (§13). Decided here so the
+   * declined card does not restate the job page's rule.
+   */
+  canCounter: boolean;
 }
 
 type ConversationRow = NonNullable<
@@ -87,6 +96,7 @@ const blocked = (
   blockedBy,
   job,
   viewerCanAward: false,
+  canCounter: false,
 });
 
 // ========================================
@@ -123,10 +133,12 @@ export const threadOffersService = {
         blockedBy: live ? "OFFER_LIVE" : null,
         job: null,
         viewerCanAward: false,
+        canCounter: false,
       };
     }
 
     const viewerCanAward = await canAward(userId, listing);
+    const canCounter = canCounterOn(userId, listing);
     const job = toJob(listing);
 
     // Being unable to *send* an offer says nothing about being able to *answer*
@@ -137,6 +149,7 @@ export const threadOffersService = {
     const no = (blockedBy: ThreadOfferBlock, withJob = false) => ({
       ...blocked("job", blockedBy, withJob ? job : null),
       viewerCanAward,
+      canCounter,
     });
 
     if (listing.status !== "open") return no("LISTING_NOT_OPEN");
@@ -172,6 +185,7 @@ export const threadOffersService = {
       blockedBy: null,
       job,
       viewerCanAward,
+      canCounter,
     };
   },
 
@@ -421,8 +435,21 @@ export const threadOffersService = {
     return { threadOffer: updated, shipmentId };
   },
 
-  async decline(userId: string, threadOfferId: string) {
-    const { threadOffer } = await requireRespondable(userId, threadOfferId);
+  /**
+   * Say no, from inside the chat - and tell the sender (§13).
+   *
+   * `notify: false` is for an admin's borrowed session: the decline is
+   * recorded as the user's, but nobody is pinged by someone looking.
+   */
+  async decline(
+    userId: string,
+    threadOfferId: string,
+    { notify = true }: { notify?: boolean } = {}
+  ) {
+    const { threadOffer, conversation } = await requireRespondable(
+      userId,
+      threadOfferId
+    );
     // Declining does not reject the underlying bid: on the job lane an
     // operator may still award it from /admin/awards, and one person's "no
     // thanks" in a chat is not that decision.
@@ -431,10 +458,17 @@ export const threadOffersService = {
       "declined",
       userId
     );
+    if (notify) await announceDecline(threadOffer, conversation);
     return { threadOffer: updated };
   },
 
-  /** The sender retracts. On the job lane the bid goes with it. */
+  /**
+   * The sender retracts. On the job lane the bid goes with it.
+   *
+   * A card the other side declined is still the sender's to retract while its
+   * bid is live: the bid holds their one slot on the job, and taking it back
+   * is how they make room for another price (§13).
+   */
   async withdraw(userId: string, threadOfferId: string) {
     const threadOffer = await threadOffersDal.getById(threadOfferId);
     if (!threadOffer) throw err("THREAD_OFFER_NOT_FOUND", 404);
@@ -443,7 +477,12 @@ export const threadOffersService = {
     if (threadOffer.senderId !== userId) {
       throw err("NOT_YOUR_OFFER_TO_WITHDRAW", 403);
     }
-    if (threadOffer.status !== "pending") throw err("OFFER_NOT_PENDING", 409);
+    const declinedWithLiveBid =
+      threadOffer.status === "declined" &&
+      threadOffer.offer?.status === "pending";
+    if (threadOffer.status !== "pending" && !declinedWithLiveBid) {
+      throw err("OFFER_NOT_PENDING", 409);
+    }
 
     if (threadOffer.offerId) {
       await offersService.withdrawOffer(userId, threadOffer.offerId);
@@ -542,6 +581,68 @@ async function canAward(
     (await userService.hasRole(userId, "operator")) ||
     (await userService.hasRole(userId, "admin"))
   );
+}
+
+/**
+ * The job page's own rule for the counter-price (`counterOffer`): the
+ * requester, on a direct request that is still open.
+ */
+const canCounterOn = (
+  userId: string,
+  listing: { status: string; shipperId: string; origin: string | null }
+) =>
+  listing.shipperId === userId &&
+  listing.origin === "direct" &&
+  listing.status === "open";
+
+/**
+ * Tell the sender their price was refused: a notification that opens the
+ * thread, and a nudge on the conversation channel so a thread already on
+ * screen redraws the card. No chat message is written - the decline is an
+ * answer on the card, not words in the recipient's mouth.
+ *
+ * Best-effort on both halves: the decline has already committed.
+ */
+async function announceDecline(
+  threadOffer: {
+    id: string;
+    senderId: string;
+    conversationId: string;
+    priceCents: number;
+    offerId: string | null;
+  },
+  conversation: ConversationRow
+) {
+  const price = formatCurrency(threadOffer.priceCents);
+  const title = conversation.listing?.title;
+  const onJob = Boolean(threadOffer.offerId && title);
+
+  await Promise.all([
+    notificationsService
+      .createNotification({
+        userId: threadOffer.senderId,
+        type: "offer_declined",
+        title: "Votre prix a été refusé",
+        message: onJob
+          ? `Le demandeur a refusé ${price} pour « ${title} ». Retirez cette offre pour proposer un autre prix.`
+          : `Votre offre de ${price} a été refusée. Vous pouvez en envoyer une nouvelle.`,
+        linkUrl: `/messages/${threadOffer.conversationId}`,
+        data: {
+          conversationId: threadOffer.conversationId,
+          threadOfferId: threadOffer.id,
+          listingId: conversation.listing?.id ?? null,
+          offerId: threadOffer.offerId,
+        },
+      })
+      .catch((e) => console.error("offer_declined notification failed", e)),
+    ablyServer
+      .publish(
+        namespaced(`conversation:${threadOffer.conversationId}`),
+        "offer:updated",
+        { threadOfferId: threadOffer.id, status: "declined" }
+      )
+      .catch((e) => console.error("offer:updated publish failed", e)),
+  ]);
 }
 
 function toJob(listing: ConversationRow["listing"]): ThreadOfferJob {

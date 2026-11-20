@@ -238,6 +238,46 @@ describe("JobDetail, as the client asked on 21 October", () => {
     expect(bar.textContent).toContain("250,00");
   });
 
+  // 2.91.0 #37: on an iPad the bar was one truncated title and nothing else.
+  it("lets the title wrap to two lines instead of cutting it", () => {
+    render();
+
+    const title = screen.getByRole("heading", { level: 1, name: "Armoire normande" });
+    expect(title.className).toContain("line-clamp-2");
+    expect(title.className.split(" ")).not.toContain("truncate");
+  });
+
+  // Midday UTC, so the day is the same one wherever the suite runs.
+  const NOON = {
+    pickupFrom: "2026-10-05T10:00:00.000Z",
+    pickupUntil: "2026-10-05T12:00:00.000Z",
+  };
+
+  it("says where and when under the title, and keeps the reference and budget", () => {
+    hooks.job = { ...JOB, ...NOON };
+    render();
+
+    const line = screen.getByTestId("job-identity-route");
+    expect(line.textContent).toContain("Caen → Rennes");
+    expect(line.textContent).toContain(
+      tr("myJobs.detail.pickupDates", { dates: "5 oct." })
+    );
+
+    const bar = screen.getByTestId("job-identity-bar");
+    expect(bar.contains(line)).toBe(true);
+    expect(bar.textContent).toContain("Réf. 100042");
+    expect(bar.textContent).toContain("250,00");
+  });
+
+  it("gives a pickup over several days as a range", () => {
+    hooks.job = { ...JOB, ...NOON, pickupUntil: "2026-10-08T12:00:00.000Z" };
+    render();
+
+    expect(screen.getByTestId("job-identity-route").textContent).toMatch(
+      /5\s?[–-]\s?8 oct\./
+    );
+  });
+
   it("names the requester of a direct request in the bar", () => {
     hooks.job = {
       ...JOB,

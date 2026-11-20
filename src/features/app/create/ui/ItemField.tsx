@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NumericInput } from "@/components/ui/numeric-input";
 import { NUMERIC_RULES } from "@/lib/numeric-input";
-import { ITEM_SUGGESTIONS, type ItemSuggestion } from "../cargo";
+import { ITEM_SUGGESTIONS, suggestionFill, type ItemSuggestion } from "../cargo";
+import type { CargoChoices } from "../hooks/useCargoChoices";
 import type { JobFormApi } from "../hooks/useJobForm";
 import { FieldError } from "./FieldError";
 
@@ -43,7 +44,14 @@ const TITLE_MAX = 120;
  * change, the same move already made for a weight bracket and a size preset
  * (docs/specs/cargo_input_spec.md §2) — no other surface learns a new shape.
  */
-export function ItemField({ form }: { form: JobFormApi["form"] }) {
+export function ItemField({
+  form,
+  choices,
+}: {
+  form: JobFormApi["form"];
+  /** Which cargo answers are the person's own, and so not a suggestion's to write. */
+  choices: CargoChoices;
+}) {
   const t = useTranslations("create.what");
   const { register, formState, watch, setValue, getValues } = form;
   const errors = formState.errors;
@@ -67,12 +75,22 @@ export function ItemField({ form }: { form: JobFormApi["form"] }) {
     setValue("title", t(`itemSuggestions.${suggestion.id}`), {
       shouldValidate: true,
     });
-    setValue("weightBracket", suggestion.weightBracket, {
-      shouldValidate: true,
+    // The guess that comes with a name fills only what nobody has answered:
+    // a weight or a size chosen by hand is never written over
+    // (client feedback 2026-11-19, #21).
+    const fill = suggestionFill(suggestion, {
+      weight: choices.isByHand("weight"),
+      size: choices.isByHand("size"),
     });
-    if (suggestion.sizePreset) {
+    if (fill.weightBracket) {
+      setValue("weightBracket", fill.weightBracket, { shouldValidate: true });
+      // A figure left from an earlier guess's bracket would be read inside
+      // this one — see the comment on `resolveWeightKg`.
+      setValue("exactWeightKg", undefined);
+    }
+    if (fill.sizePreset) {
       setValue("sizeMode", "preset");
-      setValue("sizePreset", suggestion.sizePreset, { shouldValidate: true });
+      setValue("sizePreset", fill.sizePreset, { shouldValidate: true });
     }
     setSuggestionsOpen(false);
   };

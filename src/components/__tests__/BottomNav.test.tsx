@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -87,9 +87,12 @@ describe("BottomNav", () => {
   it("names the posting verb in French too", () => {
     const { onError } = renderWith("fr");
 
-    expect(
-      screen.getByRole("link", { name: /Demander un transport/ })
-    ).toHaveAttribute("href", "/create");
+    // The bar's own short label: « Demander un transport » at a readable
+    // size ended on « … » (2.91.0 #4/#28).
+    expect(screen.getByRole("link", { name: "Demander" })).toHaveAttribute(
+      "href",
+      "/create"
+    );
     expect(onError.mock.calls.map(([e]) => e.message)).toEqual([]);
   });
 
@@ -149,27 +152,71 @@ describe("BottomNav", () => {
     expect(driver).toContain("/expedion");
   });
 
-  // Same rule as the sidebar's driver entry (become_driver_spec.md §3).
+  // 2.91.0 #35, become_driver_spec.md §3: the third slot is the person's own
+  // requests. It was « Devenir chauffeur » / « Mon dossier ».
   it.each([
-    ["en", "Become a driver"],
-    ["fr", "Devenir chauffeur"],
-  ] as const)("offers to become a driver before an application exists (%s)", async (locale, label) => {
+    ["en", "My requests"],
+    ["fr", "Mes demandes"],
+  ] as const)("gives a plain account the list of its requests (%s)", (locale, label) => {
     const { onError } = renderWith(locale);
 
-    fireEvent.click(screen.getByRole("link", { name: label }));
-
-    expect(await screen.findByRole("dialog", { name: label })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: label })).toHaveAttribute(
+      "href",
+      "/listings/me"
+    );
+    expect(hrefs()).not.toContain("/carrier/application");
     expect(onError.mock.calls.map(([e]) => e.message)).toEqual([]);
   });
 
-  it("goes straight to an existing application", () => {
+  it("gives an applicant the same slot: the application is not on the bar", () => {
     application = { status: "draft" } as CarrierApplication;
     renderWith();
 
-    expect(screen.getByRole("link", { name: "My application" })).toHaveAttribute(
-      "href",
-      "/carrier/application"
+    expect(hrefs()).toContain("/listings/me");
+    expect(hrefs()).not.toContain("/carrier/application");
+    expect(screen.queryByRole("link", { name: /application|driver/i })).toBeNull();
+  });
+
+  it.each(["driver", "carrier"])(
+    "keeps the board, not the requests, in that slot for an approved %s in User mode",
+    (role) => {
+      auth.user = { roles: ["shipper", role] };
+      window.localStorage.setItem(ACTIVE_ACCESS_KEY, "user");
+      window.localStorage.setItem(DRIVER_ACCESS_SEEN_KEY, "1");
+
+      renderWith();
+
+      expect(hrefs()).toEqual(["/home", "/create", "/expedion", "/deliveries", "/messages"]);
+    }
+  );
+
+  it("lays the requester's bar out in one order", () => {
+    renderWith();
+
+    expect(hrefs()).toEqual(["/home", "/create", "/listings/me", "/deliveries", "/messages"]);
+  });
+
+  it.each([
+    ["shipper"],
+    ["carrier"],
+    ["driver"],
+  ])("has a label for every item of the %s bar, in both languages", (role) => {
+    auth.user = { roles: [role] };
+
+    for (const locale of ["en", "fr"] as const) {
+      const { onError, unmount } = renderWith(locale);
+      expect(onError.mock.calls.map(([e]) => e.message)).toEqual([]);
+      unmount();
+    }
+  });
+
+  it("marks the requests slot as current on its own page", () => {
+    pathname = "/listings/me";
+    renderWith("fr");
+
+    expect(screen.getByRole("link", { name: "Mes demandes" })).toHaveAttribute(
+      "aria-current",
+      "page"
     );
-    expect(screen.queryByRole("link", { name: "Become a driver" })).not.toBeInTheDocument();
   });
 });

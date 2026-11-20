@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useActiveConversation } from "../context";
 import type { NewMessageEvent } from "@/server/dto/ably-events.dto";
 import { namespaced } from "@/lib/env";
+import { jobDates, routeOf } from "../lib/job-summary";
 
 /**
  * Custom hook for managing message detail/chat conversation
@@ -120,8 +121,25 @@ export function useMessageDetail(conversationId: string) {
         });
       };
 
+      // An answer on a card - today a refusal - writes no message, so the
+      // sender's open thread would go on reading « En attente » until a
+      // reload (thread_offer_spec.md §13). The event carries nothing to
+      // render from; it only says the thread is stale.
+      const handleOfferUpdated = () => {
+        queryClient.invalidateQueries({
+          queryKey: ["messages", "thread", conversationId],
+        });
+      };
+
       channel.subscribe("message:new", handleNewMessage);
-      subscriptionRef.current = { channel, handler: handleNewMessage };
+      channel.subscribe("offer:updated", handleOfferUpdated);
+      subscriptionRef.current = {
+        channel,
+        handlers: [
+          { event: "message:new", handler: handleNewMessage },
+          { event: "offer:updated", handler: handleOfferUpdated },
+        ],
+      };
     } catch (error) {
       console.error("[useMessageDetail] Failed to subscribe:", error);
     }
@@ -173,6 +191,7 @@ export function useMessageDetail(conversationId: string) {
 
     // Use otherParticipant from API response (already filtered by backend)
     const other = threadData.otherParticipant;
+    const listing = threadData.conversation.listing;
 
     return {
       id: threadData.conversation.id,
@@ -185,10 +204,14 @@ export function useMessageDetail(conversationId: string) {
       listing: threadData.conversation.listing?.title || "",
       listingReference: threadData.conversation.listing?.reference,
       listingImage: threadData.conversation.listing?.photos?.[0]?.url,
+      listingId: threadData.conversation.listing?.id,
+      listingRoute: routeOf(listing?.pickupCity, listing?.dropoffCity) ?? undefined,
+      listingDates:
+        jobDates(listing?.pickupFrom, listing?.dropoffUntil, locale) ?? undefined,
       messages: [],
       offerContext: threadData.offerContext,
     };
-  }, [threadData, conversationId, t]);
+  }, [threadData, conversationId, t, locale]);
 
   // Transform messages to UI format
   const messages: ChatMessage[] = useMemo(() => {
@@ -203,6 +226,9 @@ export function useMessageDetail(conversationId: string) {
       }),
       sentByMe: msg.isOwn,
       readByOther: msg.readByOther,
+      // Kept, so the avatar beside a bubble is its writer's and not a « ? ».
+      senderName: msg.sender?.name || undefined,
+      senderAvatar: msg.sender?.image || undefined,
       offer: msg.threadOffer ?? undefined,
     }));
   }, [threadData, locale]);

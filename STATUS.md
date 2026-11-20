@@ -1,400 +1,74 @@
 # STATUS.md
 
-## Client feedback monitor — Nicolas's feedback of 4–6 November 2026 (the remaining tickets)
+## Client feedback monitor — WhatsApp batch of 19 November 2026 (38 points)
 
-_Owner: this section is for you. Spec: `docs/specs/client_feedback_2026_11_11_spec.md`; plan:
-`docs/plans/plan_client_feedback_2026_11_11.md`. Shipped in **2.83.0**; the part before it in 2.80.0–2.82.2._
+_Owner: this section is for you. One row per point the client sent on 19 November while testing 2.90.0. Spec:
+`docs/specs/client_feedback_2026_11_19_spec.md` (readings chosen without the client in §0); plan:
+`docs/plans/plan_client_feedback_2026_11_19.md`. Built in **2.91.0**, pushed to `main` on 2026-11-20. Earlier monitors (7 October – 6 November) were
+cleared from this file on the owner's instruction the same day; they remain in git history, and each release's
+own entry below still records what shipped._
 
-| Ticket | State |
-|---|---|
-| B03 Add trip greyed | **Shipped** — trips by town + postcode, a reason under the button |
-| B05 Missing-documents email | **Shipped** — at submission; not on every later upload |
-| A01 Exact hours | **Shipped** (migration 0047) — periods stay |
-| C02 Contact confirmed | **Shipped** (checkbox); auto-approval **deliberately not built** |
-| A07 Illustration | **Shipped** (four generic pictures, labelled); message-thread header not covered |
-| U01 Homepage | **Shipped** as an assumption |
-| U04 Profile | **Shipped** as an assumption |
-| D01 Airtable slips | Imported and previewable (2.82.x); AI auto-fill for new slips belongs to the Expedion rebuild |
+**Legend:** 🔵 built in 2.91.0 · 🟠 built, with a reading or a check to confirm · ⚪ already shipped ·
+❓ waits on the client · 🔍 waits on a check · ⚖️ waits on a decision
 
-### Decisions taken without the client — please confirm or overrule
+| # | The client's point | Root cause found | State | Waits on |
+|---|---|---|---|---|
+| 1 | Assistant: « nothing appeared » | Not reproduced (retracted at #18). No timeout anywhere; the sentence was cleared on send | 🔵 | — |
+| 2 | Assistant should keep asking for what is missing | It asked about item, size, weight and towns only | 🟠 | Dates are now asked; budget is not |
+| 3 | Design: coly2go is clearer | Taste; no single defect | ❓ | Which screens first |
+| 4 | Font size and type | 10 px bar labels, 12 px address fields, `text-xs` in ~300 places | 🟠 | Bar and driver dashboard done; an app-wide pass and the typeface are a design decision |
+| 5 | « The sheet »: every action per page | Not code | 🔍 | The owner's tracking sheet |
+| 6 | Sign-in: « S'inscrire » needs a scroll | Last element of a ~700 px centred card | 🔵 | — |
+| 7 | Expeditoo → Expeditop | He was on 2.90.0 | ⚪ 2.90.2 | Ask him to retest on www.expeditop.fr |
+| 8 | Sign-up says nothing about the role | No text; `/welcome` unreachable for e-mail sign-ups | 🟠 | Confirm a note is enough (§0 A) |
+| 9 | Driver application: private / professional radio | `carriers.kind = private` means **in-house driver** today | ⚖️ | What « private » means; SIRET or not |
+| 10 | Private drivers authorised at once | Approval is admin-only; every external carrier has a SIRET | ⚖️ | The client and their lawyer |
+| 11 | Admin: select professional drivers, e-mail alert | Both exist (Type filter, e-mail naming the type), as interne/externe | ⚪ in part | #9 |
+| 12 | « Vérifiez votre email », no e-mail | No e-mail on an unverified sign-in; no resend; a refused send only logged | 🟠 | Resend logs for his address; that Resend accepts the expeditop.fr sender |
+| 13 | « This field just redirects to an admin page » | « Message » pushed `/messages/…` while in Admin mode; `MainLayout` bounced it | 🔵 | — |
+| 14 | A congratulation message after registration | `WelcomeEmail` existed, called only from a dev route | 🔵 | — |
+| 15 | « Message » should message the driver | Same as #13 | 🔵 | — |
+| 16 | Admin: a user's requests, answers and messages | Did not exist | 🟠 | Run once on a real database |
+| 17 | Icons and shortcuts in a bar; three-line button | Fixed 256 px sidebar from 1280 px; no rail, no hamburger | ❓ | Rail or hamburger; does the bottom bar stay |
+| 18 | Assistant ignored the dates | By design until now (spec §2) | 🟠 | A live read to check the model's date arithmetic |
+| 19 | Every country and territory | 14 on purpose (no customs border) | ⚖️ | Customs; postal formats |
+| 20 | Address labels bold and bigger | 12 px | 🔵 | — |
+| 21 | 5–30 kg shown as 100 kg | A title suggestion (« Table… ») overwrote the bracket | 🟠 | Ask whether he picked a suggestion or used the assistant |
+| 22 | No « whenever » on a precise date | Exact mode was one period + one hour | 🟠 | Confirm « that day, any time »; bidding deadline (known limit) |
+| 23 | Town search finds nothing outside France | `searchAddress(query, "fr")` | 🔵 | — |
+| 24 | « Mes offres » should show the job | Payload carried it; the client type did not | 🔵 | — |
+| 25 | Message rows: job details | Towns in the payload unused; no dates | 🔵 | — |
+| 26 | Filter messages by type | No status filter | ❓ | The categories |
+| 27 | Landing: « replace texte by connexion/inscription » | « Connexion » hidden below 640 px | ❓ | Which text |
+| 28 | Mobile font size | As #4 | 🟠 | As #4; « Suivi » for « Expéditions » on the bar |
+| 29 | Unreadable coloured messages | Probable: no `color-mix()` on iOS 15–16.1 → solid tints | 🟠 | A real iPhone on iOS 15; which screen |
+| 30 | « Error of access code » at login | Nothing by that name exists | ❓ | A screenshot |
+| 31 | Message screen: job details | As #25 | 🔵 | — |
+| 32 | Initials and pseudo instead of the full name | Sign-up says the pseudo is seen by you alone | ⚖️ | Whether to show pseudos |
+| 33 | After « Refuser », no other price | No counter in chat; the transporter told nothing | 🔵 | — |
+| 34 | Keep the job title on screen in a thread | Only the name row was sticky | 🔵 | — |
+| 35 | Bottom bar: requests instead of « Devenir chauffeur » | — | 🟠 | Confirm the entry's new home (access badge, profile) |
+| 36 | 3–4 taps on the bottom bar | Not reproduced | 🔍 | Reproduce on a phone |
+| 37 | Job page title cut on iPad | One truncated line; no towns or dates | 🔵 | — |
+| 38 | « Cancel format of field » on professional registration | French formats: SIRET, +33, 5-digit postal code, FR VAT | ❓ | Which field, what he typed |
 
-- **A01** — both kept: periods by default, optional exact hours at each end. Offers stay on periods.
-- **C02** — the checkbox is admin-side and informational; approval stays manual because every driver carries goods for hire and « individual » is undefined.
-- **A07** — generic labelled illustrations or nothing; no AI image, no provider, no cost.
-- **U01** — one focused pass without a reference: hero, three steps, two reasons, one button. Cross-sell banner, job-board preview, platform tour and testimonials are no longer on the page.
-- **U04** — five headings, no new data: Identity · Contact · Addresses · Driver · Account.
-- **B05** — the email goes out at submission only, French then English in one message.
-- **B03** — a trip needs a town and a postcode; the street and the pin are optional (the pin is looked up).
+Also fixed, uncaptioned: the « ? » avatar beside chat bubbles.
+
+### Readings built without the client — confirm or overrule
+
+- **#35** « Devenir chauffeur » moved to the access badge's menu (and stays on the profile).
+- **#28** the bar says « Suivi » where the sidebar says « Expéditions ».
+- **#18** the assistant now returns dates, reversing `request_assistant_spec.md`'s earlier rule.
+- **#12** only the resend button reports a failed send; sign-up and sign-in stay silent on purpose.
+- **#22** a « precise day, any time » request closes to offers 6 h before 06:00; the bidding rule is unchanged.
+- **#8** a note, not a role field. **#14** an e-mail, once, not sent to Expedion-origin accounts.
 
 ### Operator to-do
 
-- [ ] **Run Actions → "Migrate database" on the release branch before `main` moves** — `0047_time_windows_contact_confirmed` (seven nullable columns). New code on an unmigrated database fails every read of `listings` and `carriers`.
-
----
-
-## Client feedback monitor — WhatsApp batch of 31 October 2026 (the request form)
-
-_Owner: this section is for you. One row per message the client forwarded on
-31 October, seven of them with Cocolis screenshots as the reference. Spec:
-`docs/specs/client_feedback_2026_10_31_spec.md` (choices made without the
-client in §0). Plan: `docs/plans/plan_client_feedback_2026_10_31.md`._
-
-**State on 2026-11-02:** all eight shipped in **2.76.0**, which went to `main`
-on 2026-11-02 together with 2.75.0. Migration `0045_request_form_feedback` was
-applied first, by the owner through Actions → Migrate database, and checked
-through `mirror_readonly`.
-
-**Legend:** 🔵 shipped in 2.76.0 ·
-🟠 shipped, with a choice the client should confirm
-
-| # | The client's ask | Root cause found | State | Waits on |
-|---|---|---|---|---|
-| F1 | Address book for pickup and delivery addresses | The dropdown only showed when a saved address had a map pin, so most requesters never saw it; an address saved without a pin was stored and then filtered out forever; one mixed list for both ends | 🔵 | — |
-| F2 | Link to a moving quote, and the moving description | Not built: a request could only describe items | 🟠 | Rate per m³ for an automatic estimate; whether moves need a « déménageur » profile (§0 C–F) |
-| F3 | Delivery address with floors | Floor and lift were saved but **shown nowhere**; asked only for « Appartement »; the lift switch could not say « non » | 🔵 | — |
-| F4 | Price estimate | Quantity ignored (ten boxes priced as one); nothing without a map pin; a one-line hint | 🟠 | Rates above 100 kg and for moves (§0 F–G) |
-| F5 | « Ni protection ni emballage », ticked by default | "Nothing" was four switches left off, and the job page showed nothing | 🔵 | — |
-| F6 | Pickup country and delivery country | No country anywhere: search and map France-only, saved addresses stored as « France », escalation dropped `delivery_country` | 🟠 | Confirm the 14 countries offered (§0 A) |
-| F7 | « de retrait » / « de livraison » in the address labels | Shared address component, generic labels | 🔵 | — |
-| F8 | « Commissaire-priseur » / « Auction house » location type | Missing from the enum; every Expedion pickup was stamped « Autre » for that reason | 🔵 | — |
-
-## Client feedback monitor — consolidated document of 29 October 2026, with the owner's decisions of 30 October
-
-_Owner: this section is for you. One row per item in `EXPEDITOO Client
-Feedback Consolidated 29.10.2026.pdf`, with its state on 30 October. Spec:
-`docs/specs/client_feedback_2026_10_29_spec.md` (decisions in §0). Plan:
-`docs/plans/plan_client_feedback_2026_10_29.md`._
-
-**State on 2026-10-31:** 2.71.0 is **live** — migrations `0042`–`0044`
-applied by the owner (44 journal rows, newest `when` 1788606000000, checked
-through `mirror_readonly`), `main` fast-forwarded to `5a61011`,
-`/api/public/changelog` reads 2.71.0. The scheduled jobs run (every run green
-since 2026-10-30 19:01 UTC). Mail goes out from `no-reply@prionation.io`.
-
-**Legend:** ✅ live on production · 🟠 live, but needs a setting outside the
-code to do all it can · ⏸ decided not to build for now
-
-| # | Item | State | Release | Decision / what it waits on |
-|---|---|---|---|---|
-| A1 | « À traiter » vs « Tous » | ✅ | 2.65.0 | — |
-| A2 | Reverse sort + period filter | ✅ | 2.66.0, fixed 2.69.0 | — |
-| A3 | Number on every quote | ✅ | 2.65.0 | — |
-| A4 | Reference = number alone; admin columns | ✅ | 2.66.0 | — |
-| A5 | Driver on shipments | ✅ | 2.65.0 | — |
-| A6 | Role switch | ✅ | 2.61.0 | — |
-| B1 | Admin picks, client pays to confirm | ✅ | 2.67.0 | — |
-| B2 | Driver withdraws → back on board | ✅ | 2.6x | — |
-| B3 | « Annonce directe » tag | ✅ | 2.66.0 | Shipped as « Site Expeditoo »; two strings if Léa asks otherwise |
-| B4 | Fixed panel on job page | ✅ | 2.65.0 | — |
-| B5 | « Urgent » 48 h + « Immédiat » | ✅ | 2.66.0 | « Immédiat » = pickup window already open (assumption, one line to change) |
-| B6 | Negotiation | ✅ | 2.67.0 | Range, counter-offer, 5 rounds |
-| C1 | Driver transfers | ✅ manual | — | Stay request → approve → paid until the lawyer clears Connect |
-| C2 | Stripe to the driver's IBAN | ⏸ | 2.69.0 (code) | Release sweep built, **not scheduled**; IBAN via the RIB at signup |
-| C3 | Apple Pay / Google Pay / PayPal | 🟠 | 2.66.0 | Register the domain in Stripe for Apple Pay; PayPal skipped |
-| C4 | Sender address | ✅ | — | `no-reply@prionation.io`, verified in Resend, `EMAIL_FROM` set in Vercel Production on 30 October |
-| D1 | Condensed dashboard | ✅ | 2.65.0 | — |
-| D2 | Map view + driver search | ✅ | 2.68.0 | — |
-| D3 | Readable on mobile | ✅ | 2.65.0 | — |
-| D4 | Confirmation after actions | ✅ | 2.65.0 | — |
-| D5 | Search messages by listing | ✅ | 2.65.0 | — |
-| D6 | Profile counters | ✅ | 2.65.0 | — |
-| X1 | Scheduled jobs | ✅ | 2.71.0 | Running since 30 October. `a-111-02` was not parked in time and was published at 13:53 UTC as job 100012 (1 €, no offer) — remove it from Admin → Annonces or let it expire on 1 November 07:53 UTC |
-| REQ-01 | Professional / private | ✅ | 2.71.0 | Field added, everyone professional |
-| REQ-02 | Actif / Absent / Suspendu / Désinscrit | ✅ | 2.66.0 | — |
-| REQ-03 | Email verification | ✅ | built | Mail now reaches everyone |
-| REQ-04 | Bot prevention | ✅ | built | Mail now reaches everyone |
-| REQ-05 | Reset link | ✅ | built | Checked on production on 31 October |
-| REQ-06 | Separate private signup | ⏸ | — | Opens when the client defines a private driver |
-| REQ-07 | Admin alert on applications | ✅ | 2.66.0 | In-app and email |
-| REQ-08 | Pro approval button | ✅ | — | Approve / reject / suspend exist; every driver is professional |
-| N1 | Delivery availability before payment | ✅ | 2.67.0 | Dates after booking: through messages |
-| N2 | Driver list sorting, dates | ✅ | 2.66.0 | — |
-| N3 | Automatic payout | ⏸ | 2.69.0 (code) | Not scheduled — see C2 |
-| N4 | Payout held on a reported problem | ✅ | 2.69.0 | — |
-| N5 | « Mes paiements » in « Mes livraisons » | ✅ | 2.66.0 | — |
-| N6 | Email per payout | ✅ | 2.69.0 | — |
-| N7 | Alerts to the driver | 🟠 | 2.69.0, email 2.71.0 | Email live; texts once `TWILIO_*` exist |
-| N8 | Route planner | ✅ | 2.70.0, 2.72.0 | FOSSGIS public Valhalla (fair use, set as `VALHALLA_ROUTE_URL`); Stadia Maps EU + `VALHALLA_API_KEY` when it outgrows it |
-| N9 | Airtable import / reminder | ⏸ | — | Airtable stays a one-way, read-only import |
-| P1 | _(reported 31 Oct)_ Accept blocked: « no map point » | ✅ | 2.73.0 | Missing pins looked up from the address, then the town, at award and at posting |
-
----
-
-## Client feedback monitor — Nicolas's review of 21 October 2026
-
-_Owner: this section is for you. One row per point in Evan's write-up
-(`Expeditoo_retours_Nicolas_21-10-2026.pdf`). Spec:
-`docs/specs/client_feedback_2026_10_21_spec.md`._
-
-**Legend:** ⬜ not started · 🔧 in progress · ✅ done and tested locally ·
-🚀 live on production · ❓ needs an answer · 🔑 needs the owner's hand
-
-**State on 2026-10-25:** 2.65.0 is **live** (commit `8e909af`, migrate run
-`40156001990` on `release/2.65.0` first; `/api/public/changelog` reads
-2.65.0, Gates green on `main`). Still yours: the two GitHub values (X1) and
-the Resend domain (C4) — Operator to-do. Questions for Nicolas drafted
-for WhatsApp (EN/FR), below.
-
-| # | Nicolas asked | Status | What was wrong, what changed | Check on prod |
-|---|---|---|---|---|
-| A1 | « À traiter » vs « Tous » unclear | 🚀 | Badge counted all quotes (48, some twice), tab only the 25 newest (1). Now one worklist of every quote needing action, oldest first, with a line saying what counts; « Tous » → « Récents » | `/admin/expedion`: tab count = sidebar badge |
-| A2 | Sort « En attente » by request date | 🚀 ❓ | Column → « Reçu » with the date and the sort arrow; worklist oldest first, recent newest first. Direction to confirm | same page |
-| A3 | Number site requests + Airtable ref | 🚀 | Site quotes had no number of ours. Every quote now « DEV-NNNNN » (migration 0040), Airtable number under it | quote rows and dialog |
-| A4 | Uniform reference (initials + cities) | 🚀 ❓ | « PAR-CLA-100018 » everywhere; **no initials** (on the drivers' board). Format to confirm | any job, `/admin/listings` |
-| A5 | Show the selected driver | 🚀 | Driver was fetched and dropped; « Propositions » hard-coded 0. Driver column, real reference, French statuses | `/admin/shipments` |
-| A6 | Switch roles from one account | 🚀 | Already built (2.61.0), sidebar badge « UTILISATEUR ⌄ » | — |
-| B1 | Award queue should show requests without a driver | 🚀 ❓ | Only escalated jobs with bids, badge counted an expired one. Second read-only section for every other open request; operators still cannot award a direct one (requester's card) | `/admin/awards` |
-| B2 | Driver cancels → listing back on the board | 🚀 | Already built (« Me désister ») | — |
-| B3 | « Annonce directe » box unclear | 🚀 ❓ | It is the origin tag; it now explains itself on hover. Label waits for Léa's question | `/admin/listings`, hover « Directe » |
-| B4 | Sticky title / requester / price | 🚀 | Pinned bar on the job page, both tabs | any job, scroll |
-| B5 | Urgent banner | 🚀 ❓ | « Urgent » when open and pickup < 48 h (rule to confirm) | board, job page, lists |
-| B6 | Messaging: the other price | 🚀 ❓ | Budget and % gap under every offer in a thread. A requester counter-offer is not built — asked | a job thread |
-| C1 | Driver transfers are manual | ❓ | Unchanged — waits on the client and their lawyer | — |
-| C2 | Pay drivers by Stripe to their IBAN | ❓ | Connect onboarding and transfer code exist, not wired — waits on the commission split and the lawyer | — |
-| C3 | PayPal + Apple Pay | ⬜ 🔑 | Léa's action; Stripe setup first (Operator to-do) | — |
-| C4 | Forgot password does not work | 🚀 🔑 | Resend's sandbox sender refuses his address. Refusal now logged; email and page in French. **Owner: verify a Resend domain** | `/forgot-password` with a non-owner address |
-| D1 | Condensed dashboard | 🚀 | One line per live request, up to 4, « Tout voir » | `/home` |
-| D2 | List / card / close-up | 🚀 ❓ | Liste / Cartes / Détaillé on « Mes demandes », remembered. « Carte » read as card, not map — asked | `/listings/me` |
-| D3 | Readable on mobile, swipeable cards | 🚀 | Pickup / delivery swipe on a phone; pinned bar | a job at phone width |
-| D4 | Confirmation + redirect after each action | 🚀 | Audit: offer toasts and refusals were English, delete-conversation silent — fixed. The rest already confirmed | submit / withdraw an offer |
-| D5 | Message search by listing | 🚀 | Search by town, route, reference; live listings as chips; a listing with no thread points to its carriers | `/messages` |
-| D6 | Profile: posted / taken | 🚀 | Two counters on `/profile` and the admin's « Voir le profil » | `/profile` |
-| X1 | _(found)_ Scheduled jobs never ran | 🚀 🔑 | GitHub `APP_URL` / `CRON_SECRET` unset since forever. « Tâches planifiées » card on Paramètres; past-deadline requests read « Expirée ». **Owner: set the two values** | Paramètres → « Tâches planifiées » |
-
-### Questions for Nicolas
-
-- **A2** — « À traiter » oldest first and « Récents » newest first: right way round?
-- **A4** — « PAR-CLA-100018 » without initials: enough, or initials on the admin screens only?
-- **B1** — should an operator ever award a *direct* request? It would mean charging the requester without them at the keyboard.
-- **B5** — urgent = less than 48 h before the pickup must happen: the right threshold?
-- **B6** — is « l'autre prix » the budget beside the offer (built), or a counter-offer the requester sends back?
-- **D2** — « carte » as card (built) or as map?
-- **B3** — waiting for Léa's question.
-
----
-
-## Client feedback monitor — WhatsApp batch of 7–8 October 2026
-
-_Owner: this section is for you. One row per message the client sent, one
-report per row below it. It is kept current while the work is in progress —
-the status column is the truth at the time of the last commit._
-
-**Legend:** ⬜ not started · 🔧 in progress · ✅ done and tested locally ·
-🚀 live on production · ❓ needs an answer from the client
-
-**State on 2026-10-15:** all eleven rows are 🚀 — 2.63.0 is live (commit
-`e9550c6`, migration `0038` applied first). Checked on production by me,
-signed out and read-only: #1 and #2 (sign-up shows Prénom / Nom / Pseudo, no
-password placeholder). The rest need a signed-in look — the « Check on prod »
-line of each report says where.
-
-| # | The client asked | Status | Where to check it on production |
-|---|---|---|---|
-| 1 | Sign-up form: two fields, last name and first name, perhaps an alias | 🚀 | `/signup` |
-| 2 | Remove the stars from the password field | 🚀 | `/signup`, `/signin`, `/reset-password` |
-| 3 | Put « Flexible » first in « Vos dates sont-elles fixes ? » | 🚀 | `/create` → Quand |
-| 4 | After publishing, show the end date (31 Oct) instead of the start date (8 Oct) | 🚀 | `/create` → publish → thank-you page |
-| 5 | Mes trajets: sub-tabs « en attente de réponse », « en transit », « terminés » | 🚀 | `/carrier/trips` |
-| 6 | Quick links: put « J'ai une demande » under « Contact & Aide » | 🚀 | `/profile`, `/help` |
-| 7a | Quick links: « Mes factures » becomes « Historique des transactions », bills and receipts per user type | 🚀 | `/profile` → Historique des transactions |
-| 7b | Personal contact details, with a second phone for a relative (requester and carrier) | 🚀 | `/profile` → Coordonnées |
-| 8 | `/create`: « Détails » should not be mandatory | 🚀 | `/create` → Quoi |
-| 9 | Rename the two « Détails » fields to « Détails – conditions d'accès » | 🚀 | `/create` → Où |
-| 10 | Titles of the bottom fields are cut off on iPad | 🚀 | any page on an iPad, bottom bar |
-
-### Decisions taken without the client — please confirm or overrule
-
-The client was not asked these; each is the reading I built, and each is
-cheap to flip.
-
-- **A (#3)** Flexible is also the **default** selection, not only the first
-  button. A first option that is not the selected one reads as a mistake.
-- **B (#9)** Only one field on `/create` is titled « Détails »; the fields that
-  come in a pair are the pickup and delivery notes (« Note pour le
-  transporteur »), and they are where floor, gate code and parking go. Those
-  two are renamed. The cargo field on step 1 keeps « Détails » (and becomes
-  optional, #8).
-- **C (#1)** The form the client means is the sign-up form: its translation
-  namespace is `auth.register`, it has the one « Nom complet » field the
-  message asks to split, and #2 (the password stars, sent a minute later) is
-  on the same page. The driver application has no name field to split.
-  The alias is collected and editable, and shown to nobody else yet — where a
-  pseudonym should replace the real name (offers? messages?) is the client's
-  call, so it is asked below rather than guessed.
-- **D (#7b)** The relative's phone is seen by the account holder and by staff
-  (admin / operator — the platform's usual meaning; only admins can open the
-  admin panel today) — never by a carrier or a requester on a job.
-- **E (#4)** Requests already live keep the deadline they were published with;
-  only requests published from this release on get the new one.
-
-### Questions for the client
-
-- Where should a pseudonym (alias) be shown instead of the real name?
-- Is the relative's phone for support to call when the account holder cannot be
-  reached, or should the carrier on the job see it too?
-
-### Item reports
-
-Each report: what the client asked, what was wrong, what changed, how it was
-proved, how to check it on production, and what is still open.
-
-#### 1. Sign-up: last name, first name, perhaps an alias — 🚀
-
-- **Asked:** « please create another field to have two fields for name and
-  first name (and perhaps also an alias) ».
-- **Was:** `/signup` had one field, « Nom complet ».
-- **Now:** « Prénom » and « Nom » side by side (required), « Pseudo
-  (facultatif) » below with a line saying only the person sees it for now.
-  Stored in three new `user` columns (`first_name`, `last_name`, `alias`,
-  migration `0038`); `name` is rebuilt from the parts **on the server** so it
-  can never disagree with them. Google sign-up fills the parts from Google.
-  Existing accounts keep their `name`; the profile card (#7b) pre-splits it
-  for them to confirm.
-- **Proved:** sign-up through the real API stored `Camille` / `Martin` and
-  composed `name = "Camille Martin"` while the client sent another name;
-  Chromium shows the three labelled fields. Tests: `signup-schema.test.ts`,
-  `person-name.test.ts`, `auth-user-fields.test.ts`.
-- **Check on prod:** sign out → `/signup` → three fields, Prénom/Nom required.
-- **Open:** where the alias should be shown instead of the real name — asked
-  above.
-
-#### 2. No stars in the password field — 🚀
-
-- **Was:** `••••••••` as the placeholder of all five password inputs.
-- **Now:** no placeholder on `/signup` (×2), `/signin`, `/reset-password` (×2).
-- **Proved:** Chromium reads `placeholder = null` on every password input.
-- **Check on prod:** `/signin` and `/signup` — the password boxes are empty.
-
-#### 3. « Flexible » first — 🚀
-
-- **Now:** « Flexible » is the first button **and selected by default**
-  (decision A). A saved draft keeps the mode it was saved with.
-- **Proved:** Chromium on two drafts: order `Flexible, Date précise`; the
-  flexible one opens on Flexible, the exact one on Date précise. Tests:
-  `timing.test.ts`, `TimingField.test.tsx`.
-- **Check on prod:** `/create` → Quoi → Où → Quand.
-
-#### 4. After publishing, show the end date — 🚀 (behaviour change)
-
-- **Asked:** « please change the beginning date by the end date (here 31
-  october) ».
-- **Was:** the page was *right*: bidding really closed 6 h before the **start**
-  of the window and the 15-minute expiry cron then closed the job. Changing
-  the sentence alone would have made it false.
-- **Now:** a **flexible direct** request takes offers until 6 h before the
-  **end** of its pickup window; the thank-you page prints that date. What may
-  be published is unchanged (still decided on the start). Escalated Expedion
-  jobs and exact-date requests are unchanged. A flexible request whose carrier
-  withdraws mid-window keeps its dates and stays open to its end.
-- **Proved:** a request published locally for 16 → 31 Oct got
-  `expiresAt = 31 Oct 14:00 UTC` (= end − 6 h), and its page read « jusqu'au
-  31 oct., 15:00 » (Paris). 11 rule tests (`bidding-deadline.test.ts`), 6
-  service tests, 2 re-board tests, 2 form tests.
-- **Check on prod:** publish a flexible request over two weeks → the
-  thank-you page names the last week's date, not tomorrow.
-- **Open:** requests already live keep the deadline they were given
-  (decision E).
-
-#### 5. « Mes trajets »: en attente de réponse / en transit / terminés — 🚀
-
-- **Now:** four tabs, held in `?tab=`: « Prévus » (declared trajets, as
-  before), « En attente de réponse » (the carrier's unanswered offers — price,
-  earliest slot, « Retirer l'offre » with a confirmation), « En transit »
-  (awarded runs not yet delivered, with the client-vocabulary status pill),
-  « Terminés » (what « Effectués » showed). Old `?tab=completed` links work.
-  Two-by-two on a phone.
-- **Proved:** Chromium as the beta seed carrier: two pending offers with
-  prices and slots, one pending run; every tab, `?tab=completed` and a junk
-  value. 35 new tests.
-- **Check on prod:** sign in as a carrier → `/carrier/trips`, click each tab.
-
-#### 6. « J'ai une demande » under « Contact & Aide » — 🚀
-
-- **Now:** gone from the profile's quick links; a « J'ai une demande » card
-  opens the same feedback form on `/help` (now titled « Contact & Aide », the
-  words of the link) and on `/driver/help`.
-- **Proved:** Chromium: no quick link, the card opens the dialog.
-- **Check on prod:** `/profile` → « Contact & Aide » → « Envoyer une demande ».
-
-#### 7a. « Mes factures » → « Historique des transactions » — 🚀
-
-- **Now:** renamed (URL kept, emails link to it). Tab « Demandeur »: the
-  documents with a **Type** column — « Facture », « Reçu de paiement » or
-  « Avoir », the words the PDF prints. Tab « Transporteur » (carriers only):
-  every delivered run with price, commission, net, payout status, period
-  filter and the relevé download.
-- **Proved:** Chromium as the beta seed requester: « Reçu de paiement
-  INV-2026-0002 … 189,00 € »; as the seed carrier: the carrier tab. A carrier
-  with no file yet now sees « Aucun transport livré » rather than an error
-  (fixed during the browser pass). 24 UI tests, service and PDF tests.
-- **Check on prod:** `/profile` → « Historique des transactions ».
-- **Open:** while the issuer's identifiers are empty every row reads « Reçu de
-  paiement »; filling `INVOICE_ISSUER_*` turns them into « Facture ».
-
-#### 7b. Personal contact details with a relative's phone — 🚀
-
-- **Now:** a « Coordonnées personnelles » card on `/profile` for every
-  account: Prénom, Nom, Pseudo, Téléphone, and « Personne à contacter » (name +
-  phone). Phones are in a new table, `user_contact_details`, **not** on
-  `user`, so no existing join can carry them. Read by the owner and by staff
-  (admin / operator) on « Voir le profil » in `/admin/users` and
-  `/admin/drivers`; refused to everyone else (decision D).
-- **Proved:** Chromium: saved, survived a reload, the header name refreshed;
-  the admin profile shows the card; `GET` another account's details as a
-  non-staff account → 403; signed out → 401. 8 service tests, 4 card tests.
-- **Check on prod:** `/profile` → edit the card → save → reload.
-- **Open:** whether the relative's phone should also reach the carrier on a
-  job — asked above.
-
-#### 8. « Détails » not mandatory — 🚀
-
-- **Was:** required, 5 characters minimum, in the form *and* the API (its error
-  key did not even exist in the translations).
-- **Now:** optional everywhere; an empty one is stored as `""` and draws
-  nothing on the job page.
-- **Proved:** a request published through the API with no description was
-  accepted and stored `""`. Form and DTO tests.
-- **Check on prod:** `/create` → Quoi: « Détails » has no asterisk; publish
-  without it.
-
-#### 9. The two « Détails » → « Détails – conditions d'accès » — 🚀
-
-- **Now:** the pickup and delivery notes (the two fields that come as a pair,
-  decision B) are « Détails – conditions d'accès (facultatif) », with a
-  placeholder naming the floor, the code and the parking. The driver's run
-  page now labels the same text « Conditions d'accès : ». Beside a pasted map
-  link the note stays « Décrivez l'endroit exact ».
-- **Proved:** Chromium on both drafts: both labels, the saved text intact.
-- **Check on prod:** `/create` → Où.
-
-#### 10. Bottom titles cut on iPad — 🚀
-
-- **Cause, reproduced:** the three bottom bars were 88px tall *including* the
-  iPad's home-indicator space. In Chromium with a 20px inset emulated, every
-  label box was squeezed to 7px — the text needs 12.65px — so `line-clamp`
-  sliced each title in half (« Accueil », « Demander un »).
-- **Now:** each bar is `88px + the inset`, and the three shells (and the
-  impersonation banner) are offset by the same amount. Same emulation: labels
-  13px / 25px, whole, « Demander un transport » on two lines.
-- **Check on prod:** on the iPad, any page — the bottom labels are whole.
-
-### Found on the way
-
-- **Fixed — accounts could set their own protected flags.** Better Auth lets a
-  client write every extra user field unless it says `input: false`. Before
-  this release, `POST /api/auth/update-user {"isVerified": true}` (or
-  `stripeAccountId`, `stripeAccountStatus`) was accepted from any signed-in
-  account — proved by running the old config through Better Auth's own parser.
-  Now each is refused (`400 … IS_NOT_ALLOWED_TO_BE_SET`), checked against the
-  running server. See Operator to-do for the production check.
-- **Not fixed — the help pages show placeholder contacts.** `/help` lists
-  `support@expeditoo.com` and `+1 (234) 567-890`; `/driver/help` lists
-  `drivers@expeditoo.com` and `+1 (987) 654-321` — US-format numbers that are
-  not the company's. The driver page is also English-only, and `/help`'s FAQ
-  still explains goods auctions. Needs the real contacts from the client.
-- **Not fixed — the requester's « conditions d'accès » are not on the
-  requester's own delivery page** (`/deliveries/[id]`): the driver's run page
-  shows them, the shared delivery page never did.
+- [ ] One real pass in production after deploy: sign up → French mail → click → welcome mail; then sign in unverified
+      → `/verify-email` with a fresh mail. If the resend says it failed, the sender is not accepted by Resend.
+- [ ] Open the app on an iPhone on iOS 15 (#29, #36).
+- [ ] Open `/admin/users/<id>/activity` once on a real database (#16).
 
 ---
 
@@ -1007,6 +681,72 @@ than leaving it in a chat message.
       after approval (the 2.61.0 entry, "What was wrong" item 4). To restore them, open
       `/admin/users`, then the roles dialog for that account, and add both.
       Until then its application page says driver access is off.
+
+---
+
+## ✅ 2026-11-20 — The client's feedback of 19 November, the clear points (2.91.0)
+
+*« go ahead with everything that clear, then back to me with report what is done, and numbers that still open or
+needs to check on client or my side ».*
+
+Spec `client_feedback_2026_11_19_spec.md`, plan `plan_client_feedback_2026_11_19.md`. Monitor at the top of this
+file, one row per point. **No migration.**
+
+**How it was done.** All 38 points were traced to their cause first. The ones needing nobody's answer were built in
+five streams on disjoint files, copy handed over as patches and spliced once.
+
+**Sign-in and mail** (#6, #8, #12, #14) — `src/app/signin`, `(auth)/signup`, `(auth)/verify-email`, `lib/auth.ts`,
+`auth.service.ts`, `useAuthActions.ts`, new `ResendVerification.tsx` / `useResendVerification.ts`,
+`VerificationEmail.tsx`, `WelcomeEmail.tsx`. `sendOnSignIn: true`; `EMAIL_NOT_VERIFIED` redirects to
+`/verify-email`; the resend throws `VERIFICATION_EMAIL_NOT_SENT` on a refused send. **Judgment call:** sign-up and
+sign-in still swallow a failed send — a throw at sign-up answers 500 for an account that exists and breaks
+`createDriverAccount`; at sign-in it replaces the 403 the Flutter client keys on. The welcome mail hangs off
+`afterEmailVerification` and off `handlePostSignup` for a verified (Google) account; « once » rests on Better Auth,
+not on a flag.
+
+**Request form and assistant** (#1, #2, #18, #20, #21, #22) — `request-assistant.service.ts`, its DTO, new
+`assistant-dates.ts`, `assistant.ts`, `timing.ts`, `from-listing.ts`, new `useCargoChoices.ts`, `ItemField.tsx`,
+`TimingField.tsx`, `location-picker-field.tsx`. **#18 reverses a written rule** (« its answer has no date »):
+`request_assistant_spec.md` and `CLAUDE.md` changed with it. Dates are validated in the service against Paris
+today, never clamped; delivery before pickup nulls both. #21's cause: a title suggestion wrote its bracket over a
+chosen one — « chosen by hand » is now tracked explicitly.
+
+**Messages** (#25, #31, #33, #34) — `messages.dal.ts`, `messages.service.ts` (`toInboxListing`, field by field),
+`thread-offers.service.ts` (`canCounter` in `contextFor`; `withdraw` accepts a declined card whose bid is pending;
+`decline` notifies), the decline route, `MessageRow.tsx`, `MessageDetail.tsx`, `ThreadOfferBubble.tsx`,
+`ThreadOfferAction.tsx`, new `BubbleAvatar.tsx`, `job-summary.ts`. `OfferCard` gained `id="offer-…"` for the deep
+link; `offer_declined` joined `NotificationType`.
+
+**Admin** (#13, #15, #16) — new `use-leave-admin-nav.ts`; new `admin-user-activity.{dal,dto,service}.ts`, five GET
+routes under `api/admin/users/[id]/`, `/admin/users/[id]/activity`, `ui/user-activity/*`. Read-only by
+construction: selects only, no messaging service imported, tests assert it. `admin` and `support`.
+
+**Driver and navigation** (#4, #23, #24, #28, #29, #35, #37) — `geocoding.ts`, `city-field.tsx`
+(`CITY_SEARCH_COUNTRIES` from `JOB_COUNTRIES`), `MyOffers.tsx`, `listing/types.ts` (`OfferListing`),
+`JobDetail.tsx`, `BottomNav.tsx`, `FloatingNav.tsx`, `DriverDashboard.tsx`, `globals.css` (`--nav-active`, the
+no-`color-mix` fallback block).
+
+**Found on the way.**
+- Moving « Mes demandes » into the bar left « Devenir chauffeur » reachable on a phone only through the profile.
+  `AccessSwitcher` now opens a menu for any account that does not drive yet.
+- The verification mail logged its URL and token to the console. Removed.
+- An expired mail link toasted « Email vérifié ». It now lands on the resend form.
+- `apply_i18n.py` asserts the raw message files have as many lines as their canonical dump; they no longer do
+  (14 fewer), so the patches were spliced with a line-count-independent variant. The tool needs the same fix.
+- `PendingOffer` restated the job beside an offer; it now uses `OfferListing`.
+
+**Verification** (each gate alone, on the final tree unless said)
+- `npx tsc --noEmit` — 0 errors.
+- `npx eslint .` — 0 errors, 73 warnings (none new in a production file of this release).
+- `pnpm test` — 3,862 tests in 1,086 suites: 3,860 passed on the first full run; the 2 that failed were the release-record checks, red only because the version was bumped before this entry existed. Re-run after it: `changelog.test.ts`, `i18n-keys.test.ts`, `no-dead-ends.test.ts`, 25/25. The full suite was not run a second time.
+- `pnpm changelog:check` — ok, 2.91.0 agrees across the four files.
+- `pnpm build` — succeeds.
+- FR/EN parity by key diff — exact.
+- **Not run:** any browser, any device, any real database, a live OpenAI read, a real Resend send.
+
+**Known limits** — in the spec's « Known limits ». The ones that matter: #29 is unproved without an iPhone on
+iOS 15; a « precise day, any time » request closes to offers 6 h before 06:00 (`biddingRunsUntil` is unchanged);
+#16's queries have only met mocks.
 
 ---
 

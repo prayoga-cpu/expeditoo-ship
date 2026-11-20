@@ -7,7 +7,8 @@
  * Lyon à Bordeaux » — and the form opens with the item, its size and weight
  * and the two towns already filled (docs/specs/request_assistant_spec.md).
  *
- * This service never creates, saves or publishes anything. Its answer is a
+ * This service never creates, saves or publishes anything, and must never
+ * grow a path to `listingsService`. Its answer is a
  * set of values in the form's own vocabulary, and the person still walks the
  * four steps and presses « Publier » themselves — so every rule the form and
  * `createListing` enforce still decides what goes on the board, and a wrong
@@ -27,6 +28,12 @@ import {
   sizeForDimensions,
   type WeightBracketId,
 } from "@/features/app/create/cargo";
+import {
+  ASSISTANT_TIME_ZONE,
+  parisDay,
+  parisWeekday,
+  statedDates,
+} from "@/features/app/create/assistant-dates";
 import { getOpenAIClient } from "@/lib/ai/openai";
 import {
   DEFAULT_COUNTRY,
@@ -71,6 +78,16 @@ const WEIGHT_MAX_KG = 44_000;
 /** No van carries a thing longer than this; past it the model misread a unit. */
 const DIMENSION_MAX_CM = 2_000;
 
+/**
+ * How long each outside call may take. The box gives up after thirty seconds
+ * (`ASSISTANT_READ_TIMEOUT_MS`), so the model's share and the map's — up to
+ * four lookups an end, the two ends side by side — have to fit inside that
+ * together, with room for the round trip.
+ */
+export const MODEL_TIMEOUT_MS = 15_000;
+export const TRANSCRIBE_TIMEOUT_MS = 20_000;
+export const MAP_LOOKUP_TIMEOUT_MS = 3_000;
+
 /** A country the model may name that no request can reach. */
 const OTHER_COUNTRY = "OTHER";
 
@@ -106,6 +123,8 @@ const modelDraftSchema = z.object({
   dropoffCity: text,
   dropoffPostalCode: text,
   dropoffCountry: country,
+  pickupDate: text,
+  deliveryDate: text,
 });
 
 type ModelDraft = z.infer<typeof modelDraftSchema>;
@@ -160,6 +179,14 @@ const JSON_SCHEMA = {
     dropoffCity: nullable("string", "Town the goods are delivered to."),
     dropoffPostalCode: nullable("string", "Its postal code, ONLY if stated."),
     dropoffCountry: COUNTRY_PROPERTY,
+    pickupDate: nullable(
+      "string",
+      "Day the goods are to be collected, as YYYY-MM-DD, ONLY if the person says when. null otherwise."
+    ),
+    deliveryDate: nullable(
+      "string",
+      "Day the goods are to be delivered, as YYYY-MM-DD, ONLY if the person says when. null otherwise."
+    ),
   },
   required: Object.keys(modelDraftSchema.shape),
 } as const;
@@ -175,34 +202,44 @@ Rules:
 - itemName is the object only — no towns, no dates, no price — in the person's language, in sentence case: only the first letter is a capital ("Canapé 3 places", "Machine à laver").
 - Convert units: 1 m = 100 cm, 1 t = 1000 kg. French decimals use a comma.
 - weightBracket and sizePreset are estimates the person will confirm. Give both for any everyday object when no figure was stated; leave them null only for something unusual.
+- Dates: work them out from today's date, given below. A day of the month with no month ("le 20", "on the 20th") is the next such day, today included. "demain"/"tomorrow" is today plus one day. A weekday ("vendredi", "next Friday") is the next such day after today. A date with no year is the next time it comes. One date with no word saying it is the delivery is the pickup. A period with no day ("la semaine prochaine", "in March", "as soon as possible") is null.
 - If the text is not about moving something, every field is null.`;
+
+/** What « le 20 » and « demain » are counted from: the day it is in France. */
+const todayLine = (now: Date) =>
+  `Today is ${parisWeekday(now)} ${parisDay(now)} (${ASSISTANT_TIME_ZONE}).`;
 
 // ========================================
 // Reading
 // ========================================
 
-async function readDraft(requestText: string): Promise<ModelDraft> {
+async function readDraft(requestText: string, now: Date): Promise<ModelDraft> {
   const client = getOpenAIClient();
   if (!client) throw err("ASSISTANT_UNAVAILABLE", 503);
 
   let content: string | null | undefined;
   try {
-    const response = await client.chat.completions.create({
-      model: MODEL,
-      temperature: 0,
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: `<request>\n${requestText}\n</request>` },
-      ],
-      response_format: {
-        type: "json_schema",
-        json_schema: {
-          name: "transport_request",
-          strict: true,
-          schema: JSON_SCHEMA as never,
+    const response = await client.chat.completions.create(
+      {
+        model: MODEL,
+        temperature: 0,
+        messages: [
+          { role: "system", content: `${SYSTEM_PROMPT}\n\n${todayLine(now)}` },
+          { role: "user", content: `<request>\n${requestText}\n</request>` },
+        ],
+        response_format: {
+          type: "json_schema",
+          json_schema: {
+            name: "transport_request",
+            strict: true,
+            schema: JSON_SCHEMA as never,
+          },
         },
       },
-    });
+      // One try, on a clock: the SDK's own retries would triple the wait, and
+      // the person has a « Réessayer » of their own.
+      { timeout: MODEL_TIMEOUT_MS, maxRetries: 0 }
+    );
     content = response.choices[0]?.message?.content;
   } catch (error) {
     console.error("Request assistant: model call failed", error);
@@ -285,6 +322,25 @@ function sizeOf(
 // Towns — looked up, not trusted
 // ========================================
 
+const TIMED_OUT = Symbol("timed out");
+
+/**
+ * A map lookup, or `TIMED_OUT` once it has had its time. The lookup itself is
+ * not cancelled — `geocoding.ts` takes no signal — it is only no longer
+ * waited for.
+ */
+async function inTime<T>(lookup: Promise<T>): Promise<T | typeof TIMED_OUT> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const late = new Promise<typeof TIMED_OUT>((resolve) => {
+    timer = setTimeout(() => resolve(TIMED_OUT), MAP_LOOKUP_TIMEOUT_MS);
+  });
+  try {
+    return await Promise.race([lookup, late]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /**
  * The postal code and country of a town, from the map. A big town has several
  * codes and this is the one at its centre: good enough to open the Where step
@@ -301,9 +357,14 @@ async function lookUpTown(
     : [DEFAULT_COUNTRY.toLowerCase(), JOB_COUNTRIES.join(",").toLowerCase()];
 
   for (const scope of scopes) {
-    const [hit] = await searchAddress(city, scope, 1);
+    // A map that is slow now will be slow for the next scope too: the town is
+    // left unplaced, which the Where step already knows how to ask about.
+    const hits = await inTime(searchAddress(city, scope, 1));
+    if (hits === TIMED_OUT) return null;
+    const [hit] = hits;
     if (!hit) continue;
-    const place = await reverseGeocode(hit.center[1], hit.center[0]);
+    const place = await inTime(reverseGeocode(hit.center[1], hit.center[0]));
+    if (place === TIMED_OUT) return null;
     const code = place?.countryCode.toUpperCase();
     if (!place || !isJobCountry(code)) continue;
     return {
@@ -364,11 +425,14 @@ function missingFrom(draft: Omit<RequestDraft, "missing">): AssistantField[] {
     weight: draft.weightBracket !== null,
     pickup: draft.pickup !== null,
     dropoff: draft.dropoff !== null,
+    // The pickup day is the one a request cannot do without; a delivery day
+    // alone still leaves the question to ask.
+    when: draft.pickupDate !== null,
   };
   return ASSISTANT_FIELDS.filter((field) => !has[field]);
 }
 
-async function toRequestDraft(model: ModelDraft): Promise<RequestDraft> {
+async function toRequestDraft(model: ModelDraft, now: Date): Promise<RequestDraft> {
   const [pickup, dropoff] = await Promise.all([
     endOf(model.pickupCity, model.pickupPostalCode, model.pickupCountry),
     endOf(model.dropoffCity, model.dropoffPostalCode, model.dropoffCountry),
@@ -382,6 +446,7 @@ async function toRequestDraft(model: ModelDraft): Promise<RequestDraft> {
     ...sizeOf(model),
     pickup: pickup.kind === "found" ? pickup.end : null,
     dropoff: dropoff.kind === "found" ? dropoff.end : null,
+    ...statedDates(model, now),
     outOfArea: ASSISTANT_SIDES.filter(
       (side: AssistantSide) => ends[side].kind === "outOfArea"
     ),
@@ -403,8 +468,8 @@ export const requestAssistantService = {
    * sent with everything said before it, so the reading is always of the
    * whole request and there is no conversation to store.
    */
-  async understand(requestText: string): Promise<RequestDraft> {
-    return toRequestDraft(await readDraft(requestText));
+  async understand(requestText: string, now = new Date()): Promise<RequestDraft> {
+    return toRequestDraft(await readDraft(requestText, now), now);
   },
 
   /** A short recording as the text the person would have typed. */
@@ -416,11 +481,10 @@ export const requestAssistantService = {
     if (!AUDIO_TYPE.test(audio.type)) throw err("AUDIO_UNSUPPORTED", 415);
 
     try {
-      const result = await client.audio.transcriptions.create({
-        file: audio,
-        model: TRANSCRIBE_MODEL,
-        language: locale,
-      });
+      const result = await client.audio.transcriptions.create(
+        { file: audio, model: TRANSCRIBE_MODEL, language: locale },
+        { timeout: TRANSCRIBE_TIMEOUT_MS, maxRetries: 0 }
+      );
       return result.text.trim();
     } catch (error) {
       console.error("Request assistant: transcription failed", error);

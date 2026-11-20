@@ -14,6 +14,8 @@ import { paymentsService } from "../payments.service";
 import * as userService from "../user.service";
 import { publishNewMessage } from "../message-publish";
 import { requesterAlertsService } from "../requester-alerts.service";
+import { notificationsService } from "../notifications.service";
+import { ablyServer } from "@/lib/ably-server";
 
 // Covers docs/specs/thread_offer_spec.md §5, §7 and §12.
 
@@ -69,6 +71,12 @@ vi.mock("../payments.service", () => ({
 }));
 
 vi.mock("../user.service", () => ({ hasRole: vi.fn() }));
+vi.mock("../notifications.service", () => ({
+  notificationsService: { createNotification: vi.fn().mockResolvedValue({}) },
+}));
+vi.mock("@/lib/ably-server", () => ({
+  ablyServer: { publish: vi.fn().mockResolvedValue(undefined) },
+}));
 vi.mock("../message-publish", () => ({ publishNewMessage: vi.fn() }));
 vi.mock("../requester-alerts.service", () => ({
   requesterAlertsService: { onDriverMessage: vi.fn().mockResolvedValue({ email: false }) },
@@ -339,6 +347,49 @@ describe("viewerCanAward", () => {
     );
 
     expect(ctx.viewerCanAward).toBe(false);
+  });
+});
+
+describe("canCounter — who may answer with another price (§13)", () => {
+  it("is true for the requester of a direct request that is still open", async () => {
+    const ctx = await threadOffersService.contextFor(
+      ME,
+      conversation({ listing: openListing({ shipperId: ME }) }) as never
+    );
+    expect(ctx.canCounter).toBe(true);
+  });
+
+  it("is false for the carrier on the same thread", async () => {
+    const ctx = await threadOffersService.contextFor(ME, conversation() as never);
+    expect(ctx.canCounter).toBe(false);
+  });
+
+  it("is false on an escalated job, whose price was paid in Expedion", async () => {
+    const ctx = await threadOffersService.contextFor(
+      ME,
+      conversation({
+        listing: openListing({ shipperId: ME, origin: "expedion" }),
+      }) as never
+    );
+    expect(ctx.canCounter).toBe(false);
+  });
+
+  it("is false once the request is no longer open", async () => {
+    const ctx = await threadOffersService.contextFor(
+      ME,
+      conversation({
+        listing: openListing({ shipperId: ME, status: "awarded" }),
+      }) as never
+    );
+    expect(ctx.canCounter).toBe(false);
+  });
+
+  it("is false on a thread with no job", async () => {
+    const ctx = await threadOffersService.contextFor(
+      ME,
+      standaloneConversation() as never
+    );
+    expect(ctx.canCounter).toBe(false);
   });
 });
 
@@ -637,6 +688,93 @@ describe("responding", () => {
       "declined",
       ME
     );
+  });
+
+  // §13: a refusal used to reach nobody.
+  it("tells the sender their price was refused, with a way back to the thread", async () => {
+    vi.mocked(threadOffersDal.getById).mockResolvedValue(
+      pending({ priceCents: 18000 }) as never
+    );
+
+    await threadOffersService.decline(ME, "to-1");
+
+    expect(notificationsService.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: THEM,
+        type: "offer_declined",
+        linkUrl: "/messages/conv-1",
+        data: expect.objectContaining({
+          threadOfferId: "to-1",
+          offerId: "offer-1",
+          listingId: "listing-1",
+        }),
+      })
+    );
+    expect(ablyServer.publish).toHaveBeenCalledWith(
+      expect.stringContaining("conversation:conv-1"),
+      "offer:updated",
+      { threadOfferId: "to-1", status: "declined" }
+    );
+  });
+
+  it("pings nobody when an admin declines from a borrowed session", async () => {
+    await threadOffersService.decline(ME, "to-1", { notify: false });
+
+    expect(threadOffersDal.updateStatus).toHaveBeenCalledWith(
+      "to-1",
+      "declined",
+      ME
+    );
+    expect(notificationsService.createNotification).not.toHaveBeenCalled();
+    expect(ablyServer.publish).not.toHaveBeenCalled();
+  });
+
+  it("still declines when the notification cannot be written", async () => {
+    vi.mocked(notificationsService.createNotification).mockRejectedValueOnce(
+      new Error("down")
+    );
+
+    const result = await threadOffersService.decline(ME, "to-1");
+
+    expect(result.threadOffer).toMatchObject({ status: "declined" });
+  });
+
+  it("writes no message and touches no bid or payment on a decline", async () => {
+    await threadOffersService.decline(ME, "to-1");
+
+    expect(messagesDAL.createMessage).not.toHaveBeenCalled();
+    expect(offersService.withdrawOffer).not.toHaveBeenCalled();
+    expect(offersService.acceptOffer).not.toHaveBeenCalled();
+  });
+
+  it("lets the sender take back a declined card whose bid is still live", async () => {
+    vi.mocked(threadOffersDal.getById).mockResolvedValue(
+      pending({
+        senderId: ME,
+        status: "declined",
+        offer: { id: "offer-1", status: "pending" },
+      }) as never
+    );
+
+    await threadOffersService.withdraw(ME, "to-1");
+
+    expect(offersService.withdrawOffer).toHaveBeenCalledWith(ME, "offer-1");
+    expect(threadOffersDal.updateStatus).toHaveBeenCalledWith(
+      "to-1",
+      "withdrawn",
+      null
+    );
+  });
+
+  it("refuses to withdraw a declined card with no live bid behind it", async () => {
+    vi.mocked(threadOffersDal.getById).mockResolvedValue(
+      pending({ senderId: ME, status: "declined", offerId: null, offer: null }) as never
+    );
+
+    expect(await codeFrom(threadOffersService.withdraw(ME, "to-1"))).toBe(
+      "OFFER_NOT_PENDING"
+    );
+    expect(offersService.withdrawOffer).not.toHaveBeenCalled();
   });
 
   it("lets only the sender withdraw", async () => {

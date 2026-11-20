@@ -27,6 +27,7 @@ import {
   hourOptions,
   togglePeriods,
   type EndpointTiming,
+  type ExactSlot,
   type IsoWeekday,
   type TimeSlot,
   type TimingMode,
@@ -138,6 +139,20 @@ export function TimingField({
   );
 }
 
+/**
+ * Four labels, one of them « N'importe quand »: at phone width a quarter of
+ * the row is narrower than « N'importe », so below `sm` the four sit two by two
+ * as separate pills, and join into one segmented bar from `sm` up.
+ */
+const PERIOD_GROUP =
+  "flex-wrap gap-2 data-[variant=outline]:shadow-none sm:flex-nowrap sm:gap-0 sm:data-[variant=outline]:shadow-xs";
+const PERIOD_ITEM = [
+  "h-auto min-h-9 basis-[calc(50%-0.25rem)] py-1.5 whitespace-normal text-center leading-tight",
+  "rounded-md data-[variant=outline]:border-l",
+  "sm:basis-0 sm:rounded-none sm:first:rounded-l-md sm:last:rounded-r-md",
+  "sm:data-[variant=outline]:border-l-0 sm:data-[variant=outline]:first:border-l",
+].join(" ");
+
 function EndpointTimingFields({
   side,
   title,
@@ -192,37 +207,49 @@ function EndpointTimingFields({
               value={value.slot}
               onValueChange={(next) => {
                 if (!next) return;
-                const slot = next as TimeSlot;
-                onChange({ ...value, slot, hour: defaultHourForSlot(slot) });
+                const slot = next as ExactSlot;
+                // The whole day keeps the hour last chosen, out of sight.
+                onChange(
+                  slot === ANY_PERIOD
+                    ? { ...value, slot }
+                    : { ...value, slot, hour: defaultHourForSlot(slot) }
+                );
               }}
-              className="w-full"
+              className={cn("w-full", PERIOD_GROUP)}
             >
+              {/* That day, at any time of it: no hour to pick
+                  (request_availability_spec.md §9). */}
+              <ToggleGroupItem value={ANY_PERIOD} className={PERIOD_ITEM}>
+                {t("slot.any")}
+              </ToggleGroupItem>
               {TIME_SLOTS.map((slot) => (
-                <ToggleGroupItem key={slot} value={slot} className="flex-1">
+                <ToggleGroupItem key={slot} value={slot} className={PERIOD_ITEM}>
                   {t(`slot.${slot}`)}
                 </ToggleGroupItem>
               ))}
             </ToggleGroup>
           </div>
 
-          <div>
-            <Label htmlFor={`${side}-hour`}>{t("hourLabel")}</Label>
-            <Select
-              value={value.hour}
-              onValueChange={(hour) => onChange({ ...value, hour })}
-            >
-              <SelectTrigger id={`${side}-hour`}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {hourOptions(value.slot).map((hour) => (
-                  <SelectItem key={hour} value={hour}>
-                    {hour}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {value.slot !== ANY_PERIOD && (
+            <div>
+              <Label htmlFor={`${side}-hour`}>{t("hourLabel")}</Label>
+              <Select
+                value={value.hour}
+                onValueChange={(hour) => onChange({ ...value, hour })}
+              >
+                <SelectTrigger id={`${side}-hour`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {hourOptions(value.slot).map((hour) => (
+                    <SelectItem key={hour} value={hour}>
+                      {hour}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </>
       ) : (
         <>
@@ -370,20 +397,6 @@ function WeekdayField({
     </div>
   );
 }
-
-/**
- * Four labels, one of them « N'importe quand »: at phone width a quarter of
- * the row is narrower than « N'importe », so below `sm` the four sit two by two
- * as separate pills, and join into one segmented bar from `sm` up.
- */
-const PERIOD_GROUP =
-  "flex-wrap gap-2 data-[variant=outline]:shadow-none sm:flex-nowrap sm:gap-0 sm:data-[variant=outline]:shadow-xs";
-const PERIOD_ITEM = [
-  "h-auto min-h-9 basis-[calc(50%-0.25rem)] py-1.5 whitespace-normal text-center leading-tight",
-  "rounded-md data-[variant=outline]:border-l",
-  "sm:basis-0 sm:rounded-none sm:first:rounded-l-md sm:last:rounded-r-md",
-  "sm:data-[variant=outline]:border-l-0 sm:data-[variant=outline]:first:border-l",
-].join(" ");
 
 /**
  * Several times of day at once — "not only one", as the client put it.

@@ -6,8 +6,10 @@ import { splitFragileNote } from "./api/jobs.api";
 import { bracketForWeight, sizeForDimensions } from "./cargo";
 import type { JobFormValues, LocationType } from "./schemas";
 import {
+  ANY_PERIOD,
   EXACT_WINDOW_HOURS,
   ISO_WEEKDAYS,
+  defaultEndpointTiming,
   defaultHourForSlot,
   forInput,
   hourOptions,
@@ -102,12 +104,34 @@ function movedTime(at: Date, until: Date, hour: string, side: SnappedTime["side"
   return hour === saved ? null : { side, hour, saved, selected: hour };
 }
 
+/**
+ * A fixed day taken whole — « N'importe quand » in « Date précise »
+ * (request_availability_spec.md §9): a window that closes with the day, at
+ * 22:00, on the day it opens, and is wider than the hour an exact time gets.
+ * Its start is 06:00, or later when it was saved on the day itself and the
+ * hours already gone were left out; either way the form re-derives it from
+ * the clock, so nothing here depends on which.
+ */
+function isWholeDay(at: Date, until: Date): boolean {
+  return (
+    toDayString(at) === toDayString(until) &&
+    clock(until) === `${pad(SLOT_HOURS.evening.end)}:00` &&
+    until.getTime() - at.getTime() > EXACT_WINDOW_MS
+  );
+}
+
 /** One end at its saved time, and what moved when the form cannot show it. */
 function exactEndpoint(
   at: Date,
   until: Date,
   side: SnappedTime["side"]
 ): { endpoint: EndpointTiming; snapped: SnappedTime | null } {
+  if (isWholeDay(at, until)) {
+    return {
+      endpoint: { ...defaultEndpointTiming(toDayString(at)), slot: ANY_PERIOD },
+      snapped: null,
+    };
+  }
   const slot = slotForHour(at.getHours());
   const hour = nearestHour(slot, clock(at));
   return {

@@ -140,9 +140,17 @@ export const messagesDAL = {
                 id: true,
                 title: true,
                 reference: true,
+                status: true,
                 // Searched, and shown as the thread's route (§D5).
                 pickupCity: true,
                 dropoffCity: true,
+                // The row's « 20 nov. – 22 nov. ». Towns and dates only: no
+                // street, postal code or pin belongs in an inbox payload
+                // (listing_privacy_spec.md).
+                pickupFrom: true,
+                pickupUntil: true,
+                dropoffFrom: true,
+                dropoffUntil: true,
               },
               with: {
                 photos: {
@@ -279,6 +287,11 @@ export const messagesDAL = {
             heightCm: true,
             pickupFrom: true,
             pickupUntil: true,
+            // The thread header's route and dates - town level, like the inbox.
+            pickupCity: true,
+            dropoffCity: true,
+            dropoffFrom: true,
+            dropoffUntil: true,
           },
           with: {
             photos: {

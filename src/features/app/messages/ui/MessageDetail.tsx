@@ -5,7 +5,8 @@ import { useRef, useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ChatBubble } from "./ChatBubble";
-import { Send, ArrowLeft, ArrowDown } from "lucide-react";
+import { Send, ArrowLeft, ArrowDown, ChevronRight } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { ChatMessage, Conversation } from "../types";
@@ -13,6 +14,7 @@ import { ThreadOfferAction, ThreadOfferNotice } from "./ThreadOfferAction";
 import { ThreadOfferBubble } from "./ThreadOfferBubble";
 import { ListingReference } from "@/features/app/listing/ui/ListingReference";
 import { useTranslations } from "next-intl";
+import { jobLine } from "../lib/job-summary";
 
 /**
  * Pure UI component for displaying message detail/chat
@@ -65,6 +67,16 @@ export function MessageDetail({
   const [hasNewMessage, setHasNewMessage] = useState(false);
   const prevMessagesLengthRef = useRef(messages.length);
   const initialScrollDoneRef = useRef(false);
+  // The offer dialog, held here so a refused card can open the composer's own.
+  const [offering, setOffering] = useState(false);
+  const offerContext = conversation.offerContext;
+  const ownOffers = messages.filter((m) => m.sentByMe && m.offer);
+  const latestOwnOfferId = ownOffers[ownOffers.length - 1]?.offer?.id;
+  // The viewer's live bid is one the requester refused here: its card carries
+  // the way out, and the composer's notice must agree with it.
+  const refusedLiveBid = ownOffers.some(
+    (m) => m.offer?.status === "declined" && m.offer.offer?.status === "pending"
+  );
 
   // Scroll to bottom function
   const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
@@ -140,69 +152,47 @@ export function MessageDetail({
 
   return (
     <div className="h-full min-h-0 flex flex-col bg-background   mx-auto w-full relative">
-      {/* Header */}
-      <div className="p-4 md:p-6 border-b border-border sticky top-0 bg-background/95 backdrop-blur flex items-center gap-3 z-10">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="rounded-full -ml-2"
-          onClick={() => router.push(backLink)}
-        >
-          <ArrowLeft className="w-6 h-6" />
-        </Button>
-        <Avatar className="w-10 h-10">
-          <AvatarImage
-            src={conversation.recipient.avatar}
-            alt={conversation.recipient.name}
-          />
-          <AvatarFallback className="bg-linear-to-b from-blue-400 to-blue-600 dark:from-blue-600 dark:to-blue-950 text-white">
-            {conversation.recipient.name.charAt(0)}
-          </AvatarFallback>
-        </Avatar>
-        <div className="flex-1 min-w-0">
-          <h1 className="font-bold text-foreground truncate">
-            {conversation.recipient.name}
-          </h1>
-          <p className="text-xs text-muted-foreground truncate">
-            {conversation.recipient.rating !== undefined ? (
-              <>
-                ⭐ {conversation.recipient.rating.toFixed(1)}/5 (
-                {conversation.recipient.reviewsCount || 0})
-              </>
-            ) : (
-              t("noRatings")
-            )}
-          </p>
-        </div>
-      </div>
-
-      {/* Item Context Card - Only show if there's a listing */}
-      {conversation.listing && (
-        <div className="px-4 md:px-6 py-3 bg-muted/50 border-b border-border flex items-center gap-3">
-          {conversation.listingImage ? (
-            <div className="h-10 w-10 shrink-0 overflow-hidden rounded-md border border-border bg-background">
-              <img
-                src={conversation.listingImage}
-                alt={conversation.listing}
-                className="h-full w-full object-cover"
-              />
-            </div>
-          ) : (
-            <div className="h-10 w-10 shrink-0 flex items-center justify-center rounded-md border border-border bg-background text-muted-foreground">
-              📦
-            </div>
-          )}
-          <div className="min-w-0 flex-1">
-            <p className="text-xs text-muted-foreground">{t("aboutListing")}</p>
-            <p className="font-medium text-foreground truncate">
-              {conversation.listing}
+      {/* One sticky stack: who, then which job. The job row used to sit
+          outside it and scrolled away with the messages, because the shell's
+          <main> is what scrolls here, not the list below. */}
+      <div className="sticky top-0 z-10 border-b border-border bg-background/95 backdrop-blur">
+        <div className="px-4 py-3 md:px-6 md:py-4 flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="rounded-full -ml-2"
+            onClick={() => router.push(backLink)}
+          >
+            <ArrowLeft className="w-6 h-6" />
+          </Button>
+          <Avatar className="w-10 h-10">
+            <AvatarImage
+              src={conversation.recipient.avatar}
+              alt={conversation.recipient.name}
+            />
+            <AvatarFallback className="bg-linear-to-b from-blue-400 to-blue-600 dark:from-blue-600 dark:to-blue-950 text-white">
+              {conversation.recipient.name.charAt(0)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <h1 className="font-bold text-foreground truncate">
+              {conversation.recipient.name}
+            </h1>
+            <p className="text-xs text-muted-foreground truncate">
+              {conversation.recipient.rating !== undefined ? (
+                <>
+                  ⭐ {conversation.recipient.rating.toFixed(1)}/5 (
+                  {conversation.recipient.reviewsCount || 0})
+                </>
+              ) : (
+                t("noRatings")
+              )}
             </p>
-            {conversation.listingReference !== undefined && (
-              <ListingReference reference={conversation.listingReference} />
-            )}
           </div>
         </div>
-      )}
+
+        {conversation.listing && <JobRow conversation={conversation} />}
+      </div>
 
       {/* Messages */}
       <div
@@ -218,10 +208,17 @@ export function MessageDetail({
               offer={message.offer}
               isOwn={message.sentByMe}
               timestamp={message.timestamp}
-              avatar={conversation.recipient.avatar}
+              avatar={message.senderAvatar ?? conversation.recipient.avatar}
+              name={message.senderName ?? conversation.recipient.name}
               readByOther={message.readByOther}
-              viewerCanAward={conversation.offerContext?.viewerCanAward ?? false}
-              budgetCents={conversation.offerContext?.job?.budgetCents ?? null}
+              viewerCanAward={offerContext?.viewerCanAward ?? false}
+              canCounter={offerContext?.canCounter ?? false}
+              onRepropose={() => setOffering(true)}
+              canRepropose={
+                Boolean(offerContext?.canOffer) &&
+                message.offer.id === latestOwnOfferId
+              }
+              budgetCents={offerContext?.job?.budgetCents ?? null}
             />
           ) : (
             <ChatBubble
@@ -229,7 +226,8 @@ export function MessageDetail({
               message={message.text}
               isOwn={message.sentByMe}
               timestamp={message.timestamp}
-              avatar={conversation.recipient.avatar}
+              avatar={message.senderAvatar ?? conversation.recipient.avatar}
+              name={message.senderName ?? conversation.recipient.name}
               readByOther={message.readByOther}
               onDelete={
                 message.sentByMe && onDeleteMessage
@@ -262,11 +260,13 @@ export function MessageDetail({
 
       {/* Message Composer */}
       <div className="border-t border-border bg-background sticky bottom-0 z-10">
-        <ThreadOfferNotice context={conversation.offerContext} />
+        <ThreadOfferNotice context={offerContext} refused={refusedLiveBid} />
         <div className="flex gap-2 p-4 md:p-6">
           <ThreadOfferAction
             conversationId={conversation.id}
-            context={conversation.offerContext}
+            context={offerContext}
+            open={offering}
+            onOpenChange={setOffering}
           />
           <Input
             type="text"
@@ -287,5 +287,72 @@ export function MessageDetail({
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * Which job the thread is about, pinned under the name: title and reference on
+ * one line, « Paris → Lyon · 20 nov. – 22 nov. » on the next, and the whole row
+ * a link to the job. Two lines and a small thumbnail, so on a phone it costs
+ * the conversation about as much as one bubble.
+ */
+function JobRow({ conversation }: { conversation: Conversation }) {
+  const t = useTranslations("messages.detail");
+  const line = jobLine(conversation.listingRoute, conversation.listingDates);
+
+  const body = (
+    <>
+      {conversation.listingImage ? (
+        <div className="h-9 w-9 shrink-0 overflow-hidden rounded-md border border-border bg-background">
+          <img
+            src={conversation.listingImage}
+            alt=""
+            className="h-full w-full object-cover"
+          />
+        </div>
+      ) : (
+        <div
+          aria-hidden
+          className="h-9 w-9 shrink-0 flex items-center justify-center rounded-md border border-border bg-background text-muted-foreground"
+        >
+          📦
+        </div>
+      )}
+      <div className="min-w-0 flex-1">
+        <div className="flex items-baseline gap-2 min-w-0">
+          <p className="text-sm font-medium text-foreground truncate">
+            {conversation.listing}
+          </p>
+          {conversation.listingReference !== undefined && (
+            <ListingReference
+              reference={conversation.listingReference}
+              className="shrink-0"
+            />
+          )}
+        </div>
+        {line && (
+          <p className="text-xs text-muted-foreground truncate">{line}</p>
+        )}
+      </div>
+    </>
+  );
+  const className =
+    "flex items-center gap-3 px-4 md:px-6 py-2 bg-muted/50 border-t border-border";
+
+  // No id, no link: a thread cached before the payload carried it.
+  if (!conversation.listingId) return <div className={className}>{body}</div>;
+
+  return (
+    <Link
+      href={`/listing/${conversation.listingId}`}
+      title={t("openListing")}
+      className={`${className} transition-colors hover:bg-muted`}
+    >
+      {body}
+      <ChevronRight
+        aria-hidden
+        className="h-4 w-4 shrink-0 text-muted-foreground"
+      />
+    </Link>
   );
 }

@@ -24,7 +24,10 @@ import { earliestPickupFor } from "@/lib/listing-window";
  * `exact` names one instant per endpoint — a date, a time of day, and an hour
  * within it — and turns it into a one-hour arrival window, because the schema
  * requires `pickupFrom < pickupUntil` and a person does not think in windows
- * when they mean "9 o'clock". `flexible` names a date range, the weekdays and
+ * when they mean "9 o'clock". Or it names the day alone — « N'importe quand »
+ * — and the window is that whole day, 06:00 to 22:00, still not flexible: the
+ * day is fixed, the hour is the carrier's to propose
+ * (request_availability_spec.md §9). `flexible` names a date range, the weekdays and
  * the times of day within it; `isFlexible: true` is what already tells
  * `offers.service.ts` a carrier may propose outside it altogether
  * (see `offersService.submitOffer`), so all of it is a preference, not a hard
@@ -36,6 +39,12 @@ import { earliestPickupFor } from "@/lib/listing-window";
 // week, not an hour.
 export const TIMING_MODES = ["flexible", "exact"] as const;
 export type TimingMode = (typeof TIMING_MODES)[number];
+
+/** The toggle that stands for all three times of day. */
+export const ANY_PERIOD = "any";
+
+/** An exact day's time of day: one of the three, or the whole day. */
+export type ExactSlot = TimeSlot | typeof ANY_PERIOD;
 
 /** How wide the arrival window is around an exact time. */
 export const EXACT_WINDOW_HOURS = 1;
@@ -59,9 +68,12 @@ export interface EndpointTiming {
   date: string;
   /** Flexible mode only: the range's end day. */
   dateUntil: string;
-  /** Exact mode only: the time of day `hour` sits in. */
-  slot: TimeSlot;
-  /** Exact mode only: "HH:mm" within `slot`'s hours. */
+  /** Exact mode only: the time of day `hour` sits in, or the whole day. */
+  slot: ExactSlot;
+  /**
+   * Exact mode only: "HH:mm" within `slot`'s hours. Kept, unused, while
+   * `slot` is the whole day.
+   */
   hour: string;
   /** Flexible mode only: the times of day someone is there. All three = any time. */
   periods: TimeSlot[];
@@ -126,9 +138,6 @@ export function canonicalPeriods(periods: readonly TimeSlot[]): TimeSlot[] {
   return chosen.length > 0 ? chosen : [...TIME_SLOTS];
 }
 
-/** The toggle that stands for all three times of day. */
-export const ANY_PERIOD = "any";
-
 /**
  * The times of day after a press on the « N'importe quand · Matin · Après-midi ·
  * Soir » toggles, given what they hold now and the values the toggle group
@@ -176,7 +185,7 @@ function localAt(day: string, hour: number): Date {
   return d;
 }
 
-function addDays(day: string, n: number): string {
+export function addDays(day: string, n: number): string {
   const d = parseDayString(day);
   d.setDate(d.getDate() + n);
   return toDayString(d);
@@ -284,10 +293,33 @@ function resolveFlexible(
   };
 }
 
-function resolveExact(endpoint: EndpointTiming): { from: string; until: string } {
-  if (!isAvailabilityDay(endpoint.date)) return { from: "", until: "" };
+/**
+ * « N'importe quand » on an exact day: the window one flexible day with every
+ * time of day gives, 06:00 to 22:00 (request_availability_spec.md §9). Like a
+ * flexible start, it never begins before `notBefore` while part of the day is
+ * still ahead of it — today's whole day, at ten, is ten to 22:00, not a window
+ * that opened at six. A day `notBefore` has left behind is kept as typed, for
+ * the schema or the publication check to say so.
+ */
+function resolveWholeDay(day: string, notBefore: Date | null): ResolvedEndpoint {
+  const [whole] = dayIntervals(day, TIME_SLOTS);
+  const clamped =
+    notBefore !== null && notBefore > whole.start && notBefore < whole.end;
+  return {
+    from: forInput((clamped ? notBefore : whole.start).getTime()),
+    until: forInput(whole.end.getTime()),
+    clamped,
+  };
+}
+
+function resolveExact(
+  endpoint: EndpointTiming,
+  notBefore: Date | null
+): ResolvedEndpoint {
+  if (!isAvailabilityDay(endpoint.date)) return { from: "", until: "", clamped: false };
+  if (endpoint.slot === ANY_PERIOD) return resolveWholeDay(endpoint.date, notBefore);
   const from = `${endpoint.date}T${endpoint.hour}`;
-  return { from, until: addHours(from, EXACT_WINDOW_HOURS) };
+  return { from, until: addHours(from, EXACT_WINDOW_HOURS), clamped: false };
 }
 
 /**
@@ -295,15 +327,20 @@ function resolveExact(endpoint: EndpointTiming): { from: string; until: string }
  * hold, plus — for the hint under « Enlèvement » — the derived start when it
  * is later than the range's own first slot.
  *
- * `now` matters only in flexible mode: a range that starts today starts at the
- * first slot still usable, never at one already gone. The form calls this on
+ * `now` matters in flexible mode, and for an exact day taken whole: a range
+ * that starts today starts at the first slot still usable, never at one
+ * already gone. An exact hour is posted as chosen. The form calls this on
  * every change and again at submit, so a page left open does not post a start
  * that has since become too soon.
  */
 export function resolveTimingWindows(timing: TimingState, now = new Date()) {
   if (timing.mode === "exact") {
-    const pickup = resolveExact(timing.pickup);
-    const dropoff = resolveExact(timing.dropoff);
+    const pickup = resolveExact(timing.pickup, firstUsablePickup(now));
+    // A delivery cannot start before the pickup does.
+    const dropoff = resolveExact(
+      timing.dropoff,
+      pickup.from ? new Date(pickup.from) : null
+    );
     return {
       pickupFrom: pickup.from,
       pickupUntil: pickup.until,
@@ -314,7 +351,7 @@ export function resolveTimingWindows(timing: TimingState, now = new Date()) {
       pickupPeriods: [...TIME_SLOTS],
       dropoffDays: [...ISO_WEEKDAYS],
       dropoffPeriods: [...TIME_SLOTS],
-      pickupClampedFrom: null,
+      pickupClampedFrom: pickup.clamped ? pickup.from : null,
     };
   }
 
@@ -345,7 +382,8 @@ export function timingFieldValues(resolved: ResolvedTiming) {
   return values;
 }
 
-function defaultEndpointTiming(date: string): EndpointTiming {
+/** One end on one day, every weekday and time of day allowed. */
+export function defaultEndpointTiming(date: string): EndpointTiming {
   const slot: TimeSlot = "morning";
   return {
     date,

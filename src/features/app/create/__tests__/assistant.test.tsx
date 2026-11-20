@@ -6,7 +6,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { RequestDraft } from "@/server/dto/request-assistant.dto";
 import fr from "../../../../../messages/fr.json";
-import { hasFindings, joinSaid } from "../assistant";
+import { hasFindings, joinSaid, timingFromDraft } from "../assistant";
+import { suggestionFill } from "../cargo";
+import { ISO_WEEKDAYS, TIME_SLOTS, addDays, defaultTimingState } from "../timing";
 
 /**
  * The assistant's reading written onto the real form
@@ -43,6 +45,8 @@ const draft = (over: Partial<RequestDraft> = {}): RequestDraft => ({
   dimensions: null,
   pickup: { city: "Lyon", postalCode: "69002", country: "FR" },
   dropoff: { city: "Bruxelles", postalCode: "1000", country: "BE" },
+  pickupDate: null,
+  deliveryDate: null,
   missing: [],
   outOfArea: [],
   ...over,
@@ -171,6 +175,150 @@ describe("applyAssistant", () => {
   });
 });
 
+/** A day `n` days from the form's own default pickup, as the box holds it. */
+const dayFromNow = (n: number) => addDays(defaultTimingState().pickup.date, n - 1);
+
+describe("applyAssistant — the days it read", () => {
+  it("leaves the When step alone when no day was stated", () => {
+    const { result } = renderHook(() => useJobForm(), { wrapper });
+    const before = result.current.timing;
+
+    act(() => result.current.applyAssistant(draft()));
+
+    expect(result.current.timing).toBe(before);
+  });
+
+  it("writes both days as one-day flexible ranges, and the windows the form posts", () => {
+    const pickupDate = dayFromNow(10);
+    const deliveryDate = dayFromNow(12);
+
+    const result = filled(draft({ pickupDate, deliveryDate }));
+
+    expect(result.current.timing).toMatchObject({
+      mode: "flexible",
+      pickup: { date: pickupDate, dateUntil: pickupDate },
+      dropoff: { date: deliveryDate, dateUntil: deliveryDate },
+    });
+    expect(result.current.form.getValues()).toMatchObject({
+      isFlexible: true,
+      pickupFrom: `${pickupDate}T06:00`,
+      pickupUntil: `${pickupDate}T22:00`,
+      dropoffFrom: `${deliveryDate}T06:00`,
+      dropoffUntil: `${deliveryDate}T22:00`,
+    });
+  });
+
+  it("moves « Date précise » to flexible: the person named a day, not an hour", () => {
+    const { result } = renderHook(() => useJobForm(), { wrapper });
+    act(() =>
+      result.current.handleTimingChange({ ...result.current.timing, mode: "exact" })
+    );
+
+    act(() => result.current.applyAssistant(draft({ pickupDate: dayFromNow(10) })));
+
+    expect(result.current.timing.mode).toBe("flexible");
+    expect(result.current.form.getValues("isFlexible")).toBe(true);
+  });
+});
+
+describe("timingFromDraft", () => {
+  const current = defaultTimingState();
+  const dates = (pickupDate: string | null, deliveryDate: string | null) =>
+    timingFromDraft(current, { pickupDate, deliveryDate });
+
+  it("is nothing to write when no day was stated", () => {
+    expect(dates(null, null)).toBeNull();
+  });
+
+  it("leaves weekdays and times of day at their defaults", () => {
+    const narrowed = {
+      ...current,
+      pickup: { ...current.pickup, days: [1 as const], periods: ["evening" as const] },
+    };
+
+    const next = timingFromDraft(narrowed, { pickupDate: "2031-03-20", deliveryDate: null });
+
+    expect(next?.pickup).toMatchObject({ days: [...ISO_WEEKDAYS], periods: [...TIME_SLOTS] });
+  });
+
+  it("moves the default delivery to the day after a pickup stated alone, when it would fall before", () => {
+    const next = dates("2031-03-20", null);
+
+    expect(next?.pickup).toMatchObject({ date: "2031-03-20", dateUntil: "2031-03-20" });
+    expect(next?.dropoff).toMatchObject({ date: "2031-03-21", dateUntil: "2031-03-21" });
+  });
+
+  it("keeps a delivery already on or after the stated pickup", () => {
+    // The default pickup's own day: the default delivery is the day after.
+    const next = dates(current.pickup.date, null);
+
+    expect(next?.dropoff).toEqual(current.dropoff);
+  });
+
+  it("crosses a month's end when it moves the delivery", () => {
+    expect(dates("2031-01-31", null)?.dropoff.date).toBe("2031-02-01");
+  });
+
+  it("keeps the default pickup under a delivery stated alone", () => {
+    const next = dates(null, "2031-03-22");
+
+    expect(next?.pickup).toEqual(current.pickup);
+    expect(next?.dropoff).toMatchObject({ date: "2031-03-22", dateUntil: "2031-03-22" });
+  });
+
+  it("brings the pickup back to a delivery stated alone that falls before it", () => {
+    const late = { ...current, pickup: { ...current.pickup, date: "2031-06-01", dateUntil: "2031-06-03" } };
+
+    const next = timingFromDraft(late, { pickupDate: null, deliveryDate: "2031-03-22" });
+
+    expect(next?.pickup).toMatchObject({ date: "2031-03-22", dateUntil: "2031-03-22" });
+  });
+
+  it("gives an end kept from « Date précise » a range that does not end before it starts", () => {
+    const exact = {
+      ...current,
+      mode: "exact" as const,
+      dropoff: { ...current.dropoff, date: "2031-04-10", dateUntil: "2031-01-01" },
+    };
+
+    const next = timingFromDraft(exact, { pickupDate: "2031-03-20", deliveryDate: null });
+
+    expect(next?.dropoff).toMatchObject({ date: "2031-04-10", dateUntil: "2031-04-10" });
+  });
+});
+
+describe("applyAssistant — weight and size against a title suggestion", () => {
+  const table = { id: "diningTable", weightBracket: "upTo100", sizePreset: "l" } as const;
+  const byHand = (result: ReturnType<typeof filled>) => ({
+    weight: result.current.cargoChoices.isByHand("weight"),
+    size: result.current.cargoChoices.isByHand("size"),
+  });
+
+  it("makes what it wrote the requester's answer: a later suggestion changes the title only", () => {
+    const result = filled(draft({ weightBracket: "upTo30", exactWeightKg: 24, sizePreset: "m" }));
+
+    expect(byHand(result)).toEqual({ weight: true, size: true });
+    expect(suggestionFill(table, byHand(result))).toEqual({
+      weightBracket: undefined,
+      sizePreset: undefined,
+    });
+  });
+
+  it("leaves to the suggestions what it did not find", () => {
+    const result = filled(draft({ weightBracket: null, sizePreset: null }));
+
+    expect(byHand(result)).toEqual({ weight: false, size: false });
+  });
+
+  it("hands both back when the kind of request changes", () => {
+    const result = filled(draft());
+
+    act(() => result.current.setJobKind("moving"));
+
+    expect(byHand(result)).toEqual({ weight: false, size: false });
+  });
+});
+
 describe("joinSaid", () => {
   it("is everything said, in order, as one text", () => {
     expect(joinSaid([" un canapé de Lyon ", "", "vers Bordeaux"])).toBe(
@@ -188,5 +336,7 @@ describe("hasFindings", () => {
 
   it("is true as soon as one field was read", () => {
     expect(hasFindings({ ...NOTHING, dropoff: draft().dropoff })).toBe(true);
+    // A day is something to put on the form, even alone.
+    expect(hasFindings({ ...NOTHING, pickupDate: "2031-03-20" })).toBe(true);
   });
 });

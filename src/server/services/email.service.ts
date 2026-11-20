@@ -67,20 +67,18 @@ export const emailService = {
   },
 
   /**
-   * Send Welcome Email to new user
+   * The welcome, sent once an account's address is confirmed
+   * (`authService.sendWelcomeEmail` decides when, and to whom).
    */
-  async sendWelcomeEmail(to: string, name: string) {
+  async sendWelcomeEmail(to: string, name?: string) {
     const emailHtml = await render(WelcomeEmail({ name }));
 
     return this.sendEmail({
       to,
-      subject: "Welcome to Expeditop!",
+      subject: "Bienvenue sur EXPEDITOP",
       html: emailHtml,
     });
   },
-
-
-
 
   /**
    * Send Order Confirmation Email to buyer

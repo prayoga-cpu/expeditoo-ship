@@ -13,6 +13,8 @@ import {
   sendDriverInvitationEmail,
   isDriverInvitation,
   sendVerificationEmail,
+  sendWelcomeEmail,
+  isVerificationResend,
 } from "@/server/services/auth.service";
 import { getProfile, getUserRoles } from "@/server/services/user.service";
 import { impersonation } from "@/lib/auth-impersonation";
@@ -92,26 +94,53 @@ const options = {
 
   // Email Verification Configuration
   emailVerification: {
+    // An unverified sign-in is refused (403 EMAIL_NOT_VERIFIED) and used to
+    // send nothing, so somebody who had lost the first mail had no way to get
+    // another. With this on, the refusal itself mails a fresh link; the
+    // sign-in page then lands them on /verify-email, where the resend button
+    // is.
+    sendOnSignIn: true,
     sendVerificationEmail: async (
-      { user, url, token }: EmailVerificationParams,
-      _request: EmailCallbackRequest
+      { user, url }: EmailVerificationParams,
+      request: EmailCallbackRequest
     ) => {
-      // Send verification email when user signs up
-      // Better Auth provides the verification URL with token
-      try {
-        console.log("[Better Auth] Sending verification email to:", user.email);
-        console.log("[Better Auth] Verification URL:", url);
-        console.log("[Better Auth] Token:", token);
+      // Role assignment does NOT happen here — it lives in the
+      // `databaseHooks.user.create.after` hook so OAuth signups (which
+      // never trigger this callback) get their default role too.
+      //
+      // The link is never logged: its token is the proof of address.
+      const sent = await sendVerificationEmail(user.email, url);
+      if (sent) return;
 
-        // Send verification email with the URL provided by Better Auth.
-        // Role assignment does NOT happen here — it lives in the
-        // `databaseHooks.user.create.after` hook so OAuth signups (which
-        // never trigger this callback) get their default role too.
-        await sendVerificationEmail(user.email, url);
-      } catch (error) {
-        console.error("[Better Auth] Email verification error:", error);
-        throw error; // Re-throw to let Better Auth know there was an issue
+      // A mail that did not leave is an error only where saying so costs
+      // nothing else. Inside sign-up the account is already written (and the
+      // endpoint runs in a transaction): a throw would answer 500 for an
+      // account that may exist. Inside sign-in it would replace the 403 both
+      // clients key on (`EMAIL_NOT_VERIFIED`) with a server error. On an
+      // explicit resend the mail is the whole request, so it fails.
+      if (isVerificationResend(request)) {
+        throw new APIError("INTERNAL_SERVER_ERROR", {
+          message: "The verification email could not be sent.",
+          code: "VERIFICATION_EMAIL_NOT_SENT",
+        });
       }
+    },
+    // The welcome, once: Better Auth calls this only on the transition to
+    // verified, never for a link clicked a second time. Contained in the
+    // service — a mail must not fail a verification that has already been
+    // written.
+    afterEmailVerification: async (user) => {
+      await sendWelcomeEmail(user.email);
+    },
+  },
+
+  // « Renvoyer l'email » sends a real mail on every call, so it gets a
+  // tighter budget than the default. Like every Better Auth limit this is
+  // enforced in production only; the button's own cooldown is a courtesy,
+  // this is the rule.
+  rateLimit: {
+    customRules: {
+      "/send-verification-email": { window: 60, max: 3 },
     },
   },
 

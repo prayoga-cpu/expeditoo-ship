@@ -220,9 +220,39 @@ export interface OfferSlot {
   deliveryAt: string;
 }
 
+/**
+ * The job a carrier bid on, as `GET /api/carrier/offers` sends it inside each
+ * of their own offers: the approved carrier's view (`toListingView(…,
+ * "vetted")`, offers.service.ts `getCarrierOffers`). Only what « Mes offres »
+ * prints is named here — the rest of the view rides along untyped.
+ */
+export type OfferListing = Pick<
+  Job,
+  | "id"
+  | "reference"
+  | "title"
+  | "status"
+  | "pickupCity"
+  | "pickupPostalCode"
+  | "pickupCountry"
+  | "dropoffCity"
+  | "dropoffPostalCode"
+  | "dropoffCountry"
+  | "pickupFrom"
+  | "pickupUntil"
+  | "dropoffFrom"
+  | "dropoffUntil"
+>;
+
 export interface Offer {
   id: string;
   listingId: string;
+  /**
+   * Present on the carrier's own list only (`getCarrierOffers`); the offers
+   * of one job (`OffersResponse`) do not repeat the job. Null when the
+   * listing row no longer resolves.
+   */
+  listing?: OfferListing | null;
   priceCents: number;
   /** The booked slot - the earliest proposed, until one is chosen on award. */
   estimatedPickup: string;

@@ -21,6 +21,7 @@ import { Reviews } from "./Reviews";
 import { startConversation } from "@/features/app/messages/api/conversations.api";
 import { StaffContactCard } from "./StaffContactCard";
 import { RequestActivityCard } from "./RequestActivityCard";
+import { useLeaveAdminNav } from "@/lib/use-leave-admin-nav";
 
 interface PublicUser {
   id: string;
@@ -101,6 +102,10 @@ export function PublicProfile({
   const t = useTranslations("profile.public");
   const { user: currentUser } = useAuth();
   const [isMessageLoading, setIsMessageLoading] = useState(false);
+  // The thread renders in MainLayout, which bounces Admin mode back to the
+  // panel: from the staff view the mode has to be left before the push, or
+  // the admin never sees the conversation they just opened.
+  const openOutsideAdmin = useLeaveAdminNav();
 
   // Use TanStack Query for data fetching (per docs/rules.md §6)
   const { data: user, isLoading: isLoadingUser } = useQuery({
@@ -132,7 +137,7 @@ export function PublicProfile({
     try {
       setIsMessageLoading(true);
       const { conversationId } = await startConversation(id);
-      router.push(`/messages/${conversationId}`);
+      openOutsideAdmin(`/messages/${conversationId}`);
     } catch (error) {
       console.error("Message error:", error);
       toast.error(error instanceof Error ? error.message : t("messageError"));
@@ -244,7 +249,12 @@ export function PublicProfile({
       </Card>
 
       {staffView && <StaffContactCard userId={id} />}
-      {staffView && <RequestActivityCard userId={id} />}
+      {staffView && (
+        <RequestActivityCard
+          userId={id}
+          detailsHref={`/admin/users/${id}/activity`}
+        />
+      )}
 
       {/* Listings Grid */}
       <div>

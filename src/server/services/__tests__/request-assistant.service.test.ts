@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  MAP_LOOKUP_TIMEOUT_MS,
+  MODEL_TIMEOUT_MS,
   RequestAssistantError,
   requestAssistantService,
 } from "../request-assistant.service";
@@ -42,6 +44,8 @@ const NOTHING = {
   dropoffCity: null,
   dropoffPostalCode: null,
   dropoffCountry: null,
+  pickupDate: null,
+  deliveryDate: null,
 };
 
 /** The model's next answer. */
@@ -69,8 +73,11 @@ beforeEach(() => {
   mapSays({ postalCode: "69002", countryCode: "fr" });
 });
 
-const understand = (text = "un canapé de Lyon à Bordeaux") =>
-  requestAssistantService.understand(text);
+/** Friday 20 November 2026, mid-morning in France. */
+const NOW = new Date("2026-11-20T09:00:00Z");
+
+const understand = (text = "un canapé de Lyon à Bordeaux", now = NOW) =>
+  requestAssistantService.understand(text, now);
 
 describe("requestAssistantService.understand", () => {
   it("reads a sentence into the form's vocabulary, with nothing missing", async () => {
@@ -81,6 +88,7 @@ describe("requestAssistantService.understand", () => {
       sizePreset: "xl",
       pickupCity: "Lyon",
       dropoffCity: "Bordeaux",
+      pickupDate: "2026-11-24",
     });
 
     const draft = await understand();
@@ -94,6 +102,8 @@ describe("requestAssistantService.understand", () => {
       dimensions: null,
       pickup: { city: "Lyon", postalCode: "69002", country: "FR" },
       dropoff: { city: "Bordeaux", postalCode: "69002", country: "FR" },
+      pickupDate: "2026-11-24",
+      deliveryDate: null,
       missing: [],
       outOfArea: [],
     });
@@ -119,11 +129,13 @@ describe("requestAssistantService.understand", () => {
 
     const draft = await understand("quel temps fait-il ?");
 
-    expect(draft.missing).toEqual(["title", "size", "weight", "pickup", "dropoff"]);
+    expect(draft.missing).toEqual(["title", "size", "weight", "pickup", "dropoff", "when"]);
     expect(searchMock).not.toHaveBeenCalled();
   });
 
   describe("weight", () => {
+    // The rule the form's own « chosen by hand » follows: what the person
+    // said beats what anything guessed (client feedback 2026-11-19, #21).
     it("prefers a stated weight to the estimate, typed into its bracket", async () => {
       modelSays({ itemName: "Cartons", weightKg: 24, weightBracket: "upTo5" });
 
@@ -277,6 +289,134 @@ describe("requestAssistantService.understand", () => {
     });
   });
 
+  describe("dates", () => {
+    const dates = async (pickupDate: unknown, deliveryDate: unknown = null, now = NOW) => {
+      modelSays({ pickupDate, deliveryDate });
+      const { pickupDate: pickup, deliveryDate: delivery } = await understand("x y z", now);
+      return [pickup, delivery];
+    };
+
+    it("tells the model what day it is in France, weekday included", async () => {
+      modelSays({});
+
+      await understand();
+
+      expect(create.mock.calls[0][0].messages[0].content).toContain(
+        "Today is Friday 2026-11-20 (Europe/Paris)."
+      );
+    });
+
+    it("counts today in France, not on the server: 23:30 UTC is already tomorrow", async () => {
+      const lateEvening = new Date("2026-11-20T23:30:00Z");
+      modelSays({});
+
+      await understand("x y z", lateEvening);
+
+      expect(create.mock.calls[0][0].messages[0].content).toContain("Saturday 2026-11-21");
+      // …so the 20th is gone, and the 21st is today.
+      expect(await dates("2026-11-20", null, lateEvening)).toEqual([null, null]);
+      expect(await dates("2026-11-21", null, lateEvening)).toEqual(["2026-11-21", null]);
+    });
+
+    it("keeps a pickup and a delivery the person stated", async () => {
+      expect(await dates("2026-11-20", "2026-11-22")).toEqual(["2026-11-20", "2026-11-22"]);
+    });
+
+    it("keeps the same day at both ends", async () => {
+      expect(await dates("2026-11-25", "2026-11-25")).toEqual(["2026-11-25", "2026-11-25"]);
+    });
+
+    it("keeps a delivery day stated alone, and still asks when", async () => {
+      modelSays({ deliveryDate: "2026-11-22" });
+
+      const draft = await understand();
+
+      expect(draft).toMatchObject({ pickupDate: null, deliveryDate: "2026-11-22" });
+      expect(draft.missing).toContain("when");
+    });
+
+    it("does not ask when once the pickup day is known", async () => {
+      modelSays({ pickupDate: "2026-11-20" });
+
+      expect((await understand()).missing).not.toContain("when");
+    });
+
+    it.each([
+      ["a day already gone", "2026-11-19"],
+      ["a day that does not exist", "2027-02-30"],
+      ["a day more than twelve months ahead", "2027-11-21"],
+      ["a date with an hour", "2026-11-25T10:00"],
+      ["words", "vendredi"],
+      ["another shape", "25/11/2026"],
+    ])("drops %s rather than moving it", async (_, value) => {
+      expect(await dates(value)).toEqual([null, null]);
+    });
+
+    it("believes a day up to twelve months ahead, to the day", async () => {
+      expect(await dates("2027-11-20")).toEqual(["2027-11-20", null]);
+    });
+
+    it("keeps neither day when the delivery is before the pickup", async () => {
+      expect(await dates("2026-11-22", "2026-11-20")).toEqual([null, null]);
+    });
+
+    it("keeps the good day when only the other is unusable", async () => {
+      expect(await dates("2026-11-25", "2026-02-31")).toEqual(["2026-11-25", null]);
+      expect(await dates("2020-01-01", "2026-11-25")).toEqual([null, "2026-11-25"]);
+    });
+
+    it("answers dates the DTO accepts", async () => {
+      modelSays({ pickupDate: "2026-11-20", deliveryDate: "2026-11-22" });
+
+      expect(requestDraftSchema.safeParse(await understand()).success).toBe(true);
+    });
+  });
+
+  describe("on a clock", () => {
+    it("gives the model one try and a deadline", async () => {
+      modelSays({});
+
+      await understand();
+
+      expect(create.mock.calls[0][1]).toEqual({ timeout: MODEL_TIMEOUT_MS, maxRetries: 0 });
+    });
+
+    it("leaves a town unplaced when the map does not answer, and still reads the rest", async () => {
+      vi.useFakeTimers();
+      try {
+        modelSays({ itemName: "Canapé", pickupCity: "Lyon", pickupDate: "2026-11-24" });
+        searchMock.mockReturnValue(new Promise(() => {}));
+
+        const reading = understand();
+        await vi.advanceTimersByTimeAsync(MAP_LOOKUP_TIMEOUT_MS);
+        const draft = await reading;
+
+        expect(draft.title).toBe("Canapé");
+        expect(draft.pickup).toEqual({ city: "Lyon", postalCode: "", country: "FR" });
+        expect(draft.pickupDate).toBe("2026-11-24");
+        // Not asked again of every other country: the map is what is slow.
+        expect(searchMock).toHaveBeenCalledTimes(1);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("leaves the postal code blank when the second lookup hangs", async () => {
+      vi.useFakeTimers();
+      try {
+        modelSays({ pickupCity: "Lyon" });
+        reverseMock.mockReturnValue(new Promise(() => {}));
+
+        const reading = understand();
+        await vi.advanceTimersByTimeAsync(MAP_LOOKUP_TIMEOUT_MS);
+
+        expect((await reading).pickup).toEqual({ city: "Lyon", postalCode: "", country: "FR" });
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+  });
+
   describe("when it cannot answer", () => {
     const refusal = async (run: () => Promise<unknown>) => {
       try {
@@ -339,6 +479,7 @@ describe("requestAssistantService.transcribe", () => {
 
     expect(text).toBe("un canapé de Lyon à Bordeaux");
     expect(transcribe.mock.calls[0][0]).toMatchObject({ language: "fr" });
+    expect(transcribe.mock.calls[0][1]).toMatchObject({ maxRetries: 0 });
   });
 
   it("refuses an empty recording", async () => {

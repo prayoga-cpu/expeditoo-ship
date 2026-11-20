@@ -366,3 +366,164 @@ this very page.
 **UI**
 - status derivation: banned beats unverified beats active
 - `Never` for a null last login
+
+---
+
+## 7. « Demandes et messages » — a user's requests, offers and conversations (2.91.0)
+
+Client feedback #16: from a user's row, reach the requests that person posted,
+the requests they answered as a transporter, and the messages that go with
+them. Before this the staff view of a profile showed two bare counts
+(`RequestActivityCard`) and no way to the things counted.
+
+**Surface:** `/admin/users/:id/activity`. A route, not an in-page swap like
+« Voir le profil »: the row menu of both tables (`/admin/users` and
+`/admin/drivers`, which share `UsersTable`) reaches it with a plain link and no
+page wiring; a job page or a conversation opened from it comes back to it with
+the browser's Back; and the address can be handed to a colleague.
+
+**Entry points**
+- Row menu → « Demandes et messages », in both `viewMode`s.
+- The staff view of a profile: `RequestActivityCard` takes `detailsHref` and
+  shows « Voir les demandes et les messages » under its two figures. A person's
+  own profile passes no `detailsHref` and is unchanged.
+
+### 7.1 Who may read
+
+| Role | Reads |
+|---|---|
+| `admin` | yes |
+| `support` | yes — roles_spec.md §2: « read users … act in support conversations » |
+| `operator` | no — dispatch reads jobs and offers, not people's correspondence |
+| `finance` | no — money, no user moderation |
+| anyone else | no |
+
+Enforced in `adminUserActivityService` (`ACTIVITY_READER_ROLES`), never in a
+route. The permission is checked **before** the account is looked up, so a
+caller without the role gets `FORBIDDEN_ROLE` for an id that exists and for one
+that does not.
+
+`src/proxy.ts` lets only `admin` into `/admin/*` today, so in practice the
+*page* is an admin's; the API rule above is what holds if the support desk is
+given the page later. A borrowed (impersonation) session carries the target's
+roles and is refused like any other non-staff caller.
+
+### 7.2 What is shown
+
+Three tabs, each paged at 50, newest first, with « Afficher la suite ». The
+open tab is `?tab=` and the open conversation `?conversation=`, both in the
+URL.
+
+| Tab | Rows | Each row |
+|---|---|---|
+| Demandes publiées | every listing with `shipper_id = :id`, drafts and scheduled included | reference, title, pickup town → delivery town, pickup date, status (an open request past `expires_at` reads « Expirée », as everywhere), offers count, « Voir la demande » |
+| Offres faites | every `offers` row with `carrier_id = :id` | the job (reference, title, towns), price, offer status, date, « Voir la demande » |
+| Conversations | every conversation the account participates in | other party (name), the job if any, message count, last message date, « Lire les messages » |
+
+A conversation the account hid from its own inbox (`deleted_at`) or cleared
+(`last_cleared_at`) is **still listed, with all its messages**: those two
+columns shape that person's own view, the other participant still holds the
+whole thread, and staff read the record.
+
+Opening a conversation replaces the tabs with its messages, oldest first:
+sender, time, text. A message carrying a thread offer is one line —
+« Offre — 210,00 € — En attente » — read from `thread_offers` at its *current*
+status, as the participants see it. An attachment is **said** (« Pièce
+jointe »), not served.
+
+### 7.3 Reading writes nothing
+
+Staff reading a thread is not a participant reading it — the rule §3.5 sets
+for a borrowed session, for the same reason. Nothing on this surface marks a
+message read, moves `last_read_at`, clears an unread count, sends a read
+receipt or notifies anyone.
+
+Held by construction rather than by care:
+
+- `admin-user-activity.dal.ts` contains selects only.
+- `adminUserActivityService` imports that DAL and no other, and never
+  `messagesService` / `messagesDAL` (whose `getThread` marks page 1 read for
+  whoever calls it).
+- Every route under it exports `GET` and nothing else.
+- The UI has no composer, no accept/decline, no mutation hook.
+
+A test asserts each of the four.
+
+### 7.4 What crosses the wire
+
+Explicit projections in `admin-user-activity.dto.ts`, **narrower** than the
+staff `full` audience of `listing-view.ts`: a job is `id`, `reference`,
+`title`, `pickupCity`, `dropoffCity`, `status` — towns only. No street, postal
+code, pin, contact name or phone, note, budget, or requester row. The DAL names
+its columns one by one (no `user: true` join) and the projection re-picks them,
+so a wider row cannot leak. Another party is `id` and `name`. A message carries
+no `isRead`. An offer carries no `proposedBy`.
+
+Staff who need the address open the job page, where `listing-view.ts` serves
+them the `full` view.
+
+### 7.5 Leaving the panel (#13/#15)
+
+« Message » on the staff view of a profile created the conversation and pushed
+to `/messages/:id` — a `MainLayout` page, whose guard sends Admin mode straight
+back to `/admin/expedion`. The admin never saw the thread and an empty
+conversation was left behind.
+
+`useLeaveAdminNav` (`src/lib/use-leave-admin-nav.ts`) leaves Admin mode
+**before** the push — to the account's first non-admin mode, Driver if it
+drives, otherwise User — exactly as `useApplicationNav` does for the driver
+application. `AdminLayout` re-arms Admin mode only on its own mount, so nothing
+bounces the admin back; the access switcher returns them to the panel. The same
+hook carries « Voir la demande » from this view to `/listing/:id`.
+
+### 7.6 API
+
+All `GET`, all `{ success, data }`. Lists take `?page=` (≥ 1, default 1) and
+answer `{ items, page, pageSize: 50, total, hasMore }`.
+
+| Path | 200 |
+|---|---|
+| `/api/admin/users/:id/activity` | `{ user: { id, name, email }, counts: { requests, offers, conversations } }` |
+| `/api/admin/users/:id/requests` | page of request lines |
+| `/api/admin/users/:id/offers` | page of offer lines |
+| `/api/admin/users/:id/conversations` | page of conversation lines |
+| `/api/admin/users/:id/conversations/:conversationId` | `{ conversation, messages: page }`, messages newest first |
+
+| Situation | Status | Code |
+|---|---|---|
+| No session | 401 | `UNAUTHENTICATED` |
+| Not `admin` or `support` | 403 | `FORBIDDEN_ROLE` |
+| Unknown account | 404 | `USER_NOT_FOUND` |
+| Conversation the account is not in (or that does not exist) | 404 | `CONVERSATION_NOT_FOUND` |
+| `page` not a positive integer | 400 | validation |
+
+The conversation endpoint answers 404, never 403, for a thread the account is
+not in: it reads *a user's* threads and is not a way to open any thread by id.
+
+### 7.7 States
+
+Every read has all three (CLAUDE.md gotchas 9 and 24):
+
+| State | Page | A tab | A conversation |
+|---|---|---|---|
+| Loading | `PageLoader` | skeleton rows | skeleton rows |
+| Failed | `LoadErrorState` — retry, « Retour aux utilisateurs » | `LoadErrorState` — retry | `LoadErrorState` — retry, « Retour aux conversations » |
+| Refused (403 / 404) | « Activité indisponible » + « Retour aux utilisateurs », no retry — the answer will not change | — | as failed |
+| Empty | — | empty state + « Retour aux utilisateurs » | « Aucun message » + « Retour aux conversations » |
+
+### 7.8 Test coverage required
+
+- **Service** — admin and support read all five; a plain account, a
+  transporter, an operator and finance get `FORBIDDEN_ROLE` on all five with no
+  DAL call; unknown account → `USER_NOT_FOUND`; a stranger cannot tell an
+  unknown id from a known one; conversation not the account's →
+  `CONVERSATION_NOT_FOUND` and no message read; page 2 asks the DAL for
+  `offset 50`; a bad page is refused.
+- **Read-only** — the four assertions of §7.3.
+- **Projection** — each view pinned key by key; a row carrying a street, a pin,
+  a phone, a note and the requester's account yields none of them.
+- **UI** — loading, failed (retry reads again), refused (no retry), empty (a
+  link on), a request row opening its job through `useLeaveAdminNav`, a
+  conversation oldest-first with a thread offer as one line, and no textbox,
+  form or send control anywhere in it.
+- **`useLeaveAdminNav`** — the mode in storage *at the moment of the push*.

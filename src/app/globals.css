@@ -43,6 +43,14 @@
   --warning: oklch(0.62 0.16 70);
   --warning-foreground: oklch(0.2 0.05 70);
 
+  /* The active item of the phone navigation bar: `--foreground` at 8 %,
+     written out with its own alpha. `bg-foreground/[0.08]` said the same thing
+     through `color-mix()`, which iOS Safari 15.4–16.1 does not have — there
+     Tailwind's fallback is the solid colour, and the item was a near-black
+     pill with a near-black label. `oklch()` with an alpha needs nothing those
+     browsers lack. Keep it in step with `--foreground` by hand. */
+  --nav-active: oklch(0.15 0.02 250 / 0.08);
+
   --radius: 0.5rem;
   --sidebar: oklch(1 0 0);
   --sidebar-foreground: oklch(0.15 0.02 250);
@@ -73,6 +81,7 @@
   --success-foreground: oklch(1 0 0);
   --warning: oklch(0.8 0.15 75);
   --warning-foreground: oklch(0.18 0.04 70);
+  --nav-active: oklch(0.95 0.02 250 / 0.08);
 }
 
 /* ── Landing surface ────────────────────────────────────────────────────
@@ -189,6 +198,7 @@
   --color-success-foreground: var(--success-foreground);
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
+  --color-nav-active: var(--nav-active);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-field-border: var(--field-border);
@@ -423,6 +433,148 @@
 
   .animate-lp-tick {
     animation: lpTick 0.5s ease-out;
+  }
+}
+
+/* ── Tints where `color-mix()` does not exist ───────────────────────────
+   Tailwind v4 writes `bg-success/15` as two rules: `background-color:
+   var(--success)` — solid — and, inside `@supports (color: color-mix(in lab,
+   red, red))`, the 15 % mix that replaces it. iOS Safari 15.4–16.1 reads
+   `oklch()` and has no `color-mix()`, so it keeps the solid one: a badge
+   written `bg-success/15 text-success` is green on green, and the same goes
+   for every tinted badge, banner and pill — about 150 uses. Reported from a client's
+   iPhone (2.91.0 #29).
+
+   This block is the exact negation of Tailwind's own test, so a browser runs
+   either its mix or this, never both. It gives each low-opacity semantic tint
+   a real translucent colour — the token's own `oklch()` with an alpha, kept in
+   step with the tokens above by hand. One alpha per token, not one per step:
+   on those browsers `/5` and `/20` look alike, and both are readable.
+
+   What it matches, precisely. `[class~="bg-success/15"]` is the *whole word*
+   match: an element whose class list contains exactly that token. It does not
+   match `hover:bg-success/15`, `dark:bg-success/15` or `bg-success/150` — a
+   substring selector (`*=`) would, and would make every solid button carrying
+   `hover:bg-primary/90` transparent. Only steps up to 30 % are listed: from
+   there up the solid fallback is a legible surface (a `bg-primary/90` button
+   is simply `bg-primary`), below it the text is the same hue as its ground.
+
+   Why it wins, and only where it should. It sits in `@layer utilities`, after
+   the utilities Tailwind generates, with the specificity of one class: it
+   overrides the base utility it names and nothing stronger. A state variant on
+   the same element (`data-[state=active]:bg-primary`, `dark:bg-…`,
+   `hover:bg-…`, all two-part selectors) still beats it, so a tinted tab that
+   turns solid when active still does. Unlayered, it would have beaten those
+   too. The one thing it also outranks is a bare breakpoint variant
+   (`sm:bg-card`, one class inside a media query) on an element that also
+   carries a listed tint; nothing in the app pairs the two.
+
+   Not covered, on purpose: borders (`border-success/30` falls back to a solid
+   border, which reads fine), text opacity, and gradient stops
+   (`from-primary/10`, six uses). Cannot be tested here — no iOS 15/16 device —
+   so it was checked against the compiled CSS only. */
+@supports not (color: color-mix(in lab, red, red)) {
+  :root {
+    --tint-primary: oklch(0.55 0.2 258 / 0.12);
+    --tint-success: oklch(0.58 0.15 155 / 0.15);
+    --tint-warning: oklch(0.62 0.16 70 / 0.15);
+    --tint-destructive: oklch(0.62 0.22 18 / 0.12);
+    --tint-foreground: oklch(0.15 0.02 250 / 0.08);
+    --tint-muted-foreground: oklch(0.52 0.02 250 / 0.15);
+    --tint-primary-foreground: oklch(1 0 0 / 0.2);
+  }
+
+  .dark {
+    --tint-success: oklch(0.72 0.15 155 / 0.15);
+    --tint-warning: oklch(0.8 0.15 75 / 0.15);
+    --tint-foreground: oklch(0.95 0.02 250 / 0.08);
+    --tint-muted-foreground: oklch(0.65 0.02 250 / 0.15);
+  }
+
+  @layer utilities {
+    [class~="bg-primary/5"],
+    [class~="bg-primary/10"],
+    [class~="bg-primary/15"],
+    [class~="bg-primary/20"],
+    [class~="bg-primary/25"],
+    [class~="bg-primary/30"],
+    [class~="bg-primary/[0.03]"],
+    [class~="bg-primary/8"] {
+      background-color: var(--tint-primary);
+    }
+
+    [class~="bg-success/5"],
+    [class~="bg-success/10"],
+    [class~="bg-success/15"],
+    [class~="bg-success/20"],
+    [class~="bg-success/25"],
+    [class~="bg-success/30"] {
+      background-color: var(--tint-success);
+    }
+
+    [class~="bg-warning/5"],
+    [class~="bg-warning/10"],
+    [class~="bg-warning/15"],
+    [class~="bg-warning/20"],
+    [class~="bg-warning/25"],
+    [class~="bg-warning/30"] {
+      background-color: var(--tint-warning);
+    }
+
+    [class~="bg-destructive/5"],
+    [class~="bg-destructive/10"],
+    [class~="bg-destructive/15"],
+    [class~="bg-destructive/20"],
+    [class~="bg-destructive/25"],
+    [class~="bg-destructive/30"],
+    [class~="bg-accent-red/8"] {
+      background-color: var(--tint-destructive);
+    }
+
+    [class~="bg-foreground/5"],
+    [class~="bg-foreground/10"],
+    [class~="bg-foreground/[0.08]"] {
+      background-color: var(--tint-foreground);
+    }
+
+    [class~="bg-muted-foreground/10"],
+    [class~="bg-muted-foreground/15"],
+    [class~="bg-muted-foreground/20"] {
+      background-color: var(--tint-muted-foreground);
+    }
+
+    [class~="bg-primary-foreground/10"],
+    [class~="bg-primary-foreground/20"] {
+      background-color: var(--tint-primary-foreground);
+    }
+
+    /* The one tint that lives on a state variant with same-hue text
+       (`data-[state=active]:bg-primary/8 … text-primary`, the reviews tabs).
+       Two parts, like Tailwind's own rule for it, and later: it wins. */
+    [class~="data-[state=active]:bg-primary/8"][data-state="active"] {
+      background-color: var(--tint-primary);
+    }
+
+    /* A pointer on an old iPad: the hover tints, which are otherwise solid
+       under text of the same colour for as long as the pointer rests. */
+    @media (hover: hover) {
+      [class~="hover:bg-primary/5"]:hover,
+      [class~="hover:bg-primary/10"]:hover {
+        background-color: var(--tint-primary);
+      }
+
+      [class~="hover:bg-destructive/10"]:hover {
+        background-color: var(--tint-destructive);
+      }
+
+      [class~="hover:bg-success/10"]:hover {
+        background-color: var(--tint-success);
+      }
+
+      [class~="hover:bg-muted-foreground/20"]:hover {
+        background-color: var(--tint-muted-foreground);
+      }
+    }
   }
 }
 

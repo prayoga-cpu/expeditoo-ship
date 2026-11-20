@@ -510,28 +510,34 @@ export function LocationPickerField({
 
       {/* A link fills these in; until it has, there is nothing to show. */}
       {linkMode && !hasPin ? null : (
-      <div className="grid grid-cols-3 gap-2">
-        <div className="col-span-3 space-y-1">
-          <Label htmlFor={`${id}-address`} className="text-xs">
+      <div className="grid grid-cols-3 gap-x-2 gap-y-3">
+        <div className="col-span-3 space-y-1.5">
+          {/* A caller that names the field — « Adresse de retrait » on
+              /create — is naming what its block is for, so it is the block's
+              strongest label (client feedback 2026-11-19: at 12px it read as
+              a caption). Unnamed, it sits under the caller's own label and
+              stays an ordinary one. */}
+          <Label
+            htmlFor={`${id}-address`}
+            className={cn(addressLabel && "text-base font-semibold")}
+          >
             {addressLabel ?? t("address")}
           </Label>
           <Input
             id={`${id}-address`}
             value={value.address}
-            className="h-8 text-xs"
             disabled={fieldsLocked}
             onChange={(e) => onChange({ ...value, address: e.target.value })}
           />
         </div>
         <div className="space-y-1">
-          <Label htmlFor={`${id}-postal`} className="text-xs">
+          <Label htmlFor={`${id}-postal`}>
             {t("postalCode")}
           </Label>
           <Input
             id={`${id}-postal`}
             value={value.postalCode}
             placeholder={postalCodePlaceholder}
-            className="h-8 text-xs"
             disabled={fieldsLocked}
             onChange={(e) =>
               onChange({ ...value, postalCode: e.target.value })
@@ -539,13 +545,12 @@ export function LocationPickerField({
           />
         </div>
         <div className="col-span-2 space-y-1">
-          <Label htmlFor={`${id}-city`} className="text-xs">
+          <Label htmlFor={`${id}-city`}>
             {t("city")}
           </Label>
           <Input
             id={`${id}-city`}
             value={value.city}
-            className="h-8 text-xs"
             disabled={fieldsLocked}
             onChange={(e) => onChange({ ...value, city: e.target.value })}
           />

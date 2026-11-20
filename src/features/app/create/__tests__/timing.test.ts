@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { offerablePeriods } from "@/lib/offer-slots";
 import {
   ANY_PERIOD,
   ISO_WEEKDAYS,
@@ -88,6 +89,117 @@ describe("resolveTimingWindows — exact", () => {
     );
 
     expect(resolved.pickupFrom).toBe("2030-01-02T09:00");
+  });
+});
+
+describe("resolveTimingWindows — exact, « N'importe quand »", () => {
+  const anyDay = (pickup: Partial<EndpointTiming> = {}, dropoff: Partial<EndpointTiming> = {}): TimingState => ({
+    mode: "exact",
+    pickup: endpoint({ slot: ANY_PERIOD, ...pickup }),
+    dropoff: endpoint({ date: "2030-01-03", slot: ANY_PERIOD, ...dropoff }),
+  });
+
+  it("is that whole day, 06:00 to 22:00, and still not flexible", () => {
+    const resolved = resolveTimingWindows(anyDay(), EARLY);
+
+    expect(resolved).toMatchObject({
+      pickupFrom: local(2, 6),
+      pickupUntil: local(2, 22),
+      dropoffFrom: local(3, 6),
+      dropoffUntil: local(3, 22),
+      isFlexible: false,
+      pickupDays: [...ISO_WEEKDAYS],
+      pickupPeriods: [...TIME_SLOTS],
+      pickupClampedFrom: null,
+    });
+  });
+
+  it("is the window one flexible day with every time of day gives", () => {
+    const exact = resolveTimingWindows(anyDay(), EARLY);
+    const flex = resolveTimingWindows(flexible({}, { date: "2030-01-03", dateUntil: "2030-01-03" }), EARLY);
+
+    expect([exact.pickupFrom, exact.pickupUntil, exact.dropoffFrom, exact.dropoffUntil]).toEqual([
+      flex.pickupFrom,
+      flex.pickupUntil,
+      flex.dropoffFrom,
+      flex.dropoffUntil,
+    ]);
+  });
+
+  it("ignores the hour left over from a time of day", () => {
+    const resolved = resolveTimingWindows(anyDay({ hour: "19:30" }), EARLY);
+
+    expect(resolved.pickupFrom).toBe(local(2, 6));
+  });
+
+  it("starts today's whole day at the first usable moment, and says so", () => {
+    const resolved = resolveTimingWindows(anyDay(), AFTERNOON);
+
+    const start = forInput(firstUsablePickup(AFTERNOON).getTime());
+    expect(resolved.pickupFrom).toBe(start);
+    expect(resolved.pickupUntil).toBe(local(2, 22));
+    expect(resolved.pickupClampedFrom).toBe(start);
+  });
+
+  it("keeps a day already over as typed, for the publication check to say", () => {
+    const resolved = resolveTimingWindows(anyDay(), new Date(2030, 0, 2, 22, 30));
+
+    expect(resolved.pickupFrom).toBe(local(2, 6));
+    expect(resolved.pickupClampedFrom).toBeNull();
+  });
+
+  it("never starts a same-day delivery before the pickup", () => {
+    const resolved = resolveTimingWindows(
+      {
+        mode: "exact",
+        pickup: endpoint({ slot: "afternoon", hour: "14:00" }),
+        dropoff: endpoint({ slot: ANY_PERIOD }),
+      },
+      EARLY
+    );
+
+    expect(resolved.dropoffFrom).toBe(local(2, 14));
+    expect(resolved.dropoffUntil).toBe(local(2, 22));
+  });
+
+  it("lets a carrier offer any time of that day, and no other day", () => {
+    // `submitOffer` refuses a slot outside a non-flexible window whole
+    // (`PICKUP_OUTSIDE_WINDOW`); the offer form asks the same question first.
+    const resolved = resolveTimingWindows(anyDay(), EARLY);
+    const window = {
+      from: new Date(resolved.pickupFrom),
+      until: new Date(resolved.pickupUntil),
+      isFlexible: false,
+    };
+    const tz = window.from.getTimezoneOffset();
+
+    expect(offerablePeriods("2030-01-02", window, EARLY, tz)).toEqual([...TIME_SLOTS]);
+    expect(offerablePeriods("2030-01-01", window, EARLY, tz)).toEqual([]);
+    expect(offerablePeriods("2030-01-03", window, EARLY, tz)).toEqual([]);
+  });
+
+  it("offers a carrier more than an exact hour does: 09:00 is the morning only", () => {
+    const resolved = resolveTimingWindows(anyDay({ slot: "morning", hour: "09:00" }), EARLY);
+    const window = {
+      from: new Date(resolved.pickupFrom),
+      until: new Date(resolved.pickupUntil),
+      isFlexible: false,
+    };
+
+    expect(
+      offerablePeriods("2030-01-02", window, EARLY, window.from.getTimezoneOffset())
+    ).toEqual(["morning"]);
+  });
+
+  it("mixes with an exact hour at the other end", () => {
+    const resolved = resolveTimingWindows(
+      anyDay({}, { slot: "morning", hour: "10:30" }),
+      EARLY
+    );
+
+    expect(resolved.pickupUntil).toBe(local(2, 22));
+    expect(resolved.dropoffFrom).toBe(local(3, 10, 30));
+    expect(resolved.dropoffUntil).toBe(local(3, 11, 30));
   });
 });
 

@@ -47,12 +47,20 @@ export interface ConversationResponse {
     name: string;
     image: string | null;
   } | null;
+  /** Absent on a payload cached before the field existed. */
+  type?: "LISTING" | "SUPPORT";
   listing: {
     id: string;
     title: string;
     reference: number;
+    status?: string;
     pickupCity?: string | null;
     dropoffCity?: string | null;
+    /** ISO instants. Towns and dates are all an inbox row knows of a job. */
+    pickupFrom?: string;
+    pickupUntil?: string;
+    dropoffFrom?: string;
+    dropoffUntil?: string;
   } | null;
   lastMessageAt: string | null;
   lastMessage: string | null;
@@ -97,6 +105,10 @@ export interface ThreadResponse {
       // for as long as the thread has existed, so the header always fell
       // back to the placeholder.
       photos?: Array<{ url: string }>;
+      pickupCity?: string | null;
+      dropoffCity?: string | null;
+      pickupFrom?: string;
+      dropoffUntil?: string;
     } | null;
   };
   otherParticipant: {

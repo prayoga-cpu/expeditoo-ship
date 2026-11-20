@@ -63,6 +63,7 @@ const context = (over: Partial<ThreadOfferContext> = {}): ThreadOfferContext => 
   blockedBy: null,
   job,
   viewerCanAward: false,
+  canCounter: false,
   ...over,
 });
 

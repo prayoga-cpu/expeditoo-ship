@@ -8,7 +8,7 @@ import { enUS, fr } from "date-fns/locale";
 import { useLocale, useTranslations } from "next-intl";
 
 import { cn } from "@/lib/utils";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { BubbleAvatar } from "./BubbleAvatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/currency";
@@ -46,9 +46,23 @@ interface ThreadOfferBubbleProps {
   isOwn: boolean;
   timestamp: string;
   avatar?: string;
+  /** The sender's name, for the avatar's initial. */
+  name?: string;
   readByOther?: boolean;
   /** Whether this viewer is who awards the underlying job. */
   viewerCanAward: boolean;
+  /**
+   * Whether this viewer may answer a bid with a counter-price on the job page
+   * (`contextFor`). Decides what a card they declined offers next (§13).
+   */
+  canCounter?: boolean;
+  /** Opens the thread's own offer dialog. */
+  onRepropose?: () => void;
+  /**
+   * Whether a refused standalone offer may show « Proposer un autre prix »:
+   * the composer would let this viewer send one, and this is their latest card.
+   */
+  canRepropose?: boolean;
   /**
    * The job's budget, when the thread is about one — shown beside the price
    * so both sides read the two figures together (§B6).
@@ -83,8 +97,12 @@ export function ThreadOfferBubble({
   isOwn,
   timestamp,
   avatar,
+  name,
   readByOther,
   viewerCanAward,
+  canCounter = false,
+  onRepropose,
+  canRepropose = false,
   budgetCents,
 }: ThreadOfferBubbleProps) {
   const t = useTranslations("messages.offer");
@@ -100,13 +118,14 @@ export function ThreadOfferBubble({
 
   const isJobLane = offer.offer !== null;
   // The one case where the bid and the thread offer disagree: the recipient
-  // said no here, and the bid stays live for whoever awards the job. Their own
-  // card shows their answer. Asking again would open a payment dialog for an
-  // offer this thread will refuse (pay_at_accept_spec.md §3.4). The sender's
-  // card is left alone: their bid really is still pending.
+  // said no here, and the bid stays live for whoever awards the job. The
+  // refusal wins on both sides. For the recipient, asking again would open a
+  // payment dialog for an offer this thread will refuse
+  // (pay_at_accept_spec.md §3.4). For the sender, « En attente » under a price
+  // the requester turned down was a dead end: nothing said so, and nothing
+  // offered a way to another price (§13).
   const declinedHere =
     isJobLane &&
-    !isOwn &&
     offer.status === "declined" &&
     shownStatus(offer) === "pending";
   const status = declinedHere ? "declined" : shownStatus(offer);
@@ -123,14 +142,7 @@ export function ThreadOfferBubble({
 
   return (
     <div className={cn("flex gap-3 mb-4", isOwn && "flex-row-reverse")}>
-      {!isOwn && (
-        <Avatar className="w-8 h-8 shrink-0 flex-none">
-          <AvatarImage src={avatar} />
-          <AvatarFallback className="bg-linear-to-br from-primary to-accent-pink text-white text-[10px]">
-            ?
-          </AvatarFallback>
-        </Avatar>
-      )}
+      {!isOwn && <BubbleAvatar name={name} src={avatar} />}
 
       <div
         className={cn(
@@ -278,6 +290,25 @@ export function ThreadOfferBubble({
             </Button>
           )}
 
+          {status === "declined" && (
+            <AfterDecline
+              isOwn={isOwn}
+              // Set only while the refused bid is still live on the job.
+              liveBid={declinedHere ? offer.offer : null}
+              canCounter={canCounter}
+              canRepropose={canRepropose && onRepropose !== undefined}
+              busy={busy}
+              onWithdrawAndRepropose={() =>
+                withdraw
+                  .mutateAsync(offer.id)
+                  .then(() => onRepropose?.())
+                  // Already reported by the mutation's own onError.
+                  .catch(() => {})
+              }
+              onRepropose={() => onRepropose?.()}
+            />
+          )}
+
           {offer.offer && (
             <AcceptPaymentDialog
               offerId={offer.offer.id}
@@ -316,6 +347,89 @@ export function ThreadOfferBubble({
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+interface AfterDeclineProps {
+  isOwn: boolean;
+  /** The bid behind a card refused on the job lane, while it is still live. */
+  liveBid: { id: string; listingId: string } | null;
+  canCounter: boolean;
+  canRepropose: boolean;
+  busy: boolean;
+  onWithdrawAndRepropose: () => void;
+  onRepropose: () => void;
+}
+
+/**
+ * What a refusal leads to, on each side of it (thread_offer_spec.md §13).
+ *
+ * A refused card used to end on its badge. The recipient is sent to the one
+ * place a counter-price exists - the job page - when they may send one, and is
+ * otherwise told the next move is the other side's. The sender is told the
+ * price was refused and given the way to another: take the bid back, which
+ * frees their one slot on the job, then the same offer dialog as ever.
+ */
+function AfterDecline({
+  isOwn,
+  liveBid,
+  canCounter,
+  canRepropose,
+  busy,
+  onWithdrawAndRepropose,
+  onRepropose,
+}: AfterDeclineProps) {
+  const t = useTranslations("messages.offer.card.afterDecline");
+
+  if (!isOwn) {
+    const counter = liveBid !== null && canCounter;
+    return (
+      <div className="space-y-2">
+        <p className="text-xs text-muted-foreground">
+          {counter
+            ? t("youCanCounter")
+            : liveBid
+              ? t("youCarrierNext")
+              : t("youOtherNext")}
+        </p>
+        {counter && liveBid && (
+          <Button asChild size="sm" variant="outline" className="w-full">
+            <Link href={`/listing/${liveBid.listingId}#offer-${liveBid.id}`}>
+              {t("counter")}
+            </Link>
+          </Button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <p className="text-xs text-muted-foreground">
+        {liveBid ? t("refusedBidLive") : t("refused")}
+      </p>
+      {liveBid ? (
+        <Button
+          size="sm"
+          className="w-full"
+          disabled={busy}
+          onClick={onWithdrawAndRepropose}
+        >
+          {t("withdrawAndRepropose")}
+        </Button>
+      ) : (
+        canRepropose && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full"
+            onClick={onRepropose}
+          >
+            {t("repropose")}
+          </Button>
+        )
+      )}
     </div>
   );
 }

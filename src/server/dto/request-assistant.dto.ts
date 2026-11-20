@@ -13,9 +13,11 @@ import {
  * Nothing here is a listing. The answer is a set of values the form may be
  * filled with, in the form's own vocabulary — a weight bracket, a size preset,
  * a town with its postal code — and the requester still walks the form and
- * publishes through it. That is why the shape carries no price, no date, no
- * `origin` and no id: there is nothing for the model to decide that the form
- * does not ask the person again.
+ * publishes through it. That is why the shape carries no price, no `origin`
+ * and no id: there is nothing for the model to decide that the form does not
+ * ask the person again. It does carry the two days the person stated, since
+ * 2.91.0 — a calendar day each, checked by the service, shown on the When step
+ * before anything is posted (spec §4.6).
  */
 
 /** A paragraph, not a document: what one person says about one request. */
@@ -38,6 +40,9 @@ export const ASSISTANT_FIELDS = [
   "weight",
   "pickup",
   "dropoff",
+  // Asked last, and never in the way of « Remplir le formulaire »: the When
+  // step has dates of its own.
+  "when",
 ] as const;
 
 export type AssistantField = (typeof ASSISTANT_FIELDS)[number];
@@ -54,6 +59,9 @@ export const assistantEndSchema = z.object({
 });
 
 export type AssistantEnd = z.infer<typeof assistantEndSchema>;
+
+/** A calendar day, `YYYY-MM-DD`: no hour, no timezone. */
+const assistantDaySchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
 export const requestDraftSchema = z.object({
   title: z.string().min(1).max(120).nullable(),
@@ -72,6 +80,13 @@ export const requestDraftSchema = z.object({
     .nullable(),
   pickup: assistantEndSchema.nullable(),
   dropoff: assistantEndSchema.nullable(),
+  /**
+   * Only a day the person stated, already checked: a real date, from today
+   * (Europe/Paris) to twelve months ahead. Anything else is null.
+   */
+  pickupDate: assistantDaySchema.nullable(),
+  /** The same, and never before `pickupDate`. */
+  deliveryDate: assistantDaySchema.nullable(),
   /** What the sentence did not say, in the order the assistant asks for it. */
   missing: z.array(z.enum(ASSISTANT_FIELDS)),
   /** Ends named in a country no request can collect from or deliver to. */

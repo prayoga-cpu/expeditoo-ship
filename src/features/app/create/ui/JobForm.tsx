@@ -90,6 +90,7 @@ export function JobForm(props: JobFormApi) {
     prefillAddresses,
     applyAssistant,
     assistantFills,
+    cargoChoices,
     setJobKind,
     publish,
     saveDraft,
@@ -127,6 +128,7 @@ export function JobForm(props: JobFormApi) {
             photos={photos}
             onPhotosChange={handlePhotosChange}
             onKindChange={setJobKind}
+            cargoChoices={cargoChoices}
           />
         )}
         {currentStep === 1 && (
@@ -207,10 +209,12 @@ function WhatStep({
   photos,
   onPhotosChange,
   onKindChange,
+  cargoChoices,
 }: StepProps & {
   photos: string[];
   onPhotosChange: (p: string[]) => void;
   onKindChange: JobFormApi["setJobKind"];
+  cargoChoices: JobFormApi["cargoChoices"];
 }) {
   const t = useTranslations("create.what");
   const { register, formState, setValue, watch } = form;
@@ -229,7 +233,7 @@ function WhatStep({
   return (
     <div className="space-y-5">
       <JobKindLink kind={kind} onChange={onKindChange} />
-      <ItemField form={form} />
+      <ItemField form={form} choices={cargoChoices} />
 
       <div>
         <Label htmlFor="description">
@@ -244,9 +248,9 @@ function WhatStep({
         <FieldError message={errors.description?.message} />
       </div>
 
-      <WeightBracketField form={form} />
+      <WeightBracketField form={form} onChosen={() => cargoChoices.mark("weight")} />
 
-      <SizeField form={form} />
+      <SizeField form={form} onChosen={() => cargoChoices.mark("size")} />
 
       <div>
         <Label htmlFor="accessHeightCm">{t("accessHeight")}</Label>
@@ -414,7 +418,7 @@ function EndpointFields({
 
   return (
     <section className="space-y-4">
-      <h2 className="font-semibold">{title}</h2>
+      <h2 className="text-lg font-semibold">{title}</h2>
 
       {addresses && (
         <SavedAddressPicker

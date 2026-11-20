@@ -181,3 +181,74 @@ periods (« Matin, Soir »), separated by « · ». Labels reuse
   four sets.
 - `RequestSummary.test.tsx`: the line appears when restricted, not otherwise.
 - `src/db/__tests__/migrations-journal.test.ts` passes with `0035`.
+
+## 9. « N'importe quand » on an exact day (2.91.0)
+
+Client feedback, 2026-11-19: « Date précise » offered Matin / Après-midi / Soir
+and an hour, and no way to say "that day, whenever". The flexible mode had the
+choice; the exact one did not.
+
+- **The choice.** In « Date précise », each end's « Moment de la journée » is
+  « N'importe quand · Matin · Après-midi · Soir » (`EndpointTiming.slot` is an
+  `ExactSlot`: a time of day or `"any"`). While « N'importe quand » is chosen
+  the « Heure précise » select is not shown; the hour last chosen is kept out
+  of sight and comes back with a time of day's own default. The optional
+  « Plage horaire précise » under it is unchanged and still says the hours when
+  the requester has them.
+- **The window** (`resolveWholeDay`, `timing.ts`). That day from 06:00 to
+  22:00 — exactly what one flexible day with every time of day resolves to
+  (§4). **`isFlexible` stays `false`**: the day is fixed, the hour is the
+  carrier's to propose. The four availability sets are the full sets, as for
+  any exact request.
+- **Today.** Like a flexible start, a whole day never begins before the first
+  usable pickup (`firstUsablePickup`) while part of the day is still ahead of
+  it: chosen at ten, today's window is 10:30-ish → 22:00, and the hint under
+  « Enlèvement » says so (`pickupClampedFrom`, the copy flexible already uses).
+  A day already over is kept as typed for the publication check to report. A
+  whole-day delivery never starts before the pickup does. An exact **hour** is
+  still posted as chosen, never moved.
+- **Round trip** (`from-listing.ts`, `isWholeDay`). A non-flexible window that
+  closes at 22:00 on the day it opens and is wider than the one hour an exact
+  time gets comes back as « N'importe quand », with no « time moved » notice —
+  on a draft resumed, a live request unpublished to be edited, and a copy
+  posted again. 21:00–22:00 is the evening's last hour, not a whole day. A
+  window from before the one-hour rule that happens to end at 22:00 (10:00–
+  22:00) reads as a whole day too, which widens it to 06:00; one that ends
+  anywhere else (09:00–17:00) is still narrowed to its first hour and named
+  (`draft_requests_spec.md` §2).
+
+### 9.1 What follows from a wider non-flexible window
+
+- **Offers.** `submitOffer` refuses, whole, an offer with a slot that does not
+  overlap a non-flexible window (`PICKUP_OUTSIDE_WINDOW`). Against a whole day
+  all three periods of that day overlap, and no slot of any other day does —
+  which is the request: that day, any time. `offerablePeriods` asks the same
+  question per period and copes without change (it returns all three for the
+  day, none for its neighbours; on the day itself, a period already over is
+  still dropped by its own `end <= now` test).
+- **Publication.** `publication.ts` judges `pickupFrom`, here 06:00 (or the
+  clamped start today). Nothing new is refused or allowed.
+- **Bidding deadline — unchanged, and worth knowing.** `biddingRunsUntil`
+  (`src/lib/listing-window.ts`) lets only a *flexible* direct request run to
+  the end of its window; an exact one closes six hours before its start. A
+  whole day tomorrow therefore stops taking offers at midnight tonight, and a
+  whole day chosen for *today* gets the thirty-minute minimum, although its
+  window is open until 22:00. The form's « bidding closes soon » warning says
+  so. Letting a whole-day exact request run along its window is a change to
+  `listing-window.ts` and to what `takeJob`/`assignDirect` book, not to the
+  form.
+- **Display.** `RequestSummary` and the job page print the window as a range,
+  « 20 nov. 06:00 – 22:00 »; no availability line is added, since the sets are
+  full.
+
+### 9.2 Tests
+
+- `timing.test.ts`: the whole day equals one flexible day; `isFlexible` false;
+  the leftover hour ignored; today clamped and hinted; a day over kept as
+  typed; a same-day delivery not before its pickup; mixed with an exact hour;
+  `offerablePeriods` against the resolved window.
+- `from-listing.test.ts`: the round trip posts the same window; told apart end
+  by end; a clamped same-day start; 21:00–22:00 not a whole day; a flexible day
+  not taken for it.
+- `TimingField.test.tsx`: the fourth choice at both ends; the hour hidden and
+  brought back; the optional hours still offered.

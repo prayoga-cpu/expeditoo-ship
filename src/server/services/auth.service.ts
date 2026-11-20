@@ -5,6 +5,7 @@ import * as usersDAL from "@/server/dal/users.dal";
 import * as sessionsDAL from "@/server/dal/sessions.dal";
 import { sendViaResend, EMAIL_FROM, assertSent } from "@/lib/email";
 import { expedionOrigins, type AppOrigin } from "@/lib/app-origins";
+import { emailService } from "@/server/services/email.service";
 
 import { VerificationEmail } from "@/server/emails/VerificationEmail";
 import { PasswordResetEmail } from "@/server/emails/PasswordResetEmail";
@@ -38,6 +39,12 @@ export async function handlePostSignup(userId: string, email: string) {
       email,
       created?.emailVerified ?? false
     );
+
+    // The same fact decides the welcome: a Google account is usable from this
+    // moment, so this is when it is greeted. A password account is greeted
+    // when its link is clicked (`afterEmailVerification`, src/lib/auth.ts) --
+    // one moment or the other, never both.
+    if (created?.emailVerified) await sendWelcomeEmail(email);
 
     return {
       success: true,
@@ -204,88 +211,115 @@ function brandingFor(origin: AppOrigin | null | undefined): MailBranding {
 // ========================================
 
 /**
- * Send verification email to user
+ * Send the verification mail. Answers whether it left.
+ *
+ * It used to answer nothing: a Resend refusal was logged and swallowed, so
+ * every screen said « envoyé » whatever had happened. It still never throws --
+ * Better Auth calls this from inside sign-up (a transaction, with the account
+ * already written) and from inside a refused sign-in, and a throw there turns
+ * a created account into a 500 and « email not verified » into a server
+ * error. The caller decides what a `false` means: nothing on those two paths,
+ * a real failure on an explicit resend (`isVerificationResend`).
+ *
  * @param email - User's email address
- * @param verificationUrl - Verification URL with token (provided by Better Auth)
+ * @param verificationUrl - Better Auth's link, token included. Required: a
+ *   link without a token verifies nothing, which is what the old optional
+ *   parameter's fallback produced.
  */
 export async function sendVerificationEmail(
   email: string,
-  verificationUrl?: string
-) {
+  verificationUrl: string
+): Promise<boolean> {
   try {
     // Get user name for personalization, and the product this account belongs
     // to -- both come off the same row, so branding costs no extra query.
     const user = await usersDAL.getUserByEmail(email);
-    const userName = user?.name?.split(" ")[0] || "there";
     const brand = brandingFor(user?.origin);
 
-    // Use provided URL or fallback to basic URL (for manual resend). The
-    // fallback stays on this app for both products: `/verify-email` is a page
-    // here, and Expedion's router has no screen at that path to land on.
-    let finalVerificationUrl =
-      verificationUrl ||
-      `${process.env.NEXT_PUBLIC_APP_URL}/verify-email?email=${encodeURIComponent(email)}`;
-
-    // If Better Auth provided a URL, modify the callbackURL to redirect to the
-    // sign-in screen of the app this person actually signed up in, carrying the
-    // `verified` flag that screen reads. Sending an Expedion buyer to
-    // EXPEDITOP's `/signin` ended their verification on a carrier login form
-    // for a product they have no account relationship with.
-    if (verificationUrl) {
-      const url = new URL(finalVerificationUrl);
-      url.searchParams.set("callbackURL", brand.verifiedCallbackUrl);
-      finalVerificationUrl = url.toString();
-    }
+    // Redirect to the sign-in screen of the app this person actually signed
+    // up in, carrying the `verified` flag that screen reads. Sending an
+    // Expedion buyer to EXPEDITOP's `/signin` ended their verification on a
+    // carrier login form for a product they have no account relationship with.
+    const url = new URL(verificationUrl);
+    url.searchParams.set("callbackURL", brand.verifiedCallbackUrl);
 
     const sent = await sendViaResend({
       from: EMAIL_FROM,
       to: email,
-      subject: `Verify your ${brand.productName} account`,
+      subject: `Confirmez votre adresse e-mail ${brand.productName}`,
       react: VerificationEmail({
-        verificationUrl: finalVerificationUrl,
-        userName,
+        verificationUrl: url.toString(),
+        userName: firstNameOf(user?.name),
         productName: brand.productName,
       }),
     });
     assertSent(sent, "verification email");
+    return true;
   } catch (error) {
     console.error("[Auth Service] Failed to send verification email:", error);
-    // Don't throw - email failure shouldn't block account creation
-    // But log for admin notification
+    return false;
   }
 }
 
+/** The first word of a display name, or nothing to greet by. */
+function firstNameOf(name: string | null | undefined): string | undefined {
+  return name?.trim().split(/\s+/)[0] || undefined;
+}
+
 /**
- * Resend verification email
+ * Whether Better Auth is sending this mail because somebody pressed
+ * « Renvoyer l'email » -- `POST /send-verification-email` -- rather than as a
+ * side effect of a sign-up or a sign-in.
+ *
+ * It is the one path where a failed send can be reported honestly: nothing
+ * else rides on that request, so failing it costs the person nothing but the
+ * false « envoyé ». A server-side call (`auth.api.signUpEmail`, the in-house
+ * driver onboarding) carries no request at all and is never one.
  */
-export async function resendVerificationEmail(email: string) {
-  // Check if user exists
-  const user = await usersDAL.getUserByEmail(email);
-
-  if (!user) {
-    // Don't reveal if email exists (security)
-    return {
-      success: true,
-      message:
-        "If an account exists with this email, a verification link has been sent.",
-    };
+export function isVerificationResend(
+  request: { url: string } | null | undefined
+): boolean {
+  if (!request?.url) return false;
+  try {
+    return new URL(request.url).pathname.endsWith("/send-verification-email");
+  } catch {
+    return false;
   }
+}
 
-  // Check if already verified
-  if (user.emailVerified) {
-    return {
-      success: false,
-      message: "This email address is already verified.",
-    };
+// ========================================
+// Welcome
+// ========================================
+
+/**
+ * Greets an account whose address has just been confirmed.
+ *
+ * Called from the two moments an address becomes verified, each of which
+ * happens once per account: Better Auth's `afterEmailVerification` (the link
+ * in the mail -- it does not fire for a link clicked twice, the endpoint
+ * returns before it when the row is already verified) and `handlePostSignup`
+ * for a Google account, which is born verified. Neither is driven by a
+ * session, so an admin's borrowed one cannot trigger it.
+ *
+ * An Expedion account is not greeted: this mail describes EXPEDITOP -- post a
+ * transport, become a driver -- to somebody who signed up in another app.
+ *
+ * Never throws: a welcome that cannot leave must not fail a verification or a
+ * sign-up.
+ *
+ * @returns whether a mail was handed to the sender
+ */
+export async function sendWelcomeEmail(email: string): Promise<boolean> {
+  try {
+    const user = await usersDAL.getUserByEmail(email);
+    if (!user || user.origin === "expedion") return false;
+
+    await emailService.sendWelcomeEmail(email, firstNameOf(user.name));
+    return true;
+  } catch (error) {
+    console.error("[Auth Service] Failed to send welcome email:", error);
+    return false;
   }
-
-  // Send verification email
-  await sendVerificationEmail(email);
-
-  return {
-    success: true,
-    message: "Verification email sent. Please check your inbox.",
-  };
 }
 
 // ========================================

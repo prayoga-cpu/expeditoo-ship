@@ -1,4 +1,4 @@
-import { appUrl } from "@/lib/app-url";
+import { appUrl, mailbox } from "@/lib/app-url";
 import {
   Body,
   Container,
@@ -15,39 +15,65 @@ import {
 import * as React from "react";
 
 interface WelcomeEmailProps {
-  name: string;
+  /** First name to greet by; the mail greets nobody in particular without it. */
+  name?: string;
 }
 
+/**
+ * Sent once, when an account's address is confirmed
+ * (`authService.sendWelcomeEmail`). French: the people who sign up here are
+ * French clients and drivers.
+ *
+ * It says only what an account can do the day it is created: post a transport
+ * request, and apply to drive from inside the app. Nothing here grants a role.
+ */
 export const WelcomeEmail = ({ name }: WelcomeEmailProps) => {
-  const previewText = `Welcome to Expeditop, ${name}!`;
+  const home = appUrl();
 
   return (
-    <Html>
+    <Html lang="fr">
       <Head />
-      <Preview>{previewText}</Preview>
+      <Preview>Votre compte EXPEDITOP est prêt.</Preview>
       <Tailwind>
         <Body className="bg-white my-auto mx-auto font-sans">
           <Container className="border border-solid border-[#eaeaea] rounded my-[40px] mx-auto p-[20px] max-w-[465px]">
             <Heading className="text-black text-[24px] font-normal text-center p-0 my-[30px] mx-0">
-              Welcome to <strong>Expeditop</strong>
+              Bienvenue sur <strong>EXPEDITOP</strong>
             </Heading>
             <Text className="text-black text-[14px] leading-[24px]">
-              Hello {name},
+              {name ? `Bonjour ${name},` : "Bonjour,"}
             </Text>
             <Text className="text-black text-[14px] leading-[24px]">
-              We're excited to have you on board! Expeditop is the unified marketplace for all your logistics needs.
+              Votre adresse e-mail est confirmée et votre compte est prêt. Un
+              seul compte suffit pour tout faire.
             </Text>
-            <Section className="text-center mt-[32px] mb-[32px]">
+            <Text className="text-black text-[14px] leading-[24px]">
+              <strong>Vous avez quelque chose à faire transporter ?</strong>{" "}
+              Décrivez votre demande dès maintenant : des chauffeurs vérifiés
+              vous font leurs offres, et c’est vous qui choisissez.
+            </Text>
+            <Section className="text-center mt-[24px] mb-[24px]">
               <Link
-                href={appUrl()}
+                href={`${home}/create`}
                 className="bg-[#000000] rounded text-white text-[12px] font-semibold no-underline text-center px-5 py-3"
               >
-                Get Started
+                Demander un transport
               </Link>
             </Section>
+            <Text className="text-black text-[14px] leading-[24px]">
+              <strong>Vous souhaitez transporter pour nos clients ?</strong>{" "}
+              Ouvrez « Devenir chauffeur » dans l’application pour déposer votre
+              candidature. Nous vérifions votre dossier avant vos premières
+              courses.
+            </Text>
+            <Text className="text-black text-[14px] leading-[24px]">
+              <Link href={home} className="text-[#000000] underline">
+                Ouvrir EXPEDITOP
+              </Link>
+            </Text>
             <Hr className="border border-solid border-[#eaeaea] my-[26px] mx-0 w-full" />
             <Text className="text-[#666666] text-[12px] leading-[24px]">
-              If you have any questions, feel free to reply to this email.
+              Une question ? Écrivez-nous à {mailbox("support")}.
             </Text>
           </Container>
         </Body>

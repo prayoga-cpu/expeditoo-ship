@@ -4,7 +4,9 @@ import { describe, expect, it, vi } from "vitest";
 import { useState } from "react";
 
 import fr from "../../../../messages/fr.json";
-import { CityField, type CityValue } from "../city-field";
+import { CITY_SEARCH_COUNTRIES, CityField, foreignCountry, type CityValue } from "../city-field";
+import { JOB_COUNTRIES } from "@/lib/countries";
+import { searchAddress } from "@/lib/geocoding";
 
 // The suggestions come from Nominatim; nothing here is about the network.
 vi.mock("@/lib/geocoding", () => ({ searchAddress: vi.fn(async () => []) }));
@@ -145,5 +147,60 @@ describe("CityField", () => {
     fireEvent.click(screen.getByText("externe"));
 
     expect(field().value).toBe("Orléans");
+  });
+});
+
+// 2.91.0 #23: « BRUXELLES » answered with French hamlets, because the search
+// was pinned to France while the app serves fourteen countries.
+describe("CityField, across the countries a job can be in", () => {
+  it("searches exactly the countries of the one list, never its own copy", () => {
+    const codes = CITY_SEARCH_COUNTRIES.split(",");
+
+    expect(codes).toEqual(JOB_COUNTRIES.map((code) => code.toLowerCase()));
+    expect(codes).toContain("be");
+    expect(codes[0]).toBe("fr");
+  });
+
+  it("hands that list to the geocoder", async () => {
+    vi.mocked(searchAddress).mockResolvedValueOnce([]);
+    render(wrap(<Host initial={null} />));
+
+    fireEvent.focus(field());
+    fireEvent.change(field(), { target: { value: "BRUXELLES" } });
+
+    await vi.waitFor(() =>
+      expect(searchAddress).toHaveBeenCalledWith("BRUXELLES", CITY_SEARCH_COUNTRIES, 5)
+    );
+  });
+
+  it("names the country of a suggestion outside France, and only then", async () => {
+    vi.mocked(searchAddress).mockResolvedValueOnce([
+      { id: "1", place_name: "Bruxelles, Région de Bruxelles-Capitale", center: [4.35, 50.85], countryCode: "BE" },
+      { id: "2", place_name: "Bruxelles, Saint-Pierre-de-Maillé, Vienne", center: [0.83, 46.68], countryCode: "FR" },
+    ]);
+    const onChange = vi.fn();
+    render(wrap(<CityField id="c" value={null} onChange={onChange} placeholder="Ville" />));
+
+    fireEvent.focus(field());
+    fireEvent.change(field(), { target: { value: "Bruxelles" } });
+
+    expect(await screen.findByText("Belgique")).toBeInTheDocument();
+    expect(screen.queryByText("France")).toBeNull();
+
+    fireEvent.click(screen.getByText("Bruxelles, Région de Bruxelles-Capitale"));
+
+    // A place and nothing else: the country never reaches the board's URL.
+    expect(onChange).toHaveBeenLastCalledWith({
+      label: "Bruxelles, Région de Bruxelles-Capitale",
+      lat: 50.85,
+      lng: 4.35,
+    });
+  });
+
+  it("says nothing for France or for a place with no country", () => {
+    expect(foreignCountry("FR", "fr")).toBeNull();
+    expect(foreignCountry(undefined, "fr")).toBeNull();
+    expect(foreignCountry("BE", "fr")).toBe("Belgique");
+    expect(foreignCountry("BE", "en")).toBe("Belgium");
   });
 });

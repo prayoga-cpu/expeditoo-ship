@@ -173,7 +173,9 @@ export const messagesService = {
       return {
         id: conv.id,
         otherParticipant,
-        listing: conv.listing,
+        // SUPPORT or LISTING, so the row can say which.
+        type: conv.type,
+        listing: toInboxListing(conv.listing),
         lastMessageAt: conv.lastMessageAt,
         isUnread,
         lastMessage: conv.messages[0]?.content || null,
@@ -336,6 +338,34 @@ export const messagesService = {
     return await messagesDAL.softDeleteConversation(conversationId, userId);
   },
 };
+
+type InboxListing = NonNullable<
+  Awaited<ReturnType<typeof messagesDAL.getUserConversations>>[number]["listing"]
+>;
+
+const iso = (value: Date | string) => new Date(value).toISOString();
+
+/**
+ * What an inbox row may say about its job: the title, the reference, the two
+ * towns and the dates. Named field by field, so a column added to the DAL
+ * read does not reach every participant by default (listing_privacy_spec.md).
+ */
+function toInboxListing(listing: InboxListing | null) {
+  if (!listing) return null;
+  return {
+    id: listing.id,
+    title: listing.title,
+    reference: listing.reference,
+    status: listing.status,
+    pickupCity: listing.pickupCity,
+    dropoffCity: listing.dropoffCity,
+    pickupFrom: iso(listing.pickupFrom),
+    pickupUntil: iso(listing.pickupUntil),
+    dropoffFrom: iso(listing.dropoffFrom),
+    dropoffUntil: iso(listing.dropoffUntil),
+    photos: (listing.photos ?? []).map((photo) => ({ url: photo.url })),
+  };
+}
 
 /**
  * The offer gate, or nothing.

@@ -82,8 +82,9 @@ export function OfferCard({
 
   return (
     <Card
+      id={`offer-${offer.id}`}
       className={cn(
-        "p-4 sm:p-5 transition-colors duration-200",
+        "scroll-mt-28 p-4 sm:p-5 transition-colors duration-200",
         offer.status === "accepted" && "border-success ring-1 ring-success/30",
         offer.status === "pending" &&
           offer.proposedAt &&

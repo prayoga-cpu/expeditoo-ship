@@ -38,6 +38,12 @@ export interface SearchResult {
   id: string;
   place_name: string;
   center: [number, number]; // [lng, lat]
+  /**
+   * ISO 3166-1 alpha-2, upper case — absent when Nominatim names no country
+   * (open sea). A search across several countries needs it to tell
+   * « Bruxelles, Belgique » from a French hamlet of the same name.
+   */
+  countryCode?: string;
 }
 
 export interface ReverseGeocodeResult {
@@ -51,7 +57,8 @@ export interface ReverseGeocodeResult {
 /**
  * Forward geocode: search text to coordinates
  * @param query Search query (minimum 3 characters recommended)
- * @param countryCode Restrict to country (default: "fr" for France)
+ * @param countryCode Restrict to a country, or to several as Nominatim's
+ *   comma-separated `countrycodes` ("fr,be,lu"). Default: "fr" for France
  * @param limit Maximum results (default: 5)
  */
 export async function searchAddress(
@@ -86,6 +93,7 @@ export async function searchAddress(
       id: item.place_id.toString(),
       place_name: item.display_name,
       center: [parseFloat(item.lon), parseFloat(item.lat)] as [number, number],
+      countryCode: item.address?.country_code?.toUpperCase(),
     }));
   } catch (error) {
     console.error("Geocoding search error:", error);

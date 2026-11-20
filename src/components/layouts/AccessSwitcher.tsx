@@ -67,12 +67,14 @@ export function AccessSwitcher({
   const { mode, qualifiedModes, setMode } = useActiveAccessMode();
   const [onboardingOpen, setOnboardingOpen] = useState(false);
 
-  // Only a genuinely multi-mode account gets a dropdown at all — an ordinary
-  // single-role account already has « Devenir chauffeur » in the sidebar and
-  // the mobile bar, and does not need its badge to turn into a control just
-  // to repeat that entry.
-  const interactive = qualifiedModes.length > 1;
-  const canAddCarrier = interactive && !qualifiedModes.includes("carrier");
+  // A multi-mode account switches here. A single-mode account that does not
+  // drive yet also gets the menu, for one row: « Devenir chauffeur ». Since
+  // 2.91.0 the phone's bottom bar carries « Mes demandes » in that slot
+  // (become_driver_spec.md §3.1), so below `xl` this is the entry that is
+  // always on screen. An account that already drives and holds one mode
+  // keeps a plain badge: there is nothing to pick.
+  const canAddCarrier = !qualifiedModes.includes("carrier");
+  const interactive = qualifiedModes.length > 1 || canAddCarrier;
   const { data: application } = useCarrierApplication({ enabled: canAddCarrier });
 
   if (isLoading || !user) return null;

@@ -38,10 +38,21 @@ import { FieldError } from "./FieldError";
  * accepts up to 44 t, so `over1000` asks for the figure rather than pretending
  * a ladder of chips can express one.
  */
-export function WeightBracketField({ form }: { form: JobFormApi["form"] }) {
+export function WeightBracketField({
+  form,
+  onChosen,
+}: {
+  form: JobFormApi["form"];
+  /** The person answered: a title suggestion no longer writes the weight. */
+  onChosen?: () => void;
+}) {
   const t = useTranslations("create.what");
   const { setValue, watch, formState } = form;
   const bracket = watch("weightBracket");
+  const setExact = (kg: number | undefined) => {
+    onChosen?.();
+    setValue("exactWeightKg", kg, { shouldValidate: true });
+  };
 
   return (
     <fieldset className="space-y-3">
@@ -52,6 +63,7 @@ export function WeightBracketField({ form }: { form: JobFormApi["form"] }) {
       <RadioGroup
         value={bracket ?? ""}
         onValueChange={(value) => {
+          onChosen?.();
           setValue("weightBracket", value as WeightBracketId, {
             shouldValidate: true,
           });
@@ -79,7 +91,7 @@ export function WeightBracketField({ form }: { form: JobFormApi["form"] }) {
           label={t("weightExact")}
           required
           value={watch("exactWeightKg") as number | undefined}
-          onChange={(kg) => setValue("exactWeightKg", kg, { shouldValidate: true })}
+          onChange={setExact}
           errors={formState.errors}
         />
       )}
@@ -92,7 +104,7 @@ export function WeightBracketField({ form }: { form: JobFormApi["form"] }) {
         <WeightExactInput
           label={t("weightExactOptional")}
           value={watch("exactWeightKg") as number | undefined}
-          onChange={(kg) => setValue("exactWeightKg", kg, { shouldValidate: true })}
+          onChange={setExact}
           errors={formState.errors}
         />
       )}

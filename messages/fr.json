@@ -53,7 +53,18 @@
       "myEarnings": "Mes gains",
       "language": "Langue",
       "feedback": "Envoyer un retour",
-      "planner": "Planificateur"
+      "planner": "Planificateur",
+      "bar": {
+        "home": "Accueil",
+        "requestTransport": "Demander",
+        "myRequests": "Mes demandes",
+        "shipments": "Suivi",
+        "messages": "Messages",
+        "jobs": "Missions",
+        "myOffers": "Mes offres",
+        "myTrips": "Mes trajets",
+        "deliveries": "Livraisons"
+      }
     },
     "categories": {
       "electronics": "Électronique",
@@ -229,7 +240,7 @@
     },
     "register": {
       "title": "Créer votre compte",
-      "subtitle": "Rejoignez EXPEDITOP pour expédier et enchérir",
+      "subtitle": "Un seul compte pour faire transporter vos biens — ou pour les transporter.",
       "email": "Adresse e-mail",
       "password": "Mot de passe",
       "confirmPassword": "Confirmer le mot de passe",
@@ -261,7 +272,8 @@
       "aliasHint": "Le nom sous lequel vous aimeriez apparaître. Pour l'instant, vous seul le voyez.",
       "placeholderFirstName": "Jean",
       "placeholderLastName": "Dupont",
-      "placeholderAlias": "Jeannot"
+      "placeholderAlias": "Jeannot",
+      "accountNote": "Avec ce compte, vous pouvez demander un transport tout de suite. Pour transporter en tant que chauffeur, déposez votre candidature depuis l'application après l'inscription (« Devenir chauffeur »)."
     },
     "forgotPassword": {
       "title": "Mot de passe oublié ?",
@@ -304,7 +316,7 @@
     "verifyEmail": {
       "title": "Vérifiez votre email",
       "subtitle": "Nous avons envoyé un lien de vérification à votre email",
-      "resend": "Renvoyer l'email de vérification",
+      "resend": "Renvoyer l'email",
       "resending": "Envoi en cours...",
       "resent": "Email de vérification envoyé !",
       "backToLogin": "Retour à la connexion",
@@ -319,10 +331,19 @@
       "failedTitle": "Nous n'avons pas pu vérifier votre email",
       "failedBody": "Le lien a peut-être expiré ou a déjà été utilisé.",
       "failedFallback": "La vérification de l'email a échoué.",
-      "signUpAgain": "Recréer mon compte",
       "needHelp": "Besoin d'aide ?",
       "contactSupport": "Contacter le support",
-      "loading": "Chargement…"
+      "loading": "Chargement…",
+      "subtitleWithEmail": "Nous avons envoyé un lien de vérification à {email}",
+      "fromSignIn": "Votre adresse e-mail n'est pas encore confirmée. Nous venons de vous envoyer un nouveau lien : ouvrez-le pour activer votre compte. S'il n'arrive pas, renvoyez-le ci-dessous.",
+      "linkFailedBody": "Le lien a peut-être expiré ou a déjà été utilisé. Demandez-en un nouveau ci-dessous.",
+      "resentHint": "Il peut mettre quelques minutes à arriver.",
+      "resendIn": "Renvoyer dans {seconds} s",
+      "resendFailed": "L'email n'a pas pu être envoyé. Réessayez dans un instant ; si le problème continue, écrivez-nous à {support}.",
+      "resendRateLimited": "Trop de demandes à la suite. Patientez une minute avant de réessayer.",
+      "emailLabel": "Votre adresse e-mail",
+      "emailPlaceholder": "vous@exemple.com",
+      "emailInvalid": "Veuillez saisir une adresse e-mail valide"
     },
     "intent": {
       "bid": "Vous étiez sur le point de placer une offre.",
@@ -732,7 +753,8 @@
     },
     "activity": {
       "posted": "Demandes publiées",
-      "taken": "Prises en charge par un transporteur"
+      "taken": "Prises en charge par un transporteur",
+      "viewDetails": "Voir les demandes et les messages"
     }
   },
   "settings": {
@@ -802,13 +824,13 @@
     },
     "detail": {
       "noRatings": "Aucun avis",
-      "aboutListing": "À propos de l'annonce",
       "newMessage": "Nouveau message",
       "typeMessage": "Écrivez un message...",
       "loading": "Chargement...",
       "unknown": "Inconnu",
       "you": "Vous",
-      "backToInbox": "Retour aux messages"
+      "backToInbox": "Retour aux messages",
+      "openListing": "Voir l'annonce"
     },
     "offer": {
       "button": "Faire une offre",
@@ -856,7 +878,17 @@
         "budget": "Budget du demandeur : {amount}",
         "gapBelow": "{percent} % en dessous",
         "gapAbove": "{percent} % au-dessus",
-        "gapEqual": "au même prix"
+        "gapEqual": "au même prix",
+        "afterDecline": {
+          "youCanCounter": "Vous avez refusé ce prix. Vous pouvez proposer le vôtre au transporteur depuis l'annonce.",
+          "counter": "Proposer un autre prix",
+          "youCarrierNext": "Vous avez refusé ce prix. Le transporteur peut vous envoyer une nouvelle offre.",
+          "youOtherNext": "Vous avez refusé ce prix. Votre interlocuteur peut vous envoyer une nouvelle offre.",
+          "refusedBidLive": "Le demandeur a refusé ce prix. Votre offre reste enregistrée sur l'annonce tant que vous ne la retirez pas.",
+          "withdrawAndRepropose": "Retirer et proposer un autre prix",
+          "refused": "Votre interlocuteur a refusé ce prix. Vous pouvez lui envoyer une nouvelle offre.",
+          "repropose": "Proposer un autre prix"
+        }
       },
       "errors": {
         "CONVERSATION_HAS_NO_LISTING": "Cette conversation ne porte pas sur une annonce.",
@@ -872,10 +904,12 @@
         "PAYMENT_NOT_AUTHORISED": "Le paiement n'a pas été confirmé. Réessayez.",
         "COORDINATES_REQUIRED": "Nous n'avons pas pu situer l'adresse de retrait ou de livraison, même au niveau de la ville. Corrigez l'adresse de la demande, puis réessayez.",
         "generic": "Impossible d'envoyer cette offre. Réessayez."
-      }
+      },
+      "refusedNotice": "Le demandeur a refusé votre prix. Pour en proposer un autre, retirez l'offre depuis sa carte ci-dessus."
     },
     "item": {
-      "noListing": "Aucune annonce"
+      "noListing": "Aucune annonce",
+      "support": "Support"
     },
     "time": {
       "today": "Aujourd'hui",
@@ -1174,7 +1208,6 @@
         "findAnother": "Trouver une autre mission",
         "viewJob": "Voir la mission",
         "withdraw": "Retirer",
-        "pickup": "Enlèvement {date}",
         "status": {
           "pending": "En attente",
           "accepted": "Retenue",
@@ -1184,7 +1217,13 @@
         },
         "notCarrier": "Les offres sont réservées aux transporteurs validés",
         "notCarrierDesc": "Ce compte n'a pas l'accès transporteur. Consultez votre dossier ; s'il est déjà approuvé, déconnectez-vous puis reconnectez-vous, sinon contactez le support.",
-        "application": "Mon dossier transporteur"
+        "application": "Mon dossier transporteur",
+        "jobDates": "Dates demandées :",
+        "jobPickup": "enlèvement {dates}",
+        "jobDelivery": "livraison {dates}",
+        "yourSlot": "Votre créneau :",
+        "slotPickup": "enlèvement {date}",
+        "jobUnavailable": "Cette demande n'est plus disponible."
       },
       "makeOffer": "Faire une offre",
       "ownJobTitle": "C'est votre demande",
@@ -1198,9 +1237,9 @@
   "create": {
     "assistant": {
       "title": "Décrivez votre demande, le formulaire se remplit",
-      "hint": "Dites en une phrase ce que vous faites transporter, d'où et vers où. Vous vérifiez tout avant de publier.",
+      "hint": "Dites en une phrase ce que vous faites transporter, d'où, vers où et quand. Vous vérifiez tout avant de publier.",
       "label": "Votre demande",
-      "placeholder": "Exemple : un canapé 3 places de Lyon à Bordeaux",
+      "placeholder": "Exemple : un canapé 3 places de Lyon à Bordeaux, enlèvement le 20",
       "read": "Analyser",
       "reading": "Analyse en cours…",
       "add": "Ajouter",
@@ -1214,7 +1253,8 @@
         "size": "Taille",
         "weight": "Poids",
         "pickup": "Enlèvement",
-        "dropoff": "Livraison"
+        "dropoff": "Livraison",
+        "when": "Dates"
       },
       "toSpecify": "À préciser",
       "outOfArea": "Pays non desservi pour le moment",
@@ -1226,7 +1266,8 @@
         "size": "Quelle est sa taille ? Ses dimensions, ou un objet de taille comparable.",
         "weight": "Combien pèse-t-il, à peu près ?",
         "pickup": "Dans quelle ville faut-il l'enlever ?",
-        "dropoff": "Dans quelle ville faut-il le livrer ?"
+        "dropoff": "Dans quelle ville faut-il le livrer ?",
+        "when": "Quel jour faut-il l'enlever, et le livrer ?"
       },
       "askMore": "Autre chose à préciser ou à corriger ?",
       "fill": "Remplir le formulaire",
@@ -1237,13 +1278,20 @@
       "describeAgain": "Décrire à nouveau",
       "privacy": "Votre texte ou votre dictée est lu par un service d'intelligence artificielle (OpenAI) pour remplir le formulaire. Rien n'est publié sans votre validation.",
       "error": {
-        "failed": "Nous n'avons pas pu lire votre demande. Réessayez, ou remplissez directement le formulaire ci-dessous.",
+        "failed": "Nous n'avons pas pu lire votre demande. Votre texte est conservé : réessayez, ou remplissez directement le formulaire ci-dessous.",
         "rateLimited": "Trop d'essais à la suite. Patientez une minute, ou remplissez directement le formulaire ci-dessous.",
         "micDenied": "Le micro n'est pas autorisé. Autorisez-le dans votre navigateur, ou écrivez votre demande.",
-        "micFailed": "La dictée n'a pas fonctionné. Réessayez, ou écrivez votre demande."
+        "micFailed": "La dictée n'a pas fonctionné. Réessayez, ou écrivez votre demande.",
+        "timeout": "La lecture prend trop de temps. Votre texte est conservé : réessayez, ou remplissez directement le formulaire ci-dessous."
       },
       "toast": {
         "filled": "Formulaire pré-rempli. Vérifiez chaque étape."
+      },
+      "retry": "Réessayer",
+      "dates": {
+        "both": "Enlèvement {pickup} · livraison {delivery}",
+        "pickup": "Enlèvement {date}",
+        "delivery": "Livraison {date}"
       }
     },
     "illustration": {
@@ -1525,7 +1573,7 @@
       "modeLabel": "Vos dates sont-elles fixes ?",
       "mode": {
         "exact": "Date précise",
-        "exactHint": "Choisissez une heure précise d'enlèvement et de livraison.",
+        "exactHint": "Choisissez le jour de l'enlèvement et de la livraison, et l'heure si vous en avez une.",
         "flexible": "Flexible",
         "flexibleHint": "Donnez une plage de dates — les transporteurs peuvent aussi proposer en dehors."
       },
@@ -1808,7 +1856,8 @@
       "noPackaging": "Ni protection ni emballage",
       "moveSize": "Taille",
       "estimatedWeight": "Poids estimé",
-      "approxKg": "≈ {weight, number} kg"
+      "approxKg": "≈ {weight, number} kg",
+      "pickupDates": "Enlèvement {dates}"
     },
     "carriers": {
       "tab": "Transporteurs disponibles",
@@ -2927,7 +2976,8 @@
         "removeDriver": "Retirer le statut chauffeur",
         "activate": "Réactiver",
         "suspend": "Suspendre",
-        "delete": "Supprimer le compte"
+        "delete": "Supprimer le compte",
+        "activity": "Demandes et messages"
       },
       "dialogs": {
         "cancel": "Annuler",
@@ -3782,6 +3832,73 @@
         "picked_up": "Enlevé",
         "delivered": "Livré",
         "cancelled": "Annulé"
+      }
+    },
+    "userActivity": {
+      "title": "Demandes et messages",
+      "back": "Retour",
+      "backToUsers": "Retour aux utilisateurs",
+      "readOnly": "Consultation seule : rien n'est marqué comme lu, et la personne n'est pas prévenue de votre lecture.",
+      "loadMore": "Afficher la suite",
+      "openJob": "Voir la demande",
+      "pickupOn": "Enlèvement le {date}",
+      "offeredOn": "Offre du {date}",
+      "offersCount": "{count, plural, =0 {Aucune offre} one {# offre} other {# offres}}",
+      "unavailable": {
+        "title": "Activité indisponible",
+        "description": "Ce compte n'existe plus, ou votre rôle ne permet pas de consulter ses demandes et ses messages."
+      },
+      "tabs": {
+        "requests": "Demandes publiées ({count})",
+        "offers": "Offres faites ({count})",
+        "conversations": "Conversations ({count})"
+      },
+      "requests": {
+        "emptyTitle": "Aucune demande publiée",
+        "emptyDescription": "Ce compte n'a encore déposé aucune demande de transport."
+      },
+      "offers": {
+        "emptyTitle": "Aucune offre faite",
+        "emptyDescription": "Ce compte n'a répondu à aucune demande en tant que transporteur."
+      },
+      "conversations": {
+        "emptyTitle": "Aucune conversation",
+        "emptyDescription": "Ce compte n'a encore échangé aucun message.",
+        "with": "Avec {names}",
+        "support": "Conversation avec le support",
+        "unknownParty": "Interlocuteur dont le compte n'existe plus",
+        "noJob": "Sans demande associée",
+        "read": "Lire les messages",
+        "messageCount": "{count, plural, =0 {Aucun message} one {# message} other {# messages}}",
+        "lastMessage": "Dernier message le {date}",
+        "noMessage": "Conversation ouverte, sans message"
+      },
+      "thread": {
+        "back": "Retour aux conversations",
+        "emptyTitle": "Aucun message",
+        "emptyDescription": "Cette conversation a été ouverte, mais personne n'y a encore écrit.",
+        "loadOlder": "Afficher les messages précédents",
+        "offerLine": "Offre — {price} — {status}",
+        "attachment": "Pièce jointe",
+        "deletedSender": "Compte supprimé"
+      },
+      "listingStatus": {
+        "draft": "Brouillon",
+        "scheduled": "Programmée",
+        "open": "Ouverte",
+        "awarded": "Attribuée",
+        "in_progress": "En cours",
+        "completed": "Terminée",
+        "cancelled": "Annulée",
+        "expired": "Expirée"
+      },
+      "offerStatus": {
+        "pending": "En attente",
+        "accepted": "Acceptée",
+        "rejected": "Refusée",
+        "declined": "Refusée",
+        "withdrawn": "Retirée",
+        "expired": "Expirée"
       }
     }
   },

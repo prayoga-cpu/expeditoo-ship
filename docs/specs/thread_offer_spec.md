@@ -457,3 +457,111 @@ still rises, because `createMessage` bumped `lastMessageAt`.
 `src/i18n/__tests__/locale-parity.test.ts` both pass unedited;
 `npx vitest run src/server/services/__tests__/offers.service.test.ts` stays
 green, proving the offers engine was not touched.
+
+---
+
+## 13. After a refusal (2.91.0, client feedback #33)
+
+Declining an offer in the chat used to be a dead end on both sides. The thread
+offer went `declined`, the underlying bid stayed `pending` (§5.3 — still
+true, and still deliberate), and nothing else happened: no notification, no
+realtime event, the sender's card went on reading « En attente… », the
+composer told them « Vous avez déjà une offre en cours ici », and the requester
+had no way from the thread to answer with another price.
+
+**Nothing here is a second negotiation engine.** The counter-price stays where
+it lives — `offersService.counterOffer`, on the job page — and `acceptOffer`
+stays the only money path. A decline awards nothing, charges nothing, writes no
+message and does not touch the bid.
+
+### 13.1 `offerContext.canCounter`
+
+`contextFor` returns one more flag, `canCounter`: the viewer is the listing's
+`shipperId`, the listing is `origin = 'direct'` and `status = 'open'` — the job
+page's own rule for `OfferNegotiation`, and `counterOffer`'s own guard. It is
+`false` on the standalone lane and carried on **every** job-lane branch, like
+`viewerCanAward`, because the requester is a blocked sender (`OWN_LISTING`) by
+definition.
+
+### 13.2 The declined card
+
+"Declined here" is: job lane, thread offer `declined`, bid still `pending`.
+**The refusal wins over the pending bid for display on both sides** (it used to
+win for the recipient only).
+
+| Viewer | Condition | Card shows |
+|---|---|---|
+| Recipient | declined here, `canCounter` | « Vous avez refusé ce prix… » + **Proposer un autre prix** → `/listing/:id#offer-:offerId` |
+| Recipient | declined here, cannot counter (escalated job, operator) | the transporter can send a new offer |
+| Recipient | standalone, declined | the other person can send a new offer |
+| Sender | declined here | « Le demandeur a refusé ce prix… » + **Retirer et proposer un autre prix** |
+| Sender | standalone, declined | refused; **Proposer un autre prix** on their latest card, when `canOffer` |
+
+Once the bid is decided or withdrawn the card follows the bid again (§8.3) and
+none of the above renders.
+
+**Retirer et proposer un autre prix** calls the existing
+`POST /api/messages/offers/:id/withdraw`, then opens the composer's own
+`ThreadOfferDialog` — held in `MessageDetail`, opened once the refetched
+context says `canOffer`. If the withdrawal fails the dialog does not open.
+
+### 13.3 Withdrawing a declined card
+
+`withdraw` accepted `pending` only, so the action above would have answered
+`OFFER_NOT_PENDING`. It now also accepts a thread offer that is `declined`
+**while its bid is `pending`**: the bid is withdrawn through
+`offersService.withdrawOffer` (which frees the carrier's slot on the job —
+`getLiveByCarrierAndListing` ignores withdrawn bids) and the card goes
+`withdrawn`. A declined standalone offer has no bid and is still refused; there
+is nothing to take back, and the composer was never blocked by it.
+
+### 13.4 The composer notice
+
+`OFFER_LIVE` with a refused card in the thread renders `refusedNotice` instead
+of `alreadyBid`, with no « Gérer mes offres » link: the card carries the way
+out. Whether a refused live bid is in the thread is read from the thread's own
+messages — it is wording, not a permission.
+
+### 13.5 Telling the sender
+
+`decline(userId, id, { notify })`, after the status write, best-effort:
+
+- an in-app notification to the sender — type `offer_declined`, `linkUrl`
+  `/messages/:conversationId`, `data` `{ conversationId, threadOfferId,
+  listingId, offerId }`;
+- `offer:updated` `{ threadOfferId, status }` on the `conversation:<id>`
+  channel. It carries nothing to render from; `useMessageDetail` invalidates
+  the thread query on it, so an open thread redraws the card.
+
+A failure in either is logged and never fails the decline.
+
+**Suppressed for an impersonated session.** The route passes
+`notify: !isImpersonated(session)`: an admin inside the account may decline in
+the user's name, and the carrier is not pinged by someone who is looking.
+
+### 13.6 Tests
+
+- Service: `canCounter` true for the requester of an open direct request, false
+  for the carrier, on an escalated job, on a closed request and on the
+  standalone lane; `decline` notifies the sender and publishes `offer:updated`;
+  neither happens with `notify: false`; a failed notification does not fail the
+  decline; a decline writes no message and calls neither `acceptOffer` nor
+  `withdrawOffer`; `withdraw` accepts a declined card with a live bid and
+  refuses one without.
+- Route: 401 with no session; `notify: true` normally, `false` when
+  `session.impersonatedBy` is set.
+- `ThreadOfferBubble`: the sender's refused card reads « Refusée », not
+  « En attente »; the withdraw-and-repropose action withdraws then calls
+  `onRepropose`, and does not on failure; the counter link renders only with
+  `canCounter` on the job lane and points at the offer; the standalone
+  « Proposer un autre prix » renders on the latest card only.
+- `ThreadOfferNotice`: `refused` replaces the `alreadyBid` line.
+
+### 13.7 Known limits
+
+- `#offer-:id` is not yet an anchor on the job page (`OfferCard` has no `id`),
+  so the link lands on the job page's offers rather than on the one offer.
+- The notification's wording is French on the server, like its neighbours in
+  `listings.service.ts`; notifications are not localised anywhere yet.
+- A refusal is not emailed or texted. The in-app bell and the live card are the
+  whole signal.

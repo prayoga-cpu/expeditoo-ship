@@ -25,11 +25,20 @@ import { OptionCard } from "./WeightBracketField";
  * Each preset card shows the centimetres it resolves to, so what the driver
  * will read is never hidden from the person choosing it.
  */
-export function SizeField({ form }: { form: JobFormApi["form"] }) {
+export function SizeField({
+  form,
+  onChosen,
+}: {
+  form: JobFormApi["form"];
+  /** The person answered: a title suggestion no longer writes the size. */
+  onChosen?: () => void;
+}) {
   const t = useTranslations("create.what");
   const { register, setValue, watch, formState } = form;
   const mode = (watch("sizeMode") ?? "preset") as SizeMode;
   const preset = watch("sizePreset");
+  // A measurement typed is an answer like a card pressed.
+  const typed = { onChange: () => onChosen?.() };
 
   return (
     <fieldset className="space-y-3">
@@ -42,9 +51,10 @@ export function SizeField({ form }: { form: JobFormApi["form"] }) {
         value={mode}
         // Radix clears the value when the active item is pressed again; a mode
         // has to be one or the other, so an empty result keeps the current one.
-        onValueChange={(next) =>
-          setValue("sizeMode", (next || mode) as SizeMode)
-        }
+        onValueChange={(next) => {
+          onChosen?.();
+          setValue("sizeMode", (next || mode) as SizeMode);
+        }}
         className="w-full"
       >
         {SIZE_MODES.map((id) => (
@@ -57,9 +67,10 @@ export function SizeField({ form }: { form: JobFormApi["form"] }) {
       {mode === "preset" ? (
         <RadioGroup
           value={preset ?? ""}
-          onValueChange={(value) =>
-            setValue("sizePreset", value as SizePresetId)
-          }
+          onValueChange={(value) => {
+            onChosen?.();
+            setValue("sizePreset", value as SizePresetId);
+          }}
           className="grid grid-cols-2 gap-2 sm:grid-cols-3"
         >
           {SIZE_PRESET_IDS.map((id) => {
@@ -86,7 +97,7 @@ export function SizeField({ form }: { form: JobFormApi["form"] }) {
             <NumericInput
               id="lengthCm"
               rules={NUMERIC_RULES.CM}
-              {...register("lengthCm")}
+              {...register("lengthCm", typed)}
             />
           </div>
           <div>
@@ -94,7 +105,7 @@ export function SizeField({ form }: { form: JobFormApi["form"] }) {
             <NumericInput
               id="widthCm"
               rules={NUMERIC_RULES.CM}
-              {...register("widthCm")}
+              {...register("widthCm", typed)}
             />
           </div>
           <div>
@@ -102,7 +113,7 @@ export function SizeField({ form }: { form: JobFormApi["form"] }) {
             <NumericInput
               id="heightCm"
               rules={NUMERIC_RULES.CM}
-              {...register("heightCm")}
+              {...register("heightCm", typed)}
             />
           </div>
         </div>

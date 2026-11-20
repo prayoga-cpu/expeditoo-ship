@@ -8,7 +8,7 @@ import { ApiError } from "@/lib/fetcher";
 import { useAuth } from "@/lib/auth-context";
 import { deliveriesApi, type Shipment } from "@/features/app/deliveries/api";
 import { offersApi } from "@/features/app/offers/api/offers.api";
-import type { Job, Offer } from "@/features/app/listing/types";
+import type { Offer, OfferListing } from "@/features/app/listing/types";
 import {
   tripsApi,
   type CarrierRoute,
@@ -180,10 +180,7 @@ export function useCompletedTrips(filters: EarningsFilters = {}) {
  * approved carrier reads any job (`toListingView(…, "vetted")`); only what the
  * card prints is declared here.
  */
-export type PendingOfferJob = Pick<
-  Job,
-  "id" | "reference" | "title" | "pickupCity" | "dropoffCity"
->;
+export type PendingOfferJob = OfferListing;
 
 export interface PendingOffer extends Offer {
   listing: PendingOfferJob | null;

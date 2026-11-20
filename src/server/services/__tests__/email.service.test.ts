@@ -74,7 +74,7 @@ describe('emailService', () => {
             expect(mocks.render).toHaveBeenCalled();
             expect(mocks.send).toHaveBeenCalledWith(expect.objectContaining({
                 to: 'user@test.com',
-                subject: 'Welcome to Expeditop!'
+                subject: 'Bienvenue sur EXPEDITOP'
             }));
         });
     });

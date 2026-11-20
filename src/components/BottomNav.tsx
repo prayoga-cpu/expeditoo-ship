@@ -1,15 +1,14 @@
 "use client";
 
 import type React from "react";
-import { useState } from "react";
 import { usePathname } from "next/navigation";
 import {
   Home,
   Calendar,
-  FileText,
   Plus,
   MessageCircle,
   Gavel,
+  Package,
   Route,
   Truck,
 } from "lucide-react";
@@ -18,28 +17,24 @@ import { useTranslations } from "next-intl";
 
 interface NavItem {
   href: string;
+  /** Under `common.navigation.bar` — the bar's own short labels, not the
+   * sidebar's: five items share a phone's width, and « Demander un
+   * transport » at a readable size ended on « … » (2.91.0 #4/#28). */
   labelKey: string;
   icon: React.ReactNode;
   badge?: number;
-  /** Replaces the plain navigation: "My application" flips access mode
-   * first, « Devenir chauffeur » opens the onboarding dialog instead. */
-  onSelect?: () => void;
 }
 
 import { useUnreadMessages } from "@/features/app/messages/hooks";
 import { useAuth } from "@/lib/auth-context";
 import { useActiveAccessMode } from "@/lib/use-active-access-mode";
-import { useApplicationNav } from "@/lib/use-application-nav";
-import { useCarrierApplication } from "@/features/app/carrier/hooks/useCarrier";
-import { DriverOnboardingDialog } from "@/features/app/carrier/ui/DriverOnboardingDialog";
 
 export function BottomNav() {
   const pathname = usePathname();
   const { unreadCount } = useUnreadMessages();
-  const t = useTranslations("common.navigation");
+  const t = useTranslations("common.navigation.bar");
   const { user } = useAuth();
   const { mode } = useActiveAccessMode();
-  const applicationNav = useApplicationNav();
 
   // Which bar renders is the same "access mode" MainLayout's desktop
   // sidebar reads (use-active-access-mode.ts) — the two used to disagree,
@@ -49,14 +44,11 @@ export function BottomNav() {
   const roles = user?.roles ?? [];
   const isCarrier = mode === "carrier" && roles.includes("carrier");
   const isDriver = mode === "carrier" && roles.includes("driver");
-  const isApplicant = !isCarrier && !isDriver;
-  // Driver access with the mode set to User: the applicant bar below would
+  // Driver access with the mode set to User: the requester bar below would
   // hide the board from someone who can bid on it, so it swaps the
-  // application slot for « Missions ». Mode picks the bar; roles decide
+  // « Mes demandes » slot for « Missions ». Mode picks the bar; roles decide
   // whether the board is on it.
   const hasDriverRole = roles.includes("driver") || roles.includes("carrier");
-  const [onboardingOpen, setOnboardingOpen] = useState(false);
-  const { data: application } = useCarrierApplication({ enabled: isApplicant });
 
   const messages: NavItem = {
     href: "/messages",
@@ -122,38 +114,33 @@ export function BottomNav() {
   ];
 
   /**
-   * Anyone without an application yet. Posting, not browsing: `/create` came
-   * back and `POST /api/listings` asks only for a session, while the board is
-   * bids this person cannot place — so showing them `/expedion` offered the one
+   * Everyone not in Driver mode. Posting, not browsing: `/create` came back
+   * and `POST /api/listings` asks only for a session, while the board is bids
+   * this person cannot place — so showing them `/expedion` offered the one
    * verb they have no use for and withheld the one they do. Same split the
    * header makes (`HeaderQuickActions.tsx`); the two bars must not disagree,
    * because below `xl` this one is the only navigation there is.
    */
-  const applicantItems: NavItem[] = [
+  const requesterItems: NavItem[] = [
     { href: "/home", labelKey: "home", icon: <Home className="w-5 h-5" /> },
     {
       href: "/create",
       labelKey: "requestTransport",
       icon: <Plus className="w-5 h-5" />,
     },
-    // Same rule as the sidebar's driver entry (become_driver_spec.md §3):
-    // explain the path in a dialog until an application exists, then go
-    // straight to it. An approved driver already finished that path, so the
-    // slot is the board instead.
+    // The third slot is the list of this person's requests (2.91.0 #35): what
+    // someone who posts comes back for. It was « Devenir chauffeur » / « Mon
+    // dossier », an invitation most requesters never take, on the one bar a
+    // phone has — while « Mes demandes » sat a menu away. The application is
+    // still reached from the profile's links, the /home card and banner, and
+    // the access switcher (become_driver_spec.md §3). An approved driver
+    // browsing in User mode keeps the board here instead.
     hasDriverRole
       ? { href: "/expedion", labelKey: "jobs", icon: <Plus className="w-5 h-5" /> }
-      : application
-      ? {
-          href: "/carrier/application",
-          labelKey: "myApplication",
-          icon: <FileText className="w-5 h-5" />,
-          onSelect: applicationNav,
-        }
       : {
-          href: "/carrier/application",
-          labelKey: "becomeDriver",
-          icon: <Truck className="w-5 h-5" />,
-          onSelect: () => setOnboardingOpen(true),
+          href: "/listings/me",
+          labelKey: "myRequests",
+          icon: <Package className="w-5 h-5" />,
         },
     {
       href: "/deliveries",
@@ -167,24 +154,18 @@ export function BottomNav() {
     ? carrierItems
     : isDriver
       ? driverItems
-      : applicantItems;
+      : requesterItems;
 
   return (
-    <>
-      <FloatingNav
-        items={navItems.map((item) => ({
-          href: item.href,
-          label: t(item.labelKey),
-          icon: item.icon,
-          badge: item.badge,
-          onSelect: item.onSelect,
-          active: Boolean(pathname?.startsWith(item.href)),
-        }))}
-      />
-      {isApplicant && (
-        <DriverOnboardingDialog open={onboardingOpen} onOpenChange={setOnboardingOpen} />
-      )}
-    </>
+    <FloatingNav
+      items={navItems.map((item) => ({
+        href: item.href,
+        label: t(item.labelKey),
+        icon: item.icon,
+        badge: item.badge,
+        active: Boolean(pathname?.startsWith(item.href)),
+      }))}
+    />
   );
 }
 

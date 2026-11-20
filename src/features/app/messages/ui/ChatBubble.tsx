@@ -1,12 +1,14 @@
 import { cn } from "@/lib/utils";
 import { Check, CheckCheck } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { BubbleAvatar } from "./BubbleAvatar";
 
 interface ChatBubbleProps {
   message: string;
   isOwn: boolean;
   timestamp: string;
   avatar?: string;
+  /** The writer's name, for the avatar's initial. */
+  name?: string;
   readByOther?: boolean;
   onDelete?: () => void;
 }
@@ -16,18 +18,12 @@ export function ChatBubble({
   isOwn,
   timestamp,
   avatar,
+  name,
   readByOther,
 }: ChatBubbleProps) {
   return (
     <div className={cn("flex gap-3 mb-4", isOwn && "flex-row-reverse")}>
-      {!isOwn && (
-        <Avatar className="w-8 h-8 shrink-0 flex-none">
-          <AvatarImage src={avatar} />
-          <AvatarFallback className="bg-linear-to-br from-primary to-accent-pink text-white text-[10px]">
-            ?
-          </AvatarFallback>
-        </Avatar>
-      )}
+      {!isOwn && <BubbleAvatar name={name} src={avatar} />}
       <div className={cn("flex flex-col max-w-xs", isOwn && "items-end")}>
         <div
           className={cn(

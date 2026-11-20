@@ -12,6 +12,13 @@ import { ThreadOfferDialog } from "./ThreadOfferDialog";
 interface ThreadOfferActionProps {
   conversationId: string;
   context: ThreadOfferContext | null | undefined;
+  /**
+   * Controlled from the thread, so a refused card can open this same dialog
+   * (« Retirer et proposer un autre prix »). Left out, the button keeps its
+   * own state.
+   */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 /**
@@ -29,9 +36,13 @@ interface ThreadOfferActionProps {
 export function ThreadOfferAction({
   conversationId,
   context,
+  open: controlledOpen,
+  onOpenChange,
 }: ThreadOfferActionProps) {
   const t = useTranslations("messages.offer");
-  const [open, setOpen] = useState(false);
+  const [ownOpen, setOwnOpen] = useState(false);
+  const open = controlledOpen ?? ownOpen;
+  const setOpen = onOpenChange ?? setOwnOpen;
 
   if (!context) return null;
 
@@ -70,10 +81,29 @@ export function ThreadOfferAction({
  * carrier, not approved, own listing, listing closed - are silent, because
  * naming them would explain the product to someone who did not ask.
  */
-export function ThreadOfferNotice({ context }: { context: ThreadOfferContext | null | undefined }) {
+export function ThreadOfferNotice({
+  context,
+  refused = false,
+}: {
+  context: ThreadOfferContext | null | undefined;
+  /**
+   * The viewer's live bid is one the requester refused in this thread. Its
+   * card says so and carries the way out, so this line must not go on calling
+   * it « une offre en cours » (thread_offer_spec.md §13).
+   */
+  refused?: boolean;
+}) {
   const t = useTranslations("messages.offer");
 
   if (!context || context.canOffer) return null;
+
+  if (context.blockedBy === "OFFER_LIVE" && refused) {
+    return (
+      <p className="px-4 md:px-6 pt-3 text-xs text-muted-foreground">
+        {t("refusedNotice")}
+      </p>
+    );
+  }
 
   if (context.blockedBy === "OFFER_LIVE") {
     return (

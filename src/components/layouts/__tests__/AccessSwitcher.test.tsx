@@ -64,14 +64,17 @@ describe("AccessSwitcher", () => {
     window.localStorage.clear();
   });
 
-  it("renders a plain badge, no dropdown, for a single-mode account", () => {
+  it("gives a single-mode account that does not drive a menu with the driver entry", () => {
     auth.user = { roles: ["shipper"] };
     auth.isLoading = false;
 
-    renderWith();
+    renderWith({ defaultOpen: true });
 
-    expect(screen.getByText("User")).toBeInTheDocument();
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    // The phone's bottom bar carries « Mes demandes » in the slot this entry
+    // used to have, so the badge is the way in that is always on screen.
+    expect(
+      screen.getByRole("menuitem", { name: en.common.accessSwitcher.becomeDriver })
+    ).toBeInTheDocument();
   });
 
   it.each([

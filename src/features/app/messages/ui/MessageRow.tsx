@@ -4,7 +4,9 @@ import { Badge } from "@/components/ui/badge";
 import { SwipeableItem } from "@/components/ui/swipeable-item";
 import { cn } from "@/lib/utils";
 import { Headset } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { Message } from "../types";
+import { jobLine } from "../lib/job-summary";
 
 /**
  * Pure UI component for rendering a single message row
@@ -26,6 +28,9 @@ export function MessageRow({
   basePath = "/messages"
 }: MessageRowProps) {
   const router = useRouter();
+  const t = useTranslations("messages.item");
+  // « Paris → Lyon · 20 nov. – 22 nov. »: which job, readable from the list.
+  const job = jobLine(message.route, message.dates);
 
   const handleClick = (_e: React.MouseEvent) => {
     // Prevent navigation if the user was likely swiping/selecting text
@@ -82,7 +87,7 @@ export function MessageRow({
                     className="shrink-0 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 text-xs px-2 py-0"
                   >
                     <Headset className="w-3 h-3 mr-1" />
-                    Support
+                    {t("support")}
                   </Badge>
                 )}
               </div>
@@ -90,9 +95,19 @@ export function MessageRow({
                 {message.timestamp}
               </span>
             </div>
-            <p className="text-xs text-muted-foreground truncate mb-1">
+            <p
+              className={cn(
+                "text-xs truncate",
+                job ? "font-medium text-foreground/80" : "text-muted-foreground mb-1"
+              )}
+            >
               {message.listing}
             </p>
+            {job && (
+              <p className="text-xs text-muted-foreground truncate mb-1">
+                {job}
+              </p>
+            )}
             <p
               className={cn(
                 "text-sm truncate",

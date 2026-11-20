@@ -39,11 +39,16 @@ export function useRequestAssistant() {
 
   const { mutate, reset: resetReading } = reading;
 
-  /** Read what was said so far plus `text`. */
+  /**
+   * Read what was said so far plus `text`. `onRead` runs once the reading is
+   * in — the moment the box may let go of the sentence. Until then, and after
+   * a failure, the sentence is still the caller's to show: a call that fails
+   * or never answers must not cost the person what they typed.
+   */
   const say = useCallback(
-    (text: string) => {
+    (text: string, onRead?: () => void) => {
       if (!text.trim()) return;
-      mutate([...said, text]);
+      mutate([...said, text], { onSuccess: onRead });
     },
     [mutate, said]
   );

@@ -6,7 +6,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import en from "../../../../../messages/en.json";
 import fr from "../../../../../messages/fr.json";
-import { SIZE_PRESET_IDS, WEIGHT_BRACKET_IDS } from "../cargo";
+import { SIZE_PRESET_IDS, WEIGHT_BRACKET_IDS, suggestionFill } from "../cargo";
+import { useCargoChoices } from "../hooks/useCargoChoices";
 import { jobFormSchema, type JobFormValues } from "../schemas";
 import { SizeField } from "../ui/SizeField";
 import { ItemField } from "../ui/ItemField";
@@ -28,29 +29,37 @@ let getValues: UseFormGetValues<JobFormValues>;
 function Harness({
   locale,
   messages,
+  defaults,
 }: {
   locale: string;
   messages: typeof en;
+  /** Values the form already holds that nobody chose on this step. */
+  defaults?: Partial<JobFormValues>;
 }) {
   // Created exactly as `useJobForm` creates it, so the components are handed
   // the type they are declared against without a cast.
   const form = useForm<JobFormValues>({
     resolver: zodResolver(jobFormSchema),
-    defaultValues: { sizeMode: "preset" },
+    defaultValues: { sizeMode: "preset", ...defaults },
   });
   getValues = form.getValues;
+  // Wired as `WhatStep` wires them (JobForm.tsx).
+  const choices = useCargoChoices();
 
   return (
     <NextIntlClientProvider locale={locale} messages={messages} onError={onError}>
-      <ItemField form={form} />
-      <WeightBracketField form={form} />
-      <SizeField form={form} />
+      <ItemField form={form} choices={choices} />
+      <WeightBracketField form={form} onChosen={() => choices.mark("weight")} />
+      <SizeField form={form} onChosen={() => choices.mark("size")} />
     </NextIntlClientProvider>
   );
 }
 
-const renderFields = (locale = "fr", messages = fr) =>
-  render(<Harness locale={locale} messages={messages} />);
+const renderFields = (
+  locale = "fr",
+  messages = fr,
+  defaults?: Partial<JobFormValues>
+) => render(<Harness locale={locale} messages={messages} defaults={defaults} />);
 
 /**
  * By id rather than by accessible name: several cards legitimately share
@@ -318,5 +327,137 @@ describe("size", () => {
     fireEvent.click(exact);
 
     expect(screen.getByLabelText("Longueur (cm)")).toBeInTheDocument();
+  });
+});
+
+/**
+ * A title suggestion's guess fills what nobody answered and never replaces an
+ * answer (client feedback 2026-11-19, #21). The client picked « 5 – 30 kg », clicked
+ * « Table », and the form said « 30 – 100 kg ».
+ */
+describe("a title suggestion and the answers given by hand", () => {
+  const title = () => screen.getByLabelText("Que transportez-vous ?", { exact: false });
+
+  /** Type into the title and click the suggestion that reads `label`. */
+  const suggest = (typed: string, label: string) => {
+    fireEvent.focus(title());
+    fireEvent.change(title(), { target: { value: typed } });
+    fireEvent.click(screen.getByRole("option", { name: label }));
+  };
+
+  const TABLE = fr.create.what.itemSuggestions.diningTable;
+  const CHAIR = fr.create.what.itemSuggestions.chair;
+
+  it("fills the weight and the size nobody has chosen", () => {
+    renderFields();
+
+    suggest(TABLE.slice(0, 4), TABLE);
+
+    expect(getValues()).toMatchObject({
+      title: TABLE,
+      weightBracket: "upTo100",
+      sizeMode: "preset",
+      sizePreset: "l",
+    });
+  });
+
+  it("lets a second suggestion replace the first one's guess", () => {
+    renderFields();
+
+    suggest(TABLE.slice(0, 4), TABLE);
+    suggest(CHAIR.slice(0, 4), CHAIR);
+
+    expect(getValues()).toMatchObject({ title: CHAIR, weightBracket: "upTo30", sizePreset: "m" });
+  });
+
+  it("changes the title only once a bracket was chosen by hand", () => {
+    renderFields();
+    choose("weight-upTo30");
+
+    suggest(TABLE.slice(0, 4), TABLE);
+
+    expect(getValues().title).toBe(TABLE);
+    expect(getValues().weightBracket).toBe("upTo30");
+    // The size was nobody's answer yet: the guess may still fill it.
+    expect(getValues().sizePreset).toBe("l");
+  });
+
+  it("keeps a bracket chosen by hand even when it is the one a suggestion guesses", () => {
+    renderFields();
+    // « Table » guesses upTo100; chosen by hand, it is no longer a guess.
+    choose("weight-upTo100");
+
+    suggest(CHAIR.slice(0, 4), CHAIR);
+
+    expect(getValues().weightBracket).toBe("upTo100");
+  });
+
+  it("keeps a weight typed by hand, figure included", () => {
+    renderFields();
+    suggest(TABLE.slice(0, 4), TABLE);
+    typeKeys(screen.getByLabelText(/si vous le connaissez/) as HTMLInputElement, "45");
+
+    suggest(CHAIR.slice(0, 4), CHAIR);
+
+    expect(getValues()).toMatchObject({ weightBracket: "upTo100", exactWeightKg: 45 });
+  });
+
+  it("clears a figure left under a guess when the next guess moves the bracket", () => {
+    // A figure inside a lighter bracket that nobody chose on this step: read
+    // inside « 30 – 100 kg » it would say a table weighs 24 kg.
+    renderFields("fr", fr, { weightBracket: "upTo30", exactWeightKg: 24 });
+
+    suggest(TABLE.slice(0, 4), TABLE);
+
+    expect(getValues().weightBracket).toBe("upTo100");
+    expect(getValues().exactWeightKg).toBeUndefined();
+  });
+
+  it("changes the title only once a size was chosen by hand", () => {
+    renderFields();
+    choose("size-s");
+
+    suggest(TABLE.slice(0, 4), TABLE);
+
+    expect(getValues()).toMatchObject({ title: TABLE, sizePreset: "s", weightBracket: "upTo100" });
+  });
+
+  it("leaves exact dimensions alone: switching to them is an answer", () => {
+    renderFields();
+    fireEvent.click(screen.getByRole("radio", { name: fr.create.what.sizeModes.exact }));
+
+    suggest(TABLE.slice(0, 4), TABLE);
+
+    expect(getValues().sizeMode).toBe("exact");
+    expect(getValues().sizePreset).toBeUndefined();
+  });
+});
+
+describe("suggestionFill", () => {
+  const table = { id: "diningTable", weightBracket: "upTo100", sizePreset: "l" } as const;
+
+  it("is the whole guess while nothing was chosen by hand", () => {
+    expect(suggestionFill(table, { weight: false, size: false })).toEqual({
+      weightBracket: "upTo100",
+      sizePreset: "l",
+    });
+  });
+
+  it("drops each part the person answered themselves", () => {
+    expect(suggestionFill(table, { weight: true, size: false })).toEqual({
+      weightBracket: undefined,
+      sizePreset: "l",
+    });
+    expect(suggestionFill(table, { weight: true, size: true })).toEqual({
+      weightBracket: undefined,
+      sizePreset: undefined,
+    });
+  });
+
+  it("has no size to give for a thing that comes in every size", () => {
+    expect(
+      suggestionFill({ id: "armchair", weightBracket: "upTo100" }, { weight: false, size: false })
+        .sizePreset
+    ).toBeUndefined();
   });
 });

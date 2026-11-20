@@ -79,8 +79,17 @@ const OFFER: PendingOffer = {
     id: "job_1",
     reference: 100042,
     title: "Armoire normande",
+    status: "open",
     pickupCity: "Caen",
+    pickupPostalCode: "14000",
+    pickupCountry: "FR",
     dropoffCity: "Rennes",
+    dropoffPostalCode: "35000",
+    dropoffCountry: "FR",
+    pickupFrom: "2026-10-22T06:00:00.000Z",
+    pickupUntil: "2026-10-24T22:00:00.000Z",
+    dropoffFrom: "2026-10-23T06:00:00.000Z",
+    dropoffUntil: "2026-10-25T22:00:00.000Z",
   },
 };
 

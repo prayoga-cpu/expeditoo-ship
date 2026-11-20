@@ -319,3 +319,65 @@ describe("fromListing — an exact time the half-hour list cannot show", () => {
     expect(resumed.snappedTimes).toEqual([]);
   });
 });
+
+describe("fromListing — a fixed day taken whole", () => {
+  const wholeDay = (over: Partial<DraftJob> = {}) =>
+    draft({
+      pickupFrom: local(7, 6).toISOString(),
+      pickupUntil: local(7, 22).toISOString(),
+      dropoffFrom: local(9, 6).toISOString(),
+      dropoffUntil: local(9, 22).toISOString(),
+      ...over,
+    });
+
+  it("comes back as « N'importe quand » in « Date précise », and posts the same window", () => {
+    const job = wholeDay();
+    const { resumed, payload } = roundTrip(job);
+
+    expect(resumed.timing.mode).toBe("exact");
+    expect(resumed.timing.pickup).toMatchObject({ date: "2030-01-07", slot: "any" });
+    expect(resumed.timing.dropoff).toMatchObject({ date: "2030-01-09", slot: "any" });
+    expect(resumed.snappedTimes).toEqual([]);
+    expect(payload).toMatchObject({
+      isFlexible: false,
+      pickupFrom: job.pickupFrom,
+      pickupUntil: job.pickupUntil,
+      dropoffFrom: job.dropoffFrom,
+      dropoffUntil: job.dropoffUntil,
+    });
+  });
+
+  it("is told apart from an exact hour at each end on its own", () => {
+    const { resumed } = roundTrip(
+      wholeDay({
+        dropoffFrom: local(9, 14, 30).toISOString(),
+        dropoffUntil: local(9, 15, 30).toISOString(),
+      })
+    );
+
+    expect(resumed.timing.pickup.slot).toBe("any");
+    expect(resumed.timing.dropoff).toMatchObject({ slot: "afternoon", hour: "14:30" });
+  });
+
+  it("reads a whole day saved on the day itself, its gone hours left out", () => {
+    // Saved at ten with « N'importe quand » today: 10:30 to 22:00.
+    const { resumed } = roundTrip(wholeDay({ pickupFrom: local(7, 10, 30).toISOString() }));
+
+    expect(resumed.timing.pickup.slot).toBe("any");
+    expect(resumed.snappedTimes).toEqual([]);
+  });
+
+  it("does not take the evening's last hour for a whole day", () => {
+    const { resumed } = roundTrip(
+      wholeDay({ pickupFrom: local(7, 21).toISOString(), pickupUntil: local(7, 22).toISOString() })
+    );
+
+    expect(resumed.timing.pickup).toMatchObject({ slot: "evening", hour: "21:00" });
+  });
+
+  it("does not take a flexible day for it", () => {
+    const { resumed } = roundTrip(wholeDay({ isFlexible: true }));
+
+    expect(resumed.timing.mode).toBe("flexible");
+  });
+});

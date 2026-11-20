@@ -14,6 +14,10 @@ export interface Message {
   type?: "LISTING" | "SUPPORT"; // Chat type for badge display
   /** The job the thread is about, when it is about one. */
   listingId?: string;
+  /** « Paris → Lyon », when the thread is about a job. */
+  route?: string;
+  /** « 20 nov. – 22 nov. »: the pickup day, then the delivery day. */
+  dates?: string;
 }
 
 /**
@@ -37,6 +41,9 @@ export interface ChatMessage {
   timestamp: string;
   sentByMe: boolean;
   readByOther?: boolean; // Read receipt: true if the other person has seen this message
+  /** Who wrote it — the avatar beside the bubble shows their initial. */
+  senderName?: string;
+  senderAvatar?: string;
   /**
    * The formal price this message carries, if any. Present means the thread
    * renders a card instead of a bubble - it is the whole discriminator.
@@ -109,6 +116,11 @@ export interface ThreadOfferContext {
   blockedBy: ThreadOfferBlock | null;
   job: ThreadOfferJob | null;
   viewerCanAward: boolean;
+  /**
+   * Whether the viewer may answer a bid with a counter-price on the job page:
+   * the requester of a direct request still open (thread_offer_spec.md §13).
+   */
+  canCounter: boolean;
 }
 
 export interface Conversation {
@@ -123,6 +135,11 @@ export interface Conversation {
   /** The job's « Réf. », when the thread is about one. */
   listingReference?: number;
   listingImage?: string;
+  /** The job's id, for the header's link to it. */
+  listingId?: string;
+  /** « Paris → Lyon » and « 20 nov. – 22 nov. », for the pinned job row. */
+  listingRoute?: string;
+  listingDates?: string;
   messages: ChatMessage[];
   offerContext?: ThreadOfferContext | null;
 }
