@@ -146,7 +146,7 @@ function OfferAnchor({
         <Button
           type="button"
           onClick={() => ref.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
-          className="fixed right-4 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-40 rounded-full shadow-lg xl:hidden"
+          className="fixed right-4 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-40 rounded-full shadow-lg lg:hidden"
         >
           <Gavel className="mr-1.5 h-4 w-4" aria-hidden="true" />
           {t("makeOffer")}

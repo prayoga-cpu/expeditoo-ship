@@ -214,7 +214,11 @@
       "system": "Same as my device"
     },
     "verifiedUser": "Verified user",
-    "loadingContent": "Loading content"
+    "loadingContent": "Loading content",
+    "sidebar": {
+      "collapse": "Collapse the menu",
+      "expand": "Expand the menu"
+    }
   },
   "auth": {
     "login": {
@@ -360,6 +364,24 @@
       "driveTitle": "I want to drive and earn",
       "driveDescription": "Apply as a driver, bid on jobs and get paid for deliveries.",
       "driveCta": "Start my application"
+    },
+    "errors": {
+      "invalidCredentials": "Wrong email or password. Check them, or reset your password.",
+      "accountExists": "An account already exists with this email address. Sign in, or reset your password if you have forgotten it.",
+      "invalidEmail": "This email address is not valid. Check it and try again.",
+      "passwordTooShort": "This password is too short: choose one of at least 8 characters.",
+      "passwordTooLong": "This password is too long: choose one of at most 128 characters.",
+      "suspended": "This account is suspended. If you think this is a mistake, write to us at {support}.",
+      "rateLimited": "Too many attempts in a row. Wait a minute before trying again.",
+      "invalidToken": "This link is no longer valid or has already been used. Ask for a new one.",
+      "network": "Could not connect. Check your internet connection, then try again.",
+      "unknown": "Something went wrong. Try again in a moment; if it keeps happening, write to us at {support}.",
+      "actions": {
+        "forgotPassword": "Forgot your password?",
+        "signIn": "Sign in",
+        "resetPassword": "Reset my password",
+        "requestNewLink": "Get a new link"
+      }
     }
   },
   "profile": {
@@ -815,8 +837,14 @@
     "search": "Search: name, town, route (Paris → Lyon), reference…",
     "tabs": {
       "all": "All",
-      "unread": "Unread",
-      "inbox": "Inbox"
+      "label": "Filter conversations by the state of the listing",
+      "waiting": "Awaiting a carrier",
+      "active": "In progress",
+      "done": "Finished",
+      "none": "No listing",
+      "emptyTitle": "No conversation under “{filter}”",
+      "emptyDescription": "Your other conversations are still there, under another filter.",
+      "showAll": "See all conversations"
     },
     "empty": {
       "title": "No messages yet",
@@ -2169,7 +2197,9 @@
       "langLabel": "Language",
       "themeLight": "Light",
       "themeDark": "Dark",
-      "themeSystem": "System"
+      "themeSystem": "System",
+      "signUp": "Sign up",
+      "loginOrSignUp": "Log in / Sign up"
     },
     "hero": {
       "badge": "The carrier network of the Expedion group",

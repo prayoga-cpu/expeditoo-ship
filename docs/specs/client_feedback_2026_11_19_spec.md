@@ -168,14 +168,23 @@ Error code: `VERIFICATION_EMAIL_NOT_SENT` (500), resend only.
 
 ---
 
+## 10. Follow-ups built in 2.92.0 (#17, #22, #26, #27, #30, #32, #36)
+
+- **#17** The sidebar shows from `lg`; below it, the bottom bar. Rail (`w-16`) or expanded (`w-64`), toggled by a
+  three-line button, remembered in `expeditoo-sidebar`; default rail under 1280 px.
+- **#36** The tapped bar item is active at once; loading screens at the segment roots; toasts at the top under `lg`.
+- **#26** Filters `waiting` (open, scheduled, draft) · `active` (awarded, in progress) · `done` (completed,
+  cancelled, expired) · `none` (no request), server-side, counted by one grouped query. « Créneaux à valider » and
+  « En attente d'action » have no state here and are not built.
+- **#32** Two-letter initials; names unchanged (pseudos remain a decision).
+- **#27** Below `sm` one « Connexion / Inscription » link; from `sm`, « Inscription » beside « Connexion ».
+- **#30** Every sign-in, sign-up and reset failure maps to a French message with a next step.
+- **#22** `biddingRunsUntil` runs a direct precise-day request to its window's end when the window exceeds 6 h.
+
 ## Known limits
 
 - **#29 is unproved.** It was compiled and inspected, never run on iOS
   15–16.1.
-- **#22 and the bidding deadline.** A « precise day, any time » request closes
-  to offers 6 h before 06:00, as a precise 06:00 request does;
-  `biddingRunsUntil` runs to the window's end for flexible direct requests
-  only.
 - **#22 and old drafts.** A non-flexible window that happens to end at 22:00
   now reads as a whole day.
 - **#16** has only been run against mocks. Run its DAL once on a real database

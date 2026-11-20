@@ -417,7 +417,7 @@ export function JobBoard({ origin }: { origin?: "direct" | "expedion" } = {}) {
           // height instead.
           "h-[70vh] w-full border-t lg:h-auto lg:flex-1 lg:border-t-0 lg:border-l",
           // The map's attribution sits on its bottom edge; keep it above the nav.
-          "lg:pb-[calc(88px_+_env(safe-area-inset-bottom))] xl:pb-0",
+          "lg:pb-0",
           pane === "list" && "hidden lg:block"
         )}
       >

@@ -4,6 +4,10 @@
  */
 
 import type { ThreadOfferContext, ThreadOfferView } from "../types";
+import type {
+  ConversationCounts,
+  ConversationFilter,
+} from "@/lib/conversation-filter";
 
 /** Thrown so a caller can branch on the server's code, not its wording. */
 export class ThreadOfferApiError extends Error {
@@ -45,6 +49,9 @@ export interface ConversationResponse {
   otherParticipant: {
     id: string;
     name: string;
+    /** For the avatar's initials; null on an account older than 2.63.0. */
+    firstName?: string | null;
+    lastName?: string | null;
     image: string | null;
   } | null;
   /** Absent on a payload cached before the field existed. */
@@ -79,6 +86,8 @@ export interface MessageResponse {
   sender: {
     id: string;
     name: string;
+    firstName?: string | null;
+    lastName?: string | null;
     image: string | null;
   };
   /** Present when this message carries a formal price. */
@@ -114,6 +123,8 @@ export interface ThreadResponse {
   otherParticipant: {
     id: string;
     name: string;
+    firstName?: string | null;
+    lastName?: string | null;
     image: string | null;
     rating?: number;
     reviewsCount?: number;
@@ -138,16 +149,19 @@ export const messagesApi = {
    * @param page - Page number for pagination
    * @param limit - Number of items per page
    * @param search - Optional search query (by participant name or listing title)
+   * @param filter - Optional state of the job; `all` (or nothing) filters nothing
    */
   async getConversations(
     page = 1,
     limit = 20,
-    search?: string
+    search?: string,
+    filter?: ConversationFilter
   ): Promise<ConversationResponse[]> {
     const params = new URLSearchParams();
     params.set("page", String(page));
     params.set("limit", String(limit));
     if (search) params.set("search", search);
+    if (filter && filter !== "all") params.set("filter", filter);
 
     const res = await fetch(`/api/messages/conversations?${params.toString()}`);
     const data = await res.json();
@@ -155,6 +169,18 @@ export const messagesApi = {
       throw new Error(data.error?.message || "Failed to fetch conversations");
     }
     return data.data.items;
+  },
+
+  /**
+   * How many of the viewer's conversations each filter chip holds.
+   */
+  async getConversationCounts(): Promise<ConversationCounts> {
+    const res = await fetch("/api/messages/conversations/counts");
+    const data = await res.json();
+    if (!data.success) {
+      throw new Error(data.error?.message || "Failed to count conversations");
+    }
+    return data.data;
   },
 
   /**

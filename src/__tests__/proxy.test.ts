@@ -22,9 +22,14 @@ function session(options: {
   emailVerified: boolean;
   impersonatedBy?: string | null;
   id?: string;
+  email?: string;
 }) {
   return {
-    user: { id: options.id ?? "user-1", emailVerified: options.emailVerified },
+    user: {
+      id: options.id ?? "user-1",
+      emailVerified: options.emailVerified,
+      email: options.email ?? "jean@mail.com",
+    },
     session: { impersonatedBy: options.impersonatedBy ?? null },
   };
 }
@@ -53,6 +58,44 @@ describe("proxy", () => {
     const response = await proxy(request("/home"));
 
     expect(response.headers.get("location")).toContain("/verify-email");
+  });
+
+  // The verify screen's resend button needs the address. Without it the page
+  // asked the person to type an email the session already held.
+  it("hands the verify screen the session's address, encoded", async () => {
+    getSession.mockResolvedValue(
+      session({ emailVerified: false, email: "jean+test@mail.com" }) as never
+    );
+
+    const response = await proxy(request("/home"));
+    const location = new URL(response.headers.get("location") ?? "");
+
+    expect(location.pathname).toBe("/verify-email");
+    expect(location.search).toBe("?email=jean%2Btest%40mail.com");
+    expect(location.searchParams.get("email")).toBe("jean+test@mail.com");
+  });
+
+  it("never writes an address it does not have into the URL", async () => {
+    getSession.mockResolvedValue({
+      user: { id: "user-1", emailVerified: false },
+      session: { impersonatedBy: null },
+    } as never);
+
+    const response = await proxy(request("/home"));
+    const location = new URL(response.headers.get("location") ?? "");
+
+    expect(location.pathname).toBe("/verify-email");
+    expect(location.searchParams.has("email")).toBe(false);
+  });
+
+  it("leaves the verify screen itself alone, so the redirect cannot loop", async () => {
+    getSession.mockResolvedValue(session({ emailVerified: false }) as never);
+
+    const response = await proxy(
+      request("/verify-email?email=jean%40mail.com")
+    );
+
+    expect(response.headers.get("location")).toBeNull();
   });
 
   it("lets an impersonated session past the verification wall", async () => {

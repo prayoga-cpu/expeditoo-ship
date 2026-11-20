@@ -7,6 +7,7 @@ import { Headset } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { Message } from "../types";
 import { jobLine } from "../lib/job-summary";
+import { initialsOf } from "../lib/initials";
 
 /**
  * Pure UI component for rendering a single message row
@@ -47,13 +48,13 @@ export function MessageRow({
     >
       <div className="group flex items-stretch border-b border-border transition-all duration-200 ease-out cursor-pointer overflow-hidden">
         {/* Left Static Part (Avatar) */}
-        <div className="py-4 pr-3 shrink-0 flex items-start bg-background group-hover:bg-muted transition-colors duration-200">
+        <div className="py-3 pr-3 shrink-0 flex items-start bg-background group-hover:bg-muted transition-colors duration-200">
           <Avatar className="w-12 h-12 shrink-0 pointer-events-none">
             {" "}
             {/* Disable pointer events on avatar image to prevent drag */}
             <AvatarImage src={message.avatar} alt={message.name} />
-            <AvatarFallback className="bg-linear-to-b from-blue-400 to-blue-600 dark:from-blue-600 dark:to-blue-950 text-white">
-              {message.name.charAt(0)}
+            <AvatarFallback className="bg-linear-to-b from-blue-400 to-blue-600 dark:from-blue-600 dark:to-blue-950 text-white text-sm font-semibold">
+              {message.initials ?? initialsOf({ name: message.name })}
             </AvatarFallback>
           </Avatar>
         </div>
@@ -66,12 +67,15 @@ export function MessageRow({
           className="flex-1 min-w-0"
           // We need to set background here to cover the delete button,
           // and handle hover state manually since this element sits on top of the parent hover
-          contentClassName="h-full flex gap-3 py-4 pl-0 bg-background group-hover:bg-muted transition-colors duration-200"
+          contentClassName="h-full flex gap-3 py-3 pl-0 bg-background group-hover:bg-muted transition-colors duration-200"
         >
           <div className="flex-1 min-w-0 pointer-events-none">
             {" "}
             {/* Ensure clicks go through to parent but disable inner element dragging */}
-            <div className="flex justify-between items-start gap-2 mb-1">
+            {/* Three lines at most (client feedback 2026-11-19, #32): who and
+                when / the job and the last message / its towns and dates. The
+                snippet used to take a fourth line of its own. */}
+            <div className="flex items-baseline justify-between gap-2">
               <div className="flex items-center gap-2 min-w-0">
                 <h3
                   className={cn(
@@ -91,33 +95,51 @@ export function MessageRow({
                   </Badge>
                 )}
               </div>
-              <span className="text-xs text-muted-foreground shrink-0">
+              <span
+                className={cn(
+                  "text-xs shrink-0",
+                  message.unread
+                    ? "font-semibold text-primary"
+                    : "text-muted-foreground"
+                )}
+              >
                 {message.timestamp}
               </span>
             </div>
-            <p
-              className={cn(
-                "text-xs truncate",
-                job ? "font-medium text-foreground/80" : "text-muted-foreground mb-1"
+            <p className="flex items-baseline gap-1.5 min-w-0 text-sm">
+              <span
+                className={cn(
+                  "truncate text-xs",
+                  message.snippet ? "shrink-0 max-w-[50%]" : "min-w-0",
+                  job ? "font-medium text-foreground/80" : "text-muted-foreground"
+                )}
+              >
+                {message.listing}
+              </span>
+              {message.snippet && (
+                <>
+                  <span aria-hidden className="shrink-0 text-xs text-muted-foreground">
+                    ·
+                  </span>
+                  <span
+                    data-testid="row-snippet"
+                    className={cn(
+                      "min-w-0 flex-1 truncate",
+                      message.unread
+                        ? "font-semibold text-foreground"
+                        : "text-muted-foreground"
+                    )}
+                  >
+                    {message.snippet}
+                  </span>
+                </>
               )}
-            >
-              {message.listing}
             </p>
             {job && (
-              <p className="text-xs text-muted-foreground truncate mb-1">
+              <p className="text-xs text-muted-foreground truncate">
                 {job}
               </p>
             )}
-            <p
-              className={cn(
-                "text-sm truncate",
-                message.unread
-                  ? "font-semibold text-foreground"
-                  : "text-muted-foreground"
-              )}
-            >
-              {message.snippet}
-            </p>
           </div>
           {message.unread && (
             <div className="w-3 h-3 rounded-full bg-primary shrink-0 mt-2" />

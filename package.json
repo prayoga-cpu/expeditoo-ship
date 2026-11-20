@@ -1,10 +1,11 @@
 {
   "name": "expeditoo-ship",
-  "version": "2.91.0",
+  "version": "2.92.0",
   "packageManager": "pnpm@10.10.0",
   "private": true,
   "scripts": {
     "build": "next build",
+    "build:vercel": "tsx scripts/vercel-build.ts",
     "dev": "next dev",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
@@ -26,6 +27,9 @@
     "env:set": "bash scripts/env-set.sh",
     "env:pull:production": "vercel env pull .env.production.local --environment=production",
     "env:pull:preview": "vercel env pull .env.preview.local --environment=preview",
+    "env:pull:dev": "vercel env pull .env.dev.local --environment=preview --git-branch=dev",
+    "env:audit": "tsx scripts/env-audit.ts",
+    "env:bootstrap:dev": "bash scripts/env-bootstrap-dev.sh",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",

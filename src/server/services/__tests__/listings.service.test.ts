@@ -1518,14 +1518,24 @@ describe("createListing — bidding runs to a flexible window's end", () => {
     expect(row.expiresAt.getTime()).toBe(flexible.pickupFrom.getTime() - 6 * HOUR);
   });
 
-  it("leaves an exact-date request exactly as it was", async () => {
+  it("leaves a precise-hour request exactly as it was", async () => {
     // Read from the input, not a second `at(48 * HOUR)`: the clock moves
     // between the two, and a slow run failed by a few milliseconds.
     const input = createInput() as { pickupFrom: Date };
-    await listingsService.createListing("user-1", input as never);
+    const hour = { pickupUntil: new Date(input.pickupFrom.getTime() + HOUR) };
+    await listingsService.createListing("user-1", { ...input, ...hour } as never);
 
     const row = vi.mocked(listingsDal.create).mock.calls[0][0];
     expect(row.expiresAt.getTime()).toBe(input.pickupFrom.getTime() - 6 * HOUR);
+  });
+
+  it("runs a precise day to its window's end (client_feedback_2026_11_19 §10)", async () => {
+    const input = createInput() as { pickupFrom: Date };
+    const day = { pickupUntil: new Date(input.pickupFrom.getTime() + 16 * HOUR) };
+    await listingsService.createListing("user-1", { ...input, ...day } as never);
+
+    const row = vi.mocked(listingsDal.create).mock.calls[0][0];
+    expect(row.expiresAt.getTime()).toBe(day.pickupUntil.getTime() - 6 * HOUR);
   });
 
   it("still refuses a flexible request that starts too soon", async () => {

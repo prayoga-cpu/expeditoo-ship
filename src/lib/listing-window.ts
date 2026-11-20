@@ -60,13 +60,23 @@ function later(a: Date | null, b: Date | null): Date | null {
  * told « offres jusqu'au 8 oct. » and asked for the 31st. An escalated job
  * keeps closing on its start: its take and assign lanes book
  * `estimated_pickup = pickupFrom`, which would be a date already gone if
- * bidding ran past it. Exact-date requests have no window to run along.
+ * bidding ran past it.
+ *
+ * A direct request on a **precise day** runs along its window too once that
+ * window is longer than `BIDDING_LEAD_MS` — « N'importe quand » is 06:00–22:00
+ * (client_feedback_2026_11_19_spec.md §10). Closing it 6 h before 06:00 shut a
+ * request for tomorrow at midnight, and gave one for today thirty minutes,
+ * with sixteen hours of pickup still ahead. A precise hour, or a window of
+ * 6 h or less, has nothing to run along and closes on its start as before.
  */
 export function biddingRunsUntil(
-  listing: { isFlexible: boolean; pickupUntil: Date },
+  listing: { isFlexible: boolean; pickupFrom: Date; pickupUntil: Date },
   isDirect: boolean
 ): Date | null {
-  return isDirect && listing.isFlexible ? listing.pickupUntil : null;
+  if (!isDirect) return null;
+  if (listing.isFlexible) return listing.pickupUntil;
+  const length = listing.pickupUntil.getTime() - listing.pickupFrom.getTime();
+  return length > BIDDING_LEAD_MS ? listing.pickupUntil : null;
 }
 
 /**

@@ -6,6 +6,10 @@ import {
   type GetMessagesQuery,
   type GetConversationsQuery,
 } from "@/server/dto/messages.dto";
+import {
+  toConversationCounts,
+  type ConversationFilter,
+} from "@/lib/conversation-filter";
 import { nanoid } from "nanoid";
 import { publishNewMessage } from "./message-publish";
 import { threadOffersService } from "./thread-offers.service";
@@ -147,13 +151,14 @@ export const messagesService = {
   /**
    * Get user's inbox
    */
-  async getInbox(userId: string, query: GetConversationsQuery) {
+  async getInbox(userId: string, query: InboxQuery) {
     const offset = (query.page - 1) * query.limit;
     const conversations = await messagesDAL.getUserConversations(
       userId,
       query.limit,
       offset,
-      query.search // Pass search query to DAL
+      query.search, // Pass search query to DAL
+      query.filter ?? "all"
     );
 
     // Transform for UI
@@ -188,6 +193,19 @@ export const messagesService = {
       limit: query.limit,
       // Total count would require another query, skipping for now
     };
+  },
+
+  /**
+   * How many of the caller's conversations each filter chip holds
+   * (client feedback 2026-11-19, #26).
+   *
+   * The caller's own, always: `userId` is the session's, and the read behind
+   * it has no other way in. Totals, not search results — the numbers describe
+   * the inbox, and do not move while someone types in the search box.
+   */
+  async getInboxCounts(userId: string) {
+    const rows = await messagesDAL.countUserConversationsByListingStatus(userId);
+    return toConversationCounts(rows);
   },
 
   /**
@@ -337,6 +355,11 @@ export const messagesService = {
 
     return await messagesDAL.softDeleteConversation(conversationId, userId);
   },
+};
+
+/** `filter` is optional here: absent means every conversation. */
+type InboxQuery = Omit<GetConversationsQuery, "filter"> & {
+  filter?: ConversationFilter;
 };
 
 type InboxListing = NonNullable<

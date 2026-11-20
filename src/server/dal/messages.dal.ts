@@ -1,13 +1,18 @@
 import { db } from "@/db";
 import { matchesConversationSearch } from "@/lib/conversation-search";
 import {
+  conversationBucket,
+  type ConversationFilter,
+} from "@/lib/conversation-filter";
+import { listings } from "@/db/schema/listings";
+import {
   conversations,
   conversationParticipants,
   messages,
   type InsertConversation,
   type InsertMessage,
 } from "@/db/schema/messages";
-import { eq, and, sql, inArray, gt, lt, asc, max } from "drizzle-orm";
+import { eq, and, sql, inArray, gt, lt, asc, max, count, isNull } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 export const messagesDAL = {
@@ -107,12 +112,14 @@ export const messagesDAL = {
    * @param limit - Number of conversations to return
    * @param offset - Offset for pagination
    * @param search - Optional search query (filters by participant name or listing title)
+   * @param filter - Optional state of the job (conversation-filter.ts); `all` filters nothing
    */
   async getUserConversations(
     userId: string,
     limit: number,
     offset: number,
-    search?: string
+    search?: string,
+    filter: ConversationFilter = "all"
   ) {
     // Get conversations where user is a participant AND has not soft-deleted
     const userConvs = await db.query.conversationParticipants.findMany({
@@ -130,6 +137,9 @@ export const messagesDAL = {
                   columns: {
                     id: true,
                     name: true,
+                    // For the avatar's two initials, nothing else (#32).
+                    firstName: true,
+                    lastName: true,
                     image: true,
                   },
                 },
@@ -203,8 +213,45 @@ export const messagesDAL = {
       );
     }
 
+    // The state of the job, on the same rows and before the page is cut, so
+    // it combines with the search and a page is never short of matches that
+    // exist (client feedback 2026-11-19, #26).
+    if (filter !== "all") {
+      conversations = conversations.filter(
+        (conv) => conversationBucket(conv.listing?.status) === filter
+      );
+    }
+
     // Apply pagination after filtering
     return conversations.slice(offset, offset + limit);
+  },
+
+  /**
+   * How many of the caller's conversations sit on a job in each status — one
+   * grouped read, `status: null` being the conversations about no job.
+   *
+   * The same two rules as the list above and no others: the caller is a
+   * participant, and has not deleted the conversation (a new message clears
+   * `deleted_at`, so a revived thread counts again). The service folds the
+   * statuses into the chips' buckets; this stays a plain count per status so
+   * the mapping has one home.
+   */
+  async countUserConversationsByListingStatus(userId: string) {
+    return await db
+      .select({ status: listings.status, count: count() })
+      .from(conversationParticipants)
+      .innerJoin(
+        conversations,
+        eq(conversations.id, conversationParticipants.conversationId)
+      )
+      .leftJoin(listings, eq(listings.id, conversations.listingId))
+      .where(
+        and(
+          eq(conversationParticipants.userId, userId),
+          isNull(conversationParticipants.deletedAt)
+        )
+      )
+      .groupBy(listings.status);
   },
 
   /**
@@ -225,6 +272,8 @@ export const messagesDAL = {
           columns: {
             id: true,
             name: true,
+            firstName: true,
+            lastName: true,
             image: true,
           }
         },
@@ -261,6 +310,8 @@ export const messagesDAL = {
               columns: {
                 id: true,
                 name: true,
+                firstName: true,
+                lastName: true,
                 image: true,
               }
             }

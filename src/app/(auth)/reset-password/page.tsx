@@ -10,6 +10,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuthActions } from "@/features/auth/hooks/useAuthActions";
+import { AuthErrorNotice } from "@/features/auth/ui";
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 
@@ -79,9 +80,12 @@ function ResetPasswordContent() {
       setTimeout(() => {
         router.push("/signin");
       }, 3000);
-    } else {
+    } else if (result.error === "invalidToken") {
+      // Only a dead link ends the form: the screen it leads to already says
+      // so and offers a new one. Anything else — a lost connection, too many
+      // attempts — leaves the form up with the notice, to be tried again;
+      // it used to cost the person their link.
       setResetState("error");
-      setServerError(result.error || t("failedFallback"));
     }
   };
 
@@ -225,13 +229,7 @@ function ResetPasswordContent() {
               </p>
 
               {/* Error Display */}
-              {(serverError || authError) && (
-                <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-                  <p className="text-destructive text-sm">
-                    {serverError || authError}
-                  </p>
-                </div>
-              )}
+              <AuthErrorNotice error={authError} />
 
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 <div>

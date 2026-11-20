@@ -19,6 +19,10 @@ name: Migrate database
 #                               Production. Prefer the NON-POOLING/direct URL:
 #                               migrations take DDL locks and a pooled
 #                               connection can drop them mid-statement.
+#   - POSTGRES_URL_DEV          the development database's direct URL (the Neon
+#                               `dev` branch), plus the repo VARIABLE
+#                               DEV_DB_REFS naming its endpoint id. Only the
+#                               `dev` choice reads them.
 #
 # Manual on purpose. Auto-migrating on every push to main would apply a bad
 # migration to production before anyone read it, and migrations here are
@@ -40,6 +44,7 @@ on:
         default: production
         options:
           - production
+          - dev
       confirm:
         description: Type "migrate" to confirm
         required: true
@@ -81,11 +86,27 @@ jobs:
 
       - name: Apply migrations
         env:
-          POSTGRES_URL: ${{ secrets.POSTGRES_URL_PRODUCTION }}
-          MIGRATE_TARGET: production
+          TARGET: ${{ inputs.environment }}
+          POSTGRES_URL_PRODUCTION: ${{ secrets.POSTGRES_URL_PRODUCTION }}
+          POSTGRES_URL_DEV: ${{ secrets.POSTGRES_URL_DEV }}
+          DEV_DB_REFS: ${{ vars.DEV_DB_REFS }}
         run: |
+          # `dev` deliberately does NOT set MIGRATE_TARGET: without it
+          # src/db/migrate.ts refuses anything that is not an allow-listed
+          # development database, so the production URL pasted into the dev
+          # secret is refused instead of migrated. The dev database is normally
+          # migrated by its own Vercel build (scripts/vercel-build.ts); this is
+          # for doing it by hand.
+          if [ "$TARGET" = "production" ]; then
+            export POSTGRES_URL="$POSTGRES_URL_PRODUCTION" MIGRATE_TARGET=production
+            unset DEV_DB_REFS
+            secret=POSTGRES_URL_PRODUCTION
+          else
+            export POSTGRES_URL="$POSTGRES_URL_DEV"
+            secret=POSTGRES_URL_DEV
+          fi
           if [ -z "$POSTGRES_URL" ]; then
-            echo "::error::secrets.POSTGRES_URL_PRODUCTION is not set — see the header of this workflow."
+            echo "::error::secrets.$secret is not set — see the header of this workflow."
             exit 1
           fi
           set -o pipefail

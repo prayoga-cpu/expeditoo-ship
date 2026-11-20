@@ -5,7 +5,12 @@ import { usePathname } from "next/navigation";
 import { useRef, useEffect } from "react";
 import { ADMIN_NAV_GROUPS, badgeFor } from "../nav";
 import { cn } from "@/lib/utils";
-import { FLOATING_NAV_CAPSULE, FLOATING_NAV_OUTER } from "@/components/layouts/FloatingNav";
+import {
+  FLOATING_NAV_CAPSULE,
+  FLOATING_NAV_LABEL,
+  FLOATING_NAV_OUTER,
+} from "@/components/layouts/FloatingNav";
+import { NAV_PRESS, usePendingNav } from "@/components/layouts/use-pending-nav";
 import { useTranslations } from "next-intl";
 import { useAdminNavCounts } from "../hooks/useAdminNavCounts";
 
@@ -28,6 +33,7 @@ export function AdminBottomNav() {
   const counts = useAdminNavCounts();
   const scrollRef = useRef<HTMLDivElement>(null);
   const activeRef = useRef<HTMLAnchorElement>(null);
+  const { pendingHref, onNavigate } = usePendingNav();
 
   // The same groups as the sidebar, flattened: one list, so a page cannot be
   // reachable on a desktop and not on a phone.
@@ -65,6 +71,8 @@ export function AdminBottomNav() {
         {navItems.map((item) => {
           const isActive = isCurrent(pathname, item.href);
           const badge = item.badge;
+          // Lit at once on a tap, before the route answers (use-pending-nav.ts).
+          const lit = pendingHref ? pendingHref === item.href : isActive;
           return (
             <Link
               key={item.href}
@@ -72,23 +80,27 @@ export function AdminBottomNav() {
               ref={isActive ? activeRef : undefined}
               role="menuitem"
               aria-current={isActive ? "page" : undefined}
+              data-pending={pendingHref === item.href ? "" : undefined}
+              onClick={(event) => onNavigate(event, item.href, isActive)}
               className={cn(
-                "flex flex-col items-center justify-center gap-1 py-2 px-3 min-w-[68px] min-h-14 rounded-[24px] transition-all duration-200 relative group shrink-0",
-                isActive
-                  ? "bg-foreground/[0.08] text-primary"
+                // A fixed width, not a minimum: the label wraps to a second
+                // line inside it instead of stretching the item, the same
+                // 12px / two-line rule as FloatingNav (2.91.0 #4/#28) — this
+                // bar was left at 10px on one line. The icon lost its padded
+                // tile so the two lines stay inside the 88px the shell
+                // reserves: 20 + 2 + 28 + 8, in a capsule with 6px of padding.
+                "relative flex min-h-14 w-[76px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-[24px] px-1 py-1 transition-[color,background-color,transform] duration-200",
+                NAV_PRESS,
+                lit
+                  ? "bg-nav-active text-primary"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              <div
-                className={cn(
-                  "relative p-1.5 rounded-lg transition-all duration-200",
-                  isActive ? "bg-primary/10" : "group-hover:bg-muted"
-                )}
-              >
+              <div className="relative">
                 {item.icon}
                 {badge ? (
                   <span
-                    className="absolute -top-1 -right-1 bg-destructive text-white text-[10px] font-bold rounded-full min-w-4 h-4 px-1 flex items-center justify-center shadow-sm tabular-nums"
+                    className="absolute -top-1.5 -right-2 bg-destructive text-white text-[10px] font-bold rounded-full min-w-4 h-4 px-1 flex items-center justify-center shadow-sm tabular-nums"
                     aria-hidden
                   >
                     {badge > 9 ? "9+" : badge}
@@ -100,10 +112,8 @@ export function AdminBottomNav() {
 
               <span
                 className={cn(
-                  "text-[10px] font-medium transition-all duration-200 whitespace-nowrap",
-                  isActive
-                    ? "text-foreground font-semibold"
-                    : "text-muted-foreground"
+                  FLOATING_NAV_LABEL,
+                  lit ? "font-semibold text-foreground" : "font-medium"
                 )}
               >
                 {item.label}

@@ -48,6 +48,8 @@ interface ThreadOfferBubbleProps {
   avatar?: string;
   /** The sender's name, for the avatar's initial. */
   name?: string;
+  /** Their two letters, when known apart from `name`. */
+  initials?: string;
   readByOther?: boolean;
   /** Whether this viewer is who awards the underlying job. */
   viewerCanAward: boolean;
@@ -98,6 +100,7 @@ export function ThreadOfferBubble({
   timestamp,
   avatar,
   name,
+  initials,
   readByOther,
   viewerCanAward,
   canCounter = false,
@@ -142,7 +145,7 @@ export function ThreadOfferBubble({
 
   return (
     <div className={cn("flex gap-3 mb-4", isOwn && "flex-row-reverse")}>
-      {!isOwn && <BubbleAvatar name={name} src={avatar} />}
+      {!isOwn && <BubbleAvatar name={name} initials={initials} src={avatar} />}
 
       <div
         className={cn(

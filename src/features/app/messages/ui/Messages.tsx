@@ -2,11 +2,13 @@
 
 import { LoadErrorState } from "@/components/ui/load-error-state";
 import Link from "next/link";
-import { Search, MessageSquare, MapPin, X } from "lucide-react";
+import { Search, MessageSquare, MapPin, X, ListFilter } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 import { MessageRow } from "./MessageRow";
+import { ConversationFilterBar } from "./ConversationFilters";
+import { useConversationFilter } from "../hooks/useConversationFilter";
 import { PageLoader } from "@/components/ui/page-loader";
 import { CenteredEmptyState } from "@/components/ui/centered-empty-state";
 import type { ListingChip, Message } from "../types";
@@ -50,6 +52,9 @@ export function Messages({
   const t = useTranslations("messages");
   const next = useTranslations("common.nextSteps");
   const picked = listingChips.find((chip) => chip.id === listingFilter) ?? null;
+  // The state-of-the-job filter lives in the URL (`?filter=`), so this reads
+  // the same value the list hook fetched with (#26).
+  const { filter: stateFilter, setFilter: setStateFilter } = useConversationFilter();
 
   if (isLoading) {
     const isDriver = basePath.includes("/driver");
@@ -86,8 +91,11 @@ export function Messages({
             onChange={(e) => onSearchChange(e.target.value)}
           />
         </div>
+        <div className="mt-3">
+          <ConversationFilterBar />
+        </div>
         {listingChips.length > 0 && onListingFilterChange ? (
-          <div className="mt-3 space-y-1.5">
+          <div className="mt-2 space-y-1.5">
             <p className="text-xs text-muted-foreground">{t("chips.label")}</p>
             <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
               {listingChips.map((chip) => {
@@ -117,8 +125,6 @@ export function Messages({
         ) : null}
       </div>
 
-      {/* Tabs */}
-
       {/* Messages List */}
       <div className="flex-1 overflow-y-auto flex flex-col">
         {messages.length > 0 ? (
@@ -132,6 +138,20 @@ export function Messages({
               />
             ))}
           </div>
+        ) : stateFilter !== "all" ? (
+          // Nothing in this state — which is not « no messages ». Asked first:
+          // with a job picked as well, « no conversation on this route yet »
+          // could be untrue, the thread merely sitting under another chip.
+          <CenteredEmptyState
+            variant="page"
+            icon={ListFilter}
+            title={t("tabs.emptyTitle", { filter: t(`tabs.${stateFilter}`) })}
+            description={t("tabs.emptyDescription")}
+          >
+            <Button variant="outline" onClick={() => setStateFilter("all")}>
+              {t("tabs.showAll")}
+            </Button>
+          </CenteredEmptyState>
         ) : picked ? (
           // A job picked from the chips with no thread yet: say so, and on the
           // viewer's own request offer the carriers already on that route.

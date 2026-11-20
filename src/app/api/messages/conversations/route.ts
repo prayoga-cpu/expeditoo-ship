@@ -22,10 +22,23 @@ export async function GET(req: Request) {
       page: Number(searchParams.get("page") || 1),
       limit: Number(searchParams.get("limit") || 20),
       search: searchParams.get("search") || undefined,
+      // The state of the job (conversation-filter.ts); absent means all.
+      filter: searchParams.get("filter") || undefined,
     };
 
-    const validated = getConversationsQuerySchema.parse(query);
-    const result = await messagesService.getInbox(session.user.id, validated);
+    // A filter the chips do not offer is the caller's mistake, said as one:
+    // `parse` threw into the catch below and answered 500.
+    const parsed = getConversationsQuerySchema.safeParse(query);
+    if (!parsed.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: { code: "VALIDATION_ERROR", message: "Invalid query" },
+        },
+        { status: 400 }
+      );
+    }
+    const result = await messagesService.getInbox(session.user.id, parsed.data);
 
     return NextResponse.json({
       success: true,

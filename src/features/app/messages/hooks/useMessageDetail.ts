@@ -10,6 +10,7 @@ import { useActiveConversation } from "../context";
 import type { NewMessageEvent } from "@/server/dto/ably-events.dto";
 import { namespaced } from "@/lib/env";
 import { jobDates, routeOf } from "../lib/job-summary";
+import { initialsOf } from "../lib/initials";
 
 /**
  * Custom hook for managing message detail/chat conversation
@@ -197,6 +198,7 @@ export function useMessageDetail(conversationId: string) {
       id: threadData.conversation.id,
       recipient: {
         name: other?.name || t("unknown"),
+        initials: other ? initialsOf(other) : undefined,
         avatar: other?.image || undefined,
         rating: other?.rating,
         reviewsCount: other?.reviewsCount,
@@ -228,6 +230,7 @@ export function useMessageDetail(conversationId: string) {
       readByOther: msg.readByOther,
       // Kept, so the avatar beside a bubble is its writer's and not a « ? ».
       senderName: msg.sender?.name || undefined,
+      senderInitials: msg.sender ? initialsOf(msg.sender) : undefined,
       senderAvatar: msg.sender?.image || undefined,
       offer: msg.threadOffer ?? undefined,
     }));

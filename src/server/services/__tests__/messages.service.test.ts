@@ -27,6 +27,7 @@ vi.mock('@/server/dal/messages.dal', () => ({
     createMessage: vi.fn(),
     getUnreadCount: vi.fn(),
     getUserConversations: vi.fn(),
+    countUserConversationsByListingStatus: vi.fn(),
     getMessages: vi.fn(),
     markAsRead: vi.fn(),
     markAllAsSeen: vi.fn(),
@@ -188,6 +189,56 @@ describe('messagesService', () => {
             
             expect(result.items[0].isUnread).toBe(true); // lastMessageAt > lastReadAt
             expect(result.items[0].lastMessage).toBe('Last msg');
+        });
+    });
+
+    // client feedback 2026-11-19, #26: conversations by the state of their job.
+    describe('getInbox filter and counts', () => {
+        beforeEach(() => {
+            vi.mocked(messagesDAL.getUserConversations).mockResolvedValue([] as never);
+        });
+
+        it('reads every conversation when no filter is named', async () => {
+            await messagesService.getInbox('user-1', { page: 1, limit: 10 });
+
+            expect(messagesDAL.getUserConversations).toHaveBeenCalledWith(
+                'user-1', 10, 0, undefined, 'all'
+            );
+        });
+
+        it('hands the filter down with the search and the page', async () => {
+            await messagesService.getInbox('user-1', {
+                page: 3, limit: 20, search: 'Clamart', filter: 'active',
+            });
+
+            expect(messagesDAL.getUserConversations).toHaveBeenCalledWith(
+                'user-1', 20, 40, 'Clamart', 'active'
+            );
+        });
+
+        it('folds the per-status counts into the chips, for the caller only', async () => {
+            vi.mocked(messagesDAL.countUserConversationsByListingStatus).mockResolvedValue([
+                { status: 'open', count: 2 },
+                { status: 'draft', count: 1 },
+                { status: 'awarded', count: 1 },
+                { status: 'in_progress', count: 3 },
+                { status: 'completed', count: 4 },
+                { status: 'cancelled', count: 1 },
+                { status: null, count: 2 },
+            ]);
+
+            const counts = await messagesService.getInboxCounts('user-1');
+
+            expect(messagesDAL.countUserConversationsByListingStatus).toHaveBeenCalledWith('user-1');
+            expect(counts).toEqual({ all: 14, waiting: 3, active: 4, done: 5, none: 2 });
+        });
+
+        it('counts an empty inbox as zero under every chip', async () => {
+            vi.mocked(messagesDAL.countUserConversationsByListingStatus).mockResolvedValue([]);
+
+            expect(await messagesService.getInboxCounts('user-1')).toEqual({
+                all: 0, waiting: 0, active: 0, done: 0, none: 0,
+            });
         });
     });
 

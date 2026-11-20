@@ -6,6 +6,8 @@
 export interface Message {
   id: string;
   name: string;
+  /** « NM »: what the avatar shows without a photo (lib/initials.ts). */
+  initials?: string;
   avatar?: string;
   listing: string;
   snippet: string;
@@ -43,6 +45,7 @@ export interface ChatMessage {
   readByOther?: boolean; // Read receipt: true if the other person has seen this message
   /** Who wrote it — the avatar beside the bubble shows their initial. */
   senderName?: string;
+  senderInitials?: string;
   senderAvatar?: string;
   /**
    * The formal price this message carries, if any. Present means the thread
@@ -127,6 +130,8 @@ export interface Conversation {
   id: string;
   recipient: {
     name: string;
+    /** « NM », for the header avatar and the bubbles beside their messages. */
+    initials?: string;
     avatar?: string;
     rating?: number;
     reviewsCount?: number;

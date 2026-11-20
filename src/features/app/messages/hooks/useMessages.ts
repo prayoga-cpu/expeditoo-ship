@@ -1,6 +1,11 @@
 import { useMemo, useState, useCallback, useEffect } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useDebounce } from "use-debounce";
 import { toast } from "sonner";
 import { messagesApi, type ConversationResponse } from "../api";
@@ -10,6 +15,8 @@ import { myRequestKeys } from "@/features/app/listing/hooks/useMyRequests";
 import { activeRequests } from "@/features/app/dashboard/myRequestStatus";
 import type { Job } from "@/features/app/listing/types";
 import { jobDates, routeOf } from "../lib/job-summary";
+import { initialsOf } from "../lib/initials";
+import { useConversationFilter } from "./useConversationFilter";
 
 /**
  * The jobs the search offers as filters (§D5): every job the viewer has a
@@ -56,6 +63,8 @@ export function useMessages() {
   const [debouncedSearch] = useDebounce(searchQuery, 300);
   // A job picked from the chips under the search box (§D5).
   const [listingFilter, setListingFilter] = useState<string | null>(null);
+  // The state of the job, held in the URL so Back restores it (#26).
+  const { filter: stateFilter, setFilter: setStateFilter } = useConversationFilter();
   const queryClient = useQueryClient();
   const t = useTranslations("messages");
   const locale = useLocale();
@@ -81,6 +90,11 @@ export function useMessages() {
     setSearchQuery(value);
   }, []);
 
+  const listKey = useMemo(
+    () => ["messages", "conversations", debouncedSearch, stateFilter] as const,
+    [debouncedSearch, stateFilter]
+  );
+
   // Fetch conversations from API (real-time updates via Ably)
   const {
     data: conversations = [],
@@ -88,17 +102,21 @@ export function useMessages() {
     error,
     refetch,
   } = useQuery({
-    queryKey: ["messages", "conversations", debouncedSearch],
-    queryFn: () => messagesApi.getConversations(1, 50, debouncedSearch || undefined),
+    queryKey: listKey,
+    queryFn: () =>
+      messagesApi.getConversations(1, 50, debouncedSearch || undefined, stateFilter),
     refetchOnWindowFocus: false,
     structuralSharing: true,
+    // Switching chip keeps the rows on screen until the new ones arrive,
+    // instead of swapping the whole page for the loader.
+    placeholderData: keepPreviousData,
   });
 
   // The unfiltered inbox, for the chips: same key as the main read when the
   // box is empty, so it costs no second request then.
   const { data: everyConversation = [] } = useQuery({
-    queryKey: ["messages", "conversations", ""],
-    queryFn: () => messagesApi.getConversations(1, 50, undefined),
+    queryKey: ["messages", "conversations", "", "all"],
+    queryFn: () => messagesApi.getConversations(1, 50, undefined, "all"),
     refetchOnWindowFocus: false,
     structuralSharing: true,
   });
@@ -126,18 +144,16 @@ export function useMessages() {
     mutationFn: (conversationId: string) => messagesApi.deleteConversation(conversationId),
     onMutate: async (conversationId) => {
       // Cancel any outgoing refetches
-      await queryClient.cancelQueries({
-        queryKey: ["messages", "conversations", debouncedSearch]
-      });
+      await queryClient.cancelQueries({ queryKey: listKey });
 
       // Snapshot the previous value
       const previousConversations = queryClient.getQueryData<ConversationResponse[]>(
-        ["messages", "conversations", debouncedSearch]
+        listKey
       );
 
       // Optimistically update to the new value
       queryClient.setQueryData<ConversationResponse[]>(
-        ["messages", "conversations", debouncedSearch],
+        listKey,
         (old) => (old ? old.filter((c) => c.id !== conversationId) : [])
       );
 
@@ -151,7 +167,7 @@ export function useMessages() {
       // Use the context returned from onMutate to roll back
       if (context?.previousConversations) {
         queryClient.setQueryData(
-          ["messages", "conversations", debouncedSearch],
+          listKey,
           context.previousConversations
         );
       }
@@ -195,6 +211,9 @@ export function useMessages() {
       conversations.map((conv: ConversationResponse) => ({
         id: conv.id,
         name: conv.otherParticipant?.name || t("detail.unknown"),
+        initials: conv.otherParticipant
+          ? initialsOf(conv.otherParticipant)
+          : undefined,
         avatar: conv.otherParticipant?.image || undefined,
         listing: conv.listing?.title || t("item.noListing"),
         snippet: conv.lastMessage || "",
@@ -222,6 +241,8 @@ export function useMessages() {
     listingChips: chips,
     listingFilter,
     setListingFilter,
+    stateFilter,
+    setStateFilter,
     unreadCount,
     deleteConversation,
     isLoading,

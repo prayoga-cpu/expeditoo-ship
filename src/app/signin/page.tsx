@@ -9,22 +9,30 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuthActions } from "@/features/auth/hooks/useAuthActions";
-import { AuthIntentNote, AuthSwitchLink } from "@/features/auth/ui";
+import {
+  AuthErrorNotice,
+  AuthIntentNote,
+  AuthSwitchLink,
+} from "@/features/auth/ui";
 import { useState, useEffect, Suspense } from "react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 
-const signinSchema = z.object({
-  email: z
-    .string()
-    .min(1, "Email is required")
-    .email("Please enter a valid email"),
-  password: z.string().min(1, "Password is required"),
-  rememberMe: z.boolean().optional(),
-});
+// The messages were English literals; `auth.login.errors.*` had been written
+// and was read by nothing.
+function buildSigninSchema(t: (key: string) => string) {
+  return z.object({
+    email: z
+      .string()
+      .min(1, t("errors.emailRequired"))
+      .email(t("errors.emailInvalid")),
+    password: z.string().min(1, t("errors.passwordRequired")),
+    rememberMe: z.boolean().optional(),
+  });
+}
 
-type SigninFormData = z.infer<typeof signinSchema>;
+type SigninFormData = z.infer<ReturnType<typeof buildSigninSchema>>;
 
 function SignInContent() {
   const router = useRouter();
@@ -35,7 +43,6 @@ function SignInContent() {
     isLoading,
     error: authError,
   } = useAuthActions();
-  const [serverError, setServerError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const t = useTranslations("auth.login");
 
@@ -69,7 +76,7 @@ function SignInContent() {
     handleSubmit,
     formState: { errors },
   } = useForm<SigninFormData>({
-    resolver: zodResolver(signinSchema),
+    resolver: zodResolver(buildSigninSchema(t)),
     defaultValues: {
       email: "",
       password: "",
@@ -77,22 +84,14 @@ function SignInContent() {
     },
   });
 
+  // A refusal comes back through the hook's `error`, as a key the notice
+  // below turns into a sentence (`auth-errors.ts`).
   const onSubmit = async (data: SigninFormData) => {
-    setServerError(null);
-    const result = await signIn(data.email, data.password, data.rememberMe);
-
-    if (!result.success && result.error) {
-      setServerError(result.error);
-    }
+    await signIn(data.email, data.password, data.rememberMe);
   };
 
   const handleGoogleSignIn = async () => {
-    setServerError(null);
-    const result = await signInWithGoogle();
-
-    if (!result.success && result.error) {
-      setServerError(result.error);
-    }
+    await signInWithGoogle();
   };
 
   return (
@@ -134,13 +133,7 @@ function SignInContent() {
           <AuthIntentNote />
 
           {/* Error Display */}
-          {(serverError || authError) && (
-            <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-              <p className="text-destructive text-sm">
-                {serverError || authError}
-              </p>
-            </div>
-          )}
+          <AuthErrorNotice error={authError} />
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div>

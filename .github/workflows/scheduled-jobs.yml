@@ -34,10 +34,21 @@ on:
           - publish-scheduled-listings
           - carrier-documents
           - cleanup-images
+      # The schedule only ever reaches production. dev.expeditop.fr has no
+      # clock of its own: run a sweep there by hand when you are testing one.
+      # Needs variable APP_URL_DEV and secret CRON_SECRET_DEV.
+      target:
+        description: Which deployment
+        required: true
+        type: choice
+        default: production
+        options:
+          - production
+          - dev
 
 # A long sweep must never overlap the next tick of the same sweep.
 concurrency:
-  group: scheduled-jobs-${{ github.event.schedule || inputs.job }}
+  group: scheduled-jobs-${{ inputs.target || 'production' }}-${{ github.event.schedule || inputs.job }}
   cancel-in-progress: false
 
 jobs:
@@ -64,8 +75,8 @@ jobs:
 
       - name: Invoke
         env:
-          APP_URL: ${{ vars.APP_URL }}
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          APP_URL: ${{ inputs.target == 'dev' && vars.APP_URL_DEV || vars.APP_URL }}
+          CRON_SECRET: ${{ inputs.target == 'dev' && secrets.CRON_SECRET_DEV || secrets.CRON_SECRET }}
           PATH_SUFFIX: ${{ steps.target.outputs.path }}
         run: |
           set -euo pipefail

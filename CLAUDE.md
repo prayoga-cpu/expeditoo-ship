@@ -72,6 +72,7 @@ npx tsc --noEmit    # Typecheck — the gate that matters during the pivot
 pnpm db:generate    # DO NOT USE - see below; hand-write the .sql instead
 pnpm db:migrate     # Apply migrations
 pnpm db:studio      # Drizzle Studio
+pnpm env:audit      # Vercel: is any production value shared with Preview/dev?
 ```
 
 **`pnpm db:generate` is not usable in this repo.** `0002` left no meta
@@ -778,6 +779,17 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
   « Devenir chauffeur » lives in the access badge's menu. The town search
   covers `JOB_COUNTRIES`. `globals.css` has a fallback block for browsers
   without `color-mix()` (iOS 15–16.1), matched on whole class tokens.
+
+- **A dev deployment that cannot reach production** (2.91.1,
+  `environments_spec.md` §10–11, `plan_dev_environment.md`). `dev.expeditop.fr`
+  is the Preview scope bound to git branch `dev`; its own Neon branch, R2
+  buckets, auth/cron secrets and Stripe test keys. Its Vercel build migrates
+  the dev database and only that (`build-migrate.ts`); « Refresh dev database »
+  mirrors production **anonymised** (never a raw Neon reset — that would copy
+  KYC keys and password hashes to a public host). **`R2_BUCKET_NAME` was one
+  value for Production and Preview** — the one share no boot guard catches,
+  because `cleanup-images` deletes whatever the database does not reference.
+  `pnpm env:audit` fails on it. The operator half is in STATUS → Operator to-do.
 
 **Not done**
 - **`EXPEDION_APP_ORIGINS` is set in Vercel Production but not in `.env.local`**,

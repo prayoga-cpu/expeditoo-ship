@@ -15,6 +15,7 @@ import { ThreadOfferBubble } from "./ThreadOfferBubble";
 import { ListingReference } from "@/features/app/listing/ui/ListingReference";
 import { useTranslations } from "next-intl";
 import { jobLine } from "../lib/job-summary";
+import { initialsOf } from "../lib/initials";
 
 /**
  * Pure UI component for displaying message detail/chat
@@ -170,8 +171,9 @@ export function MessageDetail({
               src={conversation.recipient.avatar}
               alt={conversation.recipient.name}
             />
-            <AvatarFallback className="bg-linear-to-b from-blue-400 to-blue-600 dark:from-blue-600 dark:to-blue-950 text-white">
-              {conversation.recipient.name.charAt(0)}
+            <AvatarFallback className="bg-linear-to-b from-blue-400 to-blue-600 dark:from-blue-600 dark:to-blue-950 text-white text-sm font-semibold">
+              {conversation.recipient.initials ??
+                initialsOf({ name: conversation.recipient.name })}
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
@@ -210,6 +212,11 @@ export function MessageDetail({
               timestamp={message.timestamp}
               avatar={message.senderAvatar ?? conversation.recipient.avatar}
               name={message.senderName ?? conversation.recipient.name}
+              initials={
+                message.senderName
+                  ? message.senderInitials
+                  : conversation.recipient.initials
+              }
               readByOther={message.readByOther}
               viewerCanAward={offerContext?.viewerCanAward ?? false}
               canCounter={offerContext?.canCounter ?? false}
@@ -228,6 +235,11 @@ export function MessageDetail({
               timestamp={message.timestamp}
               avatar={message.senderAvatar ?? conversation.recipient.avatar}
               name={message.senderName ?? conversation.recipient.name}
+              initials={
+                message.senderName
+                  ? message.senderInitials
+                  : conversation.recipient.initials
+              }
               readByOther={message.readByOther}
               onDelete={
                 message.sentByMe && onDeleteMessage

@@ -4,6 +4,7 @@ import { Plus_Jakarta_Sans, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers/Providers";
 import { PWAInstall } from "@/components/pwa/PWAInstall";
+import { EnvBadge } from "@/components/EnvBadge";
 import { defaultLocale } from "@/i18n/config";
 
 const font = Plus_Jakarta_Sans({
@@ -63,6 +64,7 @@ export default function RootLayout({
         suppressHydrationWarning
         className={`${font.variable} ${fontGeist.variable} ${fontMono.variable} font-sans antialiased`}
       >
+        <EnvBadge />
         <Providers>
           {children}
           <PWAInstall />

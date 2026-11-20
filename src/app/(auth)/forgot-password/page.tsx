@@ -10,6 +10,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuthActions } from "@/features/auth/hooks/useAuthActions";
+import { AuthErrorNotice } from "@/features/auth/ui";
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 
@@ -30,7 +31,6 @@ export default function ForgotPasswordPage() {
   } = useAuthActions();
   const [submitted, setSubmitted] = useState(false);
   const [submittedEmail, setSubmittedEmail] = useState("");
-  const [serverError, setServerError] = useState<string | null>(null);
   const t = useTranslations("auth.forgotPassword");
   const forgotPasswordSchema = useMemo(
     () =>
@@ -50,14 +50,13 @@ export default function ForgotPasswordPage() {
   });
 
   const onSubmit = async (data: ForgotPasswordFormData) => {
-    setServerError(null);
     const result = await requestPasswordReset(data.email);
 
+    // A refusal comes back through the hook's `error`, as a key the notice
+    // below turns into a sentence (`auth-errors.ts`).
     if (result.success) {
       setSubmittedEmail(data.email);
       setSubmitted(true);
-    } else if (result.error) {
-      setServerError(result.error);
     }
   };
 
@@ -91,13 +90,7 @@ export default function ForgotPasswordPage() {
               </p>
 
               {/* Error Display */}
-              {(serverError || authError) && (
-                <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-                  <p className="text-destructive text-sm">
-                    {serverError || authError}
-                  </p>
-                </div>
-              )}
+              <AuthErrorNotice error={authError} />
 
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 <div>

@@ -2,6 +2,7 @@ import {
   BIDDING_LEAD_MS,
   MIN_BIDDING_WINDOW_MS,
   biddingDeadline,
+  biddingRunsUntil,
   expiresAtFor,
   publicationProblem,
 } from "@/lib/listing-window";
@@ -146,7 +147,12 @@ export function publicationIssues(
   // The server's deadline, window end included (client_feedback_2026_10_spec.md
   // §4) — a flexible request open for three weeks is not "closing soon".
   const pickupUntil = toDate(values.pickupUntil);
-  const runsUntil = values.isFlexible === true ? pickupUntil : null;
+  const runsUntil = pickupUntil
+    ? biddingRunsUntil(
+        { isFlexible: values.isFlexible === true, pickupFrom, pickupUntil },
+        true
+      )
+    : null;
   const closesAt = biddingDeadline(pickupFrom, runsUntil, publishAt);
   const short =
     closesAt !== null &&

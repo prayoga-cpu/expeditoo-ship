@@ -2,7 +2,6 @@
 
 import { NotificationBell } from "@/components/NotificationBell";
 import { HeaderToolbox } from "@/components/layouts/HeaderToolbox";
-import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
@@ -16,6 +15,9 @@ import { Button } from "@/components/ui/button";
 import { DriverBottomNav } from "./DriverBottomNav";
 import { AppSidebarHeader } from "@/components/layouts/AppSidebarHeader";
 import { HeaderAccount } from "@/components/layouts/HeaderAccount";
+import { AccessSwitcher } from "@/components/layouts/AccessSwitcher";
+import { AppSidebar, SidebarLink, SidebarToggle } from "@/components/layouts/SidebarRail";
+import { RAIL, WHEN_RAIL, useSidebarRail } from "@/components/layouts/use-sidebar-rail";
 import { AppVersionLink } from "@/components/ui/app-version";
 import { useTranslations } from "next-intl";
 import { useActiveAccessMode } from "@/lib/use-active-access-mode";
@@ -32,6 +34,7 @@ export function DriverLayout({ children }: DriverLayoutProps) {
   const t = useTranslations("driver");
   const tCommon = useTranslations("common");
   const { qualifiedModes, setMode } = useActiveAccessMode();
+  const rail = useSidebarRail();
   const hideBottomNav = pathname?.startsWith("/driver/shipments/");
 
   // Same fix as AdminLayout's Back button: an account that also holds admin
@@ -74,33 +77,29 @@ export function DriverLayout({ children }: DriverLayoutProps) {
       <AppSidebarHeader href="/driver/dashboard" />
       {/* p-4, not px-4: same as the admin sidebar — its subtitle used to supply
           the gap under the logo. Matches the app sidebar. */}
-      <nav className="flex-1 min-h-0 overflow-y-auto p-4 space-y-2">
+      <nav className={cn("flex-1 min-h-0 overflow-y-auto p-4 space-y-2", RAIL.gutter)}>
         {sidebarItems.map((item) => (
-          <Link
+          <SidebarLink
             key={item.href}
             href={item.href}
-            className={cn(
-              "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors",
+            label={item.title}
+            icon={item.icon}
+            active={
               pathname === item.href ||
-                (item.href !== "/driver/dashboard" &&
-                  pathname?.startsWith(item.href))
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
-            )}
-          >
-            <item.icon className="w-5 h-5" />
-            {item.title}
-          </Link>
+              (item.href !== "/driver/dashboard" && Boolean(pathname?.startsWith(item.href)))
+            }
+          />
         ))}
       </nav>
-      <div className="px-4 mt-auto">
+      <div className={cn("px-4 mt-auto", RAIL.gutter)}>
         <Button
           variant="outline"
-          className="w-full justify-start gap-2"
+          className={cn("w-full justify-start gap-2", RAIL.center)}
+          title={tCommon("navigation.backToApp")}
           onClick={handleBack}
         >
           <ArrowLeft className="w-4 h-4" />
-          {tCommon("navigation.backToApp")}
+          <span className={RAIL.srOnly}>{tCommon("navigation.backToApp")}</span>
         </Button>
       </div>
     </div>
@@ -115,9 +114,9 @@ export function DriverLayout({ children }: DriverLayoutProps) {
       } as React.CSSProperties}
     >
       {/* Desktop Sidebar - Static like MainLayout */}
-      <aside className="hidden xl:flex w-64 shrink-0 overflow-hidden border-r bg-card flex-col">
+      <AppSidebar state={rail.state}>
         <SidebarContent />
-      </aside>
+      </AppSidebar>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -125,7 +124,11 @@ export function DriverLayout({ children }: DriverLayoutProps) {
         <header className="border-b border-border bg-card sticky top-0 z-40">
           <div className="flex items-center justify-between px-4 md:px-6 py-2 h-12">
             <div className="flex min-w-0 items-center gap-3">
+              <SidebarToggle rail={rail} />
               <h1 className="text-lg font-bold text-foreground">{t("panelTitle")}</h1>
+              {/* The sidebar's switcher does not fit a rail; it rides here
+                  while the sidebar is one. */}
+              <AccessSwitcher className={WHEN_RAIL.sidebarOnly[rail.state]} />
               <AppVersionLink className="hidden md:inline-flex" />
             </div>
             <div className="flex items-center gap-2">
@@ -145,7 +148,7 @@ export function DriverLayout({ children }: DriverLayoutProps) {
             MainLayout, where their escape showed up as a second scrollbar. */}
         <main
           className={cn(
-            "relative flex-1 min-h-0 overflow-y-auto overflow-x-hidden xl:pb-0",
+            "relative flex-1 min-h-0 overflow-y-auto overflow-x-hidden lg:pb-0",
             !hideBottomNav && "pb-[calc(88px_+_env(safe-area-inset-bottom))]"
           )}
           style={{ scrollbarGutter: "stable" }}

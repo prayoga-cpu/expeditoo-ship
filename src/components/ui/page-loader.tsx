@@ -26,7 +26,7 @@ const sizeMap = {
  * 
  * All layouts now have IDENTICAL structure, so they all use the SAME offset values.
  */
-const loaderClass = "min-h-[calc(100vh-var(--loader-offset-mobile,8rem))] xl:min-h-[calc(100vh-var(--loader-offset-desktop,7rem))]";
+const loaderClass = "min-h-[calc(100vh-var(--loader-offset-mobile,8rem))] lg:min-h-[calc(100vh-var(--loader-offset-desktop,7rem))]";
 
 /**
  * Full-page/section loading component

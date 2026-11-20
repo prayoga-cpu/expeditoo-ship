@@ -5,9 +5,20 @@ import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 import { useQueryClient } from "@tanstack/react-query";
 import { composeName } from "@/lib/person-name";
+import {
+  authErrorKey,
+  thrownAuthErrorKey,
+  type AuthErrorKey,
+} from "@/features/auth/lib/auth-errors";
 
 /** Better Auth's code for a sign-in refused because the address is unconfirmed. */
 const EMAIL_NOT_VERIFIED = "EMAIL_NOT_VERIFIED";
+
+/**
+ * What every action answers. `error` is a key, never a sentence: the server's
+ * own wording is English and stops here (`auth-errors.ts`).
+ */
+export type AuthActionResult = { success: boolean; error?: AuthErrorKey };
 
 /** `/verify-email`, carrying the address its resend button needs. */
 export function verifyEmailPath(email: string, from?: "signin"): string {
@@ -24,20 +35,38 @@ export function useAuthActions() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<AuthErrorKey | null>(null);
+
+  const refuse = (key: AuthErrorKey): AuthActionResult => {
+    setError(key);
+    return { success: false, error: key };
+  };
 
   /**
-   * Sign in with email and password
+   * The frame every action shares: the loading flag, a clean slate, and a
+   * request that threw (offline, blocked) turned into a key like any other
+   * refusal.
    */
-  const signIn = async (
-    email: string,
-    password: string,
-    rememberMe = false
-  ) => {
+  const run = async (
+    action: () => Promise<AuthActionResult>
+  ): Promise<AuthActionResult> => {
     setIsLoading(true);
     setError(null);
 
     try {
+      return await action();
+    } catch (err) {
+      return refuse(thrownAuthErrorKey(err));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  /**
+   * Sign in with email and password
+   */
+  const signIn = (email: string, password: string, rememberMe = false) =>
+    run(async () => {
       const result = await authClient.signIn.email({
         email,
         password,
@@ -53,8 +82,7 @@ export function useAuthActions() {
           return { success: false };
         }
 
-        setError(result.error.message || "Sign in failed");
-        return { success: false, error: result.error.message };
+        return refuse(authErrorKey(result.error));
       }
 
       // Redirect to home after successful signin
@@ -62,27 +90,17 @@ export function useAuthActions() {
       router.refresh();
 
       return { success: true };
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Sign in failed";
-      setError(errorMessage);
-      return { success: false, error: errorMessage };
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    });
 
   /**
    * Sign up with email and password
    */
-  const signUp = async (
+  const signUp = (
     email: string,
     password: string,
     person: { firstName: string; lastName: string; alias?: string }
-  ) => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
+  ) =>
+    run(async () => {
       // `name` is the display string; the server re-composes it from the
       // parts in the user-create hook (client_feedback_2026_10_spec.md §1).
       const firstName = person.firstName.trim();
@@ -97,10 +115,7 @@ export function useAuthActions() {
         ...(alias ? { alias } : {}),
       });
 
-      if (result.error) {
-        setError(result.error.message || "Sign up failed");
-        return { success: false, error: result.error.message };
-      }
+      if (result.error) return refuse(authErrorKey(result.error));
 
       // The account exists from here on, whether or not its first mail left
       // (the server never fails a sign-up on the mail). The verify screen is
@@ -108,24 +123,14 @@ export function useAuthActions() {
       router.push(verifyEmailPath(email));
 
       return { success: true };
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Sign up failed";
-      setError(errorMessage);
-      return { success: false, error: errorMessage };
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    });
 
   /**
    * Sign in with Google OAuth
    */
-  const signInWithGoogle = async () => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      await authClient.signIn.social({
+  const signInWithGoogle = () =>
+    run(async () => {
+      const result = await authClient.signIn.social({
         provider: "google",
         callbackURL: "/home",
         // A brand-new account (this provider's first sign-in) lands on
@@ -134,24 +139,18 @@ export function useAuthActions() {
         newUserCallbackURL: "/welcome",
       });
 
+      // The redirect to Google never started (provider not configured, rate
+      // limit). This used to be dropped: the button simply did nothing.
+      if (result?.error) return refuse(authErrorKey(result.error));
+
       return { success: true };
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Google sign in failed";
-      setError(errorMessage);
-      return { success: false, error: errorMessage };
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    });
 
   /**
    * Sign out
    */
-  const signOut = async () => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
+  const signOut = () =>
+    run(async () => {
       await authClient.signOut();
 
       // Clear all react-query cache to prevent stale data (like user roles)
@@ -163,105 +162,59 @@ export function useAuthActions() {
       router.refresh();
 
       return { success: true };
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Sign out failed";
-      setError(errorMessage);
-      return { success: false, error: errorMessage };
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    });
 
   /**
    * Request password reset
    */
-  const requestPasswordReset = async (email: string) => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
+  const requestPasswordReset = (email: string) =>
+    run(async () => {
       const result = await authClient.requestPasswordReset({
         email,
         redirectTo: "/reset-password",
       });
 
-      if (result.error) {
-        setError(result.error.message || "Failed to send reset email");
-        return { success: false, error: result.error.message };
-      }
+      if (result.error) return refuse(authErrorKey(result.error));
 
       return { success: true };
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to send reset email";
-      setError(errorMessage);
-      return { success: false, error: errorMessage };
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    });
 
   /**
    * Reset password with token
    */
-  const resetPassword = async (token: string, newPassword: string) => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
+  const resetPassword = (token: string, newPassword: string) =>
+    run(async () => {
       const result = await authClient.resetPassword({
         newPassword,
         token,
       });
 
-      if (result.error) {
-        setError(result.error.message || "Failed to reset password");
-        return { success: false, error: result.error.message };
-      }
+      if (result.error) return refuse(authErrorKey(result.error));
 
       // Redirect to signin
       router.push("/signin");
 
       return { success: true };
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to reset password";
-      setError(errorMessage);
-      return { success: false, error: errorMessage };
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    });
 
   /**
    * Verify email with token
    */
-  const verifyEmail = async (token: string) => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
+  const verifyEmail = (token: string) =>
+    run(async () => {
       const result = await authClient.verifyEmail({
         query: {
           token,
         },
       });
 
-      if (result.error) {
-        setError(result.error.message || "Email verification failed");
-        return { success: false, error: result.error.message };
-      }
+      if (result.error) return refuse(authErrorKey(result.error));
 
       // Don't redirect here - let the calling page handle the redirect
       // Better Auth will auto-sign in if autoSignInAfterVerification is enabled
 
       return { success: true };
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Email verification failed";
-      setError(errorMessage);
-      return { success: false, error: errorMessage };
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    });
 
   /**
    * Clear error

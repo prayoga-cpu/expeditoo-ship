@@ -46,9 +46,10 @@ export function isUrgent(job: UrgencyInput, now: Date = new Date()): boolean {
 /**
  * « Immédiat » (client_feedback_2026_10_29_spec.md §B5): the goods can be
  * collected right now — the request still has no driver and its pickup window
- * has already opened. Only a flexible request can be in that state while it
- * still takes offers: a fixed one stops taking them 6 h before its window
- * opens (`biddingRunsUntil`). Independent of « Urgent »: a window open since
+ * has already opened. A flexible request can be in that state while it still
+ * takes offers, and so can one on a precise day whose window is longer than
+ * 6 h (« N'importe quand »); a precise hour stops taking them 6 h before it
+ * (`biddingRunsUntil`). Independent of « Urgent »: a window open since
  * yesterday that closes tomorrow is both, and says so.
  */
 export function isImmediate(

@@ -35,10 +35,28 @@ const withPWA = withPWAInit({
   },
 });
 
+const appEnv = resolveAppEnvForBuild();
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   env: {
-    NEXT_PUBLIC_APP_ENV: resolveAppEnvForBuild(),
+    NEXT_PUBLIC_APP_ENV: appEnv,
+  },
+  /**
+   * Nothing but production may be indexed. `dev.expeditop.fr` is a custom
+   * domain, so Vercel's deployment protection does not cover it and it is
+   * public — it has to be, for Stripe's webhooks and the Expedion app to reach
+   * it. A header rather than robots.txt: it also covers API responses and
+   * pages a crawler reaches by a link from elsewhere.
+   */
+  async headers() {
+    if (appEnv === 'production') return [];
+    return [
+      {
+        source: '/:path*',
+        headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
+      },
+    ];
   },
   typescript: {
     ignoreBuildErrors: true,

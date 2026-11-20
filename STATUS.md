@@ -4,7 +4,7 @@
 
 _Owner: this section is for you. One row per point the client sent on 19 November while testing 2.90.0. Spec:
 `docs/specs/client_feedback_2026_11_19_spec.md` (readings chosen without the client in §0); plan:
-`docs/plans/plan_client_feedback_2026_11_19.md`. Built in **2.91.0**, pushed to `main` on 2026-11-20. Earlier monitors (7 October – 6 November) were
+`docs/plans/plan_client_feedback_2026_11_19.md`. Built in **2.91.0** and **2.92.0**; both on `main` (2.91.0 on 2026-11-20, 2.92.0 on 2026-11-21). Earlier monitors (7 October – 6 November) were
 cleared from this file on the owner's instruction the same day; they remain in git history, and each release's
 own entry below still records what shipped._
 
@@ -29,26 +29,26 @@ own entry below still records what shipped._
 | 14 | A congratulation message after registration | `WelcomeEmail` existed, called only from a dev route | 🔵 | — |
 | 15 | « Message » should message the driver | Same as #13 | 🔵 | — |
 | 16 | Admin: a user's requests, answers and messages | Did not exist | 🟠 | Run once on a real database |
-| 17 | Icons and shortcuts in a bar; three-line button | Fixed 256 px sidebar from 1280 px; no rail, no hamburger | ❓ | Rail or hamburger; does the bottom bar stay |
+| 17 | Icons and shortcuts in a bar; three-line button | Fixed 256 px sidebar from 1280 px; no rail, no hamburger | 🟠 2.92.0 | Both asked for: a rail from 1024 px with a three-line toggle. Needs eyes at 1024 / 1280 / 390 px |
 | 18 | Assistant ignored the dates | By design until now (spec §2) | 🟠 | A live read to check the model's date arithmetic |
 | 19 | Every country and territory | 14 on purpose (no customs border) | ⚖️ | Customs; postal formats |
 | 20 | Address labels bold and bigger | 12 px | 🔵 | — |
 | 21 | 5–30 kg shown as 100 kg | A title suggestion (« Table… ») overwrote the bracket | 🟠 | Ask whether he picked a suggestion or used the assistant |
-| 22 | No « whenever » on a precise date | Exact mode was one period + one hour | 🟠 | Confirm « that day, any time »; bidding deadline (known limit) |
+| 22 | No « whenever » on a precise date | Exact mode was one period + one hour | 🟠 | Confirm « that day, any time ». Bidding now runs to the window's end (2.92.0) |
 | 23 | Town search finds nothing outside France | `searchAddress(query, "fr")` | 🔵 | — |
 | 24 | « Mes offres » should show the job | Payload carried it; the client type did not | 🔵 | — |
 | 25 | Message rows: job details | Towns in the payload unused; no dates | 🔵 | — |
-| 26 | Filter messages by type | No status filter | ❓ | The categories |
-| 27 | Landing: « replace texte by connexion/inscription » | « Connexion » hidden below 640 px | ❓ | Which text |
+| 26 | Filter messages by type | No status filter | 🟠 2.92.0 | Four filters built (waiting / active / done / no request); « Créneaux à valider » and « En attente d'action » do not exist in this app |
+| 27 | Landing: « replace texte by connexion/inscription » | « Connexion » hidden below 640 px | 🟠 2.92.0 | Confirm he meant the header button; 640–760 px header may wrap |
 | 28 | Mobile font size | As #4 | 🟠 | As #4; « Suivi » for « Expéditions » on the bar |
 | 29 | Unreadable coloured messages | Probable: no `color-mix()` on iOS 15–16.1 → solid tints | 🟠 | A real iPhone on iOS 15; which screen |
-| 30 | « Error of access code » at login | Nothing by that name exists | ❓ | A screenshot |
+| 30 | « Error of access code » at login | Nothing by that name exists; every sign-in failure showed Better Auth's English text | 🟠 2.92.0 | Errors now French with a next step; still ask for the screenshot |
 | 31 | Message screen: job details | As #25 | 🔵 | — |
-| 32 | Initials and pseudo instead of the full name | Sign-up says the pseudo is seen by you alone | ⚖️ | Whether to show pseudos |
+| 32 | Initials and pseudo instead of the full name | Sign-up says the pseudo is seen by you alone | ⚖️ in part | Two-letter initials + a three-line row built; names stay, pseudos are the open decision |
 | 33 | After « Refuser », no other price | No counter in chat; the transporter told nothing | 🔵 | — |
 | 34 | Keep the job title on screen in a thread | Only the name row was sticky | 🔵 | — |
 | 35 | Bottom bar: requests instead of « Devenir chauffeur » | — | 🟠 | Confirm the entry's new home (access badge, profile) |
-| 36 | 3–4 taps on the bottom bar | Not reproduced | 🔍 | Reproduce on a phone |
+| 36 | 3–4 taps on the bottom bar | Not reproduced; no instant feedback, no loading screens, toast over the bar | 🟠 2.92.0 | Instant pressed state, loading screens, top toasts built; reproduce on a phone |
 | 37 | Job page title cut on iPad | One truncated line; no towns or dates | 🔵 | — |
 | 38 | « Cancel format of field » on professional registration | French formats: SIRET, +33, 5-digit postal code, FR VAT | ❓ | Which field, what he typed |
 
@@ -99,6 +99,18 @@ adversarial verification pass — treat their detail as slightly less certain.
 Work that needs a human hand outside the codebase. Add to this list rather
 than leaving it in a chat message.
 
+- [ ] **(2.91.1, dev environment) Dashboards first, in this order** — `plan_dev_environment.md` §5.A; **before** anything
+  runs on `dev`, and above all before any cron is pointed at it:
+  1. Vercel → Storage → the Neon connection: **untick Preview**, so production's `POSTGRES_URL` stops being injected.
+  2. Neon: create branch `dev` from `main`; **reset the owner password on that branch** (it inherits production's).
+  3. Cloudflare R2: `expeditop-dev`, `expeditop-kyc-dev`, `expeditop-shipments-dev`; DNS `dev` CNAME → `cname.vercel-dns.com`.
+  4. Stripe test mode: webhook `https://dev.expeditop.fr/api/stripe/webhook`; Google OAuth redirect for the dev host.
+  5. Split the still-shared rows in Vercel (`R2_BUCKET_NAME`, `BETTER_AUTH_SECRET`, `NEXT_PUBLIC_APP_URL`,
+     `EXPEDION_*_API_KEY`: edit → untick Preview), then `vercel login`, `pnpm env:bootstrap:dev`, `pnpm env:audit`.
+  6. GitHub secrets `MIRROR_SOURCE_URL`, `VERCEL_TOKEN`; create `dev` from `main`; bind `dev.expeditop.fr` to it in
+     Vercel → Domains; run « Refresh dev database », then check `curl -I` shows `X-Robots-Tag`.
+- [ ] **(2.91.1)** Rotate nothing, but note: until step 5 is done a preview deployment holds production's
+  `BETTER_AUTH_SECRET`.
 - [ ] **(2.87.0, driver types) Run Actions → « Migrate database » on the release branch before `main` moves** —
   `0048_in_house_driver_no_siret` drops `NOT NULL` on `carriers.siret`. New code on an unmigrated database
   500s every in-house file creation (« Gérer le rôle », the in-house form, the application tick).
@@ -683,6 +695,103 @@ than leaving it in a chat message.
       Until then its application page says driver access is off.
 
 ---
+
+## ✅ 2026-11-21 — Sidebar rail, message filters, landing header, readable sign-in errors (2.92.0)
+
+*« and anything you can suggest based on the feedback pls go ahead implement with your suggestion ».*
+
+Spec `client_feedback_2026_11_19_spec.md` §10. Monitor rows 17, 22, 26, 27, 30, 32, 36 updated. **No migration.** Pushed to `main` together with 2.91.1.
+
+**Shell** (#17, #36) — `use-sidebar-rail.ts` + `SidebarRail.tsx` shared by the three shells: sidebar from `lg`
+(1024 px), rail `w-16` or expanded `w-64`, default drawn by CSS (rail under 1280 px), choice in
+`localStorage` `expeditoo-sidebar`. `use-pending-nav.ts`: the tapped bar item is active at once, a second tap is
+dropped, cleared on path change or after 8 s. Four `loading.tsx` at the segment roots. Sonner: top below `lg`.
+`AdminBottomNav` shares `FLOATING_NAV_LABEL`. Four leftovers still keyed on `xl` were moved to `lg`
+(`ImpersonationBanner`, `page-loader`, `JobBidSection`, `JobBoard`).
+
+**Messages** (#26, #32) — `conversation-filter.ts` holds the status → bucket map once, typed on
+`listingStatusEnum` and tested against it. `?filter=` on `GET /api/messages/conversations`, counts at
+`/conversations/counts` (one grouped query). `initialsOf` for the three avatars; rows are three lines. Names untouched.
+
+**Landing and auth** (#27, #30) — `LandingNavbar` below `sm`: one two-line « Connexion / Inscription » link;
+from `sm` « Inscription » beside « Connexion ». `auth-errors.ts` maps Better Auth codes to keys, rendered by
+`AuthErrorNotice` on sign-in, sign-up, forgot and reset. `proxy.ts` passes the session email to `/verify-email`.
+
+**Bidding deadline** (#22) — `biddingRunsUntil` now also runs a **direct precise-day request whose window is longer
+than 6 h** to its window's end; a precise hour keeps closing on its start. The form's `publication.ts` mirrors it.
+
+**Found on the way.** A reset-password error used to end the form for any failure; only a dead link does now.
+`signInWithGoogle` swallowed a provider refusal. Sign-in's zod messages were English literals and the
+`auth.login.errors.*` copy was read by nothing.
+
+**Verification** (each alone, on the final tree)
+- `npx tsc --noEmit` — 0 errors on the combined tree (the one earlier error was in the peer's `scripts/vercel-build.ts`, since fixed).
+- `npx eslint .` — 0 errors, 73 warnings.
+- `pnpm test` — 4,038 / 4,038 on the final combined tree. (The first run had 1 failure, `listings.service.test.ts`, a
+  test pinning the old rule for an 8 h precise window; it was rewritten.)
+- `pnpm build` — succeeds on the combined tree (2.91.1 + 2.92.0), run after the peer session finished.
+- **Not run:** any browser, device or real database.
+
+**Known limits** — the rail has never been seen at 1024 / 1280 px; the grouped count query has only met mocks; the
+landing header at 640–1000 px probably wraps; `expired` in the filter is the stored status, so a past-deadline open
+job reads « waiting » until the sweep runs.
+
+---
+
+## ✅ 2026-11-21 — A dev deployment that cannot reach production (2.91.1)
+
+*« analyze the codebase … prepare the setup for the dev env so it doesn't clash with prod, especially the database,
+for the sub domain dev.expeditop.fr … from codebase, github dev branch, until the vercel CLI » — then « go ahead
+and implement with your suggestion ».*
+
+Plan `docs/plans/plan_dev_environment.md`; contract `docs/specs/environments_spec.md` §10–11. **No migration.**
+Not committed. Nothing outside the repo has been touched: no Vercel variable, no GitHub secret, no branch pushed.
+
+**What was found (2026-11-20, via the Vercel API, names and scopes only).** The code already had three environments and
+fail-closed database guards; Vercel's Preview scope did not. One value served Production **and** Preview for
+`POSTGRES_URL`, `POSTGRES_URL_NON_POOLING` (Neon integration), `R2_BUCKET_NAME`, `BETTER_AUTH_SECRET`,
+`NEXT_PUBLIC_APP_URL`, `EXPEDION_API_KEY` and `EXPEDION_ADMIN_API_KEY`. The database share is caught at boot
+(`src/db/index.ts`), so previews crash rather than write. **The bucket share is caught by nothing**: `cleanup-images`
+deletes every object the database does not reference, so a dev deployment on another database and production's
+bucket would empty production's images (its 20 % floor and the dry-run default are the only brakes). A shared
+`BETTER_AUTH_SECRET` makes a dev session cookie valid in production.
+
+**What changed.**
+- `vercel.json` → `pnpm build:vercel` → `scripts/vercel-build.ts`: on `VERCEL_ENV=preview` **and** branch `dev` only
+  (`src/lib/build-migrate.ts`), run `pnpm db:migrate` against the unpooled URL (retrying only connection failures),
+  then `pnpm build`. Production and other previews build as before. `migrate.ts`'s allow-list is still the boundary.
+- `next.config.mjs`: `X-Robots-Tag: noindex, nofollow` on every non-production build. `src/components/EnvBadge.tsx`
+  (mounted in `app/layout.tsx`): amber « DEV » tab when `APP_ENV === "preview"`.
+- Workflows: `gates.yml` also on push to `dev`; `migrate.yml` gains a `dev` choice (**no** `MIGRATE_TARGET`, so a
+  production URL in the dev secret is refused); `scheduled-jobs.yml` gains `target: production | dev` for manual runs —
+  the schedule still reaches production only; new `refresh-dev-db.yml` and `env-audit.yml`.
+- `scripts/db-mirror.sh`: **now copies `drizzle.__drizzle_migrations`.** `pg_dump --schema=public` does not carry it,
+  so a mirrored database kept its own journal beside production's tables and `db:migrate` could report success while
+  applying nothing. Temp files renamed `name.XXXXXX` — macOS `mktemp` does not expand X's followed by a suffix, so a
+  killed run left a literal file and every later run failed with « File exists ».
+- `scripts/sql/anonymize.sql`: **the mirror had never completed.** It wrote one SIRET (`73282932000074`) to every
+  carrier and `carriers.siret` is UNIQUE, so it died on the second carrier. Each now gets `9` + a 13-digit sequence;
+  an in-house driver's NULL stays NULL.
+- `src/lib/env-audit.ts`, `scripts/env-audit.ts` (`pnpm env:audit`): fails when a `MUST_DIFFER` key is one shared row.
+  `scripts/env-bootstrap-dev.sh` (`pnpm env:bootstrap:dev`) writes the Preview values once; refuses the production
+  endpoint, never uses `--force`. `env:pull:dev` added.
+
+**Judgment calls.** Preview scope bound to a branch, not a Vercel custom environment (one slot, and the code has three
+environments). Raw Neon `reset_to_parent` rejected for the anonymised mirror — it would put KYC keys, password hashes
+and live Stripe ids on a public host. `MOCK_PAYMENTS` off on dev (Stripe test mode), so the real charge path, never yet
+exercised in production, gets a test-card pass. `refresh-dev-db.yml` requires `DEV_USER_PASSWORD`: the seed script's
+default is in a public repository and dev is a public host.
+
+**Verification.** The mirror was run end to end into a throwaway local database (production read through
+`mirror_readonly`): dump 11 MB, journal 48 rows copied, scrub and `verify-anonymized.sql` passed, 22 users, 7 carriers
+with distinct SIRETs, then `pnpm db:migrate` applied nothing (production is at 48 = the repo). The first run failed
+on the SIRET bug above, the second on the stale temp file; both fixed. Header checks: `headers()` returns the noindex
+rule for `APP_ENV=preview` and `[]` for production. Script syntax `bash -n` clean. Unit tests added:
+`build-migrate`, `env-audit`, `EnvBadge`.
+
+**Known limits.** `scripts/vercel-build.ts` and the three workflows have not run — they need the operator steps below.
+The refresh workflow installs `postgresql-client-18` from apt.postgresql.org (production is on 18). Vercel cannot
+override an integration-managed `POSTGRES_URL` in place: untick Preview on the Neon integration first.
 
 ## ✅ 2026-11-20 — The client's feedback of 19 November, the clear points (2.91.0)
 

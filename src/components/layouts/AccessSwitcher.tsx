@@ -85,7 +85,9 @@ export function AccessSwitcher({
       className={cn(
         "gap-1 text-[10px] uppercase tracking-wide",
         MODE_TONE[mode],
-        className
+        // On the trigger instead when there is one: hiding only the badge
+        // left an empty, focusable button behind it.
+        !interactive && className
       )}
       title={t("hint")}
     >
@@ -111,7 +113,10 @@ export function AccessSwitcher({
       <DropdownMenu defaultOpen={defaultOpen}>
         <DropdownMenuTrigger
           aria-label={tSwitch("srLabel")}
-          className="rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className={cn(
+            "rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            className
+          )}
         >
           {badge}
         </DropdownMenuTrigger>

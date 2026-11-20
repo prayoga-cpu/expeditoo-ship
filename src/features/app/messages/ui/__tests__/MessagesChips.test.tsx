@@ -12,6 +12,11 @@ vi.mock("next/link", () => ({
   ),
 }));
 
+// The state-of-the-job row reads its counts over the network; not under test here.
+vi.mock("../../hooks/useConversationCounts", () => ({
+  useConversationCounts: () => ({ data: undefined }),
+}));
+
 const tr = createTranslator({ locale: "fr", messages: fr as Catalogue, onError: () => {} });
 
 /** client_feedback_2026_10_21_spec.md §D5 */

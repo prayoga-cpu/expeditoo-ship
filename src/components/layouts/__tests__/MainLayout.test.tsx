@@ -5,6 +5,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import en from "../../../../messages/en.json";
 
 import { MainLayout } from "../MainLayout";
+import { withSidebarCopy } from "./sidebar-messages";
+import { SIDEBAR_RAIL_KEY } from "../use-sidebar-rail";
 import { AccessModeProvider } from "@/lib/access-mode-context";
 import { ACTIVE_ACCESS_KEY } from "@/lib/active-access";
 import type { CarrierApplication } from "@/features/app/carrier/api/carrier.api";
@@ -40,7 +42,7 @@ vi.mock("@/features/app/carrier/hooks/useCarrier", () => ({
 
 function renderWith() {
   return render(
-    <NextIntlClientProvider locale="en" messages={en}>
+    <NextIntlClientProvider locale="en" messages={withSidebarCopy(en)}>
       <AccessModeProvider>
         <MainLayout>content</MainLayout>
       </AccessModeProvider>
@@ -53,6 +55,72 @@ const sidebarHrefs = () =>
     .getAllByRole("link")
     .map((link) => link.getAttribute("href"))
     .filter((href): href is string => href !== null);
+
+describe("MainLayout sidebar rail", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    application = null;
+    auth.user = { roles: ["carrier", "driver"] };
+    window.matchMedia = (() => ({
+      matches: false,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    })) as unknown as typeof window.matchMedia;
+  });
+
+  const sidebarLinks = () =>
+    within(screen.getByRole("complementary")).getAllByRole("link").length;
+
+  it("renders the three-line toggle, wired to the sidebar", () => {
+    renderWith();
+    const toggle = screen.getByRole("button", { name: "Expand the menu" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(toggle).toHaveAttribute("aria-controls", screen.getByRole("complementary").id);
+  });
+
+  it("is a rail by default below xl, and expanding it loses no entry", () => {
+    renderWith();
+    const aside = screen.getByRole("complementary");
+    expect(aside).toHaveAttribute("data-rail", "auto");
+    const before = sidebarLinks();
+
+    fireEvent.click(screen.getByRole("button", { name: "Expand the menu" }));
+
+    expect(aside).toHaveAttribute("data-rail", "off");
+    expect(sidebarLinks()).toBe(before);
+    expect(screen.getByRole("button", { name: "Collapse the menu" })).toHaveAttribute(
+      "aria-expanded",
+      "true"
+    );
+    expect(window.localStorage.getItem(SIDEBAR_RAIL_KEY)).toBe("expanded");
+  });
+
+  it("keeps every link named and titled for the rail", () => {
+    renderWith();
+    const aside = within(screen.getByRole("complementary"));
+    const trips = aside.getByRole("link", { name: "My trips" });
+    expect(trips).toHaveAttribute("title", "My trips");
+  });
+
+  it("restores a remembered rail", () => {
+    window.localStorage.setItem(SIDEBAR_RAIL_KEY, "rail");
+    renderWith();
+    expect(screen.getByRole("complementary")).toHaveAttribute("data-rail", "on");
+  });
+
+  it("shows the sidebar from lg and drops the phone bar there", () => {
+    renderWith();
+    const aside = screen.getByRole("complementary");
+    expect(aside.className).toContain("lg:flex");
+    expect(aside.className).not.toContain("xl:flex");
+    const bar = screen
+      .getAllByRole("link", { name: /Messages/ })
+      .map((link) => link.closest("nav"))
+      .find((nav) => !nav?.closest("aside"));
+    expect(bar?.className).toContain("lg:hidden");
+    expect(bar?.className).not.toContain("xl:hidden");
+  });
+});
 
 describe("MainLayout sidebar", () => {
   beforeEach(() => {

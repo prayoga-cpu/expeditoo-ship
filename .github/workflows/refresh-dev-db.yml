@@ -1,0 +1,113 @@
+name: Refresh dev database
+
+# Replaces the development database (the Neon `dev` branch behind
+# dev.expeditop.fr) with an ANONYMISED copy of production, then re-applies the
+# migrations production does not have yet.
+#
+# This is `pnpm db:mirror` run from CI, and nothing more: one read-only
+# pg_dump of production, a restore into the dev database, scripts/sql/
+# anonymize.sql, then scripts/sql/verify-anonymized.sql, which fails the run if
+# a single row still carries what the scrub was meant to remove. The copy is
+# never raw — that is why this is not a Neon "reset to parent", which would put
+# real names, password hashes, KYC file keys and live Stripe ids on a public
+# host. docs/specs/environments_spec.md §5, §10.
+#
+# Manual, with a typed confirmation: it throws away whatever dev holds.
+#
+# Requires, in repo Settings:
+#   Secrets
+#     MIRROR_SOURCE_URL   production's DIRECT url as the read-only
+#                         `mirror_readonly` role. Never the owner: this
+#                         workflow must be unable to write to production.
+#     POSTGRES_URL_DEV    the dev database's DIRECT url.
+#     DEV_USER_PASSWORD   password for the seeded sign-in accounts
+#                         (admin@dev.local …). REQUIRED — the script's default
+#                         is written in a public repository, and dev is a
+#                         public host.
+#   Variables
+#     DEV_DB_REFS         the dev Neon endpoint id. The restore refuses any
+#                         target not listed here, production included.
+#     MIRROR_KEEP_EMAILS  optional, comma-separated: accounts left readable.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: Type "refresh" to replace the dev database
+        required: true
+        type: string
+
+concurrency:
+  group: refresh-dev-db
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Refuse an unconfirmed run
+        if: inputs.confirm != 'refresh'
+        run: |
+          echo "::error::Type \"refresh\" in the confirm box to run this."
+          exit 1
+
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # pg_dump refuses a server newer than itself, and production is on
+      # PostgreSQL 18; the runner ships an older client.
+      - name: Install PostgreSQL 18 client tools
+        run: |
+          set -euo pipefail
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+            https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-18
+          echo "/usr/lib/postgresql/18/bin" >> "$GITHUB_PATH"
+
+      - name: Check the configuration
+        env:
+          MIRROR_SOURCE_URL: ${{ secrets.MIRROR_SOURCE_URL }}
+          POSTGRES_URL_DEV: ${{ secrets.POSTGRES_URL_DEV }}
+          DEV_USER_PASSWORD: ${{ secrets.DEV_USER_PASSWORD }}
+          DEV_DB_REFS: ${{ vars.DEV_DB_REFS }}
+        run: |
+          missing=""
+          [ -n "$MIRROR_SOURCE_URL" ] || missing="$missing secrets.MIRROR_SOURCE_URL"
+          [ -n "$POSTGRES_URL_DEV" ]  || missing="$missing secrets.POSTGRES_URL_DEV"
+          [ -n "$DEV_USER_PASSWORD" ] || missing="$missing secrets.DEV_USER_PASSWORD"
+          [ -n "$DEV_DB_REFS" ]       || missing="$missing vars.DEV_DB_REFS"
+          if [ -n "$missing" ]; then
+            echo "::error::Not set:$missing — see the header of this workflow."
+            exit 1
+          fi
+
+      - name: Mirror production into dev, anonymised
+        env:
+          MIRROR_SOURCE_URL: ${{ secrets.MIRROR_SOURCE_URL }}
+          MIRROR_TARGET_URL: ${{ secrets.POSTGRES_URL_DEV }}
+          MIRROR_KEEP_EMAILS: ${{ vars.MIRROR_KEEP_EMAILS }}
+          DEV_USER_PASSWORD: ${{ secrets.DEV_USER_PASSWORD }}
+          DEV_DB_REFS: ${{ vars.DEV_DB_REFS }}
+        run: bash scripts/db-mirror.sh
+
+      # The mirror carries production's migration journal across, so this
+      # applies exactly the migrations that are on `dev` and not yet on
+      # production. No MIGRATE_TARGET: the development-database guard stays on.
+      - name: Re-apply migrations production does not have yet
+        env:
+          POSTGRES_URL: ${{ secrets.POSTGRES_URL_DEV }}
+          DEV_DB_REFS: ${{ vars.DEV_DB_REFS }}
+        run: pnpm db:migrate

@@ -186,6 +186,11 @@ export async function proxy(req: NextRequest) {
     // Redirect unverified users to verification page
     const url = req.nextUrl.clone();
     url.pathname = "/verify-email";
+    // The page's resend button needs the address, and the session knows it:
+    // without it the person was asked to type an email they had just used.
+    if (session.user.email) {
+      url.searchParams.set("email", session.user.email);
+    }
     return NextResponse.redirect(url);
   }
 

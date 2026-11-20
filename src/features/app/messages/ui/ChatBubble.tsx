@@ -9,6 +9,8 @@ interface ChatBubbleProps {
   avatar?: string;
   /** The writer's name, for the avatar's initial. */
   name?: string;
+  /** Their two letters, when known apart from `name`. */
+  initials?: string;
   readByOther?: boolean;
   onDelete?: () => void;
 }
@@ -19,11 +21,12 @@ export function ChatBubble({
   timestamp,
   avatar,
   name,
+  initials,
   readByOther,
 }: ChatBubbleProps) {
   return (
     <div className={cn("flex gap-3 mb-4", isOwn && "flex-row-reverse")}>
-      {!isOwn && <BubbleAvatar name={name} src={avatar} />}
+      {!isOwn && <BubbleAvatar name={name} initials={initials} src={avatar} />}
       <div className={cn("flex flex-col max-w-xs", isOwn && "items-end")}>
         <div
           className={cn(

@@ -17,7 +17,9 @@ name: Gates
 
 on:
   push:
-    branches: [main]
+    # `dev` is what dev.expeditop.fr is built from, and it is pushed to
+    # directly — so it is checked on push, not only when it reaches a PR.
+    branches: [main, dev]
   pull_request:
 
 concurrency:

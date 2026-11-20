@@ -16,8 +16,8 @@ at production again.
 
 | | `local` | `preview` | `production` |
 |---|---|---|---|
-| Runs on | a developer's machine | a Vercel Preview deployment (per-PR) | the Vercel Production deployment |
-| Database | local PostgreSQL 17, or a registered dev Supabase project | a registered dev Supabase project | the production Supabase project |
+| Runs on | a developer's machine | a Vercel Preview deployment: `dev.expeditop.fr` (branch `dev`) and per-PR previews | the Vercel Production deployment (`www.expeditop.fr`) |
+| Database | local PostgreSQL, or the Neon `dev` branch | the Neon `dev` branch (§10) | the production Neon endpoint |
 | Stripe | test keys | test keys | live keys (asserted at boot) |
 | Ably | shared key, channels namespaced `local:*` | shared key, channels namespaced `preview:*` | shared key, unprefixed channels |
 | Email | redirected to `EMAIL_DEV_RECIPIENT` or dropped | redirected to `EMAIL_DEV_RECIPIENT` or dropped | sent for real |
@@ -83,8 +83,8 @@ boot) checks the direction the two guards above cannot: that the **production**
 deployment is actually pointed at the production database, not silently
 running against an empty or wrong one.
 
-To add a second development database (a Supabase project, so Preview deploys
-and teammates share one): create the Supabase project, then add its ref to
+To add a second development database (a Neon branch, so Preview deploys
+and teammates share one): create it, then add its endpoint id to
 `DEV_DB_REFS` in `.env.local` and in the Vercel Preview environment.
 
 ## 5. `pnpm db:mirror` — anonymised production → dev copy
@@ -161,6 +161,9 @@ pnpm env:list                              # read-only: what's set, per scope
 pnpm env:set STRIPE_SECRET_KEY production  # prompts for the value (hidden)
 pnpm env:pull:production                   # → .env.production.local (reference only)
 pnpm env:pull:preview                      # → .env.preview.local (reference only)
+pnpm env:pull:dev                          # the Preview values the `dev` branch gets
+pnpm env:audit                             # fails if a key is shared with Production (§11)
+pnpm env:bootstrap:dev                     # one-time: write the dev values (§10)
 ```
 
 `env:pull:*` output files are for **reading**, to compare what's configured —
@@ -177,3 +180,51 @@ pnpm db:mirror                 # OR: anonymised copy of production
 pnpm db:seed:dev-users         # sign-in accounts (admin@dev.local etc., see the script)
 pnpm dev
 ```
+
+## 10. The dev deployment: `dev.expeditop.fr`
+
+A long-lived deployment built from the git branch `dev`, in Vercel's **Preview**
+scope. `VERCEL_ENV=preview` makes `APP_ENV` `"preview"`, so no code knows a
+fourth environment and a pull-request preview is isolated exactly as `dev` is.
+Plan: `docs/plans/plan_dev_environment.md`.
+
+**What makes it safe — all values are Preview-scope, none shared with Production:**
+
+| Concern | Preview value | If it were wrong |
+|---|---|---|
+| Database | Neon `dev` branch, endpoint id in `DEV_DB_REFS` | `src/db/index.ts` refuses a production URL at boot |
+| Migrations | `src/db/migrate.ts` allow-lists `DEV_DB_REFS` only | refuses, unless `MIGRATE_TARGET=production` (CI only) |
+| Stripe | `sk_test_` / `pk_test_`, its own `whsec_` | `env-assertions.ts` refuses a live key outside production |
+| R2 | `expeditop-dev`, `-kyc-dev`, `-shipments-dev` | **not caught by any guard**: `cleanup-images` deletes what the database does not reference, so a shared `R2_BUCKET_NAME` lets dev empty production's bucket |
+| Sessions | its own `BETTER_AUTH_SECRET` | a shared one makes a dev cookie valid in production |
+| Cron | its own `CRON_SECRET`; GitHub's schedule only calls production | dev sweeps run by hand: Actions → Scheduled jobs → `target: dev` |
+| Mail | rewritten to `EMAIL_DEV_RECIPIENT` | dropped when unset |
+| Indexing | `X-Robots-Tag: noindex, nofollow` on every response (`next.config.mjs`) | the host is public by necessity (Stripe, Expedion) |
+| Recognition | amber « DEV » tab on every page (`EnvBadge`) | two tabs look identical |
+
+`MOCK_PAYMENTS` is **off** on dev: it runs real Stripe in test mode with test
+cards and a real test-mode webhook.
+
+**Migrations.** The `dev` branch's Vercel build runs `pnpm db:migrate` first
+(`vercel.json` → `scripts/vercel-build.ts`, condition in
+`src/lib/build-migrate.ts`); a failed migration fails the build and the previous
+deployment keeps serving. Production and other previews never migrate in the
+build — production by `migrate.yml`, deliberately.
+
+**Data.** Actions → **Refresh dev database** runs `scripts/db-mirror.sh` from CI:
+an anonymised copy of production, verified, plus production's migration
+journal (`drizzle.__drizzle_migrations`, which `pg_dump --schema=public` does
+not carry), then `pnpm db:migrate` for what is on `dev` and not on production.
+Never a raw Neon branch reset: that would put real names, password hashes, KYC
+keys and live Stripe ids on a public host. Because a Neon branch inherits its
+parent's role passwords, the `dev` branch's password is reset on creation.
+
+## 11. Detecting drift
+
+`pnpm env:audit` (and `.github/workflows/env-audit.yml`, Mondays) reads Vercel's
+variable **names and scopes** — never values — and fails when a key in
+`MUST_DIFFER` (`src/lib/env-audit.ts`) is stored as one value for Production and
+Preview. On 2026-11-20 five were: `POSTGRES_URL`, `POSTGRES_URL_NON_POOLING`,
+`R2_BUCKET_NAME`, `BETTER_AUTH_SECRET`, `NEXT_PUBLIC_APP_URL`; so were both
+`EXPEDION_*_API_KEY`s. `pnpm env:bootstrap:dev` writes the Preview values once
+the dashboards are done; it never overwrites.

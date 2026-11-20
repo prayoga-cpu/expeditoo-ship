@@ -4,7 +4,6 @@ import { useEffect } from "react";
 import { NotificationBell } from "@/components/NotificationBell";
 import { HeaderToolbox } from "@/components/layouts/HeaderToolbox";
 import { AppVersionLink } from "@/components/ui/app-version";
-import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { ADMIN_NAV_GROUPS, badgeFor } from "../nav";
@@ -13,6 +12,14 @@ import { Button } from "@/components/ui/button";
 import { AdminBottomNav } from "./AdminBottomNav";
 import { AppSidebarHeader } from "@/components/layouts/AppSidebarHeader";
 import { HeaderAccount } from "@/components/layouts/HeaderAccount";
+import { AccessSwitcher } from "@/components/layouts/AccessSwitcher";
+import {
+  AppSidebar,
+  SidebarHeading,
+  SidebarLink,
+  SidebarToggle,
+} from "@/components/layouts/SidebarRail";
+import { RAIL, WHEN_RAIL, useSidebarRail } from "@/components/layouts/use-sidebar-rail";
 import { useAdminNavCounts } from "../hooks/useAdminNavCounts";
 import type { AdminNavCounts } from "@/server/services/admin-nav.service";
 import { useTranslations } from "next-intl";
@@ -51,6 +58,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const tCommon = useTranslations("common");
   const counts = useAdminNavCounts();
   const { mode, qualifiedModes, setMode } = useActiveAccessMode();
+  const rail = useSidebarRail();
 
   // Reaching this layout at all means the session is browsing the back
   // office. The switcher badge is only a client-side preference on top of
@@ -87,35 +95,28 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       <AppSidebarHeader href="/admin/expedion" />
       {/* p-4, not px-4: the removed subtitle's bottom padding had been standing
           in for the gap under the logo. Matches the app sidebar. */}
-      <nav className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
+      <nav className={cn("flex-1 min-h-0 overflow-y-auto p-4 space-y-4", RAIL.gutter)}>
         {ADMIN_NAV_GROUPS.map((group) => (
           <div key={group.id} className="space-y-1" role="group" aria-label={t(`navigation.groups.${group.labelKey}`)}>
-            <p className="px-4 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/70">
-              {t(`navigation.groups.${group.labelKey}`)}
-            </p>
+            <SidebarHeading>{t(`navigation.groups.${group.labelKey}`)}</SidebarHeading>
             {group.items.map((item) => {
               const active =
                 pathname === item.href || Boolean(pathname?.startsWith(`${item.href}/`));
               return (
-                <Link
+                <SidebarLink
                   key={item.href}
                   href={item.href}
-                  aria-current={active ? "page" : undefined}
-                  className={cn(
-                    "flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                    active
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  )}
+                  label={t(`navigation.${item.labelKey}`)}
+                  icon={item.icon}
+                  active={active}
+                  dense
                 >
-                  <item.icon className="w-5 h-5" />
-                  <span className="flex-1">{t(`navigation.${item.labelKey}`)}</span>
                   <NavBadge
                     count={badgeFor(counts, item)}
                     tone={item.badges ? BADGE_TONE[item.badges[0]] : "info"}
                     active={active}
                   />
-                </Link>
+                </SidebarLink>
               );
             })}
           </div>
@@ -135,9 +136,9 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       }
     >
       {/* Desktop Sidebar - Static like MainLayout */}
-      <aside className="hidden xl:flex w-64 shrink-0 overflow-hidden border-r bg-card flex-col">
+      <AppSidebar state={rail.state}>
         <SidebarContent />
-      </aside>
+      </AppSidebar>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -145,14 +146,18 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         <header className="border-b border-border bg-card shrink-0 z-40">
           <div className="flex items-center justify-between px-4 md:px-6 py-2 h-12">
             <div className="flex min-w-0 items-center gap-3">
+              <SidebarToggle rail={rail} />
               <h1 className="text-lg font-bold text-foreground">
                 {t("panelTitle")}
               </h1>
+              {/* The sidebar's switcher does not fit a rail; it rides here
+                  while the sidebar is one. */}
+              <AccessSwitcher className={WHEN_RAIL.sidebarOnly[rail.state]} />
               <AppVersionLink className="hidden md:inline-flex" />
             </div>
             <div className="flex items-center gap-2">
               {/* The sidebar no longer carries its own "Back to App" — this is
-                  the only way out now, at every width, not just below xl.
+                  the only way out now, at every width, not just below lg.
                   A plain `Link` used to leave `mode` at "admin", so
                   `MainLayout`'s own guard sent `/profile` straight back here
                   before the click ever registered as working. */}
@@ -171,7 +176,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             keeps absolutely positioned descendants inside this scroller — see
             MainLayout, where their escape showed up as a second scrollbar. */}
         <main
-          className="relative flex-1 min-h-0 overflow-y-auto overflow-x-hidden pb-[calc(88px_+_env(safe-area-inset-bottom))] xl:pb-0 overscroll-contain"
+          className="relative flex-1 min-h-0 overflow-y-auto overflow-x-hidden pb-[calc(88px_+_env(safe-area-inset-bottom))] lg:pb-0 overscroll-contain"
           style={{ scrollbarGutter: "stable" }}
         >
           <div className="p-4 md:p-6">{children}</div>
@@ -205,7 +210,7 @@ function NavBadge({
   if (!count) return null;
 
   return (
-    <span className="flex items-center">
+    <span className={cn("flex items-center", RAIL.badge)}>
       <span
         aria-hidden
         className={cn(

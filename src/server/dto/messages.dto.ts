@@ -1,4 +1,8 @@
 import { z } from "zod";
+import {
+  CONVERSATION_FILTERS,
+  DEFAULT_CONVERSATION_FILTER,
+} from "@/lib/conversation-filter";
 
 export const createConversationSchema = z.object({
   recipientId: z.string().min(1, "Recipient ID is required"),
@@ -26,6 +30,9 @@ export const getConversationsQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(50).default(20),
   search: z.string().optional(), // Search by participant name or listing title
+  // The state of the job the conversation is about (conversation-filter.ts).
+  // Derived from the one list, so a value the chips do not offer is refused.
+  filter: z.enum(CONVERSATION_FILTERS).default(DEFAULT_CONVERSATION_FILTER),
 });
 
 export type CreateConversationInput = z.infer<typeof createConversationSchema>;

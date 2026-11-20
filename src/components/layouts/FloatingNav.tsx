@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { NAV_PRESS, usePendingNav } from "./use-pending-nav";
 
 export interface FloatingNavItem {
   href: string;
@@ -30,9 +31,18 @@ export interface FloatingNavItem {
  * one word of about eight letters, which is why the bars carry their own
  * short labels (`common.navigation.bar.*`), and a two-word label wraps to a
  * second line instead of being cut.
+ *
+ * The bar belongs to phones and tablets: from `lg` the sidebar takes over, as
+ * a rail on a small laptop (2.92.0 #17). It used to stay until `xl`, which put
+ * a phone's tab bar on a 1024–1279px laptop.
  */
 export const FLOATING_NAV_OUTER =
-  "pointer-events-none fixed inset-x-0 bottom-0 z-50 px-2 pb-[calc(12px_+_env(safe-area-inset-bottom))] sm:px-4 xl:hidden";
+  "pointer-events-none fixed inset-x-0 bottom-0 z-50 px-2 pb-[calc(12px_+_env(safe-area-inset-bottom))] sm:px-4 lg:hidden";
+/** The label under an icon: 12px, two lines at most, broken between words; a
+ * single word too long for the item breaks rather than disappearing. Below
+ * 360px (the first iPhone SE) 12px no longer fits one word. */
+export const FLOATING_NAV_LABEL =
+  "line-clamp-2 w-full text-center text-xs leading-[1.15] tracking-tight break-words max-[359px]:text-[11px]";
 export const FLOATING_NAV_CAPSULE =
   "pointer-events-auto mx-auto max-w-lg rounded-[30px] border border-white/40 bg-background/60 p-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.16)] backdrop-blur-2xl backdrop-saturate-150 dark:border-white/10 dark:bg-background/50";
 
@@ -43,22 +53,31 @@ export function FloatingNav({
   items: FloatingNavItem[];
   ariaLabel?: string;
 }) {
+  const { pendingHref, onNavigate } = usePendingNav();
+
   return (
     <nav aria-label={ariaLabel} className={FLOATING_NAV_OUTER}>
       <div className={cn(FLOATING_NAV_CAPSULE, "flex items-stretch gap-0.5")}>
-        {items.map((item) => (
+        {items.map((item) => {
+          // The tapped item reads as current while its page is on the way
+          // (use-pending-nav.ts); `aria-current` keeps telling the truth.
+          const lit = pendingHref ? pendingHref === item.href : item.active;
+          return (
           <Link
             key={item.href}
             href={item.href}
             aria-current={item.active ? "page" : undefined}
+            data-pending={pendingHref === item.href ? "" : undefined}
+            onClick={(event) => onNavigate(event, item.href, item.active)}
             className={cn(
-              "relative flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-[24px] px-0.5 py-1 transition-colors duration-200",
+              "relative flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-[24px] px-0.5 py-1 transition-[color,background-color,transform] duration-200",
+              NAV_PRESS,
               // `bg-nav-active` is a plain colour with its own alpha
               // (globals.css). `bg-foreground/[0.08]` compiled to a solid
               // `var(--foreground)` with the tint in a `color-mix()` override,
               // and iOS Safari 15.4–16.1 has no `color-mix()`: the active item
               // was a near-black pill with a near-black label (2.91.0 #29).
-              item.active
+              lit
                 ? "bg-nav-active text-primary"
                 : "text-muted-foreground hover:text-foreground"
             )}
@@ -73,17 +92,15 @@ export function FloatingNav({
             </span>
             <span
               className={cn(
-                // Two lines at most, broken between words; a single word too
-                // long for the item breaks rather than disappearing. Below
-                // 360px (the first iPhone SE) 12px no longer fits one word.
-                "line-clamp-2 w-full text-center text-xs leading-[1.15] tracking-tight break-words max-[359px]:text-[11px]",
-                item.active ? "font-semibold text-foreground" : "font-medium"
+                FLOATING_NAV_LABEL,
+                lit ? "font-semibold text-foreground" : "font-medium"
               )}
             >
               {item.label}
             </span>
           </Link>
-        ))}
+          );
+        })}
       </div>
     </nav>
   );

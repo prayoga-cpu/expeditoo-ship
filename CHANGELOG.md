@@ -14,6 +14,45 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.92.0] - 2026-11-21 · feat
+
+More of the client's feedback of 19 November.
+
+- **A side bar on laptops.** From a 1024 px-wide window the menu is a narrow
+  column of icons on the left, with a three-line button at the top to open it
+  fully; your choice is remembered. Phones and tablets keep the bottom bar.
+- **The bottom bar answers at once.** The button you tap lights up immediately
+  and a second tap on it does nothing, instead of seeming to ignore you. Pages
+  show a loading screen while they open. Notifications now appear at the top on
+  phones, so they no longer hide the bar.
+- **Messages by state of the request.** Filter your conversations by
+  « En attente de transporteur », « En cours », « Terminées » or « Sans
+  annonce », each with its count. The conversation list shows initials in the
+  round picture and uses less room per row.
+- **The first screen of the site.** On a phone, the header offers
+  « Connexion / Inscription » where there was only « Devenir transporteur »; on
+  a larger screen, « Inscription » sits beside « Connexion ».
+- **Sign-in problems explained in French.** A wrong password, an e-mail
+  already registered, a suspended account, too many attempts or a lost
+  connection each tell you what to do next, instead of an English message.
+  Being sent to « Vérifiez votre email » now already knows your address.
+- **A request for « a precise day, any time »** takes offers until the end of
+  that day's collection window, not before the day starts.
+- The bottom bar of the admin panel has the same larger labels as the others.
+
+## [2.91.1] - 2026-11-21 · infra
+
+Nothing you can see on the live site changes. This prepares a separate test
+site, `dev.expeditop.fr`, where the team can try changes and debug without any
+risk to real drivers, requests or payments.
+
+- The test site has its own database, its own file storage, its own login
+  secrets and Stripe in test mode, and cannot read or write the real ones.
+- Every page on the test site carries a small « Dev » tab and asks search
+  engines not to list it.
+- Refreshing the test data copies the real data with every name, e-mail, phone
+  number, address and document removed.
+
 ## [2.91.0] - 2026-11-20 · feat
 
 The client's feedback of 19 November, the points that needed nobody's answer.

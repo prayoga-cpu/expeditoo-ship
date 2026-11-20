@@ -29,16 +29,47 @@ const PICKUP_FROM = new Date("2026-10-08T04:00:00.000Z");
 const PICKUP_UNTIL = new Date("2026-10-31T21:00:00.000Z");
 
 describe("biddingRunsUntil", () => {
-  const flexible = { isFlexible: true, pickupUntil: PICKUP_UNTIL };
-  const exact = { isFlexible: false, pickupUntil: PICKUP_UNTIL };
+  const flexible = { isFlexible: true, pickupFrom: PICKUP_FROM, pickupUntil: PICKUP_UNTIL };
+  // A precise hour: the form's one-hour window.
+  const exactHour = {
+    isFlexible: false,
+    pickupFrom: PICKUP_FROM,
+    pickupUntil: new Date(PICKUP_FROM.getTime() + HOUR),
+  };
+  // « N'importe quand » on a precise day: 06:00–22:00.
+  const exactDay = {
+    isFlexible: false,
+    pickupFrom: PICKUP_FROM,
+    pickupUntil: new Date(PICKUP_FROM.getTime() + 16 * HOUR),
+  };
 
   it("runs a flexible direct request to the end of its window", () => {
     expect(biddingRunsUntil(flexible, true)).toEqual(PICKUP_UNTIL);
   });
 
-  it("leaves an escalated job and an exact request on their start", () => {
+  it("leaves an escalated job and a precise hour on their start", () => {
     expect(biddingRunsUntil(flexible, false)).toBeNull();
-    expect(biddingRunsUntil(exact, true)).toBeNull();
+    expect(biddingRunsUntil(exactHour, true)).toBeNull();
+  });
+
+  it("runs a precise day to the end of its window, on a direct request only", () => {
+    expect(biddingRunsUntil(exactDay, true)).toEqual(exactDay.pickupUntil);
+    expect(biddingRunsUntil(exactDay, false)).toBeNull();
+  });
+
+  it("keeps a precise window of six hours or less on its start", () => {
+    const sixHours = { ...exactHour, pickupUntil: new Date(PICKUP_FROM.getTime() + 6 * HOUR) };
+    expect(biddingRunsUntil(sixHours, true)).toBeNull();
+  });
+
+  it("gives a precise day for tomorrow its window, not midnight tonight", () => {
+    // 21:30 UTC on the 7th; pickup 04:00–20:00 UTC on the 8th.
+    const closes = biddingDeadline(
+      exactDay.pickupFrom,
+      biddingRunsUntil(exactDay, true),
+      NOW
+    );
+    expect(closes).toEqual(new Date(exactDay.pickupUntil.getTime() - 6 * HOUR));
   });
 });
 

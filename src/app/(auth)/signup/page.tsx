@@ -13,7 +13,11 @@ import {
   buildSignupSchema,
   type SignupFormData,
 } from "@/features/auth/lib/signup-schema";
-import { AuthIntentNote, AuthSwitchLink } from "@/features/auth/ui";
+import {
+  AuthErrorNotice,
+  AuthIntentNote,
+  AuthSwitchLink,
+} from "@/features/auth/ui";
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 
@@ -26,7 +30,6 @@ export default function SignupPage() {
   } = useAuthActions();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [serverError, setServerError] = useState<string | null>(null);
   const t = useTranslations("auth.register");
 
   // First and last name asked separately, and an optional alias
@@ -42,27 +45,19 @@ export default function SignupPage() {
     defaultValues: EMPTY_SIGNUP,
   });
 
+  // A refusal comes back through the hook's `error`, as a key the notice
+  // below turns into a sentence (`auth-errors.ts`).
   const onSubmit = async (data: SignupFormData) => {
-    setServerError(null);
-    const result = await signUp(data.email, data.password, {
+    await signUp(data.email, data.password, {
       firstName: data.firstName,
       lastName: data.lastName,
       alias: data.alias,
     });
-
-    if (!result.success && result.error) {
-      setServerError(result.error);
-    }
     // If success, useAuthActions will redirect to verify-email
   };
 
   const handleGoogleSignIn = async () => {
-    setServerError(null);
-    const result = await signInWithGoogle();
-
-    if (!result.success && result.error) {
-      setServerError(result.error);
-    }
+    await signInWithGoogle();
   };
 
   return (
@@ -115,13 +110,7 @@ export default function SignupPage() {
           </Suspense>
 
           {/* Error Display */}
-          {(serverError || authError) && (
-            <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-              <p className="text-destructive text-sm">
-                {serverError || authError}
-              </p>
-            </div>
-          )}
+          <AuthErrorNotice error={authError} />
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">

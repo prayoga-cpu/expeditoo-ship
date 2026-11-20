@@ -70,12 +70,23 @@ SET label = 'Dev address',
     lng = round(lng::numeric, 2)::double precision;
 
 -- ---------------------------------------------------------------------------
--- Carriers. SIRET is replaced with INSEE's published example value, which is
--- Luhn-valid, so french-identifiers.ts validation still passes.
+-- Carriers. Each SIRET becomes a different made-up one: `carriers.siret` is
+-- UNIQUE, so the single example value this used to write failed on the second
+-- carrier and stopped the whole mirror. Fourteen digits is all
+-- french-identifiers.ts asks for. An in-house driver has no SIRET and keeps
+-- none.
 -- ---------------------------------------------------------------------------
+UPDATE "carriers" c
+SET siret = n.fake
+FROM (
+  SELECT id, '9' || lpad((row_number() OVER (ORDER BY id))::text, 13, '0') AS fake
+  FROM "carriers"
+  WHERE siret IS NOT NULL
+) n
+WHERE c.id = n.id;
+
 UPDATE "carriers"
 SET company_name = 'Dev Carrier ' || right(id, 6),
-    siret = '73282932000074',
     vat_number = NULL,
     contact_phone = '+3360000' || lpad((abs(hashtext(id)) % 10000)::text, 4, '0'),
     address_line = right(id, 3) || ' rue de Développement',

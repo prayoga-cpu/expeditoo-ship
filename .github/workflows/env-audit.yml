@@ -1,0 +1,37 @@
+name: Environment audit
+
+# Asks Vercel which environment variables exist in which scope — names and
+# targets only, never a value — and fails when a variable that must differ
+# between Production and Preview is stored as one shared value. That is how a
+# dev or preview deployment ends up holding production's database, bucket or
+# signing secret, and nothing in the repository can see it: the setting lives
+# in a dashboard. Rules: src/lib/env-audit.ts.
+#
+# Requires repo secret VERCEL_TOKEN (vercel.com/account/tokens, scoped to the
+# team). Read access is all it is used for.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 5 * * 1" # Mondays 05:00 UTC
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Audit
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: pnpm env:audit

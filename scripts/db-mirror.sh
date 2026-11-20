@@ -107,7 +107,7 @@ fi
 POSTGRES_URL="$TARGET_URL" POSTGRES_URL_NON_POOLING="$TARGET_URL" \
   npx --no-install tsx scripts/guard-db.ts "restore a production mirror into"
 
-DUMP_FILE="$(mktemp "${TMPDIR:-/tmp}/expeditoo-mirror-XXXXXX.dump")"
+DUMP_FILE="$(mktemp "${TMPDIR:-/tmp}/expeditoo-mirror.XXXXXX")"
 cleanup() { [ "$KEEP_DUMP" -eq 1 ] || rm -f "$DUMP_FILE"; }
 trap cleanup EXIT
 
@@ -144,6 +144,32 @@ if [ $RESTORE_STATUS -ne 0 ]; then
   echo "❌ Restore failed (exit $RESTORE_STATUS). The target is left empty on purpose." >&2
   exit $RESTORE_STATUS
 fi
+
+# --- 2b. Carry the migration journal across ---------------------------------
+# The dump is `--schema=public`, and drizzle keeps what it has applied in
+# `drizzle.__drizzle_migrations` — another schema. Left alone, the target kept
+# its OWN journal beside production's tables: a target that had run a
+# migration production has not yet would have the journal row without the
+# column, and `pnpm db:migrate` would report success and apply nothing. The
+# journal now says what the restored tables are, so the migrate that follows
+# puts back exactly the migrations production does not have.
+echo "📒 Copying the migration journal…"
+JOURNAL_FILE="$(mktemp "${TMPDIR:-/tmp}/expeditoo-journal.XXXXXX")"
+cleanup() { [ "$KEEP_DUMP" -eq 1 ] || rm -f "$DUMP_FILE"; rm -f "$JOURNAL_FILE"; }
+"$PSQL" "$SOURCE_URL" --quiet --set ON_ERROR_STOP=1 \
+  -c "\copy (SELECT hash, created_at FROM drizzle.__drizzle_migrations ORDER BY id) TO '$JOURNAL_FILE' WITH (FORMAT csv)"
+"$PSQL" "$TARGET_URL" --quiet --set ON_ERROR_STOP=1 <<SQL
+SET client_min_messages = warning;
+CREATE SCHEMA IF NOT EXISTS drizzle;
+CREATE TABLE IF NOT EXISTS drizzle.__drizzle_migrations (
+  id SERIAL PRIMARY KEY,
+  hash text NOT NULL,
+  created_at bigint
+);
+TRUNCATE drizzle.__drizzle_migrations RESTART IDENTITY;
+\copy drizzle.__drizzle_migrations (hash, created_at) FROM '$JOURNAL_FILE' WITH (FORMAT csv)
+SQL
+echo "   $(wc -l < "$JOURNAL_FILE" | tr -d ' ') migrations recorded"
 
 # --- 3. Scrub, then prove the scrub landed ----------------------------------
 echo "🧼 Anonymising…"

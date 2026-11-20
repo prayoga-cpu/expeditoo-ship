@@ -2,6 +2,8 @@
 
 import type React from "react";
 import { Fragment, useEffect, useState } from "react";
+import { AppSidebar, SidebarHeading, SidebarLink, SidebarToggle } from "./SidebarRail";
+import { RAIL, WHEN_RAIL, useSidebarRail, type SidebarRail } from "./use-sidebar-rail";
 import { BottomNav } from "../BottomNav";
 import { NotificationBell } from "../NotificationBell";
 import { HeaderToolbox } from "./HeaderToolbox";
@@ -91,6 +93,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   const applicationNav = useApplicationNav();
   const tStatus = useTranslations("carrier.onboarding.status");
   const [onboardingOpen, setOnboardingOpen] = useState(false);
+  const rail = useSidebarRail();
   // User mode renders the driver entry below. Driver mode carries « Mon dossier »
   // only while the file is not approved: once it is, the application lives in
   // Profile, and a suspended or deregistered driver — who still needs it, to
@@ -243,10 +246,10 @@ export function MainLayout({ children }: MainLayoutProps) {
         '--loader-offset-desktop': '7rem',
       } as React.CSSProperties}
     >
-      <aside className="hidden xl:flex w-64 shrink-0 overflow-hidden border-r bg-card flex-col">
+      <AppSidebar state={rail.state}>
         <AppSidebarHeader href="/home" />
 
-        <nav className="flex-1 min-h-0 overflow-y-auto p-4 space-y-2">
+        <nav className={cn("flex-1 min-h-0 overflow-y-auto p-4 space-y-2", RAIL.gutter)}>
           {navItems.map((item, index) => {
             // A heading where the group changes. The admin shortcut carries
             // none and follows the last group, so it never gets a stray one.
@@ -256,57 +259,48 @@ export function MainLayout({ children }: MainLayoutProps) {
                 : null;
             const isActive =
               pathname === item.href ||
-              (item.href !== "/home" && pathname?.startsWith(item.href));
+              (item.href !== "/home" && Boolean(pathname?.startsWith(item.href)));
             return (
               <Fragment key={item.href}>
-                {heading && (
-                  <p className="px-4 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/70">
-                    {heading}
-                  </p>
-                )}
-              <Link
-                href={item.href}
-                onClick={
-                  item.onSelect
-                    ? (e) => {
-                        e.preventDefault();
-                        item.onSelect!();
-                      }
-                    : undefined
-                }
-                className={cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors relative", // Added relative
-                  item.accent
-                    ? isActive
-                      ? ACCENT_CLASSES[item.accent].active
-                      : ACCENT_CLASSES[item.accent].idle
-                    : isActive
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                )}
-              >
-                <item.icon className="w-5 h-5" />
-                <span>{item.label}</span>
-                {item.badge && (
-                  <span className="ml-auto bg-destructive text-destructive-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-                    {item.badge > 99 ? "99+" : item.badge}
-                  </span>
-                )}
-                {item.status && (
-                  <span className="ml-auto shrink-0 whitespace-nowrap rounded-full bg-success/15 px-1.5 py-0.5 text-[10px] font-semibold">
-                    {item.status}
-                  </span>
-                )}
-              </Link>
+                {heading && <SidebarHeading className="pt-3">{heading}</SidebarHeading>}
+                <SidebarLink
+                  href={item.href}
+                  label={item.label}
+                  icon={item.icon}
+                  active={isActive}
+                  tone={item.accent ? ACCENT_CLASSES[item.accent] : undefined}
+                  onSelect={item.onSelect}
+                >
+                  {item.badge && (
+                    <span
+                      className={cn(
+                        "ml-auto bg-destructive text-destructive-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full",
+                        RAIL.badge
+                      )}
+                    >
+                      {item.badge > 99 ? "99+" : item.badge}
+                    </span>
+                  )}
+                  {item.status && (
+                    <span
+                      className={cn(
+                        "ml-auto shrink-0 whitespace-nowrap rounded-full bg-success/15 px-1.5 py-0.5 text-[10px] font-semibold",
+                        RAIL.srOnly
+                      )}
+                    >
+                      {item.status}
+                    </span>
+                  )}
+                </SidebarLink>
               </Fragment>
             );
           })}
         </nav>
-      </aside>
+      </AppSidebar>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header />
+        <Header rail={rail} />
 
         {/* Content Area - Wrapper provides consistent padding.
             `relative` makes this the containing block for every absolutely
@@ -316,7 +310,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             scrollbar appears that slides the whole shell up over blank space. */}
         <main
           className={cn(
-            "relative flex-1 min-h-0 overflow-y-auto overflow-x-hidden xl:pb-0",
+            "relative flex-1 min-h-0 overflow-y-auto overflow-x-hidden lg:pb-0",
             !hideBottomNav && "pb-[calc(88px_+_env(safe-area-inset-bottom))]"
           )}
           style={{ scrollbarGutter: "stable" }}
@@ -333,8 +327,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   );
 }
 
-function Header() {
-
+function Header({ rail }: { rail: SidebarRail }) {
   return (
     <header className="border-b border-border bg-card sticky top-0 z-40">
       <div className="flex items-center justify-between px-4 md:px-6 py-2 h-12">
@@ -342,21 +335,25 @@ function Header() {
             — this used to be a bare heading, which is why mobile showed the
             wordmark with no mark beside it.
 
-            The release rides beside it. From `xl` the logo moves to the
-            sidebar and the version is the only thing on this side, which is
-            the point: that half of the bar was empty. Below `md` it is hidden
+            The release rides beside it. From `lg` the logo moves to the
+            sidebar — as the mark alone when that is a rail — and this side
+            keeps the sidebar's three-line button and the version. Below `md`
+            the version is hidden
             — at 390px the logo, the driver actions and the utility trio
             already fill the row, and a version is the first thing that can go. */}
         <div className="flex items-center gap-3 shrink-0">
-          <div className="xl:hidden">
+          <SidebarToggle rail={rail} />
+          <div className="lg:hidden">
             <Link href="/home">
               <BrandWordmark size={24} />
             </Link>
           </div>
-          {/* The sidebar, where the switcher lives from `xl`, does not exist
-              on a phone — so a driver sitting in the wrong mode had no way to
-              see, let alone change, which one they were in. */}
-          <AccessSwitcher className="max-md:hidden xl:hidden" />
+          {/* The sidebar, where the switcher lives while it is expanded, does
+              not exist on a phone and has no room for it as a rail — so a
+              driver sitting in the wrong mode had no way to see, let alone
+              change, which one they were in. Shown here whenever the sidebar
+              is not showing it. */}
+          <AccessSwitcher className={WHEN_RAIL.withBar[rail.state]} />
           <AppVersionLink className="hidden md:inline-flex" />
         </div>
 
