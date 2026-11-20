@@ -29,7 +29,7 @@ export async function GET() {
     // which would shuffle the dropdown between loads.
     return ok(
       carriers
-        // An in-house driver's company is « Expeditoo » for all of them, which
+        // An in-house driver's company is « Expeditop » for all of them, which
         // would make the picker unreadable: they go by name.
         .map(({ id, companyName, kind, user }) => ({
           id,

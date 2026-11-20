@@ -201,7 +201,7 @@ describe("companyIdentityService.issuer", () => {
     const issuer = await companyIdentityService.issuer();
 
     expect(issuer.isComplete).toBe(false);
-    expect(issuer.name).toBe("Expeditoo");
+    expect(issuer.name).toBe("Expeditop");
     spy.mockRestore();
   });
 });

@@ -74,7 +74,7 @@ export const emailService = {
 
     return this.sendEmail({
       to,
-      subject: "Welcome to Expeditoo!",
+      subject: "Welcome to Expeditop!",
       html: emailHtml,
     });
   },
@@ -257,7 +257,7 @@ export const emailService = {
       to,
       subject:
         params.kind === "earned"
-          ? `${params.amountLabel} ajoutés à votre solde Expeditoo`
+          ? `${params.amountLabel} ajoutés à votre solde Expeditop`
           : `Virement de ${params.amountLabel} effectué`,
       html: emailHtml,
     });

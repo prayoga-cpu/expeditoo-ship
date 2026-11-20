@@ -75,7 +75,7 @@ export function JobBidSection({ job, viewerId }: JobBidSectionProps) {
   if (!isCarrier && (roles.includes("admin") || roles.includes("operator"))) {
     return <StaffCard />;
   }
-  // An in-house driver is given work by Expeditoo and does not bid.
+  // An in-house driver is given work by Expeditop and does not bid.
   if (!isCarrier && roles.includes("driver")) return <InHouseCard />;
   if (!isCarrier) return <BecomeCarrierCard />;
   if (notApprovedSubmits.length > 0) return <NotApprovedCard />;

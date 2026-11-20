@@ -16,7 +16,7 @@ import type { Offer } from "@/features/app/listing/types";
 /**
  * The carrier's side of the negotiation (client_feedback_2026_10_29_spec.md
  * §B6): the client's price, and three answers — take it, keep yours, or
- * answer with another. Also says when Expeditoo recommended this offer (§B1).
+ * answer with another. Also says when Expeditop recommended this offer (§B1).
  */
 export function CounterResponse({ offer }: { offer: Offer }) {
   const t = useTranslations("negotiation");

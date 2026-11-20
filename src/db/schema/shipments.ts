@@ -217,7 +217,7 @@ export const shipmentConfirmationChannelEnum = pgEnum(
     /** A signed one-tap link from the SMS or the email was used. */
     "link",
     /**
-     * A signed-in party confirmed on Expeditoo's own delivery screen.
+     * A signed-in party confirmed on Expeditop's own delivery screen.
      *
      * Neither of the two above could carry it: `expedion_app` names the
      * sibling product's Flutter client, and `link` claims an unauthenticated

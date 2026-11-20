@@ -79,7 +79,7 @@ export const AD_VALOREM_MINIMUM_CENTS = 500;
 
 /**
  * How long a paid job waits for an admin to assign a driver before it
- * escalates to the Expeditoo marketplace.
+ * escalates to the Expeditop marketplace.
  *
  * Open decision #1 in both roadmaps. 48h is the placeholder: long enough for a
  * human to work a queue over a weekday, short enough to stay inside the
@@ -146,7 +146,7 @@ export const PRICE_FIELDS = [
 // Helpers
 // ========================================
 
-/** Volumetric weight, matching the Expeditoo pricing engine's divisor. */
+/** Volumetric weight, matching the Expeditop pricing engine's divisor. */
 export function hasDimensions(q: {
   lengthCm: number | null;
   widthCm: number | null;
@@ -694,7 +694,7 @@ export const expedionService = {
 
   /**
    * Prices a quote from its extracted dimensions, using the same engine that
-   * prices Expeditoo listings so the two products never quote differently for
+   * prices Expeditop listings so the two products never quote differently for
    * the same journey.
    *
    * A no-op when dimensions or coordinates are missing — those quotes wait for
@@ -1065,11 +1065,11 @@ export const expedionService = {
    * this instead returns the quote to `quoted`, where the client accepts and
    * pays the corrected figure — so the two never disagree at any point.
    *
-   * **This does not move money.** EXPEDITOO never took it: `expedion_quotes`
+   * **This does not move money.** EXPEDITOP never took it: `expedion_quotes`
    * carries no payment intent or session, because the client pays on the
    * Expedion side and that side reports the settlement here (see
    * `POST /quotes/:id/paid`). `refundService` only knows about `payments`
-   * rows, which are Expeditoo's own holds against shipments — there is no row
+   * rows, which are Expeditop's own holds against shipments — there is no row
    * here for it to refund. What this does is unwind our record of the
    * payment and put the Stripe reference on the timeline, so whoever runs the
    * Expedion Stripe account can refund against it. Wiring that call is a

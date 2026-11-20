@@ -33,7 +33,7 @@ describe("routePlannerService.plan", () => {
     const asked = fetchMock.mock.calls.map(([, init]) => JSON.parse(init.body));
     expect(fetchMock.mock.calls[0][1]).toMatchObject({
       method: "POST",
-      headers: expect.objectContaining({ "User-Agent": expect.stringContaining("Expeditoo") }),
+      headers: expect.objectContaining({ "User-Agent": expect.stringContaining("Expeditop") }),
     });
     expect(asked.map((b) => b.costing_options.auto.use_highways).sort()).toEqual([0, 1]);
     expect(asked[0].locations).toEqual([

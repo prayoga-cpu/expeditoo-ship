@@ -167,7 +167,7 @@ describe("ExpedionClientsTable", () => {
     expect(screen.getByText("No name given")).toBeInTheDocument();
   });
 
-  it("says plainly when there is no Expeditoo account to act on", () => {
+  it("says plainly when there is no Expeditop account to act on", () => {
     renderWith("en", en, <ExpedionClientsTable />);
 
     // The majority case. Rendered as a stated fact, not an empty cell.

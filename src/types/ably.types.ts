@@ -1,5 +1,5 @@
 /**
- * Ably Types for Expeditoo
+ * Ably Types for Expeditop
  * Provides proper typing for Ably real-time channels and messages
  */
 

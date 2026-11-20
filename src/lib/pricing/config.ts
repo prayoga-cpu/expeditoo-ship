@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- * EXPEDITOO PRICING ENGINE - CONFIGURATION
+ * EXPEDITOP PRICING ENGINE - CONFIGURATION
  * ============================================================================
  *
  * 🇫🇷 FRENCH MARKET RATES (Updated: December 2025)
@@ -41,7 +41,7 @@ export const PRICING_CONFIG: PricingConfig = {
 
   /**
    * Platform service fee as a percentage (10 = 10%)
-   * This is EXPEDITOO's commission on each delivery.
+   * This is EXPEDITOP's commission on each delivery.
    *
    * 💡 Typical marketplace fees: 8% - 15%
    */

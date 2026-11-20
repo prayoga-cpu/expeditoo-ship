@@ -25,7 +25,7 @@ interface RecentDirectRequestsPanelProps {
 /**
  * The newest requests posted at `/create`, beside the Expedion quotes.
  *
- * Supervision read `expedion_quotes` alone, so a request posted on Expeditoo
+ * Supervision read `expedion_quotes` alone, so a request posted on Expeditop
  * itself (a `listings` row with `origin = 'direct'`) never showed on the page
  * an admin lands on. The client asked whether the panel was "only the Airtable
  * import", and it was (request_summary_spec.md §3.2).

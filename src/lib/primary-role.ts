@@ -11,7 +11,7 @@ import { userRoleEnum, type UserRoleEnum } from "@/db/schema/users";
  *
  * Ordered most-privileged first, so the label names the strongest access the
  * account actually has. `carrier` (the outside driver who bids and is paid)
- * outranks `driver` (the in-house Expeditoo driver, who sees no money); they
+ * outranks `driver` (the in-house Expeditop driver, who sees no money); they
  * are two roles, not one person under two names (driver_types_spec.md §1).
  */
 const PRECEDENCE = [

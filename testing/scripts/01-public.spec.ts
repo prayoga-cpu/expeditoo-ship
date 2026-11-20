@@ -13,7 +13,7 @@ test.describe('Public Pages', () => {
         test('PUB-001: Homepage loads with correct title', async ({ page }) => {
             await page.goto('/');
             await page.waitForLoadState('domcontentloaded');
-            await expect(page).toHaveTitle(/EXPEDITOO/i);
+            await expect(page).toHaveTitle(/EXPEDITOP/i);
         });
 
         test('PUB-002: Hero section is visible', async ({ page }) => {

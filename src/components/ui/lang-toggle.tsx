@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
  *
  * The landing header has carried one since it shipped (`LandingLangToggle`),
  * and the sibling Expedion app carries the same control in its own header —
- * but inside EXPEDITOO the only way to change language was three levels deep
+ * but inside EXPEDITOP the only way to change language was three levels deep
  * in `/profile` → Settings, which is not where anyone looks for it.
  *
  * Deliberately not a shared component with the landing one: that version is

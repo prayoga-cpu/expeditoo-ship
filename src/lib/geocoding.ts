@@ -10,7 +10,7 @@ const NOMINATIM_URL = "https://nominatim.openstreetmap.org";
 
 // User-Agent header is required by Nominatim usage policy
 const HEADERS = {
-  "User-Agent": "Expeditoo/1.0",
+  "User-Agent": "Expeditop/1.0",
   Accept: "application/json",
 };
 

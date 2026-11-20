@@ -79,7 +79,7 @@ export function invoiceIssuer(stored?: StoredIssuer | null): InvoiceIssuer {
   // The brand stands in for display, but a facture names the legal entity, so
   // only a stated name counts toward completeness.
   const statedName = either(stored?.legalName, env.INVOICE_ISSUER_NAME);
-  const name = statedName ?? "Expeditoo";
+  const name = statedName ?? "Expeditop";
   const legalForm = either(stored?.legalForm, env.INVOICE_ISSUER_LEGAL_FORM);
   const address = either(stored?.address, env.INVOICE_ISSUER_ADDRESS);
   const siret = either(stored?.siret, env.INVOICE_ISSUER_SIRET);

@@ -62,7 +62,7 @@ describe("invoiceIssuer(stored)", () => {
 
   it("is not a facture under the brand name alone", () => {
     const issuer = invoiceIssuer({ ...STORED, legalName: null });
-    expect(issuer.name).toBe("Expeditoo");
+    expect(issuer.name).toBe("Expeditop");
     expect(issuer.isComplete).toBe(false);
   });
 

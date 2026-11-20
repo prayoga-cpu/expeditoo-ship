@@ -207,7 +207,7 @@ export const offersDal = {
     return row;
   },
 
-  /** Clears Expeditoo's pick on every other offer of a job (§B1: one per job). */
+  /** Clears Expeditop's pick on every other offer of a job (§B1: one per job). */
   async clearProposalsForListing(listingId: string, tx: Executor = db) {
     await tx
       .update(offers)

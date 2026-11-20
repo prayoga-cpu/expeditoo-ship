@@ -33,7 +33,7 @@ export const carrierStatusEnum = pgEnum("carrier_status", [
 /**
  * Professional or private (REQ-01, migration 0044). `professional` is the
  * outside carrier with the full file and the `carrier` role; `private` is the
- * in-house Expeditoo driver — no company, no SIRET, the `driver` role
+ * in-house Expeditop driver — no company, no SIRET, the `driver` role
  * (driver_types_spec.md, 2.87.0).
  */
 export const carrierKindEnum = pgEnum("carrier_kind", ["professional", "private"]);

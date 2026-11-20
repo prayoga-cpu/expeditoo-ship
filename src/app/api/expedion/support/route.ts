@@ -11,7 +11,7 @@
  * and an operator answering had to leave the product to do it. This writes to
  * the same `conversations` / `messages` tables the website's support chat uses,
  * with `type: "SUPPORT"`, so an Expedion message lands in the existing admin
- * inbox (`/admin/support`) next to the Expeditoo ones and is answered the same
+ * inbox (`/admin/support`) next to the Expeditop ones and is answered the same
  * way. Nothing about the admin side had to change to receive them.
  *
  * Why this route exists at all when `/api/chat/support` and `/api/messages`
@@ -64,7 +64,7 @@ const threadQuerySchema = z.object({
  *     mouth, and a key that ships in a native binary is not an identity.
  *
  * The missing-account refusal is 409 rather than 401 because the caller *is*
- * authenticated; what is missing is an Expeditoo account, and the client should
+ * authenticated; what is missing is an Expeditop account, and the client should
  * say so rather than bounce them through a sign-in they already completed.
  */
 async function requireChatUser(caller: ExpedionCaller) {
@@ -87,7 +87,7 @@ async function requireChatUser(caller: ExpedionCaller) {
   throw new ExpedionAuthError(
     "CHAT_ACCOUNT_REQUIRED",
     409,
-    "Support chat needs an Expeditoo account for this address."
+    "Support chat needs an Expeditop account for this address."
   );
 }
 

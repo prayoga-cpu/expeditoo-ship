@@ -92,7 +92,7 @@ export const offers = pgTable(
     selfAccepted: boolean("self_accepted").default(false).notNull(),
 
     /**
-     * Expeditoo's pick on a direct request (client_feedback_2026_10_29_spec.md
+     * Expeditop's pick on a direct request (client_feedback_2026_10_29_spec.md
      * §B1, migration 0043): an operator recommends this offer and the
      * requester still pays to confirm it. A recommendation, not an award — no
      * status changes and no card is touched. At most one per job.

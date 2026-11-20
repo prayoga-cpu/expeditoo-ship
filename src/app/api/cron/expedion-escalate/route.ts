@@ -2,7 +2,7 @@
  * GET /api/cron/expedion-escalate
  *
  * The auto-escalate sweep. Paid jobs that have sat past their configured
- * window with no driver assigned are pushed onto the Expeditoo marketplace.
+ * window with no driver assigned are pushed onto the Expeditop marketplace.
  *
  * Guarded by CRON_SECRET, matching the other cron routes. Safe to run
  * concurrently: escalation claims each quote with a conditional update, so an

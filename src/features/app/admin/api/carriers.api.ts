@@ -79,7 +79,7 @@ export interface CarrierApplication {
     city: string;
     postalCode: string;
     status: CarrierApplicationStatus;
-    /** `private` is the in-house Expeditoo driver, `professional` the outside carrier. */
+    /** `private` is the in-house Expeditop driver, `professional` the outside carrier. */
     kind: "professional" | "private";
     ibanLast4: string | null;
     bicLast4: string | null;

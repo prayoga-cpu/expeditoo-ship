@@ -59,7 +59,7 @@ const ROLE_FOR_KIND = { private: "driver", professional: "carrier" } as const;
 const KIND_FOR_ROLE = { driver: "private", carrier: "professional" } as const;
 
 /** What an in-house driver's company reads as: the one they drive for. */
-const IN_HOUSE_COMPANY = "Expeditoo";
+const IN_HOUSE_COMPANY = "Expeditop";
 
 async function enrolAsOwnDriver(
   carrier: Carrier,
@@ -369,7 +369,7 @@ export const carrierService = {
   // ---- Admin: in-house drivers (in_house_drivers_spec.md §6) ----
 
   /**
-   * An admin or operator onboarding a driver who works for Expeditoo itself
+   * An admin or operator onboarding a driver who works for Expeditop itself
    * (driver_types_spec.md §4). `existing`: the email already has an account and
    * is converted — nothing is mailed, and the account is never deleted on
    * failure. `invite`: no account yet, so one is created here and the person is
@@ -479,9 +479,9 @@ export const carrierService = {
     if (!existing || existing.status !== "approved") {
       await notifyCarrier(
         userId,
-        role === "driver" ? "You are now an Expeditoo driver" : "Carrier application approved",
+        role === "driver" ? "You are now an Expeditop driver" : "Carrier application approved",
         role === "driver"
-          ? "Expeditoo will assign you runs."
+          ? "Expeditop will assign you runs."
           : "You can now bid on transport jobs."
       );
     }
@@ -629,7 +629,7 @@ export const carrierService = {
 
   /**
    * Approving grants the role the file's kind earns — `carrier` (bids and runs
-   * the work) for an outside carrier, `driver` (runs what Expeditoo assigns) for
+   * the work) for an outside carrier, `driver` (runs what Expeditop assigns) for
    * an in-house file — and enrols the owner in their own fleet so they can be
    * assigned a run. Idempotent: a second approval is a no-op rather than a
    * duplicate grant.
@@ -667,7 +667,7 @@ export const carrierService = {
       carrier.userId,
       "Carrier application approved",
       carrier.kind === "private"
-        ? "You are now an Expeditoo driver: Expeditoo will assign you runs."
+        ? "You are now an Expeditop driver: Expeditop will assign you runs."
         : "You can now bid on transport jobs."
     );
 

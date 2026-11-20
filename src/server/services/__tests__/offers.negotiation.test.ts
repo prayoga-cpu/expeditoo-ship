@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * Expeditoo's pick and the negotiation, on the offer itself
+ * Expeditop's pick and the negotiation, on the offer itself
  * (client_feedback_2026_10_29_spec.md §B1, §B6).
  */
 
@@ -73,7 +73,7 @@ beforeEach(() => {
 });
 
 describe("proposeOffer (§B1)", () => {
-  it("marks one offer as Expeditoo's pick, clearing any other, and tells the requester", async () => {
+  it("marks one offer as Expeditop's pick, clearing any other, and tells the requester", async () => {
     const result = await offersService.proposeOffer(operator, "o1");
 
     expect(m.offers.clearProposalsForListing).toHaveBeenCalledWith("job-1", "tx");

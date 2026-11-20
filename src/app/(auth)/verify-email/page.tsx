@@ -70,7 +70,7 @@ function VerifyEmailContent() {
         {/* Logo */}
         <div className="flex items-center justify-center gap-2 mb-8">
           <BrandMark size={40} />
-          <span className="text-2xl font-bold text-foreground">EXPEDITOO</span>
+          <span className="text-2xl font-bold text-foreground">EXPEDITOP</span>
         </div>
 
         {/* Verification Card */}

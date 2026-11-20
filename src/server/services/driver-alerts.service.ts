@@ -86,7 +86,7 @@ export const driverAlertsService = {
     return await alert(
       params.recipientId,
       carrier.contactPhone,
-      `Expeditoo : nouveau message de votre client au sujet de « ${listing.title} ». Répondez ici : ${url}`,
+      `Expeditop : nouveau message de votre client au sujet de « ${listing.title} ». Répondez ici : ${url}`,
       { kind: "message", jobTitle: listing.title, url }
     );
   },
@@ -103,7 +103,7 @@ export const driverAlertsService = {
     return await alert(
       params.carrierUserId,
       carrier.contactPhone,
-      `Expeditoo : votre offre pour « ${params.jobTitle} » a été acceptée. Détails : ${url}`,
+      `Expeditop : votre offre pour « ${params.jobTitle} » a été acceptée. Détails : ${url}`,
       { kind: "accepted", jobTitle: params.jobTitle, url }
     );
   },

@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import fr from "../../../../../../messages/fr.json";
 
 /**
- * driver_types_spec.md §3: the « chauffeur interne Expeditoo » tick swaps the
+ * driver_types_spec.md §3: the « chauffeur interne Expeditop » tick swaps the
  * company questions for the short set, and what is sent says which it is.
  */
 
@@ -51,13 +51,13 @@ describe("CarrierProfileForm — two kinds of driver", () => {
 
     expect(screen.getByLabelText("Raison sociale")).toBeInTheDocument();
     expect(screen.getByLabelText("SIRET")).toBeInTheDocument();
-    expect(screen.getByLabelText("Je suis chauffeur interne Expeditoo")).not.toBeChecked();
+    expect(screen.getByLabelText("Je suis chauffeur interne Expeditop")).not.toBeChecked();
   });
 
   it("drops the company questions once the in-house tick is on", () => {
     renderForm();
 
-    fireEvent.click(screen.getByLabelText("Je suis chauffeur interne Expeditoo"));
+    fireEvent.click(screen.getByLabelText("Je suis chauffeur interne Expeditop"));
 
     expect(screen.queryByLabelText("Raison sociale")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("SIRET")).not.toBeInTheDocument();
@@ -67,7 +67,7 @@ describe("CarrierProfileForm — two kinds of driver", () => {
 
   it("sends an in-house application with only the contact details", async () => {
     renderForm();
-    fireEvent.click(screen.getByLabelText("Je suis chauffeur interne Expeditoo"));
+    fireEvent.click(screen.getByLabelText("Je suis chauffeur interne Expeditop"));
     fillContact();
 
     fireEvent.click(screen.getByRole("button", { name: "Enregistrer" }));

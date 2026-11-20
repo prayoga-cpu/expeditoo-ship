@@ -14,6 +14,19 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.90.2] - 2026-11-20 · ux
+
+- **The platform is now called EXPEDITOP.** The name changes everywhere you read
+  it: the page title, the logo and the install prompt, every screen in French and
+  English, the legal notice, the terms and the privacy notice, the PDF receipts
+  and the text of every e-mail. The address `www.expeditop.fr` and the name now
+  match.
+- **E-mails come from « Expeditop ».** Messages are sent from
+  `no-reply@expeditop.fr`, so the sender you see is the same name and domain as
+  the site.
+- Your account, your jobs, your offers and your preferences are untouched: only
+  the name moved.
+
 ## [2.90.1] - 2026-11-20 · infra
 
 - **EXPEDITOO now lives at www.expeditop.fr.** The address is ours: links in

@@ -1,7 +1,7 @@
 /**
  * POST /api/expedion/write-back
  *
- * Expeditoo → Expedion status write-back. Fired when a carrier is selected on
+ * Expeditop → Expedion status write-back. Fired when a carrier is selected on
  * an escalated job and at each delivery stage, so the Expedion client sees the
  * chosen carrier and live status without leaving their app.
  *

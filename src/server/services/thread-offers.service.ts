@@ -32,7 +32,7 @@ export class ThreadOfferError extends Error {
 
 const err = (code: string, status: number) => new ThreadOfferError(code, status);
 
-/** An in-house Expeditoo driver (`carriers.kind = 'private'`). */
+/** An in-house Expeditop driver (`carriers.kind = 'private'`). */
 async function isInHouse(userId: string): Promise<boolean> {
   return (await carriersDal.getByUserId(userId))?.kind === "private";
 }

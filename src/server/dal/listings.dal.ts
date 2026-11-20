@@ -276,7 +276,7 @@ export const listingsDal = {
         name: "Transport (général)",
         slug: DEFAULT_CATEGORY_SLUG,
         description:
-          "Demandes de transport déposées directement sur Expeditoo.",
+          "Demandes de transport déposées directement sur Expeditop.",
       })
       .onConflictDoNothing();
 

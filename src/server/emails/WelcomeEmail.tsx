@@ -19,7 +19,7 @@ interface WelcomeEmailProps {
 }
 
 export const WelcomeEmail = ({ name }: WelcomeEmailProps) => {
-  const previewText = `Welcome to Expeditoo, ${name}!`;
+  const previewText = `Welcome to Expeditop, ${name}!`;
 
   return (
     <Html>
@@ -29,13 +29,13 @@ export const WelcomeEmail = ({ name }: WelcomeEmailProps) => {
         <Body className="bg-white my-auto mx-auto font-sans">
           <Container className="border border-solid border-[#eaeaea] rounded my-[40px] mx-auto p-[20px] max-w-[465px]">
             <Heading className="text-black text-[24px] font-normal text-center p-0 my-[30px] mx-0">
-              Welcome to <strong>Expeditoo</strong>
+              Welcome to <strong>Expeditop</strong>
             </Heading>
             <Text className="text-black text-[14px] leading-[24px]">
               Hello {name},
             </Text>
             <Text className="text-black text-[14px] leading-[24px]">
-              We're excited to have you on board! Expeditoo is the unified marketplace for all your logistics needs.
+              We're excited to have you on board! Expeditop is the unified marketplace for all your logistics needs.
             </Text>
             <Section className="text-center mt-[32px] mb-[32px]">
               <Link

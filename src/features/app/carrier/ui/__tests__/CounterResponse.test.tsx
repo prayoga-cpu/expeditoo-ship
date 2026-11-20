@@ -64,7 +64,7 @@ describe("CounterResponse", () => {
     });
   });
 
-  it("says when Expeditoo recommended the offer, with no counter-price out", () => {
+  it("says when Expeditop recommended the offer, with no counter-price out", () => {
     renderIt(offer({ counterPriceCents: null, proposedAt: "2026-10-29T10:00:00.000Z" }));
     expect(screen.getByText(t.proposedToClient)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: t.acceptClientPrice })).not.toBeInTheDocument();

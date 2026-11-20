@@ -1,7 +1,7 @@
 const BRAND_BLUE = "#0052FF";
 
 /**
- * The Expeditoo mark: a blue rounded square holding a knocked-out disc with a
+ * The Expeditop mark: a blue rounded square holding a knocked-out disc with a
  * blue chevron. Single source of truth for the logo across marketing and app.
  *
  * The disc reads the surface behind it — the landing palette when rendered
@@ -56,7 +56,7 @@ export function BrandMark({
 }
 
 /**
- * Mark plus the EXPEDITOO / TRANSPORT lockup used in the landing chrome.
+ * Mark plus the EXPEDITOP / TRANSPORT lockup used in the landing chrome.
  *
  * `size` was only ever wired to the mark — the wordmark's two font sizes and
  * the gap between mark and text were flat pixel values, so the same component
@@ -96,7 +96,7 @@ export function BrandWordmark({
           className="font-bold leading-none tracking-[-0.02em]"
           style={{ fontSize: capSize }}
         >
-          EXPEDITOO
+          EXPEDITOP
         </span>
         {tagline && (
           <span

@@ -504,7 +504,7 @@ export interface MarketplaceTotals {
 }
 
 /**
- * The Expeditoo half of the report.
+ * The Expeditop half of the report.
  *
  * `origin = 'expedion'` on `listings` is what distinguishes an escalated
  * auction job from a directly-posted one, so it is the join that makes a

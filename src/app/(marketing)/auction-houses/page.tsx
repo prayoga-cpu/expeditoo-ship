@@ -18,7 +18,7 @@ import {
  *
  * Careful about one thing: a house does not post work here. It accepts and
  * pays a quote inside Expedion, and only a job nobody has taken inside the
- * window reaches this network. Describing Expeditoo as somewhere to shop for
+ * window reaches this network. Describing Expeditop as somewhere to shop for
  * transport directly would misstate the product (CLAUDE.md, "Shippers do not
  * post jobs here").
  */

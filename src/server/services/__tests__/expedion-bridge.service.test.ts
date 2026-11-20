@@ -6,7 +6,7 @@ import { carriersDal } from "@/server/dal/carriers.dal";
 import { expedionSmsService } from "@/server/services/expedion-sms.service";
 
 /**
- * The return leg: an award on Expeditoo landing on the Expedion quote.
+ * The return leg: an award on Expeditop landing on the Expedion quote.
  *
  * The regression these exist for is an id-space crossing.
  * `offers.carrier_id` and `shipments.carrier_id` reference `user.id`, but

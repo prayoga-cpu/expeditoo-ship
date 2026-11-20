@@ -28,7 +28,7 @@ import { useExpedionRequote } from "../hooks/useExpedionReport";
  * An `AlertDialog` like `EscalateDialog`, for the same reason: nothing here is
  * editable and none of it is reversible from this screen.
  *
- * The refund itself happens on the Expedion side — EXPEDITOO never took the
+ * The refund itself happens on the Expedion side — EXPEDITOP never took the
  * payment — which is why the copy says a refund is owed rather than done.
  */
 export function RequoteDialog({

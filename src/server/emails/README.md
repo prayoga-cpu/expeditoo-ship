@@ -1,6 +1,6 @@
 # Email Templates
 
-This directory contains React Email templates for EXPEDITOO's transactional emails.
+This directory contains React Email templates for EXPEDITOP's transactional emails.
 
 ## Templates
 
@@ -32,9 +32,9 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Send verification email
 await resend.emails.send({
-  from: "EXPEDITOO <onboarding@resend.dev>",
+  from: "EXPEDITOP <onboarding@resend.dev>",
   to: "user@example.com",
-  subject: "Verify your EXPEDITOO account",
+  subject: "Verify your EXPEDITOP account",
   react: VerificationEmail({
     verificationUrl: "https://www.expeditop.fr/verify?token=...",
     userName: "John",
@@ -43,9 +43,9 @@ await resend.emails.send({
 
 // Send password reset email
 await resend.emails.send({
-  from: "EXPEDITOO <onboarding@resend.dev>",
+  from: "EXPEDITOP <onboarding@resend.dev>",
   to: "user@example.com",
-  subject: "Reset your EXPEDITOO password",
+  subject: "Reset your EXPEDITOP password",
   react: PasswordResetEmail({
     resetUrl: "https://www.expeditop.fr/reset?token=...",
     userName: "John",
@@ -65,7 +65,7 @@ Required environment variables:
 
 ```env
 RESEND_API_KEY=re_...           # Your Resend API key
-EMAIL_FROM=EXPEDITOO <onboarding@resend.dev>  # Sender email
+EMAIL_FROM=EXPEDITOP <onboarding@resend.dev>  # Sender email
 NEXT_PUBLIC_APP_URL=http://localhost:3000     # App URL for links
 NODE_ENV=development            # Set to 'production' to send real emails
 ```
@@ -78,7 +78,7 @@ NODE_ENV=development            # Set to 'production' to send real emails
 
 ## Design
 
-All templates follow EXPEDITOO's brand guidelines:
+All templates follow EXPEDITOP's brand guidelines:
 
 - Clean, modern design
 - Black CTA buttons

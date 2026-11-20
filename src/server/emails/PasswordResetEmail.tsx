@@ -18,7 +18,7 @@ interface PasswordResetEmailProps {
    * Which product this account belongs to, as the recipient knows it.
    *
    * The two products share one Better Auth instance and one password, so this
-   * mail goes out to Expedion clients as readily as to EXPEDITOO carriers, and
+   * mail goes out to Expedion clients as readily as to EXPEDITOP carriers, and
    * a reset mail branded for the wrong product reads like a phishing attempt at
    * the one moment a user is most right to be suspicious. The caller resolves
    * the name from `user.origin` (src/server/services/auth.service.ts); the
@@ -30,7 +30,7 @@ interface PasswordResetEmailProps {
 export function PasswordResetEmail({
   resetUrl,
   userName,
-  productName = "EXPEDITOO",
+  productName = "EXPEDITOP",
 }: PasswordResetEmailProps) {
   return (
     <Html>

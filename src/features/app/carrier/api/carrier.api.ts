@@ -34,7 +34,7 @@ export interface CarrierDocument {
 
 export interface CarrierApplication {
   id: string;
-  /** `private` is the in-house Expeditoo driver; `professional` the outside carrier. */
+  /** `private` is the in-house Expeditop driver; `professional` the outside carrier. */
   kind: "professional" | "private";
   companyName: string;
   /** Null for an in-house driver. */

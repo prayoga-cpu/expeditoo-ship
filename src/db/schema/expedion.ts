@@ -19,7 +19,7 @@ import { listings } from "./listings";
 // ========================================
 //
 // Expedion is the auction-specific front door to the same driver network
-// Expeditoo serves (expedion_encheres/ROADMAP.md §1). A buyer wins a lot at a
+// Expeditop serves (expedion_encheres/ROADMAP.md §1). A buyer wins a lot at a
 // French auction house, uploads the bordereau, and gets a devis; an admin
 // assigns a driver, and if nobody takes it the job escalates into `listings`
 // where carriers bid.
@@ -48,7 +48,7 @@ export const expedionQuoteStatusEnum = pgEnum("expedion_quote_status", [
   "paid",
   /** Admin assigned a driver from the pool. */
   "assigned",
-  /** No driver available — pushed to the Expeditoo marketplace. */
+  /** No driver available — pushed to the Expeditop marketplace. */
   "escalated",
   /** Collected from the auction house. */
   "picked_up",
@@ -106,7 +106,7 @@ export const expedionQuotes = pgTable(
     // ---- Ownership ----
     // Expedion keeps Firebase Auth this phase (ROADMAP.md §5), so the Firebase
     // UID is the identity we can actually resolve. `userId` is the forward path
-    // for when auth migrates onto Better Auth alongside Expeditoo.
+    // for when auth migrates onto Better Auth alongside Expeditop.
     firebaseUid: text("firebase_uid").notNull(),
     userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
 
@@ -190,7 +190,7 @@ export const expedionQuotes = pgTable(
     ),
     assignedAt: timestamp("assigned_at", { withTimezone: true }),
 
-    // ---- Escalation bridge to Expeditoo (Phase D) ----
+    // ---- Escalation bridge to Expeditop (Phase D) ----
     /** The marketplace listing this quote became, once escalated. */
     listingId: text("listing_id").references(() => listings.id, {
       onDelete: "set null",
@@ -275,7 +275,7 @@ export const expedionQuotes = pgTable(
 // Status feed
 // ========================================
 // One append-only feed both apps read, so the Expedion tracking screen and the
-// Expeditoo shipment view never disagree about what happened when.
+// Expeditop shipment view never disagree about what happened when.
 
 export const expedionQuoteEvents = pgTable(
   "expedion_quote_events",

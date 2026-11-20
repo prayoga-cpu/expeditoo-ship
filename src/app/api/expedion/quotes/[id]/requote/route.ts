@@ -8,7 +8,7 @@
  * with what Stripe captured. Going back to `quoted` and having the client
  * accept and pay again keeps the two in step at every step.
  *
- * It does not move money. EXPEDITOO never took the client's payment (see
+ * It does not move money. EXPEDITOP never took the client's payment (see
  * `POST /quotes/:id/paid`), so the refund is issued on the Expedion side; the
  * response carries the Checkout reference to issue it against.
  */

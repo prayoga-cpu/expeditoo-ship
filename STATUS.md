@@ -1010,6 +1010,36 @@ than leaving it in a chat message.
 
 ---
 
+## ✅ 2026-11-20 — The brand becomes EXPEDITOP; mail goes out from expeditop.fr (2.90.2)
+
+*« change the brand name as well to be expeditop not expeditoo anymore » · « resend is done ».*
+
+Spec `domain_expeditop_fr_spec.md` §7. No migration.
+
+**Renamed** — only the standalone words `Expeditoo` / `EXPEDITOO` (113 files, 297 places): `messages/*.json`, UI,
+e-mail templates and README, PDF text, `layout.tsx` metadata, the PWA prompt, `public/logo.svg` label and map-style
+names, User-Agent strings, code comments, the e2e title check.
+
+**Deliberately NOT renamed — do not "finish the job"** (renaming any of them has a cost and no benefit):
+- the repo, package and Vercel project `expeditoo-ship`, and `com.expeditoo.app` (the Android application id is the
+  store identity — changing it makes a different app);
+- browser storage keys `expeditoo-locale`, `expeditoo-active-access`, `expeditoo-returning`,
+  `expeditoo-driver-access-seen`, `expeditoo-impersonation` (renaming silently resets every user's choices);
+- `actor: "expeditoo"` written to Expedion quote timelines (`expedion-bridge.service.ts`) — a value the Flutter app
+  may match on; change it only together with that repo;
+- the `TODO(EXPEDITOO-TESTING)` / `TODO(EXPEDITOO-LEGAL)` markers the docs tell you to `grep`;
+- local database / bucket / test-account names (`expeditoo_dev`, `*@expeditoo.test`), `0004_*.sql` and other
+  applied migrations, and the history in this file and `CHANGELOG.md`.
+
+**Mail.** Resend verified `expeditop.fr`; Vercel Production `EMAIL_FROM` is now `Expeditop <no-reply@expeditop.fr>`
+(Sensitive — verify by sending: sign up with a throwaway address and read the `From`). It applies from this deploy.
+
+**Not a code change, still yours.** The Stripe account's *public business name* (statement descriptor, Checkout
+header) and the Google OAuth consent-screen app name still say Expeditoo until you edit them in those dashboards;
+the Apple Pay / Stripe domain registration is the Stripe item above.
+
+---
+
 ## ✅ 2026-11-20 — Production moves to www.expeditop.fr (2.90.1)
 
 *« we just got the new domain, setup, configure and rename everything … especially the auth and any env on production ».*

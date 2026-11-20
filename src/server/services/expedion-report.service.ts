@@ -9,7 +9,7 @@ import type { Viewer } from "@/server/services/shipment-access";
 /**
  * Composes the operator report.
  *
- * The Expeditoo-side figures come from `admin.dal` rather than being
+ * The Expeditop-side figures come from `admin.dal` rather than being
  * re-derived here — that module already defines what "active driver" and
  * "app fees" mean, and a second definition would drift from the one the rest
  * of the admin area shows.

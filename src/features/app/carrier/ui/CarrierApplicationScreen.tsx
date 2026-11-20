@@ -74,7 +74,7 @@ function ApplicationFunnel({ application }: { application: CarrierApplication })
         <ApplicationSummary application={application} />
       )}
 
-      {/* An in-house driver is not a company and is paid by Expeditoo: no
+      {/* An in-house driver is not a company and is paid by Expeditop: no
           documents to collect, no bank account to keep (driver_types_spec.md §3). */}
       {!inHouse && (
         <DocumentChecklist documents={application.documents} canUpload={!locked} />

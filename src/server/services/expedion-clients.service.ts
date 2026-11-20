@@ -55,7 +55,7 @@ export interface ExpedionClientDto {
   paidValueCents: number;
   firstSeenAt: string;
   lastSeenAt: string;
-  /** The Expeditoo account behind this client, when there is one. */
+  /** The Expeditop account behind this client, when there is one. */
   account: {
     id: string;
     name: string | null;

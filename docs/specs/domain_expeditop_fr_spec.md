@@ -78,3 +78,25 @@ and is left alone.
   empty falls back to `https://www.expeditop.fr`; constants agree; `mailbox()`.
 - The existing suites that build links (`email.service`, `invoice-render`,
   `expedion-files`) pass with the new fixtures.
+
+## 7. The brand name (2.90.2)
+
+The product is **EXPEDITOP** (written « Expeditop » in running text). Every
+standalone `Expeditoo` / `EXPEDITOO` in `src/`, `messages/`, `public/`,
+`testing/` and `.env.example` was renamed.
+
+**Kept on purpose:** the repo / package / Vercel project name `expeditoo-ship`;
+the Android application id `com.expeditoo.app`; browser storage keys
+(`expeditoo-locale`, `expeditoo-active-access`, `expeditoo-returning`,
+`expeditoo-driver-access-seen`, `expeditoo-impersonation`); the lowercase
+`actor: "expeditoo"` sent to Expedion; the `EXPEDITOO-TESTING` / `EXPEDITOO-LEGAL`
+TODO markers; local DB, bucket and test-account names; applied migrations;
+release history.
+
+**Sender:** `EMAIL_FROM` = `Expeditop <no-reply@expeditop.fr>` (Resend verified
+`expeditop.fr` on 2026-11-20).
+
+**Mailboxes that must exist** (Resend only sends; these receive):
+`support@`, `drivers@`, `transporteurs@`, `privacy@`, `contact@`,
+`facturation@expeditop.fr`; `no-reply@` should forward to `support@` so a reply
+is not lost.

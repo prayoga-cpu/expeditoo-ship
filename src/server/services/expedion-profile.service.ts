@@ -35,7 +35,7 @@ function requireAccount(caller: ExpedionCaller) {
     throw new ExpedionProfileError(
       "PROFILE_NEEDS_ACCOUNT",
       403,
-      "Sign in with an Expeditoo account to read or edit a profile"
+      "Sign in with an Expeditop account to read or edit a profile"
     );
   }
 }

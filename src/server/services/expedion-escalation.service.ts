@@ -1,10 +1,10 @@
 /**
  * ============================================================================
- * Escalation bridge: Expedion → Expeditoo — Phase D
+ * Escalation bridge: Expedion → Expeditop — Phase D
  * ============================================================================
  *
  * When no driver in the pool takes a paid Expedion job, it becomes a live
- * Expeditoo listing and carriers bid on it. The client never leaves Expedion:
+ * Expeditop listing and carriers bid on it. The client never leaves Expedion:
  * the selected carrier and every subsequent status write back onto the quote.
  *
  * Both roadmaps make the same point about why this lives on one database —
@@ -215,7 +215,7 @@ export function escalationBlockers(quote: ExpedionQuote): string[] {
 
 export const expedionEscalationService = {
   /**
-   * Pushes a quote onto the Expeditoo marketplace.
+   * Pushes a quote onto the Expeditop marketplace.
    *
    * Idempotent by construction: `claimForEscalation` only succeeds for the
    * first caller, so an admin forcing escalation while the cron sweep runs
@@ -239,7 +239,7 @@ export const expedionEscalationService = {
     const quote = await expedionDal.getById(quoteId);
     if (!quote) throw err("QUOTE_NOT_FOUND", 404);
     if (quote.listingId) {
-      throw err("ALREADY_ESCALATED", 409, "This quote is already on Expeditoo");
+      throw err("ALREADY_ESCALATED", 409, "This quote is already on Expeditop");
     }
     if (!canTransition(quote.status, "escalated")) {
       throw err(
@@ -372,7 +372,7 @@ export const expedionEscalationService = {
             actor: opts.actor ?? "system",
             message:
               opts.reason ??
-              "Aucun transporteur disponible : mise en concurrence sur Expeditoo",
+              "Aucun transporteur disponible : mise en concurrence sur Expeditop",
             metadata: { listingId: listing.id },
           },
           tx
@@ -464,7 +464,7 @@ export const expedionEscalationService = {
       );
     }
     if (quote.listingId) {
-      throw err("ALREADY_ESCALATED", 409, "This quote is already on Expeditoo");
+      throw err("ALREADY_ESCALATED", 409, "This quote is already on Expeditop");
     }
 
     // The driver is checked before anything is created. Discovering an

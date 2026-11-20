@@ -27,7 +27,7 @@ interface DriverInvitationEmailProps {
 export function DriverInvitationEmail({
   inviteUrl,
   userName,
-  productName = "EXPEDITOO",
+  productName = "EXPEDITOP",
 }: DriverInvitationEmailProps) {
   return (
     <Html>

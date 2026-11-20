@@ -6,7 +6,7 @@ export const SendEmailSchema = z.object({
   html: z.string().optional(),
   text: z.string().optional(),
   // Where a reply goes when it should not come back to the platform address.
-  // The contact form needs it: support mail is sent *by* Expeditoo but is
+  // The contact form needs it: support mail is sent *by* Expeditop but is
   // answered *to* the visitor who wrote in.
   replyTo: z.string().email("Invalid reply-to address").optional(),
   // Base64 payloads only. The Resend SDK JSON-encodes its body and does no

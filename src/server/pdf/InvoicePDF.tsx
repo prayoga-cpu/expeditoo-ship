@@ -381,7 +381,7 @@ export const InvoiceBatchPDF = ({
         {invoices.length === 0 ? (
             <Page size="A4" style={styles.page}>
                 <View style={styles.header}>
-                    <Text style={styles.logo}>Expeditoo</Text>
+                    <Text style={styles.logo}>Expeditop</Text>
                     <View>
                         <Text style={styles.invoiceTitle}>FACTURES</Text>
                         <Text style={styles.invoiceNumber}>{periodLabel}</Text>

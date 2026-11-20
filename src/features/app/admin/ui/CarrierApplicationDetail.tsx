@@ -511,7 +511,7 @@ export function CarrierApplicationDetail({
           </div>
         </div>
 
-        {/* Expeditoo pays an in-house driver as staff: no bank details to show. */}
+        {/* Expeditop pays an in-house driver as staff: no bank details to show. */}
         {!inHouse && (
           <div className="border-t pt-4 space-y-4">
             <h3 className="font-semibold">{t("banking")}</h3>

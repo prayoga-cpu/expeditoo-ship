@@ -409,7 +409,7 @@ export function useExpedionAssignDriver() {
  * Unwinds a paid quote so the client can be re-quoted.
  *
  * The response carries the Stripe reference the refund has to be issued
- * against, because EXPEDITOO never took the payment and cannot return it —
+ * against, because EXPEDITOP never took the payment and cannot return it —
  * see `expedionService.cancelAndRequote`.
  */
 export function useExpedionRequote() {

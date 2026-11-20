@@ -1,6 +1,6 @@
-# Expeditoo QA Testing
+# Expeditop QA Testing
 
-This folder contains all end-to-end (E2E) testing infrastructure for Expeditoo.
+This folder contains all end-to-end (E2E) testing infrastructure for Expeditop.
 
 ## 📋 Documentation
 

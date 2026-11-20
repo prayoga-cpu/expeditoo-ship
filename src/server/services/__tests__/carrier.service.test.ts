@@ -309,7 +309,7 @@ describe("createInHouseDriver", () => {
       expect.objectContaining({
         userId: "user-new",
         kind: "private",
-        companyName: "Expeditoo",
+        companyName: "Expeditop",
         siret: null,
         status: "approved",
         approvedBy: "admin-1",
@@ -535,14 +535,14 @@ describe("two kinds of driver", () => {
       postalCode: "69000",
     };
 
-    it("stores an in-house file with Expeditoo as the company and no SIRET", async () => {
+    it("stores an in-house file with Expeditop as the company and no SIRET", async () => {
       await carrierService.upsertApplication("user-1", inHouse);
 
       expect(carriersDal.create).toHaveBeenCalledWith(
         expect.objectContaining({
           userId: "user-1",
           kind: "private",
-          companyName: "Expeditoo",
+          companyName: "Expeditop",
           siret: null,
         })
       );
@@ -582,7 +582,7 @@ describe("two kinds of driver", () => {
         expect.objectContaining({
           userId: "user-1",
           kind: "private",
-          companyName: "Expeditoo",
+          companyName: "Expeditop",
           status: "approved",
           approvedBy: "admin-1",
         }),
@@ -660,7 +660,7 @@ describe("two kinds of driver", () => {
 
       expect(carriersDal.update).toHaveBeenCalledWith(
         "carrier-1",
-        expect.objectContaining({ contactPhone: "0612345678", companyName: "Expeditoo" })
+        expect.objectContaining({ contactPhone: "0612345678", companyName: "Expeditop" })
       );
     });
 

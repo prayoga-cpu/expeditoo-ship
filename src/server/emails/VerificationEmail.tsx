@@ -17,7 +17,7 @@ interface VerificationEmailProps {
   /**
    * Which product this account belongs to, as the recipient knows it.
    *
-   * EXPEDITOO and Expedion share one Better Auth instance, so this template
+   * EXPEDITOP and Expedion share one Better Auth instance, so this template
    * also greets auction buyers who have never heard of a freight marketplace.
    * The caller resolves the name from `user.origin`
    * (src/server/services/auth.service.ts); the default keeps every existing
@@ -30,7 +30,7 @@ interface VerificationEmailProps {
 export function VerificationEmail({
   verificationUrl,
   userName = "there",
-  productName = "EXPEDITOO",
+  productName = "EXPEDITOP",
 }: VerificationEmailProps) {
   return (
     <Html>

@@ -76,8 +76,8 @@ describe("OfferCard — slots that have passed", () => {
   });
 });
 
-/** client_feedback_2026_10_29_spec.md §B1 — Expeditoo's pick. */
-describe("OfferCard — Expeditoo's pick", () => {
+/** client_feedback_2026_10_29_spec.md §B1 — Expeditop's pick. */
+describe("OfferCard — Expeditop's pick", () => {
   it("marks the recommended offer and asks the requester to pay to confirm", () => {
     const onAccept = renderCard({
       ...offer([slot("ahead", 30 * HOUR)]),

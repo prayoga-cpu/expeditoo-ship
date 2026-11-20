@@ -208,7 +208,7 @@
   "auth": {
     "login": {
       "title": "Welcome back",
-      "subtitle": "Sign in to your EXPEDITOO account",
+      "subtitle": "Sign in to your EXPEDITOP account",
       "email": "Email address",
       "password": "Password",
       "forgotPassword": "Forgot password?",
@@ -229,7 +229,7 @@
     },
     "register": {
       "title": "Create your account",
-      "subtitle": "Join EXPEDITOO to start shipping and bidding",
+      "subtitle": "Join EXPEDITOP to start shipping and bidding",
       "email": "Email address",
       "password": "Password",
       "confirmPassword": "Confirm password",
@@ -331,7 +331,7 @@
       "carrier": "You were joining the carrier network."
     },
     "welcome": {
-      "title": "What brings you to EXPEDITOO?",
+      "title": "What brings you to EXPEDITOP?",
       "subtitle": "Pick what you need first — you can always do the other later.",
       "shipTitle": "I need to ship something",
       "shipDescription": "Post what you need moved and get offers from drivers.",
@@ -702,7 +702,7 @@
     "contact": {
       "title": "Personal contact details",
       "staffTitle": "Personal contact details (visible to staff)",
-      "privacy": "Only you and the Expeditoo team can see these — never a carrier or a requester.",
+      "privacy": "Only you and the Expeditop team can see these — never a carrier or a requester.",
       "fullName": "Full name",
       "firstName": "First name",
       "lastName": "Last name",
@@ -748,7 +748,7 @@
     },
     "notifications": {
       "title": "Notifications",
-      "description": "Choose how EXPEDITOO notifies you.",
+      "description": "Choose how EXPEDITOP notifies you.",
       "loadError": "Your notification preferences could not be loaded. Try reloading the page.",
       "channels": {
         "email": "By email",
@@ -1192,7 +1192,7 @@
       "staffTitle": "An operator or admin account does not offer a price",
       "staffDescription": "To make an offer you need an approved driver account. On an Expedion job, awarding is done from the « Award queue ».",
       "inHouseTitle": "Your runs are assigned to you",
-      "inHouseDescription": "As an Expeditoo in-house driver you do not answer ads: the team gives you the runs."
+      "inHouseDescription": "As an Expeditop in-house driver you do not answer ads: the team gives you the runs."
     }
   },
   "create": {
@@ -2085,7 +2085,7 @@
         },
         "accept": {
           "question": "How do I take a new job?",
-          "answer": "Open “Jobs”, choose a request and press “Make an offer” with your price and the time slots that suit you. You are notified as soon as the requester picks you. In-house Expeditoo drivers do not bid: runs are assigned to them and appear under “Deliveries”."
+          "answer": "Open “Jobs”, choose a request and press “Make an offer” with your price and the time slots that suit you. You are notified as soon as the requester picks you. In-house Expeditop drivers do not bid: runs are assigned to them and appear under “Deliveries”."
         },
         "vehicle": {
           "question": "Can I update my vehicle details?",
@@ -2215,7 +2215,7 @@
     "platform": {
       "eyebrow": "100% WEB PLATFORM",
       "title": "Open a tab, bid. Nothing to install.",
-      "intro": "Expeditoo is built as a modern web app (Next.js). For a carrier business, that choice is deliberate:",
+      "intro": "Expeditop is built as a modern web app (Next.js). For a carrier business, that choice is deliberate:",
       "point1": {
         "title": "Works everywhere, instantly.",
         "desc": "Cab phone, depot PC, dispatcher's laptop: same URL, no app store, no version to update."
@@ -2275,8 +2275,8 @@
       "terms": "Terms",
       "legalNotice": "Legal notice",
       "privacy": "Privacy policy",
-      "copyright": "© 2026 Expeditoo — Expedion Group",
-      "sameGroup": "Expedion and Expeditoo are part of the same company",
+      "copyright": "© 2026 Expeditop — Expedion Group",
+      "sameGroup": "Expedion and Expeditop are part of the same company",
       "changelog": "Changelog"
     },
     "actions": {
@@ -2341,7 +2341,7 @@
       },
       "privacy": {
         "title": "What happens to your documents",
-        "body": "Identity and compliance documents are held in private storage. They are never served from a public address, never attached to a job, and never shown to another carrier or to the client whose delivery you are carrying. Only operators reviewing your application can open them. We do not pass your bank details to any payment provider: of the IBAN and BIC you enter we keep only the last four characters, so you can recognise your own account, and your RIB is kept like your other documents. Your earnings are paid by bank transfer from Expeditoo when you ask for them.",
+        "body": "Identity and compliance documents are held in private storage. They are never served from a public address, never attached to a job, and never shown to another carrier or to the client whose delivery you are carrying. Only operators reviewing your application can open them. We do not pass your bank details to any payment provider: of the IBAN and BIC you enter we keep only the last four characters, so you can recognise your own account, and your RIB is kept like your other documents. Your earnings are paid by bank transfer from Expeditop when you ask for them.",
         "expiry": "If a document expires and is not replaced, the account is suspended rather than left to bid with cover that no longer exists. Replacing the document restores it."
       },
       "cta": "Apply as a driver",
@@ -2350,7 +2350,7 @@
     "auctionHouses": {
       "eyebrow": "AUCTION HOUSES",
       "title": "For auction houses and their buyers",
-      "intro": "Expeditoo is the carrier network behind Expedion. You never post here and you never manage a driver here — you accept a quote in Expedion, and this network exists so that a job nobody has picked up still gets collected.",
+      "intro": "Expeditop is the carrier network behind Expedion. You never post here and you never manage a driver here — you accept a quote in Expedion, and this network exists so that a job nobody has picked up still gets collected.",
       "flow": {
         "title": "How a delivery reaches this network",
         "items": [
@@ -2416,7 +2416,7 @@
         "rateLimited": "Too many messages from this connection. Please wait a few minutes and try again, or write to support@expeditop.fr directly.",
         "privacyNote": "We use your address to reply and nothing else.",
         "successTitle": "Message sent",
-        "successBody": "Thank you — we have it. We will reply to {email}, usually within one working day. If you have an Expeditoo account, the message is also in your support thread inside the app.",
+        "successBody": "Thank you — we have it. We will reply to {email}, usually within one working day. If you have an Expeditop account, the message is also in your support thread inside the app.",
         "subjects": {
           "carrier": "Becoming a driver",
           "auctionHouse": "Auction house partnership",
@@ -2520,7 +2520,7 @@
           "title": "Intellectual property",
           "paragraphs": [
             "The structure of the site, its text, graphics, logos and software are the property of the publisher or are used with permission. Reproduction or reuse of any part, by any means, without prior written consent is prohibited.",
-            "The EXPEDITOO and Expedion names and logos are the property of the group. Use of them without authorisation is not permitted."
+            "The EXPEDITOP and Expedion names and logos are the property of the group. Use of them without authorisation is not permitted."
           ]
         },
         {
@@ -2570,8 +2570,8 @@
         {
           "title": "What the service is",
           "paragraphs": [
-            "Expeditoo is the carrier network of the Expedion group. It publishes transport jobs escalated from Expedion, lets approved carriers bid on them, and lets an operator award one bid.",
-            "Expeditoo is not a marketplace for goods. Nothing is sold here, there is no goods auction, and no client posts work here directly — every job on this platform arrives by escalation from Expedion."
+            "Expeditop is the carrier network of the Expedion group. It publishes transport jobs escalated from Expedion, lets approved carriers bid on them, and lets an operator award one bid.",
+            "Expeditop is not a marketplace for goods. Nothing is sold here, there is no goods auction, and no client posts work here directly — every job on this platform arrives by escalation from Expedion."
           ],
           "items": [
             "Publication of escalated transport jobs",
@@ -2637,7 +2637,7 @@
           "title": "Liability",
           "paragraphs": [
             "The platform is provided as is. We do not warrant uninterrupted or error-free operation.",
-            "Expeditoo is not the carrier. The carriage itself is performed by the carrier awarded the job, under their own insurance and their own legal responsibility."
+            "Expeditop is not the carrier. The carriage itself is performed by the carrier awarded the job, under their own insurance and their own legal responsibility."
           ]
         },
         {
@@ -2652,7 +2652,7 @@
     "privacy": {
       "eyebrow": "PRIVACY",
       "title": "Privacy policy",
-      "intro": "What personal data Expeditoo holds, why it holds it, how long for, and the rights you have over it.",
+      "intro": "What personal data Expeditop holds, why it holds it, how long for, and the rights you have over it.",
       "lastUpdated": "LAST UPDATED — 5 OCTOBER 2026",
       "sections": [
         {
@@ -2995,7 +2995,7 @@
         "CANNOT_DELETE_SYSTEM_USER": "The Expedion system account cannot be deleted"
       },
       "origin": {
-        "expeditoo": "Expeditoo",
+        "expeditoo": "Expeditop",
         "expedion": "Expedion"
       }
     },
@@ -3014,9 +3014,9 @@
         "viewDetails": "View Details",
         "delete": "Delete",
         "origin": {
-          "direct": "Expeditoo site",
+          "direct": "Expeditop site",
           "expedion": "via Expedion",
-          "directHint": "Request posted on Expeditoo by its requester. They choose the transporter and pay with their own card.",
+          "directHint": "Request posted on Expeditop by its requester. They choose the transporter and pay with their own card.",
           "expedionHint": "A paid Expedion quote published because no driver took it. An operator chooses the transporter in the client's place."
         },
         "reference": "No.",
@@ -3043,7 +3043,7 @@
       "createDialog": {
         "trigger": "Add in-house driver",
         "title": "Add an in-house driver",
-        "description": "A driver on the Expeditoo team, approved as soon as you save — no application to review. Choose whether they already have an account or you invite them by email.",
+        "description": "A driver on the Expeditop team, approved as soon as you save — no application to review. Choose whether they already have an account or you invite them by email.",
         "fields": {
           "name": "Full name",
           "email": "Email",
@@ -3122,7 +3122,7 @@
       "support": "Support",
       "finance": "Finance",
       "openApplications": "Open applications",
-      "inHouseHint": "Expeditoo in-house driver: creates (or approves) their file, they appear in the Drivers list and receive the runs you assign. They do not answer ads and see no prices. Then complete their details in",
+      "inHouseHint": "Expeditop in-house driver: creates (or approves) their file, they appear in the Drivers list and receive the runs you assign. They do not answer ads and see no prices. Then complete their details in",
       "carrierHint": "Outside carrier: creates (or approves) their file, they appear in the Drivers list and can answer ads. Then complete their details in"
     },
     "payments": {
@@ -3183,7 +3183,7 @@
           "description": "No driver matches these filters.",
           "descriptionAll": "No driver has applied yet."
         },
-        "inHouse": "Expeditoo in-house driver",
+        "inHouse": "Expeditop in-house driver",
         "type": "Type",
         "contact": "Contact",
         "reached": "Reached",
@@ -3270,7 +3270,7 @@
         "kindLabel": "Driver type",
         "kind": {
           "professional": "Carrier (outside)",
-          "private": "Expeditoo in-house driver"
+          "private": "Expeditop in-house driver"
         },
         "incomplete": "Some details are missing (phone, vehicle…). You can complete the file on the person's behalf.",
         "editHint": "Correct or complete the file on the person's behalf.",
@@ -3327,8 +3327,8 @@
       "editor": {
         "title": "Complete the file",
         "description": "You are filling in {name}'s file for them. Documents and bank details stay with the person.",
-        "inHouse": "Expeditoo in-house driver",
-        "inHouseHelp": "No company, SIRET or documents: the person drives for Expeditoo.",
+        "inHouse": "Expeditop in-house driver",
+        "inHouseHelp": "No company, SIRET or documents: the person drives for Expeditop.",
         "kindLocked": "The type can no longer change once the file is approved.",
         "companyName": "Company name",
         "siret": "SIRET",
@@ -3360,7 +3360,7 @@
     },
     "expedion": {
       "title": "Overview",
-      "subtitle": "Expedion quotes and the Expeditoo marketplace, at a glance.",
+      "subtitle": "Expedion quotes and the Expeditop marketplace, at a glance.",
       "error": "Report unavailable",
       "kpi": {
         "quotes": "Quotes",
@@ -3402,7 +3402,7 @@
         "toPriceEmptyBody": "Every quote received has a published price.",
         "needsDriver": "No driver",
         "needsDriverEmpty": "No job waiting",
-        "needsDriverEmptyBody": "Every paid job has a driver or has gone to Expeditoo.",
+        "needsDriverEmptyBody": "Every paid job has a driver or has gone to Expeditop.",
         "storageAtRisk": "Storage",
         "storageAtRiskEmpty": "No lot at risk",
         "storageAtRiskEmptyBody": "No storage starts in the next four days.",
@@ -3443,7 +3443,7 @@
       "actions": {
         "reprice": "Adjust price",
         "assign": "Assign a driver",
-        "escalate": "Publish to Expeditoo",
+        "escalate": "Publish to Expeditop",
         "cancel": "Cancel",
         "saving": "Saving…",
         "assigning": "Assigning…",
@@ -3464,12 +3464,12 @@
         "carrier": "Carrier",
         "chooseCarrier": "Choose a carrier",
         "loading": "Loading…",
-        "noCarriers": "No approved carrier. Publish the job to Expeditoo instead.",
-        "escalateTitle": "Publish to Expeditoo?",
+        "noCarriers": "No approved carrier. Publish the job to Expeditop instead.",
+        "escalateTitle": "Publish to Expeditop?",
         "escalateBody": "{reference} will be published as a listing and carriers can bid immediately. Publishing is final — there is no undo.",
         "repriced": "Quote updated",
         "assigned": "Driver assigned",
-        "escalated": "Job published to Expeditoo",
+        "escalated": "Job published to Expeditop",
         "storageTitle": "Storage terms",
         "storageBody": "{reference} — extend the free-storage window or set the daily fee that applies after it.",
         "freeUntil": "Free storage until",
@@ -3484,7 +3484,7 @@
         "priceLocked": "Paid — the price is settled"
       },
       "supply": {
-        "title": "Escalation to Expeditoo",
+        "title": "Escalation to Expeditop",
         "listings": "Listings from Expedion",
         "offers": "Offers received on those listings",
         "rate": "Escalation rate",
@@ -3580,7 +3580,7 @@
         "cancel": "Cancel",
         "saveAndPublish": "Save & publish",
         "fixNow": "Fix now",
-        "readyToPublish": "Ready to publish to Expeditoo",
+        "readyToPublish": "Ready to publish to Expeditop",
         "blockedBanner": "Blocked from publishing — missing:",
         "maximize": "Maximize",
         "restore": "Restore",
@@ -3633,7 +3633,7 @@
       },
       "directRequests": {
         "title": "Direct requests",
-        "subtitle": "Posted on Expeditoo with “Request transport”. Expedion quotes and the Airtable import are above.",
+        "subtitle": "Posted on Expeditop with “Request transport”. Expedion quotes and the Airtable import are above.",
         "total": "{count} in total",
         "viewAll": "All listings",
         "loading": "Loading…",
@@ -3720,13 +3720,13 @@
     },
     "expedionClients": {
       "title": "Expedion clients",
-      "subtitle": "Everyone who has requested a quote through Expedion. Most have no Expeditoo account, so they do not appear under Users.",
+      "subtitle": "Everyone who has requested a quote through Expedion. Most have no Expeditop account, so they do not appear under Users.",
       "searchPlaceholder": "Name, email, phone, city, bordereau…",
       "filter": {
         "label": "Account",
         "all": "All clients",
-        "withAccount": "With an Expeditoo account",
-        "withoutAccount": "No Expeditoo account"
+        "withAccount": "With an Expeditop account",
+        "withoutAccount": "No Expeditop account"
       },
       "sort": {
         "label": "Sort by",
@@ -3741,7 +3741,7 @@
         "quotes": "Quotes",
         "value": "Paid",
         "lastSeen": "Last seen",
-        "account": "Expeditoo account"
+        "account": "Expeditop account"
       },
       "noName": "No name given",
       "paidOf": "{paid} paid",
@@ -3765,9 +3765,9 @@
         "delivered": "Delivered",
         "value": "Total paid",
         "since": "First quote {date}",
-        "hasAccount": "Has an Expeditoo account: {email}",
+        "hasAccount": "Has an Expeditop account: {email}",
         "accountSuspended": "Suspended",
-        "noAccountHint": "No Expeditoo account. This client signs in through Expedion only, so there is nothing here to suspend or reset.",
+        "noAccountHint": "No Expeditop account. This client signs in through Expedion only, so there is nothing here to suspend or reset.",
         "quotesTitle": "Quotes filed",
         "noQuotes": "No quotes."
       },
@@ -3842,7 +3842,7 @@
       "by": {
         "requester": "Cancelled by the client",
         "transporter": "Cancelled by the carrier",
-        "operator": "Cancelled by Expeditoo"
+        "operator": "Cancelled by Expeditop"
       },
       "categories": {
         "vehicle_breakdown": "Vehicle breakdown",
@@ -3914,8 +3914,8 @@
           "postalCode": "5 digits"
         },
         "inHouse": {
-          "label": "I am an Expeditoo in-house driver",
-          "help": "Tick if you drive for Expeditoo itself: no company, SIRET or documents. An administrator will validate your file.",
+          "label": "I am an Expeditop in-house driver",
+          "help": "Tick if you drive for Expeditop itself: no company, SIRET or documents. An administrator will validate your file.",
           "title": "Your details",
           "description": "A few details are enough for an in-house driver.",
           "bio": "Anything for the team (optional)",
@@ -3959,7 +3959,7 @@
         "phone": "Phone",
         "address": "Address",
         "type": "Type",
-        "inHouse": "Expeditoo in-house driver"
+        "inHouse": "Expeditop in-house driver"
       },
       "documents": {
         "title": "Documents",
@@ -4388,7 +4388,7 @@
       "action": "Switch to Driver mode"
     },
     "getStarted": {
-      "title": "Start driving with EXPEDITOO",
+      "title": "Start driving with EXPEDITOP",
       "description": "Submit your driver application to bid on transport jobs.",
       "action": "Start my application"
     },
@@ -4531,7 +4531,7 @@
     "requesting": "Requesting…",
     "requested": "Withdrawal requested",
     "belowMinimum": "A withdrawal starts at {minimum}. Your balance stays and grows with the next delivery.",
-    "footnote": "Payments are collected by Expeditoo. A withdrawal is a request an operator approves and transfers by hand — it is not instant.",
+    "footnote": "Payments are collected by Expeditop. A withdrawal is a request an operator approves and transfers by hand — it is not instant.",
     "historyTitle": "Past withdrawals",
     "status": {
       "requested": "Requested",
@@ -4638,7 +4638,7 @@
       "fields": {
         "legalName": {
           "label": "Legal name",
-          "placeholder": "e.g. Expeditoo SAS"
+          "placeholder": "e.g. Expeditop SAS"
         },
         "legalForm": {
           "label": "Legal form",
@@ -5108,12 +5108,12 @@
     "immediateHint": "No driver yet, and the pickup window is already open: the goods can be collected right away."
   },
   "negotiation": {
-    "proposedBadge": "Expeditoo's pick",
-    "proposedForYou": "Expeditoo picked this transporter for you. Pay to confirm the booking.",
+    "proposedBadge": "Expeditop's pick",
+    "proposedForYou": "Expeditop picked this transporter for you. Pay to confirm the booking.",
     "payToConfirm": "Pay to confirm",
     "propose": "Propose to the client",
     "unpropose": "Withdraw the proposal",
-    "proposedToClient": "Expeditoo recommended your offer to the client. They still have to pay to confirm.",
+    "proposedToClient": "Expeditop recommended your offer to the client. They still have to pay to confirm.",
     "counter": "Counter-offer",
     "counterPrice": "Your price (€)",
     "counterNote": "A word for the transporter (optional)",

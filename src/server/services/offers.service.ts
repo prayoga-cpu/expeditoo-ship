@@ -584,7 +584,7 @@ export const offersService = {
     });
   },
 
-  // ---- Expeditoo's pick and the negotiation (client_feedback_2026_10_29_spec.md §B1, §B6) ----
+  // ---- Expeditop's pick and the negotiation (client_feedback_2026_10_29_spec.md §B1, §B6) ----
 
   /**
    * An operator recommends one offer on a direct request. The requester still
@@ -611,7 +611,7 @@ export const offersService = {
     if (!proposed) throw err("OFFER_NOT_PENDING", 409);
 
     await notify(listing.shipperId, "offer_proposed", {
-      title: "Expeditoo recommends a transporter",
+      title: "Expeditop recommends a transporter",
       message: `We picked an offer of ${euroLabel(offer.priceCents)} for "${listing.title}". Pay to confirm it.`,
       listingId: listing.id,
       offerId,
@@ -619,7 +619,7 @@ export const offersService = {
     return withoutProposer(proposed);
   },
 
-  /** Takes Expeditoo's pick back off an offer. */
+  /** Takes Expeditop's pick back off an offer. */
   async withdrawProposal(actor: { userId: string; isAdmin?: boolean; isOperator?: boolean }, offerId: string) {
     if (!actor.isAdmin && !actor.isOperator) throw err("FORBIDDEN_NOT_OPERATOR", 403);
     const updated = await offersDal.updateNegotiation(offerId, {

@@ -8,7 +8,7 @@ import { ApiError } from "@/lib/fetcher";
 import { offersApi } from "../api/offers.api";
 
 /**
- * Expeditoo's pick and the counter-price loop on one offer
+ * Expeditop's pick and the counter-price loop on one offer
  * (client_feedback_2026_10_29_spec.md §B1, §B6). Every success refetches the
  * job and the carrier's pending list, so both sides read the same price.
  */

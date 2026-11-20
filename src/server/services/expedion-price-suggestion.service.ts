@@ -168,7 +168,7 @@ function describeQuote(quote: ExpedionQuote): string {
 
 function buildPrompt(quote: ExpedionQuote, engine: EngineEstimate | null): string {
   const parts = [
-    "Tu es analyste tarifaire pour Expeditoo, une marketplace française de transport qui va chercher des lots achetés en salle des ventes chez l'acheteur.",
+    "Tu es analyste tarifaire pour Expeditop, une marketplace française de transport qui va chercher des lots achetés en salle des ventes chez l'acheteur.",
     "On te donne le devis et, si disponible, le bordereau d'adjudication scanné. Propose un prix de transport standard (hors assurance ad valorem, calculée séparément par la plateforme).",
     RATE_CARD,
     describeQuote(quote),

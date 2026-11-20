@@ -361,7 +361,7 @@ export const auth = betterAuth({
   // own on native targets, so without this the Expedion app could sign in and
   // then immediately be treated as anonymous.
   //
-  // This is additive: the browser cookie flow Expeditoo's own Next.js app uses
+  // This is additive: the browser cookie flow Expeditop's own Next.js app uses
   // is untouched, and a request carrying no bearer header behaves exactly as
   // it did before.
   //

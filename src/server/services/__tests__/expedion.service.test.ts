@@ -430,7 +430,7 @@ describe('expedionService.cancelAndRequote', () => {
         expect(canTransition('paid', 'quoted')).toBe(false);
     });
 
-    // The only handle anyone has for issuing the refund — EXPEDITOO never took
+    // The only handle anyone has for issuing the refund — EXPEDITOP never took
     // the money, so this string is what the Expedion side refunds against.
     it('recovers the Stripe reference from the timeline', async () => {
         getByIdMock.mockResolvedValue(paidQuote({ acceptedPriceCents: 10_000 }) as never);

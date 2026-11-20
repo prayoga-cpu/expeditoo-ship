@@ -2,8 +2,8 @@
  * Roles this admin UI offers to add or remove.
  *
  * `driver` and `carrier` are two roles, not one person under two names
- * (driver_types_spec.md §1): `driver` is the **in-house Expeditoo driver** —
- * runs what Expeditoo assigns, bids on nothing, sees no money — and `carrier`
+ * (driver_types_spec.md §1): `driver` is the **in-house Expeditop driver** —
+ * runs what Expeditop assigns, bids on nothing, sees no money — and `carrier`
  * is the **outside driver** who bids and is paid. Granting either from the role
  * dialog goes through the carrier service, which creates or approves the file
  * that earns it, so the person lands in the Drivers list straight away.

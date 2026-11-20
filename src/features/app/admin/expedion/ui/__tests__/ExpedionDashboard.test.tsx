@@ -277,7 +277,7 @@ describe("ExpedionDashboard", () => {
     ).toBeInTheDocument();
   });
 
-  it("puts requests posted on Expeditoo beside the Expedion quotes", () => {
+  it("puts requests posted on Expeditop beside the Expedion quotes", () => {
     state.report = REPORT;
     state.isLoading = false;
     state.error = null;

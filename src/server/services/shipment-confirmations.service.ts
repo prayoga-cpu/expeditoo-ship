@@ -423,7 +423,7 @@ export const shipmentConfirmationsService = {
 
 /**
  * Puts the client's answer on the Expedion quote timeline, so an operator
- * reading the quote sees it without opening Expeditoo.
+ * reading the quote sees it without opening Expeditop.
  *
  * Writes an event and **not** a status: the quote's lifecycle is driven by the
  * transporter's side of the bridge, and a confirmation is not a stage.

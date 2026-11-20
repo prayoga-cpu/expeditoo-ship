@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**EXPEDITOO** (`expeditoo-ship`) is the **driver-side app for Expedion demand** in
+**EXPEDITOP** (renamed from « Expeditoo » on 2026-11-20; the repo and Vercel project are still `expeditoo-ship`, see `docs/specs/domain_expeditop_fr_spec.md` §7) is the **driver-side app for Expedion demand** in
 France. Expedion — the sibling quote product — escalates paid jobs no driver has
 taken; approved drivers bid downward on price, ETA and vehicle; **an operator
 selects** the winner. Status writes back so the Expedion client never leaves

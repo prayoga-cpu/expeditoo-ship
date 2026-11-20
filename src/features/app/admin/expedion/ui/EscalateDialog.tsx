@@ -17,7 +17,7 @@ import type { QuoteRow } from "@/server/dal/expedion-report.dal";
 import { useExpedionEscalate } from "../hooks/useExpedionReport";
 
 /**
- * Publishes a quote to Expeditoo as a marketplace listing.
+ * Publishes a quote to Expeditop as a marketplace listing.
  *
  * An `AlertDialog` rather than the plain `Dialog` the other two use, because
  * this one is not editable and not reversible: escalation creates a real

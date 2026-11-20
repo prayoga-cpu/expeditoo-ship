@@ -518,7 +518,7 @@ async function connectAccountFor(carrierUserId: string): Promise<string> {
  *
  *  - Only a `stripe` charge is documented. An escalated job's client was
  *    debited in Expedion, into Expedion's Stripe account, against a listing
- *    owned by a system account nobody signs into. An Expeditoo invoice for that
+ *    owned by a system account nobody signs into. An Expeditop invoice for that
  *    payment would assert a charge this company never made — and could never be
  *    corrected, because `refundForJob` refuses that money outright (§3).
  *  - It never throws. A paperwork failure must not un-award a job whose client

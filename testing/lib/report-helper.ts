@@ -68,7 +68,7 @@ ${description}
 ![Screenshot](./${screenshotName})
 
 ---
-*Expeditoo QA Automation*
+*Expeditop QA Automation*
 `;
     
     fs.writeFileSync(path.join(this.runFolder, `${sanitizedTestName}.md`), bugMd);
@@ -109,7 +109,7 @@ ${this.reports.map(bug => `
 `).join('\n')}
 
 ---
-*Generated automatically by Expeditoo QA Framework*
+*Generated automatically by Expeditop QA Framework*
 `;
 
     fs.writeFileSync(path.join(this.runFolder, 'Run_Summary.md'), summaryMd);

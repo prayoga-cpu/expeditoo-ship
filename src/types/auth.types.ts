@@ -1,5 +1,5 @@
 /**
- * Auth Types for Expeditoo
+ * Auth Types for Expeditop
  * Provides proper typing for better-auth callbacks
  */
 

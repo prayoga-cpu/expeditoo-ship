@@ -229,7 +229,7 @@ describe('authService', () => {
             );
 
             const sent = sentEmail();
-            expect(sent.subject).toBe('Verify your EXPEDITOO account');
+            expect(sent.subject).toBe('Verify your EXPEDITOP account');
             expect(textOf(sent.react).join(' ')).toContain(
                 'callbackURL=%2Fsignin%3Fverified%3Dtrue'
             );
@@ -255,12 +255,12 @@ describe('authService', () => {
                 `callbackURL=${encodeURIComponent(`${EXPEDION_ORIGIN}/seConnecter?verified=true`)}`
             );
             expect(body).toContain('Expedion');
-            expect(body).not.toContain('EXPEDITOO');
+            expect(body).not.toContain('EXPEDITOP');
         });
 
         // Without the variable there is no Expedion app to send anyone to, so
         // the mail must read exactly as it did before the branch existed.
-        it('should fall back to EXPEDITOO when no Expedion origin is configured', async () => {
+        it('should fall back to EXPEDITOP when no Expedion origin is configured', async () => {
             vi.mocked(usersDAL.getUserByEmail).mockResolvedValue(
                 namedUser('Test User', 'expedion')
             );
@@ -271,7 +271,7 @@ describe('authService', () => {
             );
 
             const sent = sentEmail();
-            expect(sent.subject).toBe('Verify your EXPEDITOO account');
+            expect(sent.subject).toBe('Verify your EXPEDITOP account');
             expect(textOf(sent.react).join(' ')).toContain(
                 'callbackURL=%2Fsignin%3Fverified%3Dtrue'
             );
@@ -290,7 +290,7 @@ describe('authService', () => {
             await authService.sendPasswordResetEmail('test@mail.com', resetUrl);
 
             const sent = sentEmail();
-            expect(sent.subject).toBe('Réinitialisez votre mot de passe EXPEDITOO');
+            expect(sent.subject).toBe('Réinitialisez votre mot de passe EXPEDITOP');
             expect(textOf(sent.react).join(' ')).toContain('Bonjour Test,');
             expect(textOf(sent.react).join(' ')).not.toContain('verify');
         });
@@ -321,7 +321,7 @@ describe('authService', () => {
             expect(sent.subject).toBe('Réinitialisez votre mot de passe Expedion');
             const strings = textOf(sent.react);
             expect(strings).toContain(resetUrl);
-            expect(strings.join(' ')).not.toContain('EXPEDITOO');
+            expect(strings.join(' ')).not.toContain('EXPEDITOP');
         });
     });
 });
@@ -389,7 +389,7 @@ describe('driver invitation (driver_types_spec.md §4)', () => {
 
     const sent = mocks.send.mock.calls[0][0];
     expect(sent.to).toBe('jane@example.com');
-    expect(sent.subject).toBe('Vous êtes invité à rejoindre les chauffeurs EXPEDITOO');
+    expect(sent.subject).toBe('Vous êtes invité à rejoindre les chauffeurs EXPEDITOP');
     expect(textOf(sent.react).join(' ')).toContain('https://app.test/set?x=1');
   });
 });

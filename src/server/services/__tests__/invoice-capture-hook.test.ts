@@ -185,7 +185,7 @@ describe("chargeForShipment", () => {
     );
 
     // The money is recorded — that client really was debited, in Expedion —
-    // and no Expeditoo document is raised for it (spec §3).
+    // and no Expeditop document is raised for it (spec §3).
     const [row] = harness.paymentRows;
     expect(row.source).toBe("expedion");
     expect(row.status).toBe("captured");

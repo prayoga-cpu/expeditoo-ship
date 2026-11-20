@@ -233,7 +233,7 @@ export interface QuoteCapabilities {
   canReprice: boolean;
   /** Hand the job to a driver in the pool. */
   canAssign: boolean;
-  /** Publish the job to the Expeditoo marketplace. */
+  /** Publish the job to the Expeditop marketplace. */
   canEscalate: boolean;
   /** Edit the free-storage deadline and the daily fee after it. */
   canEditStorage: boolean;

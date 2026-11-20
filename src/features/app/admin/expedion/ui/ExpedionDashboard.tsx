@@ -39,7 +39,7 @@ import { RecentDirectRequestsPanel } from "./RecentDirectRequestsPanel";
 import { RecentQuotesPanel } from "./RecentQuotesPanel";
 
 /**
- * The operator report — Expedion quotes and the Expeditoo marketplace they
+ * The operator report — Expedion quotes and the Expeditop marketplace they
  * escalate into, on one page.
  *
  * A client component, not a server one, for a reason worth recording: this
@@ -166,7 +166,7 @@ export function ExpedionDashboard() {
         unavailable={missing.has("recent")}
       />
 
-      {/* Requests posted on Expeditoo itself. The panel above reads Expedion
+      {/* Requests posted on Expeditop itself. The panel above reads Expedion
           quotes only — the Airtable import and the Expedion app — so without
           this a new request from /create never reached the landing page. */}
       <RecentDirectRequestsPanel

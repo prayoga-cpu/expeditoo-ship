@@ -57,7 +57,7 @@ export const userListItemSchema = z.object({
   // The nickname chosen at sign-up, shown beside the name in the admin tables.
   alias: z.string().nullable().optional(),
   // Which product the account was created in, so the table can label an
-  // Expedion client apart from an EXPEDITOO driver.
+  // Expedion client apart from an EXPEDITOP driver.
   origin: z.enum(["expeditoo", "expedion"]),
   // Where the account's driver application stands, or null when it never
   // started one. An applicant holds no driver role until approval, so without

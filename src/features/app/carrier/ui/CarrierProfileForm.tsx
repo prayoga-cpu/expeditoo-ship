@@ -301,7 +301,7 @@ function PhoneField({
 }
 
 /**
- * « Chauffeur interne Expeditoo »: the person drives for Expeditoo itself, so
+ * « Chauffeur interne Expeditop »: the person drives for Expeditop itself, so
  * the company questions fall away. Nothing here approves anything — an admin
  * reads the file and decides (driver_types_spec.md §3).
  */

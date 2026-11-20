@@ -263,16 +263,16 @@ export const listExpedionQuotesSchema = z.object({
 export type ListExpedionQuotesInput = z.infer<typeof listExpedionQuotesSchema>;
 
 // ========================================
-// Status write-back from Expeditoo (Phase D)
+// Status write-back from Expeditop (Phase D)
 // ========================================
 
 export const expedionWriteBackSchema = z.object({
-  /** The Expeditoo listing carrying this quote. */
+  /** The Expeditop listing carrying this quote. */
   listingId: z.string().min(1),
   status: expedionQuoteStatusSchema,
   /**
    * The winning carrier's **user id** — what `offers.carrier_id` and
-   * `shipments.carrier_id` hold, and what every Expeditoo-side caller has in
+   * `shipments.carrier_id` hold, and what every Expeditop-side caller has in
    * hand.
    *
    * `expedion_quotes.assigned_carrier_id` is a `carriers.id`, so the service

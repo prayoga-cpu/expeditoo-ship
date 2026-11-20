@@ -57,7 +57,7 @@ export const mapLinkService = {
       const res = await fetch(url.toString(), {
         redirect: "follow",
         signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-        headers: { "User-Agent": "Expeditoo/1.0" },
+        headers: { "User-Agent": "Expeditop/1.0" },
       });
       finalUrl = res.url || url.toString();
     } catch {

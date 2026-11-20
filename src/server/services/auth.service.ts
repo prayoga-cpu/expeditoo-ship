@@ -126,7 +126,7 @@ export async function claimExpedionQuotesForUser(
       // this runs for every account on this instance, from either product, and
       // matches on email alone. A carrier who signs up here and whose address
       // happens to appear on a historical Airtable quote would be relabelled an
-      // Expedion client by EXPEDITOO's own auth hooks. That is exactly what
+      // Expedion client by EXPEDITOP's own auth hooks. That is exactly what
       // happened to the one account an earlier backfill marked -- an admin of
       // this app.
     }
@@ -157,7 +157,7 @@ type MailBranding = {
 /**
  * Which product a transactional mail should speak for.
  *
- * EXPEDITOO and Expedion share this Better Auth instance, one `user` table and
+ * EXPEDITOP and Expedion share this Better Auth instance, one `user` table and
  * one password, so a single verification or reset mail template serves both a
  * driver on this app and an auction buyer on the Expedion app. `user.origin`
  * is the only thing that tells them apart -- it is stamped at signup from the
@@ -175,7 +175,7 @@ type MailBranding = {
  *
  * When EXPEDION_APP_ORIGINS is unset -- a local checkout, or a deployment that
  * has not been told Expedion exists -- there is no Expedion app to send anyone
- * to, so an Expedion account falls back to EXPEDITOO's name and EXPEDITOO's
+ * to, so an Expedion account falls back to EXPEDITOP's name and EXPEDITOP's
  * destination. That is exactly what every one of these mails did before this
  * branch existed, which makes the missing variable a cosmetic problem rather
  * than a broken link.
@@ -185,7 +185,7 @@ function brandingFor(origin: AppOrigin | null | undefined): MailBranding {
 
   if (!expedionApp) {
     return {
-      productName: "EXPEDITOO",
+      productName: "EXPEDITOP",
       verifiedCallbackUrl: "/signin?verified=true",
     };
   }
@@ -229,7 +229,7 @@ export async function sendVerificationEmail(
     // If Better Auth provided a URL, modify the callbackURL to redirect to the
     // sign-in screen of the app this person actually signed up in, carrying the
     // `verified` flag that screen reads. Sending an Expedion buyer to
-    // EXPEDITOO's `/signin` ended their verification on a carrier login form
+    // EXPEDITOP's `/signin` ended their verification on a carrier login form
     // for a product they have no account relationship with.
     if (verificationUrl) {
       const url = new URL(finalVerificationUrl);

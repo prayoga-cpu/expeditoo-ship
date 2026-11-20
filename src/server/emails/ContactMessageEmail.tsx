@@ -68,8 +68,8 @@ export function ContactMessageEmail({
 
           <Text style={footer}>
             {threadUrl
-              ? `This sender has an Expeditoo account — the message is also in their support thread: ${threadUrl}`
-              : "This sender has no Expeditoo account, so there is no support thread. Reply to this email to answer them."}
+              ? `This sender has an Expeditop account — the message is also in their support thread: ${threadUrl}`
+              : "This sender has no Expeditop account, so there is no support thread. Reply to this email to answer them."}
           </Text>
         </Container>
       </Body>

@@ -659,7 +659,7 @@ function printSummary(results: {
 const settle = () => new Promise((resolve) => setTimeout(resolve, 1500));
 
 async function main() {
-  console.log("EXPEDITOO — beta data seed");
+  console.log("EXPEDITOP — beta data seed");
   resolveConnection();
   const app = await loadApp();
   const now = new Date();

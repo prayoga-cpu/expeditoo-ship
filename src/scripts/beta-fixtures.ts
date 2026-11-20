@@ -277,7 +277,7 @@ export function carrierRow(kind: "owner" | "qa", userId: string): InsertCarrier 
     ibanLast4: "4242",
     bio: owner
       ? "Transport d'objets d'art et de mobilier de salle des ventes, Île-de-France et grands axes."
-      : "Compte transporteur de test — bêta EXPEDITOO.",
+      : "Compte transporteur de test — bêta EXPEDITOP.",
   };
 }
 

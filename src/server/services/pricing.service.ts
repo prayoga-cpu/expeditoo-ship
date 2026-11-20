@@ -3,7 +3,7 @@
  * PRICING SERVICE - Business Logic for Shipping Cost Calculation
  * ============================================================================
  *
- * This service handles all pricing calculations for the EXPEDITOO platform.
+ * This service handles all pricing calculations for the EXPEDITOP platform.
  *
  * Key features:
  * - Distance-based pricing with tiered rates

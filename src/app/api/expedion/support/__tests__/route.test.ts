@@ -143,7 +143,7 @@ describe('/api/expedion/support', () => {
             expect(body.data.conversationId).toBe('conv-2');
         });
 
-        it('refuses with 409 (not 401) when the identity is real but has no Expeditoo account', async () => {
+        it('refuses with 409 (not 401) when the identity is real but has no Expeditop account', async () => {
             getSessionMock.mockResolvedValue({
                 user: { id: 'ghost', email: 'ghost@example.com', emailVerified: false },
             } as never);

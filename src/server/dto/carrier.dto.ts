@@ -53,7 +53,7 @@ const professionalApplicationSchema = z.object({
 });
 
 /**
- * The in-house Expeditoo driver: a person, not a business, so no company, SIRET
+ * The in-house Expeditop driver: a person, not a business, so no company, SIRET
  * or legal form — just how to reach them. `driver` role on approval
  * (driver_types_spec.md §3).
  */

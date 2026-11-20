@@ -51,7 +51,7 @@ export const stripeAccountStatusEnum = pgEnum("stripe_account_status", [
 // ========================================
 // Signup Origin Enum
 // ========================================
-// Which of the two products the account was created in. EXPEDITOO and Expedion
+// Which of the two products the account was created in. EXPEDITOP and Expedion
 // share this Better Auth instance and this table, and nothing recorded which
 // app a person actually signed up in -- the admin user list could not tell a
 // driver from an Expedion client. Owning a quote is not an answer: 4,588 of the

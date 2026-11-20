@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- * Expedion → Expeditoo escalation demo seed
+ * Expedion → Expeditop escalation demo seed
  * ============================================================================
  *
  * The escalation bridge is mechanically sound but starved: nothing calls
@@ -81,7 +81,7 @@ function demoQuote(now: Date): InsertExpedionQuote {
     phone: null, // no phone: the escalation SMS is skipped, not sent to anyone
     description:
       "DEMO — Commode Louis-Philippe en noyer, lot 42. " +
-      "Donnée factice pour la démonstration de l'escalade Expedion → Expeditoo.",
+      "Donnée factice pour la démonstration de l'escalade Expedion → Expeditop.",
     auctionHouseName: "Hôtel Drouot (DEMO)",
     pickupAddress: "9 Rue Drouot",
     pickupPostalCode: "75009",

@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- * Expeditoo → Expedion write-back
+ * Expeditop → Expedion write-back
  * ============================================================================
  *
  * The return leg of the escalation bridge. When a carrier wins an escalated
@@ -13,7 +13,7 @@
  * inside `offersService` through that module would close an import cycle.
  * Everything here reaches only for the DAL.
  *
- * Every hook is a no-op for `direct` listings. Expeditoo's own flows call them
+ * Every hook is a no-op for `direct` listings. Expeditop's own flows call them
  * unconditionally and must not pay for a bridge they are not using, so the
  * first thing each one does is ask whether a quote is linked at all.
  */
@@ -48,7 +48,7 @@ interface CancellableQuote {
 }
 
 /**
- * Expeditoo's shipment states, mapped onto the Expedion lifecycle.
+ * Expeditop's shipment states, mapped onto the Expedion lifecycle.
  *
  * `IN_TRANSIT` deliberately maps to `picked_up`: Expedion's client-facing
  * lifecycle has no separate in-transit stage, and collapsing it is better than
@@ -89,11 +89,11 @@ async function resolveCarrierRowId(userId: string): Promise<string | null> {
 
 export const expedionBridgeService = {
   /**
-   * Applies a status change from the Expeditoo side onto the linked quote.
+   * Applies a status change from the Expeditop side onto the linked quote.
    *
    * Throws when called for a listing with no quote behind it, because the HTTP
    * route needs to report that as a 404 — the silent variants below are the
-   * ones Expeditoo's internal flows call.
+   * ones Expeditop's internal flows call.
    */
   async writeBack(input: ExpedionWriteBackInput & { confirmUrl?: string }) {
     const quote = await expedionDal.getByListingId(input.listingId);
@@ -139,7 +139,7 @@ export const expedionBridgeService = {
           metadata: {
             ...(input.metadata ?? {}),
             listingId: input.listingId,
-            // Both ids on the timeline: the user id is what Expeditoo's own
+            // Both ids on the timeline: the user id is what Expeditop's own
             // tables key on, and without it a support question about "which
             // driver" has to be answered by joining backwards from a column
             // that may be null.
@@ -198,7 +198,7 @@ export const expedionBridgeService = {
       listingId: params.listingId,
       status: "assigned",
       carrierId: params.carrierId,
-      message: "Un transporteur a été retenu via Expeditoo",
+      message: "Un transporteur a été retenu via Expeditop",
       metadata: params.priceCents ? { priceCents: params.priceCents } : {},
     });
   },
@@ -390,7 +390,7 @@ async function recordQuoteCancelled(
 }
 
 /**
- * Fire-and-forget wrapper for Expeditoo's own flows.
+ * Fire-and-forget wrapper for Expeditop's own flows.
  *
  * A failure to notify Expedion must never roll back an accepted offer or a
  * recorded delivery — the marketplace transaction is the thing that matters,

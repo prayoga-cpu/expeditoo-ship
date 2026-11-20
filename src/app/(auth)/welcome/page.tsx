@@ -54,7 +54,7 @@ export default function WelcomePage() {
       >
         <div className="flex items-center justify-center gap-2 mb-8">
           <BrandMark size={40} />
-          <span className="text-2xl font-bold text-foreground">EXPEDITOO</span>
+          <span className="text-2xl font-bold text-foreground">EXPEDITOP</span>
         </div>
 
         <div className="bg-card/50 backdrop-blur-sm rounded-2xl border border-border/50 p-8">

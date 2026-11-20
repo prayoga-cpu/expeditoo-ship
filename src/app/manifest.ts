@@ -2,8 +2,8 @@ import { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Expeditoo - Transport Marketplace',
-    short_name: 'Expeditoo',
+    name: 'Expeditop - Transport Marketplace',
+    short_name: 'Expeditop',
     description: 'Post a transport job, compare competing carrier offers, pick your carrier and track the delivery.',
     start_url: '/?source=pwa',
     id: '/?source=pwa',

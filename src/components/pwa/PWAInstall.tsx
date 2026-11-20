@@ -37,8 +37,8 @@ export function PWAInstall() {
     <pwa-install
       ref={pwaInstallRef}
       manifest-url="/manifest.webmanifest"
-      name="Expeditoo"
-      description="Install Expeditoo for a better experience: real-time updates, offline access, and faster loading."
+      name="Expeditop"
+      description="Install Expeditop for a better experience: real-time updates, offline access, and faster loading."
       icon="/icons/icon-192x192.png"
       manual-apple="true"
     ></pwa-install>

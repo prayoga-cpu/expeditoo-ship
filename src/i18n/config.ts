@@ -33,7 +33,7 @@ export function isValidLocale(locale: string): locale is Locale {
  * `navigator.languages` is ordered by the user's preference, so the first
  * entry we actually ship wins. Only the primary subtag is compared, so
  * "en-GB", "en-US" and "en" all resolve to "en". A device asking for a
- * language EXPEDITOO does not ship (say "de") falls back to French, which
+ * language EXPEDITOP does not ship (say "de") falls back to French, which
  * stays the product default.
  */
 export function detectDeviceLocale(): Locale {

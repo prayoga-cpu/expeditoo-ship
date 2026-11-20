@@ -24,12 +24,12 @@ const fontGeist = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "EXPEDITOO - Transport Marketplace",
+  title: "EXPEDITOP - Transport Marketplace",
   description: "Post a transport job, compare carrier offers, track delivery",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Expeditoo",
+    title: "Expeditop",
   },
   icons: {
     apple: "/apple-touch-icon.png",

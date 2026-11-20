@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- * EXPEDITOO PRICING ENGINE - TYPE DEFINITIONS
+ * EXPEDITOP PRICING ENGINE - TYPE DEFINITIONS
  * ============================================================================
  *
  * This file contains all TypeScript interfaces for the pricing system.
