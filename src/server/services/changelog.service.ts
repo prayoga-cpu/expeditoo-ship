@@ -13,8 +13,9 @@ import {
  * The public release history
  * ============================================================================
  *
- * `CHANGELOG.md` in the repo root is the source of truth (AGENTS.md §8). This
- * service reads it and nothing else.
+ * `CHANGELOG.md` in the repo root is the source of truth (AGENTS.md §8), with
+ * `CHANGELOG.fr.md` as its French twin. This service reads those two and
+ * nothing else.
  *
  * **There is deliberately no DAL and no table here.** The sibling Epidom repo
  * syncs its changelog into a `releases` table on every build, because it feeds
@@ -36,12 +37,25 @@ import {
  * published product news, and the route is the reason `(marketing)` exists.
  */
 
-export interface ReleaseDTO {
+/** One release's prose in one language. */
+export interface ReleaseTextDTO {
+  /** The sentence between the header and the first bullet; "" when none. */
+  summary: string;
+  entries: string[];
+}
+
+export interface ReleaseDTO extends ReleaseTextDTO {
   version: string;
   /** ISO string — the DTO crosses to a client component, where a `Date` cannot. */
   releasedAt: string;
   tag: ReleaseTag;
-  entries: string[];
+  /**
+   * The same release from `CHANGELOG.fr.md`. `summary` / `entries` above are
+   * English, the source of truth. Null only if the French file has no such
+   * release, which `pnpm changelog:check` refuses — the view then falls back to
+   * English rather than showing nothing.
+   */
+  fr: ReleaseTextDTO | null;
 }
 
 /**
@@ -50,8 +64,8 @@ export interface ReleaseDTO {
  */
 let cache: ReleaseDTO[] | null = null;
 
-function read(): string {
-  return readFileSync(join(process.cwd(), "CHANGELOG.md"), "utf8");
+function read(file = "CHANGELOG.md"): string {
+  return readFileSync(join(process.cwd(), file), "utf8");
 }
 
 export const changelogService = {
@@ -67,12 +81,24 @@ export const changelogService = {
   getReleases(): ReleaseDTO[] {
     if (cache) return cache;
 
-    cache = sortReleasesDesc(parseChangelog(read())).map((release) => ({
-      version: release.version,
-      releasedAt: release.releasedAt.toISOString(),
-      tag: release.tag,
-      entries: release.entries,
-    }));
+    const french = new Map(
+      parseChangelog(read("CHANGELOG.fr.md")).map((release) => [release.version, release])
+    );
+
+    cache = sortReleasesDesc(parseChangelog(read())).map((release) => {
+      const translated = french.get(release.version);
+
+      return {
+        version: release.version,
+        releasedAt: release.releasedAt.toISOString(),
+        tag: release.tag,
+        summary: release.summary,
+        entries: release.entries,
+        fr: translated
+          ? { summary: translated.summary, entries: translated.entries }
+          : null,
+      };
+    });
 
     return cache;
   },

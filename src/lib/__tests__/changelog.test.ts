@@ -8,6 +8,7 @@ import {
   compareVersionsDesc,
   latestRelease,
   lintChangelog,
+  lintTranslation,
   parseChangelog,
   sortReleasesDesc,
 } from "@/lib/changelog";
@@ -60,6 +61,38 @@ describe("parseChangelog", () => {
     expect(parseChangelog(SAMPLE)[2].entries).toEqual([
       "**Euro amounts read the French way.**",
     ]);
+  });
+
+  it("keeps the whole of a wrapped bullet, not just its first line", () => {
+    // The file wraps at ~80 columns with the continuation indented. The parser
+    // used to keep line one only, so the public page cut every bullet short.
+    const [release] = parseChangelog(
+      [
+        "## [2.3.0] - 2026-08-26 · feat",
+        "",
+        "- **A side bar on laptops.** From a 1024 px-wide window the menu is a",
+        "  narrow column of icons;",
+        "  your choice is remembered.",
+        "- **Second.** Short.",
+        "",
+        "Not part of any bullet.",
+        "",
+      ].join("\n")
+    );
+
+    expect(release.entries).toEqual([
+      "**A side bar on laptops.** From a 1024 px-wide window the menu is a narrow column of icons; your choice is remembered.",
+      "**Second.** Short.",
+    ]);
+  });
+
+  it("reads the intro sentence between the header and the first bullet", () => {
+    const [release] = parseChangelog(
+      "## [2.3.0] - 2026-08-26 · feat\n\nMore of the client's\nfeedback.\n\n- **One.**\n"
+    );
+
+    expect(release.summary).toBe("More of the client's feedback.");
+    expect(parseChangelog(SAMPLE)[0].summary).toBe("");
   });
 
   it("drops a release whose tag is not one of the four", () => {
@@ -138,6 +171,76 @@ describe("lintChangelog", () => {
   });
 });
 
+describe("lintTranslation", () => {
+  const EN = `## [2.3.0] - 2026-08-26 · feat
+
+More of the feedback.
+
+- **A driver can name the trajet they drive.** And the board answers with it.
+- **The map shows one price pin per job.**
+`;
+  const FR = `## [2.3.0] - 2026-08-26 · feat
+
+Une suite des retours.
+
+- **Un transporteur peut nommer le trajet qu'il fait.** Et la place de marché
+  répond avec les demandes qui s'y trouvent.
+- **La carte affiche un seul repère de prix par demande.**
+`;
+
+  it("passes a faithful French twin", () => {
+    expect(lintTranslation(EN, FR)).toEqual([]);
+  });
+
+  it("reports a release with no French entry", () => {
+    expect(lintTranslation(EN, "# Journal\n").map((p) => p.message)).toEqual([
+      expect.stringMatching(/2\.3\.0 has no French entry/),
+    ]);
+  });
+
+  it("reports a French release that is not in English", () => {
+    const extra = `${FR}\n## [2.4.0] - 2026-08-27 · fix\n\n- **Un correctif.**\n`;
+
+    expect(lintTranslation(EN, extra).map((p) => p.message)).toEqual([
+      expect.stringMatching(/2\.4\.0 is in CHANGELOG\.fr\.md but not in CHANGELOG\.md/),
+    ]);
+  });
+
+  it("reports a bullet count that differs", () => {
+    const merged = FR.replace(/- \*\*La carte[^\n]*\n/, "");
+
+    expect(lintTranslation(EN, merged).map((p) => p.message)).toEqual([
+      expect.stringMatching(/1 bullet\(s\) in French and 2 in English/),
+    ]);
+  });
+
+  it("reports a header whose date or tag was changed", () => {
+    expect(lintTranslation(EN, FR.replace("· feat", "· fix")).map((p) => p.message)).toEqual([
+      expect.stringMatching(/must keep the English header's date and tag/),
+    ]);
+  });
+
+  it("reports a bullet left in English, word for word or not", () => {
+    const same = FR.replace(/- \*\*La carte[^\n]*\n/, "- **The map shows one price pin per job.**\n");
+    const loose = FR.replace(
+      /- \*\*La carte[^\n]*\n/,
+      "- **Prices.** The map is shown with the price for the job and the driver can see it.\n"
+    );
+
+    expect(lintTranslation(EN, same)[0].message).toMatch(/bullet 2 is not translated/);
+    expect(lintTranslation(EN, loose)[0].message).toMatch(/bullet 2 is not translated/);
+  });
+
+  it("does not mistake « quoted UI copy » or code for English", () => {
+    const quoted = FR.replace(
+      /- \*\*La carte[^\n]*\n/,
+      "- **Menus.** « Devenir chauffeur » et `the-flag` restent tels quels dans la liste.\n"
+    );
+
+    expect(lintTranslation(EN, quoted)).toEqual([]);
+  });
+});
+
 describe("the repo's own release records (AGENTS.md §8)", () => {
   const changelog = read("CHANGELOG.md");
   const status = read("STATUS.md");
@@ -145,6 +248,13 @@ describe("the repo's own release records (AGENTS.md §8)", () => {
 
   it("CHANGELOG.md is well-formed", () => {
     expect(lintChangelog(changelog)).toEqual([]);
+  });
+
+  it("CHANGELOG.fr.md is well-formed and translates every release", () => {
+    const french = read("CHANGELOG.fr.md");
+
+    expect(lintChangelog(french)).toEqual([]);
+    expect(lintTranslation(changelog, french)).toEqual([]);
   });
 
   it("every release carries one of the four tags", () => {

@@ -14,6 +14,18 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.93.0] - 2026-11-21 · ux
+
+The release history now reads in French, and in full.
+
+- **The release history is in French.** When the site is in French, « Ce qui a
+  changé » shows every release in French, from the first to the latest; in
+  English, it stays in English. From now on each new release is written in both
+  languages before it goes out.
+- **Each item is shown in full.** The page used to stop every item at the end of
+  its first line, cutting sentences short. They now read to the end, and each
+  release opens with its one-line summary.
+
 ## [2.92.0] - 2026-11-21 · feat
 
 More of the client's feedback of 19 November.

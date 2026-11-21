@@ -222,6 +222,16 @@ A session is done when all five of these are true:
    names, no type names, no "refactored". A fix names the symptom the user saw,
    not the cause.
 
+   **The same entry goes into `CHANGELOG.fr.md`, in French, in the same
+   session.** `/changelog` shows that file to a French reader. The header line
+   is copied verbatim (same version, date, tag), every bullet is translated
+   and none merged or dropped, `` `code` `` and « UI labels » stay as they are.
+   English is the source; French is a real translation, written the way
+   `messages/fr.json` words the same screens. `pnpm changelog:check` and
+   `changelog.test.ts` fail on a missing release, a different bullet count or a
+   bullet left in English. The same goes for every new key in
+   `messages/en.json`: it is translated into `fr.json` in the same change.
+
    **Every session gets an entry — there is no opt-out.** A session that
    changed nothing a user can see is tagged `infra` and says so plainly
    ("Nothing you can see changes" ), then says why it mattered. That is what

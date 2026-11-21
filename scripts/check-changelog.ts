@@ -3,9 +3,12 @@
  * The session-discipline gate (AGENTS.md §8)
  * ============================================================================
  *
- * A release is recorded in four places that must agree:
+ * A release is recorded in four places that must agree (five with the French
+ * twin of the changelog):
  *
  *   CHANGELOG.md      the newest `## [x.y.z] - YYYY-MM-DD · tag` header
+ *   CHANGELOG.fr.md   the same release, in French — what /changelog shows a
+ *                     French reader
  *   STATUS.md         a matching `## ✅ YYYY-MM-DD — Title (x.y.z)` entry
  *   package.json      "version"
  *   src/lib/version.ts  APP_VERSION
@@ -24,7 +27,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { latestRelease, lintChangelog } from "../src/lib/changelog";
+import { latestRelease, lintChangelog, lintTranslation } from "../src/lib/changelog";
 
 const ROOT = process.cwd();
 
@@ -55,6 +58,17 @@ function main() {
 
   for (const problem of lintChangelog(changelog)) {
     problems.push(`CHANGELOG.md:${problem.line} — ${problem.message}`);
+  }
+
+  // The French twin. Every English release needs its French entry, or the
+  // public page shows English to a French visitor with no error anywhere.
+  const french = read("CHANGELOG.fr.md");
+
+  for (const problem of lintChangelog(french)) {
+    problems.push(`CHANGELOG.fr.md:${problem.line} — ${problem.message}`);
+  }
+  for (const problem of lintTranslation(changelog, french)) {
+    problems.push(`CHANGELOG.fr.md:${problem.line} — ${problem.message}`);
   }
 
   const latest = latestRelease(changelog);

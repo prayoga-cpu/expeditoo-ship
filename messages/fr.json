@@ -2933,7 +2933,7 @@
       "bottomMenu": "Menu d'administration — faites défiler pour voir la suite"
     },
     "table": {
-      "rowsSelected": "{count} sur {total} ligne(s) sélectionnée(s)",
+      "rowsSelected": "{selected} sur {total} ligne(s) sélectionnée(s)",
       "total": "total",
       "rowsPerPage": "Lignes par page",
       "pageOf": "Page {current} sur {total}",

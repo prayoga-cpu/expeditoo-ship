@@ -28,6 +28,8 @@ export interface ParsedRelease {
   /** Date-only. The header carries no time, so this is midnight UTC. */
   releasedAt: Date;
   tag: ReleaseTag;
+  /** The sentence(s) between the header and the first bullet; "" when none. */
+  summary: string;
   entries: string[];
 }
 
@@ -59,6 +61,9 @@ function isReleaseTag(value: string): value is ReleaseTag {
 export function parseChangelog(markdown: string): ParsedRelease[] {
   const releases: ParsedRelease[] = [];
   let current: ParsedRelease | null = null;
+  // True while the last line read belongs to the current bullet, so that an
+  // indented line is its continuation. A blank line ends the bullet.
+  let inBullet = false;
 
   for (const raw of markdown.split("\n")) {
     const line = raw.trimEnd();
@@ -73,14 +78,28 @@ export function parseChangelog(markdown: string): ParsedRelease[] {
             version: version.trim(),
             releasedAt: new Date(`${date}T00:00:00Z`),
             tag,
+            summary: "",
             entries: [],
           }
         : null;
+      inBullet = false;
       continue;
     }
 
-    if (current && line.startsWith("- ")) {
+    if (!current) continue;
+
+    if (line.startsWith("- ")) {
       current.entries.push(line.slice(2).trim());
+      inBullet = true;
+    } else if (inBullet && /^\s+\S/.test(line)) {
+      // A bullet is wrapped at ~80 columns with its continuation indented. The
+      // parser used to read the first line only, so the public page cut every
+      // bullet off mid-sentence.
+      current.entries[current.entries.length - 1] += ` ${line.trim()}`;
+    } else if (line.trim() === "") {
+      inBullet = false;
+    } else if (current.entries.length === 0 && !inBullet) {
+      current.summary = `${current.summary} ${line.trim()}`.trim();
     }
   }
 
@@ -205,6 +224,113 @@ export function lintChangelog(markdown: string): ChangelogProblem[] {
 
   if (headers === 0) {
     problems.push({ line: 1, message: "no releases found — is this CHANGELOG.md?" });
+  }
+
+  return problems;
+}
+
+/**
+ * ============================================================================
+ * CHANGELOG.fr.md — the French twin
+ * ============================================================================
+ *
+ * `CHANGELOG.md` is written in English and stays the source of truth.
+ * `CHANGELOG.fr.md` carries the same releases in French, and `/changelog` shows
+ * it to a French reader. They are held in lockstep the way `messages/fr.json`
+ * is held to `en.json`: a release in one and not the other is a gate failure,
+ * not a page that quietly shows English to a French visitor.
+ */
+
+// Words that mark a sentence as still English. Deliberately common ones — a
+// French bullet that is mostly these has not been translated.
+const ENGLISH_MARKERS = /\b(the|and|your|you|is|are|was|were|with|for|that|this|from|now|instead|when|where|which|its)\b/gi;
+const FRENCH_MARKERS = /\b(le|la|les|un|une|des|du|de|et|à|au|aux|pour|vous|votre|vos|est|sont|sur|dans|avec|qui|que|ne|pas|plus|ce|cette|en)\b/gi;
+
+function looksEnglish(text: string): boolean {
+  // « quoted UI copy » and `code` are the same in both languages.
+  const prose = text.replace(/«[^»]*»/g, " ").replace(/`[^`]*`/g, " ");
+  const english = prose.match(ENGLISH_MARKERS)?.length ?? 0;
+  const french = prose.match(FRENCH_MARKERS)?.length ?? 0;
+  return english >= 3 && english > french;
+}
+
+/**
+ * Everything wrong with the French file measured against the English one.
+ *
+ * Structure is what a script can prove: same releases, same dates and tags,
+ * same bullet count, no bullet left word-for-word English. It cannot judge the
+ * quality of a translation — that is what the person writing the release does
+ * — but it makes "forgot the French" impossible to ship.
+ */
+export function lintTranslation(english: string, french: string): ChangelogProblem[] {
+  const problems: ChangelogProblem[] = [];
+  const en = parseChangelog(english);
+  const fr = parseChangelog(french);
+  const frByVersion = new Map(fr.map((release) => [release.version, release]));
+  const enVersions = new Set(en.map((release) => release.version));
+
+  const headerLine = new Map<string, number>();
+  french.split("\n").forEach((raw, index) => {
+    const version = CHANGELOG_HEADER.exec(raw.trimEnd())?.[1];
+    if (version) headerLine.set(version.trim(), index + 1);
+  });
+
+  for (const source of en) {
+    const target = frByVersion.get(source.version);
+    const line = headerLine.get(source.version) ?? 1;
+
+    if (!target) {
+      problems.push({
+        line: 1,
+        message: `${source.version} has no French entry — add it to CHANGELOG.fr.md (same header, French bullets)`,
+      });
+      continue;
+    }
+
+    if (target.releasedAt.getTime() !== source.releasedAt.getTime() || target.tag !== source.tag) {
+      problems.push({
+        line,
+        message: `${source.version} must keep the English header's date and tag`,
+      });
+    }
+
+    if (target.entries.length !== source.entries.length) {
+      problems.push({
+        line,
+        message: `${source.version} has ${target.entries.length} bullet(s) in French and ${source.entries.length} in English — translate every bullet, none merged or dropped`,
+      });
+      continue;
+    }
+
+    if (Boolean(target.summary) !== Boolean(source.summary)) {
+      problems.push({
+        line,
+        message: `${source.version} ${source.summary ? "lost" : "gained"} its intro sentence in French`,
+      });
+    }
+
+    const texts: [string, string][] = [[source.summary, target.summary]];
+    source.entries.forEach((entry, index) => texts.push([entry, target.entries[index]]));
+
+    texts.forEach(([original, translated], index) => {
+      const what = index === 0 ? "intro" : `bullet ${index}`;
+      if (!translated) return;
+      if (translated === original || looksEnglish(translated)) {
+        problems.push({
+          line,
+          message: `${source.version} ${what} is not translated: ${JSON.stringify(translated.slice(0, 70))}`,
+        });
+      }
+    });
+  }
+
+  for (const version of frByVersion.keys()) {
+    if (!enVersions.has(version)) {
+      problems.push({
+        line: headerLine.get(version) ?? 1,
+        message: `${version} is in CHANGELOG.fr.md but not in CHANGELOG.md`,
+      });
+    }
   }
 
   return problems;

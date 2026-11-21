@@ -696,6 +696,60 @@ than leaving it in a chat message.
 
 ---
 
+## ✅ 2026-11-21 — The changelog in French, and in full (2.93.0)
+
+*« check all of the translations, especially the changelog page, auto translate to fr every changes happen ».*
+
+**No migration, no new dependency.** Three findings, then the rule that keeps them fixed.
+
+**1. `/changelog` was English for everyone.** `messages/*.json` held only the page's chrome (title, tags); the 155
+releases were read raw from `CHANGELOG.md`, which is written in English. `CHANGELOG.fr.md` is now its twin: every
+release, same header line verbatim, bullets translated. `changelogService.getReleases()` returns `summary`/`entries`
+(English, the source) plus `fr`; `ChangelogView` picks by `useLocale()` — it has to be the browser, because
+`LocaleProvider` withholds the intl provider on the server (`ssr-empty-shell`) — and falls back to English if a
+release has no twin. `GET /api/public/changelog` gains `summary` and `fr`; nothing was removed from it.
+
+**2. The page showed every bullet cut off at its first line.** `parseChangelog` kept lines starting with `- ` and
+dropped the indented continuation lines the file wraps at ~80 columns, so since the page existed each release read
+as a stub, and the one-line intro under each header was never shown. A continuation now joins its bullet (a blank
+line ends it) and the intro is parsed as `summary`, rendered under the header.
+
+**3. `admin.table.rowsSelected`** used `{count}` in French and `{selected}` in English. Nothing reads the key yet,
+so nothing rendered wrong; it would have the day something did. Fixed, and `locale-parity.test.ts` now compares
+variable **names** per key across the two catalogues.
+
+**The rule.** `lintTranslation(en, fr)` in `src/lib/changelog.ts` fails on: an English release with no French
+entry, a French one with no English source, a changed date or tag, a different bullet count (nothing merged or
+dropped), a lost intro, and a bullet that is word-for-word the English or reads as English (stop-word heuristic that
+ignores « quoted UI copy » and `code`). It runs in `pnpm changelog:check` (CI, `gates.yml`) and in
+`changelog.test.ts`. A script cannot judge a translation, only prove one exists — the quality is the author's job.
+`AGENTS.md` §8 and `CLAUDE.md` say so: the French entry is written in the same session as the English one, and
+every new key in `en.json` goes into `fr.json` in the same change.
+
+**How the 155 releases were translated.** Six parallel translators, one chunk of ~26 releases each, given the
+glossary of the app (transporteur / chauffeur, demande, offre, versement…) and told to look screen labels up in
+`fr.json`; each verified its own structure, then the assembled file went through the gate above. I read two
+stretches (2.92.0–2.91.0 and 2.44.0–2.42.1): idiomatic, vouvoiement, « » preserved. The remaining three English
+words are a quoted old menu label, an old escalation label and the `/carrier/trips` route.
+
+**Checked and found clean.** `en.json` / `fr.json`: 3,761 keys each, none missing either way, no empty value; 143
+identical values, all legitimate (Contact, Actions, SIRET, IBAN, Commission…); no French value that reads as English.
+Hardcoded English in `.tsx`: none in screens; the PDFs and emails are French. One staff-only email heading,
+`ContactMessageEmail` — « New contact enquiry » — is English; left, it is the inbox of the team, not a user.
+
+**Verification** (each alone, on the final tree)
+- `pnpm changelog:check` — ok, 2.93.0 agrees across the four records and the French twin (156 releases).
+- `npx tsc --noEmit` — 0 errors. `eslint` on the touched files — 0 errors.
+- `pnpm test` — 4,049 / 4,049 (`--maxWorkers=2`; the default run was killed by the 8 GB machine, exit 137).
+- `changelogService.getReleases()` run directly: 156 releases, 156 with a French twin, bullets and summaries whole.
+- **Not run:** `pnpm build`, and a browser look at `/changelog` in both languages.
+
+**Known limits** — the stop-word heuristic catches a bullet left in English, not a stiff or wrong translation. The
+JSON bullets of `GET /api/public/changelog` now carry both languages, so the Flutter client can pick one; it still
+reads the English ones.
+
+---
+
 ## ✅ 2026-11-21 — Sidebar rail, message filters, landing header, readable sign-in errors (2.92.0)
 
 *« and anything you can suggest based on the feedback pls go ahead implement with your suggestion ».*

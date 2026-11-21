@@ -38,7 +38,9 @@ the same as saying nobody holds the `shipper` role — every signup does. See
 
 **Session discipline is mandatory and enforced.** Every session that changes
 this repo ends with a release recorded in four places that must agree:
-`CHANGELOG.md` (what a driver, operator or client got), `STATUS.md` (why, for
+`CHANGELOG.md` (what a driver, operator or client got) **and its French twin
+`CHANGELOG.fr.md`** (same release, translated by you in the same session — what
+`/changelog` shows a French reader), `STATUS.md` (why, for
 the next engineer), `package.json` and `src/lib/version.ts`. The full rule is
 [`AGENTS.md`](./AGENTS.md) §8; `pnpm changelog:check` and
 `src/lib/__tests__/changelog.test.ts` fail when they drift, and

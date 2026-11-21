@@ -67,4 +67,27 @@ describe("message catalogues", () => {
 
     expect([...empty(en, "en"), ...empty(fr, "fr")]).toEqual([]);
   });
+
+  it("uses the same variables in French and English", () => {
+    // `{count}` in one language and `{selected}` in the other renders a hole
+    // (or throws) in whichever language was edited last. Names only: a plural
+    // branch legitimately differs between languages.
+    const variables = (text: string) =>
+      [...new Set([...text.matchAll(/\{\s*([A-Za-z_]\w*)\s*[,}]/g)].map((m) => m[1]))].sort();
+
+    const read = (catalogue: object, path: string) =>
+      path
+        .split(/\.|\[|\]/)
+        .filter(Boolean)
+        .reduce<unknown>((node, key) => (node as Node)?.[key], catalogue as unknown);
+
+    const mismatched = paths(en).flatMap((path) => {
+      const english = read(en, path);
+      const french = read(fr, path);
+      if (typeof english !== "string" || typeof french !== "string") return [];
+      return variables(english).join() === variables(french).join() ? [] : [path];
+    });
+
+    expect(mismatched).toEqual([]);
+  });
 });

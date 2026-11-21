@@ -68,6 +68,9 @@ function renderInline(text: string): ReactNode {
 function ReleaseCard({ release }: { release: ReleaseDTO }) {
   const t = useTranslations("marketing.changelog");
   const locale = useLocale();
+  // English is the source; a French reader gets CHANGELOG.fr.md. A release with
+  // no French twin (the gate refuses that) falls back to English, not to blank.
+  const text = locale === "fr" && release.fr ? release.fr : release;
 
   const date = new Date(release.releasedAt).toLocaleDateString(locale, {
     day: "numeric",
@@ -96,8 +99,14 @@ function ReleaseCard({ release }: { release: ReleaseDTO }) {
         </time>
       </div>
 
+      {text.summary ? (
+        <p className={`${LP_BODY} m-0 text-[var(--lp-dim)]`}>
+          {renderInline(text.summary)}
+        </p>
+      ) : null}
+
       <ul className="m-0 flex list-none flex-col gap-3 p-0">
-        {release.entries.map((entry, index) => (
+        {text.entries.map((entry, index) => (
           <li key={index} className={`${LP_BODY} flex gap-3`}>
             <span aria-hidden className="mt-[9px] h-1 w-1 shrink-0 rounded-full bg-[var(--lp-faint)]" />
             <span className="min-w-0">{renderInline(entry)}</span>
