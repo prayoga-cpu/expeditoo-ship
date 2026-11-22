@@ -12,7 +12,12 @@ export interface UserProfile {
   avatar: string;
 }
 
-export type ReviewType = "buyer" | "seller";
+/**
+ * Which side of the delivery the reviewed person was on. A review is written
+ * by the other party (`reviews.role` records the author's side), so one a
+ * requester wrote is one received **as a transporter**, and the reverse.
+ */
+export type ReviewType = "requester" | "carrier";
 
 export interface Review {
   id: string;
@@ -22,7 +27,6 @@ export interface Review {
   content: string;
   timestamp: string;
   type: ReviewType;
-  helpful: number;
 }
 
 export interface ReviewStats {
@@ -37,7 +41,7 @@ export interface ReviewStats {
   };
 }
 
-export type ReviewTab = "all" | "buyer" | "seller";
+export type ReviewTab = "all" | ReviewType;
 
 // Matches backend UserPreferences
 export interface NotificationSettings {

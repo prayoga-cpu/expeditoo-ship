@@ -5,6 +5,19 @@ const parse = (query: Record<string, string>) =>
   browseListingsQuerySchema.parse(query);
 
 describe("browseListingsQuerySchema", () => {
+  // board_route_search_spec.md §12 — « Titre de l'annonce ».
+  it("trims the title search and keeps it as typed", () => {
+    expect(parse({ q: "  Canapé d'angle " }).q).toBe("Canapé d'angle");
+    expect(parse({ q: "100042" }).q).toBe("100042");
+    expect(parse({ q: "   " }).q).toBe("");
+    expect(parse({}).q).toBeUndefined();
+  });
+
+  it("refuses a title search longer than the box allows", () => {
+    expect(() => parse({ q: "a".repeat(121) })).toThrow();
+    expect(parse({ q: "a".repeat(120) }).q).toHaveLength(120);
+  });
+
   it("coerces the corridor's four coordinates", () => {
     const parsed = parse({
       fromLat: "44.84",

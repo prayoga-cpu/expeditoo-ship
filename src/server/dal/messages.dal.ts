@@ -111,7 +111,7 @@ export const messagesDAL = {
    * @param userId - Current user ID
    * @param limit - Number of conversations to return
    * @param offset - Offset for pagination
-   * @param search - Optional search query (filters by participant name or listing title)
+   * @param search - Optional search query (filters by participant name or pseudo, or listing title)
    * @param filter - Optional state of the job (conversation-filter.ts); `all` filters nothing
    */
   async getUserConversations(
@@ -140,6 +140,10 @@ export const messagesDAL = {
                     // For the avatar's two initials, nothing else (#32).
                     firstName: true,
                     lastName: true,
+                    // The pseudo the inbox shows instead of the name when
+                    // there is one (client feedback 2026-11-19, #32). Nothing
+                    // else of `user` belongs in a message payload.
+                    alias: true,
                     image: true,
                   },
                 },
@@ -196,7 +200,7 @@ export const messagesDAL = {
         return dateB - dateA;
       });
 
-    // Apply search filter if provided: the other person's name, the job's
+    // Apply search filter if provided: the other person's name or pseudo, the job's
     // title, either of its towns, a typed route or its reference
     // (conversation-search.ts, client_feedback_2026_10_21_spec.md §D5).
     if (search) {
@@ -205,7 +209,12 @@ export const messagesDAL = {
           {
             participantNames: conv.participants
               .filter((p) => p.user.id !== userId)
-              .map((p) => p.user.name),
+              // The pseudo is what the row shows, so it is what people
+              // type — with or without its « @ ».
+              .flatMap((p) => [
+                p.user.name,
+                p.user.alias ? `@${p.user.alias}` : null,
+              ]),
             listing: conv.listing,
           },
           search
@@ -274,6 +283,7 @@ export const messagesDAL = {
             name: true,
             firstName: true,
             lastName: true,
+            alias: true,
             image: true,
           }
         },
@@ -312,6 +322,7 @@ export const messagesDAL = {
                 name: true,
                 firstName: true,
                 lastName: true,
+                alias: true,
                 image: true,
               }
             }

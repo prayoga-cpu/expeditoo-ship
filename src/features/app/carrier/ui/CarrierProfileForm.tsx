@@ -6,12 +6,17 @@ import { z } from "zod";
 import { useTranslations } from "next-intl";
 import { Building2, UserRound } from "lucide-react";
 import {
-  isValidSiret,
-  normalizeSiret,
-  isValidFrenchPhone,
-  VAT_PATTERN,
-  POSTAL_CODE_PATTERN,
+  formatCompanyNumber,
+  isValidCompanyNumber,
+  isValidContactPhone,
+  isValidContactPostalCode,
+  isValidVat,
+  normalizeCompanyNumber,
+  normalizeContactPhone,
+  normalizeVat,
 } from "@/lib/french-identifiers";
+import { CARRIER_KINDS, type CarrierKind } from "@/lib/carrier-kind";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -23,13 +28,14 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { useSaveCarrierProfile } from "../hooks/useCarrier";
 import type { CarrierApplication } from "../api/carrier.api";
@@ -40,33 +46,34 @@ type Translate = (key: string) => string;
  * Client-side mirror of `upsertCarrierSchema` with translated messages.
  * The REST layer revalidates against the server DTO regardless.
  *
- * One schema for both kinds: an in-house driver (`inHouse`) is asked only how
- * to reach them, an outside carrier is asked for the company as well
- * (driver_types_spec.md §3).
+ * One schema for both kinds: a « particulier » (the in-house driver, `private`)
+ * is asked only how to reach them, a professional is asked for the company as
+ * well (driver_types_spec.md §3). Every format rule is the DTO's own, from
+ * `@/lib/french-identifiers` — French or international (§8).
  */
 function buildSchema(t: Translate) {
   return z
     .object({
-      inHouse: z.boolean(),
+      kind: z.enum(CARRIER_KINDS),
       companyName: z.string().max(200),
       siret: z.string(),
       vatNumber: z.string().optional(),
       legalForm: z.string().max(100).optional(),
-      contactPhone: z.string().refine(isValidFrenchPhone, t("errors.phone")),
+      contactPhone: z.string().refine(isValidContactPhone, t("errors.phone")),
       addressLine: z.string().min(1, t("errors.addressLine")).max(300),
       city: z.string().min(1, t("errors.city")).max(120),
-      postalCode: z.string().regex(POSTAL_CODE_PATTERN, t("errors.postalCode")),
+      postalCode: z.string().refine(isValidContactPostalCode, t("errors.postalCode")),
       bio: z.string().max(2000).optional(),
     })
     .superRefine((values, ctx) => {
-      if (values.inHouse) return;
+      if (values.kind === "private") return;
       if (values.companyName.trim().length < 2) {
         ctx.addIssue({ code: "custom", path: ["companyName"], message: t("errors.companyName") });
       }
-      if (!isValidSiret(normalizeSiret(values.siret))) {
+      if (!isValidCompanyNumber(values.siret)) {
         ctx.addIssue({ code: "custom", path: ["siret"], message: t("errors.siret") });
       }
-      if (values.vatNumber && !VAT_PATTERN.test(values.vatNumber)) {
+      if (values.vatNumber && !isValidVat(values.vatNumber)) {
         ctx.addIssue({ code: "custom", path: ["vatNumber"], message: t("errors.vat") });
       }
     });
@@ -78,17 +85,21 @@ interface CarrierProfileFormProps {
   application: CarrierApplication | null;
 }
 
-/** Company details — create the draft or edit it in place. */
+/** Which of the two kinds, then its details — create the draft or edit it in place. */
 export function CarrierProfileForm({ application }: CarrierProfileFormProps) {
   const t = useTranslations("carrier.application.form");
   const save = useSaveCarrierProfile();
+  // The server refuses the change with `KIND_LOCKED` once the role is granted
+  // (driver_types_spec.md §3); the choice says so instead of failing on save.
+  const kindLocked =
+    application?.status === "approved" || application?.status === "suspended";
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(buildSchema(t)),
     defaultValues: {
-      inHouse: application?.kind === "private",
+      kind: application?.kind ?? "professional",
       companyName: application?.kind === "private" ? "" : (application?.companyName ?? ""),
-      siret: application?.siret ?? "",
+      siret: formatCompanyNumber(application?.siret ?? ""),
       vatNumber: application?.vatNumber ?? "",
       legalForm: application?.legalForm ?? "",
       contactPhone: application?.contactPhone ?? "",
@@ -101,27 +112,27 @@ export function CarrierProfileForm({ application }: CarrierProfileFormProps) {
 
   function onSubmit(values: ProfileFormValues) {
     const contact = {
-      contactPhone: values.contactPhone,
+      contactPhone: normalizeContactPhone(values.contactPhone),
       addressLine: values.addressLine,
       city: values.city,
-      postalCode: values.postalCode,
+      postalCode: values.postalCode.trim(),
       bio: values.bio || undefined,
     };
     save.mutate(
-      values.inHouse
+      values.kind === "private"
         ? { kind: "private", ...contact }
         : {
             kind: "professional",
             companyName: values.companyName,
-            siret: normalizeSiret(values.siret),
-            vatNumber: values.vatNumber || undefined,
+            siret: normalizeCompanyNumber(values.siret),
+            vatNumber: values.vatNumber ? normalizeVat(values.vatNumber) : undefined,
             legalForm: values.legalForm || undefined,
             ...contact,
           }
     );
   }
 
-  const inHouse = form.watch("inHouse");
+  const inHouse = form.watch("kind") === "private";
 
   return (
     <Card>
@@ -141,11 +152,11 @@ export function CarrierProfileForm({ application }: CarrierProfileFormProps) {
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <InHouseToggle control={form.control} t={t} />
+            <KindChoice control={form.control} t={t} locked={kindLocked} />
             {!inHouse && <CompanyFields control={form.control} t={t} />}
             {inHouse && (
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <PhoneField control={form.control} name="contactPhone" label={t("contactPhone")} />
+                <PhoneField control={form.control} t={t} />
               </div>
             )}
             <AddressFields control={form.control} t={t} inHouse={inHouse} />
@@ -170,78 +181,40 @@ function CompanyFields({ control, t }: FieldGroupProps) {
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
       <TextField control={control} name="companyName" label={t("companyName")} placeholder="Transport Express SAS" />
-      <SiretField control={control} name="siret" label={t("siret")} />
-      <TextField control={control} name="vatNumber" label={t("vatNumber")} placeholder="FRXX123456789" />
+      <CompanyNumberField control={control} t={t} />
+      <TextField control={control} name="vatNumber" label={t("vatNumber")} placeholder="FR12345678901" />
       <TextField control={control} name="legalForm" label={t("legalForm")} placeholder="SASU, SARL…" />
-      <PhoneField control={control} name="contactPhone" label={t("contactPhone")} />
+      <PhoneField control={control} t={t} />
     </div>
   );
 }
 
-/** Strips the leading `+33`/`0` trunk prefix, leaving the national significant number. */
-function toNationalNumber(value: string) {
-  return value.replace(/^\+33\s*/, "").replace(/^0+/, "");
-}
-
-/** Groups raw digits the way a SIRET is printed on an official document: 3-3-3-5. */
-function formatSiret(raw: string) {
-  const digits = raw.replace(/\D/g, "").slice(0, 14);
-  return [digits.slice(0, 3), digits.slice(3, 6), digits.slice(6, 9), digits.slice(9, 14)]
-    .filter(Boolean)
-    .join(" ");
-}
-
-function digitsBefore(value: string, caretPosition: number) {
-  return value.slice(0, caretPosition).replace(/\D/g, "").length;
-}
-
-/** The caret position in `formatted` that sits right after its Nth digit. */
-function caretAfterDigit(formatted: string, digitCount: number) {
-  if (digitCount <= 0) return 0;
-  let seen = 0;
-  for (let i = 0; i < formatted.length; i++) {
-    if (/\d/.test(formatted[i]) && ++seen === digitCount) return i + 1;
-  }
-  return formatted.length;
-}
-
-/** Auto-groups digits as 3-3-3-5 while typing, without disturbing the caret mid-edit. */
-function SiretField({
-  control,
-  name,
-  label,
-}: {
-  control: Control<ProfileFormValues>;
-  name: "siret";
-  label: string;
-}) {
+/**
+ * A SIRET or a foreign company number, so the field takes letters as well as
+ * digits and never reshapes what is being typed. A SIRET is regrouped 3-3-3-5
+ * on leaving the field, the way it is printed on an official document.
+ */
+function CompanyNumberField({ control, t }: FieldGroupProps) {
   return (
     <FormField
       control={control}
-      name={name}
+      name="siret"
       render={({ field }) => (
         <FormItem>
-          <FormLabel>{label}</FormLabel>
+          <FormLabel>{t("siret")}</FormLabel>
           <FormControl>
             <Input
-              inputMode="numeric"
               placeholder="732 829 320 00074"
-              value={formatSiret(field.value ?? "")}
-              onChange={(e) => {
-                const input = e.target;
-                const digitCount = digitsBefore(input.value, input.selectionStart ?? input.value.length);
-                const formatted = formatSiret(input.value);
-                field.onChange(formatted);
-                requestAnimationFrame(() => {
-                  const caret = caretAfterDigit(formatted, digitCount);
-                  input.setSelectionRange(caret, caret);
-                });
+              maxLength={32}
+              autoCapitalize="characters"
+              {...field}
+              onBlur={() => {
+                field.onChange(formatCompanyNumber(field.value ?? ""));
+                field.onBlur();
               }}
-              onBlur={field.onBlur}
-              name={field.name}
-              ref={field.ref}
             />
           </FormControl>
+          <FormDescription>{t("siretHelp")}</FormDescription>
           <FormMessage />
         </FormItem>
       )}
@@ -250,84 +223,110 @@ function SiretField({
 }
 
 /**
- * The carrier phone is France-only by design (a SIRET is required to apply),
- * so the `+33` country code is fixed rather than offered as a dropdown — see
- * ROADMAP.md §9 "Out of scope: multi-country expansion beyond France."
+ * A free field: the prefix used to be a fixed « +33 », which left a carrier
+ * registered in Belgium or Germany no way to give their number. A French
+ * number is still saved as « +33 6 12 34 56 78 » (`normalizeContactPhone`,
+ * on leaving the field and again on save).
  */
-function PhoneField({
-  control,
-  name,
-  label,
-}: {
-  control: Control<ProfileFormValues>;
-  name: "contactPhone";
-  label: string;
-}) {
+function PhoneField({ control, t }: FieldGroupProps) {
   return (
     <FormField
       control={control}
-      name={name}
-      render={({ field }) => {
-        const national = toNationalNumber(field.value ?? "");
-        return (
-          <FormItem>
-            <FormLabel>{label}</FormLabel>
-            <div className="relative">
-              <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center gap-1.5 text-sm text-muted-foreground">
-                🇫🇷 +33
-              </span>
-              <FormControl>
-                <Input
-                  type="tel"
-                  className="pl-18"
-                  placeholder="6 12 34 56 78"
-                  value={national}
-                  onChange={(e) => {
-                    const digits = toNationalNumber(e.target.value);
-                    field.onChange(digits ? `+33 ${digits}` : "");
-                  }}
-                  onBlur={field.onBlur}
-                  name={field.name}
-                  ref={field.ref}
-                />
-              </FormControl>
-            </div>
-            <FormMessage />
-          </FormItem>
-        );
-      }}
+      name="contactPhone"
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel>{t("contactPhone")}</FormLabel>
+          <FormControl>
+            <Input
+              type="tel"
+              autoComplete="tel"
+              placeholder="06 12 34 56 78 · +32 470 12 34 56"
+              maxLength={24}
+              {...field}
+              onBlur={() => {
+                field.onChange(normalizeContactPhone(field.value ?? ""));
+                field.onBlur();
+              }}
+            />
+          </FormControl>
+          <FormDescription>{t("phoneHelp")}</FormDescription>
+          <FormMessage />
+        </FormItem>
+      )}
     />
   );
 }
 
 /**
- * « Chauffeur interne Expeditop »: the person drives for Expeditop itself, so
- * the company questions fall away. Nothing here approves anything — an admin
- * reads the file and decides (driver_types_spec.md §3).
+ * « Particulier » or « Professionnel » — the first question, because it
+ * decides every other one. Two cards rather than a tick: a tick reads as an
+ * exception to a default, and neither kind is the exception. Choosing
+ * « particulier » approves nothing: an admin still validates the file by hand,
+ * since an approved driver reads street addresses (driver_types_spec.md §3).
  */
-function InHouseToggle({ control, t }: FieldGroupProps) {
+function KindChoice({ control, t, locked }: FieldGroupProps & { locked: boolean }) {
   return (
     <FormField
       control={control}
-      name="inHouse"
+      name="kind"
       render={({ field }) => (
-        <FormItem className="flex items-start gap-3 rounded-lg border p-4">
-          <FormControl>
-            <Checkbox
-              checked={field.value}
-              onCheckedChange={(checked) => field.onChange(checked === true)}
-              className="mt-0.5"
-            />
-          </FormControl>
-          <div className="space-y-1">
-            <FormLabel className="cursor-pointer text-sm font-semibold">
-              {t("inHouse.label")}
-            </FormLabel>
-            <p className="text-sm text-muted-foreground">{t("inHouse.help")}</p>
-          </div>
+        <FormItem className="space-y-3">
+          <FormLabel id="carrier-kind-legend">{t("kind.legend")}</FormLabel>
+          <RadioGroup
+            aria-labelledby="carrier-kind-legend"
+            className="grid grid-cols-1 gap-3 md:grid-cols-2"
+            value={field.value}
+            onValueChange={(value) => field.onChange(value as CarrierKind)}
+            disabled={locked}
+          >
+            {CARRIER_KINDS.map((kind) => (
+              <KindCard key={kind} kind={kind} t={t} selected={field.value === kind} locked={locked} />
+            ))}
+          </RadioGroup>
+          {locked && <p className="text-sm text-muted-foreground">{t("kind.locked")}</p>}
         </FormItem>
       )}
     />
+  );
+}
+
+function KindCard({
+  kind,
+  t,
+  selected,
+  locked,
+}: {
+  kind: CarrierKind;
+  t: Translate;
+  selected: boolean;
+  locked: boolean;
+}) {
+  const Icon = kind === "private" ? UserRound : Building2;
+
+  return (
+    <label
+      className={cn(
+        "flex items-start gap-3 rounded-lg border p-4 transition-colors",
+        selected ? "border-primary bg-primary/5" : "border-border",
+        locked ? "cursor-not-allowed opacity-70" : "cursor-pointer hover:bg-muted/50"
+      )}
+    >
+      <RadioGroupItem
+        value={kind}
+        className="mt-0.5"
+        aria-labelledby={`carrier-kind-${kind}-title`}
+        aria-describedby={`carrier-kind-${kind}-body`}
+      />
+      <span className="min-w-0 space-y-1">
+        <span id={`carrier-kind-${kind}-title`} className="flex items-center gap-1.5 text-sm font-semibold">
+          <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+          {t(`kind.${kind}.title`)}
+        </span>
+        <span id={`carrier-kind-${kind}-body`} className="block text-sm text-muted-foreground">
+          {t(`kind.${kind}.body`)}
+        </span>
+      </span>
+    </label>
   );
 }
 
@@ -342,7 +341,7 @@ function AddressFields({
         <TextField control={control} name="addressLine" label={t("addressLine")} placeholder="12 rue de la Logistique" />
       </div>
       <TextField control={control} name="city" label={t("city")} placeholder="Lyon" />
-      <TextField control={control} name="postalCode" label={t("postalCode")} placeholder="69000" maxLength={5} />
+      <TextField control={control} name="postalCode" label={t("postalCode")} placeholder="69000" maxLength={10} />
       <div className="md:col-span-2">
         <FormField
           control={control}
@@ -368,7 +367,7 @@ function AddressFields({
 
 interface TextFieldProps {
   control: Control<ProfileFormValues>;
-  name: Exclude<keyof ProfileFormValues, "inHouse">;
+  name: Exclude<keyof ProfileFormValues, "kind">;
   label: string;
   placeholder?: string;
   maxLength?: number;

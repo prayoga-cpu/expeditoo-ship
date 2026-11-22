@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useMutationState } from "@tanstack/react-query";
-import { FileClock, Gavel, Info, Truck, type LucideIcon } from "lucide-react";
+import { FileClock, Gavel, Info, LogIn, Truck, type LucideIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -68,6 +68,12 @@ export function JobBidSection({ job, viewerId }: JobBidSectionProps) {
   // one person on this page who cannot bid, and a page that ends without a
   // word reads as a missing button (client feedback 2026-11-16).
   if (isOwner && job.status === "open") return <OwnJobCard />;
+  // No session: `/listing/[id]` is not behind the proxy's sign-in wall, so a
+  // visitor with the link reads the public view of the job — and used to
+  // reach the end of it with nothing to press (2.95.0).
+  if (viewerId === null && job.status === "open") {
+    return <SignedOutCard jobId={job.id} />;
+  }
   if (!bidding) return null;
 
   // Staff hold no driver role by default, and « Devenir transporteur » is the
@@ -235,6 +241,21 @@ function MyOfferCard({ offer }: { offer: Offer }) {
   );
 }
 
+/** Shown with no session: the way to an offer starts at the sign-in page. */
+function SignedOutCard({ jobId }: { jobId: string }) {
+  const t = useTranslations("listing.bid");
+  return (
+    <BidPromptCard
+      icon={LogIn}
+      tone="default"
+      title={t("signedOutTitle")}
+      description={t("signedOutDescription")}
+      cta={t("signedOutCta")}
+      href={`/signin?callbackUrl=${encodeURIComponent(`/listing/${jobId}`)}`}
+    />
+  );
+}
+
 function BecomeCarrierCard() {
   const t = useTranslations("listing.bid");
   return (
@@ -267,12 +288,15 @@ function BidPromptCard({
   title,
   description,
   cta,
+  href = "/carrier/application",
 }: {
   icon: LucideIcon;
   tone: "default" | "warning";
   title: string;
   description: string;
   cta: string;
+  /** Where the button leads; the driver application unless said otherwise. */
+  href?: string;
 }) {
   const warning = tone === "warning";
   return (
@@ -293,7 +317,7 @@ function BidPromptCard({
         </div>
       </div>
       <Button asChild variant={warning ? "outline" : "default"} className="shrink-0">
-        <Link href="/carrier/application">{cta}</Link>
+        <Link href={href}>{cta}</Link>
       </Button>
     </Card>
   );

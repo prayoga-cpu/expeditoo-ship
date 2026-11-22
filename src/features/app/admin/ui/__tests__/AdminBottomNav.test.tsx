@@ -11,6 +11,10 @@ import { ADMIN_NAV_GROUPS } from "../../nav";
 let pathname = "/admin/expedion";
 
 vi.mock("next/navigation", () => ({ usePathname: () => pathname }));
+// The bar shows what the session's roles may open; these tests are an admin's.
+vi.mock("@/lib/auth-context", () => ({
+  useAuth: () => ({ user: { roles: ["shipper", "admin"] }, isLoading: false }),
+}));
 vi.mock("../../hooks/useAdminNavCounts", () => ({
   useAdminNavCounts: () => ({}),
 }));

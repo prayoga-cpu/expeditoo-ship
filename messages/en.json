@@ -273,7 +273,7 @@
       "firstName": "First name",
       "lastName": "Last name",
       "alias": "Alias (optional)",
-      "aliasHint": "The name you'd like to appear under. For now, only you can see it.",
+      "aliasHint": "The name people see in your messages, in place of your own. Without one, your name is shown.",
       "placeholderFirstName": "Jean",
       "placeholderLastName": "Dupont",
       "placeholderAlias": "Jeannot",
@@ -611,7 +611,13 @@
     "picture": {
       "title": "Profile Picture",
       "upload": "Upload New Photo",
-      "remove": "Remove Photo"
+      "remove": "Remove Photo",
+      "invalidTitle": "Unsupported file",
+      "invalidDescription": "Choose an image (JPG, PNG…).",
+      "uploadFailedTitle": "Photo not saved",
+      "uploadFailedDescription": "The upload failed. Try again, or choose a smaller image.",
+      "removeFailedTitle": "Photo not removed",
+      "removeFailedDescription": "The removal failed. Try again in a moment."
     },
     "analytics": {
       "totalRevenue": "Total Revenue",
@@ -731,21 +737,19 @@
       },
       "tabs": {
         "all": "All",
-        "buyer": "Buyer",
-        "seller": "Seller"
+        "asRequester": "As a requester",
+        "asCarrier": "As a carrier"
       },
       "card": {
-        "helpful": "Helpful",
-        "report": "Report",
-        "buyer": "Buyer",
-        "seller": "Seller"
+        "asRequester": "Received as a requester",
+        "asCarrier": "Received as a carrier"
       },
       "empty": "No reviews available for this user"
     },
     "contact": {
       "title": "Personal contact details",
       "staffTitle": "Personal contact details (visible to staff)",
-      "privacy": "Only you and the Expeditop team can see these — never a carrier or a requester.",
+      "privacy": "Your phone and your emergency contact are seen only by you and the Expeditop team — never by a carrier or a requester. Your alias is different: it is the name people see in your messages.",
       "fullName": "Full name",
       "firstName": "First name",
       "lastName": "Last name",
@@ -816,7 +820,8 @@
       },
       "accountSecurity": {
         "title": "Account & Security",
-        "description": "Welcome messages, password resets, and verifications"
+        "description": "Welcome messages, password resets, and verifications",
+        "locked": "Always sent: without them you could not verify your address or recover your account."
       }
     },
     "dangerZone": {
@@ -824,9 +829,11 @@
       "deleteAccount": "Delete my account",
       "deleteDialog": {
         "title": "Delete account",
-        "description": "This action cannot be undone. All your data will be permanently deleted.",
+        "description": "Deleting touches your payments, invoices and open requests, so our team does it after a check. The button opens an e-mail ready to send.",
         "cancel": "Cancel",
-        "delete": "Delete"
+        "delete": "Write to the team",
+        "mailSubject": "Request to delete my account",
+        "mailBody": "Hello, I would like to delete my EXPEDITOP account. Please confirm what to do next."
       }
     },
     "updated": "Settings saved",
@@ -937,7 +944,11 @@
     },
     "item": {
       "noListing": "No listing",
-      "support": "Support"
+      "support": "Support",
+      "delete": "Delete",
+      "deleteNamed": "Delete the conversation with {name}",
+      "deleteConfirm": "Confirm deleting the conversation with {name}",
+      "deleteConfirmShort": "Delete?"
     },
     "time": {
       "today": "Today",
@@ -1259,7 +1270,10 @@
       "staffTitle": "An operator or admin account does not offer a price",
       "staffDescription": "To make an offer you need an approved driver account. On an Expedion job, awarding is done from the « Award queue ».",
       "inHouseTitle": "Your runs are assigned to you",
-      "inHouseDescription": "As an Expeditop in-house driver you do not answer ads: the team gives you the runs."
+      "inHouseDescription": "As an Expeditop in-house driver you do not answer ads: the team gives you the runs.",
+      "signedOutTitle": "Sign in to make an offer",
+      "signedOutDescription": "Offers are open to verified carriers. Sign in, or create an account, and you will come back to this request.",
+      "signedOutCta": "Sign in"
     }
   },
   "create": {
@@ -1285,7 +1299,6 @@
         "when": "Dates"
       },
       "toSpecify": "To be specified",
-      "outOfArea": "Country not served yet",
       "quantity": "{title} × {count}",
       "dimensions": "{lengthCm} × {widthCm} × {heightCm} cm",
       "kilograms": "{kg} kg",
@@ -1561,7 +1574,12 @@
       },
       "country": {
         "pickup": "Pickup country",
-        "dropoff": "Delivery country"
+        "dropoff": "Delivery country",
+        "search": "Search for a country",
+        "frequent": "Frequent countries",
+        "all": "All countries",
+        "noMatch": "No country matches “{query}”",
+        "clearSearch": "Clear the search"
       },
       "addressLabel": {
         "pickup": "Pickup address",
@@ -1574,7 +1592,8 @@
       "postalCodeExample": "e.g. {example}",
       "floorHint": "0 = ground floor",
       "liftYes": "Yes",
-      "liftNo": "No"
+      "liftNo": "No",
+      "postalCodeOptional": "Optional"
     },
     "locationTypes": {
       "house": "House",
@@ -1722,7 +1741,8 @@
       "movingSurfaceRequired": "Enter the size of the home",
       "movingVolumeRequired": "Enter the volume to move",
       "movingSurfaceRange": "Between 5 and 1,000 m²",
-      "movingVolumeRange": "Between 0.5 and 200 m³"
+      "movingVolumeRange": "Between 0.5 and 200 m³",
+      "postalCodeGeneric": "Postal code: 2 to 12 letters or digits, or leave it blank"
     },
     "success": {
       "open": {
@@ -2097,7 +2117,7 @@
       "pickedUpTitle": "Load on board",
       "pickedUpDesc": "Start the run when you leave the pickup location.",
       "startTransit": "Start transit",
-      "markDelivered": "Mark delivered without photo",
+      "markDelivered": "Confirm delivery",
       "statusUpdated": "Status updated",
       "cancelledTitle": "Delivery cancelled",
       "cancelledDesc": "This run was cancelled. No further action is needed.",
@@ -2143,12 +2163,8 @@
       "title": "Driver support",
       "subtitle": "Resources and support for our transport partners.",
       "operations": {
-        "title": "Operations team",
-        "description": "A problem with a current run or your vehicle? Write to the operations team directly."
-      },
-      "emergency": {
-        "title": "Emergency line",
-        "description": "For accidents or urgent delivery problems only. Available 24/7."
+        "title": "Write to support",
+        "description": "A problem with a current run, your vehicle or your application? Write to us: this is the mailbox our team reads."
       },
       "faq": {
         "title": "Driver FAQ",
@@ -2158,7 +2174,7 @@
         },
         "absent": {
           "question": "What if the recipient is not home?",
-          "answer": "Try calling the recipient through the app. If there is no answer after 10 minutes, contact the operations team for instructions. Do not leave goods unattended unless the requester said you could."
+          "answer": "Try to reach the recipient using the contact details on the delivery. If there is no answer after 10 minutes, write to support or to the requester from your messages for instructions. Do not leave goods unattended unless the requester said you could."
         },
         "accept": {
           "question": "How do I take a new job?",
@@ -2182,14 +2198,8 @@
     }
   },
   "marketing": {
-    "banner": {
-      "text": "Buying at auction? Your lots travel with Expedion, our buyer app.",
-      "cta": "Open Expedion →"
-    },
     "navbar": {
       "howItWorks": "How it works",
-      "jobs": "Open jobs",
-      "platform": "Platform",
       "login": "Log in",
       "openApp": "Open app",
       "becomeCarrier": "Become a carrier",
@@ -2256,21 +2266,6 @@
         "desc": "Your updates feed the same tracking the buyer sees in Expedion. Proof of delivery in, earnings credited, transfer on request."
       }
     },
-    "jobBoard": {
-      "eyebrow": "OPEN RIGHT NOW",
-      "title": "Today's board",
-      "joinCta": "Join to see all 27 jobs →",
-      "bestOffer": "Best offer",
-      "closes": "CLOSES {time}",
-      "bid": "Bid",
-      "anonymised": "Illustrative rows — sample data, not live jobs. Full addresses unlock once you are verified.",
-      "jobs": {
-        "one": "Commode Louis XV, 62 kg",
-        "two": "Pair of armchairs, 34 kg",
-        "three": "Gilt mirror, fragile, 18 kg"
-      },
-      "liveLabel": "Board updating live"
-    },
     "advantages": {
       "eyebrow": "WHY CARRIERS STAY",
       "title": "Full trucks, no chasing",
@@ -2291,47 +2286,6 @@
         "desc": "Lots are covered ad valorem by Expedion from pickup to signature. Your liability is framed in the CGV."
       }
     },
-    "platform": {
-      "eyebrow": "100% WEB PLATFORM",
-      "title": "Open a tab, bid. Nothing to install.",
-      "intro": "Expeditop is built as a modern web app (Next.js). For a carrier business, that choice is deliberate:",
-      "point1": {
-        "title": "Works everywhere, instantly.",
-        "desc": "Cab phone, depot PC, dispatcher's laptop: same URL, no app store, no version to update."
-      },
-      "point2": {
-        "title": "Live auctions.",
-        "desc": "Bids refresh server-side the second they land — what you see is the real state of the board."
-      },
-      "point3": {
-        "title": "Fast on weak networks.",
-        "desc": "Pages are rendered on the server (SSR), so the board loads readable in under a second on an aire d'autoroute."
-      },
-      "point4": {
-        "title": "Easy to share.",
-        "desc": "A job is a link. Forward it to a colleague, they see it without an account."
-      },
-      "note": "Your clients, on their side, use the Expedion mobile app (Flutter, iOS + Android).",
-      "noteCta": "See Expedion →",
-      "preview": {
-        "board": "JOB BOARD",
-        "live": "LIVE",
-        "accepted": "Offer accepted — {route} for {price}",
-        "caption": "Illustrative preview — sample data, not live jobs."
-      }
-    },
-    "testimonials": {
-      "one": {
-        "quote": "“My Paris–Bordeaux returns used to be empty. Now I check the board on Sunday evening and the week is set.”",
-        "author": "Transports Vidal",
-        "role": "Carrier, Gironde · 214 jobs"
-      },
-      "two": {
-        "quote": "“Everything arrives packed and photographed by Expedion. We load, we drive.”",
-        "author": "Sophie L.",
-        "role": "Owner-driver, Orléans · 88 jobs"
-      }
-    },
     "cta": {
       "title": "Ready to drive? Join the network.",
       "subtitle": "SIRET, insurance, licence: upload your documents and, once your file is approved, you can bid.",
@@ -2342,10 +2296,8 @@
     "footer": {
       "tagline": "The carrier network of the Expedion group. Auction-house shipments, bid by verified carriers.",
       "carriers": "Carriers",
-      "openJobs": "Open jobs",
       "howItWorks": "How it works",
       "verification": "Verification",
-      "platform": "Platform",
       "group": "Group",
       "expedionBuyers": "Expedion — auction buyers",
       "auctionHouses": "Auction houses",
@@ -2841,42 +2793,39 @@
   },
   "help": {
     "title": "Contact & Help",
-    "subtitle": "Find answers to common questions or contact our support team.",
+    "subtitle": "Find answers to common questions, write to us or chat with our team.",
     "emailSupport": {
       "title": "Email Support",
-      "description": "Get in touch with our support team via email. We usually respond within 24 hours."
-    },
-    "phoneSupport": {
-      "title": "Phone Support",
-      "description": "Need urgent help? Call our support line available Mon-Fri, 9am-5pm."
+      "description": "Write to our support team. We usually reply within 24 hours."
     },
     "faq": {
       "title": "Frequently Asked Questions",
       "q1": {
-        "question": "How do I track my shipment?",
-        "answer": "You can track your shipment by going to the \"Deliveries\" section in your dashboard. Click on the specific shipment to view its current status and timeline."
+        "question": "How do I track my transport?",
+        "answer": "Open “Deliveries” in the menu, then the transport you want. You will see its status — being prepared, being collected, out for delivery, delivered — and the photos the carrier took at pickup and at delivery."
       },
       "q2": {
-        "question": "How does the auction bidding work?",
-        "answer": "When you place a bid, you are committing to buy the item if you win. The auction ends when the timer runs out. If a bid is placed in the last few minutes, the timer may extend (soft close) to allow other bidders to respond."
+        "question": "How does a transport request work?",
+        "answer": "You post your request: what needs moving, from where, to where and when. Verified carriers send you offers, each with a price and time slots. You choose — the cheapest offer does not win automatically. You pay when you accept an offer, and your transport is then booked."
       },
       "q3": {
         "question": "Can I cancel a shipment?",
         "answer": "Yes, as long as the goods have not been loaded. Open the delivery page and choose “Cancel this transport”: you are refunded in full, with no cancellation fee. Once the goods have been collected, cancelling goes through our support team. If your carrier is the one who pulls out, your transport is not cancelled — the job goes back out to other carriers and you are told."
       },
       "q4": {
-        "question": "How do I contact a seller?",
-        "answer": "You can message a seller directly from the item listing page or from your \"Messages\" dashboard. All communication should stay within the platform for your safety."
+        "question": "How do I contact a carrier?",
+        "answer": "On your request's page, the “Available carriers” tab lists those who already drive that route: press “Contact”. You can also reply to a carrier from “Messages”. Keep your conversations on the platform — that is what lets us help if something goes wrong."
       },
       "q5": {
         "question": "What payment methods are accepted?",
-        "answer": "We accept all major credit and debit cards via our secure payment partner, Stripe. We do not store your card details directly on our servers."
+        "answer": "You pay by card, through our secure payment partner Stripe, when you accept an offer. Your card details are not stored on our servers. If you cancel before the goods are loaded, you are refunded in full."
       }
     },
     "stillNeedHelp": {
       "title": "Still need help?",
       "description": "Our support team is always ready to assist you with any issues you may encounter.",
-      "chatButton": "Chat with Support"
+      "chatButton": "Chat with Support",
+      "chatStarting": "Opening the chat…"
     },
     "chatFailed": "We couldn't open the chat. Please try again."
   },
@@ -2889,16 +2838,32 @@
     },
     "types": {
       "message": "Message",
-      "bid": "Bid",
+      "bid": "Offer",
       "delivery": "Delivery",
       "review": "Review",
       "payment": "Payment",
-      "listing": "Listing",
+      "listing": "Request",
       "listing_posted": "Request posted",
       "shipment_assigned": "Shipment Assigned",
       "shipment_cancelled": "Transport cancelled",
       "shipment_withdrawn": "Carrier withdrew",
-      "job_reopened": "Job available again"
+      "job_reopened": "Job available again",
+      "offer_received": "Offer received",
+      "offer_accepted": "Offer accepted",
+      "offer_rejected": "Offer not chosen",
+      "offer_declined": "Offer declined",
+      "offer_invalidated": "Offer to resubmit",
+      "listing_expired": "Request expired",
+      "carrier_application": "Carrier application",
+      "shipment_update": "Transport update",
+      "new_job": "New job",
+      "carrier_route_match": "Job on your route",
+      "payout_scheduled": "Earnings",
+      "incident_reported": "Incident reported",
+      "feedback_submitted": "Feedback received",
+      "carrier_documents_missing": "Documents to complete",
+      "account_onboarding": "Account",
+      "other": "Notification"
     },
     "popover": {
       "unreadMessages": "{count, plural, one {# unread message} other {# unread messages}}",
@@ -2907,7 +2872,16 @@
     },
     "bell": {
       "unread": "{count, plural, one {# unread notification} other {# unread notifications}}"
-    }
+    },
+    "tabs": {
+      "all": "All",
+      "unread": "Unread",
+      "messages": "Messages"
+    },
+    "actions": {
+      "reply": "Reply"
+    },
+    "dismiss": "Dismiss this notification"
   },
   "admin": {
     "panelTitle": "Admin Panel",
@@ -2947,29 +2921,6 @@
       "sortAscending": "Ascending",
       "sortDescending": "Descending",
       "noResults": "Nothing matches this search. Try other words, or clear the filters."
-    },
-    "dashboard": {
-      "title": "Dashboard",
-      "subtitle": "Overview of your platform",
-      "revenue": "Revenue",
-      "users": "Users",
-      "drivers": "Drivers",
-      "listings": "Listings",
-      "time": {
-        "justNow": "Just now",
-        "minAgo": "{count} min ago",
-        "hoursAgo": "{count} hours ago",
-        "daysAgo": "{count} days ago",
-        "yesterday": "Yesterday"
-      },
-      "stats": {
-        "error": "Failed to load",
-        "failedChart": "Failed to load chart",
-        "recentActivity": "Recent Activity",
-        "failedActivity": "Failed to load activity",
-        "noActivity": "No recent activity",
-        "fromLastMonth": "from last month"
-      }
     },
     "users": {
       "title": "Users",
@@ -3263,7 +3214,6 @@
           "description": "No driver matches these filters.",
           "descriptionAll": "No driver has applied yet."
         },
-        "inHouse": "Expeditop in-house driver",
         "type": "Type",
         "contact": "Contact",
         "reached": "Reached",
@@ -3348,10 +3298,6 @@
         "deregister": "Remove driver",
         "reinstate": "Reactivate",
         "kindLabel": "Driver type",
-        "kind": {
-          "professional": "Carrier (outside)",
-          "private": "Expeditop in-house driver"
-        },
         "incomplete": "Some details are missing (phone, vehicle…). You can complete the file on the person's behalf.",
         "editHint": "Correct or complete the file on the person's behalf.",
         "completeFile": "Complete the file",
@@ -3407,11 +3353,10 @@
       "editor": {
         "title": "Complete the file",
         "description": "You are filling in {name}'s file for them. Documents and bank details stay with the person.",
-        "inHouse": "Expeditop in-house driver",
-        "inHouseHelp": "No company, SIRET or documents: the person drives for Expeditop.",
+        "inHouseHelp": "Private (in-house): the person drives for Expeditop — no company, no registration number, no documents. Professional: an outside carrier, with the full file.",
         "kindLocked": "The type can no longer change once the file is approved.",
         "companyName": "Company name",
-        "siret": "SIRET",
+        "siret": "SIRET or company number",
         "vatNumber": "VAT number (optional)",
         "legalForm": "Legal form (optional)",
         "contactPhone": "Contact phone",
@@ -4040,7 +3985,7 @@
         "title": "Company details",
         "description": "The legal identity of your transport company.",
         "companyName": "Company name",
-        "siret": "SIRET",
+        "siret": "SIRET or company number",
         "vatNumber": "VAT number (optional)",
         "legalForm": "Legal form (optional)",
         "contactPhone": "Contact phone",
@@ -4053,20 +3998,32 @@
         "saving": "Saving…",
         "errors": {
           "companyName": "At least 2 characters",
-          "siret": "Enter a valid 14-digit SIRET",
-          "vat": "Format FRXX123456789",
-          "phone": "Enter a valid French phone number",
+          "siret": "Enter a 14-digit SIRET, or a company number of 5 to 20 letters or digits",
+          "vat": "Country code then number, e.g. FR12345678901 or BE0123456789",
+          "phone": "Enter a French number, or an international one with its country code (+32…)",
           "addressLine": "Address is required",
           "city": "City is required",
-          "postalCode": "5 digits"
+          "postalCode": "3 to 10 letters or digits"
         },
         "inHouse": {
-          "label": "I am an Expeditop in-house driver",
-          "help": "Tick if you drive for Expeditop itself: no company, SIRET or documents. An administrator will validate your file.",
           "title": "Your details",
-          "description": "A few details are enough for an in-house driver.",
+          "description": "A phone number and an address are enough. Expeditop then validates your file by hand and emails you.",
           "bio": "Anything for the team (optional)",
           "bioPlaceholder": "Your manager, your area, your availability…"
+        },
+        "siretHelp": "French company: your 14-digit SIRET. Foreign company: your registration number.",
+        "phoneHelp": "Outside France, start with the country code (+32, +49…).",
+        "kind": {
+          "legend": "You are…",
+          "private": {
+            "title": "Private — Expeditop in-house driver",
+            "body": "Short form: phone and address. No company, no documents, no bank details. Expeditop assigns your runs."
+          },
+          "professional": {
+            "title": "Professional — carrier",
+            "body": "Company, registration number, documents and bank details. You make offers on jobs."
+          },
+          "locked": "The type can no longer change once the file is approved. To change it, contact support."
         }
       },
       "banner": {
@@ -4098,6 +4055,20 @@
         "deregistered": {
           "title": "You are deregistered",
           "description": "Your driver account is closed: you no longer receive jobs. Money already earned is still owed to you. To come back, update your file and submit it again."
+        },
+        "inHouse": {
+          "submitted": {
+            "title": "File submitted — waiting for validation",
+            "description": "Expeditop validates every in-house driver by hand: it is the only step left, and there is nothing else for you to provide. You will get an email as soon as your file is validated."
+          },
+          "under_review": {
+            "title": "Validation in progress",
+            "description": "Expeditop is looking at your in-house driver file. You will get an email as soon as it is validated."
+          },
+          "approved": {
+            "title": "You are an Expeditop driver",
+            "description": "Expeditop assigns your runs: find them under “Deliveries”."
+          }
         }
       },
       "summary": {
@@ -4156,7 +4127,9 @@
         "vehicle": "At least one vehicle in your fleet",
         "goToFleet": "Manage fleet",
         "submit": "Submit for review",
-        "submitting": "Submitting…"
+        "submitting": "Submitting…",
+        "inHouseTitle": "Before you submit your file",
+        "inHouseDescription": "One vehicle is enough: Expeditop needs one to assign you a run. Once the file is submitted, Expeditop validates it by hand and emails you."
       },
       "availability": {
         "title": "Availability",
@@ -4180,21 +4153,7 @@
     },
     "onboarding": {
       "title": "Become a driver",
-      "description": "Bid on transport jobs and get paid for each delivery. Applying takes three steps.",
-      "steps": {
-        "details": {
-          "title": "Your details",
-          "body": "Your name or business name, SIRET, phone and address. A sole trader's SIRET is enough, no Kbis needed."
-        },
-        "documents": {
-          "title": "Your documents",
-          "body": "ID card, driving licence, insurance certificate and RIB. They stay private and only our team sees them."
-        },
-        "review": {
-          "title": "Our review",
-          "body": "Our team checks your file. Once you are approved, Driver mode appears in your access menu and you can bid on jobs."
-        }
-      },
+      "description": "Two ways to drive with Expeditop. Either way: a single form, then our team validates your file.",
       "keepUser": "You keep your user access: your transport requests stay where they are.",
       "statusTitle": "Your driver application",
       "statusDescription": "Here is where it stands.",
@@ -4211,7 +4170,18 @@
         "rejected": "Rejected",
         "suspended": "Suspended",
         "deregistered": "Deregistered"
-      }
+      },
+      "kinds": {
+        "private": {
+          "title": "Private — Expeditop in-house driver",
+          "body": "Phone and address, nothing else: no company, no documents, no bank details. Expeditop assigns your runs."
+        },
+        "professional": {
+          "title": "Professional — carrier",
+          "body": "Company, SIRET or company number, documents and bank details. You answer jobs with your own offers."
+        }
+      },
+      "review": "Our team validates every file by hand. You get an email as soon as it is done, and Driver mode appears in your access menu."
     },
     "fleet": {
       "title": "My fleet",
@@ -4254,7 +4224,7 @@
         "saving": "Adding…",
         "errors": {
           "type": "Choose a vehicle type",
-          "plate": "Format AB-123-CD",
+          "plate": "4 to 12 letters or digits, e.g. AB-123-CD",
           "weight": "Between 1 and 44 000 kg",
           "year": "Enter a valid year",
           "dimension": "Enter a positive number"
@@ -4571,7 +4541,6 @@
     "loading": "Loading…",
     "count": "{count} jobs accepting offers",
     "countOne": "{count} job accepting offers",
-    "search": "Search jobs",
     "clearSearch": "Clear search",
     "filters": "Filters",
     "minBudget": "Min budget (€)",
@@ -4589,18 +4558,13 @@
     },
     "empty": {
       "title": "No jobs match",
-      "filtered": "Try widening your filters — new jobs arrive through the day.",
+      "filtered": "No job matches this search. Widen it or clear it — new jobs arrive through the day.",
       "none": "No jobs are open right now. New jobs appear here as soon as they're posted."
     },
     "previous": "Previous",
     "next": "Next",
     "route": {
-      "modeLabel": "Search type",
-      "around": "Around",
-      "onMyWay": "On my way",
-      "nearCity": "Around which city?",
       "fromCity": "Departure city",
-      "toCity": "Arrival city",
       "swap": "Swap departure and arrival",
       "radiusLabel": "Within",
       "detourLabel": "Detour allowed",
@@ -4613,7 +4577,19 @@
       "positionUnavailable": "Your device does not share its position.",
       "positionDenied": "Position refused or not found. Pick a city.",
       "backToStart": "Back to the start",
-      "openMap": "See the area on the map"
+      "openMap": "See the area on the map",
+      "cardLabel": "Search jobs",
+      "fromPlaceholder": "Paris, Lyon…",
+      "destination": "Destination",
+      "destinationPlaceholder": "Optional",
+      "dateLabel": "Date",
+      "titleLabel": "Title of the ad",
+      "titlePlaceholder": "Sofa, piano… or the ad number",
+      "submit": "Search",
+      "clear": "Clear",
+      "departureMissing": "Add a departure city: a destination alone does not describe a route.",
+      "hintAround": "Around your departure city: jobs to collect nearby. Add a destination to search along your route.",
+      "hintRoute": "Along your route: jobs between the departure and the destination, heading the same way."
     },
     "availability": {
       "empty": "My availability",

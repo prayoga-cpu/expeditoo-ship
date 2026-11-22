@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRef, useEffect } from "react";
-import { ADMIN_NAV_GROUPS, badgeFor } from "../nav";
+import { badgeFor } from "../nav";
 import { cn } from "@/lib/utils";
 import {
   FLOATING_NAV_CAPSULE,
@@ -12,7 +12,7 @@ import {
 } from "@/components/layouts/FloatingNav";
 import { NAV_PRESS, usePendingNav } from "@/components/layouts/use-pending-nav";
 import { useTranslations } from "next-intl";
-import { useAdminNavCounts } from "../hooks/useAdminNavCounts";
+import { useAdminNav } from "../hooks/useAdminNav";
 
 /**
  * Whether this entry owns the current path.
@@ -30,14 +30,15 @@ function isCurrent(pathname: string | null, href: string) {
 export function AdminBottomNav() {
   const pathname = usePathname();
   const t = useTranslations("admin.navigation");
-  const counts = useAdminNavCounts();
+  const { groups, counts } = useAdminNav();
   const scrollRef = useRef<HTMLDivElement>(null);
   const activeRef = useRef<HTMLAnchorElement>(null);
   const { pendingHref, onNavigate } = usePendingNav();
 
   // The same groups as the sidebar, flattened: one list, so a page cannot be
-  // reachable on a desktop and not on a phone.
-  const navItems = ADMIN_NAV_GROUPS.flatMap((group) => group.items).map((entry) => ({
+  // reachable on a desktop and not on a phone — and filtered by the same
+  // roles, so a phone offers no entry the proxy would bounce.
+  const navItems = groups.flatMap((group) => group.items).map((entry) => ({
     href: entry.href,
     label: t(entry.labelKey),
     icon: <entry.icon className="w-5 h-5" />,

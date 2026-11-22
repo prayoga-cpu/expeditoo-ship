@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { CircleCheck, Keyboard, Link2, MapPin, Search } from "lucide-react";
 import Map, {
@@ -26,6 +26,7 @@ import {
   countryMapCenter,
   countryName,
   DEFAULT_COUNTRY,
+  geocoderScope,
 } from "@/lib/countries";
 
 /**
@@ -78,10 +79,12 @@ export interface LocationPickerFieldProps {
   mode?: LocationPickerMode;
   onModeChange?: (mode: LocationPickerMode) => void;
   /**
-   * The country the place is in, ISO 3166-1 alpha-2: the search looks there,
-   * the map opens and stays there, and a pin reverse-geocoded elsewhere is
-   * refused. France unless the caller lets the person choose (`/create`,
-   * client_feedback_2026_10_31_spec.md §6.2).
+   * The country the place is in, ISO 3166-1 alpha-2: the search looks there
+   * and a pin reverse-geocoded elsewhere is refused. A country with a box
+   * (`countries.ts`) also holds the map to it; any other opens on the country
+   * once it is found, and is free to move. France unless the caller lets the
+   * person choose (`/create`, client_feedback_2026_10_31_spec.md §6.2,
+   * postal_codes_abroad_spec.md §5).
    */
   countryCode?: string;
   /**
@@ -137,6 +140,34 @@ export function LocationPickerField({
       : countryMapCenter(countryCode)
   );
 
+  // Where the map service files this country: itself, or — for a territory
+  // such as Réunion — the state it belongs to, with the territory's name to
+  // add to what is searched.
+  const scope = geocoderScope(countryCode, locale);
+  const mapBounds = countryMapBounds(countryCode);
+
+  // A country with no box has no centre to open on either: it is looked up
+  // once, by name, and the map moves there unless a pin got there first.
+  useEffect(() => {
+    if (mapBounds || hasPin) return;
+    let cancelled = false;
+    // Within its own code: « Georgia » and « Jersey » are also places in the
+    // United States.
+    void searchAddress(countryName(countryCode, "en"), scope.countrycodes, 1).then(([hit]) => {
+      if (cancelled || !hit) return;
+      setViewState((prev) =>
+        prev.zoom > 3
+          ? prev
+          : { longitude: hit.center[0], latitude: hit.center[1], zoom: 4 }
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+    // Once per mount: the picker is remounted when the country changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -188,7 +219,11 @@ export function LocationPickerField({
     searchTimeoutRef.current = setTimeout(async () => {
       setIsSearching(true);
       try {
-        const results = await searchAddress(query, countryCode.toLowerCase(), 5);
+        const results = await searchAddress(
+          scope.suffix ? `${query}, ${scope.suffix}` : query,
+          scope.countrycodes,
+          5
+        );
         setSearchResults(
           results.map((r) => ({
             id: r.id,
@@ -203,7 +238,7 @@ export function LocationPickerField({
         setIsSearching(false);
       }
     }, 300);
-  }, [countryCode]);
+  }, [scope.countrycodes, scope.suffix]);
 
   const setPin = useCallback(
     async (lng: number, lat: number) => {
@@ -217,7 +252,7 @@ export function LocationPickerField({
           onChange({ ...value, lat, lng });
           return;
         }
-        if (result.countryCode.toUpperCase() !== countryCode) {
+        if (result.countryCode.toLowerCase() !== scope.countrycodes) {
           setLocationError(
             t("outsideCountry", { country: countryName(countryCode, locale) })
           );
@@ -243,7 +278,7 @@ export function LocationPickerField({
         setIsGeocoding(false);
       }
     },
-    [countryCode, locale, onChange, t, value]
+    [countryCode, locale, onChange, scope.countrycodes, t, value]
   );
 
   const selectResult = (result: { center: [number, number] }) => {
@@ -359,7 +394,7 @@ export function LocationPickerField({
           mapStyle={getMapStyle(isDark)}
           onClick={(e) => void setPin(e.lngLat.lng, e.lngLat.lat)}
           cursor="crosshair"
-          maxBounds={countryMapBounds(countryCode)}
+          maxBounds={mapBounds}
         >
           <NavigationControl position="bottom-right" showCompass={false} />
           {hasPin ? (

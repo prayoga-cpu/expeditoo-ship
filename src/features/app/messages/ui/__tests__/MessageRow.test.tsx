@@ -36,6 +36,19 @@ describe("MessageRow", () => {
     expect(screen.getByRole("heading", { name: "Nicolas Martin" })).toBeInTheDocument();
   });
 
+  it("names the person by their pseudo and keeps the real initials", () => {
+    // What `useMessages` hands over for someone with a pseudo: « @pseudo » as
+    // the name, the two letters still from the first and last name.
+    renderRow({ name: "@Nico-Trans", initials: "NM" });
+
+    expect(screen.getByRole("heading", { name: "@Nico-Trans" })).toBeInTheDocument();
+    expect(screen.queryByText("Nicolas Martin")).not.toBeInTheDocument();
+    expect(screen.getByText("NM")).toBeInTheDocument();
+    // No fourth line for it: the pseudo takes the name's place.
+    const content = screen.getByRole("heading", { name: "@Nico-Trans" }).closest("div.flex-1");
+    expect(content?.children).toHaveLength(3);
+  });
+
   it("derives initials from the name when none were given", () => {
     renderRow({ initials: undefined, name: "Ana Silva" });
 

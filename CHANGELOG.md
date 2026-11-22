@@ -14,6 +14,70 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.95.0] - 2026-11-22 · fix
+
+What the page-by-page inventory turned up, fixed.
+
+- **Operators, support and finance can open the back office.** Until now only
+  an administrator could; the others were offered « Admin » and sent back to
+  the home page. Each now lands on, and sees only, the pages their role allows.
+  Support can open and answer a support conversation.
+- **A signed-out visitor on « Demander un transport »** is sent to sign in and
+  returns to the form afterwards, instead of filling five steps and failing at
+  the end. On a request's page, a visitor who is not signed in is offered a
+  « Connectez-vous pour faire une offre » button.
+- **Notifications** read in your language, name every kind of notification, and
+  open the right page.
+- **The help pages tell the truth.** The invented phone numbers are gone, and
+  the answers describe what the platform really does: a request, offers, your
+  choice, payment at acceptance, photos at pickup and delivery.
+- **Reviews** are sorted « En tant que demandeur » and « En tant que
+  transporteur »; the « Utile » and « Signaler » buttons, which did nothing,
+  are gone.
+- **« Confirmer la livraison »** replaces « Marquer livrée sans photo »: a
+  delivery always needs its photo, and the button now says so.
+- **Deleting a conversation** has a button on a computer, not only a swipe.
+- **« Compte & Sécurité » notifications** show as always on, with the reason,
+  instead of a switch that did nothing.
+- **A paid quote delivering abroad** can be published even when the country has
+  no 4-to-6-digit postal code (for example « SW1A 1AA »).
+- **Signing in takes you back** to the page you were trying to open, such as
+  the request form or a request you wanted to bid on, instead of the home page.
+- **« Supprimer mon compte »** now says what happens: it opens a message to the
+  team, who delete the account after a check. The confirmation button used to
+  close and delete nothing.
+- The header and footer no longer link to sections that do not exist.
+
+## [2.94.0] - 2026-11-22 · feat
+
+The client's feedback of 19 November, the points that were still open.
+
+- **Becoming a driver starts with one choice.** The application opens with two
+  options: « Particulier — chauffeur interne Expeditop » (a short form, no
+  company and no documents) or « Professionnel — transporteur ». An in-house
+  driver is still validated by a person at Expeditop, and is told so.
+- **Drivers are congratulated when their file is approved**, by e-mail and in
+  the app, in French, with a button to where their work is.
+- **Professionals from abroad can register.** A company number that is not a
+  SIRET, a foreign phone number, postal code, VAT number and number plate are
+  all accepted.
+- **Operators: the type of driver comes first.** The alert e-mail for a new
+  file names « Particulier (interne) » or « Professionnel » in its subject and
+  opens the file directly; the drivers page uses the same two words.
+- **Every country in the world** can be chosen for a pickup or a delivery, in a
+  list you can search. Outside the fourteen usual countries the postal code is
+  optional.
+- **One search on the missions board**: departure town, destination, date and
+  « Titre de l'annonce », with a « Rechercher » button. A departure alone
+  searches around it; with a destination it searches along your route.
+- **Messages show the pseudo.** Someone who chose a pseudo appears under it in
+  the list of conversations; the sign-up page now says so. You can search a
+  conversation by pseudo.
+- **Larger text on phones and tablets.** Everything is a little bigger below a
+  laptop-sized window.
+- **A sheet of every page and action**, by role, each with a reference you can
+  quote when asking for a change.
+
 ## [2.93.0] - 2026-11-21 · ux
 
 The release history now reads in French, and in full.

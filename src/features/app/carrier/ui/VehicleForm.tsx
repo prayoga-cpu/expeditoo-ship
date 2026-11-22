@@ -52,7 +52,7 @@ function buildSchema(t: Translate) {
     year: optionalNumeric(t("errors.year")),
     plateNumber: z
       .string()
-      .refine((value) => isValidPlate(value.toUpperCase()), t("errors.plate")),
+      .refine(isValidPlate, t("errors.plate")),
     maxWeightKg: z
       .string()
       .refine(
@@ -102,7 +102,7 @@ export function VehicleForm({ onDone }: VehicleFormProps) {
         make: values.make || undefined,
         model: values.model || undefined,
         year: values.year ? Number(values.year) : undefined,
-        plateNumber: values.plateNumber.toUpperCase(),
+        plateNumber: values.plateNumber.trim().toUpperCase(),
         maxWeightKg: Number(values.maxWeightKg),
         maxLengthCm: values.maxLengthCm ? Number(values.maxLengthCm) : undefined,
         maxWidthCm: values.maxWidthCm ? Number(values.maxWidthCm) : undefined,

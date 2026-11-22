@@ -8,11 +8,13 @@ import { LandingGatedButton } from "./LandingGatedButton";
 import { LandingLangToggle, LandingThemeToggle } from "./LandingControls";
 import { LP_BTN_PRIMARY } from "./styles";
 
-const NAV_LINKS = [
-  { href: "/#how", key: "howItWorks" },
-  { href: "/#courses", key: "jobs" },
-  { href: "/#platform", key: "platform" },
-] as const;
+/**
+ * Anchors into the landing page. Every entry must name a section that page
+ * still renders: « Courses » and « Plateforme » pointed at `#courses` and
+ * `#platform` after both sections were cut (2.95.0), and a link to a missing
+ * id just scrolls nowhere. `landing-anchors.test.tsx` holds it.
+ */
+const NAV_LINKS = [{ href: "/#how", key: "howItWorks" }] as const;
 
 export function LandingNavbar() {
   const t = useTranslations("marketing.navbar");

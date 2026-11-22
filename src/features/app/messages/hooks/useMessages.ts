@@ -16,6 +16,7 @@ import { activeRequests } from "@/features/app/dashboard/myRequestStatus";
 import type { Job } from "@/features/app/listing/types";
 import { jobDates, routeOf } from "../lib/job-summary";
 import { initialsOf } from "../lib/initials";
+import { displayNameOf } from "../lib/display-name";
 import { useConversationFilter } from "./useConversationFilter";
 
 /**
@@ -210,7 +211,9 @@ export function useMessages() {
     () =>
       conversations.map((conv: ConversationResponse) => ({
         id: conv.id,
-        name: conv.otherParticipant?.name || t("detail.unknown"),
+        // « @pseudo » when they chose one, their name otherwise (#32). The
+        // initials below stay the real ones.
+        name: displayNameOf(conv.otherParticipant) || t("detail.unknown"),
         initials: conv.otherParticipant
           ? initialsOf(conv.otherParticipant)
           : undefined,

@@ -9,7 +9,12 @@ import { OrderConfirmationEmail } from "@/server/emails/OrderConfirmationEmail";
 import { ShipmentUpdateEmail } from "@/server/emails/ShipmentUpdateEmail";
 import { ConfirmationRequestEmail } from "@/server/emails/ConfirmationRequestEmail";
 import { TransportRequestReceivedEmail } from "@/server/emails/TransportRequestReceivedEmail";
-import { DriverApplicationSubmittedEmail } from "@/server/emails/DriverApplicationSubmittedEmail";
+import {
+  DriverApplicationSubmittedEmail,
+  type DriverApplicationSubmittedEmailProps,
+} from "@/server/emails/DriverApplicationSubmittedEmail";
+import { DriverApprovedEmail, type DriverApprovedEmailProps } from "@/server/emails/DriverApprovedEmail";
+import { carrierKindLabel } from "@/lib/carrier-kind";
 import { PayoutEmail, type PayoutEmailProps } from "@/server/emails/PayoutEmail";
 import { RequesterMessageEmail, type RequesterMessageEmailProps } from "@/server/emails/RequesterMessageEmail";
 import { DriverAlertEmail, type DriverAlertEmailProps } from "@/server/emails/DriverAlertEmail";
@@ -264,19 +269,29 @@ export const emailService = {
   /** An admin is told a driver application waits for review (§REQ-07). */
   async sendDriverApplicationSubmittedEmail(
     to: string,
-    params: {
-      applicantName: string;
-      companyName: string;
-      city: string;
-      kindLabel: string;
-      reviewUrl: string;
-    }
+    params: DriverApplicationSubmittedEmailProps
   ) {
     const emailHtml = await render(DriverApplicationSubmittedEmail(params));
 
+    // The type leads: an in-house file is one click from a working driver,
+    // and the inbox should say which it is before the mail is opened.
     return this.sendEmail({
       to,
-      subject: `Nouveau dossier chauffeur : ${params.applicantName}`,
+      subject: `Nouveau dossier chauffeur — ${carrierKindLabel(params.kind)} : ${params.applicantName}`,
+      html: emailHtml,
+    });
+  },
+
+  /** « Félicitations » — a driver's file was approved (driver_types_spec.md §9). */
+  async sendDriverApprovedEmail(to: string, params: DriverApprovedEmailProps) {
+    const emailHtml = await render(DriverApprovedEmail(params));
+
+    return this.sendEmail({
+      to,
+      subject:
+        params.kind === "private"
+          ? "Félicitations, vous êtes chauffeur Expeditop"
+          : "Félicitations, votre dossier chauffeur est approuvé",
       html: emailHtml,
     });
   },

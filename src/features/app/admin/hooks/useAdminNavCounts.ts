@@ -13,8 +13,12 @@ import type { AdminNavCounts } from "@/server/services/admin-nav.service";
  * `refetchOnWindowFocus` is on here — the opposite of the report's setting —
  * because coming back to the tab is exactly when "did anything arrive?" is the
  * question being asked.
+ *
+ * `enabled: false` asks nothing: `adminNavService.counts` answers `admin` and
+ * `operator` only, so a support or finance session would otherwise collect a
+ * 403 a minute for badges on entries it cannot see (`useAdminNav`).
  */
-export function useAdminNavCounts() {
+export function useAdminNavCounts({ enabled = true }: { enabled?: boolean } = {}) {
   const { data } = useQuery<AdminNavCounts>({
     queryKey: ["admin", "nav-counts"],
     queryFn: async () => {
@@ -36,6 +40,7 @@ export function useAdminNavCounts() {
       }
       return body.data;
     },
+    enabled,
     refetchInterval: 60_000,
     staleTime: 30_000,
     retry: 1,

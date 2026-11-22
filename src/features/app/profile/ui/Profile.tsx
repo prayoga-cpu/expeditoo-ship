@@ -45,6 +45,7 @@ import { PageWrapper } from "@/components/ui/page-wrapper";
 import { LottieLoader } from "@/components/ui/lottie-loader";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/lib/auth-context";
+import { hasAdminAccess, modeLanding } from "@/lib/active-access";
 
 export function Profile() {
   const {
@@ -333,11 +334,12 @@ export function quickLinkGroups({
   hasApplication: boolean;
 }): { driver: QuickLink[]; account: QuickLink[] } {
   const isAdmin = roles?.includes("admin");
+  const hasBackOffice = hasAdminAccess(roles ?? []);
   const isCarrier = roles?.includes("carrier");
   const isDriver = isCarrier || roles?.includes("driver");
 
   // On the Admin profile, only the admin links that are not in the bottom nav.
-  if (pathname?.startsWith("/admin") && isAdmin) {
+  if (pathname?.startsWith("/admin") && hasBackOffice) {
     return {
       driver: [],
       account: [
@@ -368,8 +370,10 @@ export function quickLinkGroups({
   }
 
   const account = ACCOUNT_LINKS.map((link) => ({ ...link, fromProfile: true }));
+  if (hasBackOffice) {
+    account.unshift({ href: modeLanding("admin", roles ?? []), labelKey: "adminDashboard", icon: Shield, fromProfile: true });
+  }
   if (isAdmin) {
-    account.unshift({ href: "/admin/expedion", labelKey: "adminDashboard", icon: Shield, fromProfile: true });
     account.push({ href: "/admin/support", labelKey: "adminSupport", icon: Headset, fromProfile: true });
   }
 

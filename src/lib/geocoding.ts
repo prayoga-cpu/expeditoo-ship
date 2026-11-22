@@ -58,12 +58,14 @@ export interface ReverseGeocodeResult {
  * Forward geocode: search text to coordinates
  * @param query Search query (minimum 3 characters recommended)
  * @param countryCode Restrict to a country, or to several as Nominatim's
- *   comma-separated `countrycodes` ("fr,be,lu"). Default: "fr" for France
+ *   comma-separated `countrycodes` ("fr,be,lu"). Default: "fr" for France.
+ *   `null` searches the whole world — a request can start or end anywhere
+ *   (postal_codes_abroad_spec.md §5).
  * @param limit Maximum results (default: 5)
  */
 export async function searchAddress(
   query: string,
-  countryCode = "fr",
+  countryCode: string | null = "fr",
   limit = 5
 ): Promise<SearchResult[]> {
   if (query.length < 3) {
@@ -75,8 +77,8 @@ export async function searchAddress(
     format: "jsonv2",
     addressdetails: "1",
     limit: limit.toString(),
-    countrycodes: countryCode,
   });
+  if (countryCode) params.set("countrycodes", countryCode);
 
   try {
     const res = await fetch(`${NOMINATIM_URL}/search?${params}`, {

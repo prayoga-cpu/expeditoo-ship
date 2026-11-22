@@ -105,7 +105,6 @@ describe("requestAssistantService.understand", () => {
       pickupDate: "2026-11-24",
       deliveryDate: null,
       missing: [],
-      outOfArea: [],
     });
     // Whatever the service answers is what the DTO promises the form.
     expect(requestDraftSchema.safeParse(draft).success).toBe(true);
@@ -211,7 +210,9 @@ describe("requestAssistantService.understand", () => {
       const draft = await understand();
 
       expect(draft.pickup).toEqual({ city: "Lyon", postalCode: "69002", country: "FR" });
-      expect(searchMock).toHaveBeenCalledWith("Lyon", "fr", 1);
+      // Anywhere in the world: no country was named, and none is assumed.
+      expect(searchMock).toHaveBeenCalledWith("Lyon", null, 1);
+      expect(searchMock).toHaveBeenCalledTimes(1);
     });
 
     it("keeps a postal code the person gave, without a lookup", async () => {
@@ -233,10 +234,6 @@ describe("requestAssistantService.understand", () => {
 
     it("finds a town abroad without the person naming the country", async () => {
       modelSays({ dropoffCity: "Bruxelles" });
-      // Nothing in France; found once every served country is searched.
-      searchMock
-        .mockResolvedValueOnce([])
-        .mockResolvedValueOnce([{ id: "1", place_name: "x", center: [4.35, 50.85] }]);
       reverseMock.mockResolvedValue({
         street: "",
         city: "Bruxelles",
@@ -260,6 +257,81 @@ describe("requestAssistantService.understand", () => {
       expect(searchMock).toHaveBeenCalledWith("Bruxelles", "be", 1);
     });
 
+    // 2.94.0 — every country and territory (postal_codes_abroad_spec.md §5).
+    it("finds a town in a country far from France, and keeps its postal code", async () => {
+      modelSays({ dropoffCity: "Casablanca" });
+      mapSays({ postalCode: "20250", countryCode: "ma" });
+
+      const draft = await understand();
+
+      expect(draft.dropoff).toEqual({ city: "Casablanca", postalCode: "20250", country: "MA" });
+    });
+
+    it("takes a named far country, with a postal code of any shape", async () => {
+      modelSays({ dropoffCity: "London", dropoffPostalCode: "SW1A 1AA", dropoffCountry: "GB" });
+
+      const draft = await understand();
+
+      expect(draft.dropoff).toEqual({ city: "London", postalCode: "SW1A 1AA", country: "GB" });
+      expect(searchMock).not.toHaveBeenCalled();
+    });
+
+    it("leaves the postal code blank where the country has none", async () => {
+      modelSays({ dropoffCity: "Dubai", dropoffCountry: "AE" });
+      mapSays({ postalCode: "", countryCode: "ae" });
+
+      const draft = await understand();
+
+      expect(draft.dropoff).toEqual({ city: "Dubai", postalCode: "", country: "AE" });
+      expect(searchMock).toHaveBeenCalledWith("Dubai", "ae", 1);
+    });
+
+    it.each([
+      ["a lower-case code", "be", "BE"],
+      ["a name where a code was asked", "Maroc", "MA"],
+      ["what people call it", "UK", "GB"],
+    ])("reads %s as the country", async (_, said, code) => {
+      modelSays({ dropoffCity: "Ville", dropoffCountry: said });
+      mapSays({ postalCode: "", countryCode: code.toLowerCase() });
+
+      expect((await understand()).dropoff?.country).toBe(code);
+      expect(searchMock).toHaveBeenCalledWith("Ville", code.toLowerCase(), 1);
+    });
+
+    it.each(["XX", "OTHER", "Atlantis", ""])(
+      "reads %j as no country at all: searched everywhere, France if not found",
+      async (said) => {
+        modelSays({ pickupCity: "Trifouillis", pickupCountry: said });
+        mapSays(null);
+
+        const draft = await understand();
+
+        expect(searchMock).toHaveBeenCalledWith("Trifouillis", null, 1);
+        expect(draft.pickup).toEqual({ city: "Trifouillis", postalCode: "", country: "FR" });
+      }
+    );
+
+    it("searches a territory where the map files it, and keeps what was said", async () => {
+      modelSays({ dropoffCity: "Saint-Denis", dropoffCountry: "RE" });
+      // The map knows Réunion as France.
+      mapSays({ postalCode: "97400", countryCode: "fr" });
+
+      const draft = await understand();
+
+      expect(searchMock).toHaveBeenCalledWith("Saint-Denis, Réunion", "fr", 1);
+      expect(draft.dropoff).toEqual({ city: "Saint-Denis", postalCode: "97400", country: "RE" });
+    });
+
+    it("does not hand the model a list of every country", () => {
+      modelSays({});
+      return understand().then(() => {
+        const schema = JSON.stringify(create.mock.calls[0][0].response_format);
+        expect(schema).not.toContain('"OTHER"');
+        expect(schema).not.toContain('"RO"');
+        expect(schema).toContain("ISO 3166-1");
+      });
+    });
+
     it("keeps the town with no postal code when the map cannot find it", async () => {
       modelSays({ pickupCity: "Trifouillis" });
       mapSays(null);
@@ -277,16 +349,6 @@ describe("requestAssistantService.understand", () => {
       expect((await understand()).pickup?.postalCode).toBe("");
     });
 
-    it("says so, and fills nothing, for a country no request can reach", async () => {
-      modelSays({ pickupCity: "Nantes", dropoffCity: "London", dropoffCountry: "OTHER" });
-
-      const draft = await understand();
-
-      expect(draft.dropoff).toBeNull();
-      expect(draft.outOfArea).toEqual(["dropoff"]);
-      expect(draft.missing).toContain("dropoff");
-      expect(searchMock).not.toHaveBeenCalledWith("London", expect.anything(), 1);
-    });
   });
 
   describe("dates", () => {
@@ -450,7 +512,7 @@ describe("requestAssistantService.understand", () => {
       ["nothing", null],
       ["text that is not JSON", "bonjour"],
       ["a value outside the form's vocabulary", JSON.stringify({ ...NOTHING, sizePreset: "huge" })],
-      ["a country outside the list", JSON.stringify({ ...NOTHING, pickupCountry: "US" })],
+      ["a country that is not text", JSON.stringify({ ...NOTHING, pickupCountry: 33 })],
     ])("answers ASSISTANT_FAILED when the model returns %s", async (_, content) => {
       create.mockResolvedValueOnce({ choices: [{ message: { content } }] });
 

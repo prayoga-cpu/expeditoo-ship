@@ -87,11 +87,11 @@ function SignInContent() {
   // A refusal comes back through the hook's `error`, as a key the notice
   // below turns into a sentence (`auth-errors.ts`).
   const onSubmit = async (data: SigninFormData) => {
-    await signIn(data.email, data.password, data.rememberMe);
+    await signIn(data.email, data.password, data.rememberMe, searchParams.get("callbackUrl"));
   };
 
   const handleGoogleSignIn = async () => {
-    await signInWithGoogle();
+    await signInWithGoogle(searchParams.get("callbackUrl"));
   };
 
   return (

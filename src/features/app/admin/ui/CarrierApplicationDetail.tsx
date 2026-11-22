@@ -26,6 +26,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { actionsFor, type DriverAction } from "../lib/carrier-actions";
 import { isAbsent } from "@/lib/carrier-availability";
+import { carrierKindLabel } from "@/lib/carrier-kind";
 import { parseLocalISO, todayLocalISO, addDaysLocalISO } from "@/lib/utils/date-range";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -360,7 +361,7 @@ export function CarrierApplicationDetail({
             </h4>
             <CarrierStatusBadge status={application.status} absent={absent} />
           </div>
-          <Field label={t("kindLabel")} value={t(`kind.${application.kind ?? "professional"}`)} />
+          <Field label={t("kindLabel")} value={carrierKindLabel(application.kind, locale)} />
         </div>
 
         {onSaveFile && onAddVehicle && (

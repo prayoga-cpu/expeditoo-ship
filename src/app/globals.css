@@ -232,6 +232,31 @@
     transition-duration: 200ms;
     transition-timing-function: ease-in-out;
   }
+  /* Larger text on phones and tablets (client feedback 2026-11-19, #28:
+     « Please increase size font to the same level as the title
+     expeditoo-ship at the bottom of the screen » — Safari's address bar,
+     about 17px — and #4, « font size to be more readable »).
+
+     Below `lg` (1024px) the root is 17px instead of 16px, so every rem-based
+     size — text, spacing, controls — grows together and nothing is restyled
+     one class at a time. From `lg` it stays 100%. A percentage, not `17px`,
+     so a reader's own browser text size still applies on top.
+
+     `not all and (min-width: 64rem)` is the exact complement of Tailwind's
+     `lg:` and, unlike `(width < 64rem)`, is understood by iOS Safari 15. The
+     `rem` in a media query is always the browser's 16px, never this rule's
+     result, so the breakpoint does not move.
+
+     What does NOT grow is anything sized in px: `text-[11px]` and its like
+     stay put, which is why small labels are `text-xs` rather than a pixel
+     figure. Inputs are `text-base` on a phone: 16px becomes 17px, still above
+     the 16px under which iOS zooms the page on focus. */
+  @media not all and (min-width: 64rem) {
+    html {
+      font-size: 106.25%;
+    }
+  }
+
   body {
     @apply bg-background text-foreground;
   }
@@ -433,6 +458,25 @@
 
   .animate-lp-tick {
     animation: lpTick 0.5s ease-out;
+  }
+}
+
+/* ── The bottom bar's reserve, at the phone's text size ─────────────────
+   The floating bar (FloatingNav.tsx) is sized in rem, so with the 17px root
+   above it stands about 80px tall where a label takes two lines, plus its
+   12px of air: 92px, against the fixed 88px the shells reserve under
+   `<main>` and the impersonation banner sits on. Those two utilities are
+   therefore read as 5.5rem below `lg` — 88px at a 16px root, 93.5px at 17px —
+   so the reserve grows with the bar it clears. Unlayered on purpose: it must
+   win over the utility of the same name. The shells' class names are pinned
+   by bottom-bar-safe-area.test.ts and are not this file's to rename; if they
+   ever become `5.5rem` themselves, delete this block. */
+@media not all and (min-width: 64rem) {
+  .pb-\[calc\(88px_\+_env\(safe-area-inset-bottom\)\)\] {
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+  }
+  .bottom-\[calc\(88px_\+_env\(safe-area-inset-bottom\)\)\] {
+    bottom: calc(5.5rem + env(safe-area-inset-bottom));
   }
 }
 

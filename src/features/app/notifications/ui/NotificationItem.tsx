@@ -64,6 +64,7 @@ export function NotificationItem({
 }: NotificationItemProps) {
   const router = useRouter();
   const t = useTranslations("notifications.types");
+  const tItem = useTranslations("notifications");
 
   const handleClick = () => {
     if (link) {
@@ -120,7 +121,9 @@ export function NotificationItem({
                 typeColors[type],
               )}
             >
-              {t(type)}
+              {/* The server sends more types than this list names; an
+                  unknown one reads « Notification », never a raw key. */}
+              {t.has(type) ? t(type) : t("other")}
             </Badge>
             {onDismiss && (
               <button
@@ -129,7 +132,8 @@ export function NotificationItem({
                   e.stopPropagation();
                   onDismiss();
                 }}
-                className="opacity-0 group-hover:opacity-100 transition-opacity hover:text-destructive p-1 -mr-1"
+                aria-label={tItem("dismiss")}
+                className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity hover:text-destructive p-1 -mr-1"
               >
                 <X className="w-4 h-4" />
               </button>

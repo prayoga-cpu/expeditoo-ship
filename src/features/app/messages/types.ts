@@ -5,6 +5,7 @@
 
 export interface Message {
   id: string;
+  /** « @pseudo » when the person chose one, their name otherwise (#32). */
   name: string;
   /** « NM »: what the avatar shows without a photo (lib/initials.ts). */
   initials?: string;
@@ -43,7 +44,10 @@ export interface ChatMessage {
   timestamp: string;
   sentByMe: boolean;
   readByOther?: boolean; // Read receipt: true if the other person has seen this message
-  /** Who wrote it — the avatar beside the bubble shows their initial. */
+  /**
+   * Who wrote it, as the avatar beside the bubble is named: « @pseudo », or
+   * their name. The initials stay those of the real name.
+   */
   senderName?: string;
   senderInitials?: string;
   senderAvatar?: string;
@@ -129,7 +133,12 @@ export interface ThreadOfferContext {
 export interface Conversation {
   id: string;
   recipient: {
+    /** The full name: what the thread header says. */
     name: string;
+    /** « @pseudo », shown muted beside the name in the header; absent without one. */
+    pseudo?: string;
+    /** The pseudo, else the name: what a bubble's avatar is called (#32). */
+    displayName?: string;
     /** « NM », for the header avatar and the bubbles beside their messages. */
     initials?: string;
     avatar?: string;

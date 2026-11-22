@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslations } from "next-intl";
 
 interface UserStats {
   average: number;
@@ -45,6 +46,7 @@ export function useProfile() {
   const router = useRouter();
 
   const { toast } = useToast();
+  const tPicture = useTranslations("profile.picture");
 
   // Profile picture upload state
   const [isUploadingImage, setIsUploadingImage] = useState(false);
@@ -116,8 +118,8 @@ export function useProfile() {
     async (file: File) => {
       if (!file.type.startsWith("image/")) {
         toast({
-          title: "Invalid file",
-          description: "Please select an image file",
+          title: tPicture("invalidTitle"),
+          description: tPicture("invalidDescription"),
           variant: "destructive",
         });
         return;
@@ -157,16 +159,17 @@ export function useProfile() {
       } catch (error) {
         console.error("Profile picture upload error:", error);
         toast({
-          title: "Upload failed",
-          description:
-            error instanceof Error ? error.message : "Failed to upload image",
+          title: tPicture("uploadFailedTitle"),
+          // The thrown message is the server's, in English: said in the
+          // reader's language instead, with what to do next.
+          description: tPicture("uploadFailedDescription"),
           variant: "destructive",
         });
       } finally {
         setIsUploadingImage(false);
       }
     },
-    [toast]
+    [toast, tPicture]
   );
 
   const handleAddCard = useCallback(() => {
@@ -221,15 +224,14 @@ export function useProfile() {
     } catch (error) {
       console.error("Remove profile picture error:", error);
       toast({
-        title: "Failed to remove",
-        description:
-          error instanceof Error ? error.message : "Failed to remove picture",
+        title: tPicture("removeFailedTitle"),
+        description: tPicture("removeFailedDescription"),
         variant: "destructive",
       });
     } finally {
       setIsUploadingImage(false);
     }
-  }, [toast]);
+  }, [toast, tPicture]);
 
   return {
     user,

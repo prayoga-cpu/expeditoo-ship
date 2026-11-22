@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   Dialog,
   DialogContent,
@@ -11,7 +11,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { LottieLoader } from "@/components/ui/lottie-loader";
 import { VEHICLE_TYPES, type VehicleType } from "@/lib/carrier-constants";
+import { CARRIER_KINDS, carrierKindLabel } from "@/lib/carrier-kind";
 import type { CarrierApplication, CarrierFileInput } from "../api/carriers.api";
 
 interface FormState {
@@ -137,6 +137,7 @@ export function CarrierFileEditor({
   const [plateNumber, setPlateNumber] = useState("");
   const t = useTranslations("admin.carriers.editor");
   const tTypes = useTranslations("admin.carriers.vehicleTypes");
+  const locale = useLocale();
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -181,30 +182,35 @@ export function CarrierFileEditor({
         </DialogHeader>
 
         <form onSubmit={save} className="space-y-5">
-          <div className="flex items-start gap-3 rounded-lg border p-3">
-            <Checkbox
-              id="editor-inhouse"
-              checked={form.inHouse}
-              disabled={kindLocked || isSaving}
-              onCheckedChange={(checked) => set("inHouse", checked === true)}
-              className="mt-0.5"
-            />
-            <div>
-              <Label htmlFor="editor-inhouse" className="font-semibold">
-                {t("inHouse")}
-              </Label>
-              <p className="text-sm text-muted-foreground">
-                {kindLocked ? t("kindLocked") : t("inHouseHelp")}
-              </p>
+          {/* The same two words as the table, the filter and the alert mail
+              (`carrierKindLabel`) — a radio, because it is one or the other. */}
+          <fieldset className="space-y-2 rounded-lg border p-3">
+            <div className="flex flex-wrap gap-x-6 gap-y-2">
+              {CARRIER_KINDS.map((value) => (
+                <label key={value} className="flex items-center gap-2 text-sm font-semibold">
+                  <input
+                    type="radio"
+                    name="editor-kind"
+                    className="size-4 accent-primary"
+                    checked={form.inHouse === (value === "private")}
+                    disabled={kindLocked || isSaving}
+                    onChange={() => set("inHouse", value === "private")}
+                  />
+                  {carrierKindLabel(value, locale)}
+                </label>
+              ))}
             </div>
-          </div>
+            <p className="text-sm text-muted-foreground">
+              {kindLocked ? t("kindLocked") : t("inHouseHelp")}
+            </p>
+          </fieldset>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {!form.inHouse && (
               <>
                 <TextField id="editor-company" label={t("companyName")} value={form.companyName}
                   onChange={(v) => set("companyName", v)} disabled={isSaving} />
-                <TextField id="editor-siret" label={t("siret")} value={form.siret} inputMode="numeric"
+                <TextField id="editor-siret" label={t("siret")} value={form.siret}
                   placeholder="732 829 320 00074" onChange={(v) => set("siret", v)} disabled={isSaving} />
                 <TextField id="editor-vat" label={t("vatNumber")} value={form.vatNumber}
                   onChange={(v) => set("vatNumber", v)} disabled={isSaving} />
@@ -213,13 +219,13 @@ export function CarrierFileEditor({
               </>
             )}
             <TextField id="editor-phone" label={t("contactPhone")} value={form.contactPhone} type="tel"
-              placeholder="06 12 34 56 78" onChange={(v) => set("contactPhone", v)} disabled={isSaving} />
+              placeholder="06 12 34 56 78 · +32 470 12 34 56" onChange={(v) => set("contactPhone", v)} disabled={isSaving} />
             <TextField id="editor-address" label={t("addressLine")} value={form.addressLine}
               className="space-y-2 md:col-span-2" onChange={(v) => set("addressLine", v)} disabled={isSaving} />
             <TextField id="editor-city" label={t("city")} value={form.city}
               onChange={(v) => set("city", v)} disabled={isSaving} />
-            <TextField id="editor-postal" label={t("postalCode")} value={form.postalCode} inputMode="numeric"
-              maxLength={5} onChange={(v) => set("postalCode", v)} disabled={isSaving} />
+            <TextField id="editor-postal" label={t("postalCode")} value={form.postalCode}
+              maxLength={10} onChange={(v) => set("postalCode", v)} disabled={isSaving} />
           </div>
 
           <div className="space-y-2">

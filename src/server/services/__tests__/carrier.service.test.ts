@@ -16,6 +16,15 @@ vi.mock("@/server/dal/users.dal", () => ({
 vi.mock("@/server/services/notifications.service", () => ({
   notificationsService: { createNotification: vi.fn().mockResolvedValue({}) },
 }));
+// Approving now mails the driver (carrier-approval.service.test.ts covers it);
+// nothing here may reach a real mail provider.
+vi.mock("@/server/services/email.service", () => ({
+  emailService: {
+    sendDriverApprovedEmail: vi.fn().mockResolvedValue(true),
+    sendDriverApplicationSubmittedEmail: vi.fn().mockResolvedValue(true),
+    sendMissingDocumentsEmail: vi.fn().mockResolvedValue(true),
+  },
+}));
 vi.mock("@/lib/auth", () => ({
   auth: {
     api: {
@@ -114,9 +123,18 @@ describe("isValidPlate", () => {
     expect(isValidPlate("AB-123-CD")).toBe(true);
   });
 
-  it("rejects the old format and unseparated input", () => {
-    expect(isValidPlate("1234 AB 56")).toBe(false);
-    expect(isValidPlate("AB123CD")).toBe(false);
+  // A carrier may be registered abroad, and a pre-2009 French plate is still
+  // on the road (driver_types_spec.md §8; the rules are tested one by one in
+  // src/lib/__tests__/french-identifiers.test.ts).
+  it("accepts the old format, unseparated input and a foreign plate", () => {
+    expect(isValidPlate("1234 AB 56")).toBe(true);
+    expect(isValidPlate("AB123CD")).toBe(true);
+    expect(isValidPlate("1-ABC-123")).toBe(true);
+  });
+
+  it("rejects what is not a plate at all", () => {
+    expect(isValidPlate("ABC")).toBe(false);
+    expect(isValidPlate("AB.123.CD")).toBe(false);
   });
 });
 

@@ -93,7 +93,8 @@ export function Reviews({ userId }: { userId?: string }) {
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* Tabs: the two sides of a delivery this person can be reviewed on —
+          as the requester who posted it, or as the transporter who ran it. */}
       <div className="mb-4 md:mb-6">
         <Tabs
           value={activeTab}
@@ -110,21 +111,21 @@ export function Reviews({ userId }: { userId?: string }) {
               </Badge>
             </TabsTrigger>
             <TabsTrigger
-              value="buyer"
+              value="requester"
               className="px-4 py-2.5 rounded-lg font-medium text-sm text-muted-foreground data-[state=active]:text-primary data-[state=active]:bg-primary/8 border border-transparent data-[state=active]:border-primary/20 transition-all duration-200 hover:bg-muted/50"
             >
-              {t("tabs.buyer")}
+              {t("tabs.asRequester")}
               <Badge variant="outline" className="ml-2 text-xs">
-                {allReviews.filter((r) => r.type === "buyer").length}
+                {allReviews.filter((r) => r.type === "requester").length}
               </Badge>
             </TabsTrigger>
             <TabsTrigger
-              value="seller"
+              value="carrier"
               className="px-4 py-2.5 rounded-lg font-medium text-sm text-muted-foreground data-[state=active]:text-primary data-[state=active]:bg-primary/8 border border-transparent data-[state=active]:border-primary/20 transition-all duration-200 hover:bg-muted/50"
             >
-              {t("tabs.seller")}
+              {t("tabs.asCarrier")}
               <Badge variant="outline" className="ml-2 text-xs">
-                {allReviews.filter((r) => r.type === "seller").length}
+                {allReviews.filter((r) => r.type === "carrier").length}
               </Badge>
             </TabsTrigger>
           </TabsList>

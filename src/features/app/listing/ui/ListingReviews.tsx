@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { PageLoader } from "@/components/ui/page-loader";
 import { ReviewCard } from "@/features/app/profile/ui/ReviewCard";
 import { useListingReviews } from "../hooks/useListingReviews";
 
@@ -13,7 +14,7 @@ export function ListingReviews({ listingId }: ListingReviewsProps) {
   const t = useTranslations("listing");
 
   if (isLoading) {
-    return <div className="py-8 text-center text-muted-foreground">Loading reviews...</div>;
+    return <PageLoader />;
   }
 
   return (

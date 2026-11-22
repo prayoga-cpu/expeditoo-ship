@@ -46,10 +46,18 @@ describe("locate", () => {
     expect(point).toEqual({ lat: 48.85, lng: 2.35 });
   });
 
-  it("searches France and its neighbours, for job postcodes from abroad", async () => {
+  // 2.94.0: a request can be anywhere, so a caller that names no country is
+  // searched everywhere — not in a list of neighbours restated here.
+  it("searches the whole world when the country is not known", async () => {
     m.searchAddress.mockResolvedValue(hit(50.85, 4.35));
     await locate("Rue Neuve 1", "1000", "Bruxelles");
-    expect(m.searchAddress.mock.calls[0][1]).toContain("be");
+    expect(m.searchAddress.mock.calls[0][1]).toBeNull();
+  });
+
+  it("searches a far country by its own code", async () => {
+    m.searchAddress.mockResolvedValue(hit(35.68, 139.69));
+    await locate(null, "100-0001", "Tokyo", "JP");
+    expect(m.searchAddress.mock.calls[0][1]).toBe("jp");
   });
 
   // client_feedback_2026_10_31_spec.md §6: a listing knows its country.
@@ -57,6 +65,16 @@ describe("locate", () => {
     m.searchAddress.mockResolvedValue(hit(50.85, 4.35));
     await locate("Rue Neuve 1", "1000", "Bruxelles", "BE");
     expect(m.searchAddress.mock.calls[0][1]).toBe("be");
+  });
+
+  // The map files Réunion under France: `countrycodes=re` finds nothing.
+  it("searches a territory under its state, by name", async () => {
+    m.searchAddress.mockResolvedValue(hit(-20.88, 55.45));
+    await locate(null, "97400", "Saint-Denis", "RE");
+    expect(m.searchAddress.mock.calls[0].slice(0, 2)).toEqual([
+      "97400, Saint-Denis, Réunion",
+      "fr",
+    ]);
   });
 
   it("stops at the first lookup that finds something", async () => {

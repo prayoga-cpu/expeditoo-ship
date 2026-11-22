@@ -43,6 +43,7 @@ import {
   type TimeSlot,
 } from "@/lib/availability-window";
 import { parseListingReference } from "@/lib/listing-reference";
+import { FOLD_FROM, FOLD_TO, titlePatterns } from "@/lib/title-search";
 import { COORDINATE_SCALE } from "@/lib/listing-coordinates";
 
 type Executor = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -116,6 +117,37 @@ const distanceKmSql = (
       ))
     )
   )`;
+
+/**
+ * « Titre de l'annonce »: the board's text search, on the title and nothing
+ * else (board_route_search_spec.md §12).
+ *
+ * The title is the one text every audience may read
+ * (listing_privacy_spec.md), so matching it tells a viewer nothing their card
+ * does not. It used to be a French full-text match over title *and*
+ * description, which answered on words the card never showed.
+ *
+ * Case and accents are folded on both sides — the typed text in TypeScript,
+ * the column with `translate()` over the same table (`title-search.ts`).
+ * Every word typed must appear; each is a bound `LIKE` pattern with `%`, `_`
+ * and `\` escaped, so « 100% » is three characters and not a wildcard.
+ *
+ * A reference — « 100042 », « Réf. 100042 » — also finds its job, and still
+ * only if the rest of the board's rules let it through
+ * (listing_reference_spec.md §4).
+ */
+const titleSearchSql = (query: string): SQL | undefined => {
+  const folded = sql`translate(lower(normalize(${listings.title}, NFC)), ${FOLD_FROM}, ${FOLD_TO})`;
+  const words = titlePatterns(query).map(
+    (pattern) => sql`${folded} like ${pattern} escape '\\'`
+  );
+  const reference = parseListingReference(query);
+  const byTitle = words.length > 0 ? and(...words) : undefined;
+
+  return reference === null
+    ? byTitle
+    : or(eq(listings.reference, reference), byTitle);
+};
 
 /**
  * Photos, lowest `order` first — used by every read that returns them.
@@ -413,16 +445,7 @@ export const listingsDal = {
       conditions.push(eq(listings.categoryId, filters.categoryId));
     }
     if (filters.q) {
-      const fullText = sql`to_tsvector('french', ${listings.title} || ' ' || ${listings.description})
-            @@ plainto_tsquery('french', ${filters.q})`;
-      // « Réf. 100042 » finds its job, and still only if the rest of the
-      // board's rules let it through (listing_reference_spec.md §4).
-      const reference = parseListingReference(filters.q);
-      conditions.push(
-        reference === null
-          ? fullText
-          : or(eq(listings.reference, reference), fullText)
-      );
+      conditions.push(titleSearchSql(filters.q));
     }
     if (filters.origin) {
       conditions.push(eq(listings.origin, filters.origin));

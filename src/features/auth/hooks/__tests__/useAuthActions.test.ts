@@ -46,6 +46,48 @@ describe("verifyEmailPath", () => {
   });
 });
 
+describe("useAuthActions.signIn — where to go next", () => {
+  const ok = { data: { user: {} }, error: null };
+
+  it("returns to the in-app page the visitor was headed for", async () => {
+    mocks.signIn.mockResolvedValue(ok);
+    const { result } = renderHook(() => useAuthActions());
+
+    await act(async () => {
+      await result.current.signIn("jean@mail.com", "secret-password", false, "/create?type=moving");
+    });
+
+    expect(mocks.push).toHaveBeenCalledWith("/create?type=moving");
+  });
+
+  it.each([null, undefined, "//evil.example", "https://evil.example", "/signin"])(
+    "falls back to /home for %j",
+    async (callbackUrl) => {
+      mocks.signIn.mockResolvedValue(ok);
+      const { result } = renderHook(() => useAuthActions());
+
+      await act(async () => {
+        await result.current.signIn("jean@mail.com", "secret-password", false, callbackUrl);
+      });
+
+      expect(mocks.push).toHaveBeenCalledWith("/home");
+    }
+  );
+
+  it("hands Google the same checked destination", async () => {
+    mocks.social.mockResolvedValue({ data: {}, error: null });
+    const { result } = renderHook(() => useAuthActions());
+
+    await act(async () => {
+      await result.current.signInWithGoogle("/listing/abc");
+    });
+
+    expect(mocks.social).toHaveBeenCalledWith(
+      expect.objectContaining({ callbackURL: "/listing/abc" })
+    );
+  });
+});
+
 describe("useAuthActions.signIn", () => {
   // Better Auth answers 403 « Email not verified ». Printed raw it was an
   // English dead end; the verify screen has the resend button.

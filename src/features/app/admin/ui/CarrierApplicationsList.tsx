@@ -1,7 +1,8 @@
 "use client";
 
 import { LoadErrorState } from "@/components/ui/load-error-state";
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +11,7 @@ import { Check, Eye, Inbox } from "lucide-react";
 import { CarrierApplicationDetail } from "./CarrierApplicationDetail";
 import { CarrierStatusBadge } from "./CarrierStatusBadge";
 import { isAbsent } from "@/lib/carrier-availability";
+import { CARRIER_KINDS, carrierKindLabel } from "@/lib/carrier-kind";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { format } from "date-fns";
 import { enUS, fr } from "date-fns/locale";
@@ -96,6 +98,20 @@ export function CarrierApplicationsList({
     setIsDetailOpen(true);
   }, []);
 
+  // `?file=<id>` opens that file: the admin alert (mail and bell) links to
+  // the application itself, so an in-house driver waiting on one click is not
+  // also waiting on a search. Once per id — closing the dialog must not
+  // reopen it while the parameter is still in the URL.
+  const linkedFileId = useSearchParams()?.get("file") ?? null;
+  const openedFromLink = useRef<string | null>(null);
+  useEffect(() => {
+    if (!linkedFileId || openedFromLink.current === linkedFileId) return;
+    const linked = applications.find((application) => application.id === linkedFileId);
+    if (!linked) return;
+    openedFromLink.current = linkedFileId;
+    handleViewDetail(linked);
+  }, [linkedFileId, applications, handleViewDetail]);
+
   // The mutation hook invalidates the query; here we only close the dialog.
   const handleDetailDone = useCallback(() => {
     setIsDetailOpen(false);
@@ -141,7 +157,7 @@ export function CarrierApplicationsList({
           <DataTableColumnHeader column={column} title={t("table.type")} />
         ),
         cell: ({ row }) => (
-          <Badge variant="outline">{t(`detail.kind.${row.original.kind}`)}</Badge>
+          <Badge variant="outline">{carrierKindLabel(row.original.kind, locale)}</Badge>
         ),
       },
       {
@@ -154,7 +170,7 @@ export function CarrierApplicationsList({
             {/* An in-house driver has no company and no SIRET: say what they are. */}
             <div className="font-medium">
               {row.original.kind === "private"
-                ? t("table.inHouse")
+                ? carrierKindLabel("private", locale)
                 : row.original.companyName}
             </div>
             <div className="text-xs font-mono text-muted-foreground">
@@ -269,7 +285,7 @@ export function CarrierApplicationsList({
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [dateLocale]
+    [dateLocale, locale]
   );
 
   const sortFields = [
@@ -304,8 +320,11 @@ export function CarrierApplicationsList({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{t("table.kindAll")}</SelectItem>
-              <SelectItem value="private">{t("detail.kind.private")}</SelectItem>
-              <SelectItem value="professional">{t("detail.kind.professional")}</SelectItem>
+              {CARRIER_KINDS.map((value) => (
+                <SelectItem key={value} value={value}>
+                  {carrierKindLabel(value, locale)}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <Button

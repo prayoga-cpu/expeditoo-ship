@@ -249,6 +249,23 @@ describe("fromListing — the request comes back as it was saved", () => {
     expect(payload.dropoff.country).toBe("BE");
   });
 
+  // 2.94.0: a draft to any country, with the blank postal code it may have.
+  it("brings a far country back, with no postal code", () => {
+    const { resumed, payload } = roundTrip(
+      draft({
+        dropoffCountry: "AE",
+        dropoffPostalCode: "",
+        dropoffCity: "Dubaï",
+        dropoffLat: 25.2048,
+        dropoffLng: 55.2708,
+      })
+    );
+
+    expect(resumed.values.dropoff?.country).toBe("AE");
+    expect(resumed.values.dropoff?.postalCode).toBe("");
+    expect(payload.dropoff).toMatchObject({ country: "AE", postalCode: "" });
+  });
+
   it("never adds to the address book on the way through", () => {
     const { resumed } = roundTrip(draft());
 

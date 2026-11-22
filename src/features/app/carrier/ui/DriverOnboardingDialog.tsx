@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { ArrowRight, FileText, SearchCheck, Truck, UserRound } from "lucide-react";
+import { ArrowRight, Building2, SearchCheck, Truck, UserRound } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -17,10 +17,14 @@ import { useCarrierApplication } from "../hooks/useCarrier";
 import type { CarrierApplication } from "../api/carrier.api";
 import { ApplicationStatusBanner } from "./ApplicationStatusBanner";
 
-const STEPS = [
-  { key: "details", icon: UserRound },
-  { key: "documents", icon: FileText },
-  { key: "review", icon: SearchCheck },
+/**
+ * The two kinds, as the form's own first question names them. The dialog used
+ * to promise « trois étapes » for a screen that is one page, and listed
+ * documents an in-house driver is never asked for.
+ */
+const KINDS = [
+  { key: "private", icon: UserRound },
+  { key: "professional", icon: Building2 },
 ] as const;
 
 /**
@@ -69,7 +73,7 @@ export function DriverOnboardingDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {application ? <Status application={application} /> : <Steps />}
+        {application ? <Status application={application} /> : <Kinds />}
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
@@ -85,28 +89,28 @@ export function DriverOnboardingDialog({
   );
 }
 
-function Steps() {
+function Kinds() {
   const t = useTranslations("carrier.onboarding");
 
   return (
     <div className="space-y-4">
-      <ol className="space-y-3">
-        {STEPS.map(({ key, icon: Icon }, index) => (
+      <ul className="space-y-3">
+        {KINDS.map(({ key, icon: Icon }) => (
           <li key={key} className="flex gap-3">
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
               <Icon className="h-4 w-4" />
             </span>
             <div className="min-w-0">
-              <p className="text-sm font-medium">
-                {index + 1}. {t(`steps.${key}.title`)}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {t(`steps.${key}.body`)}
-              </p>
+              <p className="text-sm font-medium">{t(`kinds.${key}.title`)}</p>
+              <p className="text-sm text-muted-foreground">{t(`kinds.${key}.body`)}</p>
             </div>
           </li>
         ))}
-      </ol>
+      </ul>
+      <p className="flex gap-2 text-sm text-muted-foreground">
+        <SearchCheck className="mt-0.5 h-4 w-4 shrink-0" />
+        <span>{t("review")}</span>
+      </p>
       <p className="rounded-md bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
         {t("keepUser")}
       </p>

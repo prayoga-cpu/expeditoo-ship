@@ -166,8 +166,10 @@ describe("the address book on « Où »", () => {
     expect(savedAddressCountry({ country: "Belgique" })).toBe("BE");
     expect(savedAddressCountry({ country: "Belgium" })).toBe("BE");
     expect(savedAddressCountry({ country: "" })).toBe("FR");
-    // Not a country a request can be posted to.
-    expect(savedAddressCountry({ country: "USA" })).toBe("FR");
+    // 2.94.0: any country a request can be in, which is all of them.
+    expect(savedAddressCountry({ country: "USA" })).toBe("US");
+    expect(savedAddressCountry({ country: "Maroc" })).toBe("MA");
+    expect(savedAddressCountry({ country: "Atlantide" })).toBe("FR");
   });
 
   it("puts the address's country and no pin at the end it fills", () => {

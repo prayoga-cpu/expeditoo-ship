@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import * as usersDAL from "@/server/dal/users.dal";
+import { adminLandingFor, canOpenAdminPath } from "@/lib/admin-access";
 
 /**
  * Next.js 16 proxy.ts - Route protection
@@ -194,17 +195,21 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Check admin role for admin routes
+  // Check staff access for admin routes (roles_spec.md §5): which page each
+  // staff role may open lives in admin-access.ts, and nowhere else.
   if (isAdminRoute && session) {
     try {
-      // Get user roles from database
+      // Get user roles from database, per request (roles_spec.md §6 case 5)
       const user = await usersDAL.getUserById(session.user.id);
-      const isAdmin = user?.roles.some((r) => r.role === "admin");
+      const roles = user?.roles.map((r) => r.role) ?? [];
 
-      if (!isAdmin) {
-        // Redirect non-admin users to home
+      if (!canOpenAdminPath(roles, pathname)) {
+        // Staff are sent to the first page they may see; everyone else home.
+        const landing = adminLandingFor(roles);
         const url = req.nextUrl.clone();
-        url.pathname = "/home";
+        url.pathname = landing ?? "/home";
+        // The query belonged to the page that was refused.
+        if (landing) url.search = "";
         return NextResponse.redirect(url);
       }
     } catch (error) {

@@ -484,4 +484,51 @@ describe("draftEscalationBlockers — postal codes", () => {
       draftEscalationBlockers({ ...ready, deliveryPostalCode: "123" })
     ).toEqual(["deliveryPostalCode"]);
   });
+
+  // 2.95.0: the delivery follows its country, as the service does — the
+  // checklist must not show a blocker Publish no longer raises, nor hide one
+  // it still does.
+  it("reads a UK code as present", () => {
+    expect(
+      draftEscalationBlockers({
+        ...ready,
+        deliveryCountry: "Royaume-Uni",
+        deliveryPostalCode: "SW1A 1AA",
+      })
+    ).toEqual([]);
+  });
+
+  it.each([null, undefined, ""])(
+    "asks for no code where the country has none (%j)",
+    (deliveryPostalCode) => {
+      expect(
+        draftEscalationBlockers({
+          ...ready,
+          deliveryCountry: "Hong Kong",
+          deliveryPostalCode,
+        })
+      ).toEqual([]);
+    }
+  );
+
+  it.each([
+    ["France", null],
+    ["Belgique", "SW1A 1AA"],
+    [null, ""],
+    ["non précisé", null],
+  ])("keeps the strict rule for %j with %j", (deliveryCountry, deliveryPostalCode) => {
+    expect(
+      draftEscalationBlockers({ ...ready, deliveryCountry, deliveryPostalCode })
+    ).toEqual(["deliveryPostalCode"]);
+  });
+
+  it("never loosens the pickup", () => {
+    expect(
+      draftEscalationBlockers({
+        ...ready,
+        deliveryCountry: "Hong Kong",
+        pickupPostalCode: null,
+      })
+    ).toEqual(["pickupPostalCode"]);
+  });
 });

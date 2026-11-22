@@ -679,6 +679,56 @@ describe("jobFormSchema — postal codes", () => {
 
     expect(messages(form({ dropoff: typed }))).toContain("create.validation.postalCode");
   });
+
+  it("requires one where the country's format is known", () => {
+    const typed = endpoint({ lat: undefined, lng: undefined, postalCode: "" });
+
+    expect(messages(form({ dropoff: typed }))).toContain("create.validation.postalCode");
+  });
+});
+
+// 2.94.0 — every country and territory (postal_codes_abroad_spec.md §5): the
+// fourteen detailed ones keep their rule; anywhere else the code is optional.
+describe("jobFormSchema — every other country", () => {
+  const far = (over: Record<string, unknown>) =>
+    form({ dropoff: endpoint({ lat: undefined, lng: undefined, ...over }) });
+
+  it.each([
+    ["10001", "US"],
+    ["SW1A 1AA", "GB"],
+    ["100-0001", "JP"],
+    ["20250", "MA"],
+    ["", "AE"],
+    ["", "SN"],
+    ["97400", "RE"],
+  ])("accepts %j in %s", (postalCode, country) => {
+    expect(messages(far({ postalCode, country }))).toEqual([]);
+  });
+
+  it("refuses what no country writes, in words that name no format", () => {
+    const found = messages(far({ postalCode: "1", country: "US" }));
+
+    expect(found).toContain("create.validation.postalCodeGeneric");
+    expect(found).not.toContain("create.validation.postalCode");
+  });
+
+  it("refuses a country that does not exist", () => {
+    const result = jobFormSchema.safeParse(far({ postalCode: "", country: "XX" }));
+
+    expect(result.success).toBe(false);
+  });
+
+  it("takes a pin anywhere in a country with no box", () => {
+    const tokyo = endpoint({ lat: 35.68, lng: 139.69, postalCode: "100-0001", country: "JP" });
+
+    expect(messages(form({ dropoff: tokyo }))).not.toContain("create.validation.outsideCountry");
+  });
+
+  it("still refuses that pin as French", () => {
+    const tokyo = endpoint({ lat: 35.68, lng: 139.69, postalCode: "75011" });
+
+    expect(messages(form({ dropoff: tokyo }))).toContain("create.validation.outsideCountry");
+  });
 });
 
 // client_feedback_2026_10_31_spec.md §2

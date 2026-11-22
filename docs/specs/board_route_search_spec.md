@@ -1,6 +1,7 @@
 # Job board route search — spec
 
-Status: implemented.
+Status: implemented. §12 (2.94.0) reshaped the controls into one search card;
+§2–§5 — the query and its maths — are unchanged by it.
 Supersedes limitation §10.1 of `carrier_trips_spec.md`.
 
 ## 1. What this is
@@ -44,12 +45,12 @@ corridor; otherwise the point and radius mean radius. Étapes ride on the
 arrival: waypoints with nowhere to route describe no path and are dropped, and a
 half-added étape — a blank row the driver has not filled in — filters nothing
 rather than sending its placeholder coordinates. There is no `mode`
-parameter, so there is no state where the two disagree. The UI toggle is UI
-only: switching to *Autour de* drops the arrival coordinates, and a *Sur mon
-trajet* search with the arrival field still empty degrades to a radius search
-rather than erroring. An arrival with no departure describes no corridor and no
-circle, so it filters nothing — the URL parser drops it, and the DAL requires a
-departure before either predicate applies.
+parameter, so there is no state where the two disagree. Since 2.94.0 the screen
+has no toggle either (§12): a departure alone is *Autour de*, a departure and a
+destination is *Sur mon trajet*, so the card and the query derive the mode the
+same way. An arrival with no departure describes no corridor and no circle, so
+it filters nothing — the card refuses to send it and says why, the URL parser
+drops it, and the DAL requires a departure before either predicate applies.
 
 ## 3. Autour de — radius
 
@@ -165,7 +166,9 @@ on a search filter; the alternative is 93 explicit instants in the URL.
 
 `useJobBoard` now seeds its filter state from `useSearchParams()` and writes
 committed filters back with `router.replace(..., { scroll: false })`. The search
-box writes its debounced value, not every keystroke.
+card's fields are committed by « Rechercher » (§12), so nothing is debounced:
+the URL and the request change when the button is pressed. Budget, weight and
+the sort still apply as they change.
 
 Consequences:
 
@@ -180,7 +183,10 @@ link should open at the first page of the search rather than the middle.
 
 ## 7. Screen behaviour
 
-Above the existing search box:
+**Superseded by §12 for the layout** — the toggle and the separate search box
+are gone. The controls themselves (city fields, radius, étapes, the
+availability popover) are the ones described here, inside the card. As first
+built:
 
 - A `ToggleGroup` of two: **Autour de** / **Sur mon trajet**.
 - **Autour de**: one city field and a radius select (25 / 50 / 100 / 200 km).
@@ -288,3 +294,94 @@ therefore says, for each end:
 - [x] More than three étapes is rejected by the schema
 - [x] `cargoSizeLabel` is orientation-independent, and silent without dimensions
 - [x] `nearestReferenceCity` says nothing when the place is the reference
+
+## 12. One search card (2.94.0)
+
+Client feedback of 19 November, #3: a photo of a competitor's hero — a white
+card with « Ville de départ », « Destination », a date and a fourth field he
+wants to be « the title of the ad », one wide « Rechercher » — captioned
+« more clear and direct ». The board had the same questions spread over a
+mode toggle, a city row, a free-text box and a date button, each refiltering
+as it changed.
+
+### 12.1 The card
+
+`RouteSearchBar` is that card: four labelled fields and one button.
+
+| Field | Is | Sends |
+|---|---|---|
+| Ville de départ | `CityField`, with « Partir de ma position » | `fromLat`, `fromLng`, `radiusKm` |
+| Destination | `CityField`, optional, with the swap button | `toLat`, `toLng` |
+| Date | the availability popover of §5 (days and times of day) | `days`, `slots`, `tzOffset` |
+| Titre de l'annonce | free text, ≤ 120 characters | `q` |
+
+- **« Rechercher »** sends the four together; **« Effacer »** empties them and
+  searches again. Until one is pressed the board does not change: the card
+  holds a draft (`useSearchDraft`), seeded once from the committed filters so a
+  deep link from a trip card opens with its trajet in the fields. Enter in the
+  title box searches; Enter in a town field does not, because it would send a
+  name nobody chose from the suggestions.
+- **The mode is read off the fields** (§2). Departure only: *autour de*.
+  Departure and destination: *sur mon trajet*. A line under the fields says
+  which is being asked, and names the other.
+- **Nothing was removed.** Once there is a departure the card shows the radius
+  (relabelled as the accepted detour on a trajet), « Ajouter une étape » (needs
+  a destination), « Retour au départ », and the area thumbnail that opens the
+  map. Emptying the destination drops its étapes.
+- **A destination with no departure is not sent.** The card shows « Indiquez
+  la ville de départ… » (`role="alert"`) and waits; naming a departure clears
+  it. Silently dropping the destination would run a search the driver did not
+  ask for.
+- Budget, weight and the sort sit under the card and apply as they change. The
+  sheet's badge counts only what the sheet holds. Sorting by distance falls
+  back to « Plus récentes » when a search no longer names a departure.
+- **An empty answer has a way out**: « Effacer la recherche », which clears
+  every filter, the URL, and the card's own fields (`no_dead_ends_spec.md`).
+
+### 12.2 « Titre de l'annonce » — what `q` matches
+
+`q` used to be a French full-text match over the title **and the
+description**. It is now the title only:
+
+- **The title, case and accents aside.** « canape » finds « Canapé d'angle »,
+  « ÉTAGÈRE » finds « étagère ». Every word typed must appear, in any order;
+  at most six words are read.
+- **The reference**, when the text names one — « 100042 », « Réf. 100042 »
+  (`parseListingReference`). The title is still searched, so a number in a
+  title is found too.
+- **Nothing else.** The title is the one text every audience reads
+  (`listing_privacy_spec.md`), so the filter answers nothing a card does not
+  show — it never reads the description, an address or a note.
+
+There is no `unaccent` on this database and an extension is a migration, so
+the fold is written twice (`src/lib/title-search.ts`): the typed text is
+folded in TypeScript (`NFD`, marks stripped, lower-cased), the column in SQL —
+`translate(lower(normalize(title, NFC)), FOLD_FROM, FOLD_TO)`. A test holds
+the two tables together letter for letter. Upper-case accented letters are in
+the table too, because `lower()` leaves them alone on a `C`-locale database.
+The table covers the accented Latin letters of French and its neighbours; a
+letter outside it (« ł », « ő ») matches only when typed as written.
+
+Each word is a **bound** `LIKE` pattern with `%`, `_` and the backslash
+escaped (`ESCAPE '\'`): « 100% » is four characters, not a wildcard. No
+`Date` enters the expression (CLAUDE.md gotcha 23).
+
+The schema trims `q` and refuses more than 120 characters (`QUERY_TOO_LONG`).
+
+### 12.3 Test coverage required
+
+- [x] The SQL fold table and the TypeScript fold agree, letter for letter
+- [x] `titlePatterns`: one pattern per word, folded, wildcards escaped, bounded
+- [x] The DAL matches the folded title and reads no other text column
+- [x] Every word is required; what was typed is bound, never spliced
+- [x] Digits naming a reference match the reference **or** the title
+- [x] Blank text filters nothing
+- [x] The schema trims `q` and refuses 121 characters
+- [x] The card: four labelled fields, one search button, no mode toggle
+- [x] Nothing is sent until « Rechercher »; Enter in the title box searches
+- [x] Departure alone → around, with a radius; with a destination → route
+- [x] A destination alone is refused with a message, cleared by a departure
+- [x] « Effacer » empties the card and keeps budget and weight
+- [x] The board writes the committed search to the URL and opens on it
+- [x] An empty search offers « Effacer la recherche »; an empty board does not
+

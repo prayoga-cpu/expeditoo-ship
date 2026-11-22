@@ -197,6 +197,20 @@ describe("MainLayout sidebar", () => {
     expect(screen.queryAllByRole("link")).toHaveLength(0);
   });
 
+  // roles_spec.md §5.1: the bounce used to send every staff role to
+  // /admin/expedion, which the proxy then sent on to /home.
+  it.each([
+    ["operator", "/admin/bordereaux"],
+    ["support", "/admin/support"],
+    ["finance", "/admin/withdrawals"],
+  ])("redirects %s in Admin mode to its own first page, %s", (role, landing) => {
+    auth.user = { roles: ["shipper", role] };
+    renderWith();
+
+    expect(replace).toHaveBeenCalledWith(landing);
+    expect(replace).not.toHaveBeenCalledWith("/admin/expedion");
+  });
+
   // The desktop sidebar had no way into becoming a driver at all, while the
   // mobile bar did (become_driver_spec.md §3).
   it("offers a plain account « Become a driver », which opens the onboarding dialog", async () => {

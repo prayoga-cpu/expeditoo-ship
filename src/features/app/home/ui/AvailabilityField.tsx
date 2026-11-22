@@ -30,6 +30,8 @@ interface AvailabilityFieldProps {
   slots: TimeSlot[];
   onChange: (patch: { days?: string[]; slots?: TimeSlot[] }) => void;
   className?: string;
+  /** For a `<label htmlFor>`: the search card labels this field « Date ». */
+  id?: string;
 }
 
 /**
@@ -49,6 +51,7 @@ export function AvailabilityField({
   slots,
   onChange,
   className,
+  id,
 }: AvailabilityFieldProps) {
   const t = useTranslations("jobBoard.availability");
   const locale = useLocale();
@@ -71,6 +74,7 @@ export function AvailabilityField({
     <Popover>
       <PopoverTrigger asChild>
         <Button
+          id={id}
           variant="outline"
           className={cn(
             "justify-start font-normal",

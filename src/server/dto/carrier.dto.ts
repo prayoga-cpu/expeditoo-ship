@@ -1,13 +1,14 @@
 import { z } from "zod";
 import {
-  isValidSiret,
-  normalizeSiret,
+  isValidCompanyNumber,
+  normalizeCompanyNumber,
   isValidIban,
   isValidBic,
   isValidPlate,
-  isValidFrenchPhone,
-  VAT_PATTERN,
-  POSTAL_CODE_PATTERN,
+  isValidContactPhone,
+  isValidVat,
+  normalizeVat,
+  CONTACT_POSTAL_CODE_PATTERN,
 } from "@/lib/french-identifiers";
 import {
   VEHICLE_TYPES,
@@ -34,11 +35,17 @@ export {
   MAX_DOCUMENT_BYTES,
 } from "@/lib/carrier-constants";
 
+/**
+ * How to reach the person, for both kinds. A driver may live or be registered
+ * outside France, so the phone and the postal code take a French form or an
+ * international one (driver_types_spec.md §8). Every format rule here and in
+ * the forms comes from `@/lib/french-identifiers`.
+ */
 const contactFields = {
-  contactPhone: z.string().refine(isValidFrenchPhone, "INVALID_PHONE"),
+  contactPhone: z.string().refine(isValidContactPhone, "INVALID_PHONE"),
   addressLine: z.string().min(1).max(300),
   city: z.string().min(1).max(120),
-  postalCode: z.string().regex(POSTAL_CODE_PATTERN, "INVALID_POSTAL_CODE"),
+  postalCode: z.string().trim().regex(CONTACT_POSTAL_CODE_PATTERN, "INVALID_POSTAL_CODE"),
   bio: z.string().max(2000).optional(),
 };
 
@@ -46,8 +53,13 @@ const contactFields = {
 const professionalApplicationSchema = z.object({
   kind: z.literal("professional"),
   companyName: z.string().min(2).max(200),
-  siret: z.string().transform(normalizeSiret).refine(isValidSiret, "INVALID_SIRET"),
-  vatNumber: z.string().regex(VAT_PATTERN, "INVALID_VAT").optional(),
+  // A SIRET, or a foreign company number — the column and the code keep the
+  // French name. Stored normalised, which is what the uniqueness check compares.
+  siret: z
+    .string()
+    .transform(normalizeCompanyNumber)
+    .refine(isValidCompanyNumber, "INVALID_SIRET"),
+  vatNumber: z.string().transform(normalizeVat).refine(isValidVat, "INVALID_VAT").optional(),
   legalForm: z.string().max(100).optional(),
   ...contactFields,
 });
@@ -94,7 +106,7 @@ export const createVehicleSchema = z.object({
   make: z.string().max(80).optional(),
   model: z.string().max(80).optional(),
   year: z.number().int().min(1950).max(new Date().getFullYear() + 1).optional(),
-  plateNumber: z.string().refine(isValidPlate, "INVALID_PLATE"),
+  plateNumber: z.string().trim().refine(isValidPlate, "INVALID_PLATE"),
   maxWeightKg: z.number().positive().max(44_000),
   maxLengthCm: z.number().positive().optional(),
   maxWidthCm: z.number().positive().optional(),

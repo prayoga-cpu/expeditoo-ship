@@ -286,8 +286,6 @@ function useReadingValues(draft: RequestDraft): Record<AssistantField, string | 
 function Reading({ draft }: { draft: RequestDraft }) {
   const t = useTranslations("create.assistant");
   const values = useReadingValues(draft);
-  const outOfArea = (field: AssistantField) =>
-    (field === "pickup" || field === "dropoff") && draft.outOfArea.includes(field);
 
   return (
     <div className="space-y-2 rounded-md border bg-background p-3">
@@ -299,7 +297,7 @@ function Reading({ draft }: { draft: RequestDraft }) {
           <div key={field} className="contents">
             <dt className="text-muted-foreground">{t(`fields.${field}`)}</dt>
             <dd className={values[field] ? "font-medium" : "text-muted-foreground"}>
-              {values[field] ?? (outOfArea(field) ? t("outOfArea") : t("toSpecify"))}
+              {values[field] ?? t("toSpecify")}
             </dd>
           </div>
         ))}

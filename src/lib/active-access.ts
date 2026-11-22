@@ -8,6 +8,8 @@
  * the visitor a click to switch back — it never unlocks or locks anything.
  */
 
+import { adminLandingFor } from "@/lib/admin-access";
+
 export type AccessMode = "user" | "carrier" | "admin";
 
 export const ACTIVE_ACCESS_KEY = "expeditoo-active-access";
@@ -23,7 +25,29 @@ export function hasDriverAccess(roles: readonly string[]): boolean {
 
 /** Roles that qualify an account for each mode beyond the universal `user`. */
 const CARRIER_ROLES = ["carrier", "driver"];
-const ADMIN_ROLES = ["admin", "operator", "support", "finance"];
+
+/**
+ * Whether these roles open at least one back-office page.
+ *
+ * Asked of `admin-access.ts` rather than of a second list of staff roles:
+ * the mode is offered exactly when the proxy would let the account in
+ * somewhere, so the switch can never lead to a bounce again.
+ */
+export function hasAdminAccess(roles: readonly string[]): boolean {
+  return adminLandingFor(roles) !== null;
+}
+
+/**
+ * Where a mode lands. Admin lands on the account's first permitted
+ * back-office page, which is `/admin/expedion` only for an admin.
+ */
+export function modeLanding(
+  mode: AccessMode,
+  roles: readonly string[]
+): string {
+  if (mode !== "admin") return "/home";
+  return adminLandingFor(roles) ?? "/home";
+}
 
 const ALL_MODES: readonly AccessMode[] = ["admin", "carrier", "user"];
 
@@ -41,7 +65,7 @@ export function qualifiedAccessModes(
   roles: readonly string[]
 ): AccessMode[] {
   const modes: AccessMode[] = [];
-  if (roles.some((role) => ADMIN_ROLES.includes(role))) modes.push("admin");
+  if (hasAdminAccess(roles)) modes.push("admin");
   if (roles.some((role) => CARRIER_ROLES.includes(role))) modes.push("carrier");
   modes.push("user");
   return modes;

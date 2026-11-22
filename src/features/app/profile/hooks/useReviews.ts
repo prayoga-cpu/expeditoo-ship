@@ -2,9 +2,10 @@
 
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useFormatter } from "next-intl";
 import { useAuth } from "@/lib/auth-context";
 import { useTabState } from "@/features/app/common/hooks";
-import type { ReviewStats, ReviewTab } from "../types";
+import type { ReviewStats, ReviewTab, ReviewType } from "../types";
 
 interface ReviewAuthor {
   id: string;
@@ -23,6 +24,8 @@ interface ReviewFromAPI {
   rating: number;
   comment: string | null;
   createdAt: string;
+  /** The side of the delivery the **author** was on (`reviews.role`). */
+  role: "shipper" | "carrier";
   author: ReviewAuthor;
   targetUser: ReviewAuthor;
   listing: ReviewListing | null;
@@ -74,20 +77,11 @@ async function fetchMyStats(userId: string): Promise<StatsResponse> {
 }
 
 /**
- * Format date to relative time string
+ * The side the reviewed person was on: the opposite of the author's. A review
+ * a requester (`shipper`) wrote rates the transporter, and the reverse.
  */
-function formatRelativeTime(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-  if (diffDays === 0) return "Today";
-  if (diffDays === 1) return "Yesterday";
-  if (diffDays < 7) return `${diffDays} days ago`;
-  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
-  if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
-  return `${Math.floor(diffDays / 365)} years ago`;
+export function receivedAs(authorRole: "shipper" | "carrier"): ReviewType {
+  return authorRole === "shipper" ? "carrier" : "requester";
 }
 
 /**
@@ -102,6 +96,7 @@ function formatRelativeTime(dateString: string): string {
 export function useReviews(targetUserId?: string) {
   const { user } = useAuth();
   const { activeTab, setActiveTab } = useTabState<ReviewTab>("all");
+  const format = useFormatter();
 
   // Determine which user ID to use (prop or current user)
   const userIdToFetch = targetUserId || user?.id;
@@ -132,14 +127,13 @@ export function useReviews(targetUserId?: string) {
       authorImage: review.author.image,
       authorVerified: review.author.isVerified,
       rating: review.rating,
-      title: review.listing?.title || "Transaction",
+      title: review.listing?.title ?? "",
       content: review.comment || "",
-      timestamp: formatRelativeTime(review.createdAt),
-      type: "buyer" as "buyer" | "seller",
-      helpful: 0,
+      timestamp: format.relativeTime(new Date(review.createdAt)),
+      type: receivedAs(review.role),
       listingId: review.listing?.id,
     }));
-  }, [reviewsQuery.data]);
+  }, [reviewsQuery.data, format]);
 
   // Default stats
   const stats: ReviewStats = useMemo(

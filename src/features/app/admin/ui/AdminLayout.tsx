@@ -6,7 +6,7 @@ import { HeaderToolbox } from "@/components/layouts/HeaderToolbox";
 import { AppVersionLink } from "@/components/ui/app-version";
 import { usePathname, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { ADMIN_NAV_GROUPS, badgeFor } from "../nav";
+import { badgeFor } from "../nav";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { AdminBottomNav } from "./AdminBottomNav";
@@ -20,7 +20,7 @@ import {
   SidebarToggle,
 } from "@/components/layouts/SidebarRail";
 import { RAIL, WHEN_RAIL, useSidebarRail } from "@/components/layouts/use-sidebar-rail";
-import { useAdminNavCounts } from "../hooks/useAdminNavCounts";
+import { useAdminNav } from "../hooks/useAdminNav";
 import type { AdminNavCounts } from "@/server/services/admin-nav.service";
 import { useTranslations } from "next-intl";
 import { useActiveAccessMode } from "@/lib/use-active-access-mode";
@@ -56,7 +56,9 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const router = useRouter();
   const t = useTranslations("admin");
   const tCommon = useTranslations("common");
-  const counts = useAdminNavCounts();
+  // Only what this account's roles may open (admin-access.ts) — the same
+  // table the proxy reads, so no entry here can bounce.
+  const { groups, landing, counts, canOpen } = useAdminNav();
   const { mode, qualifiedModes, setMode } = useActiveAccessMode();
   const rail = useSidebarRail();
 
@@ -92,11 +94,11 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     <div className="flex flex-col h-full pb-4">
       {/* No subtitle: the content header already reads "Admin Panel", and the
           two sat one above the other. */}
-      <AppSidebarHeader href="/admin/expedion" />
+      <AppSidebarHeader href={landing ?? "/admin/expedion"} />
       {/* p-4, not px-4: the removed subtitle's bottom padding had been standing
           in for the gap under the logo. Matches the app sidebar. */}
       <nav className={cn("flex-1 min-h-0 overflow-y-auto p-4 space-y-4", RAIL.gutter)}>
-        {ADMIN_NAV_GROUPS.map((group) => (
+        {groups.map((group) => (
           <div key={group.id} className="space-y-1" role="group" aria-label={t(`navigation.groups.${group.labelKey}`)}>
             <SidebarHeading>{t(`navigation.groups.${group.labelKey}`)}</SidebarHeading>
             {group.items.map((item) => {
@@ -167,7 +169,14 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               </Button>
               <HeaderToolbox />
               <NotificationBell />
-              <HeaderAccount profileHref="/admin/profile" />
+              {/* `/admin/profile` is Settings, which operator and support may
+                  not open; their name leads to their own first page instead
+                  of a redirect. */}
+              <HeaderAccount
+                profileHref={
+                  canOpen("/admin/profile") ? "/admin/profile" : landing ?? "/admin/profile"
+                }
+              />
             </div>
           </div>
         </header>

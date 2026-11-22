@@ -363,7 +363,6 @@ describe("useJobForm — finishing a saved request", () => {
         pickupDate: "2031-03-20",
         deliveryDate: "2031-03-22",
         missing: [],
-        outOfArea: [],
       })
     );
 

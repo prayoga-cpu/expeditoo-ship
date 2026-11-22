@@ -36,20 +36,19 @@ import {
 } from "@/features/app/create/assistant-dates";
 import { getOpenAIClient } from "@/lib/ai/openai";
 import {
+  countryCodeFrom,
   DEFAULT_COUNTRY,
+  geocoderScope,
   isJobCountry,
   isValidPostalCode,
-  JOB_COUNTRIES,
   type JobCountry,
 } from "@/lib/countries";
 import { reverseGeocode, searchAddress } from "@/lib/geocoding";
 import {
   ASSISTANT_AUDIO_MAX_BYTES,
   ASSISTANT_FIELDS,
-  ASSISTANT_SIDES,
   type AssistantEnd,
   type AssistantField,
-  type AssistantSide,
   type RequestDraft,
 } from "@/server/dto/request-assistant.dto";
 
@@ -88,9 +87,6 @@ export const MODEL_TIMEOUT_MS = 15_000;
 export const TRANSCRIBE_TIMEOUT_MS = 20_000;
 export const MAP_LOOKUP_TIMEOUT_MS = 3_000;
 
-/** A country the model may name that no request can reach. */
-const OTHER_COUNTRY = "OTHER";
-
 /** The brackets with a ceiling — the ones a sentence can be read into. */
 const MODEL_BRACKETS = [
   "upTo5",
@@ -106,7 +102,10 @@ const MODEL_BRACKETS = [
 
 const text = z.string().nullable();
 const figure = z.number().nullable();
-const country = z.enum([...JOB_COUNTRIES, OTHER_COUNTRY]).nullable();
+// A code, not an enum: a request can be anywhere in the world, and some 250
+// values is no list to hand a model. What it answers is checked here against
+// `JOB_COUNTRIES` (`statedCountry`); anything else reads as "not said".
+const country = z.string().nullable();
 
 const modelDraftSchema = z.object({
   itemName: text,
@@ -134,12 +133,10 @@ const nullable = (type: string, description: string) => ({
   description,
 });
 
-const COUNTRY_PROPERTY = {
-  type: ["string", "null"],
-  enum: [...JOB_COUNTRIES, OTHER_COUNTRY, null],
-  description:
-    "Country code, only when the person names the country or the town is unmistakably abroad. OTHER for a country not in the list. null otherwise.",
-};
+const COUNTRY_PROPERTY = nullable(
+  "string",
+  "ISO 3166-1 alpha-2 country code in capitals (FR, BE, GB, US, MA, JP, RE for Réunion), ONLY when the person names the country or the town is unmistakably abroad. null otherwise."
+);
 
 /**
  * `strict: true` wants every property listed in `required` and no extras, so
@@ -342,75 +339,75 @@ async function inTime<T>(lookup: Promise<T>): Promise<T | typeof TIMED_OUT> {
 }
 
 /**
+ * The country the model named, as a code a request can carry — or null when
+ * it named none, or something that is no country. Read leniently (« fr »,
+ * « UK », « Maroc »): the schema asks for a code and a model does not always
+ * give one.
+ */
+function statedCountry(value: string | null): JobCountry | null {
+  return countryCodeFrom(value);
+}
+
+/**
  * The postal code and country of a town, from the map. A big town has several
  * codes and this is the one at its centre: good enough to open the Where step
  * on, and the person reads it there before anything is posted.
+ *
+ * Looked for in the country the person named, when they named one; anywhere
+ * in the world otherwise — the map ranks « Paris » and « Lyon » in France
+ * without being told, and « Casablanca » where it is.
  */
 async function lookUpTown(
   city: string,
   stated: JobCountry | null
 ): Promise<{ postalCode: string; country: JobCountry } | null> {
-  // France first, as every other lookup here does; then anywhere a request
-  // can go, so « Bruxelles » is found without the person naming Belgium.
-  const scopes = stated
-    ? [stated.toLowerCase()]
-    : [DEFAULT_COUNTRY.toLowerCase(), JOB_COUNTRIES.join(",").toLowerCase()];
+  const scope = stated ? geocoderScope(stated, "en") : null;
+  const query = scope?.suffix ? `${city}, ${scope.suffix}` : city;
 
-  for (const scope of scopes) {
-    // A map that is slow now will be slow for the next scope too: the town is
-    // left unplaced, which the Where step already knows how to ask about.
-    const hits = await inTime(searchAddress(city, scope, 1));
-    if (hits === TIMED_OUT) return null;
-    const [hit] = hits;
-    if (!hit) continue;
-    const place = await inTime(reverseGeocode(hit.center[1], hit.center[0]));
-    if (place === TIMED_OUT) return null;
-    const code = place?.countryCode.toUpperCase();
-    if (!place || !isJobCountry(code)) continue;
-    return {
-      postalCode: isValidPostalCode(code, place.postalCode)
-        ? place.postalCode.trim()
-        : "",
-      country: code,
-    };
-  }
-  return null;
+  // A map that is slow is not waited for: the town is left unplaced, which
+  // the Where step already knows how to ask about.
+  const hits = await inTime(searchAddress(query, scope?.countrycodes ?? null, 1));
+  if (hits === TIMED_OUT) return null;
+  const [hit] = hits;
+  if (!hit) return null;
+  const place = await inTime(reverseGeocode(hit.center[1], hit.center[0]));
+  if (place === TIMED_OUT || !place) return null;
+
+  // The named country stands: the map files a territory under its state
+  // (Réunion under France), and that is not what the person said.
+  const found = place.countryCode.toUpperCase();
+  const country = stated ?? (isJobCountry(found) ? found : null);
+  if (!country) return null;
+  return {
+    postalCode: isValidPostalCode(country, place.postalCode)
+      ? place.postalCode.trim()
+      : "",
+    country,
+  };
 }
-
-type EndReading =
-  | { kind: "none" }
-  | { kind: "outOfArea" }
-  | { kind: "found"; end: AssistantEnd };
 
 async function endOf(
   city: string | null,
   postalCode: string | null,
   countryCode: string | null
-): Promise<EndReading> {
+): Promise<AssistantEnd | null> {
   const name = clean(city)?.slice(0, 120);
-  if (!name) return { kind: "none" };
-  if (countryCode === OTHER_COUNTRY) return { kind: "outOfArea" };
+  if (!name) return null;
 
-  const stated = isJobCountry(countryCode) ? countryCode : null;
+  const stated = statedCountry(countryCode);
   const typed = clean(postalCode);
   // A postal code the person gave, in the right shape, needs no lookup.
   if (typed && isValidPostalCode(stated ?? DEFAULT_COUNTRY, typed)) {
-    return {
-      kind: "found",
-      end: { city: name, postalCode: typed, country: stated ?? DEFAULT_COUNTRY },
-    };
+    return { city: name, postalCode: typed, country: stated ?? DEFAULT_COUNTRY };
   }
 
   const found = await lookUpTown(name, stated);
   return {
-    kind: "found",
-    end: {
-      city: name,
-      // Not found: the town is still what the person said. The Where step
-      // asks for its postal code, as it does of anyone who types a town.
-      postalCode: found?.postalCode ?? "",
-      country: found?.country ?? stated ?? DEFAULT_COUNTRY,
-    },
+    city: name,
+    // Not found: the town is still what the person said. The Where step
+    // asks for its postal code, as it does of anyone who types a town.
+    postalCode: found?.postalCode ?? "",
+    country: found?.country ?? stated ?? DEFAULT_COUNTRY,
   };
 }
 
@@ -437,19 +434,14 @@ async function toRequestDraft(model: ModelDraft, now: Date): Promise<RequestDraf
     endOf(model.pickupCity, model.pickupPostalCode, model.pickupCountry),
     endOf(model.dropoffCity, model.dropoffPostalCode, model.dropoffCountry),
   ]);
-  const ends = { pickup, dropoff };
-
   const draft = {
     title: titleOf(model),
     quantity: quantityOf(model),
     ...weightOf(model),
     ...sizeOf(model),
-    pickup: pickup.kind === "found" ? pickup.end : null,
-    dropoff: dropoff.kind === "found" ? dropoff.end : null,
+    pickup,
+    dropoff,
     ...statedDates(model, now),
-    outOfArea: ASSISTANT_SIDES.filter(
-      (side: AssistantSide) => ends[side].kind === "outOfArea"
-    ),
   };
   return { ...draft, missing: missingFrom(draft) };
 }

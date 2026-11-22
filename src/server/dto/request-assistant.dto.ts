@@ -55,6 +55,7 @@ export const assistantEndSchema = z.object({
   city: z.string().min(1).max(120),
   /** Blank when the town could not be looked up; the form asks for it. */
   postalCode: z.string().max(12),
+  /** Any country or territory; France when the sentence names none. */
   country: z.enum(JOB_COUNTRIES),
 });
 
@@ -89,8 +90,6 @@ export const requestDraftSchema = z.object({
   deliveryDate: assistantDaySchema.nullable(),
   /** What the sentence did not say, in the order the assistant asks for it. */
   missing: z.array(z.enum(ASSISTANT_FIELDS)),
-  /** Ends named in a country no request can collect from or deliver to. */
-  outOfArea: z.array(z.enum(ASSISTANT_SIDES)),
 });
 
 export type RequestDraft = z.infer<typeof requestDraftSchema>;

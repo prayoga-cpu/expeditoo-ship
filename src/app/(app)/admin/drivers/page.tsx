@@ -37,7 +37,14 @@ function DriversPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  const activeTab = searchParams.get("tab") === "applications" ? "applications" : "list";
+  // The driver list is read through `getUsers`, which answers `admin` only.
+  // An operator works the applications — which `listForReview` does serve —
+  // and is not shown a tab whose table would stay empty (admin-access.ts).
+  const roles = useAuth().user?.roles ?? [];
+  const canList = roles.includes("admin");
+  const canCreate = canList || roles.includes("operator");
+  const activeTab =
+    !canList || searchParams.get("tab") === "applications" ? "applications" : "list";
   const setActiveTab = (tab: string) =>
     router.replace(tab === "applications" ? `${pathname}?tab=applications` : pathname, {
       scroll: false,
@@ -50,9 +57,6 @@ function DriversPageContent() {
   // sidebar badge: the tab has to say it has something to do, because an
   // applicant holds no role and shows nowhere else.
   const waiting = useAdminNavCounts()?.applications ?? 0;
-  // Support and finance reach this page too; the API would refuse them.
-  const roles = useAuth().user?.roles ?? [];
-  const canCreate = roles.includes("admin") || roles.includes("operator");
 
   // Fix hydration error by mounting only on client
   useEffect(() => {
@@ -110,10 +114,12 @@ function DriversPageContent() {
         className="space-y-4"
       >
         <TabsList>
-          <TabsTrigger value="list" className="gap-2">
-            <Users className="w-4 h-4" />
-            {t("tabs.list")}
-          </TabsTrigger>
+          {canList && (
+            <TabsTrigger value="list" className="gap-2">
+              <Users className="w-4 h-4" />
+              {t("tabs.list")}
+            </TabsTrigger>
+          )}
           <TabsTrigger value="applications" className="gap-2">
             <FileText className="w-4 h-4" />
             {t("tabs.applications")}
@@ -125,16 +131,18 @@ function DriversPageContent() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="list" className="space-y-4 data-[state=inactive]:hidden">
-          <UsersTable
-            users={drivers}
-            viewMode="drivers"
-            onRemoveDriver={handleRemoveDriver}
-            onUserUpdated={() => refetchDrivers()}
-            onViewProfile={(user) => setSelectedDriverId(user.id)}
-            tableMinHeight="40vh"
-          />
-        </TabsContent>
+        {canList && (
+          <TabsContent value="list" className="space-y-4 data-[state=inactive]:hidden">
+            <UsersTable
+              users={drivers}
+              viewMode="drivers"
+              onRemoveDriver={handleRemoveDriver}
+              onUserUpdated={() => refetchDrivers()}
+              onViewProfile={(user) => setSelectedDriverId(user.id)}
+              tableMinHeight="40vh"
+            />
+          </TabsContent>
+        )}
 
         <TabsContent value="applications" className="space-y-4 data-[state=inactive]:hidden">
           <CarrierApplicationsList tableMinHeight="40vh" />

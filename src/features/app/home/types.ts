@@ -51,13 +51,6 @@ export interface PlaceValue {
  */
 export const isResolvedPlace = (place: PlaceValue) => place.label !== "";
 
-/**
- * Which shape the location filter takes. Held in the UI only — the query
- * derives its mode from whether an arrival is present
- * (board_route_search_spec.md §2).
- */
-export type SearchMode = "around" | "route";
-
 /** Cocolis offers 5–200 km; these are the four a French driver actually picks. */
 export const RADIUS_OPTIONS = [25, 50, 100, 200] as const;
 

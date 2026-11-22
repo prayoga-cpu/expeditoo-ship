@@ -1,4 +1,3 @@
-export * from "./Dashboard";
 export * from "./UsersTable";
 export * from "./AdminLayout";
 export * from "./AdminBottomNav";

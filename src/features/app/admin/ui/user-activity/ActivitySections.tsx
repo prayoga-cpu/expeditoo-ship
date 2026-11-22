@@ -1,5 +1,7 @@
 "use client";
 
+import { usersHrefFor } from "@/lib/admin-access";
+import { useAuth } from "@/lib/auth-context";
 import Link from "next/link";
 import { FileText, HandCoins, MessagesSquare } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -29,7 +31,6 @@ import {
 export const activityHref = (userId: string, query = "") =>
   `/admin/users/${userId}/activity${query}`;
 
-const USERS_HREF = "/admin/users";
 
 function RequestRow({ request }: { request: ActivityRequestView }) {
   const t = useTranslations("admin.userActivity");
@@ -48,6 +49,8 @@ function RequestRow({ request }: { request: ActivityRequestView }) {
 
 /** (1) The requests this account posted. */
 export function RequestsSection({ userId }: { userId: string }) {
+  const { user } = useAuth();
+  const usersHref = usersHrefFor(user?.roles ?? []);
   const t = useTranslations("admin.userActivity.requests");
   return (
     <PagedList
@@ -55,7 +58,7 @@ export function RequestsSection({ userId }: { userId: string }) {
       itemsOf={(page) => page.items}
       renderItem={(request) => <RequestRow key={request.id} request={request} />}
       empty={{ icon: FileText, title: t("emptyTitle"), description: t("emptyDescription") }}
-      emptyHref={USERS_HREF}
+      emptyHref={usersHref}
       testId="activity-requests"
     />
   );
@@ -80,6 +83,8 @@ function OfferRow({ offer }: { offer: ActivityOfferView }) {
 
 /** (2) The offers this account made as a transporter. */
 export function OffersSection({ userId }: { userId: string }) {
+  const { user } = useAuth();
+  const usersHref = usersHrefFor(user?.roles ?? []);
   const t = useTranslations("admin.userActivity.offers");
   return (
     <PagedList
@@ -87,7 +92,7 @@ export function OffersSection({ userId }: { userId: string }) {
       itemsOf={(page) => page.items}
       renderItem={(offer) => <OfferRow key={offer.id} offer={offer} />}
       empty={{ icon: HandCoins, title: t("emptyTitle"), description: t("emptyDescription") }}
-      emptyHref={USERS_HREF}
+      emptyHref={usersHref}
       testId="activity-offers"
     />
   );
@@ -142,6 +147,8 @@ function ConversationRow({
 
 /** (3) The conversations this account is in. */
 export function ConversationsSection({ userId }: { userId: string }) {
+  const { user } = useAuth();
+  const usersHref = usersHrefFor(user?.roles ?? []);
   const t = useTranslations("admin.userActivity.conversations");
   return (
     <PagedList
@@ -151,7 +158,7 @@ export function ConversationsSection({ userId }: { userId: string }) {
         <ConversationRow key={conversation.id} userId={userId} conversation={conversation} />
       )}
       empty={{ icon: MessagesSquare, title: t("emptyTitle"), description: t("emptyDescription") }}
-      emptyHref={USERS_HREF}
+      emptyHref={usersHref}
       testId="activity-conversations"
     />
   );

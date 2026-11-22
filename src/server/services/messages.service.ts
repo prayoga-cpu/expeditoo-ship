@@ -69,8 +69,10 @@ export const messagesService = {
         // Auto-join if Admin replying to Support chat
         const isParticipant = conv.participants.some(p => p.user.id === senderId);
         if (!isParticipant && conv.type === 'SUPPORT') {
-          const isAdmin = await userService.hasRole(senderId, 'admin');
-          if (isAdmin) {
+          const isStaff =
+            (await userService.hasRole(senderId, 'admin')) ||
+            (await userService.hasRole(senderId, 'support'));
+          if (isStaff) {
             await messagesDAL.addParticipant(conversationId, senderId);
           }
         }
@@ -231,8 +233,10 @@ export const messagesService = {
     if (!isParticipant) {
       const isSupport = conversation.type === 'SUPPORT';
       if (isSupport) {
-        const isAdmin = await userService.hasRole(userId, 'admin');
-        if (!isAdmin) {
+        const isStaff =
+          (await userService.hasRole(userId, 'admin')) ||
+          (await userService.hasRole(userId, 'support'));
+        if (!isStaff) {
           throw new Error("Not authorized to view this conversation");
         }
         // Admin is allowed, proceed (optional: could auto-add participant here too)

@@ -52,6 +52,8 @@ export interface ConversationResponse {
     /** For the avatar's initials; null on an account older than 2.63.0. */
     firstName?: string | null;
     lastName?: string | null;
+    /** The pseudo shown as « @pseudo » in place of the name; null without one. */
+    alias?: string | null;
     image: string | null;
   } | null;
   /** Absent on a payload cached before the field existed. */
@@ -88,6 +90,8 @@ export interface MessageResponse {
     name: string;
     firstName?: string | null;
     lastName?: string | null;
+    /** The pseudo shown as « @pseudo » in place of the name; null without one. */
+    alias?: string | null;
     image: string | null;
   };
   /** Present when this message carries a formal price. */
@@ -125,6 +129,8 @@ export interface ThreadResponse {
     name: string;
     firstName?: string | null;
     lastName?: string | null;
+    /** The pseudo shown as « @pseudo » in place of the name; null without one. */
+    alias?: string | null;
     image: string | null;
     rating?: number;
     reviewsCount?: number;

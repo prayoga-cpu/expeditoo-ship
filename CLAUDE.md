@@ -225,7 +225,7 @@ without an `sk_live_` key, so an accept there takes real money.
 Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before shipping.
 
 **Gates — all green.** `npx tsc --noEmit` 0 errors · `pnpm lint` 0 errors ·
-3,862 unit tests pass (2.91.0) · `pnpm build` succeeds.
+4,385 unit tests pass (2.94.0) · `pnpm build` succeeds.
 
 **Done**
 - Schema remodelled to the transport model; one clean initial migration
@@ -778,9 +778,21 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
   leaves both sides a next step (`thread_offer_spec.md` §13).
   `/admin/users/[id]/activity` is **read-only** — GET routes, selects only —
   and must stay so. The phone's bottom bar carries « Mes demandes »;
-  « Devenir chauffeur » lives in the access badge's menu. The town search
-  covers `JOB_COUNTRIES`. `globals.css` has a fallback block for browsers
+  « Devenir chauffeur » lives in the access badge's menu. `globals.css` has a fallback block for browsers
   without `color-mix()` (iOS 15–16.1), matched on whole class tokens.
+
+- **The open points of 19 November, decided** (2.94.0). The client's
+  « private » driver **is** the in-house kind: the application opens on a
+  radio, labels come from `carrierKindLabel`, approval sends a French mail —
+  and **approval is never automatic**, because it grants the `vetted` view
+  (`driver_types_spec.md` §3.1). Driver identifiers accept foreign formats
+  (`french-identifiers.ts`); only `carrier-routes` still wants 5 digits.
+  `JOB_COUNTRIES` is all 249 ISO codes in two tiers; `rule()` no longer falls
+  back to France, and a generic country's postal code may be `''` — print it
+  guarded. The board search is one card that applies on « Rechercher »; `q`
+  matches the title and reference only. Messages show `alias`. Below `lg`
+  the root font is 17 px, so size things in rem.
+  `docs/site_pages_actions.csv` is the client's page-and-action sheet.
 
 - **A dev deployment that cannot reach production** (2.91.1,
   `environments_spec.md` §10–11, `plan_dev_environment.md`). `dev.expeditop.fr`

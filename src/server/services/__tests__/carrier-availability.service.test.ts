@@ -214,7 +214,12 @@ describe("submitApplication alerts the admins", () => {
     );
     expect(adminNotices).toHaveLength(2);
     expect(dal.notify).toHaveBeenCalledWith(
-      expect.objectContaining({ userId: "a1", linkUrl: "/admin/drivers?tab=applications" })
+      expect.objectContaining({
+        userId: "a1",
+        title: "Nouveau dossier chauffeur — Professionnel",
+        // Straight to the file, not the list it sits in (driver_types_spec.md §3).
+        linkUrl: "/admin/drivers?tab=applications&file=c1",
+      })
     );
     expect(dal.email.sendDriverApplicationSubmittedEmail).toHaveBeenCalledWith(
       "admin2@example.com",
@@ -222,7 +227,7 @@ describe("submitApplication alerts the admins", () => {
         applicantName: "Paul Martin",
         companyName: "Paul Martin EI",
         city: "Lyon",
-        reviewUrl: expect.stringMatching(/\/admin\/drivers\?tab=applications$/),
+        reviewUrl: expect.stringMatching(/\/admin\/drivers\?tab=applications&file=c1$/),
       })
     );
   });

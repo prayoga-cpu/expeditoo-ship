@@ -72,8 +72,7 @@ export function Notifications({
             </h1>
             {unreadCount > 0 && (
               <p className="text-sm text-muted-foreground mt-0.5">
-                {unreadCount} unread notification
-                {unreadCount !== 1 ? "s" : ""}
+                {t("bell.unread", { count: unreadCount })}
               </p>
             )}
           </div>
@@ -100,7 +99,7 @@ export function Notifications({
               value="all"
               className="px-4 py-2 rounded-lg font-medium text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all"
             >
-              All
+              {t("tabs.all")}
               {unreadByType.all > 0 && (
                 <Badge
                   variant="secondary"
@@ -114,7 +113,7 @@ export function Notifications({
               value="unread"
               className="px-4 py-2 rounded-lg font-medium text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all"
             >
-              Unread
+              {t("tabs.unread")}
               {unreadCount > 0 && (
                 <Badge
                   variant="secondary"
@@ -128,7 +127,7 @@ export function Notifications({
               value="message"
               className="px-4 py-2 rounded-lg font-medium text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all"
             >
-              Messages
+              {t("tabs.messages")}
               {unreadByType.message > 0 && (
                 <Badge
                   variant="secondary"

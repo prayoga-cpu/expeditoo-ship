@@ -1,10 +1,9 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { RatingStars } from "@/components/RatingStars";
-import { ThumbsUp, Flag } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { useTranslations } from "next-intl";
+import type { ReviewType } from "../types";
 
 interface ReviewCardProps {
   id: string;
@@ -15,12 +14,17 @@ interface ReviewCardProps {
   title: string;
   content: string;
   timestamp: string;
-  helpful?: number;
-  type?: "buyer" | "seller";
+  /** The side the reviewed person was on — see `ReviewType`. */
+  type?: ReviewType;
 }
 
+/**
+ * One review. It used to end on « Utile (0) » and « Signaler »: the first had
+ * no handler and the second logged to the console — no endpoint counts a
+ * helpful vote or takes a report (2.95.0). A review that should not be there
+ * is reported through support, and an admin can delete it.
+ */
 export function ReviewCard({
-  id: _id,
   author,
   authorVerified,
   authorImage,
@@ -28,7 +32,6 @@ export function ReviewCard({
   title,
   content,
   timestamp,
-  helpful = 0,
   type,
 }: ReviewCardProps) {
   const t = useTranslations("profile.reviews.card");
@@ -50,7 +53,7 @@ export function ReviewCard({
             </h3>
             {type && (
               <Badge variant="outline" className="text-xs">
-                {type === "buyer" ? t("buyer") : t("seller")}
+                {type === "requester" ? t("asRequester") : t("asCarrier")}
               </Badge>
             )}
           </div>
@@ -62,27 +65,10 @@ export function ReviewCard({
         </div>
       </div>
 
-      <h4 className="font-bold text-foreground mb-2">{title}</h4>
-      <p className="text-sm text-foreground mb-4 leading-relaxed">{content}</p>
-
-      <div className="flex items-center gap-2">
-        <Button variant="ghost" size="sm" className="gap-2 text-xs h-8 px-2">
-          <ThumbsUp className="w-4 h-4" />
-          {t("helpful")} ({helpful})
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="gap-2 text-xs h-8 px-2 text-muted-foreground hover:text-destructive"
-          onClick={() => {
-            // TODO: Implement report review API
-            console.log("Report review:", _id);
-          }}
-        >
-          <Flag className="w-4 h-4" />
-          {t("report")}
-        </Button>
-      </div>
+      {title && <h4 className="font-bold text-foreground mb-2">{title}</h4>}
+      {content && (
+        <p className="text-sm text-foreground leading-relaxed">{content}</p>
+      )}
     </div>
   );
 }

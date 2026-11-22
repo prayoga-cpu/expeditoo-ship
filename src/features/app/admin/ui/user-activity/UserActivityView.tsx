@@ -10,6 +10,8 @@ import { CenteredEmptyState } from "@/components/ui/centered-empty-state";
 import { LoadErrorState } from "@/components/ui/load-error-state";
 import { PageLoader } from "@/components/ui/page-loader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { usersHrefFor } from "@/lib/admin-access";
+import { useAuth } from "@/lib/auth-context";
 import { isRefusal } from "@/lib/fetcher";
 import { useUserActivitySummary } from "../../hooks/useUserActivity";
 import type { ActivitySummaryView } from "../../api/user-activity.api";
@@ -105,6 +107,8 @@ function ActivityTabs({
 export function UserActivityView({ userId, tab, conversationId, onBack }: UserActivityViewProps) {
   const t = useTranslations("admin.userActivity");
   const summary = useUserActivitySummary(userId);
+  const { user } = useAuth();
+  const usersHref = usersHrefFor(user?.roles ?? []);
 
   if (summary.isLoading) return <PageLoader />;
 
@@ -118,7 +122,7 @@ export function UserActivityView({ userId, tab, conversationId, onBack }: UserAc
         description={t("unavailable.description")}
       >
         <Button asChild variant="outline" className="mt-4">
-          <Link href="/admin/users">{t("backToUsers")}</Link>
+          <Link href={usersHref}>{t("backToUsers")}</Link>
         </Button>
       </CenteredEmptyState>
     );
@@ -129,7 +133,7 @@ export function UserActivityView({ userId, tab, conversationId, onBack }: UserAc
       <LoadErrorState
         variant="page"
         onRetry={() => summary.refetch()}
-        back={{ href: "/admin/users", label: t("backToUsers") }}
+        back={{ href: usersHref, label: t("backToUsers") }}
       />
     );
   }

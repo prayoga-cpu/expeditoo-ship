@@ -143,8 +143,8 @@ Error code: `VERIFICATION_EMAIL_NOT_SENT` (500), resend only.
 
 ## 8. Driver and navigation (#23, #24, #35, #37)
 
-- **#23** `CityField` searches every country in `JOB_COUNTRIES`
-  (`CITY_SEARCH_COUNTRIES`, derived, never restated). A suggestion outside
+- **#23** `CityField` searched the served countries (2.91.0); since 2.94.0 it
+  searches world-wide. A suggestion outside
   France carries its country.
 - **#24** « Mes offres » cards show the job's title, reference, towns and
   requested dates beside the driver's own slot.
@@ -180,6 +180,25 @@ Error code: `VERIFICATION_EMAIL_NOT_SENT` (500), resend only.
 - **#27** Below `sm` one « Connexion / Inscription » link; from `sm`, « Inscription » beside « Connexion ».
 - **#30** Every sign-in, sign-up and reset failure maps to a French message with a next step.
 - **#22** `biddingRunsUntil` runs a direct precise-day request to its window's end when the window exceeds 6 h.
+
+## 11. Decisions of 22 November, built in 2.94.0
+
+The owner ruled that the client's « private (non-professional) » driver is the in-house kind (`carriers.kind =
+private`). Detail lives in the feature specs; this is the index.
+
+- **#9, #11, #13, #38** `driver_types_spec.md` §3, §8, §9.
+- **#10 declined** `driver_types_spec.md` §3.1: no self-service approval, because approval grants the `vetted` view.
+- **#19** `postal_codes_abroad_spec.md` §5: 249 countries, two tiers.
+- **#3** `board_route_search_spec.md` §12: one search card; `q` is the title and the reference.
+- **#32** the pseudo is shown in the conversation list; `auth.register.aliasHint` and `profile.contact.privacy` rewritten.
+- **#28** root font size 106.25% below `lg`.
+- **#5** `docs/site_pages_actions.csv`.
+
+## 12. Fixes from the page inventory, 2.95.0
+
+Staff access to the back office (`roles_spec.md` §5.1), signed-out guards on `/create` and `/listing/[id]`, notifications,
+help pages, review tabs, the delivery button label, a visible conversation delete, a locked « Compte & Sécurité » row,
+escalated quotes to countries without a 4–6 digit postal code, dead anchors. Detail: `STATUS.md` 2.95.0.
 
 ## Known limits
 

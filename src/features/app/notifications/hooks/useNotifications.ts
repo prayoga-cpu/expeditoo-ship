@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { useTabState } from "@/features/app/common/hooks";
 import {
   MessageCircle,
@@ -33,6 +34,8 @@ interface NotificationsQueryData {
 export function useNotifications() {
   const { activeTab, setActiveTab } = useTabState<NotificationTab>("all");
   const queryClient = useQueryClient();
+  const tTime = useTranslations("common.time");
+  const tActions = useTranslations("notifications.actions");
 
   // Fetch notifications (real-time updates via Ably)
   const { data: notificationsData, isLoading, isError, refetch } = useQuery({
@@ -82,15 +85,17 @@ export function useNotifications() {
           type: n.type as NotificationType,
           title: n.title,
           description: n.message, // Use message instead of description
-          timestamp: getRelativeTime(n.createdAt), // Helper function
+          timestamp: getRelativeTime(n.createdAt, tTime),
           read: n.isRead,
           icon: getIcon(n.type),
           // Use explicit linkUrl if available (legacy support), otherwise construct from resourceId
           link: data?.linkUrl || getLink(n.type, resourceId),
-          action: resourceId ? getAction(n.type, resourceId) : undefined,
+          action: resourceId
+            ? getAction(n.type, resourceId, tActions("reply"))
+            : undefined,
         };
       });
-  }, [notificationsData, activeTab]);
+  }, [notificationsData, activeTab, tTime, tActions]);
 
   // Mutations
   const markAsReadMutation = useMutation({
@@ -224,9 +229,10 @@ function getIcon(type: string) {
 function getLink(type: string, resourceId?: string | null) {
   if (!resourceId) return "/notifications";
   switch (type) {
+    // There is no `/auction` route: both name a transport job.
     case "bid":
     case "listing":
-      return `/auction/${resourceId}`;
+      return `/listing/${resourceId}`;
     // The resource is the job the caller just posted.
     case "listing_posted":
       return `/listing/${resourceId}`;
@@ -249,22 +255,31 @@ function getLink(type: string, resourceId?: string | null) {
   }
 }
 
-function getAction(type: string, resourceId: string) {
+function getAction(type: string, resourceId: string, replyLabel: string) {
   switch (type) {
     case "message":
-      return { label: "Reply", href: `/messages/${resourceId}` };
+      return { label: replyLabel, href: `/messages/${resourceId}` };
     default:
       return undefined;
   }
 }
 
-function getRelativeTime(dateString: string | Date) {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+type TimeTranslator = (
+  key: "now" | "minutesAgo" | "hoursAgo" | "daysAgo",
+  values?: { count: number }
+) => string;
 
-  if (diffInSeconds < 60) return "Just now";
-  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-  return `${Math.floor(diffInSeconds / 86400)}d ago`;
+/** « il y a 5 minutes », in the reader's language (`common.time`). */
+export function getRelativeTime(dateString: string | Date, t: TimeTranslator) {
+  const date = new Date(dateString);
+  const diffInSeconds = Math.floor((Date.now() - date.getTime()) / 1000);
+
+  if (diffInSeconds < 60) return t("now");
+  if (diffInSeconds < 3600) {
+    return t("minutesAgo", { count: Math.floor(diffInSeconds / 60) });
+  }
+  if (diffInSeconds < 86400) {
+    return t("hoursAgo", { count: Math.floor(diffInSeconds / 3600) });
+  }
+  return t("daysAgo", { count: Math.floor(diffInSeconds / 86400) });
 }

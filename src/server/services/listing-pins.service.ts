@@ -1,3 +1,4 @@
+import { geocoderScope } from "@/lib/countries";
 import { searchAddress } from "@/lib/geocoding";
 import { listingsDal } from "@/server/dal/listings.dal";
 
@@ -11,20 +12,13 @@ import { listingsDal } from "@/server/dal/listings.dal";
  * this to sort itself out rather than block the payment.
  *
  * So the address is looked up — the full address, then postcode and town,
- * then the town alone, in France and its neighbours (job postcodes from
- * abroad are allowed) — and the pins are written onto the request, never over
- * one already there. Called at award (outside any lock: it is an HTTP call)
+ * then the town alone, in the end's own country (a request can start or end
+ * anywhere in the world) — and the pins are written onto the request, never
+ * over one already there. Called at award (outside any lock: it is an HTTP call)
  * and after posting, so the board map and the carriers-on-route match have a
  * point too. Best-effort: a lookup that finds nothing leaves the request as it
  * was, and the award still refuses with `COORDINATES_REQUIRED`.
  */
-
-/**
- * France and the countries a job postcode from abroad usually comes from —
- * for a caller that does not know the end's country. A listing does since
- * 2.76.0 (`pickup_country` / `dropoff_country`), and is searched in it alone.
- */
-const COUNTRIES = "fr,be,lu,ch,mc,de,es,it,nl,gb";
 
 interface Pinnable {
   id: string;
@@ -51,7 +45,11 @@ export async function locate(
   city: string | null,
   country?: string | null
 ): Promise<Point | null> {
-  const countries = country ? country.toLowerCase() : COUNTRIES;
+  // A listing knows each end's country (`pickup_country` / `dropoff_country`)
+  // and is searched in it alone. A caller that does not — a trip declared
+  // abroad — is searched everywhere, not in a list of neighbours restated
+  // here. A territory is searched where the map files it, by name.
+  const scope = country ? geocoderScope(country.toUpperCase(), "en") : null;
   const attempts = [
     [address, postalCode, city],
     [postalCode, city],
@@ -61,7 +59,11 @@ export async function locate(
     .filter((query, i, all) => query.length >= 3 && all.indexOf(query) === i);
 
   for (const query of attempts) {
-    const [hit] = await searchAddress(query, countries, 1);
+    const [hit] = await searchAddress(
+      scope?.suffix ? `${query}, ${scope.suffix}` : query,
+      scope?.countrycodes ?? null,
+      1
+    );
     if (hit) return { lat: hit.center[1], lng: hit.center[0] };
   }
   return null;

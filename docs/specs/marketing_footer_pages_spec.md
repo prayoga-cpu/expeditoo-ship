@@ -11,16 +11,19 @@ Every footer link resolves to one of:
 
 | Label | Target | Kind |
 |---|---|---|
-| Open jobs | `/#courses` | anchor, `LandingJobBoard` |
 | How it works | `/#how` | anchor, `LandingHowItWorks` |
 | Verification | `/verification` | page |
-| Platform | `/#platform` | anchor, `LandingPlatform` |
 | Expedion — auction buyers | `EXPEDION_URL` | external, `target="_blank" rel="noreferrer"` |
 | Auction houses | `/auction-houses` | page |
 | Contact | `/contact` | page |
 | Terms | `/terms` | page |
 | Legal notice | `/legal-notice` | page |
 | Privacy policy | `/privacy` | page |
+
+« Open jobs » (`/#courses`) and « Platform » (`/#platform`) were removed in
+2.95.0: the landing page stopped rendering both sections (2026-11-06) and the
+links scrolled nowhere. Every `/#…` href in the header and footer must match
+an `id` the landing page renders — `landing-anchors.test.tsx`.
 
 No footer link may point at `/#cta`. That anchor is the sign-up call to
 action; using it as a stand-in for a missing page is what this work removes.

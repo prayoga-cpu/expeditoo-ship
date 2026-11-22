@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { api } from "@/lib/fetcher";
+import { DEFAULT_COUNTRY, geocoderScope } from "@/lib/countries";
 import { searchAddress } from "@/lib/geocoding";
 import {
   canLocate,
@@ -25,8 +26,14 @@ async function pointOf(end: SuggestionEnd): Promise<{ lat: number; lng: number }
   const queries = [[end.address, town].filter((p) => p?.trim()).join(", "), town].filter(
     (query, i, all) => query.trim().length >= 3 && all.indexOf(query) === i
   );
+  // A territory is searched where the map files it, by name (`geocoderScope`).
+  const scope = geocoderScope(end.country ?? DEFAULT_COUNTRY, "en");
   for (const query of queries) {
-    const [hit] = await searchAddress(query, (end.country ?? "FR").toLowerCase(), 1);
+    const [hit] = await searchAddress(
+      scope.suffix ? `${query}, ${scope.suffix}` : query,
+      scope.countrycodes,
+      1
+    );
     if (hit) return { lat: hit.center[1], lng: hit.center[0] };
   }
   return null;
@@ -45,7 +52,10 @@ const place = (end: SuggestionEnd) => [
 /**
  * The suggested range for the request as typed so far (§B6), or null. A
  * refusal from the engine — too far, too heavy — or an end that cannot be
- * found is no suggestion, never an error on the form.
+ * found is no suggestion, never an error on the form. « Too far » is past
+ * 1,000 km (`PRICING_CONFIG.maxDistance`), which is what keeps a request to
+ * another continent from being given a road price
+ * (postal_codes_abroad_spec.md §6).
  */
 export function usePriceSuggestion(input: SuggestionInput) {
   const parcel = parcelFor(input);

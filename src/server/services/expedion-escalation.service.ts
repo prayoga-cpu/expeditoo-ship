@@ -29,8 +29,11 @@ import { listingsDal } from "@/server/dal/listings.dal";
 import { offersService } from "@/server/services/offers.service";
 import { expedionSmsService } from "@/server/services/expedion-sms.service";
 import { notifyExpedionAdmins } from "@/server/services/expedion-realtime.service";
-import { normaliseJobPostalCode } from "@/lib/postal-code";
-import { countryCodeFrom, DEFAULT_COUNTRY } from "@/lib/countries";
+import {
+  normaliseJobPostalCode,
+  quoteDeliveryCountry,
+  quotePostalCodeFor,
+} from "@/lib/postal-code";
 import {
   ExpedionError,
   canTransition,
@@ -97,9 +100,7 @@ const AUCTION_LOCATION_TYPE = "auction_house" as const;
 const DELIVERY_LOCATION_TYPE = "other" as const;
 
 /** The quote's free-typed delivery country as an ISO code; France if unsaid. */
-function deliveryCountry(text: string | null | undefined): string {
-  return countryCodeFrom(text) ?? DEFAULT_COUNTRY;
-}
+const deliveryCountry = quoteDeliveryCountry;
 
 /**
  * Escalated jobs are owned by a dedicated platform account rather than by the
@@ -155,8 +156,24 @@ async function resolveCategoryId(): Promise<string> {
  * Belgium, Austria and Romania as well as France, and a five-digit rule here
  * turned every one of those quotes into a "missing postal code" blocker
  * (postal_codes_abroad_spec.md).
+ *
+ * That is the pickup's rule — an auction house in France or next door. The
+ * delivery follows its own country (`deliveryPostalCode`).
  */
 const normalisePostalCode = normaliseJobPostalCode;
+
+/**
+ * The delivery's postal code as the listing will store it, or null when the
+ * quote cannot be published: strict for the fourteen countries whose format
+ * is known, optional (`''`) or free-form (« SW1A 1AA ») anywhere else — the
+ * rule listings have followed since 2.94.0.
+ */
+function deliveryPostalCode(quote: ExpedionQuote): string | null {
+  return quotePostalCodeFor(
+    deliveryCountry(quote.deliveryCountry),
+    quote.deliveryPostalCode
+  );
+}
 
 /** `description` has a 20-character floor; a terse lot line needs padding. */
 function buildDescription(quote: ExpedionQuote): string {
@@ -201,7 +218,7 @@ export function escalationBlockers(quote: ExpedionQuote): string[] {
     blockers.push("pickup postal code");
   if (!quote.deliveryAddress) blockers.push("delivery address");
   if (!quote.deliveryCity) blockers.push("delivery city");
-  if (!normalisePostalCode(quote.deliveryPostalCode))
+  if (deliveryPostalCode(quote) === null)
     blockers.push("delivery postal code");
   if (!quote.weightKg || quote.weightKg <= 0) blockers.push("weight");
   if (!quote.acceptedPriceCents || quote.acceptedPriceCents < 100)
@@ -319,7 +336,7 @@ export const expedionEscalationService = {
             lng: quote.deliveryLng!,
             address: quote.deliveryAddress!,
             city: quote.deliveryCity!,
-            postalCode: normalisePostalCode(quote.deliveryPostalCode)!,
+            postalCode: deliveryPostalCode(quote)!,
             // Free text in the quote (« Belgique », « USA », blank); blank or
             // unrecognised was always read as France (spec §0 B).
             country: deliveryCountry(quote.deliveryCountry),

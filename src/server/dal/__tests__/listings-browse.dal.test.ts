@@ -3,7 +3,8 @@ import { PgDialect } from "drizzle-orm/pg-core";
 import type { SQL } from "drizzle-orm";
 
 /**
- * listing_reference_spec.md §4 — the board finds a job by its reference.
+ * board_route_search_spec.md §12 and listing_reference_spec.md §4 — the board
+ * finds a job by its title, or by its reference.
  *
  * The harness stands in for the two reads `browse` makes and keeps the
  * condition it was handed, which is then rendered by Drizzle's own Postgres
@@ -32,6 +33,7 @@ vi.mock("@/db", () => ({
 
 import { listingsDal } from "../listings.dal";
 import { COORDINATE_SCALE } from "@/lib/listing-coordinates";
+import { FOLD_FROM, FOLD_TO } from "@/lib/title-search";
 
 const renderedWhere = () =>
   new PgDialect().sqlToQuery(captured.where as SQL);
@@ -44,25 +46,66 @@ beforeEach(() => {
   captured.orderBy = undefined;
 });
 
-describe("listingsDal.browse — search by reference", () => {
-  it("matches the reference or the text when the search names one", async () => {
-    await listingsDal.browse({ q: "Réf. 100042", page: 1, limit: 20 });
+describe("listingsDal.browse — « Titre de l'annonce »", () => {
+  const FOLDED =
+    'translate(lower(normalize("listings"."title", NFC)), $';
+
+  it("matches the title, folded on both sides, and nothing else", async () => {
+    await listingsDal.browse({ q: "CANAPÉ", page: 1, limit: 20 });
 
     const { sql, params } = renderedWhere();
-    expect(sql).toMatch(
-      /\("listings"\."reference" = \$\d+ or to_tsvector\('french'/
-    );
-    expect(params).toContain(100042);
-    // The words are still searched as words, prefix and all.
-    expect(params).toContain("Réf. 100042");
+    expect(sql).toContain(FOLDED);
+    expect(sql).toMatch(/ like \$\d+ escape '\\'/);
+    // What was typed is folded before it is bound: case and accents aside.
+    expect(params).toContain("%canape%");
+    expect(params).toContain(FOLD_FROM);
+    expect(params).toContain(FOLD_TO);
+    // The title only: it is the one text every audience reads
+    // (listing_privacy_spec.md). No description, no address, no notes.
+    expect(sql).not.toContain("to_tsvector");
+    for (const column of ["description", "pickup_address", "dropoff_address", "pickup_notes"]) {
+      expect(sql).not.toContain(`"listings"."${column}"`);
+    }
+    expect(sql).not.toContain('"reference"');
   });
 
-  it("searches the text alone when the search names no reference", async () => {
-    await listingsDal.browse({ q: "canapé", page: 1, limit: 20 });
+  it("asks for every word, in any order", async () => {
+    await listingsDal.browse({ q: "cuir canapé", page: 1, limit: 20 });
 
-    const { sql } = renderedWhere();
-    expect(sql).not.toContain('"reference"');
-    expect(sql).toContain("plainto_tsquery('french'");
+    const { sql, params } = renderedWhere();
+    expect(sql.split(FOLDED).length - 1).toBe(2);
+    expect(params).toEqual(expect.arrayContaining(["%cuir%", "%canape%"]));
+  });
+
+  it("binds what was typed and escapes its wildcards", async () => {
+    await listingsDal.browse({ q: "100%_'; drop table", page: 1, limit: 20 });
+
+    const { sql, params } = renderedWhere();
+    // Bound, never spliced into the statement.
+    expect(sql).not.toContain("drop table");
+    expect(params).toContain("%100\\%\\_';%");
+  });
+
+  it("matches the reference or the title when digits name one", async () => {
+    await listingsDal.browse({ q: "100042", page: 1, limit: 20 });
+
+    const { sql, params } = renderedWhere();
+    expect(sql).toMatch(/\("listings"\."reference" = \$\d+ or translate\(lower\(/);
+    expect(params).toContain(100042);
+    // A title can hold the number too.
+    expect(params).toContain("%100042%");
+  });
+
+  it("reads « Réf. 100042 » as the reference it names", async () => {
+    await listingsDal.browse({ q: "Réf. 100042", page: 1, limit: 20 });
+
+    expect(renderedWhere().params).toContain(100042);
+  });
+
+  it("filters nothing on blank text", async () => {
+    await listingsDal.browse({ q: "   ", page: 1, limit: 20 });
+
+    expect(renderedWhere().sql).not.toContain("translate(");
   });
 
   it("keeps the board's own rules around a referenced job", async () => {

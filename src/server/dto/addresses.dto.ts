@@ -9,7 +9,10 @@ export const createAddressSchema = z.object({
   label: z.string().min(1, "Label is required").max(50),
   street: z.string().min(1, "Street is required").max(200),
   city: z.string().min(1, "City is required").max(100),
-  zip: z.string().min(1, "ZIP code is required").max(20),
+  // Blank where the country has no postal codes, or none the requester knows:
+  // `/create` saves an end as it was typed (postal_codes_abroad_spec.md §5).
+  // The profile form still asks for one.
+  zip: z.string().max(20),
   country: z.string().min(1, "Country is required").max(100),
   details: z.string().max(500).optional(), // Floor, apt number, building color, etc.
   lat: z.number().optional(),

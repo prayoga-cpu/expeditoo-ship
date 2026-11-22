@@ -1,5 +1,6 @@
 "use client";
 
+import { safeCallbackPath } from "@/lib/safe-redirect";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
@@ -65,7 +66,12 @@ export function useAuthActions() {
   /**
    * Sign in with email and password
    */
-  const signIn = (email: string, password: string, rememberMe = false) =>
+  const signIn = (
+    email: string,
+    password: string,
+    rememberMe = false,
+    callbackUrl?: string | null
+  ) =>
     run(async () => {
       const result = await authClient.signIn.email({
         email,
@@ -85,8 +91,8 @@ export function useAuthActions() {
         return refuse(authErrorKey(result.error));
       }
 
-      // Redirect to home after successful signin
-      router.push("/home");
+      // Back to where the person was headed (`?callbackUrl=`, checked), else home.
+      router.push(safeCallbackPath(callbackUrl) ?? "/home");
       router.refresh();
 
       return { success: true };
@@ -128,11 +134,11 @@ export function useAuthActions() {
   /**
    * Sign in with Google OAuth
    */
-  const signInWithGoogle = () =>
+  const signInWithGoogle = (callbackUrl?: string | null) =>
     run(async () => {
       const result = await authClient.signIn.social({
         provider: "google",
-        callbackURL: "/home",
+        callbackURL: safeCallbackPath(callbackUrl) ?? "/home",
         // A brand-new account (this provider's first sign-in) lands on
         // onboarding instead — see /welcome. An existing account signing in
         // again always takes callbackURL above.

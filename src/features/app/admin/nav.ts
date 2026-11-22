@@ -16,6 +16,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import { canOpenAdminPath } from "@/lib/admin-access";
 import type { AdminNavCounts } from "@/server/services/admin-nav.service";
 
 /**
@@ -90,6 +91,19 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     items: [{ href: "/admin/settings", labelKey: "settings", icon: Settings }],
   },
 ];
+
+/**
+ * The navigation as these roles see it: only the entries the proxy would let
+ * them open (`admin-access.ts`), and no heading over an empty group. The
+ * sidebar and the phone bar both read this, so neither can offer a page that
+ * bounces.
+ */
+export function adminNavFor(roles: readonly string[]): AdminNavGroup[] {
+  return ADMIN_NAV_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => canOpenAdminPath(roles, item.href)),
+  })).filter((group) => group.items.length > 0);
+}
 
 /** The badge for an entry: its counts summed, or undefined while they load. */
 export function badgeFor(

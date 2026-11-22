@@ -80,7 +80,7 @@ describe("LandingFooter", () => {
       .filter((href) => href.startsWith("/#"))
       .map((href) => href.slice(2));
 
-    expect(anchors.sort()).toEqual(["courses", "how", "platform"]);
+    expect(anchors.sort()).toEqual(["how"]);
   });
 
   it("uses no page as a stand-in for a missing one", () => {

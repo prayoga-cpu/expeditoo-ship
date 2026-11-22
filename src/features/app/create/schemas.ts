@@ -3,7 +3,12 @@ import { z } from "zod";
 import { isValidPhoneNumber } from "libphonenumber-js/min";
 
 import { parseDecimal } from "@/lib/numeric-input";
-import { isInCountry, isValidPostalCode, JOB_COUNTRIES } from "@/lib/countries";
+import {
+  isInCountry,
+  isPostalCodeRequired,
+  isValidPostalCode,
+  JOB_COUNTRIES,
+} from "@/lib/countries";
 import {
   floorRequired,
   liftRequired,
@@ -174,7 +179,9 @@ export const endpointSchema = z
     // (client feedback 2026-11-06, A03).
     address: z.string().default(""),
     city: z.string().min(1, "create.validation.cityRequired"),
-    // Its format is the country's, checked below (spec §6.2).
+    // Its format is the country's, checked below (spec §6.2) — and it may be
+    // blank where the country's format is not known
+    // (postal_codes_abroad_spec.md §5).
     postalCode: z.string(),
     country: z.enum(JOB_COUNTRIES),
     locationType: z.enum(LOCATION_TYPES),
@@ -243,7 +250,10 @@ export const endpointSchema = z
     if (!isValidPostalCode(endpoint.country, endpoint.postalCode)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "create.validation.postalCode",
+        // A generic country has no format to name, only a loose shape.
+        message: isPostalCodeRequired(endpoint.country)
+          ? "create.validation.postalCode"
+          : "create.validation.postalCodeGeneric",
         path: ["postalCode"],
       });
     }

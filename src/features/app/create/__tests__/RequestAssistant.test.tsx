@@ -52,7 +52,6 @@ const draft = (over: Partial<RequestDraft> = {}): RequestDraft => ({
   pickupDate: "2026-11-24",
   deliveryDate: null,
   missing: [],
-  outOfArea: [],
   ...over,
 });
 
@@ -135,15 +134,16 @@ describe("RequestAssistant", () => {
     expect(await screen.findByLabelText(t.askMore)).toBeInTheDocument();
   });
 
-  it("says a country is not served rather than « to be specified »", async () => {
+  // 2.94.0: every country is served, so a far one is read like any other.
+  it("names a far country beside its town, with no postal code to show", async () => {
     understand.mockResolvedValue(
-      draft({ dropoff: null, missing: ["dropoff"], outOfArea: ["dropoff"] })
+      draft({ dropoff: { city: "Dubaï", postalCode: "", country: "AE" } })
     );
     renderBox();
 
-    await say("un piano de Nantes à Londres");
+    await say("un piano de Nantes à Dubaï");
 
-    expect(await screen.findByText(t.outOfArea)).toBeInTheDocument();
+    expect(await screen.findByText("Dubaï, Émirats arabes unis")).toBeInTheDocument();
   });
 
   it("offers nothing to fill when nothing was recognised", async () => {

@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import en from "../../../../../messages/en.json";
 import fr from "../../../../../messages/fr.json";
-import { ADMIN_NAV_GROUPS, badgeFor } from "../nav";
+import { ADMIN_PAGES } from "@/lib/admin-access";
+import { ADMIN_NAV_GROUPS, adminNavFor, badgeFor } from "../nav";
 
 const entries = ADMIN_NAV_GROUPS.flatMap((group) => group.items);
 
@@ -37,5 +38,43 @@ describe("admin navigation", () => {
     const withdrawals = entries.find((entry) => entry.href === "/admin/withdrawals")!;
     expect(badgeFor(undefined, drivers)).toBeUndefined();
     expect(badgeFor({ applications: 3 }, withdrawals)).toBeUndefined();
+  });
+
+  it("agrees with admin-access.ts on which pages are entries, and in which order", () => {
+    // `adminLandingFor` walks that list: a different order is a different landing.
+    expect(entries.map((entry) => entry.href)).toEqual(
+      ADMIN_PAGES.filter((page) => page.nav).map((page) => page.path)
+    );
+  });
+
+  const hrefsFor = (roles: string[]) =>
+    adminNavFor(roles).flatMap((group) => group.items.map((item) => item.href));
+
+  it("shows an admin everything", () => {
+    expect(adminNavFor(["admin"])).toEqual(ADMIN_NAV_GROUPS);
+  });
+
+  it("shows an operator its own entries only", () => {
+    expect(hrefsFor(["shipper", "operator"])).toEqual([
+      "/admin/bordereaux",
+      "/admin/awards",
+      "/admin/listings",
+      "/admin/shipments",
+      "/admin/drivers",
+      "/admin/withdrawals",
+      "/admin/incidents",
+      "/admin/feedback",
+    ]);
+  });
+
+  it("shows support and finance theirs, with no heading over an empty group", () => {
+    expect(hrefsFor(["support"])).toEqual(["/admin/support"]);
+    expect(adminNavFor(["support"]).map((group) => group.id)).toEqual(["quality"]);
+    expect(hrefsFor(["finance"])).toEqual(["/admin/withdrawals", "/admin/settings"]);
+    expect(adminNavFor(["finance"]).map((group) => group.id)).toEqual(["money", "system"]);
+  });
+
+  it("shows nothing to an account with no staff role", () => {
+    expect(adminNavFor(["shipper", "carrier"])).toEqual([]);
   });
 });

@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Mail, MessageCircle, Phone } from "lucide-react";
+import { ArrowLeft, Mail, MessageCircle } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
@@ -16,6 +16,9 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { messagesApi } from "@/features/app/messages/api/messages.api";
 import { FeedbackRequestCard } from "@/features/app/feedback/ui/FeedbackRequestCard";
+import { mailbox } from "@/lib/app-url";
+
+const SUPPORT_EMAIL = mailbox("support");
 
 export default function HelpPage() {
   const t = useTranslations("help");
@@ -60,7 +63,10 @@ export default function HelpPage() {
           <FeedbackRequestCard />
         </div>
 
-        <Card>
+        {/* There is no support phone line: the card that showed one carried
+            a placeholder number (2.95.0). Mail and the in-app chat below are
+            the two channels somebody answers. */}
+        <Card className="md:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Mail className="w-5 h-5" />
@@ -72,24 +78,7 @@ export default function HelpPage() {
               {t("emailSupport.description")}
             </p>
             <Button variant="outline" className="w-full" asChild>
-              <a href="mailto:support@expeditop.fr">support@expeditop.fr</a>
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Phone className="w-5 h-5" />
-              {t("phoneSupport.title")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">
-              {t("phoneSupport.description")}
-            </p>
-            <Button variant="outline" className="w-full" asChild>
-              <a href="tel:+1234567890">+1 (234) 567-890</a>
+              <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>
             </Button>
           </CardContent>
         </Card>
@@ -144,7 +133,9 @@ export default function HelpPage() {
         </p>
         <Button onClick={handleChatWithSupport} disabled={isCreatingChat}>
           <MessageCircle className="w-4 h-4 mr-2" />
-          {isCreatingChat ? "Starting chat..." : t("stillNeedHelp.chatButton")}
+          {isCreatingChat
+            ? t("stillNeedHelp.chatStarting")
+            : t("stillNeedHelp.chatButton")}
         </Button>
       </div>
     </div>

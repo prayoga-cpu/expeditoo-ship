@@ -4,7 +4,7 @@
 
 _Owner: this section is for you. One row per point the client sent on 19 November while testing 2.90.0. Spec:
 `docs/specs/client_feedback_2026_11_19_spec.md` (readings chosen without the client in §0); plan:
-`docs/plans/plan_client_feedback_2026_11_19.md`. Built in **2.91.0** and **2.92.0**; both on `main` (2.91.0 on 2026-11-20, 2.92.0 on 2026-11-21). Earlier monitors (7 October – 6 November) were
+`docs/plans/plan_client_feedback_2026_11_19.md`. Built in **2.91.0**, **2.92.0** (both on `main`) and **2.94.0** (built 2026-11-22). Earlier monitors (7 October – 6 November) were
 cleared from this file on the owner's instruction the same day; they remain in git history, and each release's
 own entry below still records what shipped._
 
@@ -15,23 +15,23 @@ own entry below still records what shipped._
 |---|---|---|---|---|
 | 1 | Assistant: « nothing appeared » | Not reproduced (retracted at #18). No timeout anywhere; the sentence was cleared on send | 🔵 | — |
 | 2 | Assistant should keep asking for what is missing | It asked about item, size, weight and towns only | 🟠 | Dates are now asked; budget is not |
-| 3 | Design: coly2go is clearer | Taste; no single defect | ❓ | Which screens first |
-| 4 | Font size and type | 10 px bar labels, 12 px address fields, `text-xs` in ~300 places | 🟠 | Bar and driver dashboard done; an app-wide pass and the typeface are a design decision |
-| 5 | « The sheet »: every action per page | Not code | 🔍 | The owner's tracking sheet |
+| 3 | Design: coly2go is clearer; « exchange date exacte by title of the add » | The board search was two modes and loose filters | 🟠 2.94.0 | One search card (departure, destination, date, title) on the missions board. A wider redesign still needs him to name screens |
+| 4 | Font size and type | 10 px bar labels, 12 px address fields | 🟠 2.94.0 | As #28; fixed-px small text remains in admin and marketing; the typeface is a brand call |
+| 5 | « The sheet »: every action per page | No such inventory existed | 🔵 2.94.0 | `docs/site_pages_actions.csv` (588 actions, 69 refs); 18 rows « à vérifier » |
 | 6 | Sign-in: « S'inscrire » needs a scroll | Last element of a ~700 px centred card | 🔵 | — |
 | 7 | Expeditoo → Expeditop | He was on 2.90.0 | ⚪ 2.90.2 | Ask him to retest on www.expeditop.fr |
 | 8 | Sign-up says nothing about the role | No text; `/welcome` unreachable for e-mail sign-ups | 🟠 | Confirm a note is enough (§0 A) |
-| 9 | Driver application: private / professional radio | `carriers.kind = private` means **in-house driver** today | ⚖️ | What « private » means; SIRET or not |
-| 10 | Private drivers authorised at once | Approval is admin-only; every external carrier has a SIRET | ⚖️ | The client and their lawyer |
-| 11 | Admin: select professional drivers, e-mail alert | Both exist (Type filter, e-mail naming the type), as interne/externe | ⚪ in part | #9 |
+| 9 | Driver application: private / professional radio | A tick box; owner ruled 22 Nov: private = in-house (`kind = private`) | 🔵 2.94.0 | — |
+| 10 | Private drivers authorised at once | Approval is admin-only | ⚖️ declined | **Not automatic**: an approved driver reads street addresses (`vetted`), so a self-declared tick cannot grant it. Immediate lane = admin « add driver ». Overrule if wanted |
+| 11 | Admin: select professional drivers, e-mail alert | Existed as interne/externe | 🔵 2.94.0 | « Particulier (interne) » / « Professionnel »; subject leads with the type; link opens the file |
 | 12 | « Vérifiez votre email », no e-mail | No e-mail on an unverified sign-in; no resend; a refused send only logged | 🟠 | Resend logs for his address; that Resend accepts the expeditop.fr sender |
-| 13 | « This field just redirects to an admin page » | « Message » pushed `/messages/…` while in Admin mode; `MainLayout` bounced it | 🔵 | — |
+| 13 | « Redirects to an admin page »; congratulate when inscription is done | « Message » bounced (2.91.0); approval sent an English in-app line, no mail | 🔵 | Approval mail + notification in French (2.94.0) |
 | 14 | A congratulation message after registration | `WelcomeEmail` existed, called only from a dev route | 🔵 | — |
 | 15 | « Message » should message the driver | Same as #13 | 🔵 | — |
 | 16 | Admin: a user's requests, answers and messages | Did not exist | 🟠 | Run once on a real database |
 | 17 | Icons and shortcuts in a bar; three-line button | Fixed 256 px sidebar from 1280 px; no rail, no hamburger | 🟠 2.92.0 | Both asked for: a rail from 1024 px with a three-line toggle. Needs eyes at 1024 / 1280 / 390 px |
 | 18 | Assistant ignored the dates | By design until now (spec §2) | 🟠 | A live read to check the model's date arithmetic |
-| 19 | Every country and territory | 14 on purpose (no customs border) | ⚖️ | Customs; postal formats |
+| 19 | Every country and territory | 14 on purpose | 🟠 2.94.0 | 249 codes, searchable; postal code optional outside the 14. Customs and escalated quotes abroad are not handled |
 | 20 | Address labels bold and bigger | 12 px | 🔵 | — |
 | 21 | 5–30 kg shown as 100 kg | A title suggestion (« Table… ») overwrote the bracket | 🟠 | Ask whether he picked a suggestion or used the assistant |
 | 22 | No « whenever » on a precise date | Exact mode was one period + one hour | 🟠 | Confirm « that day, any time ». Bidding now runs to the window's end (2.92.0) |
@@ -40,21 +40,25 @@ own entry below still records what shipped._
 | 25 | Message rows: job details | Towns in the payload unused; no dates | 🔵 | — |
 | 26 | Filter messages by type | No status filter | 🟠 2.92.0 | Four filters built (waiting / active / done / no request); « Créneaux à valider » and « En attente d'action » do not exist in this app |
 | 27 | Landing: « replace texte by connexion/inscription » | « Connexion » hidden below 640 px | 🟠 2.92.0 | Confirm he meant the header button; 640–760 px header may wrap |
-| 28 | Mobile font size | As #4 | 🟠 | As #4; « Suivi » for « Expéditions » on the bar |
+| 28 | Mobile font size | As #4 | 🟠 2.94.0 | Root 17 px below 1024 px; needs eyes on a phone. Typeface unchanged |
 | 29 | Unreadable coloured messages | Probable: no `color-mix()` on iOS 15–16.1 → solid tints | 🟠 | A real iPhone on iOS 15; which screen |
 | 30 | « Error of access code » at login | Nothing by that name exists; every sign-in failure showed Better Auth's English text | 🟠 2.92.0 | Errors now French with a next step; still ask for the screenshot |
 | 31 | Message screen: job details | As #25 | 🔵 | — |
-| 32 | Initials and pseudo instead of the full name | Sign-up says the pseudo is seen by you alone | ⚖️ in part | Two-letter initials + a three-line row built; names stay, pseudos are the open decision |
+| 32 | Initials and pseudo instead of the full name | Sign-up said the pseudo is seen by you alone | 🟠 2.94.0 | Pseudo shown in the list, name kept in the thread header; the sign-up promise was rewritten |
 | 33 | After « Refuser », no other price | No counter in chat; the transporter told nothing | 🔵 | — |
 | 34 | Keep the job title on screen in a thread | Only the name row was sticky | 🔵 | — |
 | 35 | Bottom bar: requests instead of « Devenir chauffeur » | — | 🟠 | Confirm the entry's new home (access badge, profile) |
 | 36 | 3–4 taps on the bottom bar | Not reproduced; no instant feedback, no loading screens, toast over the bar | 🟠 2.92.0 | Instant pressed state, loading screens, top toasts built; reproduce on a phone |
 | 37 | Job page title cut on iPad | One truncated line; no towns or dates | 🔵 | — |
-| 38 | « Cancel format of field » on professional registration | French formats: SIRET, +33, 5-digit postal code, FR VAT | ❓ | Which field, what he typed |
+| 38 | « Cancel format of field » on professional registration | French-only formats | 🟠 2.94.0 | Foreign company number, phone, postal code, VAT, plate accepted; a 13-digit SIRET typo now passes |
 
 Also fixed, uncaptioned: the « ? » avatar beside chat bubbles.
 
 ### Readings built without the client — confirm or overrule
+
+- **2.94.0** — #10 declined (see row); #32 pseudos now shown, reversing « vous seul le voyez »; #19 generic countries have no
+  postal rule and no map bounds; the board searches on « Rechercher », not live, and its text box matches the title and
+  reference only (no longer the description); #38 a number that is not 14 digits passes as a foreign company number.
 
 - **#35** « Devenir chauffeur » moved to the access badge's menu (and stays on the profile).
 - **#28** the bar says « Suivi » where the sidebar says « Expéditions ».
@@ -693,6 +697,103 @@ than leaving it in a chat message.
       after approval (the 2.61.0 entry, "What was wrong" item 4). To restore them, open
       `/admin/users`, then the roles dialog for that account, and add both.
       Until then its application page says driver access is off.
+
+---
+
+## ✅ 2026-11-22 — What the page inventory found, fixed: staff in the back office, signed-out guards, help, reviews, notifications (2.95.0)
+
+*« fix all of points that you found, then follow up to me that still open ».*
+
+Specs: `roles_spec.md` §5.1–5.2 (page-by-role table), `postal_codes_abroad_spec.md` §8, `take_job_spec.md` §5.
+**No migration.** Stacked on the uncommitted 2.94.0.
+
+**Back office** — `src/lib/admin-access.ts` (`ADMIN_PAGES`, `canOpenAdminPath`, `adminLandingFor`, `usersHrefFor`) is the one
+table behind the proxy, the sidebar, the phone bar, the mode switcher and the MainLayout bounce; unlisted admin paths are
+**admin-only (fail closed)** and a test walks every admin `page.tsx`. Landings: operator `/admin/bordereaux`, support
+`/admin/support`, finance `/admin/withdrawals`. `messagesService` now admits `support` to a SUPPORT thread it is not in
+(read and send), as `roles_spec.md` §3 says. Impersonation, role changes, user list, delete, suspend and password reset are
+pinned admin-only by `staff-destructive.test.ts`.
+
+**Where the spec and the services still disagree** (code won; `roles_spec.md` §5.2): the operator has no Supervision
+(`requireExpedionAdmin` is admin-only); support has no Users, Shipments or Listings entry; finance has no Payments
+(`/api/admin/payments` and `/refunds` check `admin` inline); the operator has Withdrawals. Several admin routes still check
+the role inline, against the architecture rule. None of these is a hole; each is a product decision to widen.
+
+**Guards and honesty** — `/create` redirects a signed-out visitor to `/signin?callbackUrl=…` (it used to render five steps
+and fail on « Publier »); `/listing/[id]` shows a sign-in card on an open job (reverses a test and a `take_job_spec` row).
+Notifications: labels for every type, `/auction/:id` links now `/listing/:id`. Help: phone cards removed, FAQ rewritten.
+Reviews: the hook hard-coded every review as « buyer »; it now derives the side from `reviews.role`. « Utile » and
+« Signaler » removed (no endpoint existed). Delivery button relabelled (no photo-less lane existed). Landing: dead anchors
+removed, four unused landing components and the old admin `Dashboard` deleted. Escalation abroad: `quotePostalCodeFor` on
+`postal-code.ts`, used by both blocker checks.
+
+**Found by the refreshed sheet, fixed.** `/signin` never read `?callbackUrl=`, so every « sign in to continue » redirect
+(`/create`, `/listing/[id]`, the proxy) landed on `/home` — including the guard added earlier in this release.
+`safeCallbackPath` (`src/lib/safe-redirect.ts`: one leading `/`, no `//` or `/\`, no control character, never an auth screen)
+now feeds password and Google sign-in. Not carried across « S'inscrire » or the mailed verification link. Settings →
+« Supprimer mon compte »: the confirm button had no handler; there is no self-service deletion (it touches payments,
+invoices, open jobs), so it now opens a mail to `mailbox("support")`. `CreateDriverDialog` kept a 5-digit browser
+`pattern` after the 2.94.0 relaxation; removed.
+
+**Verification** (each alone, final tree)
+- `npx tsc --noEmit` — 0 errors. `npx eslint .` — 0 errors, 72 warnings.
+- `pnpm test` — 4,606 / 4,606 on the final tree, after the three extra fixes above. (An earlier run had 1 failure, a
+  `proxy.test.ts` row pinning that support is bounced from a support thread; updated.)
+- `pnpm changelog:check` — ok at 2.95.0, English and French.
+- `pnpm build` — succeeds.
+- **Not run:** any browser or device, a real database, a real mail.
+
+**Known limits** — the operator may not be able to type « SW1A 1AA » in the Supervision delivery picker (the blocker logic
+accepts it; the input was not checked); `/admin/drivers` shows the list tab to admin only and an operator's hook still fires
+its refused fetch; `/admin/profile` is Settings, so for operator and support the header name leads to their landing;
+`useAdminStats` / `useAdminActivity` are now unreferenced; `SwipeableItem` default label and dialog « Close » are English.
+
+---
+
+## ✅ 2026-11-22 — The open points of 19 November, decided: driver kinds, all countries, pseudos, board search, the sheet (2.94.0)
+
+*« with fable reanalyze the feedback messages, and like private driver means in house driver, and any decision that you
+can take for numbers that still open ».*
+
+Specs: `driver_types_spec.md` (§3, §3.1, §8, §9), `postal_codes_abroad_spec.md` (§5–7), `board_route_search_spec.md`
+(§12), `client_feedback_2026_11_19_spec.md` §11. Monitor rows 3, 4, 5, 9, 10, 11, 13, 19, 28, 32, 38. **No migration.**
+
+**Re-read.** Three points had been under-read: #3 carried a concrete ask (« exchange date exacte by title of the add » —
+a search card); #13's second sentence was about a *driver's* approval; #5 asked for a deliverable.
+
+**Drivers** (#9–#11, #13, #38) — `CarrierProfileForm` radio; `src/lib/carrier-kind.ts` one label helper;
+`DriverApprovedEmail` from `approve` and an approving `grantRole`, own try after the commit; alert subject by kind and
+`/admin/drivers?tab=applications&file=<id>`; `french-identifiers.ts` relaxed for company number, phone, postal code,
+VAT, plate. **#10 declined**: status flow untouched.
+
+**Countries** (#19) — `JOB_COUNTRIES` is 249 codes; `FREQUENT_COUNTRIES` the old 14, unchanged. Generic tier: optional
+postal code (stored `''`), no box, no `maxBounds`. **The France fallback in `rule()` is gone.** `GEOCODER_PARENT` maps 30
+territories to the state Nominatim files them under (`re` → `fr`). `CountrySelect` on Popover. Assistant country is a
+validated string, `outOfArea` removed.
+
+**Messages, board, text** (#32, #3, #28) — `alias` in three `user` selections; `display-name.ts`. `RouteSearchBar` is one
+card holding a draft; mode derived; `q` is title + reference through `title-search.ts` (`translate(lower(normalize()))`,
+no `unaccent` extension). `globals.css`: root 106.25% below `lg`, and the `88px` bar reserves read as `5.5rem` there.
+
+**The sheet** (#5) — `docs/site_pages_actions.{csv,md}`, generated before the other three streams landed: rows for
+`/expedion`, `/create`, `/carrier/application`, `/admin/drivers` describe the previous screens.
+
+**Found on the way, not fixed.** Only `admin` passes `proxy.ts` into `/admin/*`, though operator / support / finance
+are offered Admin mode (contradicts `roles_spec.md` §5). `/#courses` and `/#platform` anchors are dead. Placeholder
+phone numbers on `/help` and `/driver/help`. `/notifications` tabs in English. « Marquer livrée sans photo » exists
+beside the photo gate. An escalated quote to a letter postal code cannot escalate (`normaliseJobPostalCode`, 4–6 digits).
+
+**Verification** (each alone, final tree)
+- `npx tsc --noEmit` — 0 errors. `npx eslint .` — 0 errors, 72 warnings.
+- `pnpm test` — 4,385 / 4,385.
+- `pnpm changelog:check` — ok at 2.94.0, English and French.
+- `pnpm build` — succeeds.
+- **Not run:** any browser or device, a real database through the app (the title-search SQL was run in `psql` only), a
+  live model read, a real mail.
+
+**Known limits** — everything visual is unseen (radio cards, country picker, search card, 17 px root on a phone); the
+bar reserve override makes a class name lie (`pb-[calc(88px…)]` is `5.5rem` below `lg`); the Ably message event still
+carries the real name; a Belgian number typed without `+` is saved as French.
 
 ---
 

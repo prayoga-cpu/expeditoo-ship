@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import en from "../../../../../../messages/en.json";
 import fr from "../../../../../../messages/fr.json";
 
+import { withDriverCopy } from "./driver-copy";
 import { ApplicationStatusBanner } from "../ApplicationStatusBanner";
 import type { CarrierApplication } from "../../api/carrier.api";
 
@@ -23,11 +24,15 @@ const approved = {
   suspensionReason: null,
 } as CarrierApplication;
 
-function renderBanner(locale: "en" | "fr" = "en") {
+function renderBanner(locale: "en" | "fr" = "en", application: CarrierApplication = approved) {
   const onError = vi.fn<(error: Error) => void>();
   render(
-    <NextIntlClientProvider locale={locale} messages={locale === "en" ? en : fr} onError={onError}>
-      <ApplicationStatusBanner application={approved} />
+    <NextIntlClientProvider
+      locale={locale}
+      messages={withDriverCopy(locale === "en" ? en : fr, locale)}
+      onError={onError}
+    >
+      <ApplicationStatusBanner application={application} />
     </NextIntlClientProvider>
   );
   return onError;
@@ -63,6 +68,68 @@ describe("ApplicationStatusBanner", () => {
     expect(
       screen.getByText("Dossier approuvé, mais accès chauffeur inactif")
     ).toBeInTheDocument();
+    expect(onError.mock.calls.map(([e]) => e.message)).toEqual([]);
+  });
+});
+
+/**
+ * driver_types_spec.md §3: an in-house driver is not approved automatically, so
+ * the wait is said plainly — who validates, and how they will hear.
+ */
+describe("ApplicationStatusBanner — in-house driver", () => {
+  const inHouse = (status: CarrierApplication["status"]) =>
+    ({ kind: "private", status, rejectionReason: null, suspensionReason: null }) as CarrierApplication;
+
+  it("tells a submitted in-house driver that Expeditop validates by hand and will email", () => {
+    auth.user = { roles: ["shipper"] };
+    const onError = renderBanner("fr", inHouse("submitted"));
+
+    expect(screen.getByText("Dossier envoyé — en attente de validation")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Expeditop valide chaque chauffeur interne à la main/)
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Vous recevrez un e-mail dès que votre dossier est validé/)).toBeInTheDocument();
+    expect(onError.mock.calls.map(([e]) => e.message)).toEqual([]);
+  });
+
+  it("says the same while the file is under review", () => {
+    auth.user = { roles: ["shipper"] };
+    renderBanner("fr", inHouse("under_review"));
+
+    expect(screen.getByText("Validation en cours")).toBeInTheDocument();
+    expect(screen.getByText(/Vous recevrez un e-mail/)).toBeInTheDocument();
+  });
+
+  it("does not tell an approved in-house driver to answer offers", () => {
+    auth.user = { roles: ["shipper", "driver"] };
+    const onError = renderBanner("fr", inHouse("approved"));
+
+    expect(screen.getByText("Vous êtes chauffeur Expeditop")).toBeInTheDocument();
+    expect(screen.getByText(/Expeditop vous attribue vos courses/)).toBeInTheDocument();
+    expect(screen.queryByText(/répondre aux offres/)).not.toBeInTheDocument();
+    expect(onError.mock.calls.map(([e]) => e.message)).toEqual([]);
+  });
+
+  it("keeps the professional's own wording for a professional", () => {
+    auth.user = { roles: ["shipper"] };
+    renderBanner("fr", { ...inHouse("submitted"), kind: "professional" });
+
+    expect(screen.getByText("Dossier envoyé")).toBeInTheDocument();
+    expect(screen.queryByText(/chauffeur interne/)).not.toBeInTheDocument();
+  });
+
+  it("still says access is off for an approved in-house file with no driver role", () => {
+    auth.user = { roles: ["shipper"] };
+    renderBanner("fr", inHouse("approved"));
+
+    expect(screen.getByText("Dossier approuvé, mais accès chauffeur inactif")).toBeInTheDocument();
+  });
+
+  it("has the in-house copy in English", () => {
+    auth.user = { roles: ["shipper"] };
+    const onError = renderBanner("en", inHouse("submitted"));
+
+    expect(screen.getByText("File submitted — waiting for validation")).toBeInTheDocument();
     expect(onError.mock.calls.map(([e]) => e.message)).toEqual([]);
   });
 });

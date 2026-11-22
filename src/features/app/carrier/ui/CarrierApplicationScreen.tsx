@@ -2,7 +2,7 @@
 
 import { LoadErrorState } from "@/components/ui/load-error-state";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   BadgeCheck,
   CircleCheck,
@@ -13,6 +13,7 @@ import {
   Truck,
 } from "lucide-react";
 import { REQUIRED_DOCUMENT_KINDS } from "@/lib/carrier-constants";
+import { carrierKindLabel } from "@/lib/carrier-kind";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -94,11 +95,13 @@ function ApplicationFunnel({ application }: { application: CarrierApplication })
 
 function ApplicationSummary({ application }: { application: CarrierApplication }) {
   const t = useTranslations("carrier.application.summary");
+  const locale = useLocale();
 
   const inHouse = application.kind === "private";
   const rows: [string, string][] = [
+    [t("type"), carrierKindLabel(application.kind, locale)],
     ...(inHouse
-      ? ([[t("type"), t("inHouse")]] as [string, string][])
+      ? []
       : ([
           [t("company"), application.companyName],
           [t("siret"), application.siret ?? "—"],
@@ -155,8 +158,12 @@ function SubmitSection({ application }: { application: CarrierApplication }) {
   return (
     <Card className="space-y-4 p-4 sm:p-6">
       <div>
-        <h2 className="font-semibold">{t("title")}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">{t("description")}</p>
+        {/* An in-house driver never bids, and is told what happens after the
+            button: a person at Expeditop validates the file, then an email. */}
+        <h2 className="font-semibold">{inHouse ? t("inHouseTitle") : t("title")}</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {inHouse ? t("inHouseDescription") : t("description")}
+        </p>
       </div>
       <ul className="space-y-2">
         {items.map((item) => (

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect } from "react";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import { TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,7 @@ import {
 import { Stepper } from "@/components/Stepper";
 import { InlineLoader } from "@/components/ui/page-loader";
 import { NUMERIC_RULES } from "@/lib/numeric-input";
-import { countryName, JOB_COUNTRIES, postalCodeExample, type JobCountry } from "@/lib/countries";
+import { postalCodeExample, type JobCountry } from "@/lib/countries";
 import { hasFloors } from "@/lib/location-types";
 import { PhotoDropzone } from "./PhotoDropzone";
 import { FieldError } from "./FieldError";
@@ -33,6 +33,7 @@ import { TimingField } from "./TimingField";
 import { PublishTimingField } from "./PublishTimingField";
 import { PickupPublicationNotice } from "./PublicationNotice";
 import { SavedAddressPicker } from "./SavedAddressPicker";
+import { CountrySelect } from "./CountrySelect";
 import { AddressLabelField } from "@/features/app/profile/ui/AddressLabelField";
 import { PackagingField } from "./PackagingField";
 import { IllustrationField } from "./IllustrationField";
@@ -358,7 +359,6 @@ function EndpointFields({
 }) {
   const t = useTranslations("create.where");
   const tTypes = useTranslations("create.locationTypes");
-  const locale = useLocale();
   const { setValue, watch, formState, clearErrors } = form;
   const endpoint = watch(side);
   const other = watch(side === "pickup" ? "dropoff" : "pickup");
@@ -381,6 +381,7 @@ function EndpointFields({
   const selectedAddress = matchSavedAddress(book, endpoint);
   const usingSavedAddress = selectedAddress !== undefined;
   const country = endpoint?.country ?? "FR";
+  const example = postalCodeExample(country);
 
   // Another country is another address: the one there was typed or found in
   // the old one, and its postal code no longer has the right shape.
@@ -439,18 +440,7 @@ function EndpointFields({
         <Label htmlFor={`${side}-country`} required>
           {t(`country.${side}`)}
         </Label>
-        <Select value={country} onValueChange={(v) => changeCountry(v as JobCountry)}>
-          <SelectTrigger id={`${side}-country`} className="w-full">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {JOB_COUNTRIES.map((code) => (
-              <SelectItem key={code} value={code}>
-                {countryName(code, locale)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <CountrySelect id={`${side}-country`} value={country} onChange={changeCountry} />
       </div>
 
       {/* The delivery's refusal belongs to the address, whichever way it was
@@ -462,7 +452,7 @@ function EndpointFields({
         <>
           {/* The shared picker rather than a private map: it already searches
               Nominatim, drags a pin, reverse-geocodes and refuses anywhere
-              outside France, in both languages and both themes. */}
+              outside the end's country, in both languages and both themes. */}
           <LocationPickerField
             // Remounted per country: the map opens on, and is held to, it.
             key={country}
@@ -471,9 +461,11 @@ function EndpointFields({
             countryCode={country}
             addressLabel={t(`addressLabel.${side}`)}
             searchPlaceholder={t(`searchPlaceholder.${side}`)}
-            postalCodePlaceholder={t("postalCodeExample", {
-              example: postalCodeExample(country),
-            })}
+            // A country whose format is not known asks for none: the code
+            // is optional there (postal_codes_abroad_spec.md §5).
+            postalCodePlaceholder={
+              example ? t("postalCodeExample", { example }) : t("postalCodeOptional")
+            }
             mode={endpoint?.locationEntry}
             onModeChange={(mode) => {
               setValue(`${side}.locationEntry`, mode);

@@ -4,8 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { useState } from "react";
 
 import fr from "../../../../messages/fr.json";
-import { CITY_SEARCH_COUNTRIES, CityField, foreignCountry, type CityValue } from "../city-field";
-import { JOB_COUNTRIES } from "@/lib/countries";
+import { CityField, foreignCountry, type CityValue } from "../city-field";
 import { searchAddress } from "@/lib/geocoding";
 
 // The suggestions come from Nominatim; nothing here is about the network.
@@ -151,25 +150,18 @@ describe("CityField", () => {
 });
 
 // 2.91.0 #23: « BRUXELLES » answered with French hamlets, because the search
-// was pinned to France while the app serves fourteen countries.
+// was pinned to France. 2.94.0: a job can be in any country, so the search is
+// pinned to none.
 describe("CityField, across the countries a job can be in", () => {
-  it("searches exactly the countries of the one list, never its own copy", () => {
-    const codes = CITY_SEARCH_COUNTRIES.split(",");
-
-    expect(codes).toEqual(JOB_COUNTRIES.map((code) => code.toLowerCase()));
-    expect(codes).toContain("be");
-    expect(codes[0]).toBe("fr");
-  });
-
-  it("hands that list to the geocoder", async () => {
+  it("searches the whole world, with no country list of its own", async () => {
     vi.mocked(searchAddress).mockResolvedValueOnce([]);
     render(wrap(<Host initial={null} />));
 
     fireEvent.focus(field());
-    fireEvent.change(field(), { target: { value: "BRUXELLES" } });
+    fireEvent.change(field(), { target: { value: "CASABLANCA" } });
 
     await vi.waitFor(() =>
-      expect(searchAddress).toHaveBeenCalledWith("BRUXELLES", CITY_SEARCH_COUNTRIES, 5)
+      expect(searchAddress).toHaveBeenCalledWith("CASABLANCA", null, 5)
     );
   });
 

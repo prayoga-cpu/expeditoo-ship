@@ -3,6 +3,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   ACTIVE_ACCESS_KEY,
   getStoredAccessMode,
+  hasAdminAccess,
+  modeLanding,
   qualifiedAccessModes,
   resolveAccessMode,
   setStoredAccessMode,
@@ -99,5 +101,34 @@ describe("stored access mode", () => {
 
     expect(() => setStoredAccessMode("admin")).not.toThrow();
     expect(getStoredAccessMode()).toBeNull();
+  });
+});
+
+// roles_spec.md §5.1: the mode is offered exactly when the proxy would let the
+// account into at least one back-office page, and it opens on that page.
+describe("Admin mode for every staff role", () => {
+  it.each(["admin", "operator", "support", "finance"])("offers Admin mode to %s", (role) => {
+    expect(hasAdminAccess(["shipper", role])).toBe(true);
+    expect(qualifiedAccessModes(["shipper", role])).toEqual(["admin", "user"]);
+  });
+
+  it("does not offer it to an account with no staff role", () => {
+    expect(hasAdminAccess(["shipper", "carrier", "driver"])).toBe(false);
+  });
+
+  it.each([
+    ["admin", "/admin/expedion"],
+    ["operator", "/admin/bordereaux"],
+    ["support", "/admin/support"],
+    ["finance", "/admin/withdrawals"],
+  ])("lands %s on %s, not on a page that would bounce", (role, landing) => {
+    expect(modeLanding("admin", ["shipper", role])).toBe(landing);
+  });
+
+  it("lands the other modes on /home whatever the roles", () => {
+    expect(modeLanding("user", ["shipper", "admin"])).toBe("/home");
+    expect(modeLanding("carrier", ["carrier", "operator"])).toBe("/home");
+    // Never a back-office address for roles that hold none.
+    expect(modeLanding("admin", ["shipper"])).toBe("/home");
   });
 });

@@ -26,6 +26,7 @@ const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn(
 vi.mock("../../api/user-activity.api", () => ({ userActivityApi: api }));
 vi.mock("@/lib/use-leave-admin-nav", () => ({ useLeaveAdminNav: () => leaveAdmin }));
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
+vi.mock("@/lib/auth-context", () => ({ useAuth: () => ({ user: { roles: ["admin"] } }) }));
 vi.mock("@/components/ui/page-loader", () => ({
   PageLoader: () => <div data-testid="page-loader" />,
 }));

@@ -192,6 +192,55 @@ describe('messagesService', () => {
         });
     });
 
+    // client feedback 2026-11-19, #32: the pseudo reaches the inbox and the thread.
+    describe('pseudo in the payload', () => {
+        const nico = { id: 'user-2', name: 'Nicolas Martin', firstName: 'Nicolas', lastName: 'Martin', alias: 'Nico-Trans', image: null };
+
+        it('hands the inbox the other participant with their alias', async () => {
+            vi.mocked(messagesDAL.getUserConversations).mockResolvedValue([
+                {
+                    id: 'conv-1',
+                    participants: [{ user: { id: 'user-1', alias: 'moi' } }, { user: nico }],
+                    lastMessageAt: null,
+                    messages: [],
+                },
+            ] as never);
+
+            const { items } = await messagesService.getInbox('user-1', { page: 1, limit: 10 });
+
+            expect(items[0].otherParticipant).toEqual(nico);
+        });
+
+        it('passes the search through, so the DAL can match the pseudo', async () => {
+            vi.mocked(messagesDAL.getUserConversations).mockResolvedValue([]);
+
+            await messagesService.getInbox('user-1', { page: 1, limit: 10, search: '@nico' });
+
+            expect(messagesDAL.getUserConversations).toHaveBeenCalledWith('user-1', 10, 0, '@nico', 'all');
+        });
+
+        it('keeps the alias on the thread: the other participant and each sender', async () => {
+            vi.mocked(messagesDAL.getConversationById).mockResolvedValue({
+                id: 'conv-1',
+                listingId: null,
+                listing: null,
+                participants: [
+                    { user: { id: 'user-1', name: 'Moi', alias: null }, lastReadAt: null, lastClearedAt: null },
+                    { user: nico, lastReadAt: null, lastClearedAt: null },
+                ],
+            } as never);
+            vi.mocked(messagesDAL.getMessages).mockResolvedValue([
+                { id: 'm1', senderId: 'user-2', content: 'Bonjour', createdAt: new Date(), sender: nico },
+            ] as never);
+            vi.mocked(reviewsService.getUserStats).mockResolvedValue({ average: 5, total: 1 } as never);
+
+            const thread = await messagesService.getThread('user-1', 'conv-1', { page: 1, limit: 50 });
+
+            expect(thread.otherParticipant).toMatchObject({ name: 'Nicolas Martin', alias: 'Nico-Trans' });
+            expect(thread.messages[0].sender).toMatchObject({ alias: 'Nico-Trans' });
+        });
+    });
+
     // client feedback 2026-11-19, #26: conversations by the state of their job.
     describe('getInbox filter and counts', () => {
         beforeEach(() => {

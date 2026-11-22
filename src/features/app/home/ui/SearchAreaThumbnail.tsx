@@ -100,7 +100,7 @@ export function SearchAreaThumbnail({
           </Source>
         )}
       </Map>
-      <span className="pointer-events-none absolute bottom-1 right-1 rounded bg-background/90 px-1.5 py-0.5 text-[11px] font-medium shadow-sm">
+      <span className="pointer-events-none absolute bottom-1 right-1 rounded bg-background/90 px-1.5 py-0.5 text-xs font-medium shadow-sm">
         {t("openMap")}
       </span>
     </button>

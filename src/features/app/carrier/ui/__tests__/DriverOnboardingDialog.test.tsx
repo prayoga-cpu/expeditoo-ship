@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import en from "../../../../../../messages/en.json";
 import fr from "../../../../../../messages/fr.json";
 
+import { withDriverCopy } from "./driver-copy";
 import { DriverOnboardingDialog } from "../DriverOnboardingDialog";
 import { AccessModeProvider } from "@/lib/access-mode-context";
 import type { CarrierApplication, CarrierStatus } from "../../api/carrier.api";
@@ -44,7 +45,7 @@ function renderDialog(locale: "en" | "fr" = "en") {
   const onOpenChange = vi.fn();
   const onError = vi.fn<(error: Error) => void>();
   render(
-    <NextIntlClientProvider locale={locale} messages={locale === "en" ? en : fr} onError={onError}>
+    <NextIntlClientProvider locale={locale} messages={withDriverCopy(locale === "en" ? en : fr, locale)} onError={onError}>
       <AccessModeProvider>
         <DriverOnboardingDialog open onOpenChange={onOpenChange} />
       </AccessModeProvider>
@@ -64,14 +65,32 @@ describe("DriverOnboardingDialog", () => {
     window.localStorage.clear();
   });
 
-  it("explains the three steps before there is an application", async () => {
+  it("presents the two kinds of driver before there is an application", async () => {
     renderDialog();
 
     expect(await screen.findByRole("dialog", { name: "Become a driver" })).toBeInTheDocument();
-    expect(screen.getByText("1. Your details")).toBeInTheDocument();
-    expect(screen.getByText("2. Your documents")).toBeInTheDocument();
-    expect(screen.getByText("3. Our review")).toBeInTheDocument();
+    expect(screen.getByText("Private — Expeditop in-house driver")).toBeInTheDocument();
+    expect(screen.getByText("Professional — carrier")).toBeInTheDocument();
+    expect(screen.getByText(/Our team validates every file by hand/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Start my application/ })).toBeInTheDocument();
+  });
+
+  // The screen is one page; the dialog used to promise three steps and list
+  // documents an in-house driver is never asked for (driver_types_spec.md §3).
+  it.each(["en", "fr"] as const)("promises no steps and a single form (%s)", async (locale) => {
+    renderDialog(locale);
+
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog.textContent).not.toMatch(/three steps|trois étapes|1\. |2\. |3\. /);
+    expect(dialog.textContent).toMatch(/a single form|un seul formulaire/);
+  });
+
+  it("asks an in-house driver for no documents", async () => {
+    renderDialog("fr");
+
+    expect(
+      await screen.findByText(/Téléphone et adresse, rien d'autre : ni société, ni documents, ni RIB/)
+    ).toBeInTheDocument();
   });
 
   it("goes to the application and closes, from the primary button", async () => {
@@ -89,7 +108,7 @@ describe("DriverOnboardingDialog", () => {
 
     expect(await screen.findByRole("dialog", { name: "Your driver application" })).toBeInTheDocument();
     expect(screen.getByText(/saved as a draft/)).toBeInTheDocument();
-    expect(screen.queryByText("1. Your details")).not.toBeInTheDocument();
+    expect(screen.queryByText("Professional — carrier")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Finish my application/ })).toBeInTheDocument();
   });
 

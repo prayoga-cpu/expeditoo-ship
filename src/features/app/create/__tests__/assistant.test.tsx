@@ -48,7 +48,6 @@ const draft = (over: Partial<RequestDraft> = {}): RequestDraft => ({
   pickupDate: null,
   deliveryDate: null,
   missing: [],
-  outOfArea: [],
   ...over,
 });
 

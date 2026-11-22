@@ -11,6 +11,7 @@ import type { NewMessageEvent } from "@/server/dto/ably-events.dto";
 import { namespaced } from "@/lib/env";
 import { jobDates, routeOf } from "../lib/job-summary";
 import { initialsOf } from "../lib/initials";
+import { displayNameOf, pseudoOf } from "../lib/display-name";
 
 /**
  * Custom hook for managing message detail/chat conversation
@@ -99,6 +100,12 @@ export function useMessageDetail(conversationId: string) {
               sender: {
                 id: eventData.senderId,
                 name: eventData.senderName || t("unknown"),
+                // The event carries the session's name only; the pseudo is
+                // the one the thread already loaded for that person.
+                alias:
+                  oldData.otherParticipant?.id === eventData.senderId
+                    ? oldData.otherParticipant.alias
+                    : undefined,
                 image: eventData.senderImage || null,
               },
             };
@@ -197,7 +204,11 @@ export function useMessageDetail(conversationId: string) {
     return {
       id: threadData.conversation.id,
       recipient: {
+        // The header keeps the full name and shows the pseudo beside it;
+        // the bubbles are named by `displayName` (#32).
         name: other?.name || t("unknown"),
+        pseudo: pseudoOf(other) ?? undefined,
+        displayName: displayNameOf(other) || t("unknown"),
         initials: other ? initialsOf(other) : undefined,
         avatar: other?.image || undefined,
         rating: other?.rating,
@@ -229,7 +240,9 @@ export function useMessageDetail(conversationId: string) {
       sentByMe: msg.isOwn,
       readByOther: msg.readByOther,
       // Kept, so the avatar beside a bubble is its writer's and not a « ? ».
-      senderName: msg.sender?.name || undefined,
+      // « @pseudo » when they have one — what the avatar's accessible name
+      // reads; the initials stay the real ones.
+      senderName: displayNameOf(msg.sender) || undefined,
       senderInitials: msg.sender ? initialsOf(msg.sender) : undefined,
       senderAvatar: msg.sender?.image || undefined,
       offer: msg.threadOffer ?? undefined,

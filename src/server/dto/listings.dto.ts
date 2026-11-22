@@ -53,12 +53,13 @@ const endpointSchema = z.object({
   address: z.string().default(""),
   city: z.string().min(1, "City is required"),
   // Its format is the country's, checked below with the country beside it
-  // (client_feedback_2026_10_31_spec.md §6.3).
-  postalCode: z.string().trim().min(1, "INVALID_POSTAL_CODE").max(12, "INVALID_POSTAL_CODE"),
+  // (client_feedback_2026_10_31_spec.md §6.3). Required where the country's
+  // format is known; elsewhere it may be blank — not every country has postal
+  // codes — and is stored as '' (postal_codes_abroad_spec.md §5).
+  postalCode: z.string().trim().max(12, "INVALID_POSTAL_CODE"),
   // ISO 3166-1 alpha-2; absent means France — every caller before 2.76.0, and
-  // escalation's pickup. Any code here, because an escalated job delivers
-  // wherever its quote does; a request posted over HTTP is held to
-  // `JOB_COUNTRIES` below (client_feedback_2026_10_31_spec.md §6.3).
+  // escalation's pickup. Any country or territory of `JOB_COUNTRIES`, checked
+  // below; a code nobody assigned is refused.
   country: z.string().regex(/^[A-Z]{2}$/, "UNSUPPORTED_COUNTRY").optional(),
   locationType: z.enum(LOCATION_TYPES),
   floor: z.number().int().min(0).optional(),
@@ -453,7 +454,13 @@ const csv = <T extends z.ZodTypeAny>(item: T) =>
 
 export const browseListingsQuerySchema = z.object({
   categoryId: z.string().optional(),
-  q: z.string().optional(),
+  /**
+   * « Titre de l'annonce »: matched against the job's title, case and accents
+   * aside, and against its reference when it names one
+   * (board_route_search_spec.md §12). Capped, because every word becomes a
+   * `LIKE` over the open jobs.
+   */
+  q: z.string().trim().max(120, "QUERY_TOO_LONG").optional(),
   /**
    * Where the job came from. Expedion escalation is the only inlet now, so the
    * board passes `expedion` to keep legacy `direct` rows — seeded or left over

@@ -2,7 +2,11 @@ import type {
   EscalationBlockerCode,
   QuoteRow,
 } from "@/server/dal/expedion-report.dal";
-import { normaliseJobPostalCode } from "@/lib/postal-code";
+import {
+  normaliseJobPostalCode,
+  quoteDeliveryCountry,
+  quotePostalCodeFor,
+} from "@/lib/postal-code";
 
 /**
  * What a quote is waiting for, and who it is waiting on.
@@ -342,12 +346,25 @@ export interface EscalationDraft {
   deliveryAddress?: string | null;
   deliveryCity?: string | null;
   deliveryPostalCode?: string | null;
+  /** Free text, as the quote holds it; decides the delivery code's rule. */
+  deliveryCountry?: string | null;
   weightKg?: number | null;
   acceptedPriceCents?: number | null;
 }
 
 function hasPostalCode(value: string | null | undefined): boolean {
   return normaliseJobPostalCode(value) !== null;
+}
+
+/**
+ * The delivery's code by its own country, through the helper the service
+ * uses: strict where the format is known, optional or free-form elsewhere —
+ * so « SW1A 1AA » and a Hong Kong address with no code both read ready here,
+ * exactly when Publish accepts them.
+ */
+function hasDeliveryPostalCode(draft: EscalationDraft): boolean {
+  const country = quoteDeliveryCountry(draft.deliveryCountry);
+  return quotePostalCodeFor(country, draft.deliveryPostalCode) !== null;
 }
 
 /**
@@ -370,8 +387,7 @@ export function draftEscalationBlockers(
   if (!hasPostalCode(draft.pickupPostalCode)) blockers.push("pickupPostalCode");
   if (!draft.deliveryAddress) blockers.push("deliveryAddress");
   if (!draft.deliveryCity) blockers.push("deliveryCity");
-  if (!hasPostalCode(draft.deliveryPostalCode))
-    blockers.push("deliveryPostalCode");
+  if (!hasDeliveryPostalCode(draft)) blockers.push("deliveryPostalCode");
   if (!draft.weightKg || draft.weightKg <= 0) blockers.push("weight");
   if (
     !draft.acceptedPriceCents ||

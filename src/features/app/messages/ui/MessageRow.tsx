@@ -8,10 +8,12 @@ import { useTranslations } from "next-intl";
 import type { Message } from "../types";
 import { jobLine } from "../lib/job-summary";
 import { initialsOf } from "../lib/initials";
+import { RowDeleteButton } from "./RowDeleteButton";
 
 /**
  * Pure UI component for rendering a single message row
- * Supports swipe-to-delete gesture for conversation deletion
+ * Supports swipe-to-delete gesture for conversation deletion, and the same
+ * deletion from a button a mouse or a keyboard can reach (`RowDeleteButton`)
  *
  * @param message - Message data object
  * @param onDelete - Callback to delete the conversation
@@ -62,6 +64,7 @@ export function MessageRow({
         {/* Right Swipeable Part (Content) */}
         <SwipeableItem
           onDelete={onDelete ? () => onDelete(message.id) : () => { }}
+          deleteLabel={t("delete")}
           // If no delete handler, disable swiping
           disabled={!onDelete}
           className="flex-1 min-w-0"
@@ -145,6 +148,14 @@ export function MessageRow({
             <div className="w-3 h-3 rounded-full bg-primary shrink-0 mt-2" />
           )}
         </SwipeableItem>
+        {onDelete && (
+          <div className="hidden md:flex items-center bg-background pl-2 group-hover:bg-muted transition-colors duration-200">
+            <RowDeleteButton
+              name={message.name}
+              onDelete={() => onDelete(message.id)}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

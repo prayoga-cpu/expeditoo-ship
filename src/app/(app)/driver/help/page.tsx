@@ -8,10 +8,16 @@ import {
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MessageSquare, Phone, Truck } from "lucide-react";
+import { MessageSquare, Truck } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { FeedbackRequestCard } from "@/features/app/feedback/ui/FeedbackRequestCard";
+import { mailbox } from "@/lib/app-url";
+
+// The one mailbox known to be read. `drivers@` was printed here and exists
+// nowhere else in the product; the « emergency line » beside it was a
+// placeholder number and is gone (2.95.0).
+const SUPPORT_EMAIL = mailbox("support");
 
 const FAQ = ["paid", "absent", "accept", "vehicle"] as const;
 
@@ -30,7 +36,7 @@ export default function DriverHelpPage() {
           <FeedbackRequestCard />
         </div>
 
-        <Card>
+        <Card className="md:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Truck className="w-5 h-5" />
@@ -42,26 +48,7 @@ export default function DriverHelpPage() {
               {t("operations.description")}
             </p>
             <Button variant="outline" className="w-full" asChild>
-              <a href="mailto:drivers@expeditop.fr">drivers@expeditop.fr</a>
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Phone className="w-5 h-5" />
-              {t("emergency.title")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">
-              {t("emergency.description")}
-            </p>
-            {/* TODO(EXPEDITOO-LEGAL): a placeholder, not a real line. Replace
-                it with the operations number before drivers rely on it. */}
-            <Button variant="destructive" className="w-full" asChild>
-              <a href="tel:+1987654321">+1 (987) 654-321</a>
+              <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>
             </Button>
           </CardContent>
         </Card>

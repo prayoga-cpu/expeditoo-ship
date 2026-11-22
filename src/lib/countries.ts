@@ -1,11 +1,21 @@
 /**
  * The countries a request can collect from or deliver to, and what each one
  * means for an address: its postal code format, roughly where it is, and its
- * name (client_feedback_2026_10_31_spec.md §6).
+ * name (client_feedback_2026_10_31_spec.md §6, postal_codes_abroad_spec.md §5).
  *
- * The list is the countries Expedion quotes already deliver to that a van can
- * reach from France without a customs border (spec §0 A). Adding one is a row
- * here — its pattern, its box, its centre — and nothing else.
+ * Every ISO 3166-1 country and territory can be chosen (the client, 19
+ * November: « need to add all territories and countries of the world »), in
+ * two tiers:
+ *
+ * - **Detailed** — `FREQUENT_COUNTRIES`, the fourteen the form offered before.
+ *   Each has a postal code pattern with an example, a box and a map centre.
+ *   Adding one is a row in `RULES` and nothing else.
+ * - **Generic** — everywhere else. The postal code is optional (some countries
+ *   have none) and loosely shaped when given; there is no box to check a pin
+ *   against and none to hold the map to.
+ *
+ * A generic or unknown code is never held to France's pattern or box: only an
+ * *absent* country means France.
  *
  * A box is a sanity check, as the France box it replaces was: it catches a pin
  * dropped in the wrong country, not one a few kilometres over a border.
@@ -111,10 +121,11 @@ const RULES = {
   },
 } as const satisfies Record<string, CountryRule>;
 
-export type JobCountry = keyof typeof RULES;
+/** A country with a rule of its own: the fourteen the form offers first. */
+export type DetailedCountry = keyof typeof RULES;
 
-/** In the order the form offers them: France first, then by proximity. */
-export const JOB_COUNTRIES = [
+/** France first, then by proximity — the « Pays fréquents » group. */
+export const FREQUENT_COUNTRIES = [
   "FR",
   "MC",
   "BE",
@@ -129,38 +140,126 @@ export const JOB_COUNTRIES = [
   "PL",
   "CZ",
   "RO",
-] as const satisfies readonly JobCountry[];
+] as const satisfies readonly DetailedCountry[];
+
+/**
+ * Every officially assigned ISO 3166-1 alpha-2 code — countries and
+ * territories alike (Réunion and Guadeloupe have their own). Static because
+ * `Intl.supportedValuesOf` lists no regions; names come from `Intl.DisplayNames`.
+ */
+// prettier-ignore
+export const JOB_COUNTRIES = [
+  "AD", "AE", "AF", "AG", "AI", "AL", "AM", "AO", "AQ", "AR", "AS", "AT", "AU", "AW", "AX", "AZ",
+  "BA", "BB", "BD", "BE", "BF", "BG", "BH", "BI", "BJ", "BL", "BM", "BN", "BO", "BQ", "BR", "BS",
+  "BT", "BV", "BW", "BY", "BZ",
+  "CA", "CC", "CD", "CF", "CG", "CH", "CI", "CK", "CL", "CM", "CN", "CO", "CR", "CU", "CV", "CW",
+  "CX", "CY", "CZ",
+  "DE", "DJ", "DK", "DM", "DO", "DZ",
+  "EC", "EE", "EG", "EH", "ER", "ES", "ET",
+  "FI", "FJ", "FK", "FM", "FO", "FR",
+  "GA", "GB", "GD", "GE", "GF", "GG", "GH", "GI", "GL", "GM", "GN", "GP", "GQ", "GR", "GS", "GT",
+  "GU", "GW", "GY",
+  "HK", "HM", "HN", "HR", "HT", "HU",
+  "ID", "IE", "IL", "IM", "IN", "IO", "IQ", "IR", "IS", "IT",
+  "JE", "JM", "JO", "JP",
+  "KE", "KG", "KH", "KI", "KM", "KN", "KP", "KR", "KW", "KY", "KZ",
+  "LA", "LB", "LC", "LI", "LK", "LR", "LS", "LT", "LU", "LV", "LY",
+  "MA", "MC", "MD", "ME", "MF", "MG", "MH", "MK", "ML", "MM", "MN", "MO", "MP", "MQ", "MR", "MS",
+  "MT", "MU", "MV", "MW", "MX", "MY", "MZ",
+  "NA", "NC", "NE", "NF", "NG", "NI", "NL", "NO", "NP", "NR", "NU", "NZ",
+  "OM",
+  "PA", "PE", "PF", "PG", "PH", "PK", "PL", "PM", "PN", "PR", "PS", "PT", "PW", "PY",
+  "QA",
+  "RE", "RO", "RS", "RU", "RW",
+  "SA", "SB", "SC", "SD", "SE", "SG", "SH", "SI", "SJ", "SK", "SL", "SM", "SN", "SO", "SR", "SS",
+  "ST", "SV", "SX", "SY", "SZ",
+  "TC", "TD", "TF", "TG", "TH", "TJ", "TK", "TL", "TM", "TN", "TO", "TR", "TT", "TV", "TW", "TZ",
+  "UA", "UG", "UM", "US", "UY", "UZ",
+  "VA", "VC", "VE", "VG", "VI", "VN", "VU",
+  "WF", "WS",
+  "YE", "YT",
+  "ZA", "ZM", "ZW",
+] as const;
+
+export type JobCountry = (typeof JOB_COUNTRIES)[number];
 
 export const DEFAULT_COUNTRY: JobCountry = "FR";
 
+const KNOWN: ReadonlySet<string> = new Set(JOB_COUNTRIES);
+
+/** Whether `code` is a country or territory a request can name. */
 export function isJobCountry(code: string | null | undefined): code is JobCountry {
+  return code != null && KNOWN.has(code);
+}
+
+/** Whether the country has a rule of its own — a pattern, a box, a centre. */
+export function isDetailedCountry(
+  code: string | null | undefined
+): code is DetailedCountry {
   return code != null && Object.prototype.hasOwnProperty.call(RULES, code);
 }
 
-function rule(code: string | null | undefined): CountryRule {
-  return isJobCountry(code) ? RULES[code] : RULES[DEFAULT_COUNTRY];
+/**
+ * The country's own rule, or null for a generic one. Only an absent country
+ * is France (every caller before 2.76.0, and escalation's pickup); a code
+ * with no rule — « US », or one nobody assigned — has none, and is never
+ * lent France's.
+ */
+function rule(code: string | null | undefined): CountryRule | null {
+  const country = code || DEFAULT_COUNTRY;
+  return isDetailedCountry(country) ? RULES[country] : null;
 }
 
-/** Whether `value` is written the way the country writes a postal code. */
+/**
+ * A postal code where the country's own shape is not known: two to twelve
+ * letters, digits, spaces or dashes, with a letter or digit at each end —
+ * « SW1A 1AA », « 10001 », « K1A 0B1 », « 100-0001 ».
+ */
+const GENERIC_POSTAL_CODE = /^[A-Za-z0-9][A-Za-z0-9 -]{0,10}[A-Za-z0-9]$/;
+
+/**
+ * Whether the country's addresses must carry a postal code. Only where its
+ * format is known: elsewhere it may not exist at all (Hong Kong, the UAE,
+ * much of Africa), so it cannot be demanded.
+ */
+export function isPostalCodeRequired(country: string | null | undefined): boolean {
+  return rule(country) !== null;
+}
+
+/**
+ * Whether `value` is written the way the country writes a postal code. A
+ * generic country accepts none at all, or anything shaped like one.
+ */
 export function isValidPostalCode(country: string | null | undefined, value: string): boolean {
-  return rule(country).postalCode.test(value.trim());
+  const own = rule(country);
+  const code = value.trim();
+  if (own) return own.postalCode.test(code);
+  return code === "" || GENERIC_POSTAL_CODE.test(code);
 }
 
-export function postalCodeExample(country: string | null | undefined): string {
-  return rule(country).example;
+/** The shape to show as a hint, or null where the country's is not known. */
+export function postalCodeExample(country: string | null | undefined): string | null {
+  return rule(country)?.example ?? null;
 }
 
-/** Within the country's box. An unknown country is held to France's. */
+/** Within the country's box. A country without one refuses no pin. */
 export function isInCountry(country: string | null | undefined, lat: number, lng: number): boolean {
-  const { box } = rule(country);
+  const own = rule(country);
+  if (!own) return true;
+  const { box } = own;
   return lat >= box.minLat && lat <= box.maxLat && lng >= box.minLng && lng <= box.maxLng;
 }
 
-/** The box as MapLibre's `maxBounds` — `[[west, south], [east, north]]`, padded. */
+/**
+ * The box as MapLibre's `maxBounds` — `[[west, south], [east, north]]`,
+ * padded — or undefined where there is no box to hold the map to.
+ */
 export function countryMapBounds(
   country: string | null | undefined
-): [[number, number], [number, number]] {
-  const { box } = rule(country);
+): [[number, number], [number, number]] | undefined {
+  const own = rule(country);
+  if (!own) return undefined;
+  const { box } = own;
   const pad = 0.5;
   return [
     [box.minLng - pad, box.minLat - pad],
@@ -168,8 +267,11 @@ export function countryMapBounds(
   ];
 }
 
+/** The whole world: where the map opens before a generic country is found. */
+export const WORLD_VIEW = { latitude: 25, longitude: 10, zoom: 1 };
+
 export function countryMapCenter(country: string | null | undefined) {
-  return rule(country).center;
+  return rule(country)?.center ?? WORLD_VIEW;
 }
 
 /**
@@ -184,87 +286,166 @@ export function countryName(code: string, locale: string): string {
   }
 }
 
-/** Names as people type them — French, English and native — to an ISO code. */
-const NAMES: Record<string, string> = {
-  fra: "FR",
-  france: "FR",
-  "republique francaise": "FR",
-  monaco: "MC",
-  belgique: "BE",
-  belgium: "BE",
-  belgie: "BE",
-  belgien: "BE",
-  luxembourg: "LU",
-  luxemburg: "LU",
-  "pays bas": "NL",
-  netherlands: "NL",
-  "the netherlands": "NL",
-  nederland: "NL",
-  hollande: "NL",
-  holland: "NL",
-  allemagne: "DE",
-  germany: "DE",
-  deutschland: "DE",
-  suisse: "CH",
-  switzerland: "CH",
-  schweiz: "CH",
-  svizzera: "CH",
-  autriche: "AT",
-  austria: "AT",
-  osterreich: "AT",
-  italie: "IT",
-  italy: "IT",
-  italia: "IT",
-  espagne: "ES",
-  spain: "ES",
-  espana: "ES",
-  portugal: "PT",
-  pologne: "PL",
-  poland: "PL",
-  polska: "PL",
-  "republique tcheque": "CZ",
-  tchequie: "CZ",
-  "czech republic": "CZ",
-  czechia: "CZ",
-  cesko: "CZ",
-  roumanie: "RO",
-  romania: "RO",
-  // Not offered on `/create`, but Expedion quotes deliver there, and an
-  // escalated job should say where rather than claim France.
-  uk: "GB",
-  "royaume uni": "GB",
-  "united kingdom": "GB",
-  angleterre: "GB",
-  england: "GB",
-  "grande bretagne": "GB",
-  "great britain": "GB",
-  irlande: "IE",
-  ireland: "IE",
-  usa: "US",
-  "etats unis": "US",
-  "united states": "US",
-  "united states of america": "US",
-  "etats unis d amerique": "US",
-  bulgarie: "BG",
-  bulgaria: "BG",
-  chine: "CN",
-  china: "CN",
-  "porto rico": "PR",
-  "puerto rico": "PR",
+/**
+ * Territories the map service (Nominatim) files under the state they belong
+ * to: `countrycodes=re` finds nothing, and a pin on Réunion reverse-geocodes
+ * as « fr ». Read from the service itself, code by code, on 2026-11-22 — it is
+ * a fact about the geocoder's data, not a statement about any territory.
+ */
+const GEOCODER_PARENT: Partial<Record<JobCountry, JobCountry>> = {
+  BL: "FR", GF: "FR", GP: "FR", MF: "FR", MQ: "FR", NC: "FR", PF: "FR", PM: "FR",
+  RE: "FR", TF: "FR", WF: "FR", YT: "FR",
+  AS: "US", GU: "US", MP: "US", PR: "US", UM: "US", VI: "US",
+  AW: "NL", BQ: "NL", CW: "NL", SX: "NL",
+  CC: "AU", CX: "AU", HM: "AU", NF: "AU",
+  HK: "CN", MO: "CN",
+  BV: "NO", SJ: "NO",
+  AX: "FI",
+  EH: "MA",
 };
 
 /**
- * The ISO code a free-typed country stands for, or null when it says nothing
- * recognisable (« non précisé », blank). Two letters are read as a code.
+ * How to ask the map service about a country: the `countrycodes` it files the
+ * country under and, for a territory filed under its state, the territory's
+ * name to add to what is searched — « Saint-Denis » in France is a suburb of
+ * Paris, « Saint-Denis, Réunion » is the one meant. A reverse-geocoded pin is
+ * in the country when its code is `countrycodes`.
  */
-export function countryCodeFrom(text: string | null | undefined): string | null {
-  const key = (text ?? "")
+export function geocoderScope(
+  code: string,
+  locale: string
+): { countrycodes: string; suffix: string | null } {
+  const parent = isJobCountry(code) ? GEOCODER_PARENT[code] : undefined;
+  return parent
+    ? { countrycodes: parent.toLowerCase(), suffix: countryName(code, locale) }
+    : { countrycodes: code.toLowerCase(), suffix: null };
+}
+
+export interface CountryOption {
+  code: JobCountry;
+  name: string;
+}
+
+/**
+ * What the country picker lists, named in `locale`: the frequent fourteen in
+ * their own order, then every country and territory by name — the frequent
+ * ones included, so « Tous les pays » is all of them.
+ */
+export function countryOptions(locale: string): {
+  frequent: CountryOption[];
+  all: CountryOption[];
+} {
+  const option = (code: JobCountry) => ({ code, name: countryName(code, locale) });
+  const collator = new Intl.Collator(locale, { sensitivity: "base" });
+  return {
+    frequent: FREQUENT_COUNTRIES.map(option),
+    all: JOB_COUNTRIES.map(option).sort((a, b) => collator.compare(a.name, b.name)),
+  };
+}
+
+/** A name as compared: accents, case and punctuation aside. */
+export function countryNameKey(text: string | null | undefined): string {
+  return (text ?? "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/[^a-z]+/g, " ")
     .trim();
+}
+
+/**
+ * What people type that the runtime's French and English names do not cover:
+ * native names, abbreviations, old names and the parts of a country.
+ */
+const ALIASES: Record<string, JobCountry> = {
+  fra: "FR",
+  "republique francaise": "FR",
+  belgie: "BE",
+  belgien: "BE",
+  luxemburg: "LU",
+  "the netherlands": "NL",
+  nederland: "NL",
+  hollande: "NL",
+  holland: "NL",
+  deutschland: "DE",
+  schweiz: "CH",
+  svizzera: "CH",
+  osterreich: "AT",
+  italia: "IT",
+  espana: "ES",
+  polska: "PL",
+  "republique tcheque": "CZ",
+  "czech republic": "CZ",
+  cesko: "CZ",
+  uk: "GB",
+  "u k": "GB",
+  angleterre: "GB",
+  england: "GB",
+  ecosse: "GB",
+  scotland: "GB",
+  "pays de galles": "GB",
+  wales: "GB",
+  "irlande du nord": "GB",
+  "northern ireland": "GB",
+  "grande bretagne": "GB",
+  "great britain": "GB",
+  usa: "US",
+  "u s a": "US",
+  "united states of america": "US",
+  "etats unis d amerique": "US",
+  uae: "AE",
+  emirats: "AE",
+  "hong kong": "HK",
+  macao: "MO",
+  macau: "MO",
+  reunion: "RE",
+  "ile de la reunion": "RE",
+  birmanie: "MM",
+  burma: "MM",
+  "ivory coast": "CI",
+  "porto rico": "PR",
+  "puerto rico": "PR",
+  russia: "RU",
+  russie: "RU",
+  "south korea": "KR",
+  "coree du sud": "KR",
+  turkey: "TR",
+  turquie: "TR",
+  vatican: "VA",
+  palestine: "PS",
+};
+
+let namesTable: Map<string, JobCountry> | null = null;
+
+/**
+ * Every country's French and English name to its code, read once from the
+ * runtime's own table, with the aliases over them. French first: where the
+ * two languages give one spelling to two places, a French reader is believed.
+ */
+function countryNames(): Map<string, JobCountry> {
+  if (namesTable) return namesTable;
+  const table = new Map<string, JobCountry>();
+  for (const locale of ["fr", "en"]) {
+    for (const code of JOB_COUNTRIES) {
+      const key = countryNameKey(countryName(code, locale));
+      if (key.length > 2 && !table.has(key)) table.set(key, code);
+    }
+  }
+  for (const [alias, code] of Object.entries(ALIASES)) table.set(alias, code);
+  namesTable = table;
+  return table;
+}
+
+/**
+ * The ISO code a free-typed country stands for — its name in French or
+ * English, an alias, or the code itself — or null when it says nothing
+ * recognisable (« non précisé », blank, two letters nobody assigned).
+ */
+export function countryCodeFrom(text: string | null | undefined): JobCountry | null {
+  const key = countryNameKey(text);
   if (!key) return null;
-  if (NAMES[key]) return NAMES[key];
-  return /^[a-z]{2}$/.test(key) ? key.toUpperCase() : null;
+  const named = countryNames().get(key);
+  if (named) return named;
+  const code = key.toUpperCase();
+  return isJobCountry(code) ? code : null;
 }

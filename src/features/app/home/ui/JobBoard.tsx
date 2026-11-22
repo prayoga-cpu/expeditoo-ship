@@ -7,8 +7,6 @@ import {
   Map as MapIcon,
   PackageSearch,
   SlidersHorizontal,
-  Search,
-  X,
 } from "lucide-react";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -36,14 +34,14 @@ import { CenteredEmptyState } from "@/components/ui/centered-empty-state";
 import { JobCard } from "./JobCard";
 import { RouteSearchBar } from "./RouteSearchBar";
 import { BoardMap } from "./BoardMap";
-import { AvailabilityField } from "./AvailabilityField";
 import { useTranslations } from "next-intl";
 import { useJobBoard } from "../hooks/useJobBoard";
 import { useAuth } from "@/lib/auth-context";
 import { useActiveAccessMode } from "@/lib/use-active-access-mode";
 import { hasDriverAccess } from "@/lib/active-access";
 import Link from "next/link";
-import type { BoardJob, BoardPane, JobSort, SearchMode } from "../types";
+import { EMPTY_SEARCH, type SearchDraft } from "../hooks/useSearchDraft";
+import type { BoardJob, BoardPane, JobSort } from "../types";
 
 const SORTS: { value: JobSort; labelKey: string }[] = [
   { value: "created_desc", labelKey: "newest" },
@@ -88,9 +86,9 @@ export function JobBoard({ origin }: { origin?: "direct" | "expedion" } = {}) {
   // runs are one switch away.
   const showModeNotice = canBid && accessMode === "user" && qualifiedModes.includes("carrier");
 
-  // Which shape the location filter wears. A deep link carrying an arrival
-  // opens on the corridor it describes.
-  const [mode, setMode] = useState<SearchMode>(filters.to ? "route" : "around");
+  // The search card holds its own draft, seeded once. Clearing everything
+  // from outside the card — the empty state's button — remounts it.
+  const [searchKey, setSearchKey] = useState(0);
 
   // Desktop shows both halves side by side; a phone has room for one, so it
   // gets a switch rather than a squeezed map.
@@ -115,12 +113,31 @@ export function JobBoard({ origin }: { origin?: "direct" | "expedion" } = {}) {
     }
   };
 
-  const changeMode = (next: SearchMode) => {
-    setMode(next);
-    // "Autour de" has no arrival field, so leaving one behind would filter on
-    // a corridor the driver can no longer see — and étapes with nowhere to go
-    // describe no path.
-    if (next === "around" && filters.to) updateFilters({ to: null, via: [] });
+  // The sheet's badge counts what the sheet holds; the search card shows its
+  // own fields.
+  const sheetFilterCount = [
+    filters.minBudget,
+    filters.maxBudget,
+    filters.maxWeightKg,
+  ].filter((value) => value !== null).length;
+
+  /**
+   * « Rechercher » and « Effacer »: the card's fields, committed together.
+   * Sorting by distance needs a point to measure from, so it falls back to
+   * the newest when the search no longer names one.
+   */
+  const search = (next: SearchDraft) =>
+    updateFilters({
+      ...next,
+      sort:
+        !next.from && filters.sort === "distance_asc"
+          ? "created_desc"
+          : filters.sort,
+    });
+
+  const clearEverything = () => {
+    resetFilters();
+    setSearchKey((key) => key + 1);
   };
 
   // Distance only means something once there is a point to measure from, and
@@ -147,7 +164,7 @@ export function JobBoard({ origin }: { origin?: "direct" | "expedion" } = {}) {
         (shown until `xl`) sat over the last card and its « Faire une offre »
         on a tablet. The pane clears the nav itself.
       */}
-      <div className="w-full space-y-4 p-4 sm:p-6 lg:max-w-2xl lg:shrink-0 lg:overflow-y-auto lg:pb-[calc(88px_+_env(safe-area-inset-bottom))] xl:pb-6">
+      <div className="w-full space-y-4 p-4 sm:p-6 lg:max-w-2xl lg:shrink-0 lg:overflow-y-auto lg:pb-6">
       <header className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
         <p className="text-sm text-muted-foreground">
@@ -177,48 +194,23 @@ export function JobBoard({ origin }: { origin?: "direct" | "expedion" } = {}) {
       )}
 
       <RouteSearchBar
-        mode={mode}
-        onModeChange={changeMode}
+        key={searchKey}
         filters={filters}
-        onChange={updateFilters}
+        onSearch={search}
+        onClear={() => search(EMPTY_SEARCH)}
         onShowMap={() => changePane("map")}
       />
 
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <div className="relative sm:flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={filters.q}
-            onChange={(e) => updateFilters({ q: e.target.value })}
-            placeholder={t("search")}
-            className="pl-9"
-            aria-label={t("search")}
-          />
-          {filters.q && (
-            <button
-              onClick={() => updateFilters({ q: "" })}
-              aria-label={t("clearSearch")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
-        </div>
-
+      {/* What narrows the answer rather than asks the question: budget,
+          weight and the order. They apply as they change. */}
+      <div className="flex justify-end">
         <div className="flex gap-2">
-          <AvailabilityField
-            days={filters.days}
-            slots={filters.slots}
-            onChange={updateFilters}
-            className="min-w-0 flex-1 sm:flex-none"
-          />
-
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="outline" className="shrink-0">
+              <Button variant="outline" className="shrink-0" aria-label={t("filters")}>
                 <SlidersHorizontal className="h-4 w-4" />
-                {activeFilterCount > 0 && (
-                  <Badge className="ml-2 px-1.5">{activeFilterCount}</Badge>
+                {sheetFilterCount > 0 && (
+                  <Badge className="ml-2 px-1.5">{sheetFilterCount}</Badge>
                 )}
               </Button>
             </SheetTrigger>
@@ -277,7 +269,7 @@ export function JobBoard({ origin }: { origin?: "direct" | "expedion" } = {}) {
                   </p>
                 </div>
 
-                <Button variant="ghost" onClick={resetFilters} className="w-full">
+                <Button variant="ghost" onClick={clearEverything} className="w-full">
                   {t("clearFilters")}
                 </Button>
               </div>
@@ -331,7 +323,7 @@ export function JobBoard({ origin }: { origin?: "direct" | "expedion" } = {}) {
               first (no_dead_ends_spec.md §4). */}
           <div className="flex flex-wrap justify-center gap-2">
             <Button onClick={() => void refetch()}>{t("retry")}</Button>
-            <Button variant="outline" onClick={resetFilters}>
+            <Button variant="outline" onClick={clearEverything}>
               {t("clearFilters")}
             </Button>
           </div>
@@ -353,8 +345,12 @@ export function JobBoard({ origin }: { origin?: "direct" | "expedion" } = {}) {
           }
         >
           {(activeFilterCount > 0 || filters.q) && (
-            <Button variant="outline" onClick={resetFilters}>
-              {t("clearFilters")}
+            <Button
+              variant="outline"
+              onClick={clearEverything}
+              data-testid="board-empty-clear"
+            >
+              {t("clearSearch")}
             </Button>
           )}
         </CenteredEmptyState>

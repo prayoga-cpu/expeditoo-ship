@@ -173,6 +173,89 @@ describe("expedionEscalationService.escalate — postal codes abroad", () => {
   });
 });
 
+// 2.95.0: the delivery follows its own country's rule, the one listings have
+// had since 2.94.0 — strict for the fourteen whose format is known, optional
+// or free-form anywhere else. A paid quote for London or Hong Kong used to
+// read « postal code missing » for ever.
+describe("expedionEscalationService.escalate — delivery outside the frequent countries", () => {
+  const escalatedWith = async (over: Record<string, unknown>) => {
+    vi.mocked(expedionDal.getById).mockResolvedValue(paidQuote(over) as never);
+    await expedionEscalationService.escalate("q_1", {});
+    return vi.mocked(listingsService.createListing).mock.calls[0][1];
+  };
+
+  it("publishes a UK delivery with its code as written", async () => {
+    const payload = await escalatedWith({
+      deliveryCountry: "Royaume-Uni",
+      deliveryCity: "London",
+      deliveryPostalCode: " SW1A 1AA ",
+    });
+
+    expect(payload.dropoff.country).toBe("GB");
+    expect(payload.dropoff.postalCode).toBe("SW1A 1AA");
+  });
+
+  it.each([null, "", "   "])(
+    "publishes a delivery to a country with no postal codes (%j), stored as ''",
+    async (deliveryPostalCode) => {
+      const payload = await escalatedWith({
+        deliveryCountry: "Hong Kong",
+        deliveryCity: "Hong Kong",
+        deliveryPostalCode,
+      });
+
+      expect(payload.dropoff.country).toBe("HK");
+      expect(payload.dropoff.postalCode).toBe("");
+    }
+  );
+
+  it("still refuses a code no country writes", async () => {
+    vi.mocked(expedionDal.getById).mockResolvedValue(
+      paidQuote({
+        deliveryCountry: "Royaume-Uni",
+        deliveryPostalCode: "SW1A 1AA / flat 2, ring twice",
+      }) as never
+    );
+
+    await expect(
+      expedionEscalationService.escalate("q_1", {})
+    ).rejects.toMatchObject({ code: "ESCALATION_INCOMPLETE" });
+  });
+
+  it.each([
+    ["France", null],
+    ["France", "SW1A 1AA"],
+    ["Belgique", ""],
+    // Blank or unrecognised is read as France, and France needs its code.
+    [null, null],
+    ["non précisé", ""],
+  ])("keeps the strict rule for %j with %j", async (deliveryCountry, deliveryPostalCode) => {
+    vi.mocked(expedionDal.getById).mockResolvedValue(
+      paidQuote({ deliveryCountry, deliveryPostalCode }) as never
+    );
+
+    await expect(
+      expedionEscalationService.escalate("q_1", {})
+    ).rejects.toMatchObject({
+      code: "ESCALATION_INCOMPLETE",
+      message: expect.stringContaining("delivery postal code"),
+    });
+    expect(listingsService.createListing).not.toHaveBeenCalled();
+  });
+
+  it("never loosens the pickup, which is an auction house here", async () => {
+    vi.mocked(expedionDal.getById).mockResolvedValue(
+      paidQuote({ deliveryCountry: "Hong Kong", pickupPostalCode: null }) as never
+    );
+
+    await expect(
+      expedionEscalationService.escalate("q_1", {})
+    ).rejects.toMatchObject({
+      message: expect.stringContaining("pickup postal code"),
+    });
+  });
+});
+
 // cargo_packaging_services_spec.md §6: `isProtected` is a state set by the
 // Expedion form (protected or packed), so it maps onto the state field and its
 // absence onto the protection service — no longer onto "help loading".
@@ -227,6 +310,13 @@ describe("expedionEscalationService.escalate — auction house and country", () 
     ["france", "FR"],
     [null, "FR"],
     ["non précisé", "FR"],
+    // 2.94.0: any country's name, in French or English — not a short table.
+    ["Maroc", "MA"],
+    ["Japan", "JP"],
+    ["Royaume-Uni", "GB"],
+    ["Côte d'Ivoire", "CI"],
+    ["Nouvelle-Calédonie", "NC"],
+    ["XX", "FR"],
   ])("reads the delivery country %j as %s", async (deliveryCountry, code) => {
     const payload = await escalatedWith({ deliveryCountry });
 

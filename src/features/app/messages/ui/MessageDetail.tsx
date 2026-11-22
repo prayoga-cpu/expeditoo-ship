@@ -71,6 +71,9 @@ export function MessageDetail({
   // The offer dialog, held here so a refused card can open the composer's own.
   const [offering, setOffering] = useState(false);
   const offerContext = conversation.offerContext;
+  // What a bubble's avatar is called: the pseudo when they have one (#32).
+  const recipientLabel =
+    conversation.recipient.displayName ?? conversation.recipient.name;
   const ownOffers = messages.filter((m) => m.sentByMe && m.offer);
   const latestOwnOfferId = ownOffers[ownOffers.length - 1]?.offer?.id;
   // The viewer's live bid is one the requester refused here: its card carries
@@ -177,8 +180,18 @@ export function MessageDetail({
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <h1 className="font-bold text-foreground truncate">
-              {conversation.recipient.name}
+            {/* The full name stays here, with the pseudo beside it: this is a
+                conversation with a person, and staff need the name (#32). */}
+            <h1 className="flex items-baseline gap-2 min-w-0 font-bold text-foreground">
+              <span className="truncate">{conversation.recipient.name}</span>
+              {conversation.recipient.pseudo && (
+                <span
+                  data-testid="recipient-pseudo"
+                  className="shrink-0 max-w-[45%] truncate text-sm font-normal text-muted-foreground"
+                >
+                  {conversation.recipient.pseudo}
+                </span>
+              )}
             </h1>
             <p className="text-xs text-muted-foreground truncate">
               {conversation.recipient.rating !== undefined ? (
@@ -211,7 +224,7 @@ export function MessageDetail({
               isOwn={message.sentByMe}
               timestamp={message.timestamp}
               avatar={message.senderAvatar ?? conversation.recipient.avatar}
-              name={message.senderName ?? conversation.recipient.name}
+              name={message.senderName ?? recipientLabel}
               initials={
                 message.senderName
                   ? message.senderInitials
@@ -234,7 +247,7 @@ export function MessageDetail({
               isOwn={message.sentByMe}
               timestamp={message.timestamp}
               avatar={message.senderAvatar ?? conversation.recipient.avatar}
-              name={message.senderName ?? conversation.recipient.name}
+              name={message.senderName ?? recipientLabel}
               initials={
                 message.senderName
                   ? message.senderInitials

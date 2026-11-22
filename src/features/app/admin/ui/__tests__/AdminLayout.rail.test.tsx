@@ -12,6 +12,10 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/admin/users",
   useRouter: () => ({ push: vi.fn() }),
 }));
+// The sidebar shows what the session's roles may open; these tests are an admin's.
+vi.mock("@/lib/auth-context", () => ({
+  useAuth: () => ({ user: { roles: ["shipper", "admin"] }, isLoading: false }),
+}));
 vi.mock("../../hooks/useAdminNavCounts", () => ({
   useAdminNavCounts: () => ({ users: 7 }),
 }));

@@ -3,7 +3,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
-import { useDebounce } from "use-debounce";
 import { listingsApi } from "@/features/app/listing/api/listings.api";
 import {
   isAvailabilityDay,
@@ -57,12 +56,11 @@ export function useJobBoard(options: { origin?: "direct" | "expedion" } = {}) {
   );
   const [page, setPage] = useState(1);
 
-  // Typing should not fire a request per keystroke.
-  const [debouncedQuery] = useDebounce(filters.q, 350);
-
   const params = useMemo(
     () => ({
-      q: debouncedQuery || undefined,
+      // « Titre de l'annonce ». Committed by the card's « Rechercher », so
+      // there is no keystroke to debounce (board_route_search_spec.md §12).
+      q: filters.q.trim() || undefined,
       origin: options.origin,
       categoryId: filters.categoryId ?? undefined,
       minBudget: filters.minBudget != null ? filters.minBudget * 100 : undefined,
@@ -92,7 +90,7 @@ export function useJobBoard(options: { origin?: "direct" | "expedion" } = {}) {
       page,
       limit: 20,
     }),
-    [debouncedQuery, filters, page, options.origin]
+    [filters, page, options.origin]
   );
 
   const query = useQuery({

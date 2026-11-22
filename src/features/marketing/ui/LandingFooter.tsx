@@ -15,16 +15,16 @@ const HEADING = "text-[13px] font-medium";
  * `mailto:`; and "Legal notice" opened the terms of service, which is a
  * different document that French law does not accept in its place. Every entry
  * now resolves to the page it names — see
- * docs/specs/marketing_footer_pages_spec.md §1.
+ * docs/specs/marketing_footer_pages_spec.md §1. « Courses ouvertes » and
+ * « Plateforme » went in 2.95.0: their sections left the landing page, and an
+ * anchor to a missing id scrolls nowhere.
  */
 const COLUMNS = [
   {
     title: "carriers",
     links: [
-      { key: "openJobs", href: "/#courses" },
       { key: "howItWorks", href: "/#how" },
       { key: "verification", href: "/verification" },
-      { key: "platform", href: "/#platform" },
     ],
   },
   {

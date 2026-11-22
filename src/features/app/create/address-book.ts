@@ -1,6 +1,6 @@
 import type { UseFormSetValue } from "react-hook-form";
 import type { Address } from "@/features/app/profile/api/addresses.api";
-import { countryCodeFrom, DEFAULT_COUNTRY, isJobCountry, type JobCountry } from "@/lib/countries";
+import { countryCodeFrom, DEFAULT_COUNTRY, type JobCountry } from "@/lib/countries";
 import type { JobFormValues } from "./schemas";
 
 export type Side = "pickup" | "dropoff";
@@ -41,12 +41,12 @@ export function matchSavedAddress(
 /**
  * The country a saved address is in. The profile form stores a name
  * (« France », « Belgique »), `/create` the name in the requester's language;
- * either reads back as its code, and anything unrecognised as France
+ * either reads back as its code — any country's name, in French or English —
+ * and anything unrecognised as France
  * (client_feedback_2026_10_31_spec.md §6.5).
  */
 export function savedAddressCountry(address: Pick<Address, "country">): JobCountry {
-  const code = countryCodeFrom(address.country);
-  return isJobCountry(code) ? code : DEFAULT_COUNTRY;
+  return countryCodeFrom(address.country) ?? DEFAULT_COUNTRY;
 }
 
 /** One group of the « Carnet d'adresses » list (spec §1.2). */

@@ -10,6 +10,7 @@ import { notificationsService } from "@/server/services/notifications.service";
 import { emailService } from "@/server/services/email.service";
 import { last4 } from "@/lib/french-identifiers";
 import { mayTakeWork } from "@/lib/carrier-availability";
+import { carrierKindLabel, type CarrierKind } from "@/lib/carrier-kind";
 import {
   REQUIRED_DOCUMENT_KINDS,
   EXPIRING_DOCUMENT_KINDS,
@@ -477,13 +478,7 @@ export const carrierService = {
     });
 
     if (!existing || existing.status !== "approved") {
-      await notifyCarrier(
-        userId,
-        role === "driver" ? "You are now an Expeditop driver" : "Carrier application approved",
-        role === "driver"
-          ? "Expeditop will assign you runs."
-          : "You can now bid on transport jobs."
-      );
+      await congratulateOnApproval(userId, kind);
     }
   },
 
@@ -663,13 +658,7 @@ export const carrierService = {
       return updated;
     });
 
-    await notifyCarrier(
-      carrier.userId,
-      "Carrier application approved",
-      carrier.kind === "private"
-        ? "You are now an Expeditop driver: Expeditop will assign you runs."
-        : "You can now bid on transport jobs."
-    );
+    await congratulateOnApproval(carrier.userId, carrier.kind);
 
     return approved;
   },
@@ -684,11 +673,7 @@ export const carrierService = {
       approvedBy: adminId,
     });
 
-    await notifyCarrier(
-      carrier.userId,
-      "Carrier application rejected",
-      reason
-    );
+    await notifyCarrier(carrier.userId, "Dossier chauffeur refusé", reason);
 
     return rejected;
   },
@@ -706,7 +691,7 @@ export const carrierService = {
       suspensionReason: reason,
     });
 
-    await notifyCarrier(carrier.userId, "Carrier account suspended", reason);
+    await notifyCarrier(carrier.userId, "Compte chauffeur suspendu", reason);
 
     return suspended;
   },
@@ -747,8 +732,8 @@ export const carrierService = {
     if (actor.userId !== carrier.userId) {
       await notifyCarrier(
         carrier.userId,
-        "Marked as away",
-        "An administrator marked your account as away: you will not be offered new jobs until it ends."
+        "Compte marqué absent",
+        "Un administrateur a marqué votre compte comme absent : aucune nouvelle course ne vous sera proposée jusqu'à votre retour."
       );
     }
     return updated;
@@ -788,8 +773,8 @@ export const carrierService = {
     if (actor.userId !== carrier.userId) {
       await notifyCarrier(
         carrier.userId,
-        "Account deregistered",
-        reason ?? "An administrator closed your driver account."
+        "Compte chauffeur désinscrit",
+        reason ?? "Un administrateur a fermé votre compte chauffeur."
       );
     }
     return updated;
@@ -873,35 +858,34 @@ export const carrierService = {
 
 /**
  * Every admin hears that a driver application waits for them, in the app and
- * by email (client_feedback_2026_10_29_spec.md §REQ-07). Every application,
- * not only « professional » ones: every applicant today is a SIRET holder,
- * and the professional / private split waits on REQ-01.
+ * by email (client_feedback_2026_10_29_spec.md §REQ-07), for both kinds.
  *
- * The email reaches nobody but the Resend account's own address until a
- * sending domain is verified (C4); the in-app notification reaches everyone.
+ * Both lead with the type — « Particulier (interne) » or « Professionnel » —
+ * and open the file itself, not the list it sits in: an in-house applicant can
+ * do nothing until somebody approves them, so the shortest path to that click
+ * is the point (driver_types_spec.md §3).
  */
 async function alertAdminsOfApplication(carrier: Carrier) {
   const admins = (await usersDal.getUsersByRole("admin")).filter(Boolean);
   const applicant = await usersDal.getUserById(carrier.userId);
   const applicantName = applicant?.name || carrier.companyName;
-  const base = appUrl();
-  const reviewUrl = `${base}/admin/drivers?tab=applications`;
+  const filePath = `/admin/drivers?tab=applications&file=${encodeURIComponent(carrier.id)}`;
 
   await Promise.allSettled(
     admins.flatMap((admin) => [
       notificationsService.createNotification({
         userId: admin.id,
         type: "carrier_application",
-        title: "New driver application",
+        title: `Nouveau dossier chauffeur — ${carrierKindLabel(carrier.kind)}`,
         message: `${applicantName} · ${carrier.companyName} · ${carrier.city}`,
-        linkUrl: "/admin/drivers?tab=applications",
+        linkUrl: filePath,
       }),
       emailService.sendDriverApplicationSubmittedEmail(admin.email, {
         applicantName,
         companyName: carrier.companyName,
         city: carrier.city,
-        kindLabel: carrier.kind === "private" ? "Chauffeur interne" : "Transporteur",
-        reviewUrl,
+        kind: carrier.kind,
+        reviewUrl: `${appUrl()}${filePath}`,
       }),
     ])
   );
@@ -944,14 +928,58 @@ async function tellApplicantWhatIsMissing(carrier: Carrier) {
   ]);
 }
 
-async function notifyCarrier(userId: string, title: string, message: string) {
+/**
+ * What an approved driver is told, by kind: an in-house driver waits for
+ * Expeditop to assign runs and finds them under « Livraisons »; an outside
+ * carrier reads the missions board and makes offers. `path` is where the
+ * notification and the mail's button lead.
+ */
+const APPROVAL_NOTICE: Record<CarrierKind, { title: string; message: string; path: string }> = {
+  private: {
+    title: "Félicitations, vous êtes chauffeur Expeditop",
+    message:
+      "Votre dossier est validé. Expeditop vous attribuera vos courses : retrouvez-les dans « Livraisons ».",
+    path: "/driver/shipments",
+  },
+  professional: {
+    title: "Félicitations, votre dossier est approuvé",
+    message: "Vous pouvez dès maintenant consulter les missions et faire vos offres.",
+    path: "/expedion",
+  },
+};
+
+/**
+ * The good news, in the app and by email. The decision is already committed
+ * when this runs, so neither channel may undo it: the notification swallows
+ * its own failure and the mail has its own try — an approval never fails
+ * because Resend did.
+ */
+async function congratulateOnApproval(userId: string, kind: CarrierKind) {
+  // The column is NOT NULL with a default; a row read without it is still a
+  // professional's, and nothing here may throw after the commit.
+  const notice = APPROVAL_NOTICE[kind] ?? APPROVAL_NOTICE.professional;
+  await notifyCarrier(userId, notice.title, notice.message, notice.path);
+
+  try {
+    const account = await usersDal.getUserById(userId);
+    if (!account?.email) return;
+    await emailService.sendDriverApprovedEmail(account.email, {
+      name: account.name || undefined,
+      kind: kind ?? "professional",
+      actionUrl: `${appUrl()}${notice.path}`,
+    });
+  } catch (e) {
+    console.error("driver approval email failed", e);
+  }
+}
+
+async function notifyCarrier(
+  userId: string,
+  title: string,
+  message: string,
+  linkUrl = "/carrier/application"
+) {
   await notificationsService
-    .createNotification({
-      userId,
-      type: "carrier_application",
-      title,
-      message,
-      linkUrl: "/carrier/application",
-    })
+    .createNotification({ userId, type: "carrier_application", title, message, linkUrl })
     .catch((e) => console.error("carrier notification failed", e));
 }

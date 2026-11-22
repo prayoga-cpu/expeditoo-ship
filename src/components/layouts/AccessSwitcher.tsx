@@ -16,18 +16,13 @@ import {
 import { useCarrierApplication } from "@/features/app/carrier/hooks/useCarrier";
 import { DriverOnboardingDialog } from "@/features/app/carrier/ui/DriverOnboardingDialog";
 import { useAuth } from "@/lib/auth-context";
-import { type AccessMode } from "@/lib/active-access";
+import { type AccessMode, modeLanding } from "@/lib/active-access";
 import { useActiveAccessMode } from "@/lib/use-active-access-mode";
 import { cn } from "@/lib/utils";
 
-/** Where switching to a mode lands. Both non-admin modes share `/home` —
- * which nav items render there is the switcher's business, not the route's;
- * see MainLayout.tsx and BottomNav.tsx. */
-const MODE_LANDING: Record<AccessMode, string> = {
-  user: "/home",
-  carrier: "/home",
-  admin: "/admin/expedion",
-};
+// Where switching to a mode lands is `modeLanding` (active-access.ts): both
+// non-admin modes share `/home`, and Admin opens on the first back-office
+// page this account's roles may see — `/admin/expedion` only for an admin.
 
 /** Loud for staff and driving access, quiet for the default — same intent as
  * the badge this replaces: an admin who forgot which access they are
@@ -100,7 +95,7 @@ export function AccessSwitcher({
 
   const handleSelect = (next: AccessMode) => {
     setMode(next);
-    router.push(MODE_LANDING[next]);
+    router.push(modeLanding(next, user?.roles ?? []));
   };
 
   // The dialog sits beside the menu, not inside it, and opens from

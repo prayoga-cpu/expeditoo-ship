@@ -13,11 +13,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Globe, Bell, Trash2, ArrowLeft, SunMoon } from "lucide-react";
+import { Globe, Bell, Lock, Trash2, ArrowLeft, SunMoon } from "lucide-react";
 
 import Link from "next/link";
 import { useSettings } from "../hooks/useSettings";
 import { useTranslations } from "next-intl";
+import { mailbox } from "@/lib/app-url";
 import { useLocale } from "@/components/providers/LocaleProvider";
 import { locales, localeNames } from "@/i18n/config";
 import { FlagComponents } from "@/components/ui/flags";
@@ -27,20 +28,42 @@ import { FlagComponents } from "@/components/ui/flags";
  * category actually has a preference key for. Reused across categories
  * rather than one-off per channel, since a category can carry up to two of
  * these (see notification_channel_settings_spec.md §2).
+ *
+ * A channel that cannot be switched off passes `lockedReason`: it is drawn as
+ * a padlock with the reason beside it, not as a greyed checkbox that looks
+ * like a control which has stopped answering.
  */
 function NotificationChannelRow({
   id,
   label,
   checked,
-  disabled,
+  lockedReason,
   onCheckedChange,
 }: {
   id: string;
   label: string;
   checked: boolean;
-  disabled?: boolean;
+  lockedReason?: string;
   onCheckedChange?: (checked: boolean) => void;
 }) {
+  if (lockedReason) {
+    return (
+      <div
+        data-testid={id}
+        className="flex items-start gap-3 py-2 first:pt-0 last:pb-0"
+      >
+        <Lock
+          aria-hidden
+          className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground"
+        />
+        <div className="space-y-0.5">
+          <p className="text-sm text-foreground">{label}</p>
+          <p className="text-xs text-muted-foreground">{lockedReason}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <label
       htmlFor={id}
@@ -49,7 +72,6 @@ function NotificationChannelRow({
       <Checkbox
         id={id}
         checked={checked}
-        disabled={disabled}
         onCheckedChange={
           onCheckedChange
             ? (value) => onCheckedChange(value as boolean)
@@ -261,7 +283,7 @@ export function Settings() {
                 id="notif-account-email"
                 label={t("notifications.channels.email")}
                 checked
-                disabled
+                lockedReason={t("notifications.accountSecurity.locked")}
               />
             </NotificationCategory>
           </div>
@@ -295,8 +317,20 @@ export function Settings() {
               <AlertDialogCancel className="rounded-lg">
                 {t("dangerZone.deleteDialog.cancel")}
               </AlertDialogCancel>
-              <AlertDialogAction className="rounded-lg bg-destructive hover:bg-destructive/90">
-                {t("dangerZone.deleteDialog.delete")}
+              <AlertDialogAction
+                asChild
+                className="rounded-lg bg-destructive hover:bg-destructive/90"
+              >
+                {/* There is no self-service deletion: it touches payments,
+                    invoices and open jobs, so the team does it after a check.
+                    The button used to close the dialog and delete nothing. */}
+                <a
+                  href={`mailto:${mailbox("support")}?subject=${encodeURIComponent(
+                    t("dangerZone.deleteDialog.mailSubject")
+                  )}&body=${encodeURIComponent(t("dangerZone.deleteDialog.mailBody"))}`}
+                >
+                  {t("dangerZone.deleteDialog.delete")}
+                </a>
               </AlertDialogAction>
             </div>
           </AlertDialogContent>

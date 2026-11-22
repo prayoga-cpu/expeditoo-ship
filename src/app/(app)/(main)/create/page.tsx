@@ -20,18 +20,30 @@ const BUDGET_STEP = 3;
  * sent from here — so the requester owns it and chooses which carrier's offer
  * to accept, rather than an operator awarding it for them. The query is read
  * here, on the server, so no client component needs `useSearchParams` and the
- * Suspense boundary it would demand.
+ * Suspense boundary it would demand. Nobody reaches the form without a
+ * session.
  */
 export default async function CreateJobPage({ searchParams }: PageProps) {
   const { draft, step, publish, type } = await searchParams;
-  if (!draft) return <NewRequestForm kind={type === "moving" ? "moving" : "items"} />;
 
+  // `/create` is not in the proxy's protected list, and a request can only be
+  // posted with a session (`POST /api/listings`). Without this a signed-out
+  // visitor was handed the whole form — five steps, photos included — and
+  // lost it to a 401 on « Publier ». The way back is the whole link:
+  // `?type=moving`, and « Publier maintenant »'s Budget step on a draft.
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) {
-    // The whole way back, « Publier maintenant »'s Budget step included.
-    const back = new URLSearchParams({ draft, ...(step && { step }), ...(publish && { publish }) });
-    redirect(`/signin?callbackUrl=${encodeURIComponent(`/create?${back}`)}`);
+    const back = new URLSearchParams({
+      ...(draft && { draft }),
+      ...(step && { step }),
+      ...(publish && { publish }),
+      ...(type && { type }),
+    }).toString();
+    const target = back ? `/create?${back}` : "/create";
+    redirect(`/signin?callbackUrl=${encodeURIComponent(target)}`);
   }
+
+  if (!draft) return <NewRequestForm kind={type === "moving" ? "moving" : "items"} />;
 
   return (
     <DraftForm

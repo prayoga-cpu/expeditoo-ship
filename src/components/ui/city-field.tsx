@@ -7,7 +7,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { LottieLoader } from "@/components/ui/lottie-loader";
-import { DEFAULT_COUNTRY, JOB_COUNTRIES, countryName } from "@/lib/countries";
+import { DEFAULT_COUNTRY, countryName } from "@/lib/countries";
 import { searchAddress } from "@/lib/geocoding";
 
 /** A place chosen from the suggestions — a name and the coordinates behind it. */
@@ -16,17 +16,6 @@ export interface CityValue {
   lat: number;
   lng: number;
 }
-
-/**
- * Where a town is looked for: every country a job can start or end in, as
- * Nominatim's `countrycodes`. Derived from the one list (`countries.ts`), so a
- * country added there is searchable here the same day. It was France alone,
- * and « Bruxelles » answered with French hamlets while the board carried jobs
- * to Belgium.
- */
-export const CITY_SEARCH_COUNTRIES = JOB_COUNTRIES.map((code) =>
-  code.toLowerCase()
-).join(",");
 
 /** A suggestion also knows its country; the picked value does not need to. */
 interface Suggestion extends CityValue {
@@ -129,7 +118,11 @@ export function CityField({
       timeoutRef.current = setTimeout(async () => {
         setIsSearching(true);
         try {
-          const found = await searchAddress(query, CITY_SEARCH_COUNTRIES, 5);
+          // The whole world: a job can start or end in any country, so the
+          // board is searched wherever its jobs are. It was France alone,
+          // then fourteen countries; the badge beside a suggestion is what
+          // tells « Bruxelles, Belgique » from a French hamlet of that name.
+          const found = await searchAddress(query, null, 5);
           setResults(
             found.map((result) => ({
               label: result.place_name,

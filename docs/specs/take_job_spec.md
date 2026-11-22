@@ -139,7 +139,9 @@ requester's own gate instead of awarding the job.
 
 | Viewer | Direct job | Escalated job |
 |---|---|---|
-| signed out, the job's owner, or the job not `open` | nothing | nothing |
+| signed out, job `open` | `SignedOutCard` → `/signin?callbackUrl=/listing/<id>` (2.95.0: the page is reachable without a session and used to end with nothing to press) | same |
+| the job's owner, job `open` | `OwnJobCard` | same |
+| the job not `open` | nothing | nothing |
 | no `carrier` role | `BecomeCarrierCard` | same |
 | a submit refused `CARRIER_NOT_APPROVED` | `NotApprovedCard` | same |
 | carrier | **`SubmitOfferForm` only** | `TakeJobPanel`, then `SubmitOfferForm` |

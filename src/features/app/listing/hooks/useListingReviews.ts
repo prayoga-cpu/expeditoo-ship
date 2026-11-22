@@ -36,12 +36,11 @@ export function useListingReviews(listingId: string) {
       author: review.author.name,
       authorImage: review.author.image,
       rating: review.rating,
-      title: "Review", // Reviews don't necessarily have titles in DB, using generic
+      title: "",
       content: review.comment || "",
-      timestamp: new Date(review.createdAt).toLocaleDateString(), // Simple formatting
-      type: "buyer" as const, // For listing reviews, usually buyers reviewing items. 
-      // Logic can be refined based on role if needed (e.g. if we show Seller reviews here too)
-      helpful: 0,
+      timestamp: new Date(review.createdAt).toLocaleDateString(),
+      // The author's side, flipped: who the review is about.
+      type: review.role === "shipper" ? ("carrier" as const) : ("requester" as const),
     }));
   }, [data]);
 

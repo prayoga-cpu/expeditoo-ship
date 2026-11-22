@@ -38,6 +38,7 @@ import {
   Navigation,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { hasAdminAccess, modeLanding } from "@/lib/active-access";
 import { useActiveAccessMode } from "@/lib/use-active-access-mode";
 import { useApplicationNav } from "@/lib/use-application-nav";
 import { useCarrierApplication } from "@/features/app/carrier/hooks/useCarrier";
@@ -87,7 +88,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   const tGroups = useTranslations("common.navigation.groups");
   const { user } = useAuth();
   const roles = user?.roles ?? [];
-  const isAdmin = roles.includes("admin");
+  const hasBackOffice = hasAdminAccess(roles);
   const hasDriverRole = roles.includes("driver") || roles.includes("carrier");
   const { mode } = useActiveAccessMode();
   const applicationNav = useApplicationNav();
@@ -107,9 +108,10 @@ export function MainLayout({ children }: MainLayoutProps) {
   // explicit switcher click already lands here correctly (crossing into
   // `/admin/*` is always a real layout remount); this covers the stale/
   // defaulted-mode case that click doesn't.
+  const adminLanding = modeLanding("admin", roles);
   useEffect(() => {
-    if (mode === "admin") router.replace("/admin/expedion");
-  }, [mode, router]);
+    if (mode === "admin") router.replace(adminLanding);
+  }, [mode, router, adminLanding]);
 
   // No sidebar, no flash of the wrong nav — just wait out the redirect above.
   if (mode === "admin") return <PageLoader />;
@@ -221,10 +223,10 @@ export function MainLayout({ children }: MainLayoutProps) {
     // type the URL to return. Roles come from the session (customSession in
     // auth.ts reads user_roles per request), so this follows a revoked role
     // without a round trip of its own.
-    ...(isAdmin
+    ...(hasBackOffice
       ? [
           {
-            href: "/admin/expedion",
+            href: modeLanding("admin", roles),
             label: t("adminPanel"),
             icon: Shield,
             // Marked out from the ordinary destinations: this one leaves the

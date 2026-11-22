@@ -7,6 +7,10 @@ import en from "../../../../../../messages/en.json";
 import { AdminBottomNav } from "../AdminBottomNav";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/admin/expedion" }));
+// The bar shows what the session's roles may open; these tests are an admin's.
+vi.mock("@/lib/auth-context", () => ({
+  useAuth: () => ({ user: { roles: ["shipper", "admin"] }, isLoading: false }),
+}));
 vi.mock("../../hooks/useAdminNavCounts", () => ({ useAdminNavCounts: () => ({}) }));
 Element.prototype.scrollTo ??= () => {};
 

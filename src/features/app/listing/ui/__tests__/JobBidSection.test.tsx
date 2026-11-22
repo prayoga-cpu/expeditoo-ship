@@ -161,6 +161,27 @@ describe("JobBidSection — nobody is left with a page that ends in silence", ()
     expect(container.querySelector("[data-testid]")).toBeNull();
   });
 
+  // 2.95.0: `/listing/[id]` is reachable without a session (it is not in the
+  // proxy's protected list) and shows the public view. Read by its link, not
+  // its copy, so the suite does not depend on the message catalogue.
+  it("sends a signed-out visitor to sign in and back to this job", () => {
+    auth.user = null;
+    const container = text(JOB, null);
+
+    const link = container.querySelector("a");
+    expect(link).not.toBeNull();
+    const url = new URL(link!.getAttribute("href")!, "https://expeditop.test");
+    expect(url.pathname).toBe("/signin");
+    expect(url.searchParams.get("callbackUrl")).toBe("/listing/job_1");
+    expect(container.querySelector("[data-testid]")).toBeNull();
+  });
+
+  it("offers a signed-out visitor nothing on a job that is no longer open", () => {
+    auth.user = null;
+
+    expect(text({ ...JOB, status: "awarded" }, null)).toBeEmptyDOMElement();
+  });
+
   it("still gives a carrier the offer form", () => {
     auth.user = { roles: ["carrier"] };
 
@@ -174,8 +195,5 @@ describe("JobBidSection — nobody is left with a page that ends in silence", ()
     expect(container).toHaveTextContent("Devenir transporteur");
   });
 
-  it("shows a signed-out visitor nothing", () => {
-    expect(text(JOB, null)).toBeEmptyDOMElement();
-  });
 });
 

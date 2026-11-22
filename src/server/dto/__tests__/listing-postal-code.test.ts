@@ -10,13 +10,19 @@ import { createListingSchema } from "../listings.dto";
  * Only the postal code's own issues are read, so the test does not depend on
  * the rest of a listing payload staying valid as the DTO grows.
  */
-const issuesAt = (field: string, postalCode: string, country?: string) => {
+const issuesAt = (
+  field: string,
+  postalCode: string,
+  country?: string,
+  pin?: { lat: number; lng: number }
+) => {
   const result = createListingSchema.safeParse({
     dropoff: {
       address: "Place du Roi Baudouin",
       city: "Bruxelles",
       postalCode,
       ...(country && { country }),
+      ...pin,
       locationType: "house",
     },
   });
@@ -57,7 +63,56 @@ describe("createListingSchema — postal codes", () => {
     expect(postalIssues(code, country)).toEqual(["INVALID_POSTAL_CODE"]);
   });
 
-  it("refuses a country a request cannot be posted to", () => {
-    expect(issuesAt("country", "10001", "US")).toEqual(["UNSUPPORTED_COUNTRY"]);
+  it("requires one where the country's format is known", () => {
+    expect(postalIssues("")).toEqual(["INVALID_POSTAL_CODE"]);
+    expect(postalIssues("   ", "FR")).toEqual(["INVALID_POSTAL_CODE"]);
+    expect(postalIssues("", "BE")).toEqual(["INVALID_POSTAL_CODE"]);
+  });
+});
+
+/**
+ * Since 2.94.0 a request can be anywhere (postal_codes_abroad_spec.md §5): the
+ * fourteen detailed countries above keep their rule, every other country and
+ * territory takes a postal code of any usual shape, or none.
+ */
+describe("createListingSchema — every other country", () => {
+  it.each([
+    ["10001", "US"],
+    ["SW1A 1AA", "GB"],
+    ["K1A 0B1", "CA"],
+    ["100-0001", "JP"],
+    ["20250", "MA"],
+    ["97400", "RE"],
+    ["", "AE"],
+    ["   ", "HK"],
+    ["", "SN"],
+  ])("accepts %j in %s", (code, country) => {
+    expect(postalIssues(code, country)).toEqual([]);
+    expect(issuesAt("country", code, country)).toEqual([]);
+  });
+
+  it.each([
+    ["1", "US"],
+    ["1234567890123", "US"],
+    ["10001!", "US"],
+  ])("refuses %j in %s", (code, country) => {
+    expect(postalIssues(code, country)).toContain("INVALID_POSTAL_CODE");
+  });
+
+  it("is not held to France's five digits", () => {
+    expect(postalIssues("1000", "US")).toEqual([]);
+  });
+
+  it("refuses a code nobody assigned, and a name where a code belongs", () => {
+    expect(issuesAt("country", "10001", "XX")).toEqual(["UNSUPPORTED_COUNTRY"]);
+    expect(issuesAt("country", "10001", "us")).toContain("UNSUPPORTED_COUNTRY");
+    expect(issuesAt("country", "10001", "Maroc")).toContain("UNSUPPORTED_COUNTRY");
+  });
+
+  it("has no box to refuse a pin with — a detailed country still has", () => {
+    const tokyo = { lat: 35.68, lng: 139.69 };
+    expect(issuesAt("lat", "100-0001", "JP", tokyo)).toEqual([]);
+    expect(issuesAt("lat", "75011", "FR", tokyo)).toEqual(["LOCATION_OUT_OF_COUNTRY"]);
+    expect(issuesAt("lat", "75011", undefined, tokyo)).toEqual(["LOCATION_OUT_OF_COUNTRY"]);
   });
 });

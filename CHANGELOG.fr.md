@@ -18,6 +18,77 @@ L'historique antérieur à la `2.0.0` appartient à la place de marché de biens
 la v1 et n'est pas conservé : la première version ci-dessous est le commit qui a
 lancé le virage vers le transport.
 
+## [2.95.0] - 2026-11-22 · fix
+
+Ce que l'inventaire page par page a révélé, corrigé.
+
+- **Les opérateurs, le support et la finance peuvent ouvrir le back-office.**
+  Jusqu'ici seul un administrateur le pouvait ; les autres se voyaient proposer
+  « Admin » puis étaient renvoyés à l'accueil. Chacun arrive désormais sur les
+  pages que son rôle autorise, et ne voit que celles-là. Le support peut ouvrir
+  et répondre à une conversation de support.
+- **Un visiteur non connecté sur « Demander un transport »** est invité à se
+  connecter et revient ensuite au formulaire, au lieu de remplir cinq étapes et
+  d'échouer à la fin. Sur la page d'une demande, un visiteur non connecté se voit
+  proposer un bouton « Connectez-vous pour faire une offre ».
+- **Les notifications** s'affichent dans votre langue, nomment chaque type de
+  notification et ouvrent la bonne page.
+- **Les pages d'aide disent vrai.** Les numéros de téléphone inventés ont
+  disparu, et les réponses décrivent ce que fait réellement la plateforme : une
+  demande, des offres, votre choix, le paiement à l'acceptation, des photos au
+  retrait et à la livraison.
+- **Les avis** se classent « En tant que demandeur » et « En tant que
+  transporteur » ; les boutons « Utile » et « Signaler », qui ne faisaient
+  rien, ont disparu.
+- **« Confirmer la livraison »** remplace « Marquer livrée sans photo » : une
+  livraison exige toujours sa photo, et le bouton le dit désormais.
+- **Supprimer une conversation** dispose d'un bouton sur ordinateur, et non plus
+  seulement d'un balayage.
+- **Les notifications « Compte & Sécurité »** s'affichent comme toujours
+  actives, avec la raison, au lieu d'un interrupteur qui ne faisait rien.
+- **Un devis payé livré à l'étranger** peut être publié même quand le pays n'a
+  pas de code postal de 4 à 6 chiffres (par exemple « SW1A 1AA »).
+- **Se connecter vous ramène** à la page que vous vouliez ouvrir, comme le
+  formulaire de demande ou une demande sur laquelle vous vouliez faire une offre,
+  au lieu de la page d'accueil.
+- **« Supprimer mon compte »** dit désormais ce qui se passe : il ouvre un
+  message à l'équipe, qui supprime le compte après vérification. Le bouton de
+  confirmation se fermait et ne supprimait rien.
+- L'en-tête et le pied de page ne renvoient plus vers des sections qui
+  n'existent pas.
+
+## [2.94.0] - 2026-11-22 · feat
+
+Les retours du client du 19 novembre, les points restés ouverts.
+
+- **Devenir chauffeur commence par un choix.** Le dossier s'ouvre sur deux
+  options : « Particulier — chauffeur interne Expeditop » (un formulaire court,
+  sans société ni documents) ou « Professionnel — transporteur ». Un chauffeur
+  interne reste validé par une personne d'Expeditop, et il en est informé.
+- **Les chauffeurs sont félicités quand leur dossier est approuvé**, par e-mail
+  et dans l'application, en français, avec un bouton vers leur espace de travail.
+- **Les professionnels étrangers peuvent s'inscrire.** Un numéro d'entreprise
+  qui n'est pas un SIRET, un numéro de téléphone, un code postal, un numéro de
+  TVA et une plaque d'immatriculation étrangers sont tous acceptés.
+- **Opérateurs : le type de chauffeur passe en premier.** L'e-mail d'alerte
+  d'un nouveau dossier indique « Particulier (interne) » ou « Professionnel »
+  dans son objet et ouvre directement le dossier ; la page des chauffeurs
+  emploie les deux mêmes mots.
+- **Tous les pays du monde** peuvent être choisis pour un retrait ou une
+  livraison, dans une liste où l'on peut chercher. Hors des quatorze pays
+  habituels, le code postal est facultatif.
+- **Une seule recherche sur le tableau des missions** : ville de départ,
+  destination, date et « Titre de l'annonce », avec un bouton « Rechercher ».
+  Un départ seul cherche autour de lui ; avec une destination, la recherche suit
+  votre trajet.
+- **Les messages affichent le pseudo.** Une personne qui a choisi un pseudo
+  apparaît sous ce nom dans la liste des conversations ; la page d'inscription
+  le précise désormais. Vous pouvez chercher une conversation par pseudo.
+- **Texte plus grand sur téléphone et tablette.** Tout est un peu plus grand en
+  dessous de la taille d'une fenêtre d'ordinateur portable.
+- **Une feuille de toutes les pages et actions**, par rôle, chacune avec une
+  référence à citer pour demander une modification.
+
 ## [2.93.0] - 2026-11-21 · ux
 
 L'historique des versions se lit désormais en français, et en entier.

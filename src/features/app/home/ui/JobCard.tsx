@@ -370,10 +370,15 @@ function Endpoint({
       <div className="min-w-0">
         <p className="truncate font-medium">
           {city}
-          {country && `, ${country}`}{" "}
-          <span className="text-muted-foreground font-mono text-xs">
-            ({postalCode})
-          </span>
+          {country && `, ${country}`}
+          {postalCode && (
+            <>
+              {" "}
+              <span className="text-muted-foreground font-mono text-xs">
+                ({postalCode})
+              </span>
+            </>
+          )}
         </p>
         {bearing && (
           <p className="text-muted-foreground truncate text-xs">

@@ -111,10 +111,93 @@ a service is fixed once; the same bug spread across 96 route files is not.
 | `/(app)/(main)/*` | any authenticated |
 | `/(app)/carrier/*` | `carrier` (approved) |
 | `/(app)/driver/*` | `driver` |
-| `/(app)/admin/*` | `operator` `support` `finance` or `admin`, each seeing only its permitted tabs |
+| `/(app)/admin/*` | `operator` `support` `finance` or `admin`, each seeing only its permitted tabs (§5.1) |
 
 The existing `/(app)/driver/*` tree is today's transporter area. It splits: bidding
 and earnings move to `/(app)/carrier/*`; execution stays under `/(app)/driver/*`.
+
+### 5.1 The back office, page by role (2.95.0)
+
+Until 2.95.0 `src/proxy.ts` admitted `admin` alone while `active-access.ts`
+offered Admin mode to all four staff roles: an operator, support or finance
+account was shown the switch and then bounced to `/home`.
+
+**One table, `src/lib/admin-access.ts` (`ADMIN_PAGES`).** The proxy, the
+sidebar (`AdminLayout`), the phone bar (`AdminBottomNav`), the mode switcher
+(`active-access.ts`) and `MainLayout`'s bounce all read it. It is a
+*navigation* table, never a permission: every read and write behind a page is
+still authorised by its own service (§4).
+
+`✓` may open · `—` sent to the role's own landing
+
+| Page | admin | operator | support | finance | Why (what the page's reads accept today) |
+|---|---|---|---|---|---|
+| `/admin/expedion` (Supervision) | ✓ | — | — | — | `GET /api/admin/expedion/report` and every quote action (`requireExpedionAdmin`) are admin-only |
+| `/admin/bordereaux` | ✓ | ✓ | — | — | `listBordereaux` / `exportBordereauxCsv`: admin, operator |
+| `/admin/awards` | ✓ | ✓ | — | — | reads the board; `acceptOffer` awards for admin, operator |
+| `/admin/listings` | ✓ | ✓ | — | — | `listingsService.adminList`: admin, operator |
+| `/admin/shipments` | ✓ | ✓ | — | — | `shipmentService.adminOverview`: admin, operator |
+| `/admin/users` | ✓ | — | — | — | `getUsers` (`verifyAdminPermission`): admin |
+| `/admin/users/[id]/activity` | ✓ | — | ✓ | — | `ACTIVITY_READER_ROLES`: admin, support. Read-only |
+| `/admin/expedion-clients` | ✓ | — | — | — | `expedionClientsService` (`requireAdmin`): admin |
+| `/admin/drivers` | ✓ | ✓ | — | — | applications and in-house drivers: admin, operator. The « list » tab reads `getUsers` and is shown to admin only |
+| `/admin/applications` (redirect → Drivers) | ✓ | ✓ | — | — | as Drivers |
+| `/admin/payments` | ✓ | — | — | — | `/api/admin/payments` and `/refunds`: admin |
+| `/admin/withdrawals` | ✓ | ✓ | — | ✓ | `withdrawalsService` (`requireOperator`): admin, operator, finance |
+| `/admin/incidents` | ✓ | ✓ | — | — | `shipmentIncidentsService`: admin, operator |
+| `/admin/feedback` | ✓ | ✓ | — | — | `feedbackService`: admin, operator |
+| `/admin/support` | ✓ | — | ✓ | — | `/api/admin/support-chats`: admin, support |
+| `/admin/support/[id]` | ✓ | — | ✓ | — | `messagesService` admits `admin` and `support` to a support thread it is not a participant of (2.95.0) |
+| `/admin/settings` | ✓ | — | — | ✓ | platform settings, Stripe check, cron status, company identity: admin, finance |
+| `/admin/profile` (redirect → Settings) | ✓ | — | — | ✓ | as Settings |
+| `/admin`, `/admin/dashboard` (redirect → Supervision) | ✓ | — | — | — | as Supervision; the others go straight to their landing |
+| any other `/admin/*` path | ✓ | — | — | — | **fail closed**: an unlisted page is admin-only |
+
+Rules:
+
+- `admin` opens everything. A multi-role account gets the union.
+- **Matching** is longest-prefix on whole path segments, `[id]` standing for
+  any one segment: `/admin/users/u1/activity` is the activity page,
+  `/admin/users/u1` falls back to the user list, and
+  `/admin/expedion-clients` is not under `/admin/expedion`.
+- **Landing** (`adminLandingFor`) is the first sidebar entry the roles may
+  open, in sidebar order: admin → `/admin/expedion`, operator →
+  `/admin/bordereaux`, support → `/admin/support`, finance →
+  `/admin/withdrawals`.
+- **Proxy.** A staff member opening a page they may not see is redirected to
+  their landing (query dropped); a non-staff account to `/home`, as before.
+  Roles are read from the database on every request (§6 case 5). If they
+  cannot be read, everyone goes to `/home`.
+- **Admin mode** is offered exactly when `adminLandingFor` is not null, and
+  the switcher and `MainLayout` land on it.
+- **Navigation** shows only permitted entries, and no heading over an empty
+  group. The badge counts (`/api/admin/nav-counts`, admin and operator only)
+  are not requested for support or finance.
+- **A new admin page is closed until classified.**
+  `src/lib/__tests__/admin-access.test.ts` walks `src/app/(app)/admin` and
+  fails on a `page.tsx` with no row.
+- **Destructive acts stay admin-only in their services** — impersonation,
+  role assignment and removal, account deletion, suspension, sign-out
+  everywhere, password reset — whatever page a role can reach
+  (`staff-destructive.test.ts`).
+- A borrowed (impersonated) session carries the target's roles, so it sees the
+  target's back office and nothing more.
+
+### 5.2 Where §3 and the services disagree
+
+The table above follows the services, so that no role is shown a page whose
+reads all answer 403. Each line below is a gap between §3 and the code, left
+for a decision — widening a service is not a navigation change.
+
+| §1 / §3 says | The code today | Effect on §5.1 |
+|---|---|---|
+| operator force-escalates a job and works the dispatch desk | the Expedion report route and `requireExpedionAdmin` (admin, assign, escalate, requote…) accept `admin` only | Supervision is admin-only; an operator lands on Slips |
+| support acts in support conversations | resolved in 2.95.0: `messagesService` now admits `support` as it does `admin` | none — support opens and answers a thread |
+| support reads users and shipments | `getUsers` is admin-only; `adminOverview` is admin/operator | support has no Users or Shipments entry; only the per-account activity page, by link |
+| support browses listings and reads offers | `listing-view.ts` `STAFF_ROLES` and `adminList` are admin/operator | no Listings or Awards entry for support |
+| finance: payments, refunds, invoices | `/api/admin/payments` and `/api/admin/refunds` check `admin` only | Payments is admin-only; finance has Withdrawals and Settings |
+| carrier KYC approval is admin-only | true, but `approve` / `reject` / `suspend` are refused in the **route** (`viewer.isAdmin`), not in `carrierService` — against §4 | none; an operator on Drivers sees applications and gets a 403 on those three buttons |
+| withdrawals are a finance matter | `requireOperator` also accepts `operator` | operator has a Withdrawals entry |
 
 ---
 

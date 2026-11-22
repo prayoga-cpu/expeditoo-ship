@@ -115,6 +115,25 @@ describe("AccessSwitcher", () => {
     expect(screen.queryByText("My driver application")).not.toBeInTheDocument();
   });
 
+  // roles_spec.md §5.1: Admin mode used to land every staff role on
+  // /admin/expedion, which the proxy opens to an admin alone.
+  it.each([
+    ["admin", "/admin/expedion"],
+    ["operator", "/admin/bordereaux"],
+    ["support", "/admin/support"],
+    ["finance", "/admin/withdrawals"],
+  ])("switching to Admin lands %s on %s", async (role, landing) => {
+    auth.user = { roles: ["shipper", role] };
+    auth.isLoading = false;
+    window.localStorage.setItem("expeditoo-active-access", "user");
+
+    renderWith({ defaultOpen: true });
+
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Admin" }));
+
+    expect(push).toHaveBeenCalledWith(landing);
+  });
+
   it("switching persists the choice and navigates to that mode's landing route", async () => {
     auth.user = { roles: ["shipper", "admin"] };
     auth.isLoading = false;

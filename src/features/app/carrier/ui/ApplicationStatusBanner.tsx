@@ -23,7 +23,15 @@ import type { CarrierApplication } from "../api/carrier.api";
  * approuvé » beside a switcher offering to add the access
  * (become_driver_spec.md §5). Waits for the session before deciding, so an
  * approved driver never sees the warning flash while it loads.
+ *
+ * An in-house driver (`private`) reads their own three lines: nothing about
+ * offers, which they never make, and — while they wait — that Expeditop
+ * validates in-house drivers by hand and will email them. The wait is the
+ * whole of what is left for them, so it is said plainly
+ * (driver_types_spec.md §3).
  */
+const IN_HOUSE_COPY: readonly string[] = ["submitted", "under_review", "approved"];
+
 export function ApplicationStatusBanner({
   application,
 }: {
@@ -39,7 +47,11 @@ export function ApplicationStatusBanner({
     status === "approved" &&
     user !== null &&
     !qualifiedAccessModes(user.roles ?? []).includes("carrier");
-  const copy = inactive ? "approvedInactive" : status;
+  const copy = inactive
+    ? "approvedInactive"
+    : application.kind === "private" && IN_HOUSE_COPY.includes(status)
+      ? `inHouse.${status}`
+      : status;
   const failed = inactive || status === "rejected" || status === "suspended";
   // A driver who left is told how to come back, not shown an error.
   const reason =

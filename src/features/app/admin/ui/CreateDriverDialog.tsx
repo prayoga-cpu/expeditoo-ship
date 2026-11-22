@@ -122,9 +122,7 @@ function ProfileFields(props: SectionProps) {
       <Field
         name="postalCode"
         label={t("postalCode")}
-        inputMode="numeric"
-        pattern="[0-9]{5}"
-        maxLength={5}
+        maxLength={10}
         required
         {...props}
       />

@@ -311,7 +311,9 @@ function PricePin({
       {size && (
         <span
           className={cn(
-            "font-mono text-[10px]",
+            // `text-xs`, not a fixed 10px: it must grow with the root size on a
+            // phone (globals.css, client feedback 2026-11-19 #28).
+            "font-mono text-xs",
             isHighlighted ? "opacity-80" : "text-muted-foreground"
           )}
         >
