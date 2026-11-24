@@ -1,0 +1,40 @@
+name: Sync dev after a launch
+
+# A launch merges `dev` into `main` with a merge commit, so afterwards `main` is
+# one commit ahead of `dev`. Fast-forwarding `dev` to it keeps the two from
+# drifting, so the next launch's pull request shows only what is new.
+#
+# Fast-forward only. If `dev` has moved on since the launch (new work already
+# pushed), it already contains everything `main` has except the merge commit
+# itself, and is left alone — the next launch merges it the same way.
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-dev
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fast-forward dev to main
+        run: |
+          set -euo pipefail
+          git fetch origin dev
+          if git merge-base --is-ancestor origin/dev HEAD; then
+            git push origin HEAD:refs/heads/dev
+            echo "dev fast-forwarded to $(git rev-parse --short HEAD)"
+          else
+            echo "::notice::dev has commits main does not; left as it is."
+          fi

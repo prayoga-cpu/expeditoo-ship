@@ -18,6 +18,24 @@ L'historique antérieur à la `2.0.0` appartient à la place de marché de biens
 la v1 et n'est pas conservé : la première version ci-dessous est le commit qui a
 lancé le virage vers le transport.
 
+## [2.95.1] - 2026-11-24 · infra
+
+Rien ne change sur le site en ligne. Chaque modification est désormais essayée
+d'abord sur le site de test, et ne vous parvient qu'après y avoir réussi.
+
+- **Le site de test, dev.expeditop.fr, est ouvert à l'équipe.** Il tourne sur sa
+  propre base de données — une copie de la vraie, dont chaque nom, e-mail,
+  numéro de téléphone, adresse et document a été retiré — avec son propre
+  stockage de fichiers et Stripe en mode test : rien de ce qu'on y fait ne peut
+  atteindre un vrai transporteur, une vraie demande ou un vrai paiement.
+- **Une modification n'arrive sur le site en ligne qu'après avoir tourné sur le
+  site de test et passé tous les contrôles automatiques.** Si un contrôle
+  échoue, le site en ligne garde la version précédente.
+- **Les mises à jour de la base de données se font d'elles-mêmes à la mise en
+  ligne**, et seulement une fois ces contrôles réussis. Une mise à jour qui
+  supprimerait ou renommerait des informations enregistrées est refusée, sauf
+  si elle est explicitement marquée comme voulue.
+
 ## [2.95.0] - 2026-11-22 · fix
 
 Ce que l'inventaire page par page a révélé, corrigé.

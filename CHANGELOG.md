@@ -14,6 +14,22 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.95.1] - 2026-11-24 · infra
+
+Nothing you can see on the live site changes. Every change is now tried on the
+test site first, and reaches you only after it passes there.
+
+- **The test site, dev.expeditop.fr, is open to the team.** It runs on its own
+  database — a copy of the real one with every name, e-mail, phone number,
+  address and document removed — with its own file storage and Stripe in test
+  mode, so nothing done there can reach a real driver, request or payment.
+- **A change reaches the live site only after it has run on the test site and
+  passed every automatic check.** If a check fails, the live site keeps running
+  the previous version.
+- **Database updates happen on their own when a change goes live**, and only
+  once those checks have passed. An update that would delete or rename stored
+  information is refused unless it is explicitly marked as intended.
+
 ## [2.95.0] - 2026-11-22 · fix
 
 What the page-by-page inventory turned up, fixed.

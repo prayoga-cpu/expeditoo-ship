@@ -225,7 +225,8 @@ without an `sk_live_` key, so an accept there takes real money.
 Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before shipping.
 
 **Gates — all green.** `npx tsc --noEmit` 0 errors · `pnpm lint` 0 errors ·
-4,385 unit tests pass (2.94.0) · `pnpm build` succeeds.
+4,623 unit tests pass (2.95.1) · `pnpm build` succeeds. The same gate runs inside
+every `dev` and production Vercel build before anything migrates (`AGENTS.md` §4a).
 
 **Done**
 - Schema remodelled to the transport model; one clean initial migration
@@ -320,12 +321,12 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
   journal `when` beats the newest one already recorded; a backdated entry is
   silently skipped. `src/db/__tests__/migrations-journal.test.ts` now fails on
   an unregistered `.sql`, a missing file, a non-increasing timestamp or a
-  duplicate prefix. The Vercel build is still a plain `next build`, so a deploy
-  never migrates: run **Actions → Migrate database** (`.github/workflows/migrate.yml`,
-  `workflow_dispatch`, type `migrate` to confirm) **before** the deploy goes out.
-  It is the only place that can: every production variable in Vercel is marked
-  Sensitive, so `vercel env pull` returns `[SENSITIVE]` and a laptop has no way
-  to reach the production database. Needs repo secret `POSTGRES_URL_PRODUCTION`.
+  duplicate prefix. **Since 2.95.1 the Vercel build migrates**: the dev
+  database on a push to `dev`, production on a launch to `main`, each after the
+  gate (`scripts/vercel-build.ts`, `AGENTS.md` §4a). **Actions → Migrate
+  database** (`migrate.yml`) is now only the fallback for a build that failed
+  mid-migration. A laptop still has no way to reach the production database:
+  every production variable is Sensitive.
 - **Expedion clients** at `/admin/expedion-clients`: the client book, grouped by
   `expedion_quotes.firebase_uid`, server-paginated over 4,592 owners. It exists
   because `/admin/users` structurally cannot show these people — they are quote
@@ -804,6 +805,15 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
   value for Production and Preview** — the one share no boot guard catches,
   because `cleanup-images` deletes whatever the database does not reference.
   `pnpm env:audit` fails on it. The operator half is in STATUS → Operator to-do.
+- **Dev first, then a gated launch** (2.95.1, `AGENTS.md` §4a,
+  `environments_spec.md` §12). Live since 2026-11-24: Neon schema-only branch
+  `dev` (`ep-late-night-aw6o8h4v`) filled by the anonymised refresh,
+  dev.expeditop.fr behind Vercel login. Work and validate on `dev`; `main`
+  takes a pull request from `dev` only, once `gates`, `release-source` and
+  `Vercel` are green; the production build re-runs the gate, refuses an
+  unmarked destructive migration (`-- release:allow-destructive <reason>`),
+  migrates production and builds. The gate runs with the toolchain only in
+  its environment (`gateEnv`), because a production build holds live keys.
 
 **Not done**
 - **`EXPEDION_APP_ORIGINS` is set in Vercel Production but not in `.env.local`**,
@@ -980,3 +990,10 @@ Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before ship
    on a failure branch with no retry or a childless `<CenteredEmptyState />`;
    an exception goes in its allowlist **with the reason** (an empty staff
    queue is the goal), and a stale entry fails too.
+25. **Never develop against production, and never push to `main`.** Work on
+   `dev`; its build gates, migrates the *dev* database and deploys
+   dev.expeditop.fr. Launch with a pull request `dev → main`; the production
+   build migrates production only after the gate passes (`AGENTS.md` §4a). A
+   migration that removes, renames, retypes or tightens something is refused
+   at build unless the `.sql` says `-- release:allow-destructive <reason>` —
+   ship the add in one launch and the removal in a later one.

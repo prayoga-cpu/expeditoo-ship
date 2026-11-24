@@ -1,5 +1,16 @@
 # GEMINI.md
 
+> **Read [`AGENTS.md`](./AGENTS.md) first — it is the process every agent
+> follows, and it wins over this file.** Most of what follows predates the
+> transport pivot and is stale (`AGENTS.md` §10).
+>
+> **Never develop against production** (`AGENTS.md` §4a): work on the `dev`
+> branch, push to `dev` (its Vercel build gates, migrates the *dev* database and
+> deploys https://dev.expeditop.fr), validate there, then launch through a pull
+> request `dev → main`. `main` accepts nothing else, and production migrates
+> itself only after the gate passes. No production database URL, no
+> `MIGRATE_TARGET=production`, no push to `main`, no `vercel --prod`.
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ---

@@ -80,7 +80,7 @@ pnpm test           # Vitest, run once
 pnpm test:e2e       # Playwright
 npx tsc --noEmit    # typecheck — the gate that matters
 
-pnpm db:migrate     # apply migrations
+pnpm db:migrate     # apply migrations — to YOUR database only (§4a)
 pnpm db:studio      # Drizzle Studio
 pnpm changelog:check  # version ↔ CHANGELOG ↔ STATUS agreement (see §8)
 ```
@@ -92,6 +92,63 @@ realignment and can `DROP COLUMN` on a live database. Hand-write the `.sql`,
 add the journal entry with a strictly increasing `when`, and let
 `src/db/__tests__/migrations-journal.test.ts` check it. Full reasoning in
 `CLAUDE.md` §"Essential Commands".
+
+---
+
+## 4a. Dev first: how a change reaches production
+
+**You never develop, debug or test against production.** Production is real
+drivers, real requests and live card payments; nothing you do while working may
+be able to reach it. There are three places, and production is not one you
+touch:
+
+| | Your machine | **dev** — where you work | production — hands off |
+|---|---|---|---|
+| Git | any branch | `dev` | `main` (protected) |
+| URL | localhost | https://dev.expeditop.fr (Vercel login) | https://www.expeditop.fr |
+| Database | local Postgres | Neon branch `dev` (`ep-late-night-aw6o8h4v`), anonymised copy | Neon `main` (`ep-sweet-bonus-awtyfuyz`) |
+| Stripe | test / `MOCK_PAYMENTS` | **test keys**, real flow | **live** keys |
+| Mail | dropped or redirected | redirected to `EMAIL_DEV_RECIPIENT` | sent |
+
+**The flow — every change, every agent, no exceptions:**
+
+1. **Work** on `dev`, or on a branch cut from `dev` and merged back into it.
+   Release bookkeeping (§8) is done here, in the commit that goes to `dev`.
+2. **Push to `dev`.** GitHub runs `gates`; Vercel builds dev.expeditop.fr and,
+   in that build, runs the same gate, refuses a destructive pending migration,
+   **migrates the dev database**, then builds (`scripts/vercel-build.ts`). A red
+   build means nothing on dev changed — fix and push again.
+3. **Validate on dev.expeditop.fr.** Walk the change in a real browser with the
+   dev accounts (`admin@dev.local`, `carrier@dev.local`, … — password is the
+   repo secret `DEV_USER_PASSWORD`; the owner keeps a copy). The host is behind
+   Vercel login: an agent gets in with the Vercel MCP's
+   `get_access_to_vercel_url`. A payment there is Stripe **test** money —
+   `4242 4242 4242 4242`.
+4. **Launch: open a pull request `dev → main`** —
+   `gh pr create --base main --head dev`. GitHub lets it merge only when
+   `gates`, `release-source` (it came from `dev`) and `Vercel` (the dev
+   deployment, which already migrated the dev database) are green. Merge it with
+   `gh pr merge --merge`. **Never push to `main`.**
+5. **Production migrates itself.** The production build re-runs the gate,
+   refuses a destructive pending migration, **migrates production**, then
+   builds. If any step fails, the build is not promoted and the previous
+   deployment keeps serving. Check Vercel's production deployment and Admin →
+   Paramètres afterwards. `sync-dev.yml` then fast-forwards `dev` to `main`.
+
+**Migrations ship additively.** Add the column or table, backfill, switch the
+code — and remove the old thing in a *later* launch, once nothing serving reads
+it. The build refuses `DROP TABLE`/`COLUMN`/`TYPE`/`SCHEMA`, `TRUNCATE`,
+`DELETE FROM`, `RENAME`, a column `TYPE` change, `SET NOT NULL` and an
+`ADD COLUMN … NOT NULL` without `DEFAULT` unless the `.sql` carries
+`-- release:allow-destructive <reason>` — and that marker is only honest after
+the code that stopped using the thing is already in production.
+
+**Never, without the owner asking in the same conversation:** a production
+database URL anywhere (`.env.local` included), `MIGRATE_TARGET=production`,
+Actions → « Migrate database » or « Seed beta » on production, `vercel --prod`,
+`vercel env` writes to Production, a push to `main`, or switching off the
+protection on `main`. Need realistic data? Actions → « Refresh dev database »
+(anonymised — never a raw copy of production).
 
 ---
 
@@ -199,6 +256,9 @@ Full rules in `docs/rules.md`. The ones that get broken most:
 7. Do not add an auto-firing write without guarding it with `isImpersonated()`.
    A borrowed session never writes by itself.
 8. Do not commit any `.env*` file other than `.env.example`.
+9. Do not reach production — not its database, not its deploy, not `main`.
+   Work on `dev`, validate on dev.expeditop.fr, launch through the pull
+   request. §4a.
 
 ---
 
@@ -259,13 +319,19 @@ A session is done when all five of these are true:
    `pnpm changelog:check` verifies items 1–3 mechanically and runs in CI, so a
    forgotten bump fails the build rather than shipping silently.
 
-5. **Outside-codebase work is written down.** An env var to set, a migration to
-   run, a Stripe or Twilio setting to change — add it to the
+5. **Outside-codebase work is written down.** An env var to set, a Stripe or
+   Twilio setting to change — add it to the
    **Operator to-do** list in `STATUS.md`. Nothing that needs a human hand may
    live only in a chat message.
 
 If you touched the schema, commit the migration `.sql` **and** its journal entry
-together. If you added a spec, link it from the `STATUS.md` entry.
+together — the dev build migrates the dev database from them, and the launch
+migrates production from the same files (§4a). If you added a spec, link it
+from the `STATUS.md` entry.
+
+The session ends with the release **on `dev`** and validated there. Launching
+it to `main` is the pull request in §4a — open it when the operator asks for a
+launch, or when the session's request was a launch.
 
 `TEMPLATE-checkpoint-agentic.yaml` is the minimal closeout record — copy it when
 a session needs a machine-readable evidence trail (changed files, checks run,
