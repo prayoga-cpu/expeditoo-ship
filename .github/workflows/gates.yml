@@ -48,7 +48,10 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          # The Vercel project builds on 24.x, and the same gate runs inside that
+          # build. On 22 this gate passed while 24's stricter multipart parser
+          # failed 10 tests there — one gate must mean one Node.
+          node-version: 24
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
