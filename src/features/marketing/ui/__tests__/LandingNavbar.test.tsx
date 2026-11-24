@@ -113,15 +113,27 @@ describe("LandingNavbar, signed out", () => {
   });
 });
 
+describe("LandingNavbar, 2.97.0 floating bar", () => {
+  it("keeps the language and theme controls in the bar from `lg`, and in the menu below it", () => {
+    renderNavbar();
+
+    const language = screen.getByRole("group", { name: "Language" });
+    const holder = language.parentElement as HTMLElement;
+    expect(holder.className.split(/\s+/)).toEqual(expect.arrayContaining(["hidden", "lg:flex"]));
+    expect(screen.getByRole("button", { name: "Open the menu" })).toBeInTheDocument();
+  });
+});
+
 describe("LandingNavbar, signed in", () => {
   it("keeps today's « Open app » and offers neither sign-in door", () => {
     auth.isAuthenticated = true;
     renderNavbar();
 
-    expect(screen.getByRole("link", { name: "Open app" })).toHaveAttribute(
-      "href",
-      "/home"
-    );
+    const openApp = screen.getByRole("link", { name: "Open app" });
+    expect(openApp).toHaveAttribute("href", "/home");
+    // Since 2.97.0 the preferences moved into the menu, which left a phone
+    // room for the one door that matters.
+    expect(visibleFrom(openApp)).toEqual({ phone: true, desktop: true });
     expect(screen.queryByText("Log in / Sign up")).not.toBeInTheDocument();
     expect(screen.queryByText("Log in")).not.toBeInTheDocument();
     expect(screen.queryByText("Sign up")).not.toBeInTheDocument();

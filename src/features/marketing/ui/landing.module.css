@@ -1,80 +1,258 @@
 /*
- * Landing-only surfaces that Tailwind utilities cannot say cleanly: the blue
- * band's gradients, which change with both the width and the theme
- * (docs/specs/landing_2026_11_spec.md §6). Colours are written with their own
- * alpha rather than through `color-mix()`, which iOS Safari 15.4–16.1 lacks.
+ * The home page's own surfaces (docs/specs/landing_2026_11_spec.md §6–7):
+ * its tokens, the hero's shade over the video, and the motion. Colours are
+ * written with their own alpha rather than through `color-mix()`, which iOS
+ * Safari 15.4–16.1 lacks.
  *
  * The blue is the app's `--primary` (#076BE3, ROADMAP.md §7). Dark mode does
- * not invert the band: it deepens it to a navy, so the page does not open on
- * a slab of saturated blue at night.
+ * not invert the page: it moves it onto deep navy, never onto grey.
  */
 
-.band {
-  background-color: #076be3;
-  background-image: radial-gradient(
-    120% 90% at 0% 0%,
-    rgb(255 255 255 / 0.1),
-    rgb(255 255 255 / 0) 60%
-  );
+/* ── Tokens ─────────────────────────────────────────────────────────────
+   `.home` sits on the page's <main>. Every section reads these, so light and
+   dark are decided here once. */
+.home {
+  --h-bg: #ffffff;
+  --h-alt: #f3f6fb;
+  --h-card: #ffffff;
+  --h-line: rgba(12, 28, 56, 0.1);
+  --h-line2: rgba(12, 28, 56, 0.18);
+  --h-text: #0b1526;
+  --h-muted: #4a5568;
+  --h-accent: #076be3;
+  --h-accent-text: #0b5bd0;
+  --h-accent-soft: #eaf2fe;
+  --h-navy: #071a3a;
+  --h-shadow: 0 28px 56px -34px rgba(7, 40, 90, 0.45);
 }
 
-:global(.dark) .band {
-  background-color: #0a2348;
-  background-image: radial-gradient(
-    120% 90% at 0% 0%,
-    rgb(61 123 255 / 0.22),
-    rgb(61 123 255 / 0) 60%
-  );
+:global(.dark) .home {
+  --h-bg: #06122a;
+  --h-alt: #091a37;
+  --h-card: #0d2144;
+  --h-line: rgba(143, 184, 255, 0.13);
+  --h-line2: rgba(143, 184, 255, 0.22);
+  --h-text: #eef3fb;
+  --h-muted: #a6b4ca;
+  --h-accent: #076be3;
+  --h-accent-text: #8fb8ff;
+  --h-accent-soft: rgba(61, 139, 255, 0.16);
+  --h-navy: #030b1c;
+  --h-shadow: 0 32px 64px -34px rgba(0, 0, 0, 0.8);
 }
 
-/* Over the photo where it sits behind the text (below `lg`): blue enough that
-   white text keeps its contrast on any part of the picture. */
-.shade {
-  background: linear-gradient(
-    180deg,
-    rgb(7 107 227 / 0.95) 0%,
-    rgb(7 107 227 / 0.9) 55%,
-    rgb(7 107 227 / 0.82) 100%
-  );
+/* ── Hero ───────────────────────────────────────────────────────────────
+   A deep blue over the video, strongest where the white text sits: on a
+   phone the whole band (text above the card), from `lg` the left half. Over
+   the brightest frame (white cloud) the left stop still leaves white text
+   above 9:1. */
+.heroShade {
+  background:
+    linear-gradient(180deg, rgb(3 22 58 / 0.55) 0%, rgb(3 22 58 / 0) 28%),
+    linear-gradient(180deg, rgb(5 38 98 / 0.9) 0%, rgb(7 84 186 / 0.86) 60%, rgb(5 38 98 / 0.94) 100%);
 }
 
-:global(.dark) .shade {
-  background: linear-gradient(
-    180deg,
-    rgb(10 35 72 / 0.96) 0%,
-    rgb(10 35 72 / 0.92) 55%,
-    rgb(10 35 72 / 0.86) 100%
-  );
+:global(.dark) .heroShade {
+  background:
+    linear-gradient(180deg, rgb(2 8 22 / 0.6) 0%, rgb(2 8 22 / 0) 28%),
+    linear-gradient(180deg, rgb(3 14 36 / 0.93) 0%, rgb(6 36 88 / 0.88) 60%, rgb(3 14 36 / 0.96) 100%);
 }
 
-/* From `lg` the photo is a framed picture beside the text: only a soft foot
-   so it sits in the band rather than on it. */
 @media (min-width: 1024px) {
-  .shade,
-  :global(.dark) .shade {
-    background: linear-gradient(
-      180deg,
-      rgb(4 20 48 / 0) 55%,
-      rgb(4 20 48 / 0.35) 100%
-    );
+  .heroShade {
+    background:
+      linear-gradient(180deg, rgb(3 22 58 / 0.5) 0%, rgb(3 22 58 / 0) 26%),
+      linear-gradient(100deg, rgb(4 30 80 / 0.94) 0%, rgb(5 52 132 / 0.88) 42%, rgb(7 107 227 / 0.62) 100%);
+  }
+
+  :global(.dark) .heroShade {
+    background:
+      linear-gradient(180deg, rgb(2 8 22 / 0.55) 0%, rgb(2 8 22 / 0) 26%),
+      linear-gradient(100deg, rgb(3 12 32 / 0.95) 0%, rgb(4 26 66 / 0.9) 42%, rgb(7 60 140 / 0.7) 100%);
   }
 }
 
-/* The closing band: the same blue, a quieter light. */
+/* The video fades in over its own poster once it really plays. */
+.video {
+  opacity: 0;
+  transition: opacity 0.9s ease;
+}
+
+.video[data-playing="true"] {
+  opacity: 1;
+}
+
+/* First paint: the headline and its lines come in from a light blur. CSS
+   only, so it runs with or without the script and always ends visible. */
+.blurIn {
+  animation: lpBlurIn 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation-delay: var(--lp-delay, 0ms);
+}
+
+@keyframes lpBlurIn {
+  from {
+    opacity: 0;
+    filter: blur(12px);
+    transform: translate3d(0, 14px, 0);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: none;
+  }
+}
+
+/* The circular « Comment ça marche » badge. */
+.spin {
+  animation: lpSpin 24s linear infinite;
+}
+
+@keyframes lpSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Reveal on scroll ───────────────────────────────────────────────────
+   Hidden only once `LandingReveal` has put `lp-motion` on <html> — and it
+   marks what is already on screen first, so nothing visible blinks. Without
+   the script, or with reduced motion, every block is simply there. */
+:global(html.lp-motion) .home [data-reveal]:not([data-in]) {
+  opacity: 0;
+  filter: blur(6px);
+  transform: translate3d(0, 22px, 0);
+}
+
+.home [data-reveal] {
+  transition:
+    opacity 0.8s cubic-bezier(0.2, 0.7, 0.2, 1),
+    filter 0.8s cubic-bezier(0.2, 0.7, 0.2, 1),
+    transform 0.8s cubic-bezier(0.2, 0.7, 0.2, 1);
+  transition-delay: var(--lp-delay, 0ms);
+}
+
+/* ── Marquee ────────────────────────────────────────────────────────────── */
+.marquee {
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
+}
+
+.marqueeTrack {
+  display: flex;
+  width: max-content;
+  animation: lpMarquee 60s linear infinite;
+}
+
+.marquee:hover .marqueeTrack {
+  animation-play-state: paused;
+}
+
+@keyframes lpMarquee {
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+/* A slow drift on the carriers' photograph. */
+.drift {
+  animation: lpDrift 26s ease-in-out infinite alternate;
+}
+
+@keyframes lpDrift {
+  from {
+    transform: scale(1.03);
+  }
+  to {
+    transform: scale(1.1) translate3d(-2%, -1%, 0);
+  }
+}
+
+/* ── The closing band: the van photograph under the brand blue ─────────── */
 .closing {
-  background-color: #076be3;
-  background-image: radial-gradient(
-    90% 120% at 100% 100%,
-    rgb(255 255 255 / 0.12),
-    rgb(255 255 255 / 0) 60%
-  );
+  background-color: #0753b8;
 }
 
 :global(.dark) .closing {
   background-color: #0a2348;
-  background-image: radial-gradient(
-    90% 120% at 100% 100%,
-    rgb(61 123 255 / 0.2),
-    rgb(61 123 255 / 0) 60%
-  );
+}
+
+/* Phone: the whole band is photo, so the shade is strong everywhere. */
+.closingShade {
+  background: linear-gradient(180deg, rgb(7 83 184 / 0.9) 0%, rgb(7 83 184 / 0.82) 100%);
+}
+
+:global(.dark) .closingShade {
+  background: linear-gradient(180deg, rgb(10 35 72 / 0.92) 0%, rgb(10 35 72 / 0.85) 100%);
+}
+
+/* From `lg` the photo is the right part: it starts in the band's own blue,
+   so there is no seam, and clears towards the right edge. */
+@media (min-width: 1024px) {
+  .closingShade {
+    background: linear-gradient(90deg, #0753b8 0%, rgb(7 83 184 / 0.55) 32%, rgb(7 83 184 / 0.12) 100%);
+  }
+
+  :global(.dark) .closingShade {
+    background: linear-gradient(90deg, #0a2348 0%, rgb(10 35 72 / 0.6) 32%, rgb(10 35 72 / 0.2) 100%);
+  }
+}
+
+/* ── Footer ─────────────────────────────────────────────────────────────
+   Navy in both themes. It keeps `lp` (the toggles read its variables), so
+   the palette is re-pointed here; `html … :global(.lp)` outranks both `.lp`
+   and `.dark .lp` without `!important`. */
+:global(html) .footer:global(.lp) {
+  --lp-bg: #061530;
+  --lp-line: rgba(255, 255, 255, 0.12);
+  --lp-line2: rgba(255, 255, 255, 0.22);
+  --lp-text: #ffffff;
+  --lp-muted: #b9c6da;
+  --lp-dim: #9fb0c8;
+  --lp-chip: rgba(255, 255, 255, 0.08);
+  --lp-bluelink: #8fb8ff;
+  background: #061530;
+  color: #ffffff;
+}
+
+:global(html.dark) .footer:global(.lp) {
+  --lp-bg: #020a1a;
+  background: #020a1a;
+}
+
+/* Every motion here is decoration; under reduced motion it all stops. */
+@media (prefers-reduced-motion: reduce) {
+  .blurIn,
+  .spin,
+  .drift {
+    animation: none;
+  }
+
+  .marqueeTrack {
+    animation: none;
+    width: auto;
+  }
+
+  .marqueeTrack [data-copy="1"] {
+    flex-wrap: wrap;
+    justify-content: center;
+    row-gap: 0.75rem;
+    padding: 0 1rem;
+  }
+
+  .marqueeTrack [data-copy="2"] {
+    display: none;
+  }
+
+  .marquee {
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+
+  .video {
+    transition: none;
+  }
+
+  .home [data-reveal] {
+    transition: none;
+  }
 }

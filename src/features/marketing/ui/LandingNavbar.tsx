@@ -1,11 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import { useCallback, useEffect, useId, useState, type Ref } from "react";
 import { useTranslations } from "next-intl";
+import { Menu } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { cn } from "@/lib/utils";
 import { BrandWordmark } from "@/components/ui/brand-mark";
+import { useMenuDialog } from "../hooks/useMenuDialog";
 import { LandingGatedButton } from "./LandingGatedButton";
 import { LandingLangToggle, LandingThemeToggle } from "./LandingControls";
+import { LandingMenu } from "./LandingMenu";
 import { LP_BTN_PRIMARY } from "./styles";
 
 /**
@@ -20,63 +25,146 @@ const NAV_LINKS = [
   { href: "/#carriers", key: "carriers" },
 ] as const;
 
-export function LandingNavbar() {
+/**
+ * Over the home page's hero the bar is glass; once the hero has scrolled
+ * under it, it turns solid. Everywhere else it is solid from the start.
+ * `false` on the server and the first render, so hydration agrees.
+ */
+function useSolidBar(overlay: boolean) {
+  const [pastHero, setPastHero] = useState(false);
+
+  useEffect(() => {
+    const hero = overlay ? document.getElementById("top") : null;
+    if (!hero || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setPastHero(!entry.isIntersecting),
+      { rootMargin: "-88px 0px 0px 0px" }
+    );
+    observer.observe(hero);
+    return () => observer.disconnect();
+  }, [overlay]);
+
+  return !overlay || pastHero;
+}
+
+const BAR =
+  "mx-auto flex h-[64px] w-full max-w-[1240px] items-center gap-2 rounded-2xl px-3 ring-1 backdrop-blur-xl transition-[background-color,box-shadow] duration-300 sm:gap-3 sm:px-5";
+
+const GLASS =
+  "bg-[rgb(255_255_255/0.86)] ring-[rgb(255_255_255/0.55)] shadow-[0_12px_34px_-16px_rgba(2,12,32,0.5)] dark:bg-[rgb(8_22_48/0.62)] dark:ring-[rgb(255_255_255/0.12)]";
+
+const SOLID =
+  "bg-[rgb(255_255_255/0.96)] ring-[rgb(12_28_56/0.1)] shadow-[0_14px_34px_-20px_rgba(7,40,90,0.45)] dark:bg-[rgb(9_24_52/0.95)] dark:ring-[rgb(143_184_255/0.14)]";
+
+/** A phone has ~300px of bar at 360px wide; the lockup steps down to 24px
+    below `sm` so the one sign-in door and the menu still fit. */
+function BarLogo() {
+  return (
+    <Link href="/#top" className="flex flex-none items-center">
+      <span className="sm:hidden">
+        <BrandWordmark size={24} tagline />
+      </span>
+      <span className="hidden sm:block">
+        <BrandWordmark size={28} tagline />
+      </span>
+    </Link>
+  );
+}
+
+/** From `xl` only: below it the doors on the right need the room. */
+function BarLinks() {
   const t = useTranslations("marketing.navbar");
+  return (
+    <nav className="hidden min-w-0 flex-auto items-center justify-center gap-6 xl:flex">
+      {NAV_LINKS.map((link) => (
+        <Link key={link.href} href={link.href} className="text-[14.5px] font-medium whitespace-nowrap text-[var(--lp-muted)]">
+          {t(link.key)}
+        </Link>
+      ))}
+    </nav>
+  );
+}
+
+function MenuButton({
+  open,
+  menuId,
+  triggerRef,
+  onOpen,
+}: {
+  open: boolean;
+  menuId: string;
+  triggerRef: Ref<HTMLButtonElement>;
+  onOpen: () => void;
+}) {
+  const t = useTranslations("marketing.navbar");
+  return (
+    <button
+      ref={triggerRef}
+      type="button"
+      onClick={onOpen}
+      aria-expanded={open}
+      aria-controls={open ? menuId : undefined}
+      aria-label={t("menuOpen")}
+      className="flex h-10 w-10 flex-none cursor-pointer items-center justify-center rounded-xl border-0 bg-transparent text-[var(--lp-text)] transition-colors hover:bg-[var(--lp-chip)]"
+    >
+      <Menu className="h-[22px] w-[22px]" aria-hidden />
+    </button>
+  );
+}
+
+/**
+ * The marketing header, floating inset from the edges (2.97.0, after the
+ * reference's): the wordmark, the session's doors, and a three-line button
+ * that opens the full-screen menu. `overlay` — the home page only — fixes it
+ * over the full-bleed hero; the other marketing pages keep it in the flow,
+ * sticky, so their content starts below it.
+ *
+ * `lp` for the palette; its own background is cleared inline, since `.lp`
+ * (unlayered) paints one and the inset bar is the only surface here.
+ */
+export function LandingNavbar({ overlay = false }: { overlay?: boolean }) {
   const { isAuthenticated } = useAuth();
+  const [open, setOpen] = useState(false);
+  const close = useCallback(() => setOpen(false), []);
+  const { panelRef, triggerRef } = useMenuDialog(open, close);
+  const solid = useSolidBar(overlay);
+  const menuId = useId();
 
   return (
-    <header className="lp sticky top-0 z-50 border-b border-[var(--lp-line)] bg-[var(--lp-headbg)] backdrop-blur-[14px]">
-      {/* The design is specified at desktop width; below `md` the control
-          cluster no longer fits one line, so the bar wraps to two rows. */}
-      {/* `font-sans` here, not on the header: `.lp` sets the marketing pages'
-          display face on the element that carries it, unlayered, and the
-          header is set in the app's own Plus Jakarta Sans since 2.96.0. */}
-      <div className="mx-auto flex w-full max-w-[1200px] flex-wrap items-center gap-x-2 gap-y-2 px-4 py-3 font-sans sm:gap-x-[22px] sm:px-8 md:h-[66px] md:flex-nowrap md:py-0">
-        {/* A phone has 328px of row at 360px wide and the lockup at 32px takes
-            139 of it, so it steps down to 24px below `sm` (104px). */}
-        <Link href="/#top" className="flex flex-none items-center">
-          <span className="sm:hidden">
-            <BrandWordmark size={24} tagline />
+    <header
+      className={cn("lp z-50 px-2.5 pt-2.5 font-sans sm:px-4 sm:pt-3", overlay ? "fixed inset-x-0 top-0" : "sticky top-0")}
+      style={{ background: "transparent" }}
+    >
+      <div data-solid={solid} className={cn(BAR, solid ? SOLID : GLASS)}>
+        <BarLogo />
+        <BarLinks />
+        <div className="ml-auto flex items-center gap-1.5 whitespace-nowrap sm:gap-3">
+          {/* The two preferences sit in the bar from `lg`; below it they are
+              in the menu, which every width can open. */}
+          <span className="hidden items-center gap-2 lg:flex">
+            <LandingLangToggle />
+            <LandingThemeToggle />
           </span>
-          <span className="hidden sm:block">
-            <BrandWordmark size={32} tagline />
-          </span>
-        </Link>
-
-        {/* From `xl` only: at 1024px the three links and the five controls on
-            the right overlap (seen in Chromium, 2.96.0). */}
-        <nav className="hidden min-w-0 flex-auto items-center gap-5 xl:flex">
-          {NAV_LINKS.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="text-[14.5px] whitespace-nowrap text-[var(--lp-muted)]"
-            >
-              {t(link.key)}
-            </Link>
-          ))}
-        </nav>
-
-        <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5 whitespace-nowrap sm:gap-3 md:flex-nowrap">
-          <LandingLangToggle />
-          <LandingThemeToggle />
-          {isAuthenticated ? (
-            <Link
-              href="/home"
-              className="hidden text-[14.5px] text-[var(--lp-muted)] sm:block"
-            >
-              {t("openApp")}
-            </Link>
-          ) : (
-            <SignedOutActions />
-          )}
+          {isAuthenticated ? <SignedInAction /> : <SignedOutActions />}
+          <MenuButton open={open} menuId={menuId} triggerRef={triggerRef} onOpen={() => setOpen(true)} />
         </div>
       </div>
+      {open && <LandingMenu id={menuId} panelRef={panelRef} onClose={close} />}
     </header>
   );
 }
 
-const LINK_CLASS = "hidden text-[14.5px] text-[var(--lp-muted)] sm:block";
+/** Someone already signed in has one thing to do from here: go in. */
+function SignedInAction() {
+  const t = useTranslations("marketing.navbar");
+  return (
+    <Link href="/home" className={`${LP_BTN_PRIMARY} px-3.5 py-2 text-[14px]`}>
+      {t("openApp")}
+    </Link>
+  );
+}
+
+const LINK_CLASS = "hidden text-[14.5px] font-medium text-[var(--lp-muted)] sm:block";
 
 /**
  * What the header offers somebody with no session.
@@ -85,11 +173,8 @@ const LINK_CLASS = "hidden text-[14.5px] text-[var(--lp-muted)] sm:block";
  * what it does: « Connexion / Inscription », straight to `/signin` (which has
  * « S'inscrire » at its top) — not the carrier flow's animation, which is for
  * the hero. It is two lines on purpose: on one line the label is 130px and the
- * header wrapped to a second row (client photo, 19 Nov). From `sm` up the two
- * doors are separate links and « Devenir transporteur » keeps its flow.
- *
- * Someone already signed in is not becoming a carrier from here — "Open app"
- * is the only CTA that still means anything, so it never reaches this.
+ * bar ran out of room (client photo, 19 Nov). From `sm` up the two doors are
+ * separate links and « Devenir transporteur » keeps its flow.
  */
 function SignedOutActions() {
   const t = useTranslations("marketing.navbar");
@@ -111,7 +196,7 @@ function SignedOutActions() {
       <LandingGatedButton
         intent="carrier"
         label={t("becomeCarrier")}
-        className={`${LP_BTN_PRIMARY} hidden px-[18px] py-[9px] text-[14.5px] sm:block`}
+        className={`${LP_BTN_PRIMARY} hidden px-4 py-[9px] text-[14.5px] sm:block`}
       />
     </>
   );

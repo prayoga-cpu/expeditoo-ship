@@ -22,6 +22,16 @@ vi.mock("@/lib/auth-context", () => ({
   useAuth: () => ({ isAuthenticated: false }),
 }));
 
+// Since 2.97.0 the footer's bottom line carries the language and theme
+// controls, as the header does.
+vi.mock("@/components/providers/LocaleProvider", () => ({
+  useLocale: () => ({ locale: "en", setLocale: vi.fn(), isLoading: false }),
+}));
+
+vi.mock("next-themes", () => ({
+  useTheme: () => ({ theme: "light", setTheme: vi.fn() }),
+}));
+
 const APP_DIR = join(process.cwd(), "src/app");
 
 /** Route groups are invisible in a URL, so a path may live under any of them. */
@@ -97,6 +107,23 @@ describe("LandingFooter", () => {
     // No footer entry may be a raw mail link: a visitor with no mail client
     // configured has no way through.
     expect(hrefs.filter((href) => href?.startsWith("mailto:"))).toEqual([]);
+  });
+
+  it("groups the links in three columns, help and the legal pages together", () => {
+    renderFooter(en);
+
+    const columns = screen.getAllByRole("navigation").map((nav) => nav.getAttribute("aria-label"));
+    expect(columns).toEqual(["Send something", "Carry", "Help and legal"]);
+    const help = screen.getByRole("navigation", { name: "Help and legal" });
+    const hrefs = Array.from(help.querySelectorAll("a")).map((link) => link.getAttribute("href"));
+    expect(hrefs).toEqual(["/help", "/contact", "/changelog", "/terms", "/legal-notice", "/privacy"]);
+  });
+
+  it("offers the language and theme controls", () => {
+    renderFooter(en);
+
+    expect(screen.getByRole("group", { name: "Language" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Theme" })).toBeInTheDocument();
   });
 
   it("opens the external Expedion link safely", () => {

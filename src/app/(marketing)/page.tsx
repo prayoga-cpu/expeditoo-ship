@@ -2,28 +2,36 @@ import type { Metadata } from "next";
 import {
   LandingNavbar,
   LandingHero,
-  LandingTrust,
+  LandingMarquee,
   LandingRecentRequests,
+  LandingServices,
   LandingHowItWorks,
-  LandingAudiences,
+  LandingPromises,
+  LandingCarriers,
+  LandingFaq,
   LandingCTA,
   LandingFooter,
+  LandingMotion,
 } from "@/features/marketing/ui";
+import styles from "@/features/marketing/ui/landing.module.css";
 
 /**
- * The landing page, rebuilt in 2.96.0 for the person who needs something
- * moved (docs/specs/landing_2026_11_spec.md). The client pointed at a
- * reference for clarity on 19 Nov — « more clear and direct, more readable »,
- * « simple & quick » — and asked for its search card with the request's title
- * in place of « Date exacte ». Its structure is followed; its words, colours
- * and images are not.
+ * The landing page (docs/specs/landing_2026_11_spec.md). 2.96.0 rebuilt it
+ * for the person who needs something moved, on the structure of the
+ * client's reference — the blue band and its four-field card, « Demandes
+ * récentes », three steps « Simple et rapide », the promises. 2.97.0 dressed
+ * it in the manner of a second reference the owner chose: a floating header
+ * and full-screen menu, a video hero, a marquee, tabs, numbered points round
+ * a photograph, a dark band, an FAQ and a picture band to close. Their
+ * structure and motion are taken; their words, colours, fonts, images and
+ * video are not.
  *
  * The header and footer may link only to sections this page renders
- * (`landing-anchors.test.tsx`): #how, #recent, #carriers.
+ * (`landing-anchors.test.tsx`), and so may the menu.
  *
- * No `lp` class on `<main>`: the sections use the app's own tokens, which
- * follow the theme toggle; the shared header and footer carry `lp` on their
- * own roots, as on every marketing page.
+ * No `lp` class on `<main>`: the sections read the home page's own tokens
+ * (`styles.home`), which follow the theme toggle; the shared header and
+ * footer carry `lp` on their own roots, as on every marketing page.
  */
 export const metadata: Metadata = {
   title: "Expeditop — Faites transporter vos objets par des transporteurs vérifiés",
@@ -33,13 +41,17 @@ export const metadata: Metadata = {
 
 export default function LandingPage() {
   return (
-    <main className="min-h-screen bg-background font-sans text-foreground">
-      <LandingNavbar />
+    <main className={`${styles.home} min-h-screen bg-[var(--h-bg)] font-sans text-[var(--h-text)]`}>
+      <LandingMotion />
+      <LandingNavbar overlay />
       <LandingHero />
-      <LandingTrust />
+      <LandingMarquee />
       <LandingRecentRequests />
+      <LandingServices />
       <LandingHowItWorks />
-      <LandingAudiences />
+      <LandingPromises />
+      <LandingCarriers />
+      <LandingFaq />
       <LandingCTA />
       <LandingFooter flush />
     </main>

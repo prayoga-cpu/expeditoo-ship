@@ -2277,7 +2277,18 @@
       "signUp": "Inscription",
       "loginOrSignUp": "Connexion / Inscription",
       "recent": "Demandes récentes",
-      "carriers": "Transporteurs"
+      "carriers": "Transporteurs",
+      "menu": "Menu",
+      "menuOpen": "Ouvrir le menu",
+      "menuClose": "Fermer le menu",
+      "menuSections": "Sur cette page",
+      "menuPreferences": "Préférences",
+      "services": "Ce que nous transportons",
+      "promises": "Nos engagements",
+      "faq": "Questions fréquentes",
+      "request": "Créer une demande",
+      "help": "Aide",
+      "contact": "Contact"
     },
     "cta": {
       "title": "Quelque chose à faire transporter ?",
@@ -2289,14 +2300,12 @@
     },
     "footer": {
       "tagline": "Faites transporter vos objets par des transporteurs vérifiés, en France et à l'étranger. Expeditop fait partie du groupe Expedion.",
-      "carriers": "Transporteurs",
+      "carriers": "Transporter",
       "howItWorks": "Comment ça marche",
       "verification": "Vérification",
-      "group": "Groupe",
       "expedionBuyers": "Expedion — acheteurs",
       "auctionHouses": "Maisons de ventes",
       "contact": "Contact",
-      "legal": "Légal",
       "terms": "CGV",
       "legalNotice": "Mentions légales",
       "privacy": "Politique de confidentialité",
@@ -2306,7 +2315,9 @@
       "requesters": "Expédier",
       "request": "Publier une demande",
       "recent": "Demandes récentes",
-      "becomeCarrier": "Devenir transporteur"
+      "becomeCarrier": "Devenir transporteur",
+      "helpLegal": "Aide et légal",
+      "help": "Aide"
     },
     "actions": {
       "bid": {
@@ -2792,7 +2803,9 @@
       "badge": "Objets, meubles et déménagements · France et étranger",
       "title": "Trouvez un transporteur pour vos objets",
       "subtitle": "Dites ce que vous transportez et où. Des transporteurs vérifiés vous envoient leur prix : vous choisissez l'offre qui vous convient.",
-      "note": "Publier une demande est gratuit. Vous ne payez qu'en acceptant une offre."
+      "note": "Publier une demande est gratuit. Vous ne payez qu'en acceptant une offre.",
+      "howLink": "Voir comment ça marche",
+      "howBadge": "Comment ça marche · Comment ça marche · "
     },
     "search": {
       "label": "Décrire votre envoi",
@@ -2817,7 +2830,6 @@
       "exampleFill": "Remplir le trajet {from} → {to}"
     },
     "trust": {
-      "label": "À chaque demande",
       "payment": {
         "title": "Paiement à l'acceptation",
         "desc": "Rien n'est débité tant que vous n'avez pas choisi une offre."
@@ -2833,7 +2845,10 @@
       "refund": {
         "title": "Remboursé en cas d'annulation",
         "desc": "Une course annulée avant le retrait vous est remboursée."
-      }
+      },
+      "eyebrow": "Nos engagements",
+      "title": "Ce qui vaut pour chaque demande",
+      "intro": "Des règles que l'application applique à chaque transport, pas des promesses de délai ni de prix."
     },
     "recent": {
       "title": "Demandes récentes",
@@ -2855,7 +2870,8 @@
         "title": "Aucune demande ouverte en ce moment",
         "description": "Décrivez ce que vous voulez transporter : votre demande sera la première de la liste.",
         "cta": "Publier une demande"
-      }
+      },
+      "eyebrow": "Ouvertes aux offres"
     },
     "howItWorks": {
       "eyebrow": "Simple et rapide",
@@ -2876,32 +2892,73 @@
       },
       "cta": "Publier une demande"
     },
-    "audiences": {
-      "title": "Deux façons d'utiliser Expeditop",
-      "intro": "Faites transporter vos objets, ou transportez ceux des autres.",
-      "shipper": {
-        "eyebrow": "Vous expédiez",
-        "title": "Un meuble, des cartons, un déménagement",
-        "intro": "Particulier ou professionnel, vous décrivez ce qu'il faut transporter et vous comparez les offres reçues.",
-        "point1": "Objets seuls ou déménagement complet",
-        "point2": "En France et à l'étranger",
-        "point3": "Le prix le plus bas n'est pas imposé : c'est vous qui choisissez",
-        "cta": "Publier une demande"
-      },
-      "carrier": {
-        "eyebrow": "Vous transportez",
-        "title": "Des courses sur votre route",
-        "intro": "Chauffeur ou transporteur professionnel, vous proposez votre prix sur les demandes ouvertes.",
-        "point1": "Consultez les demandes et proposez votre prix",
-        "point2": "Déclarez vos trajets pour trouver les courses qui vous concernent",
-        "point3": "Votre dossier est vérifié par Expeditop avant votre première offre"
-      }
-    },
     "images": {
       "hero": "Étiquettes kraft nouées à la ficelle sur un colis",
       "shipper": "Un canapé bleu clair et ses coussins dans un salon lumineux",
       "carrier": "L'autoroute vue depuis le siège du conducteur, des poids lourds sur la voie de droite",
-      "packing": "Une personne ferme un carton sur une table, du papier kraft à côté"
+      "packing": "Une personne ferme un carton sur une table, du papier kraft à côté",
+      "parcel": "Un carton d'expédition posé sur un sol en béton",
+      "europe": "Une route qui serpente entre des champs de lave et une montagne dans la brume",
+      "closing": "Un van blanc sur une piste au coucher du soleil, dans un nuage de poussière"
+    },
+    "marquee": {
+      "label": "Ce que l'on fait transporter avec Expeditop"
+    },
+    "services": {
+      "eyebrow": "Ce que nous transportons",
+      "title": "Du colis au déménagement",
+      "intro": "Un objet, quelques meubles ou un logement entier : décrivez-le une fois, des transporteurs vérifiés vous répondent.",
+      "tabsLabel": "Types de transport",
+      "parcels": {
+        "tab": "Colis et objets",
+        "title": "Colis et objets",
+        "desc": "Un carton, une valise, un vélo, un tableau : indiquez son poids et sa taille, ajoutez une photo si vous le souhaitez. Les transporteurs vous proposent leur prix.",
+        "cta": "Publier une demande"
+      },
+      "furniture": {
+        "tab": "Meubles et électroménager",
+        "title": "Meubles et électroménager",
+        "desc": "Un canapé, une armoire, un lave-linge : précisez l'étage et l'ascenseur à chaque adresse, et s'il faut aider à charger. Le transporteur sait ce qui l'attend.",
+        "cta": "Publier une demande"
+      },
+      "moving": {
+        "tab": "Déménagement",
+        "title": "Déménagement",
+        "desc": "Un studio ou une maison : donnez la superficie du logement ou le volume, ajoutez des photos des pièces. Des déménageurs vérifiés vous font leurs offres.",
+        "cta": "Demander un devis déménagement"
+      },
+      "abroad": {
+        "tab": "France et étranger",
+        "title": "En France et à l'étranger",
+        "desc": "Chaque adresse a son pays : le départ et l'arrivée peuvent être en France, ailleurs en Europe ou plus loin. Le code postal et la carte suivent le pays choisi.",
+        "cta": "Publier une demande"
+      }
+    },
+    "carriers": {
+      "eyebrow": "Vous transportez ?",
+      "title": "Des courses sur votre route",
+      "intro": "Chauffeur ou transporteur professionnel : vous fixez votre prix sur les demandes ouvertes, près des trajets que vous faites déjà.",
+      "point1": "Consultez les demandes ouvertes et proposez votre prix",
+      "point2": "Déclarez vos trajets pour retrouver les courses sur votre route",
+      "point3": "Votre dossier est vérifié par Expeditop avant votre première offre",
+      "point4": "Une fois la livraison enregistrée, la course rejoint votre solde : vous demandez un retrait, versé par virement"
+    },
+    "faq": {
+      "eyebrow": "Questions fréquentes",
+      "title": "Avant votre première demande",
+      "intro": "Ce qu'il faut savoir sur les offres, le paiement et le suivi.",
+      "cost": {
+        "question": "Combien coûte une demande ?",
+        "answer": "Publier une demande est gratuit. Chaque transporteur propose son prix ; vous ne payez qu'en acceptant une offre : son prix et les frais de service, affichés avant le paiement. Rien n'est débité tant que vous n'avez rien accepté."
+      },
+      "carriers": {
+        "question": "Qui sont les transporteurs ?",
+        "answer": "Des chauffeurs Expeditop et des transporteurs professionnels. Chaque dossier, documents et véhicule compris, est vérifié par notre équipe avant la première offre : l'approbation n'est jamais automatique."
+      },
+      "moreTitle": "Une autre question ?",
+      "moreText": "Le centre d'aide répond sur les demandes, le paiement et le suivi. Sinon, écrivez-nous.",
+      "help": "Centre d'aide",
+      "contact": "Nous contacter"
     }
   },
   "help": {

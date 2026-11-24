@@ -81,10 +81,14 @@ describe("the landing page", () => {
   it("renders its sections in order", () => {
     const { container } = withClient(<LandingPage />);
 
+    // 2.97.0: the client's reference first (hero card, recent requests),
+    // then what we move, how it works, the promises, the carriers' band, the
+    // FAQ and the closing band.
+    const SECTIONS = ["top", "recent", "shippers", "how", "promises", "carriers", "faq", "cta"];
     const ids = Array.from(container.querySelectorAll("main [id]"))
       .map((node) => node.id)
-      .filter((id) => ["top", "recent", "how", "shippers", "carriers", "cta"].includes(id));
-    expect(ids).toEqual(["top", "recent", "how", "shippers", "carriers", "cta"]);
+      .filter((id) => SECTIONS.includes(id));
+    expect(ids).toEqual(SECTIONS);
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("title");
     expect(container.querySelector("header")).not.toBeNull();
     expect(container.querySelector("footer")).not.toBeNull();
@@ -107,19 +111,43 @@ describe("the landing page", () => {
       .toBeInTheDocument();
   });
 
-  it("gives every photograph its alt text and only the hero priority", () => {
+  it("gives every photograph its alt text, and only the video's poster priority", () => {
     const { container } = withClient(<LandingPage />);
 
     // Outside Next the default loader rewrites `src`; the path is still in it.
     const source = (image: Element) => decodeURIComponent(image.getAttribute("src") ?? "");
-    const images = Array.from(container.querySelectorAll("main img")).filter((image) =>
+    const photos = Array.from(container.querySelectorAll("main img")).filter((image) =>
       source(image).includes("/images/landing/")
     );
-    expect(images.length).toBeGreaterThanOrEqual(3);
-    for (const image of images) expect(image.getAttribute("alt")).toBeTruthy();
-    const eager = images.filter((image) => image.getAttribute("loading") !== "lazy");
+    expect(photos.length).toBeGreaterThanOrEqual(6);
+    for (const image of photos) {
+      expect(image.getAttribute("alt")).toBeTruthy();
+      expect(image.getAttribute("loading")).toBe("lazy");
+    }
+
+    // The hero's first paint is the poster: server-rendered, eager, and
+    // decoration (empty alt, inside an aria-hidden layer).
+    const eager = Array.from(container.querySelectorAll("main img")).filter(
+      (image) => image.getAttribute("loading") !== "lazy"
+    );
     expect(eager).toHaveLength(1);
-    expect(source(eager[0])).toContain("/images/landing/hero.webp");
+    expect(source(eager[0])).toContain("/videos/landing/hero-poster.webp");
+    expect(eager[0].getAttribute("alt")).toBe("");
+    expect(eager[0].closest("[aria-hidden]")).not.toBeNull();
+  });
+
+  it("starts with the poster alone: no video before the browser has said motion is welcome", () => {
+    const { container } = withClient(<LandingPage />);
+
+    // jsdom has no `matchMedia`, which the page reads as « reduce ».
+    expect(container.querySelector("video")).toBeNull();
+  });
+
+  it("keeps every section in the server's HTML visible: nothing hides before the script says so", () => {
+    const { container } = withClient(<LandingPage />);
+
+    expect(container.querySelectorAll("[data-reveal]").length).toBeGreaterThan(10);
+    expect(document.documentElement.classList.contains("lp-motion")).toBe(false);
   });
 });
 

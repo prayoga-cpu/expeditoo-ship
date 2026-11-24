@@ -4,8 +4,37 @@
  * specified at desktop width only.
  */
 
-/** Clears the sticky header when an in-page anchor is followed. */
-export const LP_ANCHOR_OFFSET = "scroll-mt-[112px] md:scroll-mt-[66px]";
+/**
+ * Clears the floating header when an in-page anchor is followed: 12px of
+ * inset, the 64px bar, and some air (2.97.0). The bar no longer wraps to two
+ * rows on a phone, so one value holds at every width. Lenis reads the same
+ * `scroll-margin-top` when it handles the jump.
+ */
+export const LP_ANCHOR_OFFSET = "scroll-mt-[92px]";
+
+/** The home page's one content measure: header, sections and footer share it. */
+export const H_CONTAINER = "mx-auto w-full max-w-[1200px] px-4 sm:px-8";
+
+/** Vertical rhythm of a home section. */
+export const H_SECTION_Y = "py-20 sm:py-24 lg:py-32";
+
+/** Section titles: Plus Jakarta Sans, heavy and tight (spec §7). */
+export const H_H2 =
+  "m-0 text-[2rem] leading-[1.06] font-extrabold tracking-[-0.035em] text-balance text-[var(--h-text)] sm:text-[2.6rem] lg:text-[3.25rem]";
+
+export const H_INTRO =
+  "m-0 text-[1.02rem] leading-relaxed text-pretty text-[var(--h-muted)] sm:text-[1.1rem]";
+
+const H_BTN =
+  "inline-flex h-12 items-center justify-center gap-2 rounded-xl px-6 text-[1rem] font-semibold transition-colors focus-visible:ring-[3px] focus-visible:ring-offset-2 focus-visible:outline-none";
+
+/** The app primary, as everywhere: white on #076BE3 is 5.0:1. */
+export const H_BTN_PRIMARY = `${H_BTN} bg-primary text-white hover:bg-[#055bc4] focus-visible:ring-[rgb(7_107_227/0.45)] focus-visible:ring-offset-[var(--h-bg)]`;
+
+/** For the dark and blue bands: white, the primary's text on it. */
+export const H_BTN_WHITE = `${H_BTN} bg-white text-[#0b4fb0] hover:bg-[#eaf2ff] focus-visible:ring-white focus-visible:ring-offset-[#0a2348]`;
+
+export const H_BTN_OUTLINE_WHITE = `${H_BTN} border border-[rgb(255_255_255/0.55)] bg-transparent text-white hover:bg-[rgb(255_255_255/0.12)] focus-visible:ring-white focus-visible:ring-offset-[#0a2348]`;
 
 /** Every landing block roots itself in `lp` so the palette resolves anywhere. */
 export const LP_SECTION = `lp ${LP_ANCHOR_OFFSET} px-5 sm:px-8 pt-[72px] lg:pt-[110px]`;
