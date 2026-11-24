@@ -821,7 +821,15 @@ figures) and the bid card deleted.
   sign-in → `/home`; one welcome mail; the same code again → 410 `CODE_EXPIRED`; no second welcome mail.
 - Flaky `location-picker-field.test.tsx` (« going back to typing… ») failed once on a dev build: it switched modes
   before the reverse-geocoded text landed. The test now waits for it (5/5 locally).
-- **Not yet:** the code in production (after the merge), the prefilled /create signed in in a browser, Samsung
+- **Production (after PR #2, 2026-11-24, throwaway mail.tm inboxes):** sign-up mail with the code from
+  `no-reply@expeditop.fr`; wrong code 4, 3 tries left; resend replaces it; typed code → `/signin?email=…` prefilled →
+  `/home`; one welcome mail; reused code → 410. Link, unverified sign-in, reset → sign-in all green. Forced-dark
+  Chromium and OS-dark WebKit (iPhone 13) render `/` and `/signin` light. **Signed-in `/create` prefill verified:**
+  sign-in returns to `/create?title=Piano+droit&from=Paris&to=Lyon&date=…`; title filled, pickup a one-day window on
+  that date with delivery the next day, Paris → Lyon in the town fields.
+- **Not yet:** Samsung Internet, a real phone (#29, #36), the client's own laptop (#36).
+- **Production QA accounts to delete in /admin/users:** `qa-mwup6niu@`, `qa-mwup7d9u@`, `qacodemwuszawv@`,
+  `qa-mwut1amq@`, `qaprefillmwut834m@euploading.com`.
   Internet, a phone for #36, the dev deployment with the new mail settings.
 
 **Known limits** — the hero photo is 960 px (largest free download); the home page shows any open request, beta ones
