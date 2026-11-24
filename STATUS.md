@@ -103,16 +103,13 @@ adversarial verification pass — treat their detail as slightly less certain.
 Work that needs a human hand outside the codebase. Add to this list rather
 than leaving it in a chat message.
 
-- [ ] **(2.95.1) Vercel → Storage → `neon-crimson-car` → expeditoo-ship: untick Preview.** Still ticked on
-  2026-11-24 (the 13 database rows read `production+preview`), so every preview deployment *holds* production's
-  database password. The `dev` branch overrides `POSTGRES_URL*` with its own and the boot guard refuses production
-  elsewhere, so nothing *uses* it — but nothing should hold it either. The CLI can only disconnect + reconnect,
-  which would briefly strip production too.
-- [ ] **(2.96.1) Stripe LIVE mode: delete the destination `adventurous-radiance`**
-  (`we_1UfJlmJRpszqU81326R7d1yU` → `https://dev.expeditop.fr/api/stripe/webhook`). It is a live destination aimed at
-  dev; its secret is no longer on dev, so dev now rejects what it sends, but it should not exist. **Keep**
-  `expeditoo-vercel` (production's webhook) and both `n8n` destinations (the client's current Expedion app).
-  Not confirmed deleted as of 2026-11-24 — a test key cannot list live endpoints.
+- [ ] **`VERCEL_TOKEN` (repo secret, a team-scoped read token) for the weekly env audit** (`env-audit.yml`).
+  Without it the audit fails on its first step every Monday.
+- [x] ~~(2.95.1) Untick Preview on the `neon-crimson-car` connection~~ — **done by the owner 2026-11-24**; checked
+  the same day: all 18 integration rows (`POSTGRES_*`, `PG*`, `DATABASE_URL*`, `NEON_*`, `VITE_NEON_AUTH_URL`)
+  read `production` only. A preview from any branch but `dev` now has no `POSTGRES_URL` and fails at boot, by design.
+- [x] ~~(2.96.1) Stripe live mode: delete `adventurous-radiance`~~ — **done by the owner 2026-11-24** (reported;
+  a test key cannot list live endpoints to confirm). `expeditoo-vercel` and both `n8n` destinations kept.
 - [x] ~~(2.95.1) Stripe dev webhook in test mode~~ — **done 2026-11-24 (2.96.1)**: dev's keys and webhook are both
   the **test mode of `acct_1R10Z6JRpszqU813`** (ATOUT GLOBAL SERVICES); endpoint `we_1UfKP7JRpszqU813BGzequ5K`,
   events `account.updated` + `payment_intent.succeeded`. The old dev keys belonged to another, unactivated account,
@@ -121,8 +118,8 @@ than leaving it in a chat message.
   Protection Bypass for Automation** (Vercel → Settings → Deployment Protection; repo secret
   `VERCEL_AUTOMATION_BYPASS_DEV`; the Stripe test URL carries it as `?x-vercel-protection-bypass=`). Rotate there
   if it leaks; then update the secret and the Stripe URL.
-- [ ] **(2.95.1)** Which address receives all dev mail (`EMAIL_DEV_RECIPIENT`, Preview, branch `dev`)? Unset, dev
-  drops every mail, so a sign-up there cannot verify. `VERCEL_TOKEN` (repo secret) for the weekly env audit.
+- [x] ~~(2.95.1) Which address receives all dev mail~~ — **owner chose 2026-11-24: prayogadevelopment@gmail.com**
+  (`EMAIL_DEV_RECIPIENT`, Preview, branch `dev`; `EMAIL_FROM` there is `Expeditop <no-reply@expeditop.fr>`).
 - [x] ~~(2.91.1) dev environment dashboards~~ — **done 2026-11-24**: five shared rows made production-only (values
   kept), Preview secrets and buckets, Neon schema-only `dev` branch with reset passwords, `dev` git branch,
   dev.expeditop.fr bound to it, Cloudflare CNAME, Google redirect, `MIRROR_SOURCE_URL`, refresh run
@@ -745,8 +742,11 @@ found ». The workflow's Invoke step was parsed and run against a curl stub: `de
 `x-vercel-protection-bypass`, `production` only `Authorization`, and `dev` without the secret stops with a named
 error. No TypeScript changed here; `changelog:check` and `changelog.test.ts` (27) pass locally, and the full gate runs in this commit's dev build.
 
-**Known limits.** `adventurous-radiance` in live mode is not confirmed deleted. Dev mail (`EMAIL_DEV_RECIPIENT`)
-and the Neon Preview untick are still open (Operator to-do).
+**Known limits.** The owner then deleted `adventurous-radiance` (live), unticked Preview on the Neon connection
+(confirmed: every integration row is production-only) and chose the dev mail recipient — all the same day. Left:
+`VERCEL_TOKEN` for the weekly env audit. The flaky `location-picker-field.test.tsx` case (« going back to typing
+keeps the text… »), which failed once in the dev build of `9babbaf` and passed in the next build and 26 local runs,
+was fixed in 2.96.0's `0f3b881`: the test now waits for the reverse-geocoded text before switching modes.
 
 ## ✅ 2026-11-24 — An access code, colours that follow the toggle, a nav that answers at first paint, a new home page (2.96.0)
 
@@ -821,7 +821,15 @@ figures) and the bid card deleted.
   sign-in → `/home`; one welcome mail; the same code again → 410 `CODE_EXPIRED`; no second welcome mail.
 - Flaky `location-picker-field.test.tsx` (« going back to typing… ») failed once on a dev build: it switched modes
   before the reverse-geocoded text landed. The test now waits for it (5/5 locally).
-- **Not yet:** the code in production (after the merge), the prefilled /create signed in in a browser, Samsung
+- **Production (after PR #2, 2026-11-24, throwaway mail.tm inboxes):** sign-up mail with the code from
+  `no-reply@expeditop.fr`; wrong code 4, 3 tries left; resend replaces it; typed code → `/signin?email=…` prefilled →
+  `/home`; one welcome mail; reused code → 410. Link, unverified sign-in, reset → sign-in all green. Forced-dark
+  Chromium and OS-dark WebKit (iPhone 13) render `/` and `/signin` light. **Signed-in `/create` prefill verified:**
+  sign-in returns to `/create?title=Piano+droit&from=Paris&to=Lyon&date=…`; title filled, pickup a one-day window on
+  that date with delivery the next day, Paris → Lyon in the town fields.
+- **Not yet:** Samsung Internet, a real phone (#29, #36), the client's own laptop (#36).
+- **Production QA accounts to delete in /admin/users:** `qa-mwup6niu@`, `qa-mwup7d9u@`, `qacodemwuszawv@`,
+  `qa-mwut1amq@`, `qaprefillmwut834m@euploading.com`.
   Internet, a phone for #36, the dev deployment with the new mail settings.
 
 **Known limits** — the hero photo is 960 px (largest free download); the home page shows any open request, beta ones
