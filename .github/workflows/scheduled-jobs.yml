@@ -77,6 +77,11 @@ jobs:
         env:
           APP_URL: ${{ inputs.target == 'dev' && vars.APP_URL_DEV || vars.APP_URL }}
           CRON_SECRET: ${{ inputs.target == 'dev' && secrets.CRON_SECRET_DEV || secrets.CRON_SECRET }}
+          # dev.expeditop.fr sits behind Vercel Authentication (team only), which
+          # answers 302 to anything without a login. Vercel's "Protection Bypass
+          # for Automation" token lets this job through; production is not
+          # protected and never gets the header.
+          VERCEL_BYPASS: ${{ inputs.target == 'dev' && secrets.VERCEL_AUTOMATION_BYPASS_DEV || '' }}
           PATH_SUFFIX: ${{ steps.target.outputs.path }}
         run: |
           set -euo pipefail
@@ -85,6 +90,14 @@ jobs:
           fi
           if [ -z "${CRON_SECRET:-}" ]; then
             echo "::error::Repo secret CRON_SECRET is unset"; exit 1
+          fi
+
+          if [ "${{ inputs.target }}" = "dev" ] && [ -z "${VERCEL_BYPASS:-}" ]; then
+            echo "::error::Repo secret VERCEL_AUTOMATION_BYPASS_DEV is unset — dev.expeditop.fr will answer 302"; exit 1
+          fi
+          bypass=()
+          if [ -n "${VERCEL_BYPASS:-}" ]; then
+            bypass=(--header "x-vercel-protection-bypass: ${VERCEL_BYPASS}")
           fi
 
           echo "GET ${APP_URL}${PATH_SUFFIX}"
@@ -98,6 +111,7 @@ jobs:
           status=$(curl --silent --show-error --location \
             --max-time 300 \
             --header "Authorization: Bearer ${CRON_SECRET}" \
+            ${bypass[@]+"${bypass[@]}"} \
             --output response.json \
             --write-out "%{http_code}" \
             "${APP_URL}${PATH_SUFFIX}")

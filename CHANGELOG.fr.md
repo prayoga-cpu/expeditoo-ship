@@ -18,6 +18,20 @@ L'historique antérieur à la `2.0.0` appartient à la place de marché de biens
 la v1 et n'est pas conservé : la première version ci-dessous est le commit qui a
 lancé le virage vers le transport.
 
+## [2.96.1] - 2026-11-24 · infra
+
+Rien ne change sur le site en ligne. Le site de test se comporte désormais
+comme le vrai pour les paiements et les tâches planifiées, sans toucher à
+l'argent réel.
+
+- **Les paiements de test sur le site de test lui sont confirmés en retour**,
+  comme les vrais paiements le sont sur le site en ligne. Ils passent par le
+  mode test de Stripe : aucune carte n'est jamais débitée.
+- **Les tâches planifiées du site de test peuvent être lancées à la demande**
+  — clôture des demandes expirées, publication des demandes programmées,
+  contrôle des documents — tandis que le site lui-même reste réservé à
+  l'équipe.
+
 ## [2.96.0] - 2026-11-24 · feat
 
 Les derniers points ouverts du 19 novembre : un code pour confirmer votre adresse, des couleurs que vous choisissez, un menu qui répond tout de suite et une nouvelle page d'accueil.

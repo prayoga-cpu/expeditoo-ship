@@ -194,13 +194,14 @@ Plan: `docs/plans/plan_dev_environment.md`.
 |---|---|---|
 | Database | Neon project `neon-crimson-car` (`wispy-frost-54808747`), **schema-only** branch `dev` (`br-ancient-rice-awkr56me`, endpoint `ep-late-night-aw6o8h4v` = `DEV_DB_REFS`). `POSTGRES_URL` / `POSTGRES_URL_NON_POOLING` are set for **Preview, git branch `dev`**: they override the Marketplace integration's rows, which still give every other preview production's URL until Preview is unticked on that connection | `src/db/index.ts` refuses a production URL at boot; the dev build refuses to migrate one |
 | Migrations | `src/db/migrate.ts` allow-lists `DEV_DB_REFS` only | refuses, unless `MIGRATE_TARGET=production` (set only by the production build) |
-| Stripe | `sk_test_` / `pk_test_`, its own `whsec_` | `env-assertions.ts` refuses a live key outside production |
+| Stripe | test mode of `acct_1R10Z6JRpszqU813` (production's account): `sk_test_` / `pk_test_`, webhook `we_1UfKP7JRpszqU813BGzequ5K` (`account.updated`, `payment_intent.succeeded`) with its own `whsec_`. Never a live destination aimed at dev | `env-assertions.ts` refuses a live key outside production |
 | R2 | `expeditoo-dev`, `expeditoo-kyc-dev`, `expeditoo-shipments-dev`, `expeditoo-expedion-dev` — the buckets local development already used | **not caught by any guard**: `cleanup-images` deletes what the database does not reference, so a shared `R2_BUCKET_NAME` lets dev empty production's bucket |
 | Sessions | its own `BETTER_AUTH_SECRET` | a shared one makes a dev cookie valid in production |
-| Cron | its own `CRON_SECRET`; GitHub's schedule only calls production | dev sweeps run by hand: Actions → Scheduled jobs → `target: dev` |
+| Cron | its own `CRON_SECRET`; GitHub's schedule only calls production | dev sweeps run by hand: Actions → Scheduled jobs → `target: dev`, which sends the bypass token below |
 | Mail | rewritten to `EMAIL_DEV_RECIPIENT` | dropped when unset |
 | Indexing | `X-Robots-Tag: noindex, nofollow` on every response (`next.config.mjs`) | the host is behind Vercel Authentication too (Standard Protection covers preview custom domains) |
 | Recognition | amber « DEV » tab on every page (`EnvBadge`) | two tabs look identical |
+| Access | team-only (Vercel Authentication). Automation passes with a **Protection Bypass for Automation** token: repo secret `VERCEL_AUTOMATION_BYPASS_DEV`, sent as the `x-vercel-protection-bypass` header by the dev cron and as a query parameter on the Stripe test webhook URL. An agent opens dev with the Vercel MCP's `get_access_to_vercel_url` | without it, Stripe and the cron get a 302 |
 
 `MOCK_PAYMENTS` is **off** on dev: it runs real Stripe in test mode with test
 cards and a real test-mode webhook.

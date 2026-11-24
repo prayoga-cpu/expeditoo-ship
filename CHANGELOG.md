@@ -14,6 +14,18 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.96.1] - 2026-11-24 · infra
+
+Nothing you can see on the live site changes. The test site now behaves like
+the real one for payments and scheduled tasks, without touching real money.
+
+- **Test payments on the test site are confirmed back to it**, the way real
+  payments are on the live site. They run in Stripe's test mode, so no card is
+  ever charged.
+- **The test site's scheduled tasks can be run on demand** — closing expired
+  requests, publishing scheduled ones, document checks — while the site itself
+  stays open to the team only.
+
 ## [2.96.0] - 2026-11-24 · feat
 
 The last open points of 19 November: a code to confirm your address, colours you choose, a menu that answers at once, and a new home page.

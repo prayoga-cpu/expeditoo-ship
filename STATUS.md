@@ -108,14 +108,19 @@ than leaving it in a chat message.
   database password. The `dev` branch overrides `POSTGRES_URL*` with its own and the boot guard refuses production
   elsewhere, so nothing *uses* it — but nothing should hold it either. The CLI can only disconnect + reconnect,
   which would briefly strip production too.
-- [ ] **(2.95.1) Stripe: the dev webhook destination must be in TEST mode of the account Preview's keys belong to.**
-  Dev's `/api/admin/stripe-status` (test keys, account « Expeditoo ») lists one test endpoint,
-  `expeditoo-rho.vercel.app` — not `dev.expeditop.fr`. The destination `we_1UfJlmJRpszqU81326R7d1yU` was made
-  elsewhere (live mode or a sandbox). Recreate it in test mode, put its `whsec_` on Preview `STRIPE_WEBHOOK_SECRET`,
-  and **delete the other one if it is live**: a live destination would send real payment events to dev.
-- [ ] **(2.95.1) Decide who may open dev.expeditop.fr.** Vercel Standard Protection covers preview custom domains,
-  so it is team-only — and so Stripe's webhooks and Actions → Scheduled jobs (`target: dev`) get a 302. Either keep
-  it and add a Protection Bypass for Automation (header for the cron, query parameter on the Stripe URL), or open it.
+- [ ] **(2.96.1) Stripe LIVE mode: delete the destination `adventurous-radiance`**
+  (`we_1UfJlmJRpszqU81326R7d1yU` → `https://dev.expeditop.fr/api/stripe/webhook`). It is a live destination aimed at
+  dev; its secret is no longer on dev, so dev now rejects what it sends, but it should not exist. **Keep**
+  `expeditoo-vercel` (production's webhook) and both `n8n` destinations (the client's current Expedion app).
+  Not confirmed deleted as of 2026-11-24 — a test key cannot list live endpoints.
+- [x] ~~(2.95.1) Stripe dev webhook in test mode~~ — **done 2026-11-24 (2.96.1)**: dev's keys and webhook are both
+  the **test mode of `acct_1R10Z6JRpszqU813`** (ATOUT GLOBAL SERVICES); endpoint `we_1UfKP7JRpszqU813BGzequ5K`,
+  events `account.updated` + `payment_intent.succeeded`. The old dev keys belonged to another, unactivated account,
+  « Expeditoo » (`acct_1SgefXFRjrWz0NdH`).
+- [x] ~~(2.95.1) Decide who may open dev.expeditop.fr~~ — **owner chose 2026-11-24: stays team-only, with a
+  Protection Bypass for Automation** (Vercel → Settings → Deployment Protection; repo secret
+  `VERCEL_AUTOMATION_BYPASS_DEV`; the Stripe test URL carries it as `?x-vercel-protection-bypass=`). Rotate there
+  if it leaks; then update the secret and the Stripe URL.
 - [ ] **(2.95.1)** Which address receives all dev mail (`EMAIL_DEV_RECIPIENT`, Preview, branch `dev`)? Unset, dev
   drops every mail, so a sign-up there cannot verify. `VERCEL_TOKEN` (repo secret) for the weekly env audit.
 - [x] ~~(2.91.1) dev environment dashboards~~ — **done 2026-11-24**: five shared rows made production-only (values
@@ -705,6 +710,43 @@ than leaving it in a chat message.
       Until then its application page says driver access is off.
 
 ---
+
+## ✅ 2026-11-24 — Dev's Stripe and cron reach it through the Vercel login (2.96.1)
+
+*« I can't find, just use this one: whsec_… i just created in test sandbox » — then the owner's choice for dev
+access: « Bypass token (Recommended) ».*
+
+Follows 2.95.1 (`AGENTS.md` §4a, `environments_spec.md` §10). **No migration, no app code.**
+
+**Stripe on dev, outside the repo.** Dev's old test keys opened a different, unactivated account, « Expeditoo »
+(`acct_1SgefXFRjrWz0NdH`), whose only webhook was the abandoned `expeditoo-rho.vercel.app` — while the destination
+the owner made, `adventurous-radiance`, sat in **live** mode of ATOUT GLOBAL SERVICES aimed at dev, with its secret
+on dev: real payment events would have been accepted and acted on against the dev database. Now Preview's
+`STRIPE_SECRET_KEY`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` and `STRIPE_WEBHOOK_SECRET` are all the **test mode of
+`acct_1R10Z6JRpszqU813`** (the keys were checked to open that account and to list the new endpoint before they
+were stored). The endpoint `we_1UfKP7JRpszqU813BGzequ5K` was trimmed from 18 events — invoices, subscriptions,
+and missing `account.updated` — to exactly `HANDLED_STRIPE_EVENTS`, the pair production's endpoint listens to.
+Dev redeployed at `dc2d497`; its Admin → Stripe check: test keys, that account, `webhookEndpoint=ok`.
+
+**Dev stays team-only, automation gets a token.** A Vercel **Protection Bypass for Automation** secret was
+generated locally (32 characters, never printed), registered on the project, appended to the Stripe test URL as
+`?x-vercel-protection-bypass=`, and stored as repo secret `VERCEL_AUTOMATION_BYPASS_DEV`. `scheduled-jobs.yml`
+sends it as a header when `target: dev`, refuses to run that target without it, and never sends it to production.
+
+**Judgment call.** No test payment was created to prove Stripe → dev end to end: the account's test mode has
+three `n8n` test hooks on `payment_intent.succeeded` belonging to the client's current Expedion app, and there was
+no existing event to resend. The two links were proven separately instead (below); « Send test event » on the
+destination is the owner's one-click end-to-end check.
+
+**Verification.** `https://dev.expeditop.fr/api/public/company`: no token → 302, header token → 200, query token →
+200. A payload signed with the stored `whsec_` → 200 `{"received":true}` and Admin → Stripe showed it as the last
+event (`account.updated`, `livemode: false`); the same payload signed with a wrong secret → 400 « No signatures
+found ». The workflow's Invoke step was parsed and run against a curl stub: `dev` sends `Authorization` and
+`x-vercel-protection-bypass`, `production` only `Authorization`, and `dev` without the secret stops with a named
+error. No TypeScript changed here; `changelog:check` and `changelog.test.ts` (27) pass locally, and the full gate runs in this commit's dev build.
+
+**Known limits.** `adventurous-radiance` in live mode is not confirmed deleted. Dev mail (`EMAIL_DEV_RECIPIENT`)
+and the Neon Preview untick are still open (Operator to-do).
 
 ## ✅ 2026-11-24 — An access code, colours that follow the toggle, a nav that answers at first paint, a new home page (2.96.0)
 
