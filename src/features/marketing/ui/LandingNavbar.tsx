@@ -14,7 +14,11 @@ import { LP_BTN_PRIMARY } from "./styles";
  * `#platform` after both sections were cut (2.95.0), and a link to a missing
  * id just scrolls nowhere. `landing-anchors.test.tsx` holds it.
  */
-const NAV_LINKS = [{ href: "/#how", key: "howItWorks" }] as const;
+const NAV_LINKS = [
+  { href: "/#how", key: "howItWorks" },
+  { href: "/#recent", key: "recent" },
+  { href: "/#carriers", key: "carriers" },
+] as const;
 
 export function LandingNavbar() {
   const t = useTranslations("marketing.navbar");
@@ -24,7 +28,10 @@ export function LandingNavbar() {
     <header className="lp sticky top-0 z-50 border-b border-[var(--lp-line)] bg-[var(--lp-headbg)] backdrop-blur-[14px]">
       {/* The design is specified at desktop width; below `md` the control
           cluster no longer fits one line, so the bar wraps to two rows. */}
-      <div className="mx-auto flex w-full max-w-[1180px] flex-wrap items-center gap-x-2 gap-y-2 px-4 py-3 sm:gap-x-[22px] sm:px-8 md:h-[66px] md:flex-nowrap md:py-0">
+      {/* `font-sans` here, not on the header: `.lp` sets the marketing pages'
+          display face on the element that carries it, unlayered, and the
+          header is set in the app's own Plus Jakarta Sans since 2.96.0. */}
+      <div className="mx-auto flex w-full max-w-[1200px] flex-wrap items-center gap-x-2 gap-y-2 px-4 py-3 font-sans sm:gap-x-[22px] sm:px-8 md:h-[66px] md:flex-nowrap md:py-0">
         {/* A phone has 328px of row at 360px wide and the lockup at 32px takes
             139 of it, so it steps down to 24px below `sm` (104px). */}
         <Link href="/#top" className="flex flex-none items-center">
@@ -36,7 +43,9 @@ export function LandingNavbar() {
           </span>
         </Link>
 
-        <nav className="hidden min-w-0 flex-auto items-center gap-4 md:flex">
+        {/* From `xl` only: at 1024px the three links and the five controls on
+            the right overlap (seen in Chromium, 2.96.0). */}
+        <nav className="hidden min-w-0 flex-auto items-center gap-5 xl:flex">
           {NAV_LINKS.map((link) => (
             <Link
               key={link.href}

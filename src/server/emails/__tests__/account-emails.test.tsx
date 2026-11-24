@@ -62,4 +62,37 @@ describe("VerificationEmail", () => {
     expect(html).toContain(`href="${verificationUrl}"`);
     expect(html).toContain("Bonjour,");
   });
+
+  // email_access_code_spec.md §4: the code sits above the button, in one
+  // unbroken run of digits so a copy needs no tidying.
+  it("prints the code above the button when it has one", async () => {
+    const text = await render(
+      VerificationEmail({ verificationUrl, userName: "Jean", code: "048213" }),
+      { plainText: true }
+    );
+
+    expect(text).toContain("Votre code de confirmation");
+    expect(text).toContain("048213");
+    expect(text).toContain("Saisissez-le sur la page où vous vous êtes inscrit");
+    expect(text).toContain("Ce code et ce lien expirent dans 1 heure.");
+    expect(text.indexOf("048213")).toBeLessThan(text.indexOf("Confirmer mon adresse e-mail"));
+  });
+
+  it("sets the code in a monospace face and names it in the inbox preview", async () => {
+    const html = await render(VerificationEmail({ verificationUrl, code: "048213" }));
+
+    expect(html).toMatch(/monospace[^>]*>048213</);
+    expect(html).toContain("Votre code : 048 213");
+  });
+
+  it("is the link alone without a code, as an Expedion mail is", async () => {
+    const text = await render(
+      VerificationEmail({ verificationUrl, productName: "Expedion" }),
+      { plainText: true }
+    );
+
+    expect(text).not.toContain("Votre code");
+    expect(text).toContain("Ce lien expire dans 1 heure.");
+    expect(text).toContain("Confirmer mon adresse e-mail");
+  });
 });

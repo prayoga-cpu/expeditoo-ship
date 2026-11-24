@@ -44,6 +44,15 @@ describe("verifyEmailPath", () => {
       "/verify-email?email=jean%40mail.com&from=signin"
     );
   });
+
+  it("keeps an in-app destination and drops anything else", () => {
+    expect(verifyEmailPath("jean@mail.com", "signin", "/create?type=moving")).toBe(
+      "/verify-email?email=jean%40mail.com&from=signin&callbackUrl=%2Fcreate%3Ftype%3Dmoving"
+    );
+    expect(verifyEmailPath("jean@mail.com", "signin", "https://evil.test")).toBe(
+      "/verify-email?email=jean%40mail.com&from=signin"
+    );
+  });
 });
 
 describe("useAuthActions.signIn — where to go next", () => {
@@ -108,6 +117,23 @@ describe("useAuthActions.signIn", () => {
     );
     expect(outcome).toEqual({ success: false });
     expect(result.current.error).toBeNull();
+  });
+
+  // Verifying must not cost the person the page they were headed to.
+  it("carries where the person was headed to the verify screen", async () => {
+    mocks.signIn.mockResolvedValue({
+      data: null,
+      error: { status: 403, code: "EMAIL_NOT_VERIFIED", message: "Email not verified" },
+    });
+    const { result } = renderHook(() => useAuthActions());
+
+    await act(async () => {
+      await result.current.signIn("jean@mail.com", "secret-password", false, "/listing/abc");
+    });
+
+    expect(mocks.push).toHaveBeenCalledWith(
+      "/verify-email?email=jean%40mail.com&from=signin&callbackUrl=%2Flisting%2Fabc"
+    );
   });
 
   it("says a wrong password in a key, never in Better Auth's English", async () => {
@@ -302,15 +328,19 @@ describe("useAuthActions, the other forms", () => {
     expect(mocks.push).not.toHaveBeenCalled();
   });
 
-  it("keeps a successful reset on its way to sign-in", async () => {
+  // The page shows its success, then goes to sign-in itself; a second push
+  // from here skipped that screen and raced the page's own timer.
+  it("leaves the way to sign-in after a reset to the page", async () => {
     mocks.resetPassword.mockResolvedValue({ data: { status: true }, error: null });
     const { result } = renderHook(() => useAuthActions());
 
+    let outcome: Awaited<ReturnType<typeof result.current.resetPassword>> | undefined;
     await act(async () => {
-      await result.current.resetPassword("tok", "new-password-1");
+      outcome = await result.current.resetPassword("tok", "new-password-1");
     });
 
-    expect(mocks.push).toHaveBeenCalledWith("/signin");
+    expect(outcome).toEqual({ success: true });
+    expect(mocks.push).not.toHaveBeenCalled();
   });
 
   it("no longer drops a Google refusal on the floor", async () => {

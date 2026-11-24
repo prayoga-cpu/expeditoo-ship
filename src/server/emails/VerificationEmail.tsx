@@ -25,17 +25,31 @@ interface VerificationEmailProps {
    * at, reading exactly as it did before.
    */
   productName?: string;
+  /**
+   * The six-digit access code, for an account whose app has a screen to type
+   * it into (EXPEDITOP's `/verify-email`). Absent, the mail is the link alone,
+   * exactly as before (email_access_code_spec.md §4).
+   */
+  code?: string;
 }
+
+/** « 123 456 »: two groups read aloud more easily than six digits in a row. */
+const grouped = (code: string) => `${code.slice(0, 3)} ${code.slice(3)}`;
 
 export function VerificationEmail({
   verificationUrl,
   userName,
   productName = "EXPEDITOP",
+  code,
 }: VerificationEmailProps) {
   return (
     <Html lang="fr">
       <Head />
-      <Preview>Confirmez votre adresse e-mail {productName}</Preview>
+      <Preview>
+        {code
+          ? `Votre code : ${grouped(code)} — confirmez votre adresse e-mail ${productName}`
+          : `Confirmez votre adresse e-mail ${productName}`}
+      </Preview>
       <Body style={main}>
         <Container style={container}>
           {/* French, like the reset mail: the people who sign up here are
@@ -46,12 +60,28 @@ export function VerificationEmail({
             Merci de votre inscription sur {productName}. Il reste une étape :
             confirmer que cette adresse est bien la vôtre.
           </Text>
+          {code && (
+            <Section style={codeContainer}>
+              <Text style={codeLabel}>Votre code de confirmation</Text>
+              {/* The digits are one unbroken run, spaced by letter-spacing
+                  only, so a copy is « 123456 » with nothing to tidy. */}
+              <Text style={codeStyle}>{code}</Text>
+              <Text style={codeHint}>
+                Saisissez-le sur la page où vous vous êtes inscrit, ou
+                utilisez le bouton ci-dessous.
+              </Text>
+            </Section>
+          )}
           <Section style={buttonContainer}>
             <Button style={button} href={verificationUrl}>
               Confirmer mon adresse e-mail
             </Button>
           </Section>
-          <Text style={footer}>Ce lien expire dans 1 heure.</Text>
+          <Text style={footer}>
+            {code
+              ? "Ce code et ce lien expirent dans 1 heure."
+              : "Ce lien expire dans 1 heure."}
+          </Text>
           <Text style={footer}>
             Si vous n’avez pas créé de compte {productName}, ignorez simplement
             cet e-mail.
@@ -93,6 +123,38 @@ const text = {
   fontSize: "16px",
   lineHeight: "26px",
   padding: "0 48px",
+};
+
+const codeContainer = {
+  margin: "8px 48px 0",
+  padding: "20px 16px",
+  backgroundColor: "#f4f4f5",
+  borderRadius: "8px",
+  textAlign: "center" as const,
+};
+
+const codeLabel = {
+  color: "#666",
+  fontSize: "14px",
+  lineHeight: "20px",
+  margin: "0 0 8px",
+};
+
+const codeStyle = {
+  color: "#111",
+  fontFamily: '"SFMono-Regular",Menlo,Consolas,"Liberation Mono",monospace',
+  fontSize: "32px",
+  fontWeight: "bold",
+  letterSpacing: "8px",
+  lineHeight: "40px",
+  margin: "0",
+};
+
+const codeHint = {
+  color: "#666",
+  fontSize: "14px",
+  lineHeight: "20px",
+  margin: "8px 0 0",
 };
 
 const buttonContainer = {

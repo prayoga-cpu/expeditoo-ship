@@ -13,6 +13,10 @@ import {
 import { NAV_PRESS, usePendingNav } from "@/components/layouts/use-pending-nav";
 import { useTranslations } from "next-intl";
 import { useAdminNav } from "../hooks/useAdminNav";
+import { useAuth } from "@/lib/auth-context";
+
+/** Places held while the session's roles load (2.96.0 #36). */
+const SETTLING_SLOTS = 5;
 
 /**
  * Whether this entry owns the current path.
@@ -31,6 +35,7 @@ export function AdminBottomNav() {
   const pathname = usePathname();
   const t = useTranslations("admin.navigation");
   const { groups, counts } = useAdminNav();
+  const { isLoading: sessionLoading } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
   const activeRef = useRef<HTMLAnchorElement>(null);
   const { pendingHref, onNavigate } = usePendingNav();
@@ -78,6 +83,8 @@ export function AdminBottomNav() {
             <Link
               key={item.href}
               href={item.href}
+              // The whole route, not its loading shell (2.96.0 #36).
+              prefetch
               ref={isActive ? activeRef : undefined}
               role="menuitem"
               aria-current={isActive ? "page" : undefined}
@@ -122,6 +129,22 @@ export function AdminBottomNav() {
             </Link>
           );
         })}
+        {/* Every entry depends on the roles: until they load the capsule
+            holds item-sized places rather than standing empty and then
+            filling all at once. */}
+        {sessionLoading &&
+          navItems.length === 0 &&
+          Array.from({ length: SETTLING_SLOTS }, (_, slot) => (
+            <span
+              key={slot}
+              aria-hidden
+              data-nav-slot=""
+              className="flex min-h-14 w-[76px] shrink-0 flex-col items-center justify-center gap-1.5 px-1 py-1"
+            >
+              <span className="h-5 w-5 rounded-md bg-muted motion-safe:animate-pulse" />
+              <span className="h-2.5 w-10 rounded-full bg-muted motion-safe:animate-pulse" />
+            </span>
+          ))}
       </div>
       
       {/* Fade indicators for scroll hint */}

@@ -21,7 +21,7 @@ import type { CarrierApplication } from "@/features/app/carrier/api/carrier.api"
  * offered `/expedion` and carried no `/create` at all.
  */
 
-const auth: { user: { roles: string[] } | null } = { user: null };
+const auth: { user: { roles: string[] } | null; isLoading?: boolean } = { user: null };
 let pathname = "/home";
 let application: CarrierApplication | null = null;
 
@@ -64,6 +64,7 @@ const hrefs = () =>
 describe("BottomNav", () => {
   beforeEach(() => {
     auth.user = { roles: ["shipper"] };
+    auth.isLoading = false;
     pathname = "/home";
     application = null;
     window.localStorage.clear();
@@ -218,5 +219,39 @@ describe("BottomNav", () => {
       "aria-current",
       "page"
     );
+  });
+
+  // 2.96.0 #36: the bar is in the server's HTML now, before the session is
+  // known. It holds the role-dependent places open rather than drawing the
+  // requester's five and swapping them for a driver's under a moving finger.
+  it("keeps Home and Messages in place while the session loads, and fills the middle after", () => {
+    auth.user = null;
+    auth.isLoading = true;
+    const { rerender, container } = renderWith();
+
+    expect(hrefs()).toEqual(["/home", "/messages"]);
+    expect(container.querySelectorAll("[data-nav-slot]")).toHaveLength(3);
+    const home = screen.getByRole("link", { name: /Home/ });
+    const messages = screen.getByRole("link", { name: /Messages/ });
+
+    auth.user = { roles: ["shipper", "carrier"] };
+    auth.isLoading = false;
+    window.localStorage.setItem(ACTIVE_ACCESS_KEY, "carrier");
+    window.localStorage.setItem(DRIVER_ACCESS_SEEN_KEY, "1");
+    rerender(
+      <NextIntlClientProvider locale="en" messages={en}>
+        <AccessModeProvider>
+          <BottomNav />
+        </AccessModeProvider>
+      </NextIntlClientProvider>
+    );
+
+    expect(container.querySelectorAll("[data-nav-slot]")).toHaveLength(0);
+    expect(hrefs()[0]).toBe("/home");
+    expect(hrefs().at(-1)).toBe("/messages");
+    expect(hrefs()).toHaveLength(5);
+    // The same elements: nothing a finger was on was replaced.
+    expect(screen.getByRole("link", { name: /Home/ })).toBe(home);
+    expect(screen.getByRole("link", { name: /Messages/ })).toBe(messages);
   });
 });

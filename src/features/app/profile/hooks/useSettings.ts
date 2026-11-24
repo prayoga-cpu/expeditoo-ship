@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { UserPreferences } from "@/db/schema/users";
+import { appThemeOf, isAppTheme } from "@/lib/theme";
 
 type NotificationChannel = keyof UserPreferences["notifications"];
 
@@ -66,7 +67,9 @@ async function updatePreferences(
  * round-tripped through validation and updated nothing.
  */
 export function useSettings() {
-  const { theme, setTheme } = useTheme();
+  const { theme: chosen, setTheme } = useTheme();
+  // What the radios show: light unless Dark was chosen (no "System", 2.96.0 #29).
+  const theme = appThemeOf(chosen);
   const queryClient = useQueryClient();
   const t = useTranslations("settings");
 
@@ -91,7 +94,7 @@ export function useSettings() {
   const inApp = preferencesData?.preferences?.notifications?.inApp;
 
   const handleThemeChange = useCallback((newTheme: string) => {
-    setTheme(newTheme);
+    if (isAppTheme(newTheme)) setTheme(newTheme);
   }, [setTheme]);
 
   const handleNotificationChange = useCallback(

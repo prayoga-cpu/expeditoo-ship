@@ -21,10 +21,20 @@ const EMAIL_NOT_VERIFIED = "EMAIL_NOT_VERIFIED";
  */
 export type AuthActionResult = { success: boolean; error?: AuthErrorKey };
 
-/** `/verify-email`, carrying the address its resend button needs. */
-export function verifyEmailPath(email: string, from?: "signin"): string {
+/**
+ * `/verify-email`, carrying the address its code field and resend button
+ * need, and — when the sign-in had one — the page the person was headed to,
+ * so verifying does not cost them their way back (email_access_code_spec.md §6).
+ */
+export function verifyEmailPath(
+  email: string,
+  from?: "signin",
+  callbackUrl?: string | null
+): string {
   const query = new URLSearchParams({ email: email.trim() });
   if (from) query.set("from", from);
+  const next = safeCallbackPath(callbackUrl);
+  if (next) query.set("callbackUrl", next);
   return `/verify-email?${query.toString()}`;
 }
 
@@ -84,7 +94,7 @@ export function useAuthActions() {
         // just mailed a fresh link (`sendOnSignIn`), and the verify screen is
         // where the resend button lives if that one does not arrive either.
         if (result.error.code === EMAIL_NOT_VERIFIED) {
-          router.push(verifyEmailPath(email, "signin"));
+          router.push(verifyEmailPath(email, "signin", callbackUrl));
           return { success: false };
         }
 
@@ -197,9 +207,10 @@ export function useAuthActions() {
 
       if (result.error) return refuse(authErrorKey(result.error));
 
-      // Redirect to signin
-      router.push("/signin");
-
+      // No redirect here: the reset page shows its success, then goes to
+      // sign-in itself. Pushing from here too skipped that screen and left the
+      // page's own timer to pull a person who had already signed in back to
+      // `/signin` (email_access_code_spec.md §6).
       return { success: true };
     });
 
@@ -216,8 +227,9 @@ export function useAuthActions() {
 
       if (result.error) return refuse(authErrorKey(result.error));
 
-      // Don't redirect here - let the calling page handle the redirect
-      // Better Auth will auto-sign in if autoSignInAfterVerification is enabled
+      // No redirect here: the calling page decides. Verifying never signs
+      // anybody in — `autoSignInAfterVerification` is off — so that page
+      // sends the person to sign-in.
 
       return { success: true };
     });

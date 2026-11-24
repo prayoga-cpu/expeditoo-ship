@@ -4,7 +4,7 @@
 
 _Owner: this section is for you. One row per point the client sent on 19 November while testing 2.90.0. Spec:
 `docs/specs/client_feedback_2026_11_19_spec.md` (readings chosen without the client in §0); plan:
-`docs/plans/plan_client_feedback_2026_11_19.md`. Built in **2.91.0**, **2.92.0** (both on `main`) and **2.94.0** (built 2026-11-22). Earlier monitors (7 October – 6 November) were
+`docs/plans/plan_client_feedback_2026_11_19.md`. Built in **2.91.0**, **2.92.0**, **2.94.0**, **2.95.0** and **2.96.0**. Earlier monitors (7 October – 6 November) were
 cleared from this file on the owner's instruction the same day; they remain in git history, and each release's
 own entry below still records what shipped._
 
@@ -15,16 +15,16 @@ own entry below still records what shipped._
 |---|---|---|---|---|
 | 1 | Assistant: « nothing appeared » | Not reproduced (retracted at #18). No timeout anywhere; the sentence was cleared on send | 🔵 | — |
 | 2 | Assistant should keep asking for what is missing | It asked about item, size, weight and towns only | 🟠 | Dates are now asked; budget is not |
-| 3 | Design: coly2go is clearer; « exchange date exacte by title of the add » | The board search was two modes and loose filters | 🟠 2.94.0 | One search card (departure, destination, date, title) on the missions board. A wider redesign still needs him to name screens |
+| 3 | Design: coly2go is clearer; « exchange date exacte by title of the add » | The board search was two modes; the home page was a carrier pitch | 🟠 2.96.0 | Home page rebuilt on coly2go's structure in our words with four CC0 photos; the hero card opens /create prefilled. Needs his eyes |
 | 4 | Font size and type | 10 px bar labels, 12 px address fields | 🟠 2.94.0 | As #28; fixed-px small text remains in admin and marketing; the typeface is a brand call |
-| 5 | « The sheet »: every action per page | No such inventory existed | 🔵 2.94.0 | `docs/site_pages_actions.csv` (588 actions, 69 refs); 18 rows « à vérifier » |
+| 5 | « The sheet »: every action per page | No such inventory existed | 🔵 2.94.0 | `docs/site_pages_actions.csv` (605 actions, 69 refs, refreshed in 2.95.0). The home page changed in 2.96.0: its P01–P10 rows need a refresh |
 | 6 | Sign-in: « S'inscrire » needs a scroll | Last element of a ~700 px centred card | 🔵 | — |
 | 7 | Expeditoo → Expeditop | He was on 2.90.0 | ⚪ 2.90.2 | Ask him to retest on www.expeditop.fr |
 | 8 | Sign-up says nothing about the role | No text; `/welcome` unreachable for e-mail sign-ups | 🟠 | Confirm a note is enough (§0 A) |
 | 9 | Driver application: private / professional radio | A tick box; owner ruled 22 Nov: private = in-house (`kind = private`) | 🔵 2.94.0 | — |
 | 10 | Private drivers authorised at once | Approval is admin-only | ⚖️ declined | **Not automatic**: an approved driver reads street addresses (`vetted`), so a self-declared tick cannot grant it. Immediate lane = admin « add driver ». Overrule if wanted |
 | 11 | Admin: select professional drivers, e-mail alert | Existed as interne/externe | 🔵 2.94.0 | « Particulier (interne) » / « Professionnel »; subject leads with the type; link opens the file |
-| 12 | « Vérifiez votre email », no e-mail | No e-mail on an unverified sign-in; no resend; a refused send only logged | 🟠 | Resend logs for his address; that Resend accepts the expeditop.fr sender |
+| 12 | « Vérifiez votre email », no e-mail | No e-mail on an unverified sign-in; no resend; a refused send only logged; production still sent from prionation.io | 🔵 2.96.0 | `EMAIL_FROM` = `no-reply@expeditop.fr` in Production (and Preview `dev`); tested end to end on www.expeditop.fr on 2026-11-24 |
 | 13 | « Redirects to an admin page »; congratulate when inscription is done | « Message » bounced (2.91.0); approval sent an English in-app line, no mail | 🔵 | Approval mail + notification in French (2.94.0) |
 | 14 | A congratulation message after registration | `WelcomeEmail` existed, called only from a dev route | 🔵 | — |
 | 15 | « Message » should message the driver | Same as #13 | 🔵 | — |
@@ -41,14 +41,14 @@ own entry below still records what shipped._
 | 26 | Filter messages by type | No status filter | 🟠 2.92.0 | Four filters built (waiting / active / done / no request); « Créneaux à valider » and « En attente d'action » do not exist in this app |
 | 27 | Landing: « replace texte by connexion/inscription » | « Connexion » hidden below 640 px | 🟠 2.92.0 | Confirm he meant the header button; 640–760 px header may wrap |
 | 28 | Mobile font size | As #4 | 🟠 2.94.0 | Root 17 px below 1024 px; needs eyes on a phone. Typeface unchanged |
-| 29 | Unreadable coloured messages | Probable: no `color-mix()` on iOS 15–16.1 → solid tints | 🟠 | A real iPhone on iOS 15; which screen |
-| 30 | « Error of access code » at login | Nothing by that name exists; every sign-in failure showed Better Auth's English text | 🟠 2.92.0 | Errors now French with a next step; still ask for the screenshot |
+| 29 | Unreadable coloured messages | No `color-mix()` on iOS 15–16.1; the theme also followed the OS, and next-themes wrote an inline `color-scheme: light`, which lets Chrome's auto-dark darken the page | 🟠 2.96.0 | Light unless Dark is chosen in the app; `only light` verified against Chromium's auto-dark; Samsung Internet unverified (no device) |
+| 30 | « Error of access code » at login | No code existed; the verification mail carried only a link | 🟠 2.96.0 | A 6-digit code in the mail, typed on /verify-email; flow audited (spec `email_access_code_spec.md`); production test after the merge. Still ask him for the screenshot |
 | 31 | Message screen: job details | As #25 | 🔵 | — |
 | 32 | Initials and pseudo instead of the full name | Sign-up said the pseudo is seen by you alone | 🟠 2.94.0 | Pseudo shown in the list, name kept in the thread header; the sign-up promise was rewritten |
 | 33 | After « Refuser », no other price | No counter in chat; the transporter told nothing | 🔵 | — |
 | 34 | Keep the job title on screen in a thread | Only the name row was sticky | 🔵 | — |
 | 35 | Bottom bar: requests instead of « Devenir chauffeur » | — | 🟠 | Confirm the entry's new home (access badge, profile) |
-| 36 | 3–4 taps on the bottom bar | Not reproduced; no instant feedback, no loading screens, toast over the bar | 🟠 2.92.0 | Instant pressed state, loading screens, top toasts built; reproduce on a phone |
+| 36 | 3–4 taps on the bottom bar | The whole app remounted right after first paint (LocaleProvider, Ably wrapper) and nothing rendered on the server | 🟠 2.96.0 | Nav in the server HTML, no remount, full prefetch; first nav link 1.3–2.2 s → 60–72 ms in dev, 20/20 first clicks. Needs a production look |
 | 37 | Job page title cut on iPad | One truncated line; no towns or dates | 🔵 | — |
 | 38 | « Cancel format of field » on professional registration | French-only formats | 🟠 2.94.0 | Foreign company number, phone, postal code, VAT, plate accepted; a 13-digit SIRET typo now passes |
 
@@ -64,7 +64,7 @@ Also fixed, uncaptioned: the « ? » avatar beside chat bubbles.
 - **#28** the bar says « Suivi » where the sidebar says « Expéditions ».
 - **#18** the assistant now returns dates, reversing `request_assistant_spec.md`'s earlier rule.
 - **#12** only the resend button reports a failed send; sign-up and sign-in stay silent on purpose.
-- **#22** a « precise day, any time » request closes to offers 6 h before 06:00; the bidding rule is unchanged.
+- **#22** a « precise day, any time » request takes offers until 6 h before its window ends (2.92.0); a precise hour still closes 6 h before it.
 - **#8** a note, not a role field. **#14** an e-mail, once, not sent to Expedion-origin accounts.
 
 ### Operator to-do
@@ -703,6 +703,81 @@ than leaving it in a chat message.
       after approval (the 2.61.0 entry, "What was wrong" item 4). To restore them, open
       `/admin/users`, then the roles dialog for that account, and add both.
       Until then its application page says driver access is off.
+
+---
+
+## ✅ 2026-11-24 — An access code, colours that follow the toggle, a nav that answers at first paint, a new home page (2.96.0)
+
+*« 30. make sure all of the access code, such as otp to the user's email is works and tested on production (and audit
+the userflow) … 3. the entire homescreen … refer to this website and realign with our details … adding some related
+pictures … 36. make sure each navbar is loaded before even clicked … 12. check the resend, and test the prod … make sure
+the email is use the @expeditop.fr … 29. force everything components is colored and only change by the dark mode toggle
+in the app ».*
+
+Specs: `email_access_code_spec.md` (new, with the flow audit), `landing_2026_11_spec.md` (new). **No migration.**
+First release on the 2.95.1 flow: built in a worktree off `origin/dev`, pushed to `dev`, PR to `main`.
+
+**#12 mail** — production `EMAIL_FROM` was still `Expeditoo <no-reply@prionation.io>` (25 days old). Set to
+`Expeditop <no-reply@expeditop.fr>` with the Vercel CLI (Production; and Preview branch `dev`, with `EMAIL_DEV_RECIPIENT`
+a throwaway mail.tm inbox, owner-approved). Resend accepts the domain (it refuses unverified ones). Tested on
+www.expeditop.fr before any code change, through a mail.tm inbox: sign-up mail in 14 s, unverified sign-in 403 + fresh
+mail, link → `/signin?verified=true`, welcome mail, reset mail → reset → sign-in, all from `no-reply@expeditop.fr`.
+
+**#30 code** — `email-code.service.ts` + `verification-codes.dal.ts`: 6 digits (`crypto.randomInt`), SHA-256 of
+`identifier:code` in Better Auth's `verification` table, one live code per address, 3600 s like the link (same
+constant now), 5 attempts counted in Postgres before comparing, constant-time compare, consumed once. `POST
+/api/account/verify-email-code` (public, 10/min/IP). An unknown address answers like a missing code (no enumeration).
+Verifying never signs in; the welcome mail goes only on the first verification. EXPEDITOP mail only — Expedion
+accounts keep the link-only mail their app understands. **Not Better Auth's `emailOTP` plugin**: it opens a
+passwordless sign-up that skips the name fields, and its verify path skips `afterEmailVerification`.
+**Audit fixes**: an invited driver no longer gets « confirmez votre adresse » before the invitation; a reset verifies
+the address and revokes other sessions; reset no longer redirects twice; `?token=` no longer lands on `/welcome`
+without a session; `callbackUrl` survives unverified sign-in → verify → sign-in; `/signin?email=` prefill.
+**Security, found by the audit**: pre-registration takeover through Google linking — anyone could sign up with a
+victim's address and a password, and when the victim later used Google, Better Auth linked and verified the row with
+the stranger's password still valid. `guardOAuthLink` (`oauth-link-guard.service.ts`, `databaseHooks.account.create.before`)
+deletes the `credential` account and the sessions of an unverified user before a provider is linked; a failure stops
+the link. `onAPIError.errorURL = "/signin"` and `signinUrlError` put Google errors on /signin in French; a suspended
+account is redirected there (`?error=suspended`) instead of a raw JSON 403.
+
+**#29 theme** — `enableSystem={false}`, `enableColorScheme={false}` (its inline `color-scheme: light` outranked the
+stylesheet and **lets** Chrome auto-dark in), `color-scheme: only light` on `:root` + `viewport.colorScheme`, rewritten
+on toggle (`ColorSchemeMeta`); stored `system` → `light` once; « Système » removed everywhere (app, Settings, landing);
+Sonner follows the app theme. Verified on Chromium 143: no scheme / `light` → darkened, `only light` (CSS or meta) →
+white. iOS Safari has no forced dark. **Samsung Internet unverified.** The `<pwa-install>` dialog's shadow DOM still
+follows the OS (third party).
+
+**#36 first paint** — `LocaleProvider` always renders inside `NextIntlClientProvider` (fr / Europe/Paris on the server
+and first client render, the stored locale swapped in on the same element): no remount, and **every route now renders
+on the server** (`/` 4 → 291 words). `LazyAblyProvider` wrapped the app in `dynamic(…, { ssr: false })` and re-parented
+every page under `AblyReactProvider` once connected — now a sibling (`AblyConnection` + `ably-context.ts`). Shells draw
+stable links first and placeholders for role-dependent rows; `SidebarContent` components declared inside render (a
+new type each render, rebuilt the sidebar on every badge tick) became JSX variables. `useNavPrefetch` + full `<Link>`
+prefetch. `auth-context.tsx` shows the server's view while hydrating (`useSyncExternalStore`). Hydration hunt: 42
+routes × 3 locale variants, 124/126 clean; one attribute-only `aria-controls` id mismatch on the phone toolbox popover
+left (1/126, never reproduced in 26 targeted runs).
+
+**#3 home page** — rebuilt on coly2go's structure in EXPEDITOP's words: blue hero with a GET search card (Ville de
+départ · Destination · Date · « Que transportez-vous ? » → `/create?title=&from=&to=&date=`, works without JS),
+example route chips, trust strip (rules the app enforces), « Demandes récentes » (`GET /api/public/recent-requests`:
+≤ 6 open, unexpired, `toListingView(…, "public")` then a 14-field schema, `s-maxage=60`), three steps, two audiences,
+closing band. `parseRequestPrefill` validates the four values on the server; ignored on a draft. Four StockSnap CC0
+photos via Openverse, WebP ≤ 64 KB, credits in `public/images/landing/CREDITS.md`. `LandingStats` (the oversold
+figures) and the bid card deleted.
+
+**Verification** (worktree off `origin/dev` 2.95.1 + this release only)
+- `npx tsc --noEmit` — 0 errors. `npx eslint .` — 0 errors, 72 warnings.
+- `pnpm test` — 4,811 / 4,811.
+- `pnpm changelog:check` — ok at 2.96.0, English and French.
+- `pnpm build` — succeeds; the built `/` carries 470 words of server-rendered text (it had 4).
+- Browser: hydration hunt and forced-dark runs on `next dev` with a scratch database; the landing at 390/1024/1440 light
+  and dark; the search card → /signin with callbackUrl (signed out).
+- **Not yet:** the code in production (after the merge), the prefilled /create signed in in a browser, Samsung
+  Internet, a phone for #36, the dev deployment with the new mail settings.
+
+**Known limits** — the hero photo is 960 px (largest free download); the home page shows any open request, beta ones
+included; `api-response.ts` does not know `EmailCodeError` (the route maps it itself); the sheet's home-page rows are
+stale; the Expedion app has no code screen.
 
 ---
 

@@ -80,7 +80,7 @@ describe("LandingFooter", () => {
       .filter((href) => href.startsWith("/#"))
       .map((href) => href.slice(2));
 
-    expect(anchors.sort()).toEqual(["how"]);
+    expect(anchors.sort()).toEqual(["carriers", "how", "recent"]);
   });
 
   it("uses no page as a stand-in for a missing one", () => {

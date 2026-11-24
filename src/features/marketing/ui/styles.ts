@@ -25,8 +25,14 @@ export const LP_CARD =
 export const LP_GRID_4 =
   "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4";
 
+/**
+ * The app's own primary (`--primary`, #076BE3 — ROADMAP.md §7), so the
+ * header's button and the landing's agree. `!` on the hover colour: `.lp a:hover`
+ * in globals.css is unlayered and would otherwise paint a link-button's label
+ * light blue on blue.
+ */
 export const LP_BTN_PRIMARY =
-  "rounded-xl bg-[#0052FF] font-medium text-white transition-colors hover:bg-[#1F63FF] hover:text-white";
+  "rounded-xl bg-primary font-medium text-white transition-colors hover:bg-[#055bc4] hover:text-white!";
 
 export const LP_BTN_GHOST =
   "rounded-xl border border-[var(--lp-line2)] font-medium text-[var(--lp-text)] transition-colors hover:bg-[var(--lp-chip)] hover:text-[var(--lp-text)]";

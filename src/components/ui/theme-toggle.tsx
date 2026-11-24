@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Moon, Sun, Monitor } from "lucide-react";
+import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useTranslations } from "next-intl";
 
@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { appThemeOf } from "@/lib/theme";
 
 interface ThemeToggleProps {
   variant?: "default" | "ghost" | "outline";
@@ -43,18 +44,8 @@ export function ThemeToggle({
     );
   }
 
-  const getCurrentIcon = () => {
-    switch (theme) {
-      case "light":
-        return <Sun className="h-5 w-5" />;
-      case "dark":
-        return <Moon className="h-5 w-5" />;
-      case "system":
-        return <Monitor className="h-5 w-5" />;
-      default:
-        return <Sun className="h-5 w-5" />;
-    }
-  };
+  // Light or Dark, chosen here and nowhere else: no "System" (2.96.0 #29).
+  const current = appThemeOf(theme);
 
   return (
     <DropdownMenu modal={false}>
@@ -64,7 +55,7 @@ export function ThemeToggle({
           size={size}
           className={cn("transition-all duration-200", className)}
         >
-          {getCurrentIcon()}
+          {current === "dark" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
           <span className="sr-only">{t("toggle")}</span>
         </Button>
       </DropdownMenuTrigger>
@@ -75,7 +66,7 @@ export function ThemeToggle({
         >
           <Sun className="mr-2 h-4 w-4" />
           <span>{t("light")}</span>
-          {theme === "light" && (
+          {current === "light" && (
             <span className="ml-auto text-primary">✓</span>
           )}
         </DropdownMenuItem>
@@ -85,17 +76,7 @@ export function ThemeToggle({
         >
           <Moon className="mr-2 h-4 w-4" />
           <span>{t("dark")}</span>
-          {theme === "dark" && <span className="ml-auto text-primary">✓</span>}
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={() => setTheme("system")}
-          className="cursor-pointer"
-        >
-          <Monitor className="mr-2 h-4 w-4" />
-          <span>{t("system")}</span>
-          {theme === "system" && (
-            <span className="ml-auto text-primary">✓</span>
-          )}
+          {current === "dark" && <span className="ml-auto text-primary">✓</span>}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -17,8 +17,11 @@ import {
   AppSidebar,
   SidebarHeading,
   SidebarLink,
+  SidebarLinkSlot,
   SidebarToggle,
 } from "@/components/layouts/SidebarRail";
+import { useNavPrefetch } from "@/components/layouts/use-nav-prefetch";
+import { useAuth } from "@/lib/auth-context";
 import { RAIL, WHEN_RAIL, useSidebarRail } from "@/components/layouts/use-sidebar-rail";
 import { useAdminNav } from "../hooks/useAdminNav";
 import type { AdminNavCounts } from "@/server/services/admin-nav.service";
@@ -51,6 +54,9 @@ const BADGE_TONE: Record<keyof AdminNavCounts, "attention" | "info"> = {
   shipments: "info",
 };
 
+/** Rows held while the session's roles load. */
+const SETTLING_ROWS = 8;
+
 export function AdminLayout({ children }: AdminLayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -61,6 +67,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const { groups, landing, counts, canOpen } = useAdminNav();
   const { mode, qualifiedModes, setMode } = useActiveAccessMode();
   const rail = useSidebarRail();
+  // Every entry here depends on the roles; while the session loads the list
+  // holds rows instead of drawing nothing and then everything (2.96.0 #36).
+  const { isLoading: sessionLoading } = useAuth();
+  useNavPrefetch(groups.flatMap((group) => group.items.map((item) => item.href)));
 
   // Reaching this layout at all means the session is browsing the back
   // office. The switcher badge is only a client-side preference on top of
@@ -90,7 +100,12 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     router.push("/profile");
   };
 
-  const SidebarContent = () => (
+  // An element, not a component declared in here: a component defined inside
+  // render is a new type on every render, so React threw the whole sidebar
+  // away and rebuilt it each time this layout re-rendered — a badge count, a
+  // path change — and a click whose press and release straddled a rebuild
+  // never fired (2.96.0 #36).
+  const sidebarContent = (
     <div className="flex flex-col h-full pb-4">
       {/* No subtitle: the content header already reads "Admin Panel", and the
           two sat one above the other. */}
@@ -123,6 +138,13 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             })}
           </div>
         ))}
+        {sessionLoading && groups.length === 0 && (
+          <div className="space-y-1">
+            {Array.from({ length: SETTLING_ROWS }, (_, row) => (
+              <SidebarLinkSlot key={row} dense />
+            ))}
+          </div>
+        )}
       </nav>
     </div>
   );
@@ -138,9 +160,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       }
     >
       {/* Desktop Sidebar - Static like MainLayout */}
-      <AppSidebar state={rail.state}>
-        <SidebarContent />
-      </AppSidebar>
+      <AppSidebar state={rail.state}>{sidebarContent}</AppSidebar>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">

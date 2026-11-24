@@ -1,68 +1,71 @@
 "use client";
 
-import Link from "next/link";
+import Image from "next/image";
 import { useTranslations } from "next-intl";
-import { useAuth } from "@/lib/auth-context";
-import { LandingBidCard } from "./LandingBidCard";
-import { LandingGatedButton } from "./LandingGatedButton";
-import { LandingStats } from "./LandingStats";
-import { LP_ANCHOR_OFFSET, LP_BTN_GHOST, LP_BTN_PRIMARY } from "./styles";
+import { Check } from "lucide-react";
+import { LandingSearchCard } from "./LandingSearchCard";
+import { LANDING_IMAGES } from "./landing-images";
+import { LP_ANCHOR_OFFSET } from "./styles";
+import styles from "./landing.module.css";
 
+/**
+ * The first screen (docs/specs/landing_2026_11_spec.md §2): one sentence for
+ * the person who needs something moved, and the card that starts it. The
+ * structure is the reference the client pointed at — a blue band, a white
+ * card of four fields and one wide button — in Expeditop's own words, blue
+ * and photograph.
+ *
+ * The photo is one element placed twice by CSS: below `lg` it lies behind the
+ * band under a blue shade (texture, never competing with the text); from `lg`
+ * it is a framed picture beside the text. One file, one download.
+ */
 export function LandingHero() {
   const t = useTranslations("marketing.hero");
-  const { isAuthenticated } = useAuth();
+  const tImages = useTranslations("marketing.images");
+  const image = LANDING_IMAGES.hero;
 
   return (
     <section
       id="top"
-      className={`lp ${LP_ANCHOR_OFFSET} relative overflow-hidden px-5 pt-14 sm:px-8 lg:pt-[88px]`}
+      className={`${styles.band} ${LP_ANCHOR_OFFSET} relative isolate overflow-hidden text-white`}
     >
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -top-[260px] left-1/2 h-[520px] w-[1100px] -translate-x-1/2"
-        style={{ background: "var(--lp-glow)" }}
-      />
-      <div className="relative mx-auto grid w-full max-w-[1180px] grid-cols-1 items-center gap-14 lg:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.95fr)]">
-        <div className="flex flex-col items-start gap-6">
-          <span className="inline-flex items-center gap-[9px] rounded-full border border-[var(--lp-line2)] bg-[var(--lp-chip)] px-3.5 py-[7px] text-[13px] text-[var(--lp-muted)]">
-            <span className="h-[7px] w-[7px] rounded-full bg-[var(--lp-green)]" />
+      <div className="relative mx-auto grid w-full max-w-[1200px] grid-cols-1 gap-10 px-4 pt-10 pb-12 sm:px-8 sm:pt-14 sm:pb-16 lg:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)] lg:items-center lg:gap-14 lg:py-20">
+        <div className="relative z-10 flex min-w-0 flex-col gap-5 sm:gap-6">
+          <span className="inline-flex w-fit items-center gap-2 rounded-full border border-[rgb(255_255_255/0.28)] bg-[rgb(255_255_255/0.1)] px-3 py-1.5 text-[0.8rem] font-medium text-white">
+            <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-[#7CF0B5]" />
             {t("badge")}
           </span>
 
-          <h1 className="m-0 text-[34px] leading-[1.04] font-bold tracking-[-0.035em] text-pretty sm:text-[44px] lg:text-[56px]">
-            {t("titleLine1")}
-            <br />
-            <span className="text-[var(--lp-bluelink)]">{t("titleLine2")}</span>
+          <h1 className="m-0 max-w-[16ch] text-[2.1rem] leading-[1.08] font-bold tracking-[-0.025em] text-balance sm:text-[2.75rem] lg:text-[3.25rem]">
+            {t("title")}
           </h1>
 
-          <p className="m-0 max-w-[520px] text-[17.5px] leading-[1.6] text-pretty text-[var(--lp-muted)]">
+          <p className="m-0 max-w-[34rem] text-[1.02rem] leading-[1.6] text-pretty text-[#eaf2ff] sm:text-[1.1rem]">
             {t("subtitle")}
           </p>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <LandingGatedButton
-              intent="carrier"
-              label={isAuthenticated ? t("primaryCtaAuthed") : t("primaryCta")}
-              className={`${LP_BTN_PRIMARY} px-[26px] py-[15px] text-base`}
-            />
-            <Link
-              href="/#how"
-              className={`${LP_BTN_GHOST} px-[26px] py-[15px] text-base`}
-            >
-              {t("secondaryCta")}
-            </Link>
+          <div className="mt-1 max-w-[40rem]">
+            <LandingSearchCard />
           </div>
+
+          <p className="m-0 flex items-start gap-2 text-[0.85rem] leading-snug text-[#eaf2ff]">
+            <Check className="mt-px h-4 w-4 flex-none" aria-hidden />
+            {t("note")}
+          </p>
         </div>
 
-        {/* A decoration, not the message: below `lg` the first screen is the
-            headline and one button. */}
-        <div className="hidden lg:block">
-          <LandingBidCard />
-        </div>
-      </div>
-
-      <div className="hidden lg:block">
-        <LandingStats />
+        <figure className="absolute inset-0 -z-10 m-0 lg:relative lg:inset-auto lg:z-0 lg:aspect-[4/5] lg:overflow-hidden lg:rounded-[28px] lg:shadow-[0_40px_80px_-40px_rgba(2,12,32,0.7)] lg:ring-1 lg:ring-[rgb(255_255_255/0.18)]">
+          <Image
+            src={image.src}
+            width={image.width}
+            height={image.height}
+            alt={tImages(image.alt)}
+            priority
+            sizes="(min-width: 1024px) 520px, 100vw"
+            className="h-full w-full object-cover"
+          />
+          <div aria-hidden className={`${styles.shade} absolute inset-0`} />
+        </figure>
       </div>
     </section>
   );

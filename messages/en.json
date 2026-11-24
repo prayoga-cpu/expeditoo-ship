@@ -181,7 +181,6 @@
       "theme": "Theme",
       "light": "Light",
       "dark": "Dark",
-      "system": "Auto",
       "install": "Install the app",
       "fullscreen": "Full screen",
       "exitFullscreen": "Exit full screen",
@@ -210,8 +209,7 @@
     "theme": {
       "toggle": "Change theme",
       "light": "Light",
-      "dark": "Dark",
-      "system": "Same as my device"
+      "dark": "Dark"
     },
     "verifiedUser": "Verified user",
     "loadingContent": "Loading content",
@@ -319,7 +317,7 @@
     },
     "verifyEmail": {
       "title": "Verify your email",
-      "subtitle": "We've sent a verification link to your email",
+      "subtitle": "We've sent you an email with a 6-digit code and a confirmation link.",
       "resend": "Resend the email",
       "resending": "Sending...",
       "resent": "Verification email sent!",
@@ -329,8 +327,8 @@
       "verifyingTitle": "Verifying your email",
       "verifyingBody": "Please wait while we check your email address…",
       "successTitle": "Email verified",
-      "successBody": "Your email address is confirmed. We're signing you in…",
-      "redirecting": "Taking you to your account…",
+      "successBody": "Your email address is confirmed. Sign in to continue.",
+      "redirecting": "Taking you to sign in…",
       "continue": "Continue",
       "failedTitle": "We couldn't verify your email",
       "failedBody": "The link may have expired or already been used.",
@@ -338,16 +336,31 @@
       "needHelp": "Need help?",
       "contactSupport": "Contact support",
       "loading": "Loading…",
-      "subtitleWithEmail": "We've sent a verification link to {email}",
-      "fromSignIn": "Your email address is not confirmed yet. We have just sent you a new link: open it to activate your account. If it does not arrive, resend it below.",
-      "linkFailedBody": "The link may have expired or already been used. Ask for a new one below.",
-      "resentHint": "It can take a few minutes to arrive.",
+      "subtitleWithEmail": "We've sent a 6-digit code and a confirmation link to {email}.",
+      "fromSignIn": "Your email address is not confirmed yet. We have just sent you a new code: enter it below, or open the link in the same email. If it does not arrive, resend it.",
+      "linkFailedBody": "The link may have expired or already been used. Enter the code from your latest email below, or ask for a new one.",
+      "resentHint": "It holds a new code and can take a few minutes to arrive.",
       "resendIn": "Resend in {seconds} s",
       "resendFailed": "The email could not be sent. Try again in a moment; if it keeps failing, write to us at {support}.",
       "resendRateLimited": "Too many requests in a row. Wait a minute before trying again.",
       "emailLabel": "Your email address",
       "emailPlaceholder": "you@example.com",
-      "emailInvalid": "Please enter a valid email address"
+      "emailInvalid": "Please enter a valid email address",
+      "code": {
+        "label": "Code from the email",
+        "hint": "The 6 digits in the email we sent you. You can also open the link in that same email, on any device.",
+        "placeholder": "123456",
+        "submit": "Confirm",
+        "checking": "Checking…",
+        "verified": "Address confirmed. Taking you to sign in…",
+        "incomplete": "Enter the 6 digits of the code from the email.",
+        "invalid": "{count, plural, one {That code is not right. You have # try left: check it comes from the latest email.} other {That code is not right. You have # tries left: check it comes from the latest email.}}",
+        "invalidNoCount": "That code is not right. Check it comes from the latest email, then try again.",
+        "expired": "This code has expired or was replaced by a newer one. Ask for a new one with the \"Resend the email\" button below.",
+        "tooManyAttempts": "Too many tries: this code no longer works. Ask for a new one with the \"Resend the email\" button below.",
+        "rateLimited": "Too many attempts in a row. Wait a minute before trying again.",
+        "failed": "The check did not go through. Try again in a moment; if it keeps failing, write to us at {support}."
+      }
     },
     "intent": {
       "bid": "You were about to place an offer.",
@@ -381,7 +394,8 @@
         "signIn": "Sign in",
         "resetPassword": "Reset my password",
         "requestNewLink": "Get a new link"
-      }
+      },
+      "oauthFailed": "Signing in with Google did not go through. Try again, or sign in with your email and password below."
     }
   },
   "profile": {
@@ -788,8 +802,7 @@
     "theme": {
       "title": "Theme",
       "light": "Light",
-      "dark": "Dark",
-      "system": "System"
+      "dark": "Dark"
     },
     "language": {
       "title": "Language"
@@ -2207,94 +2220,21 @@
       "langLabel": "Language",
       "themeLight": "Light",
       "themeDark": "Dark",
-      "themeSystem": "System",
       "signUp": "Sign up",
-      "loginOrSignUp": "Log in / Sign up"
-    },
-    "hero": {
-      "badge": "The carrier network of the Expedion group",
-      "titleLine1": "The jobs come to you.",
-      "titleLine2": "You set the price.",
-      "subtitle": "When Expedion's own fleet is full, the job is posted here. Bid your price, drive, get paid by bank transfer. No prospecting.",
-      "step1": "A job opens",
-      "step2": "You underbid",
-      "step3": "Deliver, get paid",
-      "primaryCta": "Join the network",
-      "secondaryCta": "How it works",
-      "primaryCtaAuthed": "Open your profile"
-    },
-    "bidCard": {
-      "fromExpedion": "FROM EXPEDION",
-      "closes": "CLOSES",
-      "item": "Commode Louis XV, 62 kg",
-      "details": "Pickup before 22 Aug · 3rd floor, lift · packed by Expedion",
-      "bestOffer": "Best offer",
-      "yourOffer": "Your offer",
-      "offers": "Offers",
-      "leading": "Your offer is in the lead",
-      "bidCta": "Bid in euros, all-in",
-      "bidInputLabel": "Your offer in euros",
-      "insured": "INSURED BY EXPEDION · PAID BY TRANSFER",
-      "errorInvalid": "Enter an amount in euros.",
-      "errorTooLow": "Serious offers start at {min} €.",
-      "errorTooHigh": "Your offer has to undercut {best} €."
-    },
-    "stats": {
-      "jobsPerMonth": "Jobs posted per month",
-      "timeToAward": "Average time to award",
-      "emptyKm": "Empty kilometres filled",
-      "transferMinimum": "Minimum balance to request a transfer"
-    },
-    "howItWorks": {
-      "eyebrow": "HOW IT WORKS",
-      "title": "Three steps, that's all",
-      "intro": "Every job is a real Expedion delivery our own fleet could not take.",
-      "step1": {
-        "title": "A job is posted automatically",
-        "desc": "A client ordered on Expedion and no pool driver is free. Route, size, photos and deadline are already in the listing."
-      },
-      "step2": {
-        "title": "You bid your price",
-        "desc": "Reverse auction: the lowest serious offer leads. Bid what the run is worth to you, all-in."
-      },
-      "step3": {
-        "title": "The client picks, or Expedion does",
-        "desc": "At closing, the winning carrier is booked instantly. Pickup slot is already reserved with the auction house."
-      },
-      "step4": {
-        "title": "Deliver, one status feed",
-        "desc": "Your updates feed the same tracking the buyer sees in Expedion. Proof of delivery in, earnings credited, transfer on request."
-      }
-    },
-    "advantages": {
-      "eyebrow": "WHY CARRIERS STAY",
-      "title": "Full trucks, no chasing",
-      "item1": {
-        "title": "Fill your return legs",
-        "desc": "Filter jobs along routes you already drive. A Bordeaux–Paris return stops being empty kilometres."
-      },
-      "item2": {
-        "title": "Clients already signed",
-        "desc": "Expedion sells, quotes and packs. You never negotiate with the end client, you just drive."
-      },
-      "item3": {
-        "title": "Paid by bank transfer",
-        "desc": "The group pays you, not the client. Proof of delivery in, earnings credited, transfer on request."
-      },
-      "item4": {
-        "title": "Insurance already on",
-        "desc": "Lots are covered ad valorem by Expedion from pickup to signature. Your liability is framed in the CGV."
-      }
+      "loginOrSignUp": "Log in / Sign up",
+      "recent": "Recent requests",
+      "carriers": "Carriers"
     },
     "cta": {
-      "title": "Ready to drive? Join the network.",
-      "subtitle": "SIRET, insurance, licence: upload your documents and, once your file is approved, you can bid.",
+      "title": "Something to move?",
+      "subtitle": "Describe your shipment and receive offers from checked carriers. Carrying things yourself? Join them.",
       "primary": "Become a carrier",
       "primaryAuthed": "Open your profile",
-      "subtitleAuthed": "You are already signed in. Your documents, your vehicle and your verification all live in your profile."
+      "subtitleAuthed": "You're signed in: post a request, or find your carrier file in your profile.",
+      "request": "Post a request"
     },
     "footer": {
-      "tagline": "The carrier network of the Expedion group. Auction-house shipments, bid by verified carriers.",
+      "tagline": "Have your things moved by checked carriers, in France and abroad. Expeditop is part of the Expedion group.",
       "carriers": "Carriers",
       "howItWorks": "How it works",
       "verification": "Verification",
@@ -2308,7 +2248,11 @@
       "privacy": "Privacy policy",
       "copyright": "© 2026 Expeditop — Expedion Group",
       "sameGroup": "Expedion and Expeditop are part of the same company",
-      "changelog": "Changelog"
+      "changelog": "Changelog",
+      "requesters": "Send something",
+      "request": "Post a request",
+      "recent": "Recent requests",
+      "becomeCarrier": "Become a carrier"
     },
     "actions": {
       "bid": {
@@ -2789,6 +2733,121 @@
         "ux": "IMPROVED",
         "infra": "UNDER THE HOOD"
       }
+    },
+    "hero": {
+      "badge": "Items, furniture and home moves · France and abroad",
+      "title": "Find a carrier for the things you need moved",
+      "subtitle": "Say what needs moving and where. Checked carriers send you their price, and you choose the offer that suits you.",
+      "note": "Posting a request is free. You only pay when you accept an offer."
+    },
+    "search": {
+      "label": "Describe your shipment",
+      "from": {
+        "label": "Departure town",
+        "placeholder": "e.g. Paris"
+      },
+      "to": {
+        "label": "Destination",
+        "placeholder": "e.g. Lyon"
+      },
+      "date": {
+        "label": "Date"
+      },
+      "title": {
+        "label": "What are you sending?",
+        "placeholder": "e.g. a 3-seater sofa"
+      },
+      "submit": "Get offers",
+      "examples": "Examples:",
+      "exampleRoute": "{from} → {to}",
+      "exampleFill": "Fill in the trip {from} → {to}"
+    },
+    "trust": {
+      "label": "With every request",
+      "payment": {
+        "title": "Pay when you accept",
+        "desc": "Nothing is charged until you have chosen an offer."
+      },
+      "verified": {
+        "title": "Checked carriers",
+        "desc": "Expeditop drivers and professional carriers, checked before their first offer."
+      },
+      "photos": {
+        "title": "Photos at pickup and delivery",
+        "desc": "Each photo carries the place and time it was taken."
+      },
+      "refund": {
+        "title": "Refunded if cancelled",
+        "desc": "A job cancelled before pickup is refunded to you."
+      }
+    },
+    "recent": {
+      "title": "Recent requests",
+      "subtitle": "The latest requests posted on Expeditop, open to carriers' offers.",
+      "seeAll": "See all requests",
+      "kind": {
+        "items": "Item",
+        "moving": "Home move"
+      },
+      "reference": "No. {reference}",
+      "to": "to",
+      "pickupOn": "Pickup on {date}",
+      "pickupBetween": "Pickup {from} – {to}",
+      "weight": "{kg} kg",
+      "surface": "{m2} m²",
+      "volume": "{m3} m³",
+      "error": "Recent requests could not be loaded",
+      "empty": {
+        "title": "No open requests right now",
+        "description": "Describe what you need moved: your request will be the first on the list.",
+        "cta": "Post a request"
+      }
+    },
+    "howItWorks": {
+      "eyebrow": "Simple and quick",
+      "title": "How does it work?",
+      "intro": "Three steps, from your request to delivery.",
+      "stepNumber": "Step {n}:",
+      "step1": {
+        "title": "Describe your shipment",
+        "desc": "What you are sending, where from, where to and your dates. Add photos if you like."
+      },
+      "step2": {
+        "title": "Receive offers",
+        "desc": "Checked carriers propose a price and time slots. Compare them and talk to them by message."
+      },
+      "step3": {
+        "title": "Choose, and it is booked",
+        "desc": "You accept the offer that suits you and pay at that moment. Your shipment is photographed at pickup and at delivery."
+      },
+      "cta": "Post a request"
+    },
+    "audiences": {
+      "title": "Two ways to use Expeditop",
+      "intro": "Have your things moved, or move other people's.",
+      "shipper": {
+        "eyebrow": "You're sending",
+        "title": "A piece of furniture, some boxes, a home move",
+        "intro": "Private person or business, you describe what needs moving and compare the offers you receive.",
+        "point1": "Single items or a whole home move",
+        "point2": "In France and abroad",
+        "point3": "The lowest price is never imposed: you choose",
+        "cta": "Post a request"
+      },
+      "carrier": {
+        "eyebrow": "You're carrying",
+        "title": "Jobs along your way",
+        "intro": "Driver or professional carrier, you name your price on open requests.",
+        "point1": "Browse requests and propose your price",
+        "point2": "Declare your trips to find the jobs that fit them",
+        "point3": "Your file is checked by Expeditop before your first offer"
+      }
+    },
+    "images": {
+      "hero": "Kraft tags tied with twine on a parcel",
+      "shipper": "A pale blue sofa with cushions in a bright living room",
+      "carrier": "The motorway seen from the driver's seat, lorries in the right-hand lane",
+      "packing": "A person closing a cardboard box on a table, kraft paper beside it"
     }
   },
   "help": {

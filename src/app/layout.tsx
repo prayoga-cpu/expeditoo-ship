@@ -42,6 +42,10 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   themeColor: "#0052FF",
+  // `<meta name="color-scheme" content="only light">`: no browser darkens the
+  // page on its own before the stylesheet arrives (2.96.0 #29). Choosing Dark
+  // in the app rewrites it (ThemeProvider → src/lib/theme.ts).
+  colorScheme: "only light",
 };
 
 export default function RootLayout({

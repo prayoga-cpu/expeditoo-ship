@@ -18,6 +18,7 @@ import { HeaderAccount } from "@/components/layouts/HeaderAccount";
 import { AccessSwitcher } from "@/components/layouts/AccessSwitcher";
 import { AppSidebar, SidebarLink, SidebarToggle } from "@/components/layouts/SidebarRail";
 import { RAIL, WHEN_RAIL, useSidebarRail } from "@/components/layouts/use-sidebar-rail";
+import { useNavPrefetch } from "@/components/layouts/use-nav-prefetch";
 import { AppVersionLink } from "@/components/ui/app-version";
 import { useTranslations } from "next-intl";
 import { useActiveAccessMode } from "@/lib/use-active-access-mode";
@@ -70,7 +71,15 @@ export function DriverLayout({ children }: DriverLayoutProps) {
     },
   ];
 
-  const SidebarContent = () => (
+  // The whole route ahead of a tap, for the bar's destinations too
+  // (2.96.0 #36). Static: this shell's entries do not depend on the session.
+  useNavPrefetch(sidebarItems.map((item) => item.href));
+
+  // An element, not a component declared in here: a component defined inside
+  // render is a new type on every render, so React rebuilt the whole sidebar
+  // each time this layout re-rendered, and a click whose press and release
+  // straddled a rebuild never fired (2.96.0 #36).
+  const sidebarContent = (
     <div className="flex flex-col h-full pb-4">
       {/* Same as the admin sidebar: the content header already carries the
           panel title, so a subtitle here just repeated it. */}
@@ -114,9 +123,7 @@ export function DriverLayout({ children }: DriverLayoutProps) {
       } as React.CSSProperties}
     >
       {/* Desktop Sidebar - Static like MainLayout */}
-      <AppSidebar state={rail.state}>
-        <SidebarContent />
-      </AppSidebar>
+      <AppSidebar state={rail.state}>{sidebarContent}</AppSidebar>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">

@@ -4,8 +4,17 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("next/link", () => ({
-  default: ({ href, children, ...rest }: { href: string; children: React.ReactNode }) => (
-    <a href={href} {...rest}>
+  default: ({
+    href,
+    children,
+    prefetch,
+    ...rest
+  }: {
+    href: string;
+    children: React.ReactNode;
+    prefetch?: boolean | null;
+  }) => (
+    <a href={href} data-prefetch={String(prefetch)} {...rest}>
       {children}
     </a>
   ),
@@ -59,6 +68,30 @@ describe("FloatingNav", () => {
     expect(active.className.split(" ")).toContain("bg-nav-active");
     // An opacity modifier on a theme colour is what compiles to color-mix().
     expect(active.className).not.toMatch(/\bbg-[a-z-]+\/\S+/);
+  });
+});
+
+// 2.96.0 #36: the bar is usable as soon as it is shown.
+describe("FloatingNav while the session settles", () => {
+  it("holds a place without a link, the size of an item", () => {
+    const { container } = render(
+      <FloatingNav
+        items={[items[0], { placeholder: true, key: "slot-1" }, items[1]]}
+      />
+    );
+
+    expect(screen.getAllByRole("link")).toHaveLength(2);
+    const slot = container.querySelector("[data-nav-slot]");
+    expect(slot).toHaveAttribute("aria-hidden", "true");
+    expect(slot?.className).toContain("min-h-14");
+    expect(slot?.className).toContain("flex-1");
+  });
+
+  it("fetches the whole route of every item ahead of the tap", () => {
+    render(<FloatingNav items={items} />);
+    for (const link of screen.getAllByRole("link")) {
+      expect(link).toHaveAttribute("data-prefetch", "true");
+    }
   });
 });
 

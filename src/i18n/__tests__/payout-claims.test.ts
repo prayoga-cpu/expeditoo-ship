@@ -10,9 +10,6 @@ vi.mock("@/features/app/feedback/ui/FeedbackRequestCard", () => ({
   FeedbackRequestCard: () => null,
 }));
 import DriverHelpPage from "@/app/(app)/driver/help/page";
-import { LandingStats } from "@/features/marketing/ui/LandingStats";
-import { formatCurrency } from "@/lib/currency";
-import { MIN_WITHDRAWAL_CENTS } from "@/server/services/withdrawals.service";
 
 /**
  * marketing_footer_pages_spec.md §4 ("Payout claims") and §6: until the payout
@@ -79,16 +76,6 @@ function matching(strings: [string, string][], claims: RegExp[]) {
   return strings.filter(([, text]) => claims.some((claim) => claim.test(text)));
 }
 
-/** Each text node on its own, so one tile's figure never runs into the next label. */
-function renderedTexts(node: Node): string[] {
-  const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
-  const texts: string[] = [];
-  for (let text = walker.nextNode(); text; text = walker.nextNode()) {
-    texts.push(text.textContent ?? "");
-  }
-  return texts;
-}
-
 describe("payout claims", () => {
   it.each(CATALOGUES)("says nothing untrue about how carriers are paid in %s", (_, messages) => {
     expect(matching(stringsUnder(messages), FALSE_CLAIMS)).toEqual([]);
@@ -106,26 +93,9 @@ describe("payout claims", () => {
 });
 
 describe("payout claims hardcoded outside the catalogue", () => {
-  // The figures live in the component, where no catalogue scan reaches. The
-  // transfer minimum is restated there too, so this is what keeps it the
-  // service's.
-  it.each(CATALOGUES)("puts no delay or guarantee in the hero's figures in %s", (locale, messages) => {
-    const errors: string[] = [];
-    const { container } = render(
-      createElement(NextIntlClientProvider, {
-        locale,
-        messages,
-        onError: (error) => errors.push(error.message),
-        children: createElement(LandingStats),
-      })
-    );
-    const texts = renderedTexts(container);
-
-    expect(texts.filter((text) => claimsIn(text).length > 0)).toEqual([]);
-    expect(texts).toContain(formatCurrency(MIN_WITHDRAWAL_CENTS, { fractionDigits: 0 }));
-    expect(errors).toEqual([]);
-  });
-
+  // The landing's hard-coded figures (LandingStats) went with the 2.96.0
+  // rebuild, which states no figure at all. What is left outside the catalogue
+  // is the driver FAQ below.
   it.each([
     ["en", en, /request a withdrawal/i],
     ["fr", fr, /demandez un retrait/i],

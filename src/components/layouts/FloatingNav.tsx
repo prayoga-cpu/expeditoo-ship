@@ -14,6 +14,38 @@ export interface FloatingNavItem {
 }
 
 /**
+ * A place held for an item that depends on the session's roles, while they
+ * load (2.96.0 #36). The bar renders from the server's HTML now, before the
+ * session is known; filling a slot later moves nothing, where swapping one
+ * set of five links for another put a different page under a finger that was
+ * already on its way down.
+ */
+export interface FloatingNavSlot {
+  placeholder: true;
+  key: string;
+}
+
+export type FloatingNavEntry = FloatingNavItem | FloatingNavSlot;
+
+const isSlot = (entry: FloatingNavEntry): entry is FloatingNavSlot =>
+  "placeholder" in entry;
+
+/** What an unfilled slot draws: the item's own box, an icon and a label's
+ * worth of muted shape, and nothing to press. */
+function NavSlot() {
+  return (
+    <span
+      aria-hidden
+      data-nav-slot=""
+      className="flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-1.5 px-0.5 py-1"
+    >
+      <span className="h-5 w-5 rounded-md bg-muted motion-safe:animate-pulse" />
+      <span className="h-2.5 w-10 max-w-[80%] rounded-full bg-muted motion-safe:animate-pulse" />
+    </span>
+  );
+}
+
+/**
  * The shared look of every phone navigation bar: a floating, rounded, frosted
  * capsule that hovers above the content, after the new iOS tab bar.
  *
@@ -50,7 +82,7 @@ export function FloatingNav({
   items,
   ariaLabel,
 }: {
-  items: FloatingNavItem[];
+  items: FloatingNavEntry[];
   ariaLabel?: string;
 }) {
   const { pendingHref, onNavigate } = usePendingNav();
@@ -59,6 +91,7 @@ export function FloatingNav({
     <nav aria-label={ariaLabel} className={FLOATING_NAV_OUTER}>
       <div className={cn(FLOATING_NAV_CAPSULE, "flex items-stretch gap-0.5")}>
         {items.map((item) => {
+          if (isSlot(item)) return <NavSlot key={item.key} />;
           // The tapped item reads as current while its page is on the way
           // (use-pending-nav.ts); `aria-current` keeps telling the truth.
           const lit = pendingHref ? pendingHref === item.href : item.active;
@@ -66,6 +99,9 @@ export function FloatingNav({
           <Link
             key={item.href}
             href={item.href}
+            // The whole route, not just its loading shell: the tap should
+            // land on a page, not on a spinner (2.96.0 #36).
+            prefetch
             aria-current={item.active ? "page" : undefined}
             data-pending={pendingHref === item.href ? "" : undefined}
             onClick={(event) => onNavigate(event, item.href, item.active)}

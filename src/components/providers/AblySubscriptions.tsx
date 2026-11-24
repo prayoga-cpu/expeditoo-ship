@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
-import { useAblyClientContext } from "@/components/providers/AblyProvider";
+import { useAblyClientContext } from "@/components/providers/ably-context";
 import { useActiveConversation } from "@/features/app/messages/context";
 import { AblyMessage } from "@/types/ably.types";
 import type { RealtimeChannel } from "ably";

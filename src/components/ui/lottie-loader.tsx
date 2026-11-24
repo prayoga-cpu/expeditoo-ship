@@ -47,8 +47,8 @@ interface LottieLoaderProps {
  * cannot serve both themes — it rendered as a white badge on the dark
  * background. Two cuts are shipped instead and picked at runtime.
  *
- * `resolvedTheme`, not `theme`: the app's default is `system`, and `theme`
- * reports the literal string "system" rather than what is actually on screen.
+ * `resolvedTheme` follows the app's own choice only — there is no `system`
+ * any more (2.96.0 #29), so a dark device no longer picks the dark cut.
  *
  * The container renders immediately but the animation waits for mount. On the
  * server there is no theme to resolve, so mounting straight away would render

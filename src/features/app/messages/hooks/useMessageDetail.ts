@@ -4,7 +4,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { messagesApi, type ThreadResponse, type MessageResponse } from "../api";
 import type { ChatMessage, Conversation } from "../types";
-import { useAblyClientContext } from "@/components/providers/AblyProvider";
+import { useAblyClientContext } from "@/components/providers/ably-context";
 import { useAuth } from "@/lib/auth-context";
 import { useActiveConversation } from "../context";
 import type { NewMessageEvent } from "@/server/dto/ably-events.dto";

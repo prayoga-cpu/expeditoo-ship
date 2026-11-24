@@ -80,4 +80,16 @@ describe("DriverLayout sidebar rail", () => {
     );
     expect(screen.getByRole("main").className).toContain("relative");
   });
+
+  // 2.96.0 #36: the sidebar was a component declared inside render, so every
+  // re-render of the layout replaced every link — a click whose press and
+  // release straddled one never fired.
+  it("keeps the same link elements across a re-render", () => {
+    const aside = renderLayout();
+    const before = within(aside).getByRole("link", { name: /Shipments/ });
+
+    fireEvent.click(screen.getByRole("button", { name: "Expand the menu" }));
+
+    expect(within(aside).getByRole("link", { name: /Shipments/ })).toBe(before);
+  });
 });

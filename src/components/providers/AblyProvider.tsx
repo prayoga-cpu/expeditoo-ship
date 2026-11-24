@@ -2,45 +2,40 @@
 
 import * as Ably from "ably";
 import { AblyProvider as AblyReactProvider } from "ably/react";
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useAuth } from "@/lib/auth-context";
 
 import { AblySubscriptions } from "./AblySubscriptions";
 
-/**
- * Context to store the Ably client directly
- * This allows components to access the client without using ably/react hooks
- */
-const AblyClientContext = createContext<Ably.Realtime | null>(null);
+// The context lives in a light module so the slot around the app does not
+// load the SDK; re-exported here for the existing imports.
+export { useAblyAvailable, useAblyClientContext } from "./ably-context";
 
-/**
- * Get the Ably client from context
- * Returns null if not inside AblyProvider or not authenticated
- */
-export function useAblyClientContext(): Ably.Realtime | null {
-  return useContext(AblyClientContext);
+interface AblyConnectionProps {
+  /** The slot `LazyAblyProvider` owns and publishes to the app. */
+  client: Ably.Realtime | null;
+  setClient: (client: Ably.Realtime | null) => void;
 }
 
 /**
- * Check if Ably is available (user is logged in and client exists)
- */
-export function useAblyAvailable(): boolean {
-  const client = useAblyClientContext();
-  return client !== null;
-}
-
-/**
- * AblyProvider wraps the application with Ably real-time context
- * Only creates connection when user is authenticated
+ * Opens and closes the Ably connection for the signed-in user, and runs the
+ * app-wide subscriptions. Only creates a connection when the user is
+ * authenticated.
+ *
+ * It is a sibling of the app, never its parent (2.96.0 #36): the client it
+ * creates goes into `LazyAblyProvider`'s state, which the app reads through
+ * `useAblyClientContext`. `AblyReactProvider` wraps only the subscriptions, so
+ * connecting no longer re-parents — and remounts — every page. A hook from
+ * `ably/react` (`useAblyChannel`) therefore belongs under this component, not
+ * in a page.
  *
  * Uses authCallback to handle our standard API response format:
  * { success: true, data: TokenRequest }
  *
  * @see docs/plans/plan_ably_integration.md
  */
-export function AblyProvider({ children }: { children: React.ReactNode }) {
+export function AblyConnection({ client, setClient }: AblyConnectionProps) {
   const { user, isLoading } = useAuth();
-  const [client, setClient] = useState<Ably.Realtime | null>(null);
   // Track user ID to detect user changes
   const userIdRef = useRef<string | null>(null);
   // Track if component is mounted to prevent state updates after unmount
@@ -183,7 +178,7 @@ export function AblyProvider({ children }: { children: React.ReactNode }) {
 
     // Cleanup on unmount only - NOT on dependency changes
     // We handle user changes in the effect body above
-  }, [user, isLoading, client]);
+  }, [user, isLoading, client, setClient]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -213,22 +208,11 @@ export function AblyProvider({ children }: { children: React.ReactNode }) {
     };
   }, [client]);
 
-  // If no client (not logged in or loading), just render children with null client
-  if (!client) {
-    return (
-      <AblyClientContext.Provider value={null}>
-        {children}
-      </AblyClientContext.Provider>
-    );
-  }
+  if (!client) return null;
 
-  // Wrap with both our context and the Ably provider
   return (
-    <AblyClientContext.Provider value={client}>
-      <AblyReactProvider client={client}>
-        <AblySubscriptions />
-        {children}
-      </AblyReactProvider>
-    </AblyClientContext.Provider>
+    <AblyReactProvider client={client}>
+      <AblySubscriptions />
+    </AblyReactProvider>
   );
 }

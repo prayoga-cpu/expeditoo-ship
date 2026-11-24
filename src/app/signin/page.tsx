@@ -9,6 +9,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuthActions } from "@/features/auth/hooks/useAuthActions";
+import { signinUrlError } from "@/features/auth/lib/auth-errors";
 import {
   AuthErrorNotice,
   AuthIntentNote,
@@ -34,6 +35,15 @@ function buildSigninSchema(t: (key: string) => string) {
 
 type SigninFormData = z.infer<ReturnType<typeof buildSigninSchema>>;
 
+/**
+ * The address a verification hands over (`?email=`), when it is one. It fills
+ * the field and nothing more: the form is never sent on its own.
+ */
+function prefilledEmail(raw: string | null): string {
+  const email = raw?.trim() ?? "";
+  return z.string().email().max(254).safeParse(email).success ? email : "";
+}
+
 function SignInContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -52,8 +62,14 @@ function SignInContent() {
     // `error=token_expired` (or `invalid_token`) to the same callback when the
     // link did not verify anything. That used to toast « vérifié » regardless.
     // The verify screen is where another link can be asked for.
-    if (searchParams.get("error")) {
-      router.replace("/verify-email?linkError=1");
+    const urlError = signinUrlError(searchParams.get("error"));
+    if (urlError.kind === "link") {
+      // The link carries the address it was sent to; handing it on means the
+      // resend there does not ask for it again.
+      const email = prefilledEmail(searchParams.get("email"));
+      const query = new URLSearchParams({ linkError: "1" });
+      if (email) query.set("email", email);
+      router.replace(`/verify-email?${query.toString()}`);
       return;
     }
 
@@ -71,18 +87,33 @@ function SignInContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
+  const initialEmail = prefilledEmail(searchParams.get("email"));
+
+  // A Google sign-in that did not finish, or a suspended account, comes back
+  // here with `?error=`; a refusal from the form itself takes precedence.
+  const urlError = signinUrlError(searchParams.get("error"));
+  const urlNoticeKey = urlError.kind === "notice" ? urlError.key : null;
+
   const {
     register,
     handleSubmit,
+    setFocus,
     formState: { errors },
   } = useForm<SigninFormData>({
     resolver: zodResolver(buildSigninSchema(t)),
     defaultValues: {
-      email: "",
+      email: initialEmail,
       password: "",
       rememberMe: false,
     },
   });
+
+  // Arriving with the address filled in, the next thing to type is the
+  // password.
+  useEffect(() => {
+    if (initialEmail) setFocus("password");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // A refusal comes back through the hook's `error`, as a key the notice
   // below turns into a sentence (`auth-errors.ts`).
@@ -133,7 +164,7 @@ function SignInContent() {
           <AuthIntentNote />
 
           {/* Error Display */}
-          <AuthErrorNotice error={authError} />
+          <AuthErrorNotice error={authError ?? urlNoticeKey} />
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div>

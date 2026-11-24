@@ -12,6 +12,7 @@ import VerifyEmailPage from "../page";
 const mocks = vi.hoisted(() => ({
   push: vi.fn(),
   send: vi.fn(),
+  verifyCode: vi.fn(),
 }));
 let currentQuery = new URLSearchParams();
 
@@ -33,6 +34,10 @@ vi.mock("@/lib/auth-client", () => ({
 
 vi.mock("@/features/auth/hooks/useAuthActions", () => ({
   useAuthActions: () => ({ verifyEmail: vi.fn() }),
+}));
+
+vi.mock("@/features/auth/api/email-code.api", () => ({
+  verifyEmailCode: mocks.verifyCode,
 }));
 
 function renderPage(query = "") {
@@ -190,5 +195,174 @@ describe("VerifyEmailPage — how the visitor got here", () => {
     fireEvent.click(screen.getByRole("button", { name: "backToLogin" }));
 
     expect(mocks.push).toHaveBeenCalledWith("/signin");
+  });
+});
+
+describe("VerifyEmailPage — the code from the mail (email_access_code_spec.md §5)", () => {
+  const codeField = () => screen.getByLabelText("code.label");
+  const validate = () => screen.getByRole("button", { name: "code.submit" });
+
+  function typeCode(value: string) {
+    fireEvent.change(codeField(), { target: { value } });
+  }
+
+  it("asks for it in one field the phone can fill from the mail", () => {
+    renderPage("email=jean%40mail.com");
+
+    const field = codeField();
+    expect(field).toHaveAttribute("inputmode", "numeric");
+    expect(field).toHaveAttribute("autocomplete", "one-time-code");
+    expect(field).toHaveAttribute("maxlength", "6");
+    // « Valider » comes before the resend block.
+    expect(
+      validate().compareDocumentPosition(resendButton()) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+  });
+
+  it("takes a pasted « 123 456 » as one code", () => {
+    renderPage("email=jean%40mail.com");
+
+    fireEvent.paste(codeField(), {
+      clipboardData: { getData: () => "123 456" },
+    });
+
+    expect(codeField()).toHaveValue("123456");
+  });
+
+  it("keeps digits only while typing", () => {
+    renderPage("email=jean%40mail.com");
+
+    typeCode("12a-3");
+
+    expect(codeField()).toHaveValue("123");
+  });
+
+  it("asks for all six digits before asking the server", () => {
+    renderPage("email=jean%40mail.com");
+
+    typeCode("123");
+    fireEvent.click(validate());
+
+    expect(screen.getByText("code.incomplete")).toBeInTheDocument();
+    expect(mocks.verifyCode).not.toHaveBeenCalled();
+  });
+
+  it("goes to sign-in with the address filled in once the code is right", async () => {
+    mocks.verifyCode.mockResolvedValue({ status: "verified", email: "jean@mail.com" });
+    renderPage("email=jean%40mail.com");
+
+    typeCode("123456");
+    fireEvent.click(validate());
+
+    await waitFor(() =>
+      expect(mocks.push).toHaveBeenCalledWith(
+        "/signin?verified=true&email=jean%40mail.com"
+      )
+    );
+    expect(mocks.verifyCode).toHaveBeenCalledWith("jean@mail.com", "123456");
+    expect(screen.getByRole("status")).toHaveTextContent("code.verified");
+  });
+
+  it("keeps the page the sign-in was headed to", async () => {
+    mocks.verifyCode.mockResolvedValue({ status: "verified", email: "jean@mail.com" });
+    renderPage("email=jean%40mail.com&from=signin&callbackUrl=%2Flisting%2Fabc");
+
+    typeCode("123456");
+    fireEvent.click(validate());
+
+    await waitFor(() =>
+      expect(mocks.push).toHaveBeenCalledWith(
+        "/signin?verified=true&email=jean%40mail.com&callbackUrl=%2Flisting%2Fabc"
+      )
+    );
+  });
+
+  it("says how many tries are left on a wrong code", async () => {
+    mocks.verifyCode.mockResolvedValue({ status: "invalid", attemptsLeft: 3 });
+    renderPage("email=jean%40mail.com");
+
+    typeCode("000000");
+    fireEvent.click(validate());
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      'code.invalid {"count":3}'
+    );
+    expect(mocks.push).not.toHaveBeenCalled();
+    expect(validate()).toBeEnabled();
+  });
+
+  it.each([
+    ["expired", "code.expired"],
+    ["tooManyAttempts", "code.tooManyAttempts"],
+  ])("sends the person to a new code when it is %s", async (status, copy) => {
+    mocks.verifyCode.mockResolvedValue({ status });
+    renderPage("email=jean%40mail.com");
+
+    typeCode("123456");
+    fireEvent.click(validate());
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(copy);
+    expect(resendButton()).toHaveFocus();
+    expect(codeField()).toHaveValue("");
+  });
+
+  it("names support and keeps « Valider » live when the check fails", async () => {
+    mocks.verifyCode.mockResolvedValue({ status: "failed" });
+    renderPage("email=jean%40mail.com");
+
+    typeCode("123456");
+    fireEvent.click(validate());
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("code.failed");
+    expect(alert).toHaveTextContent("support@expeditop.fr");
+    expect(validate()).toBeEnabled();
+  });
+
+  it("clears the last answer as soon as a new code is typed", async () => {
+    mocks.verifyCode.mockResolvedValue({ status: "invalid", attemptsLeft: 4 });
+    renderPage("email=jean%40mail.com");
+
+    typeCode("000000");
+    fireEvent.click(validate());
+    await screen.findByRole("alert");
+
+    typeCode("1");
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("uses the address typed on the page when it was not handed one", async () => {
+    mocks.verifyCode.mockResolvedValue({ status: "verified", email: "jean@mail.com" });
+    renderPage("");
+
+    typeCode("123456");
+    fireEvent.click(validate());
+    expect(screen.getByText("emailInvalid")).toBeInTheDocument();
+    expect(mocks.verifyCode).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText("emailLabel"), {
+      target: { value: " jean@mail.com " },
+    });
+    fireEvent.click(validate());
+
+    await waitFor(() =>
+      expect(mocks.verifyCode).toHaveBeenCalledWith("jean@mail.com", "123456")
+    );
+  });
+
+  it("lets a handed address that is not one be corrected", () => {
+    renderPage("email=jean");
+
+    expect(screen.getByLabelText("emailLabel")).toHaveValue("jean");
+  });
+
+  // A failed link is where people most need the other way in.
+  it("offers the code after a link that failed, too", () => {
+    renderPage("linkError=1");
+
+    expect(codeField()).toBeInTheDocument();
+    expect(validate()).toBeEnabled();
   });
 });

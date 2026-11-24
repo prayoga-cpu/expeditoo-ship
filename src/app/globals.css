@@ -4,6 +4,15 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
+  /* Drawn light unless Dark is chosen in the app (2.96.0 #29), and said so to
+     the browser: `only` is what keeps Chrome's Auto Dark Theme (Android's
+     « contenu Web », desktop #enable-force-dark) from repainting the page; a
+     plain `light` does not. `.dark` below says `dark`, so a page in the app's
+     own Dark is never darkened twice. Never set `color-scheme: light` on a
+     descendant: it inherits, and a plain `light` lower down re-opens that
+     element to forced dark. src/lib/theme.ts keeps the meta tag in step. */
+  color-scheme: only light;
+
   /* Primary: Professional Blue */
   --primary: oklch(0.55 0.2 258);
   --primary-foreground: oklch(1 0 0);
@@ -63,6 +72,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   --background: oklch(0.16 0.012 250);
   --foreground: oklch(0.95 0.02 250);
   --card: oklch(0.21 0.012 250);

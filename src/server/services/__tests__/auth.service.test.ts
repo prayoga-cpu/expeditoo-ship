@@ -7,8 +7,16 @@ const mocks = vi.hoisted(() => {
     send: vi.fn().mockResolvedValue({ id: 'email-id' }),
     execute: vi.fn().mockResolvedValue([]),
     welcome: vi.fn().mockResolvedValue(true),
+    issueCode: vi.fn().mockResolvedValue('482913'),
   }
 })
+
+// Issuing a code is email-code.service's business (its own tests); what is
+// tested here is which mails carry one, and that a failed issue costs only
+// the code, never the mail.
+vi.mock('@/server/services/email-code.service', () => ({
+  issueVerificationCode: mocks.issueCode,
+}));
 
 // The welcome's own rendering and send are email.service's business; what is
 // tested here is when auth.service asks for one, and that it survives a no.
@@ -33,6 +41,7 @@ vi.mock('@/server/dal/users.dal', () => ({
   // The claim reads `emailVerified` back off the row Better Auth just wrote,
   // so the signup path needs this one too.
   getUserById: vi.fn(),
+  verifyUserEmail: vi.fn(),
 }));
 
 // The quote claim is one raw statement rather than a DAL call, so the only
@@ -120,6 +129,7 @@ describe('authService', () => {
         vi.mocked(usersDAL.getUserById).mockResolvedValue(verifiedUser(false));
         mocks.execute.mockResolvedValue([]);
         mocks.welcome.mockResolvedValue(true);
+        mocks.issueCode.mockResolvedValue('482913');
     });
 
     describe('handlePostSignup', () => {
@@ -420,6 +430,121 @@ describe('authService', () => {
             expect(textOf(sent.react).join(' ')).toContain(
                 'callbackURL=%2Fsignin%3Fverified%3Dtrue'
             );
+        });
+    });
+
+    // The access code beside the link (email_access_code_spec.md §4).
+    describe('sendVerificationEmail — the access code', () => {
+        const link = 'https://app.test/api/auth/verify-email?token=abc';
+
+        it('should issue a code and print it in an EXPEDITOP mail', async () => {
+            vi.mocked(usersDAL.getUserByEmail).mockResolvedValue(namedUser('Jean Dupont'));
+
+            await expect(authService.sendVerificationEmail('jean@mail.com', link)).resolves.toBe(true);
+
+            expect(mocks.issueCode).toHaveBeenCalledWith('jean@mail.com');
+            const body = textOf(sentEmail().react).join(' ');
+            expect(body).toContain('482913');
+            expect(body).toContain('Votre code de confirmation');
+        });
+
+        // Their app has no screen to type a code into.
+        it('should keep an Expedion mail to the link alone', async () => {
+            process.env.EXPEDION_APP_ORIGINS = EXPEDION_ORIGIN;
+            vi.mocked(usersDAL.getUserByEmail).mockResolvedValue(
+                namedUser('Jean Dupont', 'expedion')
+            );
+
+            await authService.sendVerificationEmail('jean@mail.com', link);
+
+            expect(mocks.issueCode).not.toHaveBeenCalled();
+            const body = textOf(sentEmail().react).join(' ');
+            expect(body).not.toContain('Votre code de confirmation');
+            expect(body).toContain('Confirmer mon adresse e-mail');
+        });
+
+        it('should still send the link when no code could be issued', async () => {
+            const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+            vi.mocked(usersDAL.getUserByEmail).mockResolvedValue(namedUser('Jean Dupont'));
+            mocks.issueCode.mockRejectedValueOnce(new Error('db down'));
+
+            await expect(authService.sendVerificationEmail('jean@mail.com', link)).resolves.toBe(true);
+
+            const body = textOf(sentEmail().react).join(' ');
+            expect(body).toContain(link.split('?')[0]);
+            expect(body).not.toContain('Votre code de confirmation');
+            consoleError.mockRestore();
+        });
+
+        // The sign-in form is filled in, and a link that failed reaches a
+        // resend that already knows the address.
+        it('should send the address along with the link callback', async () => {
+            vi.mocked(usersDAL.getUserByEmail).mockResolvedValue(namedUser('Jean Dupont'));
+
+            await authService.sendVerificationEmail('Jean@Mail.com', link);
+
+            expect(textOf(sentEmail().react).join(' ')).toContain(
+                `callbackURL=${encodeURIComponent('/signin?verified=true&email=jean%40mail.com')}`
+            );
+        });
+    });
+
+    describe('confirmAddress', () => {
+        it('should verify and welcome an address the first time', async () => {
+            vi.mocked(usersDAL.getUserByEmail).mockResolvedValue(namedUser('Jean Dupont'));
+
+            await expect(
+                authService.confirmAddress({ id: 'u1', email: 'jean@mail.com', emailVerified: false })
+            ).resolves.toBe(true);
+
+            expect(usersDAL.verifyUserEmail).toHaveBeenCalledWith('u1');
+            expect(mocks.welcome).toHaveBeenCalledTimes(1);
+        });
+
+        it('should leave an already verified address alone, and greet nobody', async () => {
+            await expect(
+                authService.confirmAddress({ id: 'u1', email: 'jean@mail.com', emailVerified: true })
+            ).resolves.toBe(false);
+
+            expect(usersDAL.verifyUserEmail).not.toHaveBeenCalled();
+            expect(mocks.welcome).not.toHaveBeenCalled();
+        });
+
+        it('should not let a welcome that fails undo the verification', async () => {
+            const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+            vi.mocked(usersDAL.getUserByEmail).mockResolvedValue(namedUser('Jean Dupont'));
+            mocks.welcome.mockRejectedValueOnce(new Error('Resend is down'));
+
+            await expect(
+                authService.confirmAddress({ id: 'u1', email: 'jean@mail.com', emailVerified: false })
+            ).resolves.toBe(true);
+            consoleError.mockRestore();
+        });
+    });
+
+    // A reset link reached the inbox: the same proof the verification asks for.
+    describe('confirmAddressAfterReset', () => {
+        it('should verify an address that was still unconfirmed', async () => {
+            vi.mocked(usersDAL.getUserByEmail).mockResolvedValue(namedUser('Jean Dupont'));
+
+            await authService.confirmAddressAfterReset({
+                id: 'u1',
+                email: 'jean@mail.com',
+                emailVerified: false,
+            });
+
+            expect(usersDAL.verifyUserEmail).toHaveBeenCalledWith('u1');
+        });
+
+        it('should never throw: the password has already changed', async () => {
+            const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+            vi.mocked(usersDAL.verifyUserEmail).mockRejectedValueOnce(new Error('db down'));
+
+            await expect(
+                authService.confirmAddressAfterReset({ id: 'u1', email: 'jean@mail.com' })
+            ).resolves.toBeUndefined();
+            expect(consoleError).toHaveBeenCalled();
+            consoleError.mockRestore();
         });
     });
 
