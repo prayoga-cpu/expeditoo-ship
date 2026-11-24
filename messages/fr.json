@@ -181,7 +181,6 @@
       "theme": "Thème",
       "light": "Clair",
       "dark": "Sombre",
-      "system": "Auto",
       "install": "Installer l'application",
       "fullscreen": "Plein écran",
       "exitFullscreen": "Quitter le plein écran",
@@ -210,8 +209,7 @@
     "theme": {
       "toggle": "Changer de thème",
       "light": "Clair",
-      "dark": "Sombre",
-      "system": "Comme mon appareil"
+      "dark": "Sombre"
     },
     "verifiedUser": "Utilisateur vérifié",
     "loadingContent": "Chargement du contenu",
@@ -319,7 +317,7 @@
     },
     "verifyEmail": {
       "title": "Vérifiez votre email",
-      "subtitle": "Nous avons envoyé un lien de vérification à votre email",
+      "subtitle": "Nous vous avons envoyé un e-mail avec un code à 6 chiffres et un lien de confirmation.",
       "resend": "Renvoyer l'email",
       "resending": "Envoi en cours...",
       "resent": "Email de vérification envoyé !",
@@ -329,8 +327,8 @@
       "verifyingTitle": "Vérification de votre email",
       "verifyingBody": "Veuillez patienter, nous vérifions votre adresse email…",
       "successTitle": "Email vérifié",
-      "successBody": "Votre adresse email est confirmée. Nous vous connectons…",
-      "redirecting": "Nous vous redirigeons vers votre compte…",
+      "successBody": "Votre adresse e-mail est confirmée. Connectez-vous pour continuer.",
+      "redirecting": "Nous vous emmenons vers la connexion…",
       "continue": "Continuer",
       "failedTitle": "Nous n'avons pas pu vérifier votre email",
       "failedBody": "Le lien a peut-être expiré ou a déjà été utilisé.",
@@ -338,16 +336,31 @@
       "needHelp": "Besoin d'aide ?",
       "contactSupport": "Contacter le support",
       "loading": "Chargement…",
-      "subtitleWithEmail": "Nous avons envoyé un lien de vérification à {email}",
-      "fromSignIn": "Votre adresse e-mail n'est pas encore confirmée. Nous venons de vous envoyer un nouveau lien : ouvrez-le pour activer votre compte. S'il n'arrive pas, renvoyez-le ci-dessous.",
-      "linkFailedBody": "Le lien a peut-être expiré ou a déjà été utilisé. Demandez-en un nouveau ci-dessous.",
-      "resentHint": "Il peut mettre quelques minutes à arriver.",
+      "subtitleWithEmail": "Nous avons envoyé un code à 6 chiffres et un lien de confirmation à {email}.",
+      "fromSignIn": "Votre adresse e-mail n'est pas encore confirmée. Nous venons de vous envoyer un nouveau code : saisissez-le ci-dessous, ou ouvrez le lien du même e-mail. S'il n'arrive pas, renvoyez-le.",
+      "linkFailedBody": "Le lien a peut-être expiré ou a déjà été utilisé. Saisissez ci-dessous le code de votre dernier e-mail, ou demandez-en un nouveau.",
+      "resentHint": "Il contient un nouveau code et peut mettre quelques minutes à arriver.",
       "resendIn": "Renvoyer dans {seconds} s",
       "resendFailed": "L'email n'a pas pu être envoyé. Réessayez dans un instant ; si le problème continue, écrivez-nous à {support}.",
       "resendRateLimited": "Trop de demandes à la suite. Patientez une minute avant de réessayer.",
       "emailLabel": "Votre adresse e-mail",
       "emailPlaceholder": "vous@exemple.com",
-      "emailInvalid": "Veuillez saisir une adresse e-mail valide"
+      "emailInvalid": "Veuillez saisir une adresse e-mail valide",
+      "code": {
+        "label": "Code reçu par e-mail",
+        "hint": "Les 6 chiffres de l'e-mail que nous vous avons envoyé. Vous pouvez aussi ouvrir le lien du même e-mail, sur n'importe quel appareil.",
+        "placeholder": "123456",
+        "submit": "Valider",
+        "checking": "Vérification…",
+        "verified": "Adresse confirmée. Nous vous emmenons vers la connexion…",
+        "incomplete": "Saisissez les 6 chiffres du code reçu par e-mail.",
+        "invalid": "{count, plural, one {Ce code n'est pas le bon. Il vous reste # essai : vérifiez qu'il vient du dernier e-mail reçu.} other {Ce code n'est pas le bon. Il vous reste # essais : vérifiez qu'il vient du dernier e-mail reçu.}}",
+        "invalidNoCount": "Ce code n'est pas le bon. Vérifiez qu'il vient du dernier e-mail reçu, puis réessayez.",
+        "expired": "Ce code a expiré ou a été remplacé par un plus récent. Demandez-en un nouveau avec le bouton « Renvoyer l'email » ci-dessous.",
+        "tooManyAttempts": "Trop d'essais : ce code ne fonctionne plus. Demandez-en un nouveau avec le bouton « Renvoyer l'email » ci-dessous.",
+        "rateLimited": "Trop de tentatives à la suite. Patientez une minute avant de réessayer.",
+        "failed": "La vérification n'a pas abouti. Réessayez dans un instant ; si le problème continue, écrivez-nous à {support}."
+      }
     },
     "intent": {
       "bid": "Vous étiez sur le point de placer une offre.",
@@ -381,7 +394,8 @@
         "signIn": "Se connecter",
         "resetPassword": "Réinitialiser mon mot de passe",
         "requestNewLink": "Recevoir un nouveau lien"
-      }
+      },
+      "oauthFailed": "La connexion avec Google n'a pas abouti. Réessayez, ou connectez-vous avec votre e-mail et votre mot de passe ci-dessous."
     }
   },
   "profile": {
@@ -788,8 +802,7 @@
     "theme": {
       "title": "Thème",
       "light": "Clair",
-      "dark": "Sombre",
-      "system": "Système"
+      "dark": "Sombre"
     },
     "language": {
       "title": "Langue"
@@ -2261,94 +2274,21 @@
       "langLabel": "Langue",
       "themeLight": "Clair",
       "themeDark": "Sombre",
-      "themeSystem": "Système",
       "signUp": "Inscription",
-      "loginOrSignUp": "Connexion / Inscription"
-    },
-    "hero": {
-      "badge": "Le réseau de transporteurs du groupe Expedion",
-      "titleLine1": "Les courses viennent à vous.",
-      "titleLine2": "Vous fixez le prix.",
-      "subtitle": "Quand la flotte d'Expedion est complète, la course est publiée ici. Proposez votre prix, roulez, soyez payé par virement. Sans prospection.",
-      "step1": "Une course se libère",
-      "step2": "Vous enchérissez à la baisse",
-      "step3": "Livrez, soyez payé",
-      "primaryCta": "Rejoindre le réseau",
-      "secondaryCta": "Comment ça marche",
-      "primaryCtaAuthed": "Ouvrir votre profil"
-    },
-    "bidCard": {
-      "fromExpedion": "DEPUIS EXPEDION",
-      "closes": "FERME",
-      "item": "Commode Louis XV, 62 kg",
-      "details": "Enlèvement avant le 22 août · 3e étage, ascenseur · emballé par Expedion",
-      "bestOffer": "Meilleure offre",
-      "yourOffer": "Votre offre",
-      "offers": "Offres",
-      "leading": "Votre offre est en tête",
-      "bidCta": "Enchérir, tout compris",
-      "bidInputLabel": "Votre offre en euros",
-      "insured": "ASSURÉ PAR EXPEDION · PAYÉ PAR VIREMENT",
-      "errorInvalid": "Saisissez un montant en euros.",
-      "errorTooLow": "Les offres sérieuses commencent à {min} €.",
-      "errorTooHigh": "Votre offre doit passer sous {best} €."
-    },
-    "stats": {
-      "jobsPerMonth": "Courses publiées par mois",
-      "timeToAward": "Délai moyen d'attribution",
-      "emptyKm": "De kilomètres à vide",
-      "transferMinimum": "Solde minimum pour demander un virement"
-    },
-    "howItWorks": {
-      "eyebrow": "COMMENT ÇA MARCHE",
-      "title": "Trois étapes, c'est tout",
-      "intro": "Chaque course est une vraie livraison Expedion que notre flotte n'a pas pu prendre.",
-      "step1": {
-        "title": "Une course est publiée automatiquement",
-        "desc": "Un client a commandé sur Expedion et aucun chauffeur du réseau n'est libre. Trajet, gabarit, photos et échéance sont déjà dans l'annonce."
-      },
-      "step2": {
-        "title": "Vous enchérissez votre prix",
-        "desc": "Enchère inversée : l'offre sérieuse la plus basse mène. Proposez ce que vaut le trajet pour vous, tout compris."
-      },
-      "step3": {
-        "title": "Le client choisit, ou Expedion choisit",
-        "desc": "À la fermeture, le transporteur retenu est réservé instantanément. Le créneau d'enlèvement est déjà bloqué auprès de la maison de ventes."
-      },
-      "step4": {
-        "title": "Livrez, un seul suivi",
-        "desc": "Vos étapes alimentent le suivi que l'acheteur voit dans Expedion. Preuve de livraison déposée, gains crédités, virement à votre demande."
-      }
-    },
-    "advantages": {
-      "eyebrow": "POURQUOI LES TRANSPORTEURS RESTENT",
-      "title": "Des camions pleins, sans démarchage",
-      "item1": {
-        "title": "Remplissez vos retours",
-        "desc": "Filtrez les courses sur vos trajets existants. Un retour Bordeaux–Paris cesse d'être des kilomètres à vide."
-      },
-      "item2": {
-        "title": "Des clients déjà signés",
-        "desc": "Expedion vend, chiffre et emballe. Vous ne négociez jamais avec le client final, vous roulez."
-      },
-      "item3": {
-        "title": "Payé par virement",
-        "desc": "C'est le groupe qui vous paie, pas le client. Preuve de livraison déposée, gains crédités, virement à votre demande."
-      },
-      "item4": {
-        "title": "Assurance déjà en place",
-        "desc": "Les lots sont couverts ad valorem par Expedion de l'enlèvement à la signature. Votre responsabilité est cadrée aux CGV."
-      }
+      "loginOrSignUp": "Connexion / Inscription",
+      "recent": "Demandes récentes",
+      "carriers": "Transporteurs"
     },
     "cta": {
-      "title": "Prêt à rouler ? Rejoignez le réseau.",
-      "subtitle": "SIRET, assurance, permis : déposez vos documents et, une fois votre dossier validé, vous pouvez proposer vos prix.",
+      "title": "Quelque chose à faire transporter ?",
+      "subtitle": "Décrivez votre envoi et recevez les offres de transporteurs vérifiés. Vous transportez ? Rejoignez-les.",
       "primary": "Devenir transporteur",
       "primaryAuthed": "Ouvrir votre profil",
-      "subtitleAuthed": "Vous êtes déjà connecté. Vos documents, votre véhicule et votre vérification sont dans votre profil."
+      "subtitleAuthed": "Vous êtes connecté : publiez une demande, ou retrouvez votre dossier transporteur dans votre profil.",
+      "request": "Publier une demande"
     },
     "footer": {
-      "tagline": "Le réseau de transporteurs du groupe Expedion. Des expéditions de ventes aux enchères, enchéries par des transporteurs vérifiés.",
+      "tagline": "Faites transporter vos objets par des transporteurs vérifiés, en France et à l'étranger. Expeditop fait partie du groupe Expedion.",
       "carriers": "Transporteurs",
       "howItWorks": "Comment ça marche",
       "verification": "Vérification",
@@ -2362,7 +2302,11 @@
       "privacy": "Politique de confidentialité",
       "copyright": "© 2026 Expeditop — Groupe Expedion",
       "sameGroup": "Expedion et Expeditop appartiennent au même groupe",
-      "changelog": "Journal des versions"
+      "changelog": "Journal des versions",
+      "requesters": "Expédier",
+      "request": "Publier une demande",
+      "recent": "Demandes récentes",
+      "becomeCarrier": "Devenir transporteur"
     },
     "actions": {
       "bid": {
@@ -2843,6 +2787,121 @@
         "ux": "AMÉLIORÉ",
         "infra": "TECHNIQUE"
       }
+    },
+    "hero": {
+      "badge": "Objets, meubles et déménagements · France et étranger",
+      "title": "Trouvez un transporteur pour vos objets",
+      "subtitle": "Dites ce que vous transportez et où. Des transporteurs vérifiés vous envoient leur prix : vous choisissez l'offre qui vous convient.",
+      "note": "Publier une demande est gratuit. Vous ne payez qu'en acceptant une offre."
+    },
+    "search": {
+      "label": "Décrire votre envoi",
+      "from": {
+        "label": "Ville de départ",
+        "placeholder": "Ex. Paris"
+      },
+      "to": {
+        "label": "Destination",
+        "placeholder": "Ex. Lyon"
+      },
+      "date": {
+        "label": "Date"
+      },
+      "title": {
+        "label": "Que transportez-vous ?",
+        "placeholder": "Ex. un canapé 3 places"
+      },
+      "submit": "Obtenir des offres",
+      "examples": "Exemples :",
+      "exampleRoute": "{from} → {to}",
+      "exampleFill": "Remplir le trajet {from} → {to}"
+    },
+    "trust": {
+      "label": "À chaque demande",
+      "payment": {
+        "title": "Paiement à l'acceptation",
+        "desc": "Rien n'est débité tant que vous n'avez pas choisi une offre."
+      },
+      "verified": {
+        "title": "Transporteurs vérifiés",
+        "desc": "Chauffeurs Expeditop et transporteurs professionnels, contrôlés avant leur première offre."
+      },
+      "photos": {
+        "title": "Photos au retrait et à la livraison",
+        "desc": "Chaque photo porte le lieu et l'heure où elle a été prise."
+      },
+      "refund": {
+        "title": "Remboursé en cas d'annulation",
+        "desc": "Une course annulée avant le retrait vous est remboursée."
+      }
+    },
+    "recent": {
+      "title": "Demandes récentes",
+      "subtitle": "Les dernières demandes publiées sur Expeditop, ouvertes aux offres des transporteurs.",
+      "seeAll": "Voir toutes les demandes",
+      "kind": {
+        "items": "Objet",
+        "moving": "Déménagement"
+      },
+      "reference": "N° {reference}",
+      "to": "vers",
+      "pickupOn": "Retrait le {date}",
+      "pickupBetween": "Retrait du {from} au {to}",
+      "weight": "{kg} kg",
+      "surface": "{m2} m²",
+      "volume": "{m3} m³",
+      "error": "Les demandes récentes n'ont pas pu être chargées",
+      "empty": {
+        "title": "Aucune demande ouverte en ce moment",
+        "description": "Décrivez ce que vous voulez transporter : votre demande sera la première de la liste.",
+        "cta": "Publier une demande"
+      }
+    },
+    "howItWorks": {
+      "eyebrow": "Simple et rapide",
+      "title": "Comment ça marche ?",
+      "intro": "Trois étapes, de votre demande à la livraison.",
+      "stepNumber": "Étape {n} :",
+      "step1": {
+        "title": "Décrivez votre envoi",
+        "desc": "Ce que vous transportez, le départ, l'arrivée et vos dates. Ajoutez des photos si vous le souhaitez."
+      },
+      "step2": {
+        "title": "Recevez des offres",
+        "desc": "Des transporteurs vérifiés vous proposent un prix et des créneaux. Comparez-les et échangez avec eux par message."
+      },
+      "step3": {
+        "title": "Choisissez, c'est réservé",
+        "desc": "Vous acceptez l'offre qui vous convient et payez à ce moment-là. Votre envoi est photographié au retrait et à la livraison."
+      },
+      "cta": "Publier une demande"
+    },
+    "audiences": {
+      "title": "Deux façons d'utiliser Expeditop",
+      "intro": "Faites transporter vos objets, ou transportez ceux des autres.",
+      "shipper": {
+        "eyebrow": "Vous expédiez",
+        "title": "Un meuble, des cartons, un déménagement",
+        "intro": "Particulier ou professionnel, vous décrivez ce qu'il faut transporter et vous comparez les offres reçues.",
+        "point1": "Objets seuls ou déménagement complet",
+        "point2": "En France et à l'étranger",
+        "point3": "Le prix le plus bas n'est pas imposé : c'est vous qui choisissez",
+        "cta": "Publier une demande"
+      },
+      "carrier": {
+        "eyebrow": "Vous transportez",
+        "title": "Des courses sur votre route",
+        "intro": "Chauffeur ou transporteur professionnel, vous proposez votre prix sur les demandes ouvertes.",
+        "point1": "Consultez les demandes et proposez votre prix",
+        "point2": "Déclarez vos trajets pour trouver les courses qui vous concernent",
+        "point3": "Votre dossier est vérifié par Expeditop avant votre première offre"
+      }
+    },
+    "images": {
+      "hero": "Étiquettes kraft nouées à la ficelle sur un colis",
+      "shipper": "Un canapé bleu clair et ses coussins dans un salon lumineux",
+      "carrier": "L'autoroute vue depuis le siège du conducteur, des poids lourds sur la voie de droite",
+      "packing": "Une personne ferme un carton sur une table, du papier kraft à côté"
     }
   },
   "help": {

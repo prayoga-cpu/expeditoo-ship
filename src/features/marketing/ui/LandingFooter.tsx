@@ -17,13 +17,22 @@ const HEADING = "text-[13px] font-medium";
  * now resolves to the page it names — see
  * docs/specs/marketing_footer_pages_spec.md §1. « Courses ouvertes » and
  * « Plateforme » went in 2.95.0: their sections left the landing page, and an
- * anchor to a missing id scrolls nowhere.
+ * anchor to a missing id scrolls nowhere. 2.96.0 added the requester's column
+ * (landing_2026_11_spec.md §3): the landing is theirs first.
  */
 const COLUMNS = [
   {
+    title: "requesters",
+    links: [
+      { key: "request", href: "/create" },
+      { key: "howItWorks", href: "/#how" },
+      { key: "recent", href: "/#recent" },
+    ],
+  },
+  {
     title: "carriers",
     links: [
-      { key: "howItWorks", href: "/#how" },
+      { key: "becomeCarrier", href: "/#carriers" },
       { key: "verification", href: "/verification" },
     ],
   },
@@ -76,19 +85,25 @@ function FooterColumn({ column }: { column: (typeof COLUMNS)[number] }) {
   );
 }
 
-export function LandingFooter() {
+export function LandingFooter({ flush = false }: { flush?: boolean } = {}) {
   const t = useTranslations("marketing.footer");
 
+  // `flush`: the landing's last section carries its own spacing; the content
+  // pages end on prose and keep the gap.
+  const gap = flush ? "" : "mt-[72px] lg:mt-[110px]";
+
   return (
-    <footer className="lp mt-[72px] border-t border-[var(--lp-line)] px-5 pt-14 pb-10 sm:px-8 lg:mt-[110px]">
-      <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-11">
-        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
+    <footer className={`lp ${gap} border-t border-[var(--lp-line)] pt-14 pb-10`}>
+      {/* Padded inside the 1200px measure, as the header is: the two
+          share one content edge on every marketing page. */}
+      <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-11 px-5 font-sans sm:px-8">
+        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1fr]">
           <div className="flex flex-col gap-4">
             <BrandWordmark size={30} tagline />
             <span className="max-w-[280px] text-sm leading-[1.6] text-[var(--lp-muted)]">
               {t("tagline")}
             </span>
-            <span className="font-mono text-[11px] tracking-[0.14em] text-[var(--lp-faint)]">
+            <span className="font-mono text-[11px] tracking-[0.14em] text-[var(--lp-dim)]">
               EXPEDITOP.FR
             </span>
           </div>
@@ -105,13 +120,15 @@ export function LandingFooter() {
               reached from the number itself, which is how somebody arrives
               wanting to know what changed. */}
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <span className="text-[13px] text-[var(--lp-faint)]">
+            {/* `--lp-muted`, not `--lp-faint`: 13px text in faint grey on the
+                footer's grey was 3:1, under AA. */}
+            <span className="text-[13px] text-[var(--lp-muted)]">
               {t("copyright")}
             </span>
-            <AppVersionLink className="text-[var(--lp-faint)] hover:text-[var(--lp-text)]" />
+            <AppVersionLink className="text-[var(--lp-muted)] hover:text-[var(--lp-text)]" />
           </div>
           <div className="flex items-center gap-2.5">
-            <span className="text-[13px] text-[var(--lp-faint)]">
+            <span className="text-[13px] text-[var(--lp-muted)]">
               {t("sameGroup")}
             </span>
             <span

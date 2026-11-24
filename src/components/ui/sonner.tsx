@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { Toaster as Sonner, ToasterProps } from "sonner";
+import { appThemeOf } from "@/lib/theme";
 
 /** Tailwind's `lg`: from here the shells draw a sidebar and no bottom bar. */
 const SIDEBAR_QUERY = "(min-width: 1024px)";
@@ -42,12 +43,15 @@ function useToastPlacement(): Pick<ToasterProps, "position" | "offset" | "mobile
 }
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme();
+  // The app's own choice, never `system`: Sonner reads `system` as
+  // `prefers-color-scheme`, which would put dark toasts on a light page
+  // whenever the device is dark (2.96.0 #29).
+  const { resolvedTheme } = useTheme();
   const placement = useToastPlacement();
 
   return (
     <Sonner
-      theme={theme as ToasterProps["theme"]}
+      theme={appThemeOf(resolvedTheme)}
       className="toaster group"
       style={
         {

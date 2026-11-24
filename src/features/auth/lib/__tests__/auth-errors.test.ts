@@ -7,6 +7,7 @@ import {
   AUTH_ERROR_CODES,
   AUTH_ERROR_KEYS,
   authErrorKey,
+  signinUrlError,
   thrownAuthErrorKey,
 } from "../auth-errors";
 
@@ -134,5 +135,27 @@ describe("the copy", () => {
 
   it.each(["fr", "en"] as const)("tells a rate limit to wait, in %s", (lang) => {
     expect(sentences[lang].rateLimited as string).toMatch(/minute/);
+  });
+});
+
+describe("signinUrlError", () => {
+  it("sends a verification link that verified nothing to the verify screen", () => {
+    expect(signinUrlError("token_expired")).toEqual({ kind: "link" });
+    expect(signinUrlError("invalid_token")).toEqual({ kind: "link" });
+  });
+
+  it("says nothing when the person closed Google's window, or when there is no error", () => {
+    expect(signinUrlError("access_denied")).toEqual({ kind: "none" });
+    expect(signinUrlError(null)).toEqual({ kind: "none" });
+  });
+
+  it("names a suspended account", () => {
+    expect(signinUrlError("suspended")).toEqual({ kind: "notice", key: "suspended" });
+  });
+
+  it("reads any other provider error as a sign-in that did not finish", () => {
+    for (const raw of ["account_not_linked", "unable_to_link_account", "invalid_callback_request", "state_mismatch"]) {
+      expect(signinUrlError(raw)).toEqual({ kind: "notice", key: "oauthFailed" });
+    }
   });
 });

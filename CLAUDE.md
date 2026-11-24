@@ -225,7 +225,7 @@ without an `sk_live_` key, so an accept there takes real money.
 Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before shipping.
 
 **Gates — all green.** `npx tsc --noEmit` 0 errors · `pnpm lint` 0 errors ·
-4,623 unit tests pass (2.95.1) · `pnpm build` succeeds. The same gate runs inside
+4,811 unit tests pass (2.96.0) · `pnpm build` succeeds. The same gate runs inside
 every `dev` and production Vercel build before anything migrates (`AGENTS.md` §4a).
 
 **Done**
@@ -285,9 +285,10 @@ every `dev` and production Vercel build before anything migrates (`AGENTS.md` §
   `.github/workflows/scheduled-jobs.yml`, not Vercel Cron (Hobby caps crons at 2/project,
   once per day). Repo variable `APP_URL` and secret `CRON_SECRET` set on 2026-10-30;
   **running in production since then** (Admin → Paramètres → « Tâches planifiées »).
-- **Mail** goes out from `no-reply@prionation.io` (owner's domain, verified in Resend,
-  `EMAIL_FROM` in Vercel Production since 2026-10-30) until Resend verifies the client's
-  domain. **The domain is `expeditop.fr` (bought 2026-11-20), served at `https://www.expeditop.fr`** —
+- **Mail** goes out from `Expeditop <no-reply@expeditop.fr>` (verified in Resend; `EMAIL_FROM`
+  in Vercel Production since 2026-11-24, and on Preview branch `dev`, where `EMAIL_DEV_RECIPIENT`
+  sends every dev mail to `prayogadevelopment@gmail.com`, the owner's choice). Test mail end to end with a mail.tm inbox, never
+  a person's address. **The domain is `expeditop.fr` (bought 2026-11-20), served at `https://www.expeditop.fr`** —
   not `expeditoo.fr`/`.com`, which belong to third parties. `appUrl()` in `src/lib/app-url.ts`
   owns the origin; `NEXT_PUBLIC_APP_URL` (Vercel, Sensitive) must name it
   (`docs/specs/domain_expeditop_fr_spec.md`).
@@ -794,6 +795,20 @@ every `dev` and production Vercel build before anything migrates (`AGENTS.md` §
   matches the title and reference only. Messages show `alias`. Below `lg`
   the root font is 17 px, so size things in rem.
   `docs/site_pages_actions.csv` is the client's page-and-action sheet.
+
+- **An access code, the theme, first paint, the home page** (2.96.0). The
+  verification mail carries a 6-digit code (`email-code.service.ts`, the
+  `verification` table, hashed, 5 attempts) beside Better Auth's link — never
+  the `emailOTP` plugin (passwordless sign-up, skips `afterEmailVerification`).
+  **`guardOAuthLink` must stay**: it removes the password of an unverified
+  account before Google is linked to it (pre-registration takeover). The theme
+  follows the in-app toggle only — `enableSystem` and `enableColorScheme` off,
+  `color-scheme: only light` — and **every route now renders on the server**:
+  `LocaleProvider` and the Ably connection no longer swap the tree, so a
+  component that reads `window`/`localStorage` during render is now a
+  hydration bug. The home page has a public `GET /api/public/recent-requests`
+  (public projection only) and `/create` reads `?title=&from=&to=&date=`.
+  `email_access_code_spec.md`, `landing_2026_11_spec.md`
 
 - **A dev deployment that cannot reach production** (2.91.1,
   `environments_spec.md` §10–11, `plan_dev_environment.md`). `dev.expeditop.fr`

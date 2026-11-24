@@ -136,10 +136,10 @@ export function Settings() {
         </h2>
         <div className="space-y-3">
           <div className="space-y-3">
+            {/* Light or Dark, and only by choice — no "System" (2.96.0 #29). */}
             {[
               { code: "light", label: t("theme.light") },
               { code: "dark", label: t("theme.dark") },
-              { code: "system", label: t("theme.system") },
             ].map((themeOption) => (
               <label
                 key={themeOption.code}

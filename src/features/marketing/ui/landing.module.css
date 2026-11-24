@@ -1,0 +1,80 @@
+/*
+ * Landing-only surfaces that Tailwind utilities cannot say cleanly: the blue
+ * band's gradients, which change with both the width and the theme
+ * (docs/specs/landing_2026_11_spec.md §6). Colours are written with their own
+ * alpha rather than through `color-mix()`, which iOS Safari 15.4–16.1 lacks.
+ *
+ * The blue is the app's `--primary` (#076BE3, ROADMAP.md §7). Dark mode does
+ * not invert the band: it deepens it to a navy, so the page does not open on
+ * a slab of saturated blue at night.
+ */
+
+.band {
+  background-color: #076be3;
+  background-image: radial-gradient(
+    120% 90% at 0% 0%,
+    rgb(255 255 255 / 0.1),
+    rgb(255 255 255 / 0) 60%
+  );
+}
+
+:global(.dark) .band {
+  background-color: #0a2348;
+  background-image: radial-gradient(
+    120% 90% at 0% 0%,
+    rgb(61 123 255 / 0.22),
+    rgb(61 123 255 / 0) 60%
+  );
+}
+
+/* Over the photo where it sits behind the text (below `lg`): blue enough that
+   white text keeps its contrast on any part of the picture. */
+.shade {
+  background: linear-gradient(
+    180deg,
+    rgb(7 107 227 / 0.95) 0%,
+    rgb(7 107 227 / 0.9) 55%,
+    rgb(7 107 227 / 0.82) 100%
+  );
+}
+
+:global(.dark) .shade {
+  background: linear-gradient(
+    180deg,
+    rgb(10 35 72 / 0.96) 0%,
+    rgb(10 35 72 / 0.92) 55%,
+    rgb(10 35 72 / 0.86) 100%
+  );
+}
+
+/* From `lg` the photo is a framed picture beside the text: only a soft foot
+   so it sits in the band rather than on it. */
+@media (min-width: 1024px) {
+  .shade,
+  :global(.dark) .shade {
+    background: linear-gradient(
+      180deg,
+      rgb(4 20 48 / 0) 55%,
+      rgb(4 20 48 / 0.35) 100%
+    );
+  }
+}
+
+/* The closing band: the same blue, a quieter light. */
+.closing {
+  background-color: #076be3;
+  background-image: radial-gradient(
+    90% 120% at 100% 100%,
+    rgb(255 255 255 / 0.12),
+    rgb(255 255 255 / 0) 60%
+  );
+}
+
+:global(.dark) .closing {
+  background-color: #0a2348;
+  background-image: radial-gradient(
+    90% 120% at 100% 100%,
+    rgb(61 123 255 / 0.2),
+    rgb(61 123 255 / 0) 60%
+  );
+}

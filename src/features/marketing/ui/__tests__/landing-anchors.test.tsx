@@ -1,4 +1,5 @@
 import { render } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 
 import LandingPage from "@/app/(marketing)/page";
@@ -38,8 +39,17 @@ vi.mock("next-themes", () => ({
   useTheme: () => ({ theme: "light", resolvedTheme: "light", setTheme: vi.fn() }),
 }));
 
+// « Demandes récentes » reads in the browser; nothing to read here.
+vi.mock("@/features/marketing/api/recent-requests.api", () => ({
+  recentRequestsApi: { list: async () => ({ items: [] }) },
+}));
+
 function anchorsAndIds() {
-  const { container } = render(<LandingPage />);
+  const { container } = render(
+    <QueryClientProvider client={new QueryClient()}>
+      <LandingPage />
+    </QueryClientProvider>
+  );
   const anchors = Array.from(container.querySelectorAll("a"))
     .map((link) => link.getAttribute("href") ?? "")
     .filter((href) => href.startsWith("/#"))
@@ -65,6 +75,13 @@ describe("landing page anchors", () => {
     const inFooter = container.querySelectorAll('footer a[href^="/#"]');
     expect(inHeader.length).toBeGreaterThan(0);
     expect(inFooter.length).toBeGreaterThan(0);
+  });
+
+  it("links the three sections the 2.96.0 page is built around, and its top", () => {
+    const { anchors } = anchorsAndIds();
+
+    // `top` is the logo's link back to the hero.
+    expect(new Set(anchors)).toEqual(new Set(["top", "how", "recent", "carriers"]));
   });
 
   it("no longer links to the sections that were cut", () => {

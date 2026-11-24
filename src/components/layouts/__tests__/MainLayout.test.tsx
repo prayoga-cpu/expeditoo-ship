@@ -19,9 +19,10 @@ import type { CarrierApplication } from "@/features/app/carrier/api/carrier.api"
  * access-mode-context.tsx the switcher also reads.
  */
 
-const auth: { user: { roles: string[] } | null } = { user: null };
+const auth: { user: { roles: string[] } | null; isLoading?: boolean } = { user: null };
 const replace = vi.fn();
 let application: CarrierApplication | null = null;
+let applicationLoading = false;
 
 vi.mock("@/lib/auth-context", () => ({ useAuth: () => auth }));
 vi.mock("next/navigation", () => ({
@@ -37,7 +38,7 @@ vi.mock("../HeaderQuickActions", () => ({ HeaderQuickActions: () => null }));
 vi.mock("../../ui/theme-toggle", () => ({ ThemeToggle: () => null }));
 vi.mock("../../ui/lang-toggle", () => ({ LangToggle: () => null }));
 vi.mock("@/features/app/carrier/hooks/useCarrier", () => ({
-  useCarrierApplication: () => ({ data: application }),
+  useCarrierApplication: () => ({ data: application, isLoading: applicationLoading }),
 }));
 
 function renderWith() {
@@ -127,6 +128,8 @@ describe("MainLayout sidebar", () => {
     window.localStorage.clear();
     replace.mockClear();
     application = null;
+    applicationLoading = false;
+    auth.isLoading = false;
     window.HTMLElement.prototype.hasPointerCapture ??= () => false;
     window.HTMLElement.prototype.scrollIntoView ??= () => {};
   });
@@ -291,5 +294,48 @@ describe("MainLayout sidebar", () => {
     for (const heading of ["Work", "Money", "Account"]) {
       expect(sidebar.getByText(heading)).toBeInTheDocument();
     }
+  });
+
+  // 2.96.0 #36: the shell renders from the server's HTML now, before the
+  // session or the driver application is known. Home is a link at once; the
+  // entries whose presence and order depend on those answers are held rows,
+  // never one set of links drawn and then replaced by another.
+  it.each([
+    ["the session", { session: true, application: false }],
+    ["the driver application", { session: false, application: true }],
+  ])("holds the role-dependent entries while %s loads", (_, loading) => {
+    auth.user = loading.session ? null : { roles: ["shipper"] };
+    auth.isLoading = loading.session;
+    applicationLoading = loading.application;
+    renderWith();
+
+    const aside = screen.getByRole("complementary");
+    expect(within(aside).getAllByRole("link").map((a) => a.getAttribute("href"))).toEqual([
+      "/home",
+      "/home",
+    ]);
+    expect(aside.querySelectorAll("[data-nav-slot]").length).toBeGreaterThan(0);
+  });
+
+  it("keeps Home the same element once the entries arrive", () => {
+    auth.user = null;
+    auth.isLoading = true;
+    const { rerender } = renderWith();
+    const aside = within(screen.getByRole("complementary"));
+    const home = aside.getByRole("link", { name: "Home" });
+
+    auth.user = { roles: ["shipper"] };
+    auth.isLoading = false;
+    rerender(
+      <NextIntlClientProvider locale="en" messages={withSidebarCopy(en)}>
+        <AccessModeProvider>
+          <MainLayout>content</MainLayout>
+        </AccessModeProvider>
+      </NextIntlClientProvider>
+    );
+
+    expect(aside.getByRole("link", { name: "Home" })).toBe(home);
+    expect(screen.getByRole("complementary").querySelectorAll("[data-nav-slot]")).toHaveLength(0);
+    expect(sidebarHrefs()).toContain("/listings/me");
   });
 });

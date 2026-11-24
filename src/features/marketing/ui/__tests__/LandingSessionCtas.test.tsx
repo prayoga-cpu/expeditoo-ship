@@ -60,22 +60,28 @@ describe("navbar", () => {
   });
 });
 
+/**
+ * Since 2.96.0 the closing band is the requester's first (landing_2026_11_spec.md
+ * §3): « Publier une demande » for everyone, the carrier's door beside it.
+ */
 describe("CTA band", () => {
-  it("invites a signed-out visitor to apply, without promising a verification time", () => {
+  it("offers a signed-out visitor both doors, without promising a verification time", () => {
     renderWithMessages(<LandingCTA />);
 
     expect(screen.getByText("Become a carrier")).toBeInTheDocument();
-    expect(screen.getByText(/upload your documents/)).toBeInTheDocument();
+    const links = Array.from(document.querySelectorAll("#cta a")).map((a) => a.getAttribute("href"));
+    expect(links).toContain("/create");
     // « Verified in 24 hours » was a promise nobody keeps (client feedback 2026-11-06, U01).
     expect(screen.queryByText(/24 hours/)).not.toBeInTheDocument();
   });
 
-  it("points a signed-in visitor at their profile instead", () => {
+  it("points a signed-in visitor at their profile instead, and still lets them post", () => {
     auth.isAuthenticated = true;
     renderWithMessages(<LandingCTA />);
 
     expect(screen.getByText("Open your profile")).toBeInTheDocument();
-    expect(screen.getByText(/already signed in/)).toBeInTheDocument();
+    expect(screen.getByText(/signed in/)).toBeInTheDocument();
     expect(screen.queryByText("Become a carrier")).not.toBeInTheDocument();
+    expect(document.querySelector('#cta a[href="/create"]')).not.toBeNull();
   });
 });

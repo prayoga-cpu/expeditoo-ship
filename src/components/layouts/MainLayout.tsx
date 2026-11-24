@@ -2,7 +2,14 @@
 
 import type React from "react";
 import { Fragment, useEffect, useState } from "react";
-import { AppSidebar, SidebarHeading, SidebarLink, SidebarToggle } from "./SidebarRail";
+import {
+  AppSidebar,
+  SidebarHeading,
+  SidebarLink,
+  SidebarLinkSlot,
+  SidebarToggle,
+} from "./SidebarRail";
+import { useNavPrefetch } from "./use-nav-prefetch";
 import { RAIL, WHEN_RAIL, useSidebarRail, type SidebarRail } from "./use-sidebar-rail";
 import { BottomNav } from "../BottomNav";
 import { NotificationBell } from "../NotificationBell";
@@ -80,13 +87,17 @@ const ACCENT_CLASSES: Record<NonNullable<NavItem["accent"]>, { active: string; i
   },
 };
 
+/** Rows held below Home while the session settles: about what a requester
+ * (six) or a driver (seven) ends up with, so the column does not jump. */
+const SETTLING_ROWS = 6;
+
 export function MainLayout({ children }: MainLayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { unreadCount } = useUnreadMessages();
   const t = useTranslations("common.navigation");
   const tGroups = useTranslations("common.navigation.groups");
-  const { user } = useAuth();
+  const { user, isLoading: sessionLoading } = useAuth();
   const roles = user?.roles ?? [];
   const hasBackOffice = hasAdminAccess(roles);
   const hasDriverRole = roles.includes("driver") || roles.includes("carrier");
@@ -99,7 +110,14 @@ export function MainLayout({ children }: MainLayoutProps) {
   // only while the file is not approved: once it is, the application lives in
   // Profile, and a suspended or deregistered driver — who still needs it, to
   // deregister or apply again — gets the entry back. Admin mode never gets here.
-  const { data: application } = useCarrierApplication({ enabled: mode !== "admin" });
+  const { data: application, isLoading: applicationLoading } = useCarrierApplication({
+    enabled: mode !== "admin",
+  });
+  // Which entries the list holds, and where Messages and Profile fall in it,
+  // depends on both answers. Until they are in, the list is Home and held
+  // rows — the server renders it that way, so a link is never drawn in one
+  // place and then moved (2.96.0 #36).
+  const navSettling = sessionLoading || applicationLoading;
 
   // Admin is its own area (`AdminLayout`, a separate route segment) — a
   // MainLayout page (bookmarked, or landed on by a fresh sign-in that
@@ -112,9 +130,6 @@ export function MainLayout({ children }: MainLayoutProps) {
   useEffect(() => {
     if (mode === "admin") router.replace(adminLanding);
   }, [mode, router, adminLanding]);
-
-  // No sidebar, no flash of the wrong nav — just wait out the redirect above.
-  if (mode === "admin") return <PageLoader />;
 
   const home = { href: "/home", label: t("home"), icon: Home };
   const jobs = { href: "/expedion", label: t("jobs"), icon: PlusCircle };
@@ -238,6 +253,14 @@ export function MainLayout({ children }: MainLayoutProps) {
       : []),
   ];
 
+  // While the session settles only Home is a link; the rest are held rows.
+  const shownItems = navSettling ? navItems.slice(0, 1) : navItems;
+  useNavPrefetch(mode === "admin" ? [] : shownItems.map((item) => item.href));
+
+  // No sidebar, no flash of the wrong nav — just wait out the redirect above.
+  if (mode === "admin") return <PageLoader />;
+
+
   const hideBottomNav = pathname?.includes("/listing/");
 
   return (
@@ -252,11 +275,11 @@ export function MainLayout({ children }: MainLayoutProps) {
         <AppSidebarHeader href="/home" />
 
         <nav className={cn("flex-1 min-h-0 overflow-y-auto p-4 space-y-2", RAIL.gutter)}>
-          {navItems.map((item, index) => {
+          {shownItems.map((item, index) => {
             // A heading where the group changes. The admin shortcut carries
             // none and follows the last group, so it never gets a stray one.
             const heading =
-              item.group && item.group !== navItems[index - 1]?.group
+              item.group && item.group !== shownItems[index - 1]?.group
                 ? tGroups(item.group)
                 : null;
             const isActive =
@@ -297,6 +320,8 @@ export function MainLayout({ children }: MainLayoutProps) {
               </Fragment>
             );
           })}
+          {navSettling &&
+            Array.from({ length: SETTLING_ROWS }, (_, row) => <SidebarLinkSlot key={row} />)}
         </nav>
       </AppSidebar>
 

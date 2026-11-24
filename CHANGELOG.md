@@ -14,6 +14,43 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.96.1] - 2026-11-24 · infra
+
+Nothing you can see on the live site changes. The test site now behaves like
+the real one for payments and scheduled tasks, without touching real money.
+
+- **Test payments on the test site are confirmed back to it**, the way real
+  payments are on the live site. They run in Stripe's test mode, so no card is
+  ever charged.
+- **The test site's scheduled tasks can be run on demand** — closing expired
+  requests, publishing scheduled ones, document checks — while the site itself
+  stays open to the team only.
+
+## [2.96.0] - 2026-11-24 · feat
+
+The last open points of 19 November: a code to confirm your address, colours you choose, a menu that answers at once, and a new home page.
+
+- **A code to confirm your address.** The confirmation e-mail now carries a
+  6-digit code above the button. Type it on the « Vérifiez votre email » page —
+  handy when the mail opens on your phone and you signed up on your computer.
+  The link still works too.
+- **E-mails come from no-reply@expeditop.fr**, the site's own address.
+- **Safer accounts.** If someone signed up with your address but never
+  confirmed it, signing in with Google now removes the password they set.
+  Resetting your password also confirms your address and signs out your other
+  devices.
+- **Google sign-in problems are explained in French** on the sign-in page,
+  including a suspended account, instead of an English error page.
+- **The colours change only when you choose.** The site stays light unless you
+  pick Dark in the app — your phone's or browser's dark mode no longer changes
+  it, and browsers that darken pages on their own leave it alone.
+- **The menu answers at once.** The menu and the bottom bar appear with the
+  page and work on the first tap, even while the page is still loading.
+- **A new home page.** Say where from, where to, when and what — « Obtenir des
+  offres » opens the request form already filled in. The page also shows recent
+  requests, how it works in three steps, and what changes for you whether you
+  send or carry goods.
+
 ## [2.95.1] - 2026-11-24 · infra
 
 Nothing you can see on the live site changes. Every change is now tried on the

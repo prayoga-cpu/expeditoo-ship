@@ -8,7 +8,6 @@ import {
   Download,
   Maximize2,
   Minimize2,
-  Monitor,
   Moon,
   SlidersHorizontal,
   Sun,
@@ -23,6 +22,7 @@ import { FeedbackDialog, FeedbackLauncher } from "@/features/app/feedback/ui";
 import { useFullscreen } from "@/lib/use-fullscreen";
 import { usePwaInstaller } from "@/lib/pwa-install";
 import { cn } from "@/lib/utils";
+import { appThemeOf } from "@/lib/theme";
 
 /**
  * Every utility control the header carries, in one place for all three shells.
@@ -48,10 +48,10 @@ function useToolboxActions() {
   };
 }
 
+/** Light or Dark, and only by choice: no "follow my device" (2.96.0 #29). */
 const THEMES = [
   { id: "light", icon: Sun, key: "light" },
   { id: "dark", icon: Moon, key: "dark" },
-  { id: "system", icon: Monitor, key: "system" },
 ] as const;
 
 function Row({
@@ -84,7 +84,8 @@ export function HeaderToolbox({
   showAccess?: boolean;
 }) {
   const t = useTranslations("common.toolbox");
-  const { theme, setTheme } = useTheme();
+  const { theme: chosen, setTheme } = useTheme();
+  const theme = appThemeOf(chosen);
   const actions = useToolboxActions();
   const [menuOpen, setMenuOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -154,7 +155,7 @@ export function HeaderToolbox({
           </div>
           <div className="space-y-1.5">
             <p className="px-1 text-xs font-medium text-muted-foreground">{t("theme")}</p>
-            <div className="grid grid-cols-3 gap-1 rounded-xl bg-muted p-1">
+            <div className="grid grid-cols-2 gap-1 rounded-xl bg-muted p-1">
               {THEMES.map(({ id, icon: Icon, key }) => (
                 <button
                   key={id}

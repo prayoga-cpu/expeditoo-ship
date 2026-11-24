@@ -103,6 +103,10 @@ export function SidebarLink({
   return (
     <Link
       href={href}
+      // The whole route ahead of the click, not just its loading shell
+      // (2.96.0 #36). Only while the sidebar is on screen; below `lg` the
+      // shell's `useNavPrefetch` covers these destinations.
+      prefetch
       title={label}
       aria-current={active ? "page" : undefined}
       onClick={
@@ -124,6 +128,33 @@ export function SidebarLink({
       <span className={cn("min-w-0 flex-1", RAIL.srOnly)}>{label}</span>
       {children}
     </Link>
+  );
+}
+
+/**
+ * A row held for entries that depend on the session's roles, while it loads
+ * (2.96.0 #36). Same box as `SidebarLink`, nothing to press, so the list is
+ * drawn from the server's HTML and its stable entries never move.
+ */
+export function SidebarLinkSlot({ dense = false }: { dense?: boolean }) {
+  return (
+    <span
+      aria-hidden
+      data-nav-slot=""
+      className={cn(
+        "flex items-center gap-3 rounded-lg px-4",
+        dense ? "py-2.5" : "py-3",
+        RAIL.center
+      )}
+    >
+      <span className="h-5 w-5 shrink-0 rounded-md bg-muted motion-safe:animate-pulse" />
+      <span
+        className={cn(
+          "h-3 w-28 max-w-full rounded-full bg-muted motion-safe:animate-pulse",
+          RAIL.hidden
+        )}
+      />
+    </span>
   );
 }
 

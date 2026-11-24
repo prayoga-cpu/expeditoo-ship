@@ -179,6 +179,14 @@ describe("LocationPickerField — manual entry", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Use link" }));
     await screen.findByText("Location found from the link");
+    // The link starts clean and reverse geocoding fills the text after the pin
+    // is set: switch back only once that text has landed, or the test races
+    // the fill (it failed once on a loaded CI runner, 2026-11-24).
+    await waitFor(() =>
+      expect(onValue).toHaveBeenLastCalledWith(
+        expect.objectContaining({ address: "D 43", lat: 48.8584, lng: 3.6 })
+      )
+    );
 
     fireEvent.click(addressOption());
 

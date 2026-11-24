@@ -8,8 +8,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ActiveConversationProvider } from "@/features/app/messages/context";
 import React from "react";
 import { isRefusal } from "@/lib/fetcher";
+import { APP_THEMES, DEFAULT_THEME, THEME_STORAGE_KEY } from "@/lib/theme";
 
-// Dynamically import AblyProvider to avoid SSR issues
+// The Ably SDK loads lazily, beside the app rather than around it
 import { LazyAblyProvider } from "@/components/providers/LazyAblyProvider";
 import { LocaleProvider } from "@/components/providers/LocaleProvider";
 import { ImpersonationBanner } from "@/components/ImpersonationBanner";
@@ -32,11 +33,16 @@ const providers = [
   (children: React.ReactNode) => (
     <ThemeProvider
       attribute="class"
-      // Light for a first visit (client feedback 2026-11-06: « fond blanc »);
-      // the toggle still offers Dark and System, and a choice is remembered.
-      defaultTheme="light"
-      enableSystem
-      storageKey="theme"
+      // Light unless the person picks Dark in the app (2.96.0 #29): never
+      // because the device or the browser is dark, so there is no System.
+      defaultTheme={DEFAULT_THEME}
+      themes={[...APP_THEMES]}
+      enableSystem={false}
+      // next-themes would write a plain `color-scheme: light` inline on
+      // <html>, which outranks globals.css's `only light` and lets Chrome's
+      // forced dark back in. The stylesheet and ThemeProvider's meta own it.
+      enableColorScheme={false}
+      storageKey={THEME_STORAGE_KEY}
       disableTransitionOnChange={false}
     >
       {children}

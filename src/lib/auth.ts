@@ -15,8 +15,11 @@ import {
   sendVerificationEmail,
   sendWelcomeEmail,
   isVerificationResend,
+  confirmAddressAfterReset,
 } from "@/server/services/auth.service";
+import { EMAIL_VERIFICATION_TTL_SECONDS } from "@/lib/email-code";
 import { getProfile, getUserRoles } from "@/server/services/user.service";
+import { guardOAuthLink } from "@/server/services/oauth-link-guard.service";
 import { impersonation } from "@/lib/auth-impersonation";
 import { originOfRequest } from "@/lib/app-origins";
 import { composeName } from "@/lib/person-name";
@@ -90,6 +93,16 @@ const options = {
       }
       await sendPasswordResetEmail(user.email, url);
     },
+    // A reset link reached this inbox, which proves the address as well as
+    // the verification link does. Without this, somebody who had lost the
+    // first mail and reset their password was refused again at sign-in for
+    // an unconfirmed address (email_access_code_spec.md §6).
+    onPasswordReset: async ({ user }) => {
+      await confirmAddressAfterReset(user);
+    },
+    // A reset is what somebody does when they think the password is known to
+    // someone else; a session opened with the old one must not survive it.
+    revokeSessionsOnPasswordReset: true,
   },
 
   // Email Verification Configuration
@@ -100,6 +113,8 @@ const options = {
     // sign-in page then lands them on /verify-email, where the resend button
     // is.
     sendOnSignIn: true,
+    // The link and the code in the same mail expire together.
+    expiresIn: EMAIL_VERIFICATION_TTL_SECONDS,
     sendVerificationEmail: async (
       { user, url }: EmailVerificationParams,
       request: EmailCallbackRequest
@@ -108,6 +123,13 @@ const options = {
       // `databaseHooks.user.create.after` hook so OAuth signups (which
       // never trigger this callback) get their default role too.
       //
+      // No request means this server signed somebody up itself: the in-house
+      // driver onboarding (`carrier.service.ts`), whose admin vouches for the
+      // address and verifies it, then mails an invitation. A « confirmez
+      // votre adresse » mail ahead of that invitation, for an account the
+      // driver never created, only confused them.
+      if (!request) return;
+
       // The link is never logged: its token is the proof of address.
       const sent = await sendVerificationEmail(user.email, url);
       if (sent) return;
@@ -231,6 +253,17 @@ const options = {
         },
       },
     },
+    account: {
+      create: {
+        // Linking Google to an account whose address was never confirmed must
+        // not keep the password somebody else may have set on it
+        // (oauth-link-guard.service.ts). `before`, so a failure stops the link
+        // instead of completing it with the password still in place.
+        before: async (account) => {
+          await guardOAuthLink(account.userId, account.providerId);
+        },
+      },
+    },
     session: {
       create: {
         // Suspension is enforced here, and only here. `user.banned` was
@@ -239,7 +272,7 @@ const options = {
         //
         // An impersonation session is exempt: an admin looking at a suspended
         // account is usually looking at it *because* it is suspended.
-        before: async (session) => {
+        before: async (session, ctx) => {
           const impersonated = (
             session as { impersonatedBy?: string | null }
           ).impersonatedBy;
@@ -247,6 +280,12 @@ const options = {
           if (impersonated) return;
 
           await rejectIfBanned(session.userId, (message) => {
+            // A Google sign-in is a browser redirect, not a fetch: a 403 body
+            // there is raw JSON on a blank page. Send it to /signin, which
+            // says « compte suspendu » in the person's language.
+            if (ctx?.path?.startsWith("/callback")) {
+              throw ctx.redirect("/signin?error=suspended");
+            }
             throw new APIError("FORBIDDEN", {
               message,
               code: "BANNED_USER",
@@ -312,6 +351,14 @@ const options = {
         },
       },
     },
+  },
+
+  // A Google sign-in that fails (cancelled, a link refused, a state that does
+  // not match) used to land on Better Auth's English `/api/auth/error` page.
+  // /signin reads `?error=` and says it in the person's language
+  // (`signinUrlError`, auth-errors.ts).
+  onAPIError: {
+    errorURL: "/signin",
   },
 
   // Session Configuration

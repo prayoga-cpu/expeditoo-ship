@@ -4,7 +4,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 let pathname = "/home";
 vi.mock("next/navigation", () => ({ usePathname: () => pathname }));
 vi.mock("next/link", () => ({
-  default: ({ href, children, ...rest }: { href: string; children: React.ReactNode }) => (
+  // `prefetch` is the router's business, not an attribute of the anchor.
+  default: ({
+    href,
+    children,
+    prefetch: _prefetch,
+    ...rest
+  }: {
+    href: string;
+    children: React.ReactNode;
+    prefetch?: boolean | null;
+  }) => (
     <a href={href} {...rest}>
       {children}
     </a>

@@ -6,10 +6,11 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle, XCircle, Mail } from "lucide-react";
 import { BrandMark } from "@/components/ui/brand-mark";
 import { useAuthActions } from "@/features/auth/hooks/useAuthActions";
+import { signInAfterVerification } from "@/features/auth/hooks/useEmailCodeVerification";
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { InlineLoader } from "@/components/ui/page-loader";
-import { ResendVerification } from "@/features/auth/ui";
+import { VerifyEmailActions } from "@/features/auth/ui";
 import { mailbox } from "@/lib/app-url";
 
 type VerificationState = "idle" | "verifying" | "success" | "error";
@@ -24,11 +25,13 @@ function VerifyEmailContent() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const token = searchParams.get("token");
-  // Sign-up and a refused sign-in both hand the address over, so the resend
-  // button works without asking for it again.
+  // Sign-up and a refused sign-in both hand the address over, so the code
+  // field and the resend button work without asking for it again.
   const email = searchParams.get("email")?.trim() || undefined;
+  // Where the refused sign-in was headed; checked before it is ever followed.
+  const callbackUrl = searchParams.get("callbackUrl");
   // A sign-in refused for an unconfirmed address: Better Auth mailed a fresh
-  // link on the way out (`sendOnSignIn`, src/lib/auth.ts).
+  // code and link on the way out (`sendOnSignIn`, src/lib/auth.ts).
   const fromSignIn = searchParams.get("from") === "signin";
   // The mail's link was followed and verified nothing (expired, already
   // used); the sign-in page forwards that here.
@@ -49,17 +52,10 @@ function VerifyEmailContent() {
 
     if (result.success) {
       setState("success");
-
-      // Wait a moment for Better Auth to complete auto-signin
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      // Refresh router to get updated session
-      router.refresh();
-
-      // A brand-new account: send it to onboarding rather than straight to
-      // the dashboard, so it can pick what it's here for. Better Auth should
-      // have already auto-signed it in.
-      router.push("/welcome");
+      // Verifying signs nobody in (`autoSignInAfterVerification` is off), so
+      // this used to land on /welcome with no session, under « nous vous
+      // connectons ». Sign-in is where a verified address goes next.
+      router.push(signInAfterVerification(email, callbackUrl));
     } else {
       setState("error");
       // Never Better Auth's own sentence: it is English and names a token.
@@ -119,23 +115,23 @@ function VerifyEmailContent() {
                 </div>
               )}
 
-              {!linkFailed && (
-                <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 mb-6">
-                  <p className="text-primary text-sm">
-                    <strong>{t("didntReceive")}</strong>
-                    <br />
-                    {t("checkSpam")}
-                  </p>
-                </div>
-              )}
-
               <div className="space-y-3">
-                <ResendVerification initialEmail={email} />
+                <VerifyEmailActions initialEmail={email} callbackUrl={callbackUrl}>
+                  {!linkFailed && (
+                    <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
+                      <p className="text-primary text-sm">
+                        <strong>{t("didntReceive")}</strong>
+                        <br />
+                        {t("checkSpam")}
+                      </p>
+                    </div>
+                  )}
+                </VerifyEmailActions>
 
                 <Button
                   onClick={() => router.push("/signin")}
-                  variant="outline"
-                  className="w-full rounded-xl border-border/50 hover:bg-muted/50 text-foreground font-semibold transition-colors"
+                  variant="ghost"
+                  className="w-full rounded-xl hover:bg-muted/50 text-foreground font-semibold transition-colors"
                 >
                   {t("backToLogin")}
                 </Button>
@@ -183,7 +179,7 @@ function VerifyEmailContent() {
               </div>
 
               <Button
-                onClick={() => router.push("/welcome")}
+                onClick={() => router.push(signInAfterVerification(email, callbackUrl))}
                 className="w-full rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground py-6 font-semibold transition-colors"
               >
                 {t("continue")}
@@ -215,15 +211,15 @@ function VerifyEmailContent() {
                 </div>
               )}
 
-              {/* Another link, not another account: the account exists, and
+              {/* Another code, not another account: the account exists, and
                   signing up again with the same address is refused. */}
               <div className="space-y-3">
-                <ResendVerification initialEmail={email} />
+                <VerifyEmailActions initialEmail={email} callbackUrl={callbackUrl} />
 
                 <Button
                   onClick={() => router.push("/signin")}
-                  variant="outline"
-                  className="w-full rounded-xl border-border/50 hover:bg-muted/50 text-foreground py-6 font-semibold transition-colors"
+                  variant="ghost"
+                  className="w-full rounded-xl hover:bg-muted/50 text-foreground font-semibold transition-colors"
                 >
                   {t("backToLogin")}
                 </Button>

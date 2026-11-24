@@ -31,6 +31,7 @@ import {
 import { jobsApi } from "../api/jobs.api";
 import { postCreateDestination } from "../destination";
 import { fromListing, type ResumedForm } from "../from-listing";
+import { prefillTiming, type RequestPrefill } from "../prefill";
 import { publicationIssues } from "../publication";
 import {
   defaultTimingState,
@@ -118,6 +119,20 @@ export interface JobFormSeed {
   publishNow?: boolean;
   /** A fresh request's kind — `/create?type=moving` (spec §2.2). */
   kind?: JobKind;
+  /**
+   * What the landing page's search card carried — `/create?title=&from=&to=&date=`,
+   * already checked by `parseRequestPrefill` (landing_2026_11_spec.md §5).
+   * A fresh request's starting values only: ignored beside `draft`.
+   */
+  prefill?: RequestPrefill;
+}
+
+/** One end with a prefilled town: no street, no postal code, no pin. */
+function prefilledEndpoint(town: string | undefined) {
+  if (!town) return { ...emptyEndpoint };
+  // « address » opens the Where step on the typed town, as the request
+  // assistant does; a request posted without a pin is placed by the server.
+  return { ...emptyEndpoint, city: town, locationEntry: "address" as const };
 }
 
 /**
@@ -167,6 +182,8 @@ export function useJobForm(seed: JobFormSeed = {}) {
     seed.draft ? fromListing(seed.draft, { locale, now: new Date() }) : null
   );
   const draftId = seed.draft?.id;
+  // Never a resumed request's: its values are the ones it was saved with.
+  const prefill = seed.draft ? undefined : seed.prefill;
   // A saved time the list could not show was moved: the requester sees the
   // When step first, whichever step they asked for, so « Publier » never posts
   // a time they did not see (draft_requests_spec.md §2).
@@ -179,7 +196,7 @@ export function useJobForm(seed: JobFormSeed = {}) {
   // which would otherwise throw away a request's exact date/time the moment
   // someone clicked "Next" and came back.
   const [timing, setTiming] = useState<TimingState>(
-    () => resumed?.timing ?? defaultTimingState()
+    () => resumed?.timing ?? (prefill ? prefillTiming(prefill) : defaultTimingState())
   );
   // The furthest step reached with « Suivant ». A failed submit may send the
   // requester back to any of these, never forward past one they have not seen.
@@ -195,7 +212,11 @@ export function useJobForm(seed: JobFormSeed = {}) {
   // (saved_addresses_spec.md §3.2) — here rather than on « Où », which
   // unmounts on every step change and would fill again an end the requester
   // had cleared. A resumed request is never filled.
-  const addressesPrefilled = useRef(resumed !== null);
+  // A town carried from the landing page is the requester's own answer, so it
+  // too keeps the address book off both ends.
+  const addressesPrefilled = useRef(
+    resumed !== null || Boolean(prefill?.from || prefill?.to)
+  );
   // How many times the assistant has filled the form: the What step's key.
   const [assistantFills, setAssistantFills] = useState(0);
   // A saved request's weight and size are the requester's own answers; a
@@ -215,7 +236,7 @@ export function useJobForm(seed: JobFormSeed = {}) {
     resolver: zodResolver(jobFormSchema),
     mode: "onBlur",
     defaultValues: {
-      title: "",
+      title: prefill?.title ?? "",
       description: "",
       // No `weightBracket`: it is a required choice, and seeding one would
       // submit a weight nobody picked.
@@ -227,8 +248,8 @@ export function useJobForm(seed: JobFormSeed = {}) {
       needsPackaging: false,
       photos: [],
       publishMode: "now",
-      pickup: { ...emptyEndpoint },
-      dropoff: { ...emptyEndpoint },
+      pickup: prefilledEndpoint(prefill?.from),
+      dropoff: prefilledEndpoint(prefill?.to),
       // Seeded blank, not left unset. An unset budget is a type error that
       // aborts the whole object before its `superRefine` — so the When step's
       // date rules never ran on "Suivant" until the budget was typed on the

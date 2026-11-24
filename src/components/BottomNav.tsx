@@ -12,7 +12,7 @@ import {
   Route,
   Truck,
 } from "lucide-react";
-import { FloatingNav } from "@/components/layouts/FloatingNav";
+import { FloatingNav, type FloatingNavEntry } from "@/components/layouts/FloatingNav";
 import { useTranslations } from "next-intl";
 
 interface NavItem {
@@ -33,7 +33,7 @@ export function BottomNav() {
   const pathname = usePathname();
   const { unreadCount } = useUnreadMessages();
   const t = useTranslations("common.navigation.bar");
-  const { user } = useAuth();
+  const { user, isLoading: sessionLoading } = useAuth();
   const { mode } = useActiveAccessMode();
 
   // Which bar renders is the same "access mode" MainLayout's desktop
@@ -156,16 +156,27 @@ export function BottomNav() {
       ? driverItems
       : requesterItems;
 
-  return (
-    <FloatingNav
-      items={navItems.map((item) => ({
-        href: item.href,
-        label: t(item.labelKey),
-        icon: item.icon,
-        badge: item.badge,
-        active: Boolean(pathname?.startsWith(item.href)),
-      }))}
-    />
-  );
+  const toEntry = (item: NavItem): FloatingNavEntry => ({
+    href: item.href,
+    label: t(item.labelKey),
+    icon: item.icon,
+    badge: item.badge,
+    active: Boolean(pathname?.startsWith(item.href)),
+  });
+
+  // Until the session answers, the bar is drawn with what every set shares —
+  // Accueil first, Messages last — and holds the three middle places open
+  // (2.96.0 #36). The bar now arrives in the server's HTML, before anyone
+  // knows the roles; drawing the requester's five and then swapping them for
+  // a driver's put another page under a tap already on its way.
+  const entries: FloatingNavEntry[] = sessionLoading
+    ? [
+        toEntry(navItems[0]),
+        ...[1, 2, 3].map((slot) => ({ placeholder: true as const, key: `slot-${slot}` })),
+        toEntry(messages),
+      ]
+    : navItems.map(toEntry);
+
+  return <FloatingNav items={entries} />;
 }
 

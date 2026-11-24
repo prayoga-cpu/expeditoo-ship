@@ -6,6 +6,7 @@ import * as sessionsDAL from "@/server/dal/sessions.dal";
 import { sendViaResend, EMAIL_FROM, assertSent } from "@/lib/email";
 import { expedionOrigins, type AppOrigin } from "@/lib/app-origins";
 import { emailService } from "@/server/services/email.service";
+import { issueVerificationCode } from "@/server/services/email-code.service";
 
 import { VerificationEmail } from "@/server/emails/VerificationEmail";
 import { PasswordResetEmail } from "@/server/emails/PasswordResetEmail";
@@ -159,6 +160,13 @@ type MailBranding = {
    * them on this app; absolute sends them to the other product.
    */
   verifiedCallbackUrl: string;
+  /**
+   * Whether the verification mail carries an access code. Only this app's
+   * `/verify-email` has a field to type one into; the Expedion app has no
+   * code screen, so its people get the link alone
+   * (email_access_code_spec.md §4).
+   */
+  hasCodeScreen: boolean;
 };
 
 /**
@@ -194,6 +202,7 @@ function brandingFor(origin: AppOrigin | null | undefined): MailBranding {
     return {
       productName: "EXPEDITOP",
       verifiedCallbackUrl: "/signin?verified=true",
+      hasCodeScreen: true,
     };
   }
 
@@ -203,6 +212,7 @@ function brandingFor(origin: AppOrigin | null | undefined): MailBranding {
     // origin, where a trailing slash would be wrong, but nothing enforces that
     // and `https://host//seConnecter` is not a route in anyone's router.
     verifiedCallbackUrl: `${expedionApp.replace(/\/+$/, "")}${EXPEDION_SIGNIN_PATH}?verified=true`,
+    hasCodeScreen: false,
   };
 }
 
@@ -241,7 +251,11 @@ export async function sendVerificationEmail(
     // Expedion buyer to EXPEDITOP's `/signin` ended their verification on a
     // carrier login form for a product they have no account relationship with.
     const url = new URL(verificationUrl);
-    url.searchParams.set("callbackURL", brand.verifiedCallbackUrl);
+    url.searchParams.set("callbackURL", verifiedCallbackFor(brand, email));
+
+    // A code the person can type where they signed up, for when the link
+    // opens somewhere else (email_access_code_spec.md §4).
+    const code = brand.hasCodeScreen ? await codeFor(email) : undefined;
 
     const sent = await sendViaResend({
       from: EMAIL_FROM,
@@ -251,6 +265,7 @@ export async function sendVerificationEmail(
         verificationUrl: url.toString(),
         userName: firstNameOf(user?.name),
         productName: brand.productName,
+        code,
       }),
     });
     assertSent(sent, "verification email");
@@ -258,6 +273,30 @@ export async function sendVerificationEmail(
   } catch (error) {
     console.error("[Auth Service] Failed to send verification email:", error);
     return false;
+  }
+}
+
+/**
+ * Where the link lands once it has verified. On this app the address rides
+ * along, so the sign-in form is filled in and a link that failed sends the
+ * person to a resend that already knows where to send.
+ */
+function verifiedCallbackFor(brand: MailBranding, email: string): string {
+  if (!brand.hasCodeScreen) return brand.verifiedCallbackUrl;
+  const address = encodeURIComponent(email.trim().toLowerCase());
+  return `${brand.verifiedCallbackUrl}&email=${address}`;
+}
+
+/**
+ * A fresh access code for the mail, or none. Issuing one writes to the
+ * database; if that fails the link still works, so the mail still leaves.
+ */
+async function codeFor(email: string): Promise<string | undefined> {
+  try {
+    return await issueVerificationCode(email);
+  } catch (error) {
+    console.error("[Auth Service] Failed to issue a verification code:", error);
+    return undefined;
   }
 }
 
@@ -294,12 +333,14 @@ export function isVerificationResend(
 /**
  * Greets an account whose address has just been confirmed.
  *
- * Called from the two moments an address becomes verified, each of which
- * happens once per account: Better Auth's `afterEmailVerification` (the link
- * in the mail -- it does not fire for a link clicked twice, the endpoint
- * returns before it when the row is already verified) and `handlePostSignup`
- * for a Google account, which is born verified. Neither is driven by a
- * session, so an admin's borrowed one cannot trigger it.
+ * Called from the moments an address becomes verified, each of which happens
+ * once per account: Better Auth's `afterEmailVerification` (the link in the
+ * mail -- it does not fire for a link clicked twice, the endpoint returns
+ * before it when the row is already verified), `confirmAddress` (the emailed
+ * code, or a completed password reset -- it greets only an address that was
+ * not verified yet) and `handlePostSignup` for a Google account, which is born
+ * verified. None is driven by a session, so an admin's borrowed one cannot
+ * trigger it.
  *
  * An Expedion account is not greeted: this mail describes EXPEDITOP -- post a
  * transport, become a driver -- to somebody who signed up in another app.
@@ -319,6 +360,50 @@ export async function sendWelcomeEmail(email: string): Promise<boolean> {
   } catch (error) {
     console.error("[Auth Service] Failed to send welcome email:", error);
     return false;
+  }
+}
+
+/**
+ * Marks an address verified and welcomes it — once. Answers whether this call
+ * is the one that verified it.
+ *
+ * For the two ways an address is proven outside Better Auth's link: the
+ * emailed code (`email-code.service`) and a completed password reset, whose
+ * link reached the same inbox. The link itself goes through Better Auth's
+ * `afterEmailVerification` instead. An address that was already verified is
+ * left alone and not greeted a second time.
+ */
+export async function confirmAddress(user: {
+  id: string;
+  email: string;
+  emailVerified: boolean;
+}): Promise<boolean> {
+  if (user.emailVerified) return false;
+
+  await usersDAL.verifyUserEmail(user.id);
+  // Never throws: a welcome that cannot leave must not undo a verification.
+  await sendWelcomeEmail(user.email);
+  return true;
+}
+
+/**
+ * A password was just reset through a link mailed to this address, which is
+ * the same proof the verification link asks for. Without this, somebody who
+ * lost the first mail, reset their password and signed in was refused again
+ * for an unconfirmed address.
+ *
+ * Contained: the password has already changed, and nothing here may turn
+ * that into an error.
+ */
+export async function confirmAddressAfterReset(user: {
+  id: string;
+  email: string;
+  emailVerified?: boolean | null;
+}): Promise<void> {
+  try {
+    await confirmAddress({ ...user, emailVerified: Boolean(user.emailVerified) });
+  } catch (error) {
+    console.error("[Auth Service] Confirming the address after a reset failed:", error);
   }
 }
 

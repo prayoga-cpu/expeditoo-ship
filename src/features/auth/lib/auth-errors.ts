@@ -25,6 +25,7 @@ export const AUTH_ERROR_KEYS = [
   "rateLimited",
   "invalidToken",
   "network",
+  "oauthFailed",
   "unknown",
 ] as const;
 
@@ -97,5 +98,28 @@ export const AUTH_ERROR_ACTIONS: Readonly<
   rateLimited: [],
   invalidToken: [{ label: "requestNewLink", href: "/forgot-password" }],
   network: [],
+  // The sign-in form sits right under the notice: that is the way out.
+  oauthFailed: [],
   unknown: [],
 };
+
+/**
+ * What `?error=` on /signin means. Two things come back there: Better Auth's
+ * verification link, when it verified nothing (`token_expired`,
+ * `invalid_token` — the verify screen is where another code or link is
+ * asked for), and a Google sign-in that did not finish (`onAPIError.errorURL`
+ * and the OAuth callback both land on /signin). `access_denied` is the person
+ * closing Google's window: nothing to say. A suspended account is sent here by
+ * the session hook as `suspended`.
+ */
+export type SigninUrlError = { kind: "link" } | { kind: "notice"; key: AuthErrorKey } | { kind: "none" };
+
+const LINK_ERRORS = new Set(["token_expired", "invalid_token"]);
+
+export function signinUrlError(raw: string | null): SigninUrlError {
+  if (!raw) return { kind: "none" };
+  if (LINK_ERRORS.has(raw)) return { kind: "link" };
+  if (raw === "access_denied") return { kind: "none" };
+  if (raw === "suspended") return { kind: "notice", key: "suspended" };
+  return { kind: "notice", key: "oauthFailed" };
+}

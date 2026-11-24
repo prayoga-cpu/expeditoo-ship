@@ -18,6 +18,49 @@ L'historique antérieur à la `2.0.0` appartient à la place de marché de biens
 la v1 et n'est pas conservé : la première version ci-dessous est le commit qui a
 lancé le virage vers le transport.
 
+## [2.96.1] - 2026-11-24 · infra
+
+Rien ne change sur le site en ligne. Le site de test se comporte désormais
+comme le vrai pour les paiements et les tâches planifiées, sans toucher à
+l'argent réel.
+
+- **Les paiements de test sur le site de test lui sont confirmés en retour**,
+  comme les vrais paiements le sont sur le site en ligne. Ils passent par le
+  mode test de Stripe : aucune carte n'est jamais débitée.
+- **Les tâches planifiées du site de test peuvent être lancées à la demande**
+  — clôture des demandes expirées, publication des demandes programmées,
+  contrôle des documents — tandis que le site lui-même reste réservé à
+  l'équipe.
+
+## [2.96.0] - 2026-11-24 · feat
+
+Les derniers points ouverts du 19 novembre : un code pour confirmer votre adresse, des couleurs que vous choisissez, un menu qui répond tout de suite et une nouvelle page d'accueil.
+
+- **Un code pour confirmer votre adresse.** L'e-mail de confirmation contient
+  désormais un code à 6 chiffres au-dessus du bouton. Saisissez-le sur la page
+  « Vérifiez votre email » — pratique quand l'e-mail s'ouvre sur votre téléphone
+  et que vous vous êtes inscrit sur votre ordinateur. Le lien fonctionne
+  toujours.
+- **Les e-mails partent de no-reply@expeditop.fr**, l'adresse du site.
+- **Des comptes mieux protégés.** Si quelqu'un s'est inscrit avec votre adresse
+  sans jamais la confirmer, vous connecter avec Google supprime désormais le mot
+  de passe qu'il avait choisi. Réinitialiser votre mot de passe confirme aussi
+  votre adresse et déconnecte vos autres appareils.
+- **Les problèmes de connexion avec Google sont expliqués en français** sur la
+  page de connexion, y compris un compte suspendu, au lieu d'une page d'erreur
+  en anglais.
+- **Les couleurs ne changent que si vous le choisissez.** Le site reste clair
+  sauf si vous choisissez Sombre dans l'application — le mode sombre de votre
+  téléphone ou de votre navigateur ne le change plus, et les navigateurs qui
+  assombrissent les pages d'eux-mêmes le laissent tel quel.
+- **Le menu répond tout de suite.** Le menu et la barre du bas s'affichent avec
+  la page et fonctionnent dès le premier appui, même pendant le chargement.
+- **Une nouvelle page d'accueil.** Indiquez le départ, la destination, la date
+  et ce que vous envoyez — « Obtenir des offres » ouvre le formulaire de demande
+  déjà rempli. La page montre aussi les demandes récentes, le fonctionnement en
+  trois étapes, et ce qui change pour vous selon que vous expédiez ou
+  transportez.
+
 ## [2.95.1] - 2026-11-24 · infra
 
 Rien ne change sur le site en ligne. Chaque modification est désormais essayée

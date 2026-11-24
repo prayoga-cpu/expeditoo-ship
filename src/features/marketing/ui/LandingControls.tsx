@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Monitor, Moon, Sun } from "lucide-react";
+import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useTranslations } from "next-intl";
 import { useLocale } from "@/components/providers/LocaleProvider";
@@ -48,7 +48,6 @@ export function LandingLangToggle() {
 const THEME_OPTIONS = [
   { value: "light", icon: Sun, labelKey: "themeLight" },
   { value: "dark", icon: Moon, labelKey: "themeDark" },
-  { value: "system", icon: Monitor, labelKey: "themeSystem" },
 ] as const;
 
 /** Borderless 34px hit target, sized so the header keeps its rhythm. */
@@ -56,8 +55,8 @@ const THEME_TRIGGER =
   "flex h-[34px] w-[34px] flex-none cursor-pointer items-center justify-center rounded-[9px] border-0 bg-transparent text-[var(--lp-text)] transition-colors hover:bg-[var(--lp-chip)]";
 
 /**
- * Light / dark / system menu, ticking the active row — the same control the
- * app header carries.
+ * Light / dark menu, ticking the active row — the same control the app header
+ * carries. No « Système »: the theme follows the toggle only (2.96.0).
  */
 export function LandingThemeToggle() {
   const { theme, setTheme } = useTheme();
