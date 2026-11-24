@@ -1,12 +1,19 @@
 name: Migrate database
 
-# Nothing else in this repo applies migrations. The Vercel build is a plain
-# `next build`, so a deploy ships code that expects columns the database may not
-# have — which is how `withdrawals` reached production as a 500 and a blank
-# "My earnings" page (CLAUDE.md, "Two migrations had never run anywhere").
+# THE FALLBACK, NOT THE ROUTE. Since 2.95.1 migrations are applied by the Vercel
+# build itself: the dev database on a push to `dev`, production on a launch to
+# `main`, each after the gate and a destructive-statement check
+# (scripts/vercel-build.ts, AGENTS.md §4a). Run this by hand only when the
+# operator asks — say, to re-apply after a build that failed mid-migration —
+# and read why that build failed first.
 #
-# This is the sanctioned place to run them, because it is the only place the
-# production connection string exists. `vercel env pull` cannot help: every
+# History: the Vercel build used to be a plain `next build`, so a deploy shipped
+# code that expected columns the database might not have — which is how
+# `withdrawals` reached production as a 500 and a blank "My earnings" page
+# (CLAUDE.md, "Two migrations had never run anywhere").
+#
+# The production connection string lives here as a secret because a laptop has
+# none. `vercel env pull` cannot help: every
 # production variable is marked Sensitive, so it returns `[SENSITIVE]` rather
 # than a value, and a laptop therefore has no way to reach the production
 # database — deliberately. `src/db/migrate.ts` enforces the same thing from the
@@ -24,15 +31,9 @@ name: Migrate database
 #                               DEV_DB_REFS naming its endpoint id. Only the
 #                               `dev` choice reads them.
 #
-# Manual on purpose. Auto-migrating on every push to main would apply a bad
-# migration to production before anyone read it, and migrations here are
-# hand-written rather than generated (0002 left no snapshot, so `drizzle-kit
-# generate` would re-emit the whole transport realignment). Run this, read the
-# output, then deploy.
-#
-# Order matters: migrate FIRST, then let the deploy go out. A migration is
-# additive in this repo, so the running old code tolerates the new columns,
-# whereas new code against an un-migrated database 500s.
+# Order still matters on the automatic route: migrate FIRST, then serve. The
+# build does exactly that, and a migration is additive in this repo, so the
+# old code still serving tolerates the new columns.
 
 on:
   workflow_dispatch:

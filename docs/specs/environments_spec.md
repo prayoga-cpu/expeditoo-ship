@@ -192,24 +192,22 @@ Plan: `docs/plans/plan_dev_environment.md`.
 
 | Concern | Preview value | If it were wrong |
 |---|---|---|
-| Database | Neon `dev` branch, endpoint id in `DEV_DB_REFS` | `src/db/index.ts` refuses a production URL at boot |
-| Migrations | `src/db/migrate.ts` allow-lists `DEV_DB_REFS` only | refuses, unless `MIGRATE_TARGET=production` (CI only) |
+| Database | Neon project `neon-crimson-car` (`wispy-frost-54808747`), **schema-only** branch `dev` (`br-ancient-rice-awkr56me`, endpoint `ep-late-night-aw6o8h4v` = `DEV_DB_REFS`). `POSTGRES_URL` / `POSTGRES_URL_NON_POOLING` are set for **Preview, git branch `dev`**: they override the Marketplace integration's rows, which still give every other preview production's URL until Preview is unticked on that connection | `src/db/index.ts` refuses a production URL at boot; the dev build refuses to migrate one |
+| Migrations | `src/db/migrate.ts` allow-lists `DEV_DB_REFS` only | refuses, unless `MIGRATE_TARGET=production` (set only by the production build) |
 | Stripe | `sk_test_` / `pk_test_`, its own `whsec_` | `env-assertions.ts` refuses a live key outside production |
-| R2 | `expeditop-dev`, `-kyc-dev`, `-shipments-dev` | **not caught by any guard**: `cleanup-images` deletes what the database does not reference, so a shared `R2_BUCKET_NAME` lets dev empty production's bucket |
+| R2 | `expeditoo-dev`, `expeditoo-kyc-dev`, `expeditoo-shipments-dev`, `expeditoo-expedion-dev` — the buckets local development already used | **not caught by any guard**: `cleanup-images` deletes what the database does not reference, so a shared `R2_BUCKET_NAME` lets dev empty production's bucket |
 | Sessions | its own `BETTER_AUTH_SECRET` | a shared one makes a dev cookie valid in production |
 | Cron | its own `CRON_SECRET`; GitHub's schedule only calls production | dev sweeps run by hand: Actions → Scheduled jobs → `target: dev` |
 | Mail | rewritten to `EMAIL_DEV_RECIPIENT` | dropped when unset |
-| Indexing | `X-Robots-Tag: noindex, nofollow` on every response (`next.config.mjs`) | the host is public by necessity (Stripe, Expedion) |
+| Indexing | `X-Robots-Tag: noindex, nofollow` on every response (`next.config.mjs`) | the host is behind Vercel Authentication too (Standard Protection covers preview custom domains) |
 | Recognition | amber « DEV » tab on every page (`EnvBadge`) | two tabs look identical |
 
 `MOCK_PAYMENTS` is **off** on dev: it runs real Stripe in test mode with test
 cards and a real test-mode webhook.
 
-**Migrations.** The `dev` branch's Vercel build runs `pnpm db:migrate` first
-(`vercel.json` → `scripts/vercel-build.ts`, condition in
-`src/lib/build-migrate.ts`); a failed migration fails the build and the previous
-deployment keeps serving. Production and other previews never migrate in the
-build — production by `migrate.yml`, deliberately.
+**Migrations.** The `dev` branch's Vercel build migrates the dev database, and
+since 2.95.1 the production build migrates production — both after the gate
+(§12). Other previews never migrate.
 
 **Data.** Actions → **Refresh dev database** runs `scripts/db-mirror.sh` from CI:
 an anonymised copy of production, verified, plus production's migration
@@ -228,3 +226,48 @@ Preview. On 2026-11-20 five were: `POSTGRES_URL`, `POSTGRES_URL_NON_POOLING`,
 `R2_BUCKET_NAME`, `BETTER_AUTH_SECRET`, `NEXT_PUBLIC_APP_URL`; so were both
 `EXPEDION_*_API_KEY`s. `pnpm env:bootstrap:dev` writes the Preview values once
 the dashboards are done; it never overwrites.
+
+## 12. The release flow: dev, then a gated launch to `main`
+
+The process every agent follows is `AGENTS.md` §4a. This is the mechanism.
+
+```
+push to dev ──▶ GitHub: gates
+            └─▶ Vercel dev build: gate → destructive check → migrate DEV DB → build
+                                   ──▶ dev.expeditop.fr  (validate here)
+PR dev → main ─▶ required: gates · release-source · Vercel (the dev deployment)
+merge        ──▶ Vercel production build: gate → destructive check
+                                   → migrate PRODUCTION → build ──▶ www.expeditop.fr
+             └─▶ sync-dev.yml: fast-forward dev to main
+```
+
+**`scripts/vercel-build.ts`**, plan from `buildPlan` (`src/lib/build-migrate.ts`):
+
+| Build | Gate | Migrates |
+|---|---|---|
+| `VERCEL_ENV=production` | yes | production — `MIGRATE_TARGET=production`, refused unless the URL *is* production |
+| `VERCEL_ENV=preview`, branch `dev` | yes | the dev database — refused if the URL is production |
+| any other preview | no | nothing |
+
+- **The gate** is `changelog:check`, `typecheck`, `lint`, `test`, run in an
+  environment holding only the toolchain (`gateEnv`): a production build holds
+  live keys, and the tests are written for a CI that has none.
+- **The destructive check** reads the journal, asks the target for the newest
+  applied `created_at` (drizzle's own comparison), and scans each pending `.sql`.
+  `DROP TABLE|COLUMN|TYPE|SCHEMA`, `TRUNCATE`, `DELETE FROM`, `RENAME`, a column
+  `TYPE` change, `SET NOT NULL` and `ADD COLUMN … NOT NULL` without `DEFAULT`
+  stop the build, unless the file carries
+  `-- release:allow-destructive <reason>`.
+- **Any failure stops the build.** Vercel does not promote it; the previous
+  deployment keeps serving. The schema is only ever migrated by a commit that
+  passed the gate, and migrations are additive, so the deployment still serving
+  tolerates a schema migrated ahead of it.
+
+**Branch protection on `main`:** pull request required, from `dev` only
+(`release-source`, `gates.yml`), status checks `gates`, `release-source` and
+`Vercel` required, applied to administrators too — every agent pushes as the
+owner's account, so a rule that exempted admins would exempt every agent. No
+review is required: the gate is the review.
+
+`migrate.yml` is the fallback for a build that failed mid-migration, run only
+when the operator asks.

@@ -12,8 +12,13 @@ name: Gates
 # package.json and src/lib/version.ts is a broken release history, and the
 # public /changelog page renders it without complaint.
 #
-# No database, no secrets. Every check here is static — the migration gate lives
-# in migrate.yml, which is a deliberate `workflow_dispatch`.
+# No database, no secrets. Every check here is static. Migrations are applied by
+# the Vercel build itself — dev on a push to `dev`, production on a launch to
+# `main` — after this same gate runs again there (scripts/vercel-build.ts).
+#
+# `main` is protected (AGENTS.md §4a): it accepts a pull request from `dev`
+# only, and only once `gates`, `release-source` and `Vercel` (the dev
+# deployment, which migrated the dev database) are green.
 
 on:
   push:
@@ -43,7 +48,10 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          # The Vercel project builds on 24.x, and the same gate runs inside that
+          # build. On 22 this gate passed while 24's stricter multipart parser
+          # failed 10 tests there — one gate must mean one Node.
+          node-version: 24
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
@@ -62,3 +70,23 @@ jobs:
 
       - name: Unit tests
         run: pnpm test
+
+  # A launch reaches production from `dev` and nowhere else: that is the branch
+  # whose deployment migrated the dev database and was checked on
+  # dev.expeditop.fr. A pull request into `main` from any other branch would
+  # skip both. Required by the branch protection on `main`.
+  release-source:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: A launch to main comes from dev
+        env:
+          BASE: ${{ github.base_ref }}
+          HEAD: ${{ github.head_ref }}
+        run: |
+          if [ "$BASE" = "main" ] && [ "$HEAD" != "dev" ]; then
+            echo "::error::Pull requests into main come from dev only (this one is from '$HEAD'). Merge it into dev, check it on dev.expeditop.fr, then open dev → main. AGENTS.md §4a."
+            exit 1
+          fi
+          echo "ok: $HEAD → $BASE"

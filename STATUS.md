@@ -103,21 +103,27 @@ adversarial verification pass — treat their detail as slightly less certain.
 Work that needs a human hand outside the codebase. Add to this list rather
 than leaving it in a chat message.
 
-- [ ] **(2.91.1, dev environment) Dashboards first, in this order** — `plan_dev_environment.md` §5.A; **before** anything
-  runs on `dev`, and above all before any cron is pointed at it:
-  1. Vercel → Storage → the Neon connection: **untick Preview**, so production's `POSTGRES_URL` stops being injected.
-  2. Neon: create branch `dev` from `main`; **reset the owner password on that branch** (it inherits production's).
-  3. Cloudflare R2: `expeditop-dev`, `expeditop-kyc-dev`, `expeditop-shipments-dev`; DNS `dev` CNAME → `cname.vercel-dns.com`.
-  4. Stripe test mode: webhook `https://dev.expeditop.fr/api/stripe/webhook`; Google OAuth redirect for the dev host.
-  5. Split the still-shared rows in Vercel (`R2_BUCKET_NAME`, `BETTER_AUTH_SECRET`, `NEXT_PUBLIC_APP_URL`,
-     `EXPEDION_*_API_KEY`: edit → untick Preview), then `vercel login`, `pnpm env:bootstrap:dev`, `pnpm env:audit`.
-  6. GitHub secrets `MIRROR_SOURCE_URL`, `VERCEL_TOKEN`; create `dev` from `main`; bind `dev.expeditop.fr` to it in
-     Vercel → Domains; run « Refresh dev database », then check `curl -I` shows `X-Robots-Tag`.
-- [ ] **(2.91.1)** Rotate nothing, but note: until step 5 is done a preview deployment holds production's
-  `BETTER_AUTH_SECRET`.
-- [ ] **(2.87.0, driver types) Run Actions → « Migrate database » on the release branch before `main` moves** —
-  `0048_in_house_driver_no_siret` drops `NOT NULL` on `carriers.siret`. New code on an unmigrated database
-  500s every in-house file creation (« Gérer le rôle », the in-house form, the application tick).
+- [ ] **(2.95.1) Vercel → Storage → `neon-crimson-car` → expeditoo-ship: untick Preview.** Still ticked on
+  2026-11-24 (the 13 database rows read `production+preview`), so every preview deployment *holds* production's
+  database password. The `dev` branch overrides `POSTGRES_URL*` with its own and the boot guard refuses production
+  elsewhere, so nothing *uses* it — but nothing should hold it either. The CLI can only disconnect + reconnect,
+  which would briefly strip production too.
+- [ ] **(2.95.1) Stripe: the dev webhook destination must be in TEST mode of the account Preview's keys belong to.**
+  Dev's `/api/admin/stripe-status` (test keys, account « Expeditoo ») lists one test endpoint,
+  `expeditoo-rho.vercel.app` — not `dev.expeditop.fr`. The destination `we_1UfJlmJRpszqU81326R7d1yU` was made
+  elsewhere (live mode or a sandbox). Recreate it in test mode, put its `whsec_` on Preview `STRIPE_WEBHOOK_SECRET`,
+  and **delete the other one if it is live**: a live destination would send real payment events to dev.
+- [ ] **(2.95.1) Decide who may open dev.expeditop.fr.** Vercel Standard Protection covers preview custom domains,
+  so it is team-only — and so Stripe's webhooks and Actions → Scheduled jobs (`target: dev`) get a 302. Either keep
+  it and add a Protection Bypass for Automation (header for the cron, query parameter on the Stripe URL), or open it.
+- [ ] **(2.95.1)** Which address receives all dev mail (`EMAIL_DEV_RECIPIENT`, Preview, branch `dev`)? Unset, dev
+  drops every mail, so a sign-up there cannot verify. `VERCEL_TOKEN` (repo secret) for the weekly env audit.
+- [x] ~~(2.91.1) dev environment dashboards~~ — **done 2026-11-24**: five shared rows made production-only (values
+  kept), Preview secrets and buckets, Neon schema-only `dev` branch with reset passwords, `dev` git branch,
+  dev.expeditop.fr bound to it, Cloudflare CNAME, Google redirect, `MIRROR_SOURCE_URL`, refresh run
+  `45401302508`. Details in the 2.95.1 entry.
+- [x] ~~(2.87.0, driver types) Run « Migrate database » for `0048_in_house_driver_no_siret`~~ — **applied**:
+  production's migration journal had 48 entries when the dev refresh copied it on 2026-11-24.
 - [ ] **(2.90.0) Give us the real operations phone number.** `driver/help` shows « +1 (987) 654-321 » as the
   24/7 emergency line and `(main)/help` « +1 (234) 567-890 »: both are placeholders. A driver who calls
   one reaches nobody. Until there is a number, consider hiding the emergency card.
@@ -699,6 +705,87 @@ than leaving it in a chat message.
       Until then its application page says driver access is off.
 
 ---
+
+## ✅ 2026-11-24 — Dev first, then a gated launch that migrates production itself (2.95.1)
+
+*« can you handle the vercel, neon, and github? » — then « once it's done update the flow of instructions to all of
+agents to not crash the prod and use dev env during development, then auto migrate if validated and pass the gate
+before launch to main ».*
+
+Spec `environments_spec.md` §10–12; the process every agent follows is **`AGENTS.md` §4a**. Plan
+`plan_dev_environment.md`. **No migration.** Built in a separate worktree off `origin/dev`, so another session's
+uncommitted work in the shared tree is not in it.
+
+**The dev environment, set up outside the repo (2026-11-24).**
+- *Vercel.* `R2_BUCKET_NAME`, `BETTER_AUTH_SECRET`, `NEXT_PUBLIC_APP_URL`, `EXPEDION_API_KEY`,
+  `EXPEDION_ADMIN_API_KEY` were one row for Production + Preview; each is now production-only. An edit without a
+  value keeps the value — proven first on a throwaway `encrypted` variable whose ciphertext came back identical,
+  then deleted; production redeployed afterwards and answered 200 with no runtime errors. Preview got fresh
+  `BETTER_AUTH_SECRET`, `CRON_SECRET`, both Expedion keys (generated, never printed), the `expeditoo-*-dev` buckets
+  local development already used, `R2_PUBLIC_URL=https://dev.expeditop.fr/api/images`, `DEV_DB_REFS`, and the
+  dev Stripe `whsec_`. Branch `dev` only: `POSTGRES_URL`, `POSTGRES_URL_NON_POOLING`, `NEXT_PUBLIC_APP_URL`.
+  Domain `dev.expeditop.fr` bound to git branch `dev`.
+- *Neon.* Production is project `neon-crimson-car` (`wispy-frost-54808747`), endpoint `ep-sweet-bonus-awtyfuyz`.
+  Branch `dev` (`br-ancient-rice-awkr56me`, endpoint `ep-late-night-aw6o8h4v`) was created **schema-only**: a
+  normal child branch starts as a raw copy of production — real names, password hashes, KYC keys — on a host
+  that would be public. Both its roles (`neondb_owner`, `mirror_readonly`) had their passwords reset. 44 tables,
+  0 rows until the refresh.
+- *GitHub.* Branch `dev` from `17b4280`; secrets `POSTGRES_URL_DEV`, `CRON_SECRET_DEV`, `DEV_USER_PASSWORD`;
+  variables `DEV_DB_REFS`, `APP_URL_DEV`. Refresh run `45401302508`: 11 MB dumped through `mirror_readonly`,
+  48 migrations recorded, scrub verified, 6 sign-in accounts. Spot check after: 18 real accounts now
+  `@dev.invalid`, 6 `@dev.local`, 0 sessions, 0 Stripe customer ids, no consumer address left in 4,862 quotes.
+- *Tooling.* Neon CLI 9.9.6 installed; project skills `neon` / `neon-postgres` updated to upstream
+  (`neon skills update`); Neon MCP for this project in `.mcp.json`, OAuth URL only, no key.
+
+**The release flow, in the repo.**
+- `src/lib/build-migrate.ts`: `buildPlan` — production gates and migrates production, the `dev` preview gates
+  and migrates the dev database, any other preview only builds. `gateEnv` hands the gate the toolchain and nothing
+  else: a production build holds live keys and the tests are written for a CI with none. `pendingMigrations`
+  uses drizzle's own comparison (journal `when` > newest applied `created_at`). `destructiveChanges` refuses
+  `DROP TABLE|COLUMN|TYPE|SCHEMA`, `TRUNCATE`, `DELETE FROM`, `RENAME`, a column `TYPE` change, `SET NOT NULL`
+  and `ADD COLUMN … NOT NULL` without `DEFAULT`, unless the file says `-- release:allow-destructive <reason>`
+  (a reason is required; comments are not scanned; `DROP NOT NULL` passes).
+- `scripts/vercel-build.ts`: plan → gate (`changelog:check`, `typecheck`, `lint`, `test`) → refuse a
+  production plan whose URL is not production, and a dev plan whose URL is → list pending migrations, refuse
+  destructive ones → `db:migrate` (`MIGRATE_TARGET=production` set by the production plan only, removed
+  otherwise) → `next build`. Connection strings are redacted from what it prints.
+- `gates.yml`: `release-source` fails a pull request into `main` from any branch but `dev`. `sync-dev.yml`
+  fast-forwards `dev` to `main` after a launch. `migrate.yml` is now the fallback, said so in its header.
+- Branch protection on `main`: pull request required; `gates`, `release-source`, `Vercel` required;
+  administrators included — every agent pushes as the owner's account, so exempting admins would exempt them all.
+- Instructions: `AGENTS.md` §4a (the flow, the never-list) and §7.9, a banner at the top of `GEMINI.md`, `CLAUDE.md`
+  gotcha 25 and its migration paragraph.
+
+**Judgment calls.** The gate runs *again* inside the production build rather than trusting the pull request's
+checks: a CLI deploy or a protection switched off would otherwise migrate production ungated. It costs a few
+minutes a launch. Dev runs the identical path first, so a Vercel-only failure of the gate shows on dev, never
+first on a launch. No review is required on the pull request — the owner works alone; the gate is the review.
+
+**Verification.** The gate exactly as the build runs it — `env -i` with only `PATH`, `HOME`, `CI` — in the
+release worktree: `changelog:check` ok (2.95.1), `tsc` 0 errors, `lint` 0 errors (72 warnings, all pre-existing),
+**4,623 tests in 342 files pass**. `build-migrate.test.ts` (25 tests) caught one real bug before it shipped: the
+marker pattern's `\s+` crossed the line break, so `-- release:allow-destructive` with no reason borrowed the next
+line's `ALTER` as one. Dev before this release, with the old build: dev build `dpl_BVConuEC4GG3axfAEWMkCPByYqeA`
+printed `Running database migrations against ep-late-night-aw6o8h4v` — the `dev`-branch override beats the
+integration's production row; the site answered 200 from the dev database (company details empty where
+production's are filled), with `x-robots-tag: noindex, nofollow`; `admin@dev.local` signed in; Admin → Stripe
+reported test keys, `mockPayments: false`; Google served its sign-in page for
+`https://dev.expeditop.fr/api/auth/callback/google` (no `redirect_uri_mismatch`).
+
+**The new gate's first run stopped itself.** Dev build `expeditoo-ship-8by8mwawx` (commit `2e9fe5b`) ran
+`changelog:check`, `typecheck`, `lint`, then failed 10 of 4,623 tests and printed « Gate failed at `pnpm test` —
+nothing was migrated or built »; dev kept serving the previous deployment. Cause: Vercel builds on Node **24**,
+GitHub's gate ran 22 and the laptop 23. Two route tests (`listings/assist` transcription, `shipments/[id]/photos`)
+ran under jsdom, whose `FormData`/`File` Node 24's multipart parser (`undici` `multipartFormDataParser`) rejects
+inside Node's own `Request`. Reproduced locally on Node 24.22.3 (10 failed), fixed with
+`// @vitest-environment node` on both files — server routes belong there — then 25/25 on Node 24 and on 23, and
+the full suite on Node 24 in a stripped environment: **4,623 / 342 pass**. `gates.yml` moved to Node 24 so the
+two gates are one gate.
+
+**Known limits.** See the four open 2.95.1 items under Operator to-do: the Neon connection still ticked for
+Preview, the Stripe dev destination in the wrong mode or account, dev.expeditop.fr's protection versus webhooks
+and the dev cron, and the dev mail recipient. `env-audit.yml` keeps failing until `VERCEL_TOKEN` is set and the
+Neon connection is unticked.
 
 ## ✅ 2026-11-22 — What the page inventory found, fixed: staff in the back office, signed-out guards, help, reviews, notifications (2.95.0)
 
