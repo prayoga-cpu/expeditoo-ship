@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 
@@ -82,6 +82,23 @@ describe("landing page anchors", () => {
 
     // `top` is the logo's link back to the hero.
     expect(new Set(anchors)).toEqual(new Set(["top", "how", "recent", "carriers"]));
+  });
+
+  it("links the full-screen menu only to sections the page renders (2.97.0)", () => {
+    const { container } = anchorsAndIds();
+
+    fireEvent.click(screen.getByRole("button", { name: "menuOpen" }));
+    const menu = screen.getByRole("dialog");
+    const inMenu = Array.from(menu.querySelectorAll("a"))
+      .map((link) => link.getAttribute("href") ?? "")
+      .filter((href) => href.startsWith("/#"))
+      .map((href) => href.slice(2));
+    const ids = new Set(Array.from(container.querySelectorAll("[id]")).map((node) => node.id));
+
+    expect(inMenu.filter((anchor) => !ids.has(anchor))).toEqual([]);
+    expect(new Set(inMenu)).toEqual(
+      new Set(["top", "recent", "shippers", "how", "promises", "carriers", "faq"])
+    );
   });
 
   it("no longer links to the sections that were cut", () => {

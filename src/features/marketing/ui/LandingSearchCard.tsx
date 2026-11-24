@@ -56,14 +56,14 @@ function SearchField({ name, label, icon: Icon, inputRef, onChange, ...input }: 
       className={cn(
         "flex min-h-[60px] cursor-text items-center gap-3 rounded-xl border px-3.5 py-2 transition-colors",
         "border-[#dfe4ec] bg-[#f6f8fb] hover:border-[#c5cdd9]",
-        "dark:border-[#27303a] dark:bg-[#0f151b] dark:hover:border-[#36414d]",
+        "dark:border-[#22385e] dark:bg-[#0a1a36] dark:hover:border-[#2f4a78]",
         "focus-within:border-primary focus-within:bg-white focus-within:ring-[3px] focus-within:ring-[rgb(7_107_227/0.22)]",
-        "dark:focus-within:bg-[#0f151b] dark:focus-within:ring-[rgb(91_157_255/0.3)]"
+        "dark:focus-within:bg-[#0a1a36] dark:focus-within:ring-[rgb(91_157_255/0.3)]"
       )}
     >
-      <Icon className="h-5 w-5 flex-none text-[#5b6675] dark:text-[#93a0ae]" aria-hidden />
+      <Icon className="h-5 w-5 flex-none text-[#5b6675] dark:text-[#9fb0c8]" aria-hidden />
       <span className="flex min-w-0 flex-1 flex-col">
-        <span id={labelId} className="text-[0.75rem] leading-tight font-semibold text-[#3d4652] dark:text-[#c2cad4]">
+        <span id={labelId} className="text-[0.75rem] leading-tight font-semibold text-[#3d4652] dark:text-[#c6d3e8]">
           {label}
         </span>
         <input
@@ -73,7 +73,7 @@ function SearchField({ name, label, icon: Icon, inputRef, onChange, ...input }: 
           onChange={(event) => onChange(event.target.value)}
           className={cn(
             "w-full min-w-0 border-0 bg-transparent p-0 text-[0.95rem] text-[#0f1722] outline-none",
-            "placeholder:text-[#6f7985] dark:text-[#eef2f6] dark:placeholder:text-[#7d8894]",
+            "placeholder:text-[#6f7985] dark:text-[#eef2f6] dark:placeholder:text-[#8193ad]",
             "[color-scheme:light] dark:[color-scheme:dark]"
           )}
           {...input}
@@ -124,7 +124,7 @@ export function LandingSearchCard() {
       method="get"
       onSubmit={handleSubmit}
       aria-label={t("label")}
-      className="w-full rounded-[20px] bg-white p-3 text-[#0f1722] shadow-[0_24px_60px_-28px_rgba(4,24,64,0.55)] ring-1 ring-[rgb(0_0_0/0.05)] sm:p-4 dark:bg-[#141a21] dark:text-[#eef2f6] dark:ring-[rgb(255_255_255/0.1)]"
+      className="w-full rounded-[20px] bg-white p-3 text-[#0f1722] shadow-[0_24px_60px_-28px_rgba(4,24,64,0.55)] ring-1 ring-[rgb(0_0_0/0.05)] sm:p-4 dark:bg-[#0d2144] dark:text-[#eef2f6] dark:ring-[rgb(255_255_255/0.1)]"
     >
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-2.5">
         <SearchField
@@ -178,14 +178,14 @@ export function LandingSearchCard() {
       </button>
 
       <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-2 px-1 pb-0.5">
-        <span className="text-[0.8rem] text-[#5b6675] dark:text-[#93a0ae]">{t("examples")}</span>
+        <span className="text-[0.8rem] text-[#5b6675] dark:text-[#9fb0c8]">{t("examples")}</span>
         {EXAMPLE_ROUTES.map((route) => (
           <button
             key={`${route.from}-${route.to}`}
             type="button"
             onClick={() => applyRoute(route)}
             aria-label={t("exampleFill", route)}
-            className="cursor-pointer rounded-full border border-[#dfe4ec] bg-white px-3 py-1 text-[0.8rem] font-medium text-[#0b4fb0] transition-colors hover:border-primary hover:bg-[#eef4fe] focus-visible:ring-[3px] focus-visible:ring-[rgb(7_107_227/0.3)] focus-visible:outline-none dark:border-[#2a333e] dark:bg-transparent dark:text-[#8fb8ff] dark:hover:bg-[#16202b]"
+            className="cursor-pointer rounded-full border border-[#dfe4ec] bg-white px-3 py-1 text-[0.8rem] font-medium text-[#0b4fb0] transition-colors hover:border-primary hover:bg-[#eef4fe] focus-visible:ring-[3px] focus-visible:ring-[rgb(7_107_227/0.3)] focus-visible:outline-none dark:border-[#22385e] dark:bg-transparent dark:text-[#8fb8ff] dark:hover:bg-[#12284f]"
           >
             {t("exampleRoute", route)}
           </button>

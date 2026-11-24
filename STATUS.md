@@ -708,6 +708,57 @@ than leaving it in a chat message.
 
 ---
 
+## ✅ 2026-11-25 — The home page rebuilt on the shipit.framer.ai patterns, in EXPEDITOP's identity (2.97.0)
+
+*« https://shipit.framer.ai/ take this page design from pictures, navbar style, footer, animations, contents, and hero
+video … includes the scroll style … but keep this component [the hero search card] and the client main references … don't
+forget to keep our brand identity … once finished directly push to main ».*
+
+Spec `landing_2026_11_spec.md` (rewritten for 2.97.0, with what was taken and what was not). **No migration.** `main`
+is PR-only from `dev`, so « push to main » went dev → PR → merge.
+
+**Reference analysed in a real browser** (Chromium, 1440 and 390): Lenis smooth scroll (`html.lenis.lenis-smooth`, a
+wheel step glides ~500 px in ~0.7 s); floating inset nav with a full-screen menu; a 1920×1080 muted looping hero video
+under a giant tight headline; blur-in headings, image cross-fades, an infinite marquee, a rotating circular badge;
+services tabs, numbered perks around a photo, dotted three-step connectors, a dark statement band, FAQ accordion, footer.
+
+**Taken, in our identity** (primary blue, Plus Jakarta Sans, BrandWordmark): Lenis `1.3.26` on the home page only
+(destroyed on unmount; never on touch or reduced motion; same-page anchors land 92 px down, under the bar); floating
+glass header → solid past the hero, three-line button → full-screen modal menu (focus trap, Escape, scroll lock, focus
+restored), the 2.92.0/2.94.0 sign-in door rules kept; full-bleed hero video under a brand-blue gradient with **the
+search card unchanged** (fields, order, GET form, chips; dark colours grey → navy); blur-in sections marked only after a
+script runs, so the server HTML stays fully visible; a marquee built from the form's own item suggestions; rotating
+« Comment ça marche » badge; tabs « Ce que nous transportons » (arrow/Home/End); three steps with dashed connectors;
+four promises around a photo; navy carrier band (pay: balance → withdrawal → transfer, nothing faster promised); FAQ (6,
+four reused from /help); closing photo band; navy footer with three columns. The client's references kept: four-field
+search card, « Demandes récentes » (same endpoint), « Comment ça marche ? — Simple et rapide », the four promises.
+
+**Not taken**: shipit's red, fonts, wording, images and video (template assets, licence unknown); pricing,
+testimonial, logo wall, counters, blog, newsletter, socials (we have none — faking them is gotcha territory); the crane
+container (its own illustration).
+
+**Media**: hero video — Wikimedia Commons, Benoît Prieur, A6 towards Paris, **CC0 1.0** (licence checked on the file
+page and the API); `hero.webm` 1.29 MB, `hero.mp4` 2.07 MB (1280×720, 10.8 s, no audio, compressed with a throwaway
+`ffmpeg-static`, never a repo dependency), `hero-poster.webp` 26 KB server-rendered. The `<video>` mounts after hydration,
+never under reduced motion or Save-Data, and pauses off screen. Three more StockSnap CC0 photos via Openverse. Credits:
+`public/videos/landing/CREDITS.md`, `public/images/landing/CREDITS.md`.
+
+**Verification** (worktree off `origin/dev` b7ddb2a + this release only)
+- `npx tsc --noEmit` — 0 errors. `npx eslint .` — 0 errors, 72 warnings.
+- `pnpm test` — 4,841 / 4,841.
+- `pnpm changelog:check` — ok at 2.97.0, English and French.
+- `pnpm build` — succeeds; the built `/` carries 1,027 words of server HTML and the poster, the `<video>` is client-only. Built-site check of /contact, /privacy, /changelog, /legal-notice, /help at 390 and 1440: no header overlap, no console error.
+- Browser (`next dev`, Chromium; WebKit smoke at 1024): 390/1024/1440 light and dark (dark through the app's switch);
+  menu by keyboard (0/50 Tabs escaped the dialog); anchors from bar, menu, footer, touch and `/terms`; signed-out search
+  → `/signin?callbackUrl=/create?title=…`; reduced motion → no video, no animation, nothing hidden; no hydration warning.
+- **Not run:** Lighthouse, a real iOS device.
+
+**Known limits** — the floating header and navy footer now dress every marketing page (checked `/terms` and, after the
+build, the pages below); the dev database had one open request, so « Demandes récentes » was seen with one card; `/terms`
+still says no client posts a request directly (predates `/create`).
+
+---
+
 ## ✅ 2026-11-24 — Dev's Stripe and cron reach it through the Vercel login (2.96.1)
 
 *« I can't find, just use this one: whsec_… i just created in test sandbox » — then the owner's choice for dev

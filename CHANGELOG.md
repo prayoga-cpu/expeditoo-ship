@@ -14,6 +14,26 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.97.0] - 2026-11-25 · ux
+
+A new home page: the same search card, a calmer and richer page around it.
+
+- **A moving road behind the search.** The top of the home page now plays a short
+  silent video of a motorway under our blue, with the same four-field search card
+  and the same « Get offers » button. On a slow connection, with reduced
+  motion or data saving on, a still picture shows instead.
+- **A floating menu bar.** It sits over the top of the page and turns solid as
+  you scroll. The three-line button opens a full-screen menu with every section,
+  the request form, help, contact, sign-in and the language and colour choices.
+- **Smoother scrolling** on the home page with a mouse or trackpad, and sections
+  that ease into view as you reach them. Nothing moves if your device asks for
+  reduced motion.
+- **What we move**, in four tabs — parcels and objects, furniture and
+  appliances, home moves, France and abroad — each with a button to start.
+- **How it works in three steps**, **our four commitments**, a section for
+  carriers, and **answers to the common questions**, all on the home page.
+- **A new footer** with the links grouped by what you came to do.
+
 ## [2.96.1] - 2026-11-24 · infra
 
 Nothing you can see on the live site changes. The test site now behaves like

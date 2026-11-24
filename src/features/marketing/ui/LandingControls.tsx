@@ -50,6 +50,46 @@ const THEME_OPTIONS = [
   { value: "dark", icon: Moon, labelKey: "themeDark" },
 ] as const;
 
+/**
+ * Clair | Sombre as two pressed-or-not buttons, for the full-screen menu: a
+ * dropdown inside a focus-trapped dialog would portal out of its trap. Before
+ * next-themes has read storage neither is pressed (2.96.0: never show
+ * someone else's choice).
+ */
+export function LandingThemeSwitch() {
+  const { theme, setTheme } = useTheme();
+  const t = useTranslations("marketing.navbar");
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => setMounted(true), []);
+
+  return (
+    <div
+      className="flex flex-none overflow-hidden rounded-lg border border-[var(--lp-line2)]"
+      role="group"
+      aria-label={t("themeLabel")}
+    >
+      {THEME_OPTIONS.map(({ value, icon: Icon, labelKey }) => (
+        <button
+          key={value}
+          type="button"
+          onClick={() => setTheme(value)}
+          aria-pressed={mounted && theme === value}
+          className={cn(
+            "flex cursor-pointer items-center gap-1.5 border-0 px-3 py-[7px] text-[13px] font-medium",
+            mounted && theme === value
+              ? "bg-[rgba(127,127,127,0.14)] text-[var(--lp-text)]"
+              : "bg-transparent text-[var(--lp-dim)]"
+          )}
+        >
+          <Icon className="h-4 w-4" aria-hidden />
+          {t(labelKey)}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 /** Borderless 34px hit target, sized so the header keeps its rhythm. */
 const THEME_TRIGGER =
   "flex h-[34px] w-[34px] flex-none cursor-pointer items-center justify-center rounded-[9px] border-0 bg-transparent text-[var(--lp-text)] transition-colors hover:bg-[var(--lp-chip)]";

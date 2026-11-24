@@ -2223,7 +2223,18 @@
       "signUp": "Sign up",
       "loginOrSignUp": "Log in / Sign up",
       "recent": "Recent requests",
-      "carriers": "Carriers"
+      "carriers": "Carriers",
+      "menu": "Menu",
+      "menuOpen": "Open the menu",
+      "menuClose": "Close the menu",
+      "menuSections": "On this page",
+      "menuPreferences": "Preferences",
+      "services": "What we move",
+      "promises": "Our commitments",
+      "faq": "Questions",
+      "request": "Create a request",
+      "help": "Help",
+      "contact": "Contact"
     },
     "cta": {
       "title": "Something to move?",
@@ -2235,14 +2246,12 @@
     },
     "footer": {
       "tagline": "Have your things moved by checked carriers, in France and abroad. Expeditop is part of the Expedion group.",
-      "carriers": "Carriers",
+      "carriers": "Carry",
       "howItWorks": "How it works",
       "verification": "Verification",
-      "group": "Group",
       "expedionBuyers": "Expedion — auction buyers",
       "auctionHouses": "Auction houses",
       "contact": "Contact",
-      "legal": "Legal",
       "terms": "Terms",
       "legalNotice": "Legal notice",
       "privacy": "Privacy policy",
@@ -2252,7 +2261,9 @@
       "requesters": "Send something",
       "request": "Post a request",
       "recent": "Recent requests",
-      "becomeCarrier": "Become a carrier"
+      "becomeCarrier": "Become a carrier",
+      "helpLegal": "Help and legal",
+      "help": "Help"
     },
     "actions": {
       "bid": {
@@ -2738,7 +2749,9 @@
       "badge": "Items, furniture and home moves · France and abroad",
       "title": "Find a carrier for the things you need moved",
       "subtitle": "Say what needs moving and where. Checked carriers send you their price, and you choose the offer that suits you.",
-      "note": "Posting a request is free. You only pay when you accept an offer."
+      "note": "Posting a request is free. You only pay when you accept an offer.",
+      "howLink": "See how it works",
+      "howBadge": "How it works · How it works · How it works · "
     },
     "search": {
       "label": "Describe your shipment",
@@ -2763,7 +2776,6 @@
       "exampleFill": "Fill in the trip {from} → {to}"
     },
     "trust": {
-      "label": "With every request",
       "payment": {
         "title": "Pay when you accept",
         "desc": "Nothing is charged until you have chosen an offer."
@@ -2779,7 +2791,10 @@
       "refund": {
         "title": "Refunded if cancelled",
         "desc": "A job cancelled before pickup is refunded to you."
-      }
+      },
+      "eyebrow": "Our commitments",
+      "title": "What holds for every request",
+      "intro": "Rules the app applies to every job, not promises about speed or price."
     },
     "recent": {
       "title": "Recent requests",
@@ -2801,7 +2816,8 @@
         "title": "No open requests right now",
         "description": "Describe what you need moved: your request will be the first on the list.",
         "cta": "Post a request"
-      }
+      },
+      "eyebrow": "Open to offers"
     },
     "howItWorks": {
       "eyebrow": "Simple and quick",
@@ -2822,32 +2838,73 @@
       },
       "cta": "Post a request"
     },
-    "audiences": {
-      "title": "Two ways to use Expeditop",
-      "intro": "Have your things moved, or move other people's.",
-      "shipper": {
-        "eyebrow": "You're sending",
-        "title": "A piece of furniture, some boxes, a home move",
-        "intro": "Private person or business, you describe what needs moving and compare the offers you receive.",
-        "point1": "Single items or a whole home move",
-        "point2": "In France and abroad",
-        "point3": "The lowest price is never imposed: you choose",
-        "cta": "Post a request"
-      },
-      "carrier": {
-        "eyebrow": "You're carrying",
-        "title": "Jobs along your way",
-        "intro": "Driver or professional carrier, you name your price on open requests.",
-        "point1": "Browse requests and propose your price",
-        "point2": "Declare your trips to find the jobs that fit them",
-        "point3": "Your file is checked by Expeditop before your first offer"
-      }
-    },
     "images": {
       "hero": "Kraft tags tied with twine on a parcel",
       "shipper": "A pale blue sofa with cushions in a bright living room",
       "carrier": "The motorway seen from the driver's seat, lorries in the right-hand lane",
-      "packing": "A person closing a cardboard box on a table, kraft paper beside it"
+      "packing": "A person closing a cardboard box on a table, kraft paper beside it",
+      "parcel": "A shipping box standing on a concrete floor",
+      "europe": "A road winding between lava fields and a mountain in the mist",
+      "closing": "A white van on a dirt track at sunset, in a cloud of dust"
+    },
+    "marquee": {
+      "label": "What people have moved with Expeditop"
+    },
+    "services": {
+      "eyebrow": "What we move",
+      "title": "From a parcel to a home move",
+      "intro": "One item, some furniture or a whole home: describe it once, and checked carriers reply.",
+      "tabsLabel": "Kinds of transport",
+      "parcels": {
+        "tab": "Parcels and items",
+        "title": "Parcels and items",
+        "desc": "A box, a suitcase, a bike, a painting: give its weight and size, and add a photo if you like. Carriers send you their price.",
+        "cta": "Post a request"
+      },
+      "furniture": {
+        "tab": "Furniture and appliances",
+        "title": "Furniture and appliances",
+        "desc": "A sofa, a wardrobe, a washing machine: say which floor and whether there is a lift at each address, and whether you need a hand loading. The carrier knows what to expect.",
+        "cta": "Post a request"
+      },
+      "moving": {
+        "tab": "Home moves",
+        "title": "Home moves",
+        "desc": "A studio or a house: give the floor area or the volume, and add photos of the rooms. Checked movers send you their offers.",
+        "cta": "Request a moving quote"
+      },
+      "abroad": {
+        "tab": "France and abroad",
+        "title": "In France and abroad",
+        "desc": "Each address has its own country: pickup and delivery can be in France, elsewhere in Europe or further away. The postcode and the map follow the country you pick.",
+        "cta": "Post a request"
+      }
+    },
+    "carriers": {
+      "eyebrow": "Do you carry?",
+      "title": "Jobs along your way",
+      "intro": "Driver or professional carrier: you set your price on open requests, near the trips you already make.",
+      "point1": "Browse open requests and propose your price",
+      "point2": "Declare your trips to find the jobs along your way",
+      "point3": "Your file is checked by Expeditop before your first offer",
+      "point4": "Once the delivery is recorded, the job's amount joins your balance: you request a withdrawal, paid by bank transfer"
+    },
+    "faq": {
+      "eyebrow": "Questions",
+      "title": "Before your first request",
+      "intro": "What to know about offers, payment and tracking.",
+      "cost": {
+        "question": "How much does a request cost?",
+        "answer": "Posting a request is free. Each carrier proposes their price; you only pay when you accept an offer: its price plus the service fee, both shown before you pay. Nothing is charged until you have accepted."
+      },
+      "carriers": {
+        "question": "Who are the carriers?",
+        "answer": "Expeditop drivers and professional carriers. Each file, documents and vehicle included, is checked by our team before the first offer: approval is never automatic."
+      },
+      "moreTitle": "Another question?",
+      "moreText": "The help centre covers requests, payment and tracking. Otherwise, write to us.",
+      "help": "Help centre",
+      "contact": "Contact us"
     }
   },
   "help": {

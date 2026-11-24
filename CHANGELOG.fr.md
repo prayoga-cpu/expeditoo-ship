@@ -18,6 +18,31 @@ L'historique antérieur à la `2.0.0` appartient à la place de marché de biens
 la v1 et n'est pas conservé : la première version ci-dessous est le commit qui a
 lancé le virage vers le transport.
 
+## [2.97.0] - 2026-11-25 · ux
+
+Une nouvelle page d'accueil : la même carte de recherche, une page plus calme et plus complète autour.
+
+- **Une route qui défile derrière la recherche.** Le haut de la page d'accueil
+  montre désormais une courte vidéo muette d'autoroute sous notre bleu, avec la
+  même carte de recherche à quatre champs et le même bouton « Obtenir des
+  offres ». Sur une connexion lente, avec les animations réduites ou l'économie
+  de données activées, une image fixe s'affiche à la place.
+- **Une barre de menu flottante.** Elle se pose sur le haut de la page et
+  devient pleine quand vous faites défiler. Le bouton à trois traits ouvre un
+  menu plein écran avec chaque section, le formulaire de demande, l'aide, le
+  contact, la connexion et les choix de langue et de couleurs.
+- **Un défilement plus fluide** sur la page d'accueil à la souris ou au pavé
+  tactile, et des sections qui apparaissent en douceur. Rien ne bouge si votre
+  appareil demande de réduire les animations.
+- **Ce que nous transportons**, en quatre onglets — colis et objets, meubles et
+  électroménager, déménagements, France et étranger — chacun avec un bouton
+  pour commencer.
+- **Le fonctionnement en trois étapes**, **nos quatre engagements**, une section
+  pour les transporteurs et **les réponses aux questions fréquentes**, le tout
+  sur la page d'accueil.
+- **Un nouveau pied de page**, avec les liens rangés selon ce que vous venez
+  faire.
+
 ## [2.96.1] - 2026-11-24 · infra
 
 Rien ne change sur le site en ligne. Le site de test se comporte désormais

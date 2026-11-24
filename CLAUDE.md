@@ -225,7 +225,7 @@ without an `sk_live_` key, so an accept there takes real money.
 Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before shipping.
 
 **Gates — all green.** `npx tsc --noEmit` 0 errors · `pnpm lint` 0 errors ·
-4,811 unit tests pass (2.96.0) · `pnpm build` succeeds. The same gate runs inside
+4,841 unit tests pass (2.97.0) · `pnpm build` succeeds. The same gate runs inside
 every `dev` and production Vercel build before anything migrates (`AGENTS.md` §4a).
 
 **Done**
@@ -809,6 +809,14 @@ every `dev` and production Vercel build before anything migrates (`AGENTS.md` §
   hydration bug. The home page has a public `GET /api/public/recent-requests`
   (public projection only) and `/create` reads `?title=&from=&to=&date=`.
   `email_access_code_spec.md`, `landing_2026_11_spec.md`
+
+- **The home page on the shipit.framer.ai patterns** (2.97.0,
+  `landing_2026_11_spec.md`). Lenis smooth scroll runs on the home page only
+  (`landing-scroll.ts`; never on touch or reduced motion) — never add it to the
+  app shells, which scroll inside `<main>`. The hero search card is the
+  client's coly2go reference: restyle around it, never change its fields or
+  its GET form. Section reveals hide content only after a script marks it, so
+  the server HTML stays readable. Media are CC0 with credits beside them.
 
 - **A dev deployment that cannot reach production** (2.91.1,
   `environments_spec.md` §10–11, `plan_dev_environment.md`). `dev.expeditop.fr`
