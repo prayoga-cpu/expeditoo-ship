@@ -287,7 +287,7 @@ every `dev` and production Vercel build before anything migrates (`AGENTS.md` §
   **running in production since then** (Admin → Paramètres → « Tâches planifiées »).
 - **Mail** goes out from `Expeditop <no-reply@expeditop.fr>` (verified in Resend; `EMAIL_FROM`
   in Vercel Production since 2026-11-24, and on Preview branch `dev`, where `EMAIL_DEV_RECIPIENT`
-  sends every dev mail to one throwaway inbox). Test mail end to end with a mail.tm inbox, never
+  sends every dev mail to `prayogadevelopment@gmail.com`, the owner's choice). Test mail end to end with a mail.tm inbox, never
   a person's address. **The domain is `expeditop.fr` (bought 2026-11-20), served at `https://www.expeditop.fr`** —
   not `expeditoo.fr`/`.com`, which belong to third parties. `appUrl()` in `src/lib/app-url.ts`
   owns the origin; `NEXT_PUBLIC_APP_URL` (Vercel, Sensitive) must name it

@@ -760,8 +760,8 @@ Specs: `email_access_code_spec.md` (new, with the flow audit), `landing_2026_11_
 First release on the 2.95.1 flow: built in a worktree off `origin/dev`, pushed to `dev`, PR to `main`.
 
 **#12 mail** — production `EMAIL_FROM` was still `Expeditoo <no-reply@prionation.io>` (25 days old). Set to
-`Expeditop <no-reply@expeditop.fr>` with the Vercel CLI (Production; and Preview branch `dev`, with `EMAIL_DEV_RECIPIENT`
-a throwaway mail.tm inbox, owner-approved). Resend accepts the domain (it refuses unverified ones). Tested on
+`Expeditop <no-reply@expeditop.fr>` with the Vercel CLI (Production; and Preview branch `dev`). Dev's
+`EMAIL_DEV_RECIPIENT` was a throwaway mail.tm inbox for the dev test, then set by the owner to `prayogadevelopment@gmail.com`. Resend accepts the domain (it refuses unverified ones). Tested on
 www.expeditop.fr before any code change, through a mail.tm inbox: sign-up mail in 14 s, unverified sign-in 403 + fresh
 mail, link → `/signin?verified=true`, welcome mail, reset mail → reset → sign-in, all from `no-reply@expeditop.fr`.
 
@@ -817,7 +817,10 @@ figures) and the bid card deleted.
 - **dev.expeditop.fr** (Vercel share link, dev inbox): mail from `no-reply@expeditop.fr` with a 6-digit code; wrong
   code → 400, 4 then 3 tries left; resend → a new code, the old one refused. **Found there:** `maxLength=6` on the code
   field truncated « 333 731 » inserted in one go to « 333 73 », so « Valider » could never succeed; removed (the field
-  already keeps six digits). Rerun after the fix: see below.
+  already keeps six digits). **Rerun after the fix, all green:** typed « 123 456 » → `/signin?email=…` prefilled →
+  sign-in → `/home`; one welcome mail; the same code again → 410 `CODE_EXPIRED`; no second welcome mail.
+- Flaky `location-picker-field.test.tsx` (« going back to typing… ») failed once on a dev build: it switched modes
+  before the reverse-geocoded text landed. The test now waits for it (5/5 locally).
 - **Not yet:** the code in production (after the merge), the prefilled /create signed in in a browser, Samsung
   Internet, a phone for #36, the dev deployment with the new mail settings.
 
