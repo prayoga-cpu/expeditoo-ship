@@ -212,7 +212,9 @@ describe("VerifyEmailPage — the code from the mail (email_access_code_spec.md 
     const field = codeField();
     expect(field).toHaveAttribute("inputmode", "numeric");
     expect(field).toHaveAttribute("autocomplete", "one-time-code");
-    expect(field).toHaveAttribute("maxlength", "6");
+    // No `maxlength`: the browser would cut « 123 456 » to « 123 45 » before
+    // the field could reduce it to digits (found on dev, 2026-11-24).
+    expect(field).not.toHaveAttribute("maxlength");
     // « Valider » comes before the resend block.
     expect(
       validate().compareDocumentPosition(resendButton()) &
@@ -226,6 +228,22 @@ describe("VerifyEmailPage — the code from the mail (email_access_code_spec.md 
     fireEvent.paste(codeField(), {
       clipboardData: { getData: () => "123 456" },
     });
+
+    expect(codeField()).toHaveValue("123456");
+  });
+
+  it("takes « 123 456 » inserted in one go (dictation, a suggestion) as one code", () => {
+    renderPage("email=jean%40mail.com");
+
+    typeCode("123 456");
+
+    expect(codeField()).toHaveValue("123456");
+  });
+
+  it("never holds more than six digits", () => {
+    renderPage("email=jean%40mail.com");
+
+    typeCode("1234567890");
 
     expect(codeField()).toHaveValue("123456");
   });

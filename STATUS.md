@@ -772,6 +772,10 @@ figures) and the bid card deleted.
 - `pnpm build` — succeeds; the built `/` carries 470 words of server-rendered text (it had 4).
 - Browser: hydration hunt and forced-dark runs on `next dev` with a scratch database; the landing at 390/1024/1440 light
   and dark; the search card → /signin with callbackUrl (signed out).
+- **dev.expeditop.fr** (Vercel share link, dev inbox): mail from `no-reply@expeditop.fr` with a 6-digit code; wrong
+  code → 400, 4 then 3 tries left; resend → a new code, the old one refused. **Found there:** `maxLength=6` on the code
+  field truncated « 333 731 » inserted in one go to « 333 73 », so « Valider » could never succeed; removed (the field
+  already keeps six digits). Rerun after the fix: see below.
 - **Not yet:** the code in production (after the merge), the prefilled /create signed in in a browser, Samsung
   Internet, a phone for #36, the dev deployment with the new mail settings.
 

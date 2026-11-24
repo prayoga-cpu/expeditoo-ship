@@ -57,9 +57,12 @@ function CodeOutcome({
 }
 
 /**
- * The field itself: digits only, at most six of them. `maxLength` would cut a
- * pasted « 123 456 » to « 123 45 » before it ever reached the field, so a
- * paste is read whole and reduced to its digits here.
+ * The field itself: digits only, at most six of them, enforced by `codeDigits`
+ * on every change. There is deliberately no `maxLength`: the browser applies it
+ * to the raw text before the field sees it, so « 123 456 » inserted in one go
+ * (dictation, a keyboard suggestion, an autofill) was cut to « 123 45 » — five
+ * digits — and « Valider » could never succeed (found on dev.expeditop.fr,
+ * 2026-11-24). A paste is read whole for the same reason.
  */
 function CodeField({
   value,
@@ -93,7 +96,6 @@ function CodeField({
         inputMode="numeric"
         autoComplete="one-time-code"
         pattern="[0-9]*"
-        maxLength={EMAIL_CODE_LENGTH}
         placeholder={t("code.placeholder")}
         value={value}
         onChange={(event) => onChange(event.target.value)}
