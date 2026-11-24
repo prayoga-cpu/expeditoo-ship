@@ -1,3 +1,7 @@
+// @vitest-environment node
+// A route receives a multipart body from Node's own fetch stack. Under jsdom the
+// test's FormData/File are jsdom's while Request is Node's, and Node 24's parser
+// (the Vercel build's) rejects that mix — 10 failures that Node 22/23 let pass.
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 /**

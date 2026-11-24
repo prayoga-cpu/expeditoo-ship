@@ -770,8 +770,17 @@ printed `Running database migrations against ep-late-night-aw6o8h4v` — the `de
 integration's production row; the site answered 200 from the dev database (company details empty where
 production's are filled), with `x-robots-tag: noindex, nofollow`; `admin@dev.local` signed in; Admin → Stripe
 reported test keys, `mockPayments: false`; Google served its sign-in page for
-`https://dev.expeditop.fr/api/auth/callback/google` (no `redirect_uri_mismatch`). The new build path's own
-results are recorded with the launch.
+`https://dev.expeditop.fr/api/auth/callback/google` (no `redirect_uri_mismatch`).
+
+**The new gate's first run stopped itself.** Dev build `expeditoo-ship-8by8mwawx` (commit `2e9fe5b`) ran
+`changelog:check`, `typecheck`, `lint`, then failed 10 of 4,623 tests and printed « Gate failed at `pnpm test` —
+nothing was migrated or built »; dev kept serving the previous deployment. Cause: Vercel builds on Node **24**,
+GitHub's gate ran 22 and the laptop 23. Two route tests (`listings/assist` transcription, `shipments/[id]/photos`)
+ran under jsdom, whose `FormData`/`File` Node 24's multipart parser (`undici` `multipartFormDataParser`) rejects
+inside Node's own `Request`. Reproduced locally on Node 24.22.3 (10 failed), fixed with
+`// @vitest-environment node` on both files — server routes belong there — then 25/25 on Node 24 and on 23, and
+the full suite on Node 24 in a stripped environment: **4,623 / 342 pass**. `gates.yml` moved to Node 24 so the
+two gates are one gate.
 
 **Known limits.** See the four open 2.95.1 items under Operator to-do: the Neon connection still ticked for
 Preview, the Stripe dev destination in the wrong mode or account, dev.expeditop.fr's protection versus webhooks
