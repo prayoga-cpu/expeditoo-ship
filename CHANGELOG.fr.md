@@ -18,6 +18,14 @@ L'historique antérieur à la `2.0.0` appartient à la place de marché de biens
 la v1 et n'est pas conservé : la première version ci-dessous est le commit qui a
 lancé le virage vers le transport.
 
+## [2.99.1] - 2026-11-25 · fix
+
+Le titre de la page d'accueil dit maintenant ce que le client a demandé.
+
+- **Titre de la page d'accueil : « Trouvez un transport partagé pour vos objets ».**
+  Le mot « partagé » suit désormais « transport », comme dans le bandeau
+  au-dessus, au lieu de « transporteur ».
+
 ## [2.99.0] - 2026-11-25 · ux
 
 Le site s'ouvre tout de suite dans votre langue, le logo mène au site web, et quelques corrections issues des retours du jour.

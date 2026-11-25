@@ -14,6 +14,14 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.99.1] - 2026-11-25 · fix
+
+The home page headline now says what the client asked for.
+
+- **Home page headline: « Trouvez un transport partagé pour vos objets ».** The
+  word « partagé » now follows « transport », as in the banner above it, instead
+  of « transporteur ».
+
 ## [2.99.0] - 2026-11-25 · ux
 
 The site opens in your language straight away, the logo takes you to the website, and a handful of fixes from today's feedback.
