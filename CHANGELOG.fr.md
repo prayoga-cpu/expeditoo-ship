@@ -18,6 +18,13 @@ L'historique antérieur à la `2.0.0` appartient à la place de marché de biens
 la v1 et n'est pas conservé : la première version ci-dessous est le commit qui a
 lancé le virage vers le transport.
 
+## [2.99.2] - 2026-11-25 · fix
+
+Le titre de la page d'accueil reprend exactement les mots du client.
+
+- **Titre de la page d'accueil : « Ajouter partagé après transport ».** Le titre
+  reprend les mots du client, tels quels, en français et en anglais.
+
 ## [2.99.1] - 2026-11-25 · fix
 
 Le titre de la page d'accueil dit maintenant ce que le client a demandé.

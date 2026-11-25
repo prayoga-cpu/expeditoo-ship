@@ -710,6 +710,18 @@ than leaving it in a chat message.
 
 ---
 
+## ✅ 2026-11-25 — The headline is the client's words, exactly (2.99.2)
+
+*« Trouvez un transport partagé pour vos objets => Ajouter partagé après transport · exacly like this pls revise the copy · edit this title to be "Ajouter partagé après transport" ».*
+
+Third pass on the client's 2:02 PM message « Rajouter partagé après transport ». 2.99.0 read it as « transporteur partagé »,
+2.99.1 as « transport partagé »; both were rejected. A third reading — « partagé » on the logo's sub-line « TRANSPORT » — was
+built and then dropped before release, because the owner came back with the headline on screen and the same sentence.
+`marketing.hero.title` is now literally « Ajouter partagé après transport » (EN « Add shared after transport »), asserted in
+`client-feedback-2026-11-25.test.ts`. No migration. **Judgment to confirm with the client:** the sentence is an *instruction*
+that reads oddly as a headline; the owner asked for it verbatim, three times. If it should read as marketing copy
+(« Trouvez un transport partagé… »), say so and it is one string.
+
 ## ✅ 2026-11-25 — The headline reads « transport partagé » (2.99.1)
 
 *« the headline should be: "Ajouter partagé après transport" · then directly push to main ».*

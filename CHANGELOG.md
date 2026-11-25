@@ -14,6 +14,13 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.99.2] - 2026-11-25 · fix
+
+The home page headline says exactly what the client wrote.
+
+- **Home page headline: « Ajouter partagé après transport ».** The title now
+  carries the client's words, word for word, in French and in English.
+
 ## [2.99.1] - 2026-11-25 · fix
 
 The home page headline now says what the client asked for.
