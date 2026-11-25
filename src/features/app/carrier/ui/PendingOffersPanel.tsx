@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Gavel } from "lucide-react";
+import { HandCoins } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { PageLoader } from "@/components/ui/page-loader";
@@ -52,7 +52,7 @@ export function PendingOffersPanel() {
 
       {notACarrier ? (
         <CenteredEmptyState
-          icon={Gavel}
+          icon={HandCoins}
           title={t("noCarrier.title")}
           description={t("noCarrier.description")}
         >
@@ -91,7 +91,7 @@ function PendingOffersEmpty() {
 
   return (
     <CenteredEmptyState
-      icon={Gavel}
+      icon={HandCoins}
       title={t("title")}
       description={t("description")}
     >

@@ -49,7 +49,7 @@ export const WelcomeEmail = ({ name }: WelcomeEmailProps) => {
             </Text>
             <Text className="text-black text-[14px] leading-[24px]">
               <strong>Vous avez quelque chose à faire transporter ?</strong>{" "}
-              Décrivez votre demande dès maintenant : des chauffeurs vérifiés
+              Décrivez votre demande dès maintenant : des chauffeurs
               vous font leurs offres, et c’est vous qui choisissez.
             </Text>
             <Section className="text-center mt-[24px] mb-[24px]">

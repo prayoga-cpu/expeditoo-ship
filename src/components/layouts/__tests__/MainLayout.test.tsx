@@ -310,8 +310,10 @@ describe("MainLayout sidebar", () => {
     renderWith();
 
     const aside = screen.getByRole("complementary");
+    // The logo opens the public website (client feedback 2026-11-25); Home is
+    // the nav's own link.
     expect(within(aside).getAllByRole("link").map((a) => a.getAttribute("href"))).toEqual([
-      "/home",
+      "/",
       "/home",
     ]);
     expect(aside.querySelectorAll("[data-nav-slot]").length).toBeGreaterThan(0);

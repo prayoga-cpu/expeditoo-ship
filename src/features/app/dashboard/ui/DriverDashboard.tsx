@@ -4,7 +4,7 @@ import { BackButton } from "@/components/ui/back-button";
 import { LoadErrorState } from "@/components/ui/load-error-state";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { ArrowRight, FileText, Gavel, Megaphone, Package, Repeat, Truck } from "lucide-react";
+import { ArrowRight, FileText, HandCoins, Megaphone, Package, Repeat, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useActiveAccessMode } from "@/lib/use-active-access-mode";
 import { Card } from "@/components/ui/card";
@@ -202,7 +202,7 @@ export function DriverDashboard() {
             href="/carrier/offers"
             label={t("stats.liveOffers")}
             value={liveOfferCount}
-            icon={Gavel}
+            icon={HandCoins}
             isLoading={isOffersLoading}
           />
         )}

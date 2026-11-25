@@ -83,7 +83,7 @@ export function DriverLayout({ children }: DriverLayoutProps) {
     <div className="flex flex-col h-full pb-4">
       {/* Same as the admin sidebar: the content header already carries the
           panel title, so a subtitle here just repeated it. */}
-      <AppSidebarHeader href="/driver/dashboard" />
+      <AppSidebarHeader />
       {/* p-4, not px-4: same as the admin sidebar — its subtitle used to supply
           the gap under the logo. Matches the app sidebar. */}
       <nav className={cn("flex-1 min-h-0 overflow-y-auto p-4 space-y-2", RAIL.gutter)}>

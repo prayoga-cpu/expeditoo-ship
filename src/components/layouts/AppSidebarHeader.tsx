@@ -6,8 +6,11 @@ import { RAIL } from "./use-sidebar-rail";
 
 interface AppSidebarHeaderProps {
   /**
-   * Destination URL when logo is clicked
-   * @default "/home"
+   * Destination URL when logo is clicked. The public website by default: a
+   * signed-in person reaches it from the logo, and the landing header's « Ouvrir
+   * l'app » brings them back (client feedback 2026-11-25). Each shell has its
+   * own « Accueil » entry in the nav for the app's home.
+   * @default "/"
    */
   href?: string;
   /**
@@ -21,7 +24,7 @@ interface AppSidebarHeaderProps {
 }
 
 export function AppSidebarHeader({
-  href = "/home",
+  href = "/",
   subtitle,
   className,
 }: AppSidebarHeaderProps) {

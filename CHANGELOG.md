@@ -14,6 +14,33 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.99.0] - 2026-11-25 · ux
+
+The site opens in your language straight away, the logo takes you to the website, and a handful of fixes from today's feedback.
+
+- **The site now opens in your language from the first moment.** A phone or
+  computer set to English shows English straight away instead of French for a
+  second and then a switch; anything else opens in French. The language button
+  still wins, and your choice is remembered.
+- **Open the website from the app.** The logo at the top of the menu — and the
+  one at the top of the screen on a phone — now takes you to the public
+  website, whichever space you are in. « Ouvrir l'app » on the site brings you
+  back, and Home stays in the menu.
+- **« Mes trajets »: the address no longer changes by itself.** Searching a
+  departure or arrival place filled the fields under the map with another
+  address, and a second search left the first one's text in place. The place you
+  pick is now the one written; a town leaves the street empty for you to add,
+  and what you typed yourself is never overwritten.
+- **« Mes offres » has its own icon.** The auction gavel is replaced by a price
+  icon in the menu, the bottom bar, the dashboard and on the job cards, since an
+  offer here is a price for a transport, not a bid in an auction.
+- **Home page: « shared », the banner, and one word less.** The headline now
+  asks you to find a « transporteur partagé ». The line at the top of the page
+  now reads « Transport partagé d'objets, meubles et déménagements · France et
+  étranger », sits in the middle, higher up, in a larger type. The word
+  « vérifiés » no longer follows « transporteurs » anywhere on the site, in page
+  titles or in the welcome e-mail.
+
 ## [2.98.0] - 2026-11-25 · ux
 
 A full read of every word in both languages, a calmer look across the site and the app, and a new section that shows the app from the inside.

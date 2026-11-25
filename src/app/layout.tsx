@@ -5,7 +5,7 @@ import "./globals.css";
 import { Providers } from "@/components/providers/Providers";
 import { PWAInstall } from "@/components/pwa/PWAInstall";
 import { EnvBadge } from "@/components/EnvBadge";
-import { defaultLocale } from "@/i18n/config";
+import { getRequestLocale } from "@/i18n/request-locale";
 
 const font = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -29,11 +29,11 @@ export const metadata: Metadata = {
   // title is read before any toggle is. `template` is what a page's own
   // `title` is set into; a page that wants the whole line uses `absolute`.
   title: {
-    default: "EXPEDITOP — Faites transporter vos objets par des transporteurs vérifiés",
+    default: "EXPEDITOP — Faites transporter vos objets en France et à l'étranger",
     template: "%s · EXPEDITOP",
   },
   description:
-    "Publiez une demande de transport, comparez les offres des transporteurs vérifiés, choisissez et suivez la livraison.",
+    "Publiez une demande de transport, comparez les offres des transporteurs, choisissez et suivez la livraison.",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -55,17 +55,19 @@ export const viewport: Viewport = {
   colorScheme: "only light",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // `lang` is `defaultLocale`, not a hardcoded "en": the server renders French
-  // copy (src/i18n/request.ts), so advertising English mislabelled every SSR
-  // response to screen readers and translation tooling. LocaleProvider corrects
-  // it on the client once the device language resolves.
+  // The language is settled on the server, before the first byte: the
+  // visitor's own choice (cookie), else what their device asks for
+  // (`Accept-Language`), else French. `lang` and the rendered copy therefore
+  // agree from the first paint, with no French flash on an English device
+  // (docs/specs/first_paint_language_spec.md).
+  const locale = await getRequestLocale();
   return (
-    <html lang={defaultLocale} suppressHydrationWarning>
+    <html lang={locale} suppressHydrationWarning>
       {/* Extensions such as Grammarly stamp their own attributes onto <body>
           before React hydrates, which reads as a mismatch. suppressHydration-
           Warning applies only to the element carrying it, so <html>'s copy —
@@ -76,7 +78,7 @@ export default function RootLayout({
         className={`${font.variable} ${fontGeist.variable} ${fontMono.variable} font-sans antialiased`}
       >
         <EnvBadge />
-        <Providers>
+        <Providers locale={locale}>
           {children}
           <PWAInstall />
         </Providers>

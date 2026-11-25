@@ -46,16 +46,27 @@ function HowBadge() {
   );
 }
 
+/**
+ * What the site is for, in one line, centred above both columns (client
+ * feedback 2026-11-25: higher, in the middle, in a larger type). It used to
+ * sit at the top of the left column in 0.8rem.
+ */
+function HeroBadge() {
+  const t = useTranslations("marketing.hero");
+  return (
+    <span
+      className={`${styles.blurIn} inline-flex max-w-full items-center gap-2.5 rounded-[18px] border border-[rgb(255_255_255/0.28)] bg-[rgb(255_255_255/0.1)] px-4 py-2 text-center text-[0.95rem] leading-snug font-medium text-white backdrop-blur-sm sm:rounded-full sm:px-5 sm:py-2.5 sm:text-[1.1rem]`}
+    >
+      <span aria-hidden className="h-2 w-2 flex-none rounded-full bg-[#7CF0B5]" />
+      {t("badge")}
+    </span>
+  );
+}
+
 function HeroCopy() {
   const t = useTranslations("marketing.hero");
   return (
     <div className="flex min-w-0 flex-col gap-6 sm:gap-7">
-      <span
-        className={`${styles.blurIn} inline-flex w-fit items-center gap-2 rounded-[14px] border sm:rounded-full border-[rgb(255_255_255/0.28)] bg-[rgb(255_255_255/0.1)] px-3.5 py-1.5 text-[0.8rem] font-medium text-white backdrop-blur-sm`}
-      >
-        <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-[#7CF0B5]" />
-        {t("badge")}
-      </span>
       <h1
         id="hero-title"
         className={`${styles.blurIn} m-0 max-w-[13ch] text-[2.55rem] leading-[1] font-extrabold tracking-[-0.045em] text-balance sm:text-[3.6rem] lg:text-[4.1rem] xl:text-[4.6rem]`}
@@ -100,14 +111,19 @@ export function LandingHero() {
     >
       <LandingHeroVideo />
       <div aria-hidden className={`${styles.heroShade} absolute inset-0 -z-10`} />
-      <div className="mx-auto grid w-full max-w-[1200px] grid-cols-1 gap-10 px-4 pt-[118px] pb-14 sm:px-8 sm:pt-[140px] sm:pb-20 lg:pt-[132px] lg:pb-20 xl:min-h-[min(100svh,960px)] xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] xl:items-center xl:gap-14 xl:pt-[128px]">
-        <HeroCopy />
-        <div className={`${styles.blurIn} flex w-full max-w-[40rem] min-w-0 flex-col gap-4`} style={revealDelay(3)}>
-          <LandingSearchCard />
-          <p className="m-0 flex items-start gap-2 px-1 text-[0.85rem] leading-snug text-[#e4eeff]">
-            <Check className="mt-px h-4 w-4 flex-none" aria-hidden />
-            {t("note")}
-          </p>
+      <div className="mx-auto flex w-full max-w-[1200px] flex-col px-4 pt-[92px] sm:px-8 sm:pt-[104px] xl:min-h-[min(100svh,960px)] xl:pt-[100px]">
+        <div className="flex justify-center">
+          <HeroBadge />
+        </div>
+        <div className="grid grid-cols-1 gap-10 pt-8 pb-14 sm:pb-20 lg:pb-20 xl:flex-1 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] xl:items-center xl:gap-14">
+          <HeroCopy />
+          <div className={`${styles.blurIn} flex w-full max-w-[40rem] min-w-0 flex-col gap-4`} style={revealDelay(3)}>
+            <LandingSearchCard />
+            <p className="m-0 flex items-start gap-2 px-1 text-[0.85rem] leading-snug text-[#e4eeff]">
+              <Check className="mt-px h-4 w-4 flex-none" aria-hidden />
+              {t("note")}
+            </p>
+          </div>
         </div>
       </div>
     </section>

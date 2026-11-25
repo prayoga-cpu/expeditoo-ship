@@ -44,6 +44,14 @@ export interface SearchResult {
    * « Bruxelles, Belgique » from a French hamlet of the same name.
    */
   countryCode?: string;
+  /**
+   * The hit's own address, when Nominatim gives one. A town-level hit has a
+   * city and no street — which is the point: the street under a town's centre
+   * is a guess, and a search pick must not write it into the form.
+   */
+  street?: string;
+  city?: string;
+  postalCode?: string;
 }
 
 export interface ReverseGeocodeResult {
@@ -96,6 +104,14 @@ export async function searchAddress(
       place_name: item.display_name,
       center: [parseFloat(item.lon), parseFloat(item.lat)] as [number, number],
       countryCode: item.address?.country_code?.toUpperCase(),
+      street: [item.address?.house_number, item.address?.road].filter(Boolean).join(" "),
+      city:
+        item.address?.city ||
+        item.address?.town ||
+        item.address?.village ||
+        item.address?.municipality ||
+        "",
+      postalCode: item.address?.postcode || "",
     }));
   } catch (error) {
     console.error("Geocoding search error:", error);

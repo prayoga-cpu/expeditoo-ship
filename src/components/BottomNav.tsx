@@ -7,7 +7,7 @@ import {
   Calendar,
   Plus,
   MessageCircle,
-  Gavel,
+  HandCoins,
   Package,
   Route,
   Truck,
@@ -71,7 +71,7 @@ export function BottomNav() {
     {
       href: "/carrier/offers",
       labelKey: "myOffers",
-      icon: <Gavel className="w-5 h-5" />,
+      icon: <HandCoins className="w-5 h-5" />,
     },
     // The bar holds six; trips takes the application's slot rather than
     // becoming a seventh. Only an approved carrier holds the `carrier` role

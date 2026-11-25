@@ -13,6 +13,7 @@ import { APP_THEMES, DEFAULT_THEME, THEME_STORAGE_KEY } from "@/lib/theme";
 // The Ably SDK loads lazily, beside the app rather than around it
 import { LazyAblyProvider } from "@/components/providers/LazyAblyProvider";
 import { LocaleProvider } from "@/components/providers/LocaleProvider";
+import type { Locale } from "@/i18n/config";
 import { ImpersonationBanner } from "@/components/ImpersonationBanner";
 
 // Create a client instance
@@ -51,8 +52,7 @@ const providers = [
   (children: React.ReactNode) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   ),
-  (children: React.ReactNode) => <LocaleProvider>{children}</LocaleProvider>,
-  (children: React.ReactNode) => <AuthProvider>{children}</AuthProvider>,
+    (children: React.ReactNode) => <AuthProvider>{children}</AuthProvider>,
   // Needs `useAuth()` (roles), so it sits inside AuthProvider. One shared mode
   // for AccessSwitcher/MainLayout/BottomNav to read and write, rather than
   // three independent copies that only agreed at first mount.
@@ -69,10 +69,24 @@ const providers = [
   ),
 ];
 
-export function Providers({ children }: { children: React.ReactNode }) {
+export function Providers({
+  children,
+  locale,
+}: {
+  children: React.ReactNode;
+  /** The language the server rendered this request in. */
+  locale?: Locale;
+}) {
+  // The locale provider sits where it always did — inside the query client,
+  // outside auth — but is built here, where the server's answer is in scope.
+  const tree = [
+    ...providers.slice(0, 2),
+    (inner: React.ReactNode) => <LocaleProvider initialLocale={locale}>{inner}</LocaleProvider>,
+    ...providers.slice(2),
+  ];
   return (
     <>
-      {providers.reduceRight((acc, ProviderFn) => ProviderFn(acc), children)}
+      {tree.reduceRight((acc, ProviderFn) => ProviderFn(acc), children)}
       <Toaster />
     </>
   );

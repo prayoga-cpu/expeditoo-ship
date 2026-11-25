@@ -109,7 +109,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     <div className="flex flex-col h-full pb-4">
       {/* No subtitle: the content header already reads "Admin Panel", and the
           two sat one above the other. */}
-      <AppSidebarHeader href={landing ?? "/admin/expedion"} />
+      <AppSidebarHeader />
       {/* p-4, not px-4: the removed subtitle's bottom padding had been standing
           in for the gap under the logo. Matches the app sidebar. */}
       <nav className={cn("flex-1 min-h-0 overflow-y-auto p-4 space-y-4", RAIL.gutter)}>

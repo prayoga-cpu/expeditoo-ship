@@ -38,10 +38,10 @@ export const metadata: Metadata = {
   // `absolute`: the root layout's `%s · EXPEDITOP` template would name the
   // brand twice.
   title: {
-    absolute: "Expeditop — Faites transporter vos objets par des transporteurs vérifiés",
+    absolute: "Expeditop — Faites transporter vos objets en France et à l'étranger",
   },
   description:
-    "Dites ce que vous transportez et où : des transporteurs vérifiés vous envoient leurs offres. Vous choisissez, vous payez à l'acceptation. En France et à l'étranger.",
+    "Dites ce que vous transportez et où : des transporteurs vous envoient leurs offres. Vous choisissez, vous payez à l'acceptation. En France et à l'étranger.",
 };
 
 export default function LandingPage() {

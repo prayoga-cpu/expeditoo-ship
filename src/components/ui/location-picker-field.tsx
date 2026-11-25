@@ -20,7 +20,7 @@ import { Label } from "@/components/ui/label";
 import { LottieLoader } from "@/components/ui/lottie-loader";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { getMapStyle } from "@/lib/map-styles";
-import { reverseGeocode, resolveMapLink, searchAddress } from "@/lib/geocoding";
+import { reverseGeocode, resolveMapLink, searchAddress, type SearchResult } from "@/lib/geocoding";
 import {
   countryMapBounds,
   countryMapCenter,
@@ -171,12 +171,16 @@ export function LocationPickerField({
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<
-    Array<{ id: string; place_name: string; center: [number, number] }>
-  >([]);
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // True once a person has typed in the address, postal or city boxes. Until
+  // then those boxes only ever hold what a pin put there, and a new pin must
+  // replace it: keeping it is how a second search, or a stray click, left
+  // « Paris » over the address of somewhere in the Rhône
+  // (client feedback 2026-11-25, « Mes trajets »).
+  const typedByHand = useRef(false);
 
   // The escape hatch for a place the search box and the pin cannot find.
   const [showLinkInput, setShowLinkInput] = useState(false);
@@ -201,10 +205,12 @@ export function LocationPickerField({
     onChange({ ...value, lat: null, lng: null });
   };
   const switchToLink = () => {
+    typedByHand.current = false;
     changeMode("link");
     onChange(empty);
   };
   const switchToAssisted = () => {
+    typedByHand.current = false;
     changeMode("assisted");
     onChange(empty);
   };
@@ -224,13 +230,7 @@ export function LocationPickerField({
           scope.countrycodes,
           5
         );
-        setSearchResults(
-          results.map((r) => ({
-            id: r.id,
-            place_name: r.place_name,
-            center: r.center,
-          }))
-        );
+        setSearchResults(results);
         setShowSuggestions(true);
       } catch {
         setSearchResults([]);
@@ -241,7 +241,7 @@ export function LocationPickerField({
   }, [scope.countrycodes, scope.suffix]);
 
   const setPin = useCallback(
-    async (lng: number, lat: number) => {
+    async (lng: number, lat: number, hit?: SearchResult) => {
       setViewState((prev) => ({ ...prev, longitude: lng, latitude: lat, zoom: 15 }));
       setIsGeocoding(true);
       setLocationError(null);
@@ -258,16 +258,32 @@ export function LocationPickerField({
           );
           return;
         }
-        // A field already holding text is trusted over the guess: reverse
-        // geocoding only fills in what is still blank, so a pin nudged to
+        if (hit) {
+          // The person chose this place from the list: it is the address, not
+          // a guess to be kept below whatever was there. The street comes from
+          // the hit itself — a town has none, and the nearest street to its
+          // centre is not one the person asked for.
+          typedByHand.current = false;
+          onChange({
+            address: hit.street ?? "",
+            city: hit.city || result.city,
+            postalCode: hit.postalCode || result.postalCode,
+            lat,
+            lng,
+          });
+          return;
+        }
+        // Text a person typed is trusted over the guess: a pin nudged to
         // correct the coordinates can never overwrite an address someone
-        // already typed (feedback tickets l5mUHEzi6Ey5tuXL1cWbm,
-        // 7HtRRTGWKRfzuRZValkCr).
+        // already wrote (feedback tickets l5mUHEzi6Ey5tuXL1cWbm,
+        // 7HtRRTGWKRfzuRZValkCr). Text a pin wrote is not typed: the next pin
+        // replaces it.
+        const keep = typedByHand.current;
         onChange({
-          address: value.address.trim() || result.street || value.address,
-          city: value.city.trim() || result.city || value.city,
+          address: (keep && value.address.trim()) || result.street || value.address,
+          city: (keep && value.city.trim()) || result.city || value.city,
           postalCode:
-            value.postalCode.trim() || result.postalCode || value.postalCode,
+            (keep && value.postalCode.trim()) || result.postalCode || value.postalCode,
           lat,
           lng,
         });
@@ -281,12 +297,12 @@ export function LocationPickerField({
     [countryCode, locale, onChange, scope.countrycodes, t, value]
   );
 
-  const selectResult = (result: { center: [number, number] }) => {
+  const selectResult = (result: SearchResult) => {
     const [lng, lat] = result.center;
     setSearchQuery("");
     setSearchResults([]);
     setShowSuggestions(false);
-    void setPin(lng, lat);
+    void setPin(lng, lat, result);
   };
 
   const handleUseLink = async () => {
@@ -562,7 +578,10 @@ export function LocationPickerField({
             id={`${id}-address`}
             value={value.address}
             disabled={fieldsLocked}
-            onChange={(e) => onChange({ ...value, address: e.target.value })}
+            onChange={(e) => {
+              typedByHand.current = true;
+              onChange({ ...value, address: e.target.value });
+            }}
           />
         </div>
         <div className="space-y-1">
@@ -574,9 +593,10 @@ export function LocationPickerField({
             value={value.postalCode}
             placeholder={postalCodePlaceholder}
             disabled={fieldsLocked}
-            onChange={(e) =>
-              onChange({ ...value, postalCode: e.target.value })
-            }
+            onChange={(e) => {
+              typedByHand.current = true;
+              onChange({ ...value, postalCode: e.target.value });
+            }}
           />
         </div>
         <div className="col-span-2 space-y-1">
@@ -587,7 +607,10 @@ export function LocationPickerField({
             id={`${id}-city`}
             value={value.city}
             disabled={fieldsLocked}
-            onChange={(e) => onChange({ ...value, city: e.target.value })}
+            onChange={(e) => {
+              typedByHand.current = true;
+              onChange({ ...value, city: e.target.value });
+            }}
           />
         </div>
       </div>
