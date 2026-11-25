@@ -799,6 +799,8 @@ relevé's dates are pinned to Europe/Paris, and dark `--success-foreground` is d
 green was 2:1). Then a crawl: **312 screens** (six demo roles × both languages, every tab opened) for a raw key or a
 `MISSING_MESSAGE` — none, except a 2.62.0 changelog line that quotes a key on purpose.
 
+**Launched** 2026-11-25 as PR #5 (merge `56d72ef`); www.expeditop.fr serves 2.98.0, no runtime errors after the deploy.
+
 **Verified.** `tsc` 0 · `lint` 0 errors (73 warnings, one fewer than before) · **4,853 unit tests** pass ·
 `pnpm build` · `changelog:check`. In Chromium against the demo database: the six auth screens (light, dark, 390 px), the
 header, the tour on desktop / phone / dark with no page-level horizontal scroll, notifications, profile, the driver's
@@ -810,8 +812,8 @@ is what a paid row holds), so every row shows « Remboursement impossible ». Pr
 it is on purpose**: fixing it switches on a live-money action in production that has never been exercised, and an
 escalated job's money cannot be refunded here at all (`REFUND_NOT_LOCAL`). Cancelling a job still refunds through
 `cancelJob`. Say the word and it is a two-line change plus a `source` column in the admin payments API.
- The tour's screenshots are French and English, **light theme only**, and show `v2.97.0` in the
-app header (taken before the bump). The seed creates no shipment photos (private storage has no local object), so the
+ The tour's screenshots are French and English, **light theme only**, and carry the version in the app
+header (`v2.98.0`): re-take them with the capture script after a release that changes those screens. The seed creates no shipment photos (private storage has no local object), so the
 « photographié » step shows the capture control, not a photo. The staff-only surfaces still print raw server messages.
 
 ---
