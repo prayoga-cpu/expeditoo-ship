@@ -5,7 +5,9 @@ import { NextIntlClientProvider } from "next-intl";
 import {
     type Locale,
     defaultLocale,
-    getInitialLocale,
+    detectDeviceLocale,
+    readLocaleCookie,
+    readStoredLocale,
     setStoredLocale,
     isValidLocale,
 } from "@/i18n/config";
@@ -59,6 +61,12 @@ export function useLocale() {
 
 interface LocaleProviderProps {
     children: React.ReactNode;
+    /**
+     * The language the server rendered this request in (cookie, else
+     * `Accept-Language`, else French). The first client render uses it too, so
+     * hydration matches and a visitor never sees another language first.
+     */
+    initialLocale?: Locale;
 }
 
 /**
@@ -78,17 +86,25 @@ interface LocaleProviderProps {
  * new props on the same element. React re-renders the text in place — nothing
  * below is unmounted.
  */
-export function LocaleProvider({ children }: LocaleProviderProps) {
-    const [locale, setLocaleState] = useState<Locale>(defaultLocale);
+export function LocaleProvider({ children, initialLocale = defaultLocale }: LocaleProviderProps) {
+    const [locale, setLocaleState] = useState<Locale>(initialLocale);
     const [timeZone, setTimeZone] = useState(DEFAULT_TIME_ZONE);
     const [isLoading, setIsLoading] = useState(true);
 
-    // Runs on mount because both sources — localStorage and the device
-    // language — only exist on the client.
+    // Runs on mount because the browser's own state only exists on the client.
+    // The server has already answered from the cookie or the device's
+    // `Accept-Language`, so this only corrects what it could not know:
+    //  - a choice kept in localStorage before the cookie existed (it is copied
+    //    to the cookie, once, so the next request needs no correction);
+    //  - a request with no header at all (a bot, a proxy), read from the
+    //    device instead.
     useEffect(() => {
-        setLocaleState(getInitialLocale());
+        const stored = readStoredLocale();
+        if (stored && readLocaleCookie() !== stored) setStoredLocale(stored);
+        setLocaleState(stored ?? (readLocaleCookie() ? initialLocale : detectDeviceLocale()));
         setTimeZone(browserTimeZone());
         setIsLoading(false);
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on mount
     }, []);
 
     // Keep <html lang> in step with what is actually rendered. The server can

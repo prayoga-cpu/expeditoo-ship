@@ -39,7 +39,7 @@ import {
   Route,
   Wallet,
   Shield,
-  Gavel,
+  HandCoins,
   Truck,
   type LucideIcon,
   Navigation,
@@ -201,7 +201,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   const carrierNavItems: NavItem[] = [
     home,
     { ...jobs, group: "work" },
-    { href: "/carrier/offers", label: t("myOffers"), icon: Gavel, group: "work" },
+    { href: "/carrier/offers", label: t("myOffers"), icon: HandCoins, group: "work" },
     { href: "/carrier/trips", label: t("myTrips"), icon: Route, group: "work" },
     { href: "/carrier/planner", label: t("planner"), icon: Navigation, group: "work" },
     { href: "/carrier/withdrawals", label: t("myEarnings"), icon: Wallet, group: "money" },
@@ -272,7 +272,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       } as React.CSSProperties}
     >
       <AppSidebar state={rail.state}>
-        <AppSidebarHeader href="/home" />
+        <AppSidebarHeader />
 
         <nav className={cn("flex-1 min-h-0 overflow-y-auto p-4 space-y-2", RAIL.gutter)}>
           {shownItems.map((item, index) => {
@@ -371,7 +371,7 @@ function Header({ rail }: { rail: SidebarRail }) {
         <div className="flex items-center gap-3 shrink-0">
           <SidebarToggle rail={rail} />
           <div className="lg:hidden">
-            <Link href="/home">
+            <Link href="/" title="Expeditop">
               <BrandWordmark size={24} />
             </Link>
           </div>

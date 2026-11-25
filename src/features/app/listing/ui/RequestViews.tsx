@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
-  Gavel,
+  HandCoins,
   LayoutGrid,
   List,
   Map as MapIcon,
@@ -169,7 +169,7 @@ export function RequestCompactRow({ job }: { job: Job }) {
           {formatCurrency(job.budgetCents)}
         </p>
         <p className="flex items-center justify-end gap-1 text-xs text-muted-foreground">
-          <Gavel className="h-3 w-3" aria-hidden />
+          <HandCoins className="h-3 w-3" aria-hidden />
           {t("offers", { count: job.offersCount })}
         </p>
       </div>
@@ -199,7 +199,7 @@ export function RequestTile({ job }: { job: Job }) {
         <p className="text-xs text-muted-foreground">{pickupDay}</p>
         <div className="mt-auto flex items-end justify-between gap-2 border-t pt-2">
           <span className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Gavel className="h-3 w-3" aria-hidden />
+            <HandCoins className="h-3 w-3" aria-hidden />
             {t("offers", { count: job.offersCount })}
           </span>
           <span className="font-mono font-semibold tabular-nums">

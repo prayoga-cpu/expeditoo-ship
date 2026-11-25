@@ -710,6 +710,38 @@ than leaving it in a chat message.
 
 ---
 
+## ✅ 2026-11-25 — The site opens in the device's language, the logo opens the website, the « Mes trajets » address fix, the client's copy (2.99.0)
+
+*« analyze all of these feedbacks … make sure detect the user device language before loaded on website, if not detected the
+default is french · make the user logged in able to open the website page, maybe by clicking the expeditop logo ·
+3 & 5: that's the copy should be · 4: every vérifiés · 7: logo itself · 1: yes okay · the hero headline use what client
+wants « Ajouter partagé après transport » · don't commit before my instruction ».*
+
+Specs `client_feedback_2026_11_25_spec.md` and `first_paint_language_spec.md`; plan `plan_client_feedback_2026_11_25.md`.
+**No migration. Not committed, not pushed** — the owner asked to hold until told.
+
+| # | Client / owner point | Root cause found | State | Waits on |
+|---|---|---|---|---|
+| 1 | « My offers » icon is an auction one | `Gavel` on every offers surface | 🔵 `HandCoins` on the menu, bottom bar, dashboard, job cards, request views, pending offers; operator « Awards » keeps the gavel | — |
+| 2 | « Mes trajets » fields fill with other data | `setPin` wrote text only into blank boxes, so the first pin froze them; a search pick reverse-geocoded the centre instead of using the hit | 🟠 fixed and tested; not reproduced in a browser (the map is mocked in jsdom) | Ask the client to retry a search on `dev` |
+| 3 | « Ajouter partagé après transport » | Owner placed it on the **headline** | 🔵 « Trouvez un transporteur **partagé** pour vos objets » / « Find a **shared** carrier… » | Confirm « transporteur partagé » (not « transport partagé ») is the wording |
+| 4 | Remove « vérifiés » after « Des transporteurs » | 12 more strings, page titles, welcome mail | 🔵 everywhere an adjective (both languages, metadata, mail); the trust card and FAQ headline read « contrôlés » / "checked"; « Comment les transporteurs sont vérifiés » (process page) kept | Confirm « contrôlés » is acceptable |
+| 5 | Badge centred, higher, larger, « Transport partagé d'objets, meubles et déménagements · France et étranger » | Left column, 0.8 rem | 🔵 centred row under the header, 0.95 / 1.1 rem; checked at 1440 and 390 px in Chromium | — |
+| 6 | Device language before load, French default | Detection ran in a `useEffect`; server always French | 🔵 cookie → `Accept-Language` → French on the server; `curl` checked | — |
+| 7 | Logged-in user opens the website | `/` public but no link to it | 🔵 logo → `/` in all three shells and the phone wordmark; « Ouvrir l'app » returns | — |
+
+**Judgment calls.** The admin logo used to lead each staff role to its landing (`roles_spec` §5.1); it now opens the
+website like the other shells, and the landing is the first nav entry (`AdminNav.roles.test.tsx` updated). Reading
+`cookies()`/`headers()` in the root layout makes routes render per request — the landing loses static caching
+(`first_paint_language_spec.md` §4). A visitor who never chose gets no cookie.
+
+**Known limits.** Page `<title>`/description in `layout.tsx` and the landing `page.tsx` are static French. A browser
+with a stored choice from before the cookie shows one correction on its first visit, then none.
+
+**Verification.** `npx tsc --noEmit` 0 errors; eslint clean on every touched path; targeted suites green; browser:
+`Accept-Language` `en-US` → `<html lang="en">` + English hero, `fr-FR`, `de-DE`, empty → French, cookie `fr` beats an
+English header; hero screenshots at 1440 and 390 px.
+
 ## ✅ 2026-11-25 — Every string read in both languages, the generated look removed, « Dans l'application » on the home page (2.98.0)
 
 *« audit all of the translations in the codebase for both language · redesign any section or component that AI generated

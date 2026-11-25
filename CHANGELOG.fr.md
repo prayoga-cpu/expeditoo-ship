@@ -18,6 +18,35 @@ L'historique antérieur à la `2.0.0` appartient à la place de marché de biens
 la v1 et n'est pas conservé : la première version ci-dessous est le commit qui a
 lancé le virage vers le transport.
 
+## [2.99.0] - 2026-11-25 · ux
+
+Le site s'ouvre tout de suite dans votre langue, le logo mène au site web, et quelques corrections issues des retours du jour.
+
+- **Le site s'ouvre désormais dans votre langue dès le premier instant.** Un
+  téléphone ou un ordinateur réglé en anglais affiche l'anglais tout de suite,
+  sans une seconde de français puis un basculement ; toute autre langue ouvre le
+  site en français. Le bouton de langue garde le dernier mot, et votre choix est
+  retenu.
+- **Ouvrir le site web depuis l'application.** Le logo en haut du menu — et
+  celui en haut de l'écran sur un téléphone — vous amène maintenant sur le site
+  public, quel que soit l'espace dans lequel vous êtes. « Ouvrir l'app » sur le
+  site vous y ramène, et l'accueil reste dans le menu.
+- **« Mes trajets » : l'adresse ne change plus toute seule.** Chercher un lieu
+  de départ ou d'arrivée remplissait les champs sous la carte avec une autre
+  adresse, et une deuxième recherche laissait le texte de la première. Le lieu
+  choisi est maintenant celui qui s'écrit ; une ville laisse la rue vide pour que
+  vous la complétiez, et ce que vous avez tapé vous-même n'est jamais écrasé.
+- **« Mes offres » a sa propre icône.** Le marteau d'enchères est remplacé par
+  une icône de prix dans le menu, la barre du bas, le tableau de bord et sur les
+  cartes de mission : ici, une offre est un prix pour un transport, pas une
+  enchère.
+- **Page d'accueil : « partagé », le bandeau, et un mot en moins.** Le titre
+  invite maintenant à trouver un « transporteur partagé ». La ligne en haut de la
+  page indique « Transport partagé d'objets, meubles et déménagements · France
+  et étranger », se place au milieu, plus haut, dans une police plus grande. Le
+  mot « vérifiés » ne suit plus « transporteurs » nulle part sur le site, dans
+  les titres de pages ni dans l'e-mail de bienvenue.
+
 ## [2.98.0] - 2026-11-25 · ux
 
 Une relecture de chaque mot dans les deux langues, un aspect plus sobre sur le site comme dans l'application, et une nouvelle section qui montre l'application de l'intérieur.

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useMutationState } from "@tanstack/react-query";
-import { FileClock, Gavel, Info, LogIn, Truck, type LucideIcon } from "lucide-react";
+import { FileClock, HandCoins, Info, LogIn, Truck, type LucideIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -154,7 +154,7 @@ function OfferAnchor({
           onClick={() => ref.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
           className="fixed right-4 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-40 rounded-full shadow-lg lg:hidden"
         >
-          <Gavel className="mr-1.5 h-4 w-4" aria-hidden="true" />
+          <HandCoins className="mr-1.5 h-4 w-4" aria-hidden="true" />
           {t("makeOffer")}
         </Button>
       )}
@@ -215,7 +215,7 @@ function MyOfferCard({ offer }: { offer: Offer }) {
     <Card className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
       <div className="flex items-start gap-3">
         <div className="rounded-full bg-primary/10 p-2.5">
-          <Gavel className="h-5 w-5 text-primary" />
+          <HandCoins className="h-5 w-5 text-primary" />
         </div>
         <div>
           <p className="font-semibold">

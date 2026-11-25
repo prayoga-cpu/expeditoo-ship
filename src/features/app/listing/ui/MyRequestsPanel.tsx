@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { useState } from "react";
 import Link from "next/link";
-import { ClipboardList, Gavel, Plus, TriangleAlert } from "lucide-react";
+import { ClipboardList, HandCoins, Plus, TriangleAlert } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -173,7 +173,7 @@ function JobRow({ job }: { job: Job }) {
               {formatCurrency(job.budgetCents)}
             </p>
             <p className="mt-1 flex items-center justify-end gap-1 text-xs text-muted-foreground">
-              <Gavel className="h-3.5 w-3.5" />
+              <HandCoins className="h-3.5 w-3.5" />
               {t("offers", { count: job.offersCount })}
             </p>
           </div>

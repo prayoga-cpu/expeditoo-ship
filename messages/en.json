@@ -1090,7 +1090,7 @@
       "inHouseTitle": "Your runs are assigned to you",
       "inHouseDescription": "As an Expeditop in-house driver you do not make offers on requests: the team gives you the runs.",
       "signedOutTitle": "Sign in to make an offer",
-      "signedOutDescription": "Offers are open to verified carriers. Sign in, or create an account, and you will come back to this request.",
+      "signedOutDescription": "Offers are open to carriers. Sign in, or create an account, and you will come back to this request.",
       "signedOutCta": "Sign in"
     }
   },
@@ -1598,7 +1598,7 @@
     },
     "moving": {
       "pageTitle": "Request a moving quote",
-      "subtitle": "Describe your move: vetted movers send you their offers, and you choose.",
+      "subtitle": "Describe your move: movers send you their offers, and you choose.",
       "heading": "About your move",
       "photosHint": "A few photos of the rooms and the large furniture help movers quote accurately.",
       "exactVolume": "I know the exact volume",
@@ -1700,7 +1700,7 @@
         "failed": "Could not accept this offer"
       },
       "reopened": "Back on the board",
-      "addressHidden": "Exact address shared with verified carriers.",
+      "addressHidden": "Exact address shared with carriers.",
       "addressMissing": "No exact address given.",
       "addressMissingEditable": "No exact address given. Add it with “Edit”.",
       "notFound": "Request not found",
@@ -2033,14 +2033,14 @@
     },
     "cta": {
       "title": "Something to move?",
-      "subtitle": "Describe your shipment and receive offers from vetted carriers. Are you a carrier? Join them.",
+      "subtitle": "Describe your shipment and receive offers from carriers. Are you a carrier? Join them.",
       "primary": "Become a carrier",
       "primaryAuthed": "Open your profile",
       "subtitleAuthed": "You're signed in: post a request, or find your carrier file in your profile.",
       "request": "Post a request"
     },
     "footer": {
-      "tagline": "Have your things moved by vetted carriers, in France and abroad. Expeditop is part of the Expedion group.",
+      "tagline": "Have your things moved, in France and abroad. Expeditop is part of the Expedion group.",
       "carriers": "Carry",
       "howItWorks": "How it works",
       "verification": "Verification",
@@ -2165,7 +2165,7 @@
             "desc": "Status flows back to Expedion — awarded, collected, in transit, delivered. Your buyer follows it where they started."
           },
           {
-            "title": "Only verified carriers",
+            "title": "Only checked carriers",
             "desc": "Every carrier has passed identity, SIRET, insurance and vehicle checks before being able to make an offer."
           },
           {
@@ -2300,7 +2300,7 @@
         {
           "title": "Purpose of the site",
           "paragraphs": [
-            "expeditop.fr is the carrier-side platform of the Expedion group. It lets verified individual carriers bid on transport jobs escalated from Expedion, and lets operators award those jobs.",
+            "expeditop.fr is the carrier-side platform of the Expedion group. It lets individual carriers bid on transport jobs escalated from Expedion, and lets operators award those jobs.",
             "The site does not sell goods and hosts no auction of goods. The only auction it operates is a reverse auction on the price of a transport job, between carriers."
           ]
         },
@@ -2548,9 +2548,9 @@
       }
     },
     "hero": {
-      "badge": "Items, furniture and home moves · France and abroad",
-      "title": "Find a carrier for the things you need moved",
-      "subtitle": "Say what needs moving and where. Vetted carriers send you their price, and you choose the offer that suits you.",
+      "badge": "Shared transport of items, furniture and home moves · France and abroad",
+      "title": "Find a shared carrier for the things you need moved",
+      "subtitle": "Say what needs moving and where. Carriers send you their price, and you choose the offer that suits you.",
       "note": "Posting a request is free. You only pay when you accept an offer.",
       "howLink": "See how it works",
       "howBadge": "How it works · How it works · How it works · "
@@ -2583,8 +2583,8 @@
         "desc": "Nothing is charged until you have chosen an offer."
       },
       "verified": {
-        "title": "Vetted carriers",
-        "desc": "Expeditop drivers and professional carriers, vetted before their first offer."
+        "title": "Checked carriers",
+        "desc": "Expeditop drivers and professional carriers, checked before their first offer."
       },
       "photos": {
         "title": "Photos at pickup and delivery",
@@ -2632,7 +2632,7 @@
       },
       "step2": {
         "title": "Receive offers",
-        "desc": "Vetted carriers propose a price and time slots. Compare them and talk to them by message."
+        "desc": "Carriers propose a price and time slots. Compare them and talk to them by message."
       },
       "step3": {
         "title": "Choose, and it is booked",
@@ -2655,7 +2655,7 @@
     "services": {
       "eyebrow": "What we move",
       "title": "From a parcel to a home move",
-      "intro": "One item, some furniture or a whole home: describe it once, and vetted carriers reply.",
+      "intro": "One item, some furniture or a whole home: describe it once, and carriers reply.",
       "tabsLabel": "Kinds of transport",
       "parcels": {
         "tab": "Parcels and items",
@@ -2672,7 +2672,7 @@
       "moving": {
         "tab": "Home moves",
         "title": "Home moves",
-        "desc": "A studio or a house: give the floor area or the volume, and add photos of the rooms. Vetted carriers send you their offers.",
+        "desc": "A studio or a house: give the floor area or the volume, and add photos of the rooms. Carriers send you their offers.",
         "cta": "Request a moving quote"
       },
       "abroad": {
@@ -2729,7 +2729,7 @@
         },
         "board": {
           "title": "Carriers see your request",
-          "desc": "It joins the open jobs, which each carrier filters by route and date. A vetted carrier proposes a price, pickup slots and a vehicle."
+          "desc": "It joins the open jobs, which each carrier filters by route and date. A carrier proposes a price, pickup slots and a vehicle."
         },
         "choose": {
           "title": "You compare and choose",
@@ -2773,7 +2773,7 @@
       },
       "q2": {
         "question": "How does a transport request work?",
-        "answer": "You post your request: what needs moving, from where, to where and when. Verified carriers send you offers, each with a price and time slots. You choose — the cheapest offer does not win automatically. You pay when you accept an offer, and your transport is then booked."
+        "answer": "You post your request: what needs moving, from where, to where and when. Carriers send you offers, each with a price and time slots. You choose — the cheapest offer does not win automatically. You pay when you accept an offer, and your transport is then booked."
       },
       "q3": {
         "question": "Can I cancel a shipment?",

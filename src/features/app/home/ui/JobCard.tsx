@@ -11,7 +11,7 @@ import {
   CalendarClock,
   CheckCircle2,
   CircleDot,
-  Gavel,
+  HandCoins,
   MapPin,
   Package,
   Weight,
@@ -223,7 +223,7 @@ export function JobCard({
                 </dd>
               </div>
               <div className="flex items-center gap-1.5">
-                <Gavel className="h-3.5 w-3.5 shrink-0" />
+                <HandCoins className="h-3.5 w-3.5 shrink-0" />
                 <dd className="font-mono">
                   {job.offersCount === 1
                     ? t("offersOne", { count: job.offersCount })
@@ -305,7 +305,7 @@ export function JobCard({
           {offerAction && (
             <Button asChild size="sm" className="w-full sm:ml-auto sm:w-auto">
               <Link href={`/listing/${job.id}#${OFFER_ANCHOR}`}>
-                <Gavel className="mr-1.5 h-4 w-4" aria-hidden="true" />
+                <HandCoins className="mr-1.5 h-4 w-4" aria-hidden="true" />
                 {t("makeOffer")}
               </Link>
             </Button>

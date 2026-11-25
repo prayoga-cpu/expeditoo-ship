@@ -94,19 +94,22 @@ describe("the back-office navigation, by staff role (roles_spec.md §5.1)", () =
 
     expect(sidebar).toEqual(ALL);
     expect(bar).toEqual(ALL);
-    expect(logo).toBe("/admin/expedion");
+    // The logo opens the public website for every shell (client feedback
+    // 2026-11-25); the staff landing is the first entry of the nav itself.
+    expect(logo).toBe("/");
   });
 
   it.each([
     ["operator", OPERATOR, "/admin/bordereaux"],
     ["support", SUPPORT, "/admin/support"],
     ["finance", FINANCE, "/admin/withdrawals"],
-  ])("shows %s only its own entries, and leads its logo to its landing", (role, hrefs, landing) => {
+  ])("shows %s only its own entries, the landing first, and a logo that opens the website", (role, hrefs, landing) => {
     const { sidebar, bar, logo } = renderShell(["shipper", role]);
 
     expect(sidebar).toEqual(hrefs);
     expect(bar).toEqual(hrefs);
-    expect(logo).toBe(landing);
+    expect(logo).toBe("/");
+    expect(sidebar[0]).toBe(landing);
   });
 
   it("puts no heading over a group with nothing in it", () => {

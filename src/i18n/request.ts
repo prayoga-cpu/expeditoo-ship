@@ -1,10 +1,10 @@
 import { getRequestConfig } from "next-intl/server";
-import { defaultLocale } from "./config";
+import { getRequestLocale } from "./request-locale";
 
 export default getRequestConfig(async () => {
-    // In a real app, you might get this from cookies/headers
-    // For now, we use default locale for SSR and let client override
-    const locale = defaultLocale;
+    // The visitor's cookie, else their device's language, else French — the
+    // same answer the root layout renders `<html lang>` with.
+    const locale = await getRequestLocale();
 
     return {
         locale,

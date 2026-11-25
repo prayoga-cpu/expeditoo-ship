@@ -151,6 +151,25 @@ describe("the landing page", () => {
   });
 });
 
+describe("the hero badge", () => {
+  // Client feedback 2026-11-25: the block moved to the middle, higher, larger.
+  it("sits centred above both columns, not inside the headline's", () => {
+    withClient(<LandingPage />);
+
+    const badge = screen.getByText("badge");
+    const headline = screen.getByRole("heading", { level: 1 });
+    expect(badge.parentElement).toHaveClass("justify-center");
+    expect(badge.parentElement?.contains(headline)).toBe(false);
+    // It comes first in the document, so it is also the first thing read.
+    expect(
+      badge.compareDocumentPosition(headline) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+    // Larger than the 0.8rem it was.
+    expect(badge.className).toContain("text-[0.95rem]");
+    expect(badge.className).toContain("sm:text-[1.1rem]");
+  });
+});
+
 describe("the search card", () => {
   it("labels each of its four fields", () => {
     withClient(<LandingSearchCard />);

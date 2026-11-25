@@ -1090,7 +1090,7 @@
       "inHouseTitle": "Vos courses vous sont attribuées",
       "inHouseDescription": "En tant que chauffeur interne Expeditop, vous ne faites pas d'offre sur les demandes : l'équipe vous confie les courses.",
       "signedOutTitle": "Connectez-vous pour faire une offre",
-      "signedOutDescription": "Les offres sont réservées aux transporteurs vérifiés. Connectez-vous, ou créez un compte, et vous reviendrez sur cette demande.",
+      "signedOutDescription": "Les offres sont réservées aux transporteurs. Connectez-vous, ou créez un compte, et vous reviendrez sur cette demande.",
       "signedOutCta": "Se connecter"
     }
   },
@@ -1598,7 +1598,7 @@
     },
     "moving": {
       "pageTitle": "Demander un devis déménagement",
-      "subtitle": "Décrivez votre déménagement : des déménageurs vérifiés vous font leurs offres, vous choisissez.",
+      "subtitle": "Décrivez votre déménagement : des déménageurs vous font leurs offres, vous choisissez.",
       "heading": "Description du déménagement",
       "photosHint": "Quelques photos des pièces et des gros meubles aident les déménageurs à chiffrer juste.",
       "exactVolume": "Je connais le volume exact",
@@ -1700,7 +1700,7 @@
         "failed": "Impossible d'accepter cette offre"
       },
       "reopened": "Remise en ligne",
-      "addressHidden": "Adresse exacte communiquée aux transporteurs vérifiés.",
+      "addressHidden": "Adresse exacte communiquée aux transporteurs.",
       "addressMissing": "Adresse précise non renseignée.",
       "addressMissingEditable": "Adresse précise non renseignée. Ajoutez-la avec « Modifier ».",
       "notFound": "Demande introuvable",
@@ -2087,14 +2087,14 @@
     },
     "cta": {
       "title": "Quelque chose à faire transporter ?",
-      "subtitle": "Décrivez votre envoi et recevez les offres de transporteurs vérifiés. Vous transportez ? Rejoignez-les.",
+      "subtitle": "Décrivez votre envoi et recevez les offres de transporteurs. Vous transportez ? Rejoignez-les.",
       "primary": "Devenir transporteur",
       "primaryAuthed": "Ouvrir votre profil",
       "subtitleAuthed": "Vous êtes connecté : publiez une demande, ou retrouvez votre dossier transporteur dans votre profil.",
       "request": "Publier une demande"
     },
     "footer": {
-      "tagline": "Faites transporter vos objets par des transporteurs vérifiés, en France et à l'étranger. Expeditop fait partie du groupe Expedion.",
+      "tagline": "Faites transporter vos objets, en France et à l'étranger. Expeditop fait partie du groupe Expedion.",
       "carriers": "Transporter",
       "howItWorks": "Comment ça marche",
       "verification": "Vérification",
@@ -2219,7 +2219,7 @@
             "desc": "Les statuts remontent vers Expedion — attribuée, enlevée, en transit, livrée. Votre acheteur suit la course là où il a commencé."
           },
           {
-            "title": "Uniquement des transporteurs vérifiés",
+            "title": "Uniquement des transporteurs contrôlés",
             "desc": "Chaque transporteur a passé les contrôles d'identité, de SIRET, d'assurance et de véhicule avant de pouvoir faire une offre."
           },
           {
@@ -2354,7 +2354,7 @@
         {
           "title": "Objet du site",
           "paragraphs": [
-            "expeditop.fr est la plateforme transporteurs du groupe Expedion. Elle permet à des transporteurs indépendants vérifiés d'enchérir sur des courses escaladées depuis Expedion, et à des opérateurs de les attribuer.",
+            "expeditop.fr est la plateforme transporteurs du groupe Expedion. Elle permet à des transporteurs indépendants d'enchérir sur des courses escaladées depuis Expedion, et à des opérateurs de les attribuer.",
             "Le site ne vend aucune marchandise et n'héberge aucune vente aux enchères de biens. La seule enchère qu'il opère est une enchère inversée sur le prix d'une course, entre transporteurs."
           ]
         },
@@ -2602,9 +2602,9 @@
       }
     },
     "hero": {
-      "badge": "Objets, meubles et déménagements · France et étranger",
-      "title": "Trouvez un transporteur pour vos objets",
-      "subtitle": "Dites ce que vous transportez et où. Des transporteurs vérifiés vous envoient leur prix : vous choisissez l'offre qui vous convient.",
+      "badge": "Transport partagé d'objets, meubles et déménagements · France et étranger",
+      "title": "Trouvez un transporteur partagé pour vos objets",
+      "subtitle": "Dites ce que vous transportez et où. Des transporteurs vous envoient leur prix : vous choisissez l'offre qui vous convient.",
       "note": "Publier une demande est gratuit. Vous ne payez qu'en acceptant une offre.",
       "howLink": "Voir comment ça marche",
       "howBadge": "Comment ça marche · Comment ça marche · "
@@ -2637,7 +2637,7 @@
         "desc": "Rien n'est débité tant que vous n'avez pas choisi une offre."
       },
       "verified": {
-        "title": "Transporteurs vérifiés",
+        "title": "Transporteurs contrôlés",
         "desc": "Chauffeurs Expeditop et transporteurs professionnels, contrôlés avant leur première offre."
       },
       "photos": {
@@ -2686,7 +2686,7 @@
       },
       "step2": {
         "title": "Recevez des offres",
-        "desc": "Des transporteurs vérifiés vous proposent un prix et des créneaux. Comparez-les et échangez avec eux par message."
+        "desc": "Des transporteurs vous proposent un prix et des créneaux. Comparez-les et échangez avec eux par message."
       },
       "step3": {
         "title": "Choisissez, c'est réservé",
@@ -2709,7 +2709,7 @@
     "services": {
       "eyebrow": "Ce que nous transportons",
       "title": "Du colis au déménagement",
-      "intro": "Un objet, quelques meubles ou un logement entier : décrivez-le une fois, des transporteurs vérifiés vous répondent.",
+      "intro": "Un objet, quelques meubles ou un logement entier : décrivez-le une fois, des transporteurs vous répondent.",
       "tabsLabel": "Types de transport",
       "parcels": {
         "tab": "Colis et objets",
@@ -2726,7 +2726,7 @@
       "moving": {
         "tab": "Déménagement",
         "title": "Déménagement",
-        "desc": "Un studio ou une maison : donnez la superficie du logement ou le volume, ajoutez des photos des pièces. Des transporteurs vérifiés vous font leurs offres.",
+        "desc": "Un studio ou une maison : donnez la superficie du logement ou le volume, ajoutez des photos des pièces. Des transporteurs vous font leurs offres.",
         "cta": "Demander un devis déménagement"
       },
       "abroad": {
@@ -2783,7 +2783,7 @@
         },
         "board": {
           "title": "Les transporteurs voient votre demande",
-          "desc": "Elle rejoint les missions ouvertes, que chacun filtre par trajet et par date. Un transporteur vérifié propose son prix, ses créneaux et son véhicule."
+          "desc": "Elle rejoint les missions ouvertes, que chacun filtre par trajet et par date. Un transporteur propose son prix, ses créneaux et son véhicule."
         },
         "choose": {
           "title": "Vous comparez et vous choisissez",
@@ -2827,7 +2827,7 @@
       },
       "q2": {
         "question": "Comment fonctionne une demande de transport ?",
-        "answer": "Vous publiez votre demande : ce qu'il faut transporter, d'où, vers où et quand. Des transporteurs vérifiés vous font des offres, chacune avec un prix et des créneaux. C'est vous qui choisissez — l'offre la moins chère ne l'emporte pas automatiquement. Vous payez au moment où vous acceptez une offre, et votre transport est alors réservé."
+        "answer": "Vous publiez votre demande : ce qu'il faut transporter, d'où, vers où et quand. Des transporteurs vous font des offres, chacune avec un prix et des créneaux. C'est vous qui choisissez — l'offre la moins chère ne l'emporte pas automatiquement. Vous payez au moment où vous acceptez une offre, et votre transport est alors réservé."
       },
       "q3": {
         "question": "Puis-je annuler un envoi ?",

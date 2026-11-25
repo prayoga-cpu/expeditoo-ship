@@ -1,7 +1,7 @@
 "use client";
 
 import { useFormatter, useLocale, useTranslations } from "next-intl";
-import { CalendarClock, Gavel, MapPin, Truck } from "lucide-react";
+import { CalendarClock, HandCoins, MapPin, Truck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -45,7 +45,7 @@ export function MyOffers() {
   if (isError && isRefusal(error)) {
     return (
       <CenteredEmptyState
-        icon={Gavel}
+        icon={HandCoins}
         title={t("notCarrier")}
         description={t("notCarrierDesc")}
       >
@@ -68,7 +68,7 @@ export function MyOffers() {
 
   if (!offers || offers.length === 0) {
     return (
-      <CenteredEmptyState icon={Gavel} title={t("empty")} description={t("emptyDesc")}>
+      <CenteredEmptyState icon={HandCoins} title={t("empty")} description={t("emptyDesc")}>
         <Button asChild>
           {/* The board lives at /expedion. /home is the driver dashboard. */}
           <Link href="/expedion">{t("browse")}</Link>
