@@ -17,9 +17,11 @@ describe("the hero's words", () => {
     );
   });
 
-  it("adds « partagé » after « transport » in the headline, as the client asked", () => {
-    expect(fr.marketing.hero.title).toBe("Trouvez un transport partagé pour vos objets");
-    expect(en.marketing.hero.title).toBe("Find shared transport for the things you need moved");
+  // The owner, three times, with the headline on screen: « edit this title to
+  // be "Ajouter partagé après transport" », « exacly like this ».
+  it("sets the headline to the client's words, exactly", () => {
+    expect(fr.marketing.hero.title).toBe("Ajouter partagé après transport");
+    expect(en.marketing.hero.title).toBe("Add shared after transport");
   });
 
   it("says « Des transporteurs vous envoient leur prix », with no « vérifiés »", () => {
