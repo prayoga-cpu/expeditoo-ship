@@ -81,7 +81,8 @@ function useActionErrorMessage() {
       case "CANCEL_REQUIRES_SUPPORT":
         return t("requiresSupport");
       default:
-        return error instanceof Error ? error.message : t("generic");
+        // Never the server's own sentence: it is English, or a bare code.
+        return t("generic");
     }
   };
 }

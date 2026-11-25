@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/hooks/useDateLocale";
 import { format } from "date-fns";
 import { Eye, FileText, Upload } from "lucide-react";
 import {
@@ -23,9 +24,9 @@ import { useUploadDocument, useViewDocument } from "../hooks/useCarrier";
 import type { CarrierDocument } from "../api/carrier.api";
 
 const STATUS_TONE: Record<CarrierDocument["status"], string> = {
-  pending: "bg-warning/15 text-warning border-warning/30",
-  accepted: "bg-success/15 text-success border-success/30",
-  rejected: "bg-destructive/10 text-destructive border-destructive/30",
+  pending: "tone-warning",
+  accepted: "tone-success",
+  rejected: "tone-danger",
 };
 
 interface DocumentChecklistProps {
@@ -146,6 +147,7 @@ function DocumentRow({ kind, document, required, canUpload }: DocumentRowProps) 
 
 function DocumentRowStatus({ document }: { document: CarrierDocument | undefined }) {
   const t = useTranslations("carrier.application.documents");
+  const locale = useDateLocale();
 
   if (!document) {
     return <p className="text-xs text-muted-foreground">{t("missing")}</p>;
@@ -158,7 +160,9 @@ function DocumentRowStatus({ document }: { document: CarrierDocument | undefined
       </Badge>
       {document.expiresAt && (
         <span className="text-xs text-muted-foreground">
-          {t("expires", { date: format(new Date(document.expiresAt), "d MMM yyyy") })}
+          {t("expires", {
+            date: format(new Date(document.expiresAt), "d MMM yyyy", { locale }),
+          })}
         </span>
       )}
       {document.status === "rejected" && document.rejectionReason && (

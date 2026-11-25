@@ -19,11 +19,17 @@ const EMPTY = {
   message: "",
 };
 
+/**
+ * `message` is a key the schema names (`contact.dto.ts`), not a sentence; one
+ * the catalogue does not hold — Zod's own wording for a wrong type, say —
+ * reads as the plain « invalid » line rather than as English.
+ */
 function FieldError({ message }: { message?: string }) {
+  const t = useTranslations("marketing.contact.form.errors");
   if (!message) return null;
   return (
     <span role="alert" className="text-[12.5px] text-[var(--lp-red)]">
-      {message}
+      {t.has(message) ? t(message) : t("invalid")}
     </span>
   );
 }

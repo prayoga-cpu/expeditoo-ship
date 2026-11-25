@@ -29,7 +29,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { DataTable, DataTableColumnHeader, dateRangeFilterFn } from "./data-table";
 import { formatCurrency } from "@/lib/currency";
 import { STATUS_TONE, displayStatus } from "@/features/app/listing/statusTone";
@@ -104,7 +104,7 @@ function ListingActions({
           {t("viewDetails")}
         </DropdownMenuItem>
         <DropdownMenuItem
-          className="text-red-600"
+          className="text-danger-ink"
           onClick={() => onDeleteQuery?.(listingId)}
         >
           <Trash2 className="w-4 h-4 mr-2" />
@@ -123,6 +123,7 @@ export function ListingsTable({
 }: ListingsTableProps) {
   const t = useTranslations("admin.listings.table");
   const tDialogs = useTranslations("admin.listings.dialogs");
+  const locale = useLocale();
   const [listingToDelete, setListingToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -252,7 +253,7 @@ export function ListingsTable({
         ),
         cell: ({ row }) => (
           <span className="text-muted-foreground">
-            {new Date(row.original.createdAt).toLocaleDateString()}
+            {new Date(row.original.createdAt).toLocaleDateString(locale)}
           </span>
         ),
         filterFn: dateRangeFilterFn<Listing>(),
@@ -274,7 +275,7 @@ export function ListingsTable({
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
+    [locale]
   );
 
   const sortFields = [
@@ -321,7 +322,7 @@ export function ListingsTable({
                 e.preventDefault();
                 confirmDelete();
               }}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-destructive hover:bg-destructive/90"
               disabled={isDeleting}
             >
               {isDeleting ? (

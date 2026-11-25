@@ -4,14 +4,12 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft } from "lucide-react";
-import { BrandMark } from "@/components/ui/brand-mark";
+import { ArrowLeft, MailCheck } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuthActions } from "@/features/auth/hooks/useAuthActions";
-import { AuthErrorNotice } from "@/features/auth/ui";
-import { motion } from "framer-motion";
+import { AuthErrorNotice, AuthShell } from "@/features/auth/ui";
 import { useTranslations } from "next-intl";
 
 // Built inside the component so its messages follow the visitor's language.
@@ -32,6 +30,7 @@ export default function ForgotPasswordPage() {
   const [submitted, setSubmitted] = useState(false);
   const [submittedEmail, setSubmittedEmail] = useState("");
   const t = useTranslations("auth.forgotPassword");
+  const tAuth = useTranslations("auth");
   const forgotPasswordSchema = useMemo(
     () =>
       buildSchema({ required: t("emailRequired"), invalid: t("emailInvalid") }),
@@ -61,25 +60,7 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-primary/10 via-background to-background px-4 overflow-hidden relative">
-      {/* Animated gradient orbs */}
-      <div className="absolute top-20 left-10 w-72 h-72 bg-primary/20 rounded-full blur-3xl animate-pulse" />
-      <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse" />
-
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="relative z-10 w-full max-w-md"
-      >
-        {/* Logo */}
-        <div className="flex items-center justify-center gap-2 mb-8">
-          <BrandMark size={40} />
-          <span className="text-2xl font-bold text-foreground">EXPEDITOP</span>
-        </div>
-
-        {/* Card */}
-        <div className="bg-card/50 backdrop-blur-sm rounded-2xl border border-border/50 p-8">
+    <AuthShell>
           {!submitted ? (
             <>
               <h1 className="text-2xl font-bold text-foreground mb-2">
@@ -99,10 +80,10 @@ export default function ForgotPasswordPage() {
                   </label>
                   <Input
                     type="email"
-                    placeholder="you@example.com"
+                    placeholder={tAuth("emailPlaceholder")}
                     {...register("email")}
                     disabled={isLoading}
-                    className={`bg-background/50 border-border/50 ${errors.email ? "border-destructive" : ""}`}
+                    className={`${errors.email ? "border-destructive" : ""}`}
                   />
                   {errors.email && (
                     <p className="text-destructive text-sm mt-1">
@@ -114,15 +95,15 @@ export default function ForgotPasswordPage() {
                 <Button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground py-6 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="h-11 w-full font-semibold"
                 >
-                  {isLoading ? t("submit") + "..." : t("submit")}
+                  {isLoading ? `${t("submit")}…` : t("submit")}
                 </Button>
               </form>
 
               <button
                 onClick={() => router.push("/signin")}
-                className="w-full mt-6 flex items-center justify-center gap-2 text-primary hover:text-primary/80 font-semibold"
+                className="mt-6 flex items-center gap-2 text-sm font-semibold text-primary hover:underline"
               >
                 <ArrowLeft className="w-4 h-4" />
                 {t("backToLogin")}
@@ -130,10 +111,8 @@ export default function ForgotPasswordPage() {
             </>
           ) : (
             <>
-              <div className="text-center">
-                <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4">
-                  <span className="text-2xl text-primary">✓</span>
-                </div>
+              <div>
+                <MailCheck className="mb-5 size-8 text-success" aria-hidden />
                 <h1 className="text-2xl font-bold text-foreground mb-2">
                   {t("sentTitle")}
                 </h1>
@@ -146,15 +125,13 @@ export default function ForgotPasswordPage() {
 
                 <Button
                   onClick={() => router.push("/signin")}
-                  className="w-full rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground py-6 font-semibold transition-colors"
+                  className="h-11 w-full font-semibold"
                 >
                   {t("backToLogin")}
                 </Button>
               </div>
             </>
           )}
-        </div>
-      </motion.div>
-    </div>
+    </AuthShell>
   );
 }

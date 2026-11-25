@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { parseDayString } from "@/lib/availability-window";
+import { formatRating } from "@/lib/hooks/useFormatRating";
 import type { CarrierMatch } from "../api/carriers.api";
 
 interface CarrierMatchCardProps {
@@ -93,7 +94,7 @@ export function CarrierMatchCard({
 
             <div className="flex items-center gap-1 text-sm text-muted-foreground">
               <Star className="h-3.5 w-3.5 fill-warning text-warning" />
-              <span className="font-mono">{match.rating.toFixed(1)}</span>
+              <span className="font-mono">{formatRating(match.rating, locale)}</span>
               <span>{t("reviews", { count: match.reviewCount })}</span>
             </div>
 

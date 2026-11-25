@@ -113,7 +113,7 @@ export const feedbackService = {
           notificationsService.createNotification({
             userId,
             type: "feedback_submitted",
-            title: "New feedback",
+            title: "Nouveau retour",
             message: summarise(ticket.description),
             linkUrl: "/admin/feedback",
             data: {

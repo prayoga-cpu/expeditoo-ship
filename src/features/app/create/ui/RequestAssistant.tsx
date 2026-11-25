@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
-import { CheckCircle2, Loader2, Mic, Sparkles, Square } from "lucide-react";
+import { CheckCircle2, Loader2, MessageSquareText, Mic, Square } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -95,7 +95,7 @@ export function RequestAssistant({ onApply }: RequestAssistantProps) {
     <Card className="gap-4 border-primary/30 bg-primary/5 p-4 sm:p-5">
       <div className="space-y-1">
         <h2 className="flex items-start gap-2 font-semibold">
-          <Sparkles className="mt-1 size-4 shrink-0 text-primary" aria-hidden="true" />
+          <MessageSquareText className="mt-1 size-4 shrink-0 text-primary" aria-hidden="true" />
           {t("title")}
         </h2>
         <p className="text-sm text-muted-foreground">{t("hint")}</p>

@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { ColumnDef } from "@tanstack/react-table";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Truck } from "lucide-react";
 import { ListingReference } from "@/features/app/listing/ui/ListingReference";
 import { RequesterCell } from "./RequesterCell";
@@ -18,15 +18,15 @@ interface DeliveriesTableProps {
 
 const STATUS_TONE: Record<string, string> = {
   PENDING:
-    "bg-orange-100 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400",
-  ASSIGNED: "bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400",
+    "tone-warning",
+  ASSIGNED: "tone-info",
   PICKED_UP:
-    "bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400",
+    "tone-info",
   IN_TRANSIT:
-    "bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400",
+    "tone-info",
   DELIVERED:
-    "bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400",
-  CANCELLED: "bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400",
+    "tone-success",
+  CANCELLED: "tone-danger",
 };
 
 function DeliveryStatusBadge({ status }: { status: string }) {
@@ -37,7 +37,7 @@ function DeliveryStatusBadge({ status }: { status: string }) {
     <span
       className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
         STATUS_TONE[status] ??
-        "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"
+        "tone-neutral"
       }`}
     >
       {known ? t(status) : status}
@@ -56,6 +56,7 @@ function DeliveryStatusBadge({ status }: { status: string }) {
  */
 export function DeliveriesTable({ deliveries, className }: DeliveriesTableProps) {
   const t = useTranslations("shipments.table");
+  const locale = useLocale();
 
   const columns: ColumnDef<PendingDelivery>[] = useMemo(
     () => [
@@ -170,13 +171,13 @@ export function DeliveriesTable({ deliveries, className }: DeliveriesTableProps)
         ),
         cell: ({ row }) => (
           <p className="text-sm text-muted-foreground">
-            {new Date(row.original.createdDate).toLocaleDateString()}
+            {new Date(row.original.createdDate).toLocaleDateString(locale)}
           </p>
         ),
         filterFn: dateRangeFilterFn<PendingDelivery>(),
       },
     ],
-    [t]
+    [t, locale]
   );
 
   const sortFields = [

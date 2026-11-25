@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import type { User } from "../types";
 import { mapApiUser } from "../lib/map-api-user";
 import { assignRole, fetchUsers, removeRole } from "../api/users.api";
@@ -15,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
  */
 export function useAdmin() {
   const { toast } = useToast();
+  const tMessages = useTranslations("admin.users.messages");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTab, setSelectedTab] = useState("users");
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
@@ -50,7 +52,8 @@ export function useAdmin() {
    * « In-house driver » and « Carrier » are granted here too: the server
    * creates or approves the driver file that earns the role, so the person
    * shows up in the Drivers list at once (driver_types_spec.md §5). A refusal
-   * (a suspended file, say) comes back as `success: false` and is shown. */
+   * (a suspended file, say) comes back as `success: false`; the toast is the
+   * catalogue's sentence, because the server's `message` is English. */
   const handleUpdateRole = useCallback(
     async (role: string) => {
       if (!selectedUser) return;
@@ -60,7 +63,7 @@ export function useAdmin() {
         for (const dbRole of dbRolesFor(role)) {
           const result = await assignRole(selectedUser.id, dbRole);
           if (!result.success) {
-            toast({ description: result.message, variant: "destructive" });
+            toast({ description: tMessages("errorDesc"), variant: "destructive" });
             return;
           }
         }
@@ -68,15 +71,12 @@ export function useAdmin() {
         setRoleDialogOpen(false);
       } catch (error) {
         console.error("Failed to update role:", error);
-        toast({
-          description: error instanceof Error ? error.message : String(error),
-          variant: "destructive",
-        });
+        toast({ description: tMessages("errorDesc"), variant: "destructive" });
       } finally {
         setIsUpdatingRole(false);
       }
     },
-    [selectedUser, refetch, toast]
+    [selectedUser, refetch, toast, tMessages]
   );
 
   /** The server refuses to take an account's last role, and answers with a

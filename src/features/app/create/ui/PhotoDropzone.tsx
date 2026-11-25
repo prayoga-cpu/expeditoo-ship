@@ -128,7 +128,7 @@ export function PhotoDropzone({ photos, onPhotosChange }: PhotoDropzoneProps) {
               : "cursor-pointer border-border/50 bg-muted/20 hover:border-primary/50 hover:bg-muted/40"
         }`}
       >
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-background shadow-sm transition-transform duration-200 group-hover:scale-110">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-background shadow-sm">
           {isUploading ? (
             <LottieLoader width={30} height={30} />
           ) : (
@@ -158,7 +158,7 @@ export function PhotoDropzone({ photos, onPhotosChange }: PhotoDropzoneProps) {
                 type="button"
                 onClick={() => removePhoto(index)}
                 aria-label={t("remove")}
-                className="absolute -right-2 -top-2 rounded-full bg-destructive p-1.5 text-white opacity-0 shadow-md transition-all hover:scale-110 focus-visible:opacity-100 group-hover:opacity-100"
+                className="absolute -right-2 -top-2 rounded-full bg-destructive p-1.5 text-white opacity-0 shadow-md transition-opacity focus-visible:opacity-100 group-hover:opacity-100"
               >
                 <X className="h-3.5 w-3.5" />
               </button>

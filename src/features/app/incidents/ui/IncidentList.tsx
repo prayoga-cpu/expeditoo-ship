@@ -4,6 +4,7 @@ import { LoadErrorState } from "@/components/ui/load-error-state";
 import { formatDistanceToNow } from "date-fns";
 import { AlertTriangle } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/hooks/useDateLocale";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Incident, IncidentSeverity, IncidentStatus } from "../api";
@@ -19,16 +20,16 @@ import type { Incident, IncidentSeverity, IncidentStatus } from "../api";
 /** Tokens only, so both themes come out of the palette rather than a guess. */
 const SEVERITY_STYLES: Record<IncidentSeverity, string> = {
   low: "border-border text-muted-foreground",
-  medium: "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400",
-  high: "border-destructive/40 bg-destructive/10 text-destructive",
+  medium: "tone-warning",
+  high: "tone-danger",
 };
 
 const STATUS_STYLES: Record<IncidentStatus, string> = {
-  OPEN: "border-destructive/40 bg-destructive/10 text-destructive",
+  OPEN: "tone-danger",
   ACKNOWLEDGED:
-    "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+    "tone-warning",
   RESOLVED:
-    "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+    "tone-success",
 };
 
 interface IncidentListProps {
@@ -45,6 +46,7 @@ export function IncidentList({
   onRetry,
 }: IncidentListProps) {
   const t = useTranslations("incidents");
+  const locale = useDateLocale();
 
   if (isLoading) {
     return (
@@ -91,6 +93,7 @@ export function IncidentList({
             <span className="ml-auto text-xs text-muted-foreground">
               {formatDistanceToNow(new Date(incident.createdAt), {
                 addSuffix: true,
+                locale,
               })}
             </span>
           </div>
@@ -121,7 +124,7 @@ export function IncidentList({
           </p>
 
           {incident.resolutionNote && (
-            <p className="mt-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 p-2 text-xs text-emerald-800 dark:text-emerald-300">
+            <p className="mt-2 rounded-md border tone-success p-2 text-xs">
               {t("list.resolution")}: {incident.resolutionNote}
             </p>
           )}

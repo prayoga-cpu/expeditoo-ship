@@ -124,7 +124,7 @@ function DriversPageContent() {
             <FileText className="w-4 h-4" />
             {t("tabs.applications")}
             {waiting > 0 && (
-              <Badge className="ml-1 bg-orange-500 font-mono text-white hover:bg-orange-500">
+              <Badge className="ml-1 border-transparent bg-warning font-mono text-warning-foreground hover:bg-warning">
                 {waiting}
               </Badge>
             )}

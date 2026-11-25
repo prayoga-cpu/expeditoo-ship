@@ -119,7 +119,7 @@ function VehicleCard({ vehicle }: { vehicle: Vehicle }) {
             <Badge
               className={
                 vehicle.isActive
-                  ? "bg-success/15 text-success border-success/30"
+                  ? "tone-success"
                   : "bg-muted text-muted-foreground border-border"
               }
             >

@@ -69,7 +69,7 @@ describe("CarrierTripsScreen tabs", () => {
     expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
       "Prévus",
       "En attente de réponse",
-      "En transit",
+      "En cours",
       "Terminés",
     ]);
     expect(onError).not.toHaveBeenCalled();
@@ -81,7 +81,7 @@ describe("CarrierTripsScreen tabs", () => {
     expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
       "Planned",
       "Awaiting an answer",
-      "In transit",
+      "In progress",
       "Finished",
     ]);
     expect(onError).not.toHaveBeenCalled();
@@ -96,7 +96,7 @@ describe("CarrierTripsScreen tabs", () => {
 
   it.each([
     ["pending", "En attente de réponse"],
-    ["active", "En transit"],
+    ["active", "En cours"],
     ["completed", "Terminés"],
   ])("opens ?tab=%s on its own panel", (tab, label) => {
     renderScreen(`tab=${tab}`);
@@ -119,7 +119,7 @@ describe("CarrierTripsScreen tabs", () => {
     renderScreen("tab=planned&from=mail");
 
     // Radix Tabs activates on mousedown, not click.
-    fireEvent.mouseDown(screen.getByRole("tab", { name: "En transit" }), { button: 0 });
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "En cours" }), { button: 0 });
 
     expect(nav.replace).toHaveBeenCalledWith("/carrier/trips?tab=active&from=mail", {
       scroll: false,

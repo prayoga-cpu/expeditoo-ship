@@ -195,7 +195,7 @@ export function QuoteQueueTable({
           row.original.owned ? (
             (row.original.clientName ?? "—")
           ) : (
-            <span className="text-xs text-amber-600 dark:text-amber-500">
+            <span className="text-xs text-warning-ink">
               {t("table.airtableImport")}
             </span>
           ),

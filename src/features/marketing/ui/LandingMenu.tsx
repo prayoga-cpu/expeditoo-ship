@@ -20,6 +20,7 @@ export const MENU_SECTIONS = [
   { href: "/#shippers", key: "services" },
   { href: "/#how", key: "howItWorks" },
   { href: "/#promises", key: "promises" },
+  { href: "/#app", key: "tour" },
   { href: "/#carriers", key: "carriers" },
   { href: "/#faq", key: "faq" },
 ] as const;

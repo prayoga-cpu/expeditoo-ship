@@ -30,7 +30,7 @@ import type {
   DriverShipmentDetail,
   DriverShipmentListing,
 } from "@/features/app/driver/api/shipments.api";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { PageLoader } from "@/components/ui/page-loader";
 import { LoadErrorState } from "@/components/ui/load-error-state";
 import { ApiError } from "@/lib/fetcher";
@@ -174,7 +174,7 @@ function RouteCard({ shipment }: { shipment: DriverShipmentDetail }) {
         />
         <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 bg-muted/30">
           <RouteStop
-            colorClass="bg-blue-500"
+            colorClass="bg-primary"
             label={t("pickup")}
             address={withCountry(
               stopLine(shipment.pickupAddress, listing?.pickupPostalCode, listing?.pickupCity),
@@ -188,7 +188,7 @@ function RouteCard({ shipment }: { shipment: DriverShipmentDetail }) {
             scheduledLabel={t("scheduledPickup")}
           />
           <RouteStop
-            colorClass="bg-green-500"
+            colorClass="bg-success"
             label={t("dropoff")}
             address={withCountry(
               stopLine(shipment.dropoffAddress, listing?.dropoffPostalCode, listing?.dropoffCity),
@@ -235,6 +235,7 @@ function RouteStop({
   scheduledLabel: string;
 }) {
   const t = useTranslations("driver.shipmentDetail");
+  const locale = useLocale();
 
   return (
     <div className="flex items-start gap-3">
@@ -253,7 +254,7 @@ function RouteStop({
         <p className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
           <Calendar className="w-3 h-3" />
           {scheduledLabel}:{" "}
-          {scheduledAt ? new Date(scheduledAt).toLocaleString() : t("flexible")}
+          {scheduledAt ? new Date(scheduledAt).toLocaleString(locale) : t("flexible")}
         </p>
         {note ? (
           <p className="flex items-start gap-1 text-xs text-muted-foreground mt-1">
@@ -431,6 +432,7 @@ function CancellationNote({ shipment }: { shipment: DriverShipmentDetail }) {
 function TimelineCard({ shipment }: { shipment: DriverShipmentDetail }) {
   const t = useTranslations("driver.shipmentDetail");
   const tEvents = useTranslations("deliveries.events");
+  const locale = useLocale();
 
   const events = [...shipment.events].sort(
     (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
@@ -456,7 +458,7 @@ function TimelineCard({ shipment }: { shipment: DriverShipmentDetail }) {
                   {tEvents(event.status)}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {new Date(event.createdAt).toLocaleString()}
+                  {new Date(event.createdAt).toLocaleString(locale)}
                 </p>
                 {event.note && (
                   <p className="text-sm text-muted-foreground mt-1">

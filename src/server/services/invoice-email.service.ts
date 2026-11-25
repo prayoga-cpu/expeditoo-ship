@@ -1,4 +1,5 @@
 import { appUrl } from "@/lib/app-url";
+import { formatCurrency } from "@/lib/currency";
 import { render } from "@react-email/components";
 
 import type { InvoiceIssuer } from "@/lib/invoice-issuer";
@@ -48,7 +49,7 @@ export async function invoiceDocumentEmail(
     );
   }
 
-  const amountLabel = `${(Math.abs(invoice.amount) / 100).toFixed(2)} €`;
+  const amountLabel = formatCurrency(Math.abs(invoice.amount));
   const isCreditNote = invoice.kind === "credit_note";
 
   const html = await render(

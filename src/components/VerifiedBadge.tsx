@@ -24,7 +24,7 @@ export function VerifiedBadge({ className, size = 16 }: VerifiedBadgeProps) {
         <TooltipTrigger asChild>
           <div
             className={cn(
-              "inline-flex items-center justify-center bg-blue-500 text-white rounded-full ml-1",
+              "inline-flex items-center justify-center bg-primary text-white rounded-full ml-1",
               className
             )}
             style={{ width: size, height: size }}

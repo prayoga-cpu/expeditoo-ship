@@ -43,7 +43,7 @@ export function ChatBubble({
           {isOwn && (
             <span className="text-muted-foreground">
               {readByOther ? (
-                <CheckCheck className="w-3.5 h-3.5 text-blue-500" />
+                <CheckCheck className="w-3.5 h-3.5 text-info-ink" />
               ) : (
                 <Check className="w-3.5 h-3.5" />
               )}

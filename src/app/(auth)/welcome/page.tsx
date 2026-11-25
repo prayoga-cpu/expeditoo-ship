@@ -3,10 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, PackagePlus, Truck } from "lucide-react";
-import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
+import { AuthShell } from "@/features/auth/ui";
 
-import { BrandMark } from "@/components/ui/brand-mark";
 import { useAuth } from "@/lib/auth-context";
 import {
   hasDriverAccess,
@@ -42,26 +41,11 @@ export default function WelcomePage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-primary/10 via-background to-background py-8 px-4 overflow-hidden relative">
-      <div className="absolute top-20 left-10 w-72 h-72 bg-primary/20 rounded-full blur-3xl animate-pulse" />
-      <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse" />
-
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="relative z-10 w-full max-w-md"
-      >
-        <div className="flex items-center justify-center gap-2 mb-8">
-          <BrandMark size={40} />
-          <span className="text-2xl font-bold text-foreground">EXPEDITOP</span>
-        </div>
-
-        <div className="bg-card/50 backdrop-blur-sm rounded-2xl border border-border/50 p-8">
-          <h1 className="text-2xl font-bold text-foreground mb-2 text-center">
+    <AuthShell>
+          <h1 className="text-2xl font-bold text-foreground mb-2">
             {t("title")}
           </h1>
-          <p className="text-muted-foreground mb-6 text-center">
+          <p className="text-muted-foreground mb-6">
             {t("subtitle")}
           </p>
 
@@ -70,11 +54,9 @@ export default function WelcomePage() {
               type="button"
               disabled={pending !== null}
               onClick={() => choose("user", "/home")}
-              className="w-full flex items-start gap-4 rounded-xl border border-border/50 bg-background/50 p-5 text-left transition-colors hover:border-primary/50 hover:bg-primary/5 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex items-start gap-4 rounded-lg border border-border p-5 text-left transition-colors hover:border-foreground/40 hover:bg-muted/40 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
-                <PackagePlus className="h-6 w-6" />
-              </span>
+              <PackagePlus className="mt-0.5 size-6 shrink-0 text-primary" aria-hidden />
               <span>
                 <span className="block font-semibold text-foreground">
                   {t("shipTitle")}
@@ -93,11 +75,9 @@ export default function WelcomePage() {
               type="button"
               disabled={pending !== null}
               onClick={() => choose("carrier", "/carrier/application")}
-              className="w-full flex items-start gap-4 rounded-xl border border-border/50 bg-background/50 p-5 text-left transition-colors hover:border-primary/50 hover:bg-primary/5 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex items-start gap-4 rounded-lg border border-border p-5 text-left transition-colors hover:border-foreground/40 hover:bg-muted/40 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-success/15 text-success">
-                <Truck className="h-6 w-6" />
-              </span>
+              <Truck className="mt-0.5 size-6 shrink-0 text-primary" aria-hidden />
               <span>
                 <span className="block font-semibold text-foreground">
                   {t("driveTitle")}
@@ -105,15 +85,13 @@ export default function WelcomePage() {
                 <span className="block text-sm text-muted-foreground mt-1">
                   {t("driveDescription")}
                 </span>
-                <span className="inline-flex items-center gap-1 text-sm font-medium text-success mt-3">
+                <span className="inline-flex items-center gap-1 text-sm font-medium text-primary mt-3">
                   {t("driveCta")}
                   <ArrowRight className="h-3.5 w-3.5" />
                 </span>
               </span>
             </button>
           </div>
-        </div>
-      </motion.div>
-    </div>
+    </AuthShell>
   );
 }

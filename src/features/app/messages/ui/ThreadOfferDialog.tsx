@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/select";
 import { CenteredEmptyState } from "@/components/ui/centered-empty-state";
 import { useVehicles } from "@/features/app/carrier/hooks/useCarrier";
+import { useVehicleLabel } from "@/features/app/carrier/hooks/useVehicleLabel";
 import { formatCurrency } from "@/lib/currency";
 import {
   NUMERIC_RULES,
@@ -63,6 +64,7 @@ export function ThreadOfferDialog({
   const t = useTranslations("messages.offer");
   const tForm = useTranslations("listing.bid.form");
   const locale = useLocale();
+  const vehicleLabel = useVehicleLabel();
   const job = context.job;
   const isJobLane = context.lane === "job" && job !== null;
 
@@ -152,10 +154,7 @@ export function ThreadOfferDialog({
                           value={vehicle.id}
                           disabled={!suitable || !vehicle.isActive}
                         >
-                          {vehicle.plateNumber} ·{" "}
-                          {[vehicle.make, vehicle.model]
-                            .filter(Boolean)
-                            .join(" ") || vehicle.type.replace(/_/g, " ")}
+                          {vehicle.plateNumber} · {vehicleLabel(vehicle)}
                           {!suitable && ` — ${tForm("vehicleTooSmall")}`}
                           {suitable &&
                             !vehicle.isActive &&

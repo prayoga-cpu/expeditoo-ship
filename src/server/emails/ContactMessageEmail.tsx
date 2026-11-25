@@ -9,7 +9,10 @@ import {
   Preview,
   Text,
 } from "@react-email/components";
-import type { ContactSubject } from "@/server/dto/contact.dto";
+import {
+  CONTACT_SUBJECT_LABELS,
+  type ContactSubject,
+} from "@/server/dto/contact.dto";
 
 interface ContactMessageEmailProps {
   name: string;
@@ -22,9 +25,10 @@ interface ContactMessageEmailProps {
 }
 
 /**
- * The operator-facing copy of a public contact submission. English only, and
- * deliberately so: this is internal mail to the support desk, not a message to
- * the visitor, so it does not follow the visitor's locale.
+ * The operator-facing copy of a public contact submission. French, like the
+ * rest of the staff-facing mail: this is internal mail to the support desk,
+ * not a message to the visitor, so it does not follow the visitor's locale.
+ * The subject is its label, never the enum value.
  */
 export function ContactMessageEmail({
   name,
@@ -37,21 +41,21 @@ export function ContactMessageEmail({
   return (
     <Html>
       <Head />
-      <Preview>{`Contact — ${subject} — ${name}`}</Preview>
+      <Preview>{`Contact — ${CONTACT_SUBJECT_LABELS[subject]} — ${name}`}</Preview>
       <Body style={main}>
         <Container style={container}>
-          <Heading style={h1}>New contact enquiry</Heading>
+          <Heading style={h1}>Nouvelle demande de contact</Heading>
 
           <Text style={meta}>
-            <strong>From:</strong> {name} &lt;{email}&gt;
+            <strong>De :</strong> {name} &lt;{email}&gt;
           </Text>
           {company ? (
             <Text style={meta}>
-              <strong>Company:</strong> {company}
+              <strong>Société :</strong> {company}
             </Text>
           ) : null}
           <Text style={meta}>
-            <strong>Subject:</strong> {subject}
+            <strong>Sujet :</strong> {CONTACT_SUBJECT_LABELS[subject]}
           </Text>
 
           <Hr style={rule} />
@@ -68,8 +72,8 @@ export function ContactMessageEmail({
 
           <Text style={footer}>
             {threadUrl
-              ? `This sender has an Expeditop account — the message is also in their support thread: ${threadUrl}`
-              : "This sender has no Expeditop account, so there is no support thread. Reply to this email to answer them."}
+              ? `Cette personne a un compte Expeditop : son message figure aussi dans sa conversation avec le support : ${threadUrl}`
+              : "Cette personne n'a pas de compte Expeditop : il n'y a donc pas de conversation avec le support. Répondez à cet e-mail pour lui écrire."}
           </Text>
         </Container>
       </Body>

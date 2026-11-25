@@ -156,7 +156,7 @@ function SubmitSection({ application }: { application: CarrierApplication }) {
   ];
 
   return (
-    <Card className="space-y-4 p-4 sm:p-6">
+    <Card className="gap-0 space-y-4 p-4 sm:p-6">
       <div>
         {/* An in-house driver never bids, and is told what happens after the
             button: a person at Expeditop validates the file, then an email. */}

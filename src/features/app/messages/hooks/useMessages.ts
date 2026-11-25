@@ -202,9 +202,9 @@ export function useMessages() {
     } else if (diffDays < 7) {
       return t("time.daysAgo", { count: diffDays });
     } else {
-      return date.toLocaleDateString();
+      return date.toLocaleDateString(locale);
     }
-  }, [t]);
+  }, [t, locale]);
 
   // Transform API response to UI format
   const allMessages: Message[] = useMemo(

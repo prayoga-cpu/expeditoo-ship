@@ -196,12 +196,12 @@ export function CarrierApplicationsList({
             row.original.status === "under_review";
           if (!waiting) return <span className="text-muted-foreground">—</span>;
           return row.original.contactConfirmedAt ? (
-            <span className="inline-flex items-center gap-1 text-sm text-green-600 dark:text-green-500">
+            <span className="inline-flex items-center gap-1 text-sm text-success-ink">
               <Check className="w-4 h-4" />
               {t("table.reached")}
             </span>
           ) : (
-            <span className="text-sm text-amber-600 dark:text-amber-500">
+            <span className="text-sm text-warning-ink">
               {t("table.notReached")}
             </span>
           );

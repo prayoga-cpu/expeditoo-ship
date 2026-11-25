@@ -7,6 +7,7 @@
  */
 
 import type { VehicleType } from "@/lib/carrier-constants";
+import { ApiError } from "@/lib/fetcher";
 
 export const CARRIER_APPLICATION_STATUSES = [
     "draft",
@@ -148,6 +149,20 @@ export interface ApiResponse<T> {
     };
 }
 
+/**
+ * A refused call, as an error that carries the server's **code**.
+ *
+ * The code is what the caller translates; the server's `message` is an English
+ * developer sentence and is kept only for the console, never for a toast.
+ */
+function refusal(body: ApiResponse<unknown>, res: Response): ApiError {
+    return new ApiError(
+        body.error?.code ?? "REQUEST_FAILED",
+        body.error?.message ?? "",
+        res.status,
+    );
+}
+
 export async function fetchCarrierApplications(
     status: CarrierApplicationFilter = ALL_STATUSES,
 ): Promise<CarrierApplication[]> {
@@ -157,7 +172,7 @@ export async function fetchCarrierApplications(
     const data: ApiResponse<CarrierApplication[]> = await res.json();
 
     if (!data.success) {
-        throw new Error(data.error?.message || "Failed to fetch applications");
+        throw refusal(data, res);
     }
 
     return data.data || [];
@@ -171,7 +186,7 @@ export async function approveCarrierApplication(id: string): Promise<void> {
     const data: ApiResponse<CarrierApplication> = await res.json();
 
     if (!data.success) {
-        throw new Error(data.error?.message || "Failed to approve application");
+        throw refusal(data, res);
     }
 }
 
@@ -188,7 +203,7 @@ export async function rejectCarrierApplication(
     const data: ApiResponse<CarrierApplication> = await res.json();
 
     if (!data.success) {
-        throw new Error(data.error?.message || "Failed to reject application");
+        throw refusal(data, res);
     }
 }
 
@@ -205,7 +220,7 @@ export async function suspendCarrier(
     const data: ApiResponse<CarrierApplication> = await res.json();
 
     if (!data.success) {
-        throw new Error(data.error?.message || "Failed to suspend carrier");
+        throw refusal(data, res);
     }
 }
 
@@ -226,7 +241,7 @@ async function postCarrierAction(
     });
     const data: ApiResponse<CarrierApplication> = await res.json();
     if (!data.success) {
-        throw new Error(data.error?.message || data.error?.code || "Request failed");
+        throw refusal(data, res);
     }
 }
 
@@ -292,7 +307,7 @@ export async function createDriver(
     const body: ApiResponse<CreateDriverResult> = await res.json();
 
     if (!body.success || !body.data) {
-        throw new Error(body.error?.message || "Failed to create driver");
+        throw refusal(body, res);
     }
 
     return body.data;
@@ -308,7 +323,7 @@ export async function fetchDocumentViewUrl(documentId: string): Promise<string> 
         await res.json();
 
     if (!data.success || !data.data) {
-        throw new Error(data.error?.message || "Failed to load document");
+        throw refusal(data, res);
     }
 
     return data.data.url;

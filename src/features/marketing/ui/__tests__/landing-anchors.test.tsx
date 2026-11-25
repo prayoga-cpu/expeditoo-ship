@@ -97,7 +97,7 @@ describe("landing page anchors", () => {
 
     expect(inMenu.filter((anchor) => !ids.has(anchor))).toEqual([]);
     expect(new Set(inMenu)).toEqual(
-      new Set(["top", "recent", "shippers", "how", "promises", "carriers", "faq"])
+      new Set(["top", "recent", "shippers", "how", "promises", "app", "carriers", "faq"])
     );
   });
 

@@ -20,8 +20,8 @@ type Translate = (key: string) => string;
 
 /**
  * Picks the message for a failed mutation: a translated one when the server
- * sent a code we have wording for, otherwise the server's own sentence, and a
- * translated fallback when there is nothing useful to show.
+ * sent a code we have wording for, otherwise the translated fallback. Never
+ * the server's own sentence: it is English, or a bare code.
  */
 function describe(
   error: unknown,
@@ -32,7 +32,6 @@ function describe(
   const code = error instanceof ApiError ? error.code : "";
   const key = codeKeys[code];
   if (key) return t(key);
-  if (error instanceof Error && error.message) return error.message;
   return t(fallbackKey);
 }
 

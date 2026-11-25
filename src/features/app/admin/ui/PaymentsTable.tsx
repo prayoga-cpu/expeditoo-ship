@@ -31,25 +31,31 @@ import {
 } from "@/components/ui/select";
 import { DataTable, DataTableColumnHeader, dateRangeFilterFn } from "./data-table";
 import type { AdminPayment } from "../hooks/useAdminPayments";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { formatCurrency } from "@/lib/currency";
 
-// Status badge
-function PaymentStatusBadge({
-    status,
-    statusLabel,
-}: {
-    status: "pending" | "succeeded" | "failed" | "refunded";
-    statusLabel: string;
-}) {
-    const styles = {
-        pending: "bg-yellow-500 hover:bg-yellow-600 text-white",
-        succeeded: "bg-green-500 hover:bg-green-600 text-white",
-        failed: "bg-red-500 hover:bg-red-600 text-white",
-        refunded: "bg-gray-500 hover:bg-gray-600 text-white",
-    };
+/**
+ * Keyed by the database's own statuses (`paymentStatusEnum`). The table was
+ * typed for `succeeded`, which no row has ever held, so every captured payment
+ * printed the raw key « admin.payments.status.captured » (found 2.98.0).
+ */
+const PAYMENT_TONES: Record<string, string> = {
+    pending: "tone-warning",
+    authorising: "tone-warning",
+    authorised: "tone-info",
+    captured: "tone-success",
+    succeeded: "tone-success",
+    failed: "tone-danger",
+    refunded: "tone-neutral",
+    released: "tone-neutral",
+};
 
-    return <Badge className={styles[status]}>{statusLabel}</Badge>;
+function PaymentStatusBadge({ status, statusLabel }: { status: string; statusLabel: string }) {
+    return (
+        <Badge variant="outline" className={PAYMENT_TONES[status] ?? "tone-neutral"}>
+            {statusLabel}
+        </Badge>
+    );
 }
 
 // Actions
@@ -106,6 +112,8 @@ export function PaymentsTable({
     const tStatus = useTranslations("admin.payments.status");
     const tActions = useTranslations("admin.payments.actions");
     const tDialog = useTranslations("admin.payments.refundDialog");
+    const tUsers = useTranslations("admin.users");
+    const locale = useLocale();
 
     const handleRefundClick = (id: string) => {
         setRefundPaymentId(id);
@@ -140,7 +148,7 @@ export function PaymentsTable({
                 cell: ({ row }) => (
                     <div className="flex flex-col">
                         <span className="text-sm font-medium">
-                            {row.original.userName || "Unknown"}
+                            {row.original.userName || tUsers("noName")}
                         </span>
                         <span className="text-xs text-muted-foreground">
                             {row.original.userEmail}
@@ -173,7 +181,7 @@ export function PaymentsTable({
                 cell: ({ row }) => (
                     <PaymentStatusBadge 
                         status={row.original.status} 
-                        statusLabel={tStatus(row.original.status)}
+                        statusLabel={tStatus.has(row.original.status) ? tStatus(row.original.status) : row.original.status}
                     />
                 ),
             },
@@ -184,7 +192,7 @@ export function PaymentsTable({
                 ),
                 cell: ({ row }) => (
                     <span className="text-muted-foreground">
-                        {new Date(row.original.createdAt).toLocaleDateString()}
+                        {new Date(row.original.createdAt).toLocaleDateString(locale)}
                     </span>
                 ),
                 filterFn: dateRangeFilterFn<AdminPayment>(),
@@ -207,7 +215,7 @@ export function PaymentsTable({
             },
         ],
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        []
+        [locale]
     );
 
     const sortFields = [
@@ -266,7 +274,7 @@ export function PaymentsTable({
                                 e.preventDefault();
                                 confirmRefund();
                             }}
-                            className="bg-red-600 hover:bg-red-700"
+                            className="bg-destructive hover:bg-destructive/90"
                             disabled={isRefunding}
                         >
                             {isRefunding ? (

@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { LottieLoader } from "@/components/ui/lottie-loader";
 import { useToast } from "@/hooks/use-toast";
+import { ApiError } from "@/lib/fetcher";
 import { cn } from "@/lib/utils";
 import { VEHICLE_TYPES, type VehicleType } from "@/lib/carrier-constants";
 import type { CreateDriverInput, CreateDriverResult } from "../api/carriers.api";
@@ -260,8 +261,14 @@ export function CreateDriverDialog({
       });
       handleOpenChange(false);
     } catch (error) {
+      // The refusals staff actually hit have a sentence; the server's own
+      // message is English and never shown.
+      const code = error instanceof ApiError ? error.code : null;
       toast({
-        description: error instanceof Error ? error.message : String(error),
+        description:
+          code && t.has(`toasts.errors.${code}`)
+            ? t(`toasts.errors.${code}`)
+            : t("toasts.failed"),
         variant: "destructive",
       });
     }

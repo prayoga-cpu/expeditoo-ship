@@ -46,7 +46,9 @@ export function toAdminListing(row: AdminListingRow): AdminListing {
     reference: row.reference,
     title: row.title,
     shipper: {
-      name: row.shipper?.name || "Unknown",
+      // Empty, not a placeholder word: the render sites fall back to the
+      // e-mail, then to `admin.users.noName`.
+      name: row.shipper?.name || "",
       email: row.shipper?.email || "",
     },
     budgetCents: row.budgetCents,
@@ -89,8 +91,8 @@ export function useAdminListings() {
       queryClient.invalidateQueries({ queryKey: adminListingKeys.all });
       toast.success(t("deleted"));
     },
-    onError: (error) => {
-      toast.error(t("deleteFailed", { message: error.message }));
+    onError: () => {
+      toast.error(t("deleteFailed"));
     },
   });
 

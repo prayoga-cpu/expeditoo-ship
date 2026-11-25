@@ -6,6 +6,7 @@ import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { AlertTriangle, ExternalLink } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/hooks/useDateLocale";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -84,10 +85,11 @@ export function IncidentQueue() {
 
 function QueueRow({ incident }: { incident: QueuedIncident }) {
   const t = useTranslations("incidents");
+  const locale = useDateLocale();
   const update = useUpdateIncident();
 
   return (
-    <Card className="space-y-3 p-4">
+    <Card className="gap-0 space-y-3 p-4">
       <div className="flex flex-wrap items-center gap-2">
         <span className="font-medium">
           {t(`categories.${incident.category}`)}
@@ -97,6 +99,7 @@ function QueueRow({ incident }: { incident: QueuedIncident }) {
         <span className="ml-auto text-xs text-muted-foreground">
           {formatDistanceToNow(new Date(incident.createdAt), {
             addSuffix: true,
+            locale,
           })}
         </span>
       </div>

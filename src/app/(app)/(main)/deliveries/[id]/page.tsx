@@ -58,7 +58,7 @@ export default function DeliveryDetailPage({
       if (data.success) {
         router.push(`/messages/${data.data.conversationId}`);
       } else {
-        toast.error(data.error?.message || t("errors.contactFailed"));
+        toast.error(t("errors.contactFailed"));
       }
     } catch (err) {
       console.error("Chat init error:", err);

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/hooks/useDateLocale";
 import { format } from "date-fns";
 import {
   ArrowRight,
@@ -187,6 +188,7 @@ function WeekdayStrip({ days }: { days: number[] }) {
 
 /** Elapsed dates stay visible but dimmed — the trip still happened. */
 function TripDates({ dates }: { dates: string[] }) {
+  const locale = useDateLocale();
   const today = new Date().setHours(0, 0, 0, 0);
 
   return (
@@ -200,7 +202,7 @@ function TripDates({ dates }: { dates: string[] }) {
             variant={elapsed ? "outline" : "secondary"}
             className={elapsed ? "text-muted-foreground line-through" : undefined}
           >
-            {format(new Date(date), "d MMM")}
+            {format(new Date(date), "d MMM", { locale })}
           </Badge>
         );
       })}

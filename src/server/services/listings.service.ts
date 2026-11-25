@@ -715,8 +715,8 @@ export const listingsService = {
         .createNotification({
           userId: listing.shipperId,
           type: "listing_expired",
-          title: "No carrier selected",
-          message: `"${listing.title}" closed without an accepted offer.`,
+          title: "Aucun transporteur retenu",
+          message: `« ${listing.title} » s'est clôturée sans offre acceptée.`,
           linkUrl: `/listing/${listing.id}`,
           data: { listingId: listing.id },
         })
@@ -749,8 +749,8 @@ export const listingsService = {
           .createNotification({
             userId: listing.shipperId,
             type: "listing_expired",
-            title: "Scheduled post missed its window",
-            message: `"${listing.title}" could not go live before its pickup window closed. Edit the pickup date and try again.`,
+            title: "Publication programmée manquée",
+            message: `« ${listing.title} » n'a pas pu être publiée avant la fin de son créneau de retrait. Modifiez la date de retrait et réessayez.`,
             linkUrl: `/listing/${listing.id}`,
             data: { listingId: listing.id },
           })
@@ -761,8 +761,8 @@ export const listingsService = {
         .createNotification({
           userId: listing.shipperId,
           type: "listing",
-          title: "Your scheduled job is live",
-          message: `"${listing.title}" is now on the board — carriers can start bidding.`,
+          title: "Votre demande programmée est en ligne",
+          message: `« ${listing.title} » est visible : les transporteurs peuvent faire leurs offres.`,
           linkUrl: `/listing/${listing.id}`,
           data: { listingId: listing.id },
         })
@@ -875,7 +875,7 @@ async function announceListingPosted(listing: Listing, shipperId: string) {
       userId: shipperId,
       type: "listing_posted",
       title: "Votre demande est en ligne",
-      message: `"${listing.title}" (réf. ${listing.reference}) est visible par les transporteurs.`,
+      message: `« ${listing.title} » (réf. ${listing.reference}) est visible par les transporteurs.`,
       linkUrl: `/listing/${listing.id}`,
       data: { listingId: listing.id },
     })
@@ -912,8 +912,8 @@ async function notifyOffersInvalidated(
         .createNotification({
           userId: offer.carrierId,
           type: "offer_invalidated",
-          title: "Job details changed",
-          message: `"${listing.title}" was edited. Submit a new offer if you are still interested.`,
+          title: "Demande modifiée",
+          message: `« ${listing.title} » a été modifiée. Refaites une offre si elle vous intéresse toujours.`,
           linkUrl: `/listing/${listing.id}`,
           data: { listingId: listing.id },
         })

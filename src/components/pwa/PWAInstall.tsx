@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { registerInstallElement } from "@/lib/pwa-install";
 // @ts-ignore
 import type { PWAInstallElement } from "@khmyznikov/pwa-install";
@@ -9,6 +10,7 @@ import type { PWAInstallElement } from "@khmyznikov/pwa-install";
 // a second one here collides with it.
 
 export function PWAInstall() {
+  const t = useTranslations("common.pwa");
   const pwaInstallRef = useRef<PWAInstallElement | null>(null);
 
   useEffect(() => {
@@ -38,7 +40,7 @@ export function PWAInstall() {
       ref={pwaInstallRef}
       manifest-url="/manifest.webmanifest"
       name="Expeditop"
-      description="Install Expeditop for a better experience: real-time updates, offline access, and faster loading."
+      description={t("installDescription")}
       icon="/icons/icon-192x192.png"
       manual-apple="true"
     ></pwa-install>

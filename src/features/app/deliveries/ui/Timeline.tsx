@@ -51,11 +51,11 @@ export function Timeline({ steps }: { steps: TimelineStep[] }) {
               className={cn(
                 "flex h-10 w-10 shrink-0 items-center justify-center rounded-full ring-4",
                 step.status === "CANCELLED"
-                  ? "bg-destructive/15 text-destructive ring-destructive/10"
+                  ? "tone-danger ring-destructive/10"
                   : step.step === "completed"
                     ? "bg-primary text-primary-foreground ring-primary/15"
                     : step.step === "active"
-                      ? "bg-success text-white ring-success/20"
+                      ? "bg-success text-success-foreground ring-success/20"
                       : "bg-muted text-muted-foreground ring-muted"
               )}
             >

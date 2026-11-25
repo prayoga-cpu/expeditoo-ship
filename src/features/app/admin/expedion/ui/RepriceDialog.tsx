@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Loader2, Sparkles } from "lucide-react";
+import { Calculator, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -142,7 +142,7 @@ export function RepriceDialog({
             {isSuggesting ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
-              <Sparkles className="mr-2 h-4 w-4" />
+              <Calculator className="mr-2 h-4 w-4" />
             )}
             {isSuggesting ? t("actions.suggesting") : t("actions.suggestPrice")}
           </Button>

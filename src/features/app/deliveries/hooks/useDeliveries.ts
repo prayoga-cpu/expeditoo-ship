@@ -1,10 +1,11 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { format } from "date-fns";
+import { format, type Locale } from "date-fns";
 import { useTranslations } from "next-intl";
 import { useTabState } from "@/features/app/common/hooks";
 import { useAuth } from "@/lib/auth-context";
+import { useDateLocale } from "@/lib/hooks/useDateLocale";
 import { routeTowns } from "@/lib/route-label";
 import { deliveriesApi, type Shipment } from "../api/deliveries.api";
 import type { DeliveryTab, DeliverySummaryView } from "../types";
@@ -27,17 +28,19 @@ export const deliveryKeys = {
  */
 export function useDeliveries() {
   const t = useTranslations("deliveries");
+  const tLoad = useTranslations("common.loadError");
+  const locale = useDateLocale();
   const { user } = useAuth();
   const { activeTab, setActiveTab } = useTabState<DeliveryTab>("active");
 
-  const { data, isLoading, isError, error, refetch } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: deliveryKeys.list(activeTab),
     queryFn: () =>
       deliveriesApi.list({ status: TAB_STATUSES[activeTab], limit: 50 }),
   });
 
   const deliveries: DeliverySummaryView[] = (data?.items ?? []).map(
-    (shipment) => toSummary(shipment, user?.id ?? null, t)
+    (shipment) => toSummary(shipment, user?.id ?? null, t, locale)
   );
 
   return {
@@ -47,7 +50,8 @@ export function useDeliveries() {
     total: data?.total ?? 0,
     isLoading,
     isError,
-    error: error instanceof Error ? error.message : null,
+    // A sentence of ours, never the server's: that one is English or a code.
+    error: isError ? tLoad("description") : null,
     refetch,
   };
 }
@@ -55,7 +59,8 @@ export function useDeliveries() {
 function toSummary(
   shipment: Shipment,
   viewerId: string | null,
-  t: ReturnType<typeof useTranslations>
+  t: ReturnType<typeof useTranslations>,
+  locale: Locale
 ): DeliverySummaryView {
   const towns = routeTowns(shipment);
   const counterpart =
@@ -74,10 +79,10 @@ function toSummary(
     counterpartName: counterpart.name,
     dateLabel: shipment.scheduledPickup
       ? t("card.scheduled", {
-          date: format(new Date(shipment.scheduledPickup), "d MMM HH:mm"),
+          date: format(new Date(shipment.scheduledPickup), "d MMM HH:mm", { locale }),
         })
       : t("card.created", {
-          date: format(new Date(shipment.createdAt), "d MMM yyyy"),
+          date: format(new Date(shipment.createdAt), "d MMM yyyy", { locale }),
         }),
   };
 }

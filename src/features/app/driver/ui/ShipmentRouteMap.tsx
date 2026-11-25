@@ -173,9 +173,9 @@ export function ShipmentRouteMap({
         <Marker longitude={origin.lng} latitude={origin.lat} anchor="bottom">
           <div className="flex flex-col items-center">
             <div className="bg-background px-2 py-1 rounded shadow-md text-xs font-medium mb-1 whitespace-nowrap border">
-              Pickup
+              {t("origin")}
             </div>
-            <MapPin className="w-8 h-8 text-blue-500 fill-blue-500/20" />
+            <MapPin className="w-8 h-8 text-info-ink fill-primary/20" />
           </div>
         </Marker>
 
@@ -187,9 +187,9 @@ export function ShipmentRouteMap({
         >
           <div className="flex flex-col items-center">
             <div className="bg-background px-2 py-1 rounded shadow-md text-xs font-medium mb-1 whitespace-nowrap border">
-              Dropoff
+              {t("destination")}
             </div>
-            <MapPin className="w-8 h-8 text-green-500 fill-green-500/20" />
+            <MapPin className="w-8 h-8 text-success-ink fill-success/20" />
           </div>
         </Marker>
       </Map>

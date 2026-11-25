@@ -331,7 +331,7 @@ function SentStep({
   const t = useTranslations("feedback");
   return (
     <div className="space-y-4 py-6 text-center">
-      <CheckCircle2 className="mx-auto h-10 w-10 text-emerald-600 dark:text-emerald-400" />
+      <CheckCircle2 className="mx-auto h-10 w-10 text-success-ink" />
       <div className="space-y-1">
         <p className="font-semibold">{t("success.title")}</p>
         <p className="text-sm text-muted-foreground">{t("success.message")}</p>

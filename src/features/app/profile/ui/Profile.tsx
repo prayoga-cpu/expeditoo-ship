@@ -61,6 +61,7 @@ export function Profile() {
   const { user: authUser } = useAuth();
 
   const t = useTranslations("profile");
+  const tCommon = useTranslations("common");
   const pathname = usePathname();
   const isDriverRole =
     userRoles?.includes("carrier") || userRoles?.includes("driver") || false;
@@ -132,13 +133,13 @@ export function Profile() {
         <CardContent className="p-6 md:p-8">
           <div className="flex flex-col md:flex-row gap-6 items-center md:items-center">
             <div className="relative">
-              <Avatar className="w-24 h-24 md:w-32 md:h-32 border-4 border-background shadow-xl">
+              <Avatar className="w-24 h-24 md:w-32 md:h-32 border border-border">
                 <AvatarImage
                   src={user?.image || undefined}
                   referrerPolicy="no-referrer"
                 />
-                <AvatarFallback className="text-2xl font-bold bg-linear-to-br from-primary to-accent-pink text-white">
-                  {user?.name.charAt(0)}
+                <AvatarFallback className="bg-primary/10 text-3xl font-semibold text-primary">
+                  {(user?.name || tCommon("unnamedUser")).charAt(0)}
                 </AvatarFallback>
               </Avatar>
               {/* Profile Picture Modal */}
@@ -189,26 +190,26 @@ export function Profile() {
             </div>
             <div className="flex-1 text-center md:text-left">
               <h1 className="text-2xl md:text-3xl font-bold text-foreground flex items-center justify-center md:justify-start gap-2">
-                {user.name}
+                {user.name || tCommon("unnamedUser")}
                 {user.isVerified && <VerifiedBadge size={24} />}
               </h1>
               <p className="text-muted-foreground mb-2">{user.email}</p>
               {userRoles?.includes("admin") && (
                 <Badge
                   variant="outline"
-                  className="mb-2 gap-1 border-destructive/30 bg-destructive/15 text-destructive"
+                  className="tone-danger mb-2 gap-1"
                 >
                   {t("header.adminAccess")}
                 </Badge>
               )}
               <div className="flex items-center gap-2 mb-4 justify-center md:justify-start">
-                <div className="flex items-center text-yellow-500">
+                <div className="flex items-center text-warning-ink">
                   <Star className="w-4 h-4 fill-current" />
                   <span className="ml-1 font-medium">{user.rating}</span>
                 </div>
                 <span className="text-muted-foreground">•</span>
                 <span className="text-muted-foreground">
-                  {user.reviews} {t("header.reviews")}
+                  {t("header.reviewsCount", { count: user.reviews })}
                 </span>
               </div>
               <div className="flex gap-3 justify-center md:justify-start">

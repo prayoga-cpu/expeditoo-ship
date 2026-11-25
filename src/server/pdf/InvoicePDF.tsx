@@ -383,7 +383,7 @@ export const InvoiceBatchPDF = ({
                 <View style={styles.header}>
                     <Text style={styles.logo}>Expeditop</Text>
                     <View>
-                        <Text style={styles.invoiceTitle}>FACTURES</Text>
+                        <Text style={styles.invoiceTitle}>DOCUMENTS</Text>
                         <Text style={styles.invoiceNumber}>{periodLabel}</Text>
                     </View>
                 </View>

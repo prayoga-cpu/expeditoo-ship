@@ -22,6 +22,7 @@ import { formatCurrency } from "@/lib/currency";
 import { CreateReviewModal } from "@/features/app/common/ui/CreateReviewModal";
 import { useCanReview } from "@/features/app/common/hooks/useCanReview";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/hooks/useDateLocale";
 import { useShipmentPhotos } from "@/features/app/common/hooks/useShipmentPhotos";
 import {
   useShipmentAttestations,
@@ -114,7 +115,7 @@ export function DeliveryDetail({
         isContacting={isContacting}
       />
 
-      <Card className="space-y-4 p-4 sm:p-5">
+      <Card className="gap-0 space-y-4 p-4 sm:p-5">
         <h2 className="font-semibold">{t("details.tracking")}</h2>
         <Separator />
         <Timeline steps={delivery.timeline} />
@@ -154,7 +155,7 @@ function ClientAttestationCard({ delivery }: { delivery: DeliveryDetailView }) {
   if (delivery.role !== "shipper" || milestones.length === 0) return null;
 
   return (
-    <Card className="space-y-4 p-4 sm:p-5">
+    <Card className="gap-0 space-y-4 p-4 sm:p-5">
       <div className="space-y-1">
         <h2 className="flex items-center gap-2 font-semibold">
           <BadgeCheck className="h-4 w-4 text-muted-foreground" />
@@ -240,7 +241,7 @@ function ShipmentPhotosCard({ shipmentId }: { shipmentId: string }) {
   const { pickup, delivery, isError, refetch } = useShipmentPhotos(shipmentId);
 
   return (
-    <Card className="space-y-4 p-4 sm:p-5">
+    <Card className="gap-0 space-y-4 p-4 sm:p-5">
       <h2 className="flex items-center gap-2 font-semibold">
         <Camera className="h-4 w-4 text-muted-foreground" />
         {t("sectionTitle")}
@@ -274,7 +275,7 @@ function RouteCard({ delivery }: { delivery: DeliveryDetailView }) {
   const t = useTranslations("deliveries.details");
 
   return (
-    <Card className="space-y-4 p-4 sm:p-5">
+    <Card className="gap-0 space-y-4 p-4 sm:p-5">
       <h2 className="flex items-center gap-2 font-semibold">
         <MapPin className="h-4 w-4 text-muted-foreground" />
         {t("route")}
@@ -305,6 +306,8 @@ function Endpoint({
   address: string;
   date: string | null;
 }) {
+  const locale = useDateLocale();
+
   return (
     <div className="space-y-1">
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -314,7 +317,7 @@ function Endpoint({
       {date && (
         <p className="flex items-center gap-1.5 pt-1 text-sm text-muted-foreground">
           <CalendarClock className="h-3.5 w-3.5" />
-          {format(new Date(date), "d MMM HH:mm")}
+          {format(new Date(date), "d MMM HH:mm", { locale })}
         </p>
       )}
     </div>
@@ -335,7 +338,7 @@ function CounterpartCard({
   const isShipperView = delivery.role === "shipper";
 
   return (
-    <Card className="space-y-4 p-4 sm:p-5">
+    <Card className="gap-0 space-y-4 p-4 sm:p-5">
       <h2 className="font-semibold">
         {isShipperView ? t("details.carrier") : t("details.shipper")}
       </h2>
@@ -392,7 +395,7 @@ function CancellationNote({ delivery }: { delivery: DeliveryDetailView }) {
   if (!delivery.cancelledBySide && !delivery.cancellationReason) return null;
 
   return (
-    <div className="space-y-1 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+    <div className="tone-danger space-y-1 rounded-lg border p-3 text-sm">
       {delivery.cancelledBySide && (
         <p className="font-medium">
           {t(`by.${delivery.cancelledBySide}`)}
@@ -424,7 +427,7 @@ function ReviewSection({ delivery }: { delivery: DeliveryDetailView }) {
   if (!eligibility.canReview) {
     if (eligibility.reason !== "ALREADY_REVIEWED") return null;
     return (
-      <div className="flex h-12 w-full items-center justify-center gap-2 rounded-full border border-success/30 bg-success/10 font-semibold text-success">
+      <div className="tone-success flex h-12 w-full items-center justify-center gap-2 rounded-full border font-semibold">
         <Star className="h-5 w-5 fill-current" />
         {t("buttons.reviewed")}
       </div>

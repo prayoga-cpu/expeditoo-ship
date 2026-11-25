@@ -34,7 +34,6 @@ import { CenteredEmptyState } from "@/components/ui/centered-empty-state";
 import { LoadErrorState } from "@/components/ui/load-error-state";
 import {
   ShipmentStatusBadge,
-  STATUS_ACCENT_CLASSES,
 } from "./ShipmentStatusBadge";
 import type { DriverShipment } from "../api/shipments.api";
 import { useLocale, useTranslations } from "next-intl";
@@ -179,10 +178,6 @@ export function MyShipments() {
               <Card key={shipment.id} className="overflow-hidden">
                 <CardContent className="p-0">
                   <div className="flex flex-col md:flex-row md:items-center">
-                    <div
-                      className={`w-1.5 self-stretch ${STATUS_ACCENT_CLASSES[shipment.status]}`}
-                    />
-
                     <div className="flex-1 p-4 md:p-6 space-y-4 md:space-y-0 md:grid md:grid-cols-12 md:gap-4 items-center">
                       {/* Title & Status */}
                       <div className="col-span-4 space-y-1">

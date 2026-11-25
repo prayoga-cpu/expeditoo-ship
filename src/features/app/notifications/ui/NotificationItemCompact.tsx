@@ -47,9 +47,7 @@ export function NotificationItemCompact({
       onClick={handleClick}
       className={cn(
         "group relative flex gap-3 p-3 rounded-lg transition-colors duration-200 cursor-pointer",
-        !notification.read
-          ? "bg-primary/5 hover:bg-primary/10"
-          : "hover:bg-accent",
+        "hover:bg-muted/50",
       )}
     >
       {/* Icon */}
@@ -57,7 +55,7 @@ export function NotificationItemCompact({
         className={cn(
           "shrink-0 w-10 h-10 rounded-lg flex items-center justify-center transition-colors",
           !notification.read
-            ? "bg-primary/10 text-primary"
+            ? "bg-muted text-foreground"
             : "bg-muted text-muted-foreground",
         )}
       >

@@ -1,49 +1,26 @@
 {
   "common": {
     "buttons": {
-      "save": "Enregistrer",
-      "cancel": "Annuler",
-      "submit": "Soumettre",
-      "close": "Fermer",
       "back": "Retour",
-      "next": "Suivant",
-      "add": "Ajouter",
-      "edit": "Modifier",
-      "delete": "Supprimer",
-      "confirm": "Confirmer",
-      "search": "Rechercher",
-      "filter": "Filtrer",
-      "clear": "Effacer",
-      "apply": "Appliquer",
-      "loading": "Chargement...",
       "viewAll": "Voir tout",
-      "seeMore": "Voir plus",
-      "addNew": "Ajouter nouveau"
-    },
-    "units": {
-      "cm": "cm",
-      "kg": "kg",
-      "euro": "€"
-    },
-    "formats": {
-      "pricePlaceholder": "0,00"
+      "seeMore": "Voir plus"
     },
     "navigation": {
       "home": "Accueil",
-      "shipments": "Expéditions",
       "messages": "Messages",
-      "account": "Compte",
       "profile": "Profil",
-      "settings": "Paramètres",
-      "notifications": "Notifications",
-      "logout": "Déconnexion",
-      "backToApp": "Retour à l'app",
+      "backToApp": "Retour à l'application",
       "shipmentTracking": "Suivi d'expédition",
       "jobs": "Missions",
       "browseJobs": "Voir les demandes",
       "myOffers": "Mes offres",
       "deliveries": "Livraisons",
-      "groups": { "requests": "Mes envois", "work": "Missions", "money": "Argent", "account": "Compte" },
+      "groups": {
+        "requests": "Mes envois",
+        "work": "Missions",
+        "money": "Argent",
+        "account": "Compte"
+      },
       "myApplication": "Mon dossier",
       "becomeDriver": "Devenir chauffeur",
       "adminPanel": "Panneau d'administration",
@@ -52,7 +29,6 @@
       "myTrips": "Mes trajets",
       "myEarnings": "Mes gains",
       "language": "Langue",
-      "feedback": "Envoyer un retour",
       "planner": "Planificateur",
       "bar": {
         "home": "Accueil",
@@ -66,46 +42,16 @@
         "deliveries": "Livraisons"
       }
     },
-    "categories": {
-      "electronics": "Électronique",
-      "furniture": "Meubles",
-      "clothing": "Vêtements",
-      "vehicles": "Véhicules",
-      "documents": "Documents",
-      "sports": "Sports",
-      "books": "Livres",
-      "others": "Autres",
-      "general": "Général",
-      "appliances": "Électroménager",
-      "music": "Musique",
-      "pets": "Animaux"
-    },
-    "status": {
-      "active": "Actif",
-      "pending": "En attente",
-      "completed": "Terminé",
-      "cancelled": "Annulé",
-      "inProgress": "En cours",
-      "accepted": "Accepté",
-      "picked_up": "Récupéré",
-      "in_transit": "En transit",
-      "delivered": "Livré"
-    },
     "errors": {
       "loadFailed": "Échec du chargement des données",
       "generic": "Une erreur est survenue",
-      "networkError": "Erreur de connexion",
-      "notFound": "Non trouvé",
-      "unauthorized": "Non autorisé",
-      "tryAgain": "Veuillez réessayer"
+      "tryAgain": "Réessayer"
     },
     "time": {
-      "now": "Maintenant",
-      "today": "Aujourd'hui",
-      "yesterday": "Hier",
-      "daysAgo": "il y a {count} jours",
-      "hoursAgo": "il y a {count} heures",
-      "minutesAgo": "il y a {count} minutes"
+      "now": "À l'instant",
+      "daysAgo": "{count, plural, one {il y a # jour} other {il y a # jours}}",
+      "hoursAgo": "{count, plural, one {il y a # heure} other {il y a # heures}}",
+      "minutesAgo": "{count, plural, one {il y a # minute} other {il y a # minutes}}"
     },
     "datePicker": {
       "pickDateRange": "Choisir une période",
@@ -123,12 +69,12 @@
       "clickToPin": "Cliquez sur la carte pour épingler l'emplacement",
       "gettingAddress": "Recherche de l'adresse…",
       "notFound": "Aucune adresse trouvée pour ce point",
-      "genericError": "Impossible de résoudre cet emplacement",
+      "genericError": "Impossible de trouver cet emplacement",
       "address": "Adresse",
       "postalCode": "Code postal",
       "city": "Ville",
-      "cantFindLocation": "Vous ne trouvez pas ? Collez un lien de carte",
-"enterManually": "Vous ne trouvez pas ? Saisissez l'adresse ou collez un lien Google Maps",
+      "cantFindLocation": "Vous ne trouvez pas ? Collez un lien vers une carte",
+      "enterManually": "Vous ne trouvez pas ? Saisissez l'adresse ou collez un lien Google Maps",
       "entryAddress": "Saisir l'adresse",
       "entryLink": "Lien Google Maps",
       "linkHowTo": "Dans Google Maps, appuyez longuement sur l'endroit, touchez Partager, puis Copier le lien.",
@@ -136,7 +82,7 @@
       "checkOnMap": "Vérifier sur Google Maps",
       "changeLink": "Utiliser un autre lien",
       "linkFilledHint": "Rempli à partir du lien — corrigez si besoin.",
-"useMapInstead": "Utiliser la carte à la place",
+      "useMapInstead": "Utiliser la carte à la place",
       "linkLabel": "Lien vers l'emplacement",
       "linkPlaceholder": "Collez un lien Google Maps, Apple Maps ou OpenStreetMap",
       "useLink": "Utiliser le lien",
@@ -151,12 +97,7 @@
     },
     "roles": {
       "admin": "Admin",
-      "finance": "Finance",
-      "support": "Support",
-      "operator": "Opérateur",
-      "driver": "Chauffeur",
       "carrier": "Chauffeur",
-      "shipper": "Expéditeur",
       "user": "Utilisateur",
       "hint": "Votre niveau d'accès"
     },
@@ -216,11 +157,21 @@
     "sidebar": {
       "collapse": "Réduire le menu",
       "expand": "Agrandir le menu"
-    }
+    },
+    "pwa": {
+      "installDescription": "Installez Expeditop pour une meilleure expérience : mises à jour en temps réel, accès hors ligne et chargement plus rapide."
+    },
+    "notFound": {
+      "title": "Page introuvable",
+      "description": "Cette page n'existe pas ou a été déplacée.",
+      "home": "Retour à l'accueil"
+    },
+    "close": "Fermer",
+    "unnamedUser": "Utilisateur"
   },
   "auth": {
     "login": {
-      "title": "Bon retour",
+      "title": "Bon retour parmi nous",
       "subtitle": "Connectez-vous à votre compte EXPEDITOP",
       "email": "Adresse e-mail",
       "password": "Mot de passe",
@@ -231,13 +182,13 @@
       "signInWithGoogle": "Se connecter avec Google",
       "noAccount": "Pas encore de compte ?",
       "signUp": "S'inscrire",
-      "loading": "Connexion en cours...",
+      "loading": "Connexion en cours…",
       "errors": {
-        "emailRequired": "L'email est requis",
-        "emailInvalid": "Veuillez entrer un email valide",
+        "emailRequired": "L'e-mail est requis",
+        "emailInvalid": "Veuillez entrer un e-mail valide",
         "passwordRequired": "Le mot de passe est requis"
       },
-      "emailVerified": "Email vérifié avec succès !",
+      "emailVerified": "E-mail vérifié",
       "emailVerifiedDesc": "Vous pouvez maintenant vous connecter."
     },
     "register": {
@@ -252,15 +203,15 @@
       "signUpWithGoogle": "S'inscrire avec Google",
       "hasAccount": "Déjà un compte ?",
       "signIn": "Se connecter",
-      "loading": "Création du compte...",
+      "loading": "Création du compte…",
       "terms": "En vous inscrivant, vous acceptez nos",
       "termsOfService": "Conditions d'utilisation",
       "and": "et notre",
       "privacyPolicy": "Politique de confidentialité",
       "placeholderEmail": "vous@exemple.com",
       "errors": {
-        "emailRequired": "L'email est requis",
-        "emailInvalid": "Veuillez entrer un email valide",
+        "emailRequired": "L'e-mail est requis",
+        "emailInvalid": "Veuillez entrer un e-mail valide",
         "passwordMin": "Le mot de passe doit contenir au moins 8 caractères",
         "passwordMismatch": "Les mots de passe ne correspondent pas",
         "firstNameRequired": "Le prénom est requis",
@@ -275,18 +226,17 @@
       "placeholderFirstName": "Jean",
       "placeholderLastName": "Dupont",
       "placeholderAlias": "Jeannot",
-      "accountNote": "Avec ce compte, vous pouvez demander un transport tout de suite. Pour transporter en tant que chauffeur, déposez votre candidature depuis l'application après l'inscription (« Devenir chauffeur »)."
+      "accountNote": "Avec ce compte, vous pouvez demander un transport tout de suite. Pour transporter en tant que chauffeur, déposez votre dossier depuis l'application après l'inscription (« Devenir chauffeur »)."
     },
     "forgotPassword": {
       "title": "Mot de passe oublié ?",
-      "subtitle": "Entrez votre email et nous vous enverrons un lien de réinitialisation",
+      "subtitle": "Entrez votre e-mail et nous vous enverrons un lien de réinitialisation",
       "email": "Adresse e-mail",
       "submit": "Envoyer le lien",
       "backToLogin": "Retour à la connexion",
-      "success": "Vérifiez votre email pour le lien de réinitialisation",
-      "emailRequired": "Veuillez saisir votre adresse email",
-      "emailInvalid": "Veuillez saisir une adresse email valide",
-      "sentTitle": "Vérifiez votre email",
+      "emailRequired": "Veuillez saisir votre adresse e-mail",
+      "emailInvalid": "Veuillez saisir une adresse e-mail valide",
+      "sentTitle": "Vérifiez votre e-mail",
       "sentBody": "Nous avons envoyé un lien de réinitialisation à {email}.",
       "sentHint": "Le lien expire dans 1 heure. Pensez à vérifier vos courriers indésirables."
     },
@@ -307,7 +257,6 @@
       "backToSignIn": "Retour à la connexion",
       "failedTitle": "Réinitialisation impossible",
       "failedBody": "Le lien a peut-être expiré ou a déjà servi.",
-      "failedFallback": "La réinitialisation a échoué.",
       "missingToken": "Lien de réinitialisation incomplet.",
       "passwordMin": "8 caractères minimum",
       "passwordHint": "8 caractères minimum",
@@ -316,32 +265,31 @@
       "contactSupport": "Contacter le support"
     },
     "verifyEmail": {
-      "title": "Vérifiez votre email",
+      "title": "Vérifiez votre e-mail",
       "subtitle": "Nous vous avons envoyé un e-mail avec un code à 6 chiffres et un lien de confirmation.",
-      "resend": "Renvoyer l'email",
-      "resending": "Envoi en cours...",
-      "resent": "Email de vérification envoyé !",
+      "resend": "Renvoyer l'e-mail",
+      "resending": "Envoi en cours…",
+      "resent": "E-mail de vérification envoyé",
       "backToLogin": "Retour à la connexion",
-      "didntReceive": "Vous n'avez pas reçu l'email ?",
+      "didntReceive": "Vous n'avez pas reçu l'e-mail ?",
       "checkSpam": "Vérifiez vos courriers indésirables ou patientez quelques minutes.",
-      "verifyingTitle": "Vérification de votre email",
-      "verifyingBody": "Veuillez patienter, nous vérifions votre adresse email…",
-      "successTitle": "Email vérifié",
+      "verifyingTitle": "Vérification de votre e-mail",
+      "verifyingBody": "Veuillez patienter, nous vérifions votre adresse e-mail…",
+      "successTitle": "E-mail vérifié",
       "successBody": "Votre adresse e-mail est confirmée. Connectez-vous pour continuer.",
-      "redirecting": "Nous vous emmenons vers la connexion…",
+      "redirecting": "Redirection vers la connexion…",
       "continue": "Continuer",
-      "failedTitle": "Nous n'avons pas pu vérifier votre email",
+      "failedTitle": "Nous n'avons pas pu vérifier votre e-mail",
       "failedBody": "Le lien a peut-être expiré ou a déjà été utilisé.",
-      "failedFallback": "La vérification de l'email a échoué.",
+      "failedFallback": "La vérification de l'e-mail a échoué.",
       "needHelp": "Besoin d'aide ?",
       "contactSupport": "Contacter le support",
-      "loading": "Chargement…",
       "subtitleWithEmail": "Nous avons envoyé un code à 6 chiffres et un lien de confirmation à {email}.",
       "fromSignIn": "Votre adresse e-mail n'est pas encore confirmée. Nous venons de vous envoyer un nouveau code : saisissez-le ci-dessous, ou ouvrez le lien du même e-mail. S'il n'arrive pas, renvoyez-le.",
       "linkFailedBody": "Le lien a peut-être expiré ou a déjà été utilisé. Saisissez ci-dessous le code de votre dernier e-mail, ou demandez-en un nouveau.",
       "resentHint": "Il contient un nouveau code et peut mettre quelques minutes à arriver.",
       "resendIn": "Renvoyer dans {seconds} s",
-      "resendFailed": "L'email n'a pas pu être envoyé. Réessayez dans un instant ; si le problème continue, écrivez-nous à {support}.",
+      "resendFailed": "L'e-mail n'a pas pu être envoyé. Réessayez dans un instant ; si le problème continue, écrivez-nous à {support}.",
       "resendRateLimited": "Trop de demandes à la suite. Patientez une minute avant de réessayer.",
       "emailLabel": "Votre adresse e-mail",
       "emailPlaceholder": "vous@exemple.com",
@@ -352,21 +300,21 @@
         "placeholder": "123456",
         "submit": "Valider",
         "checking": "Vérification…",
-        "verified": "Adresse confirmée. Nous vous emmenons vers la connexion…",
+        "verified": "Adresse confirmée. Redirection vers la connexion…",
         "incomplete": "Saisissez les 6 chiffres du code reçu par e-mail.",
         "invalid": "{count, plural, one {Ce code n'est pas le bon. Il vous reste # essai : vérifiez qu'il vient du dernier e-mail reçu.} other {Ce code n'est pas le bon. Il vous reste # essais : vérifiez qu'il vient du dernier e-mail reçu.}}",
         "invalidNoCount": "Ce code n'est pas le bon. Vérifiez qu'il vient du dernier e-mail reçu, puis réessayez.",
-        "expired": "Ce code a expiré ou a été remplacé par un plus récent. Demandez-en un nouveau avec le bouton « Renvoyer l'email » ci-dessous.",
-        "tooManyAttempts": "Trop d'essais : ce code ne fonctionne plus. Demandez-en un nouveau avec le bouton « Renvoyer l'email » ci-dessous.",
+        "expired": "Ce code a expiré ou a été remplacé par un plus récent. Demandez-en un nouveau avec le bouton « Renvoyer l'e-mail » ci-dessous.",
+        "tooManyAttempts": "Trop d'essais : ce code ne fonctionne plus. Demandez-en un nouveau avec le bouton « Renvoyer l'e-mail » ci-dessous.",
         "rateLimited": "Trop de tentatives à la suite. Patientez une minute avant de réessayer.",
         "failed": "La vérification n'a pas abouti. Réessayez dans un instant ; si le problème continue, écrivez-nous à {support}."
       }
     },
     "intent": {
-      "bid": "Vous étiez sur le point de placer une offre.",
-      "bidWithRef": "Vous étiez sur le point d'enchérir sur {ref}.",
+      "bid": "Vous étiez sur le point de faire une offre.",
+      "bidWithRef": "Vous étiez sur le point de faire une offre sur {ref}.",
       "jobs": "Vous alliez voir le tableau complet des courses.",
-      "carrier": "Vous rejoigniez le réseau de transporteurs."
+      "carrier": "Vous étiez sur le point de rejoindre le réseau de transporteurs."
     },
     "welcome": {
       "title": "Qu'est-ce qui vous amène sur EXPEDITOP ?",
@@ -376,7 +324,7 @@
       "shipCta": "Demander un transport",
       "driveTitle": "Je veux conduire et gagner de l'argent",
       "driveDescription": "Postulez comme chauffeur, répondez à des missions et soyez payé pour vos livraisons.",
-      "driveCta": "Commencer ma candidature"
+      "driveCta": "Déposer mon dossier"
     },
     "errors": {
       "invalidCredentials": "E-mail ou mot de passe incorrect. Vérifiez-les, ou réinitialisez votre mot de passe.",
@@ -396,7 +344,8 @@
         "requestNewLink": "Recevoir un nouveau lien"
       },
       "oauthFailed": "La connexion avec Google n'a pas abouti. Réessayez, ou connectez-vous avec votre e-mail et votre mot de passe ci-dessous."
-    }
+    },
+    "emailPlaceholder": "vous@exemple.fr"
   },
   "profile": {
     "sections": {
@@ -407,32 +356,29 @@
       "account": "Compte"
     },
     "public": {
-      "notFound": "Utilisateur non trouvé",
+      "notFound": "Utilisateur introuvable",
       "notFoundDesc": "L'utilisateur que vous recherchez n'existe pas.",
-      "goBack": "Retourner",
+      "goBack": "Retour",
       "back": "Retour",
       "reviews": "{count} avis",
       "joined": "Membre depuis {date}",
-      "activeListings": "Annonces actives",
+      "activeListings": "Demandes en cours",
       "message": "Message",
-      "noListings": "Aucune annonce active",
-      "noListingsDesc": "Cet utilisateur n'a aucun article en vente pour le moment.",
-      "loginToMessage": "Veuillez vous connecter pour envoyer un message",
+      "noListings": "Aucune demande en cours",
+      "noListingsDesc": "Cet utilisateur n'a aucune demande de transport en cours pour le moment.",
+      "loginToMessage": "Connectez-vous pour envoyer un message",
       "selfMessage": "Vous ne pouvez pas vous envoyer de message",
       "messageError": "Une erreur est survenue"
     },
-    "title": "Profil",
     "header": {
       "reviews": "avis",
       "settings": "Paramètres",
       "logout": "Déconnexion",
-      "adminAccess": "Vous disposez d'un accès administrateur"
+      "adminAccess": "Vous disposez d'un accès administrateur",
+      "reviewsCount": "{count, plural, =0 {Aucun avis} one {# avis} other {# avis}}"
     },
     "quickLinks": {
-      "title": "Liens rapides",
-      "myAuctions": "Mes enchères",
-      "myBids": "Mes offres",
-      "earnings": "Revenus",
+      "earnings": "Mes gains",
       "myReviews": "Mes avis",
       "myTrips": "Mes trajets",
       "paymentMethods": "Moyens de paiement",
@@ -441,72 +387,11 @@
       "adminUsers": "Gestion des utilisateurs",
       "adminPayments": "Paiements",
       "adminSupport": "Chats de support",
-      "driverSupport": "Support Chauffeur",
+      "driverSupport": "Support chauffeur",
       "driverDashboard": "Tableau de bord chauffeur",
       "driverApplication": "Mon dossier chauffeur",
       "becomeDriver": "Devenir chauffeur",
       "myInvoices": "Historique des transactions"
-    },
-    "myAuctions": {
-      "title": "Mes enchères",
-      "tabs": {
-        "active": "Actives",
-        "past": "Passées"
-      },
-      "newAuction": "Nouvelle enchère",
-      "card": {
-        "currentBid": "Enchère actuelle",
-        "bids": "Offres",
-        "views": "Vues",
-        "ended": "Terminée le",
-        "ends": "Se termine"
-      },
-      "actions": {
-        "viewDetails": "Voir les détails",
-        "edit": "Modifier l'enchère",
-        "end": "Terminer l'enchère",
-        "repost": "Republier l'enchère",
-        "delete": "Supprimer"
-      },
-      "empty": {
-        "noActive": "Aucune enchère active",
-        "noActiveDesc": "Vous n'avez aucune enchère active pour le moment.",
-        "noPast": "Aucune enchère passée",
-        "noPastDesc": "Vous n'avez encore publié aucune enchère.",
-        "startSelling": "Commencer à vendre"
-      },
-      "toast": {
-        "endSuccess": "Enchère terminée avec succès",
-        "deleteSuccess": "Enchère supprimée avec succès",
-        "repostSuccess": "Enchère republiée avec succès"
-      },
-      "dialogs": {
-        "end": {
-          "title": "Terminer l'enchère ?",
-          "description": "Êtes-vous sûr de vouloir terminer cette enchère plus tôt ? Cette action est irréversible. L'enchère sera déplacée vers vos enchères passées.",
-          "confirm": "Terminer l'enchère"
-        },
-        "delete": {
-          "title": "Supprimer l'enchère ?",
-          "description": "Êtes-vous sûr de vouloir supprimer \"{title}\" ? Cette action est irréversible et supprimera définitivement l'enchère ainsi que toutes ses données.",
-          "confirm": "Supprimer"
-        },
-        "repost": {
-          "title": "Republier l'enchère",
-          "description": "Créer une nouvelle enchère avec les mêmes détails. Choisissez la durée de la nouvelle enchère.",
-          "durationLabel": "Durée de l'enchère",
-          "confirm": "Republier l'enchère",
-          "durations": {
-            "1": "1 jour",
-            "3": "3 jours",
-            "5": "5 jours",
-            "7": "7 jours",
-            "14": "14 jours",
-            "30": "30 jours"
-          }
-        },
-        "cancel": "Annuler"
-      }
     },
     "address": {
       "title": "Adresses",
@@ -558,16 +443,16 @@
         "label": "Libellé",
         "labelPlaceholder": "ex: Domicile, Bureau",
         "street": "Adresse",
-        "streetPlaceholder": "123 Rue Principale",
+        "streetPlaceholder": "12 rue de la Paix",
         "city": "Ville",
         "cityPlaceholder": "Paris",
-        "zip": "Code Postal",
+        "zip": "Code postal",
         "zipPlaceholder": "75001",
         "country": "Pays",
         "countryPlaceholder": "France",
         "details": "Complément d'adresse",
         "detailsPlaceholder": "Étage, numéro d'appartement, digicode, etc.",
-        "detailsHelp": "Aidez le livreur à vous trouver facilement",
+        "detailsHelp": "Aide le transporteur à trouver l'endroit",
         "default": "Définir comme adresse par défaut",
         "usedForLabel": "Utiliser pour",
         "usedForOptions": {
@@ -578,36 +463,33 @@
         "usedForHint": "Vos nouvelles demandes commencent avec cette adresse déjà remplie de ce côté.",
         "save": "Enregistrer l'adresse",
         "update": "Mettre à jour",
-        "saving": "Enregistrement...",
+        "saving": "Enregistrement…",
         "pinLocation": "Épinglez un lieu sur la carte pour préciser la position, ou renseignez l'adresse ci-contre."
       },
       "map": {
-        "searchPlaceholder": "Rechercher un lieu en France...",
-        "clickToPin": "Cliquez sur la carte pour épingler",
-        "gettingAddress": "Récupération de l'adresse..."
+        "searchPlaceholder": "Rechercher un lieu en France…",
+        "clickToPin": "Cliquez sur la carte pour épingler l'emplacement",
+        "gettingAddress": "Recherche de l'adresse…"
       },
       "errors": {
-        "outsideFrance": "Ce lieu est en dehors de la France. La livraison est uniquement disponible en France.",
+        "outsideFrance": "Ce lieu est en dehors de la France. Une adresse enregistrée doit se trouver en France.",
         "notFound": "Adresse introuvable pour ce lieu.",
-        "generic": "Erreur lors de la récupération de l'adresse. Veuillez réessayer."
+        "generic": "Impossible de trouver l'adresse. Veuillez réessayer."
       }
     },
     "paymentMethods": {
       "title": "Moyens de paiement",
       "description": "Gérez vos cartes enregistrées pour un paiement plus rapide.",
-      "addNew": "Ajouter nouveau",
-      "cardNumber": "Numéro de carte",
-      "expiryDate": "Date d'expiration",
-      "addCard": "Ajouter la carte",
-      "expires": "Expire le",
+      "addNew": "Ajouter une carte",
+      "expires": "Expiration",
       "savedCards": "Cartes enregistrées",
       "emptyTitle": "Aucune carte enregistrée",
       "emptyDesc": "Ajoutez une carte pour payer plus rapidement.",
       "addFirst": "Ajouter une carte",
       "confirmDelete": "Êtes-vous sûr de vouloir supprimer cette carte ?",
-      "deleteSuccess": "Carte supprimée avec succès",
-      "deleteError": "Échec de la suppression de la carte",
-      "loadError": "Échec du chargement des moyens de paiement",
+      "deleteSuccess": "Carte supprimée",
+      "deleteError": "La carte n'a pas pu être supprimée.",
+      "loadError": "Vos moyens de paiement n'ont pas pu être chargés.",
       "add": {
         "title": "Ajouter une carte",
         "subtitle": "Enregistrez une carte pour payer plus vite vos prochains transports.",
@@ -624,7 +506,7 @@
     },
     "picture": {
       "title": "Photo de profil",
-      "upload": "Télécharger une nouvelle photo",
+      "upload": "Importer une nouvelle photo",
       "remove": "Supprimer la photo",
       "invalidTitle": "Fichier non pris en charge",
       "invalidDescription": "Choisissez une image (JPG, PNG…).",
@@ -649,35 +531,6 @@
       },
       "empty": "Aucun avis disponible pour cet utilisateur"
     },
-    "analytics": {
-      "avgOrderValue": "Valeur moyenne",
-      "avgTime": "Durée moyenne",
-      "deliveries": "Livraisons",
-      "earnings": "Revenus",
-      "fromLastMonth": "vs mois dernier",
-      "rating": "Note",
-      "recentDeliveries": "Livraisons récentes",
-      "recentPurchases": "Commandes récentes",
-      "revenue": "Chiffre d'affaires",
-      "revenueOverTime": "Chiffre d'affaires dans le temps",
-      "sales": "ventes",
-      "spending": "Dépenses",
-      "spendingOverTime": "Dépenses dans le temps",
-      "status": {
-        "delivered": "Livré",
-        "pending": "En attente",
-        "shipped": "Expédié"
-      },
-      "thisMonth": "ce mois-ci",
-      "topSellingItems": "Trajets les plus demandés",
-      "totalDistance": "Distance",
-      "totalEarnings": "Revenus",
-      "totalOrders": "Total des commandes",
-      "totalRevenue": "Chiffre d'affaires total",
-      "totalSales": "Total des ventes",
-      "totalSpent": "Total dépensé",
-      "weeklyEarnings": "Revenus hebdomadaires"
-    },
     "invoices": {
       "columns": {
         "actions": "Actions",
@@ -687,14 +540,14 @@
         "status": "Statut",
         "type": "Type"
       },
-      "description": "Consultez et téléchargez vos factures de paiement",
+      "description": "Consultez et téléchargez vos reçus, factures et avoirs",
       "deliveryNotice": "Chaque reçu vous est envoyé par e-mail dès le paiement, en pièce jointe. L'envoi par WhatsApp n'est pas encore disponible : consultez votre boîte mail, ou renvoyez le document ci-dessous.",
       "download": "Télécharger le PDF",
-      "empty": "Aucune facture",
-      "emptyDesc": "Vos factures apparaîtront ici après votre première commande.",
-      "error": "Échec du chargement des factures",
+      "empty": "Aucun document",
+      "emptyDesc": "Vos reçus apparaîtront ici dès votre premier transport payé.",
+      "error": "Vos documents n'ont pas pu être chargés",
       "errorDesc": "Réessayez plus tard ou contactez le support.",
-      "loading": "Chargement des factures…",
+      "loading": "Chargement de vos documents…",
       "status": {
         "draft": "Brouillon",
         "issued": "Émise",
@@ -702,8 +555,7 @@
         "void": "Annulée"
       },
       "title": "Historique des transactions",
-      "view": "Voir",
-      "downloadPeriod": "Télécharger toutes les factures de la période",
+      "downloadPeriod": "Télécharger tous les documents de la période",
       "periods": {
         "all": "Toutes périodes",
         "thisMonth": "Ce mois-ci",
@@ -816,15 +668,15 @@
         "push": "Par notification push"
       },
       "listingPublished": {
-        "title": "Annonce publiée",
-        "description": "Une confirmation par email dès que votre demande est en ligne sur le tableau."
+        "title": "Demande publiée",
+        "description": "Une confirmation par e-mail dès que votre demande est en ligne sur le tableau."
       },
       "driverPayment": {
-        "title": "Transporteur & paiement",
+        "title": "Transporteur et paiement",
         "description": "Votre reçu, envoyé dès qu'un transporteur est confirmé et le paiement effectué."
       },
       "tripUpdates": {
-        "title": "Suivi du trajet",
+        "title": "Suivi du transport",
         "description": "Retrait, en cours de livraison et livré — une notification par étape."
       },
       "routeAlerts": {
@@ -832,7 +684,7 @@
         "description": "Dès qu'une course correspond à un trajet que vous avez déclaré et pour lequel vous avez demandé à être alerté, dans Mes trajets."
       },
       "accountSecurity": {
-        "title": "Compte & Sécurité",
+        "title": "Compte et sécurité",
         "description": "Messages de bienvenue, réinitialisations de mot de passe et vérifications",
         "locked": "Toujours envoyés : sans eux, vous ne pourriez ni vérifier votre adresse ni récupérer votre compte."
       }
@@ -849,8 +701,8 @@
         "mailBody": "Bonjour, je souhaite supprimer mon compte EXPEDITOP. Merci de me confirmer la marche à suivre."
       }
     },
-    "updated": "Réglages enregistrés",
-    "updateFailed": "Impossible d'enregistrer vos réglages."
+    "updated": "Paramètres enregistrés",
+    "updateFailed": "Impossible d'enregistrer vos paramètres."
   },
   "messages": {
     "title": "Messages",
@@ -873,8 +725,8 @@
     "detail": {
       "noRatings": "Aucun avis",
       "newMessage": "Nouveau message",
-      "typeMessage": "Écrivez un message...",
-      "loading": "Chargement...",
+      "typeMessage": "Écrivez un message…",
+      "loading": "Chargement…",
       "unknown": "Inconnu",
       "you": "Vous",
       "backToInbox": "Retour aux messages",
@@ -896,7 +748,7 @@
       "withdrawn": "Offre retirée.",
       "alreadyBid": "Vous avez déjà une offre en cours ici. Retirez-la pour en envoyer une autre.",
       "manageOffers": "Gérer mes offres",
-      "slotBurnt": "Les enchères sur cette annonce vous sont fermées.",
+      "slotBurnt": "Vous ne pouvez plus faire d'offre sur cette annonce.",
       "retry": "Réessayer",
       "fleetErrorTitle": "Impossible de charger vos véhicules",
       "fleetErrorDescription": "Une offre nomme le véhicule qui fera le transport : il nous faut d'abord votre flotte.",
@@ -913,7 +765,7 @@
         "decline": "Refuser",
         "withdraw": "Retirer cette offre",
         "viewJob": "Voir l'annonce",
-        "operatorDecides": "Un opérateur décide sur cette annonce.",
+        "operatorDecides": "C'est un opérateur qui attribue cette annonce.",
         "noPayment": "Accord dans la conversation — aucun paiement n'est prélevé.",
         "status": {
           "pending": "En attente",
@@ -947,7 +799,7 @@
         "PRICE_OUT_OF_RANGE": "Ce prix est en dehors des limites autorisées.",
         "PICKUP_OUTSIDE_WINDOW": "Ce jour est en dehors de la fenêtre d'enlèvement de l'annonce.",
         "VEHICLE_NOT_OWNED": "Ce véhicule ne fait pas partie de votre flotte.",
-        "CANNOT_BID_OWN_LISTING": "Vous ne pouvez pas enchérir sur votre propre annonce.",
+        "CANNOT_BID_OWN_LISTING": "Vous ne pouvez pas faire d'offre sur votre propre annonce.",
         "PAYMENT_CHARGE_FAILED": "Le paiement n'a pas abouti. Votre carte n'a pas été débitée.",
         "PAYMENT_NOT_AUTHORISED": "Le paiement n'a pas été confirmé. Réessayez.",
         "COORDINATES_REQUIRED": "Nous n'avons pas pu situer l'adresse de retrait ou de livraison, même au niveau de la ville. Corrigez l'adresse de la demande, puis réessayez.",
@@ -967,9 +819,6 @@
       "today": "Aujourd'hui",
       "yesterday": "Hier",
       "daysAgo": "Il y a {count} jours"
-    },
-    "input": {
-      "placeholder": "Tapez un message..."
     },
     "chips": {
       "label": "Vos annonces en cours",
@@ -993,8 +842,8 @@
       "noPastDesc": "Vos expéditions livrées ou annulées apparaîtront ici."
     },
     "card": {
-      "scheduled": "Prévu : {date}",
-      "created": "Créé : {date}",
+      "scheduled": "Prévue : {date}",
+      "created": "Créée : {date}",
       "defaultTitle": "Livraison"
     },
     "details": {
@@ -1002,34 +851,22 @@
       "agreedPrice": "Prix convenu",
       "tracking": "Suivi",
       "route": "Trajet",
-      "pickup": "Enlèvement",
+      "pickup": "Retrait",
       "dropoff": "Livraison",
       "carrier": "Transporteur",
-      "shipper": "Expéditeur",
+      "shipper": "Client",
       "cancellationReason": "Motif d'annulation"
     },
     "buttons": {
-      "cancelShipment": "Annuler la livraison",
-      "keepShipment": "Garder la livraison",
-      "confirmCancellation": "Confirmer l'annulation",
-      "cancelling": "Annulation en cours...",
       "reviewed": "Noté",
       "contactCarrier": "Contacter le transporteur",
-      "contactShipper": "Contacter l'expéditeur",
+      "contactShipper": "Contacter le client",
       "rateCarrier": "Noter le transporteur",
-      "rateShipper": "Noter l'expéditeur"
-    },
-    "dialogs": {
-      "cancel": {
-        "title": "Annuler la livraison",
-        "description": "Êtes-vous sûr de vouloir annuler cette livraison ? Cette action est irréversible.",
-        "reasonLabel": "Raison de l'annulation",
-        "reasonPlaceholder": "Veuillez expliquer pourquoi vous devez annuler..."
-      }
+      "rateShipper": "Noter le client"
     },
     "events": {
       "PENDING": "Livraison créée",
-      "ASSIGNED": "Chauffeur assigné",
+      "ASSIGNED": "Chauffeur désigné",
       "PICKED_UP": "Retrait effectué",
       "IN_TRANSIT": "Livraison en cours",
       "DELIVERED": "Livré",
@@ -1052,7 +889,7 @@
     "cancelFeedback": {
       "success": "Transport annulé — votre paiement vous est remboursé",
       "requiresSupport": "La marchandise est déjà en route — contactez le support pour annuler",
-      "failed": "Impossible d'annuler l'expédition",
+      "failed": "Impossible d'annuler le transport",
       "useWithdraw": "Vous ne pouvez pas annuler la demande du client. Désistez-vous depuis l'écran de la course.",
       "systemAccount": "Ce transport appartient à Expedion — seul un opérateur peut l'annuler",
       "badCategory": "Ce motif ne correspond pas à votre rôle sur ce transport"
@@ -1075,7 +912,7 @@
       },
       "action": {
         "PICKED_UP": "Oui, le retrait a bien eu lieu",
-        "DELIVERED": "Oui, j'ai bien reçu mon lot"
+        "DELIVERED": "Oui, j'ai bien reçu ma marchandise"
       },
       "disclaimer": "Confirmer n'engage aucun paiement et ne modifie pas votre transport.",
       "thanks": "Merci, c'est enregistré",
@@ -1088,55 +925,23 @@
     "backToList": "Toutes mes livraisons"
   },
   "listing": {
-    "title": "Annonce",
-    "price": "Prix",
-    "condition": "État",
-    "category": "Catégorie",
-    "description": "Description",
-    "seller": "Vendeur",
-    "location": "Localisation",
-    "postedOn": "Publié le",
-    "buyNow": "Acheter maintenant",
-    "makeOffer": "Faire une offre",
-    "addToCart": "Ajouter au panier",
-    "contactSeller": "Contacter le vendeur",
-    "writeReview": "Écrire un avis",
-    "conditions": {
-      "new": "Neuf",
-      "likeNew": "Comme neuf",
-      "good": "Bon état",
-      "acceptable": "Acceptable"
-    },
-    "reviews": "{count} avis",
-    "reviewsTitle": "Avis des acheteurs",
-    "noReviews": "Aucun avis disponible pour cette annonce",
-    "from": "De",
-    "to": "À",
-    "quantity": "Quantité",
-    "size": "Taille",
-    "weight": "Poids",
-    "dimensions": "Dimensions",
-    "moreInfo": "Plus d'informations",
-    "info": {
-      "handling": "Pas d'aide à la manutention",
-      "signature": "Signature non requise",
-      "packaging": "Emballage personnalisé non inclus"
-    },
+    "reviewsTitle": "Avis",
+    "noReviews": "Aucun avis pour cette demande",
     "bid": {
-      "becomeCarrierTitle": "Envie d'enchérir sur ce type de mission ?",
-      "becomeCarrierDescription": "Les transporteurs se disputent le prix et le délai. Selon la mission, le gagnant est choisi par la personne qui l'a publiée ou par un opérateur. Postulez une fois, puis enchérissez sur toutes les missions.",
+      "becomeCarrierTitle": "Envie de faire des offres sur ce type de mission ?",
+      "becomeCarrierDescription": "Les transporteurs sont en concurrence sur le prix et le délai. Selon la mission, c'est la personne qui l'a publiée ou un opérateur qui choisit. Postulez une fois, puis faites des offres sur toutes les missions.",
       "becomeCarrierCta": "Devenir transporteur",
-      "notApprovedTitle": "Votre candidature transporteur n'est pas encore approuvée",
-      "notApprovedDescription": "Les offres se débloquent dès qu'un opérateur approuve votre candidature. Consultez son statut pour voir ce qu'il manque.",
-      "notApprovedCta": "Voir ma candidature",
+      "notApprovedTitle": "Votre dossier transporteur n'est pas encore approuvé",
+      "notApprovedDescription": "Les offres se débloquent dès qu'un opérateur approuve votre dossier. Consultez son statut pour voir ce qu'il manque.",
+      "notApprovedCta": "Voir mon dossier",
       "takeJobTitle": "Prendre cette course maintenant",
-      "takeJobDescription": "Acceptez-la au prix affiché de {price}. Sans enchère, sans attendre d’être choisi.",
+      "takeJobDescription": "Acceptez-la au prix affiché de {price}. Sans faire d’offre, sans attendre d’être choisi.",
       "takeJobVehicle": "Véhicule",
       "takeJobVehiclePlaceholder": "Choisir un véhicule",
       "takeJobCta": "Prendre cette course",
       "taking": "Attribution…",
       "takeSuccess": "La course est à vous. Elle figure dans vos expéditions.",
-      "takeJobFootnote": "Un opérateur peut toujours la voir et la reprendre tant que le lot n’a pas été récupéré.",
+      "takeJobFootnote": "Un opérateur peut toujours la voir et la reprendre tant que la marchandise n’a pas été enlevée.",
       "errors": {
         "LISTING_NOT_OPEN": "Un autre transporteur a été plus rapide. Cette course n’est plus disponible.",
         "LISTING_EXPIRED": "Le délai pour cette course est écoulé.",
@@ -1146,12 +951,12 @@
         "OFFER_ALREADY_EXISTS": "Vous avez déjà une offre en cours sur cette course.",
         "generic": "Impossible de prendre cette course. Veuillez réessayer.",
         "TAKE_NOT_AVAILABLE": "Ce client choisit lui-même son transporteur : faites-lui une offre.",
-        "CARRIER_ABSENT": "Vous êtes marqué absent : revenez depuis votre dossier pour proposer une offre."
+        "CARRIER_ABSENT": "Vous êtes marqué absent : mettez fin à votre absence depuis votre dossier pour faire une offre."
       },
       "form": {
         "title": "Faire une offre",
         "budget": "Budget {price}",
-        "rivals": "{count} transporteur(s) ont déjà proposé",
+        "rivals": "{count, plural, one {# transporteur a déjà fait une offre} other {# transporteurs ont déjà fait une offre}}",
         "noVehicleTitle": "Ajoutez d'abord un véhicule",
         "noVehicleDescription": "Une offre nomme le véhicule qui fera la course : votre flotte doit en compter au moins un.",
         "noVehicleCta": "Gérer ma flotte",
@@ -1196,7 +1001,7 @@
       },
       "offerCard": {
         "selected": "Retenue",
-        "lowest": "Moins-disante",
+        "lowest": "La moins chère",
         "schedule": "Enlèvement {pickup} · Livraison {delivery}",
         "deliveryBy": "{day} avant 22 h",
         "proposedSlots": "Créneaux proposés",
@@ -1208,7 +1013,7 @@
           "afternoon": "après-midi",
           "evening": "soir"
         },
-        "vsBudget": "{amount} vs budget",
+        "vsBudget": "{amount} par rapport au budget",
         "accept": "Accepter",
         "acceptSlot": "Accepter ce créneau",
         "accepting": "Acceptation…",
@@ -1237,7 +1042,7 @@
         "VEHICLE_CAPACITY_WEIGHT": "Ce véhicule ne peut pas transporter ce chargement.",
         "VEHICLE_CAPACITY_DIMENSIONS": "Ce véhicule est trop petit pour ce chargement.",
         "PICKUP_OUTSIDE_WINDOW": "Votre horaire de retrait sort du créneau du demandeur.",
-        "CARRIER_ABSENT": "Vous êtes marqué absent : revenez depuis votre dossier pour proposer une offre."
+        "CARRIER_ABSENT": "Vous êtes marqué absent : mettez fin à votre absence depuis votre dossier pour faire une offre."
       },
       "actions": {
         "availability": "Gérer ma disponibilité",
@@ -1283,7 +1088,7 @@
       "staffTitle": "Un compte opérateur ou admin ne propose pas de prix",
       "staffDescription": "Pour faire une offre, il faut un compte chauffeur approuvé. Sur une course Expedion, l'attribution se fait depuis la « File d'attribution ».",
       "inHouseTitle": "Vos courses vous sont attribuées",
-      "inHouseDescription": "En tant que chauffeur interne Expeditop, vous ne répondez pas aux annonces : l'équipe vous confie les courses.",
+      "inHouseDescription": "En tant que chauffeur interne Expeditop, vous ne faites pas d'offre sur les demandes : l'équipe vous confie les courses.",
       "signedOutTitle": "Connectez-vous pour faire une offre",
       "signedOutDescription": "Les offres sont réservées aux transporteurs vérifiés. Connectez-vous, ou créez un compte, et vous reviendrez sur cette demande.",
       "signedOutCta": "Se connecter"
@@ -1383,7 +1188,7 @@
       "draftNotePast": "À noter : le créneau d'enlèvement de ce brouillon est déjà passé.",
       "pickupTooSoon": "L'enlèvement est trop proche de la publication : les transporteurs n'auraient pas le temps de faire une offre. Modifiez-le à l'étape « Quand ».",
       "pickupInPast": "Ce créneau d'enlèvement est déjà passé. Modifiez-le à l'étape « Quand ».",
-      "schedulePast": "Cette heure de publication est trop proche ou déjà passée. Choisissez-en une plus tard.",
+      "schedulePast": "Cette heure de publication est trop proche ou déjà passée. Choisissez-en une plus tardive.",
       "failed": "Impossible de publier votre demande. Veuillez réessayer.",
       "draftFailed": "Impossible d'enregistrer le brouillon. Veuillez réessayer.",
       "checkStep": "Vérifiez l'étape « {step} ».",
@@ -1434,7 +1239,7 @@
         "pallet": "Palette"
       },
       "descriptionLabel": "Détails",
-      "descriptionPlaceholder": "Décrivez le chargement, l'accès, et tout ce qu'un transporteur doit savoir avant d'enchérir.",
+      "descriptionPlaceholder": "Décrivez le chargement, l'accès, et tout ce qu'un transporteur doit savoir avant de faire une offre.",
       "weight": "Poids",
       "quantity": "Quantité",
       "length": "Longueur (cm)",
@@ -1444,7 +1249,7 @@
       "fragileHint": "Nécessite une manipulation soignée",
       "fragileNoteLabel": "Note pour le transporteur (facultatif)",
       "accessHeight": "Hauteur maximale d'accès",
-      "accessHeightHint": "Parking, porche, passage : la hauteur la plus basse que le transporteur devra passer (facultatif).",
+      "accessHeightHint": "Parking, porche, passage : la plus petite hauteur sous laquelle le transporteur devra passer (facultatif).",
       "accessHeightPlaceholder": "ex. 190",
       "fragileNotePlaceholder": "ex. plateau en verre, à garder à l'endroit",
       "help": "Aide au chargement",
@@ -1505,7 +1310,7 @@
           "example": "Une palette complète"
         },
         "over1000": {
-          "label": "Plus d'1 t",
+          "label": "Plus de 1 t",
           "example": "Indiquez le poids"
         },
         "notSure": {
@@ -1583,7 +1388,7 @@
           "dropoff": "Adresses de livraison",
           "either": "Retrait ou livraison"
         },
-        "empty": "Aucune adresse enregistrée pour l'instant. Cochez « Enregistrer cette adresse » ci-dessous pour la retrouver ici la prochaine fois."
+        "empty": "Aucune adresse enregistrée pour l'instant. Cochez « Enregistrer cette adresse dans mon profil » ci-dessous pour la retrouver ici la prochaine fois."
       },
       "country": {
         "pickup": "Pays de retrait",
@@ -1669,8 +1474,8 @@
       "pickupInPast": "Ce créneau d'enlèvement est déjà passé. Choisissez des dates à venir.",
       "pickupTooSoon": "L'enlèvement est trop proche de la publication : les transporteurs n'auraient pas le temps de faire une offre. Choisissez un enlèvement qui commence au plus tôt le {earliest}.",
       "biddingShort": "L'enlèvement est proche de la publication : les transporteurs pourront faire une offre jusqu'au {closesAt} seulement. Pour en recevoir davantage, prévoyez l'enlèvement plus tard.",
-      "scheduleTooClose": "La publication est trop proche de l'enlèvement : planifiez-la au plus tard le {latest}, ou choisissez un enlèvement plus tard.",
-      "scheduleImpossible": "L'enlèvement est trop proche pour planifier la publication : publiez maintenant, ou choisissez un enlèvement plus tard.",
+      "scheduleTooClose": "La publication est trop proche de l'enlèvement : planifiez-la au plus tard le {latest}, ou choisissez un enlèvement plus tardif.",
+      "scheduleImpossible": "L'enlèvement est trop proche pour planifier la publication : publiez maintenant, ou choisissez un enlèvement plus tardif.",
       "editDates": "Modifier les dates"
     },
     "budget": {
@@ -1702,28 +1507,25 @@
     "dropzone": {
       "title": "Ajouter des photos",
       "subtitle": "Glissez-déposez, ou cliquez pour en choisir plusieurs",
-      "uploading": "{count} photo(s) téléversée(s)",
+      "uploading": "{count, plural, one {# photo téléversée} other {# photos téléversées}}",
       "uploadError": "Certaines photos n'ont pas pu être téléversées",
       "takePhoto": "Prendre une photo",
       "remove": "Supprimer cette photo",
       "count": "{count} sur {max}",
       "full": "Vous avez atteint la limite de {max} photos",
-      "tooMany": "Seules {count} photos ont été ajoutées — la limite est de {max}."
+      "tooMany": "{count, plural, =0 {Aucune photo n'a été ajoutée} one {Une seule photo a été ajoutée} other {Seules # photos ont été ajoutées}} — la limite est de {max}."
     },
     "validation": {
       "timeWindowIncomplete": "Indiquez l'heure de début et l'heure de fin, ou aucune des deux.",
       "timeWindowOrder": "L'heure de fin doit venir après l'heure de début.",
       "timeInvalid": "Heure invalide (format 09:00).",
       "titleShort": "Au moins 2 caractères",
-      "descriptionShort": "Au moins 5 caractères",
       "fragileNoteMax": "300 caractères maximum",
       "aboveZero": "Doit être supérieur à 0",
       "weightMax": "Cela dépasse les 44 t que nous pouvons transporter",
       "dimensionsPartial": "Indiquez les trois dimensions, ou aucune",
-      "addressRequired": "L'adresse est obligatoire",
       "cityRequired": "La ville est obligatoire",
       "postalCode": "Code postal invalide pour ce pays",
-      "pinRequired": "Placez le repère sur la carte",
       "floorRequired": "Indiquez l'étage (0 pour le rez-de-chaussée)",
       "liftRequired": "Indiquez aux transporteurs s'il y a un ascenseur",
       "sameAddress": "Le retrait et la livraison sont à la même adresse",
@@ -1732,7 +1534,7 @@
       "pickupWindow": "Le créneau de retrait doit se terminer après son début",
       "deliveryBeforePickup": "La livraison ne peut pas commencer avant le retrait",
       "deliveryWindow": "Le créneau de livraison doit se terminer après son début",
-      "budgetRequired": "Indiquez le montant que vous prévoyez",
+      "budgetRequired": "Indiquez le montant que vous pensez payer",
       "weightRequired": "Choisissez une tranche de poids",
       "weightAboveBracket": "Indiquez un poids supérieur à 1 000 kg",
       "weightExceedsBracket": "Ce poids dépasse la tranche choisie. Sélectionnez une tranche plus élevée.",
@@ -1742,7 +1544,7 @@
       "contactNameMax": "120 caractères maximum",
       "invalidPhone": "Indiquez un numéro de téléphone valide",
       "scheduledPublishRequired": "Choisissez une date et une heure de publication",
-      "scheduledPublishPast": "Choisissez un moment dans le futur",
+      "scheduledPublishPast": "Choisissez un moment à venir",
       "noAllowedDay": "Aucun des jours cochés ne tombe entre ces dates.",
       "budgetMin": "Indiquez un montant d'au moins 1 €",
       "budgetMax": "Le montant ne peut pas dépasser 100 000 €",
@@ -1823,7 +1625,7 @@
     "title": "Mes demandes",
     "postJob": "Publier une demande",
     "empty": "Aucune demande pour l'instant",
-    "emptyDesc": "Publiez une demande de transport et les transporteurs commenceront à enchérir.",
+    "emptyDesc": "Publiez une demande de transport et les transporteurs commenceront à vous faire des offres.",
     "emptyFiltered": "Aucune demande avec ce statut",
     "emptyFilteredDesc": "Essayez un autre filtre de statut.",
     "loadFailed": "Impossible de charger vos demandes",
@@ -1878,7 +1680,7 @@
       "dropoff": "Livraison",
       "flexibleDates": "Les dates sont flexibles — les transporteurs peuvent proposer des horaires en dehors de ces créneaux.",
       "offers": "Offres",
-      "bidCount": "{count, plural, =0 {Aucune offre pour l'instant.} one {# transporteur a enchéri sur cette demande.} other {# transporteurs ont enchéri sur cette demande.}}",
+      "bidCount": "{count, plural, =0 {Aucune offre pour l'instant.} one {# transporteur a fait une offre sur cette demande.} other {# transporteurs ont fait une offre sur cette demande.}}",
       "lowestFrom": "à partir de {amount}",
       "noOffers": "Aucune offre pour l'instant",
       "noOffersDesc": "Les transporteurs sont prévenus dès qu'une demande est publiée. Les premières offres arrivent généralement en quelques heures.",
@@ -2027,11 +1829,10 @@
     }
   },
   "driver": {
-    "title": "Chauffeur",
-    "panelTitle": "Espace Chauffeur",
+    "panelTitle": "Espace chauffeur",
     "navigation": {
       "dashboard": "Tableau de bord",
-      "shipments": "Expéditions",
+      "shipments": "Livraisons",
       "messages": "Messages",
       "profile": "Profil"
     },
@@ -2039,37 +1840,37 @@
       "title": "Tableau de bord chauffeur",
       "stats": {
         "assigned": "À récupérer",
-        "assignedHint": "Courses qui vous sont assignées",
+        "assignedHint": "Courses qui vous sont attribuées",
         "inProgress": "En route",
         "inProgressHint": "Récupérées ou en transit",
         "delivered": "Livrées",
         "deliveredHint": "Courses terminées"
       },
       "activeDeliveries": {
-        "title": "Livraisons Actives",
-        "empty": "Aucune livraison active pour le moment.",
+        "title": "Livraisons en cours",
+        "empty": "Aucune livraison en cours pour le moment.",
         "details": "Détails",
-        "defaultTitle": "Expédition",
+        "defaultTitle": "Livraison",
         "flexible": "Flexible"
       },
-      "subtitle": "Vos livraisons assignées en un coup d'œil"
+      "subtitle": "Vos livraisons en un coup d'œil"
     },
     "shipments": {
-      "title": "Expéditions",
-      "subtitle": "Suivez et mettez à jour vos livraisons assignées",
+      "title": "Livraisons",
+      "subtitle": "Suivez vos livraisons et mettez leur statut à jour",
       "empty": {
-        "title": "Aucune expédition",
-        "description": "Aucune expédition trouvée correspondant à vos critères."
+        "title": "Aucune livraison",
+        "description": "Aucune livraison ne correspond à ce filtre."
       },
       "filters": {
         "placeholder": "Filtrer par statut",
-        "all": "Tout",
-        "active": "Actif",
-        "completed": "Terminé",
-        "cancelled": "Annulé",
-        "assigned": "Assignées"
+        "all": "Toutes",
+        "active": "En cours",
+        "completed": "Terminées",
+        "cancelled": "Annulées",
+        "assigned": "Attribuées"
       },
-      "defaultTitle": "Expédition",
+      "defaultTitle": "Livraison",
       "flexible": "Flexible",
       "order": {
         "toggle": "Inverser l'ordre",
@@ -2080,19 +1881,18 @@
         "pickup": "Retrait prévu {date}",
         "pickedUp": "Retiré {date}",
         "delivery": "Livraison prévue {date}",
-        "delivered": "Livré {date}"
+        "delivered": "Livrée {date}"
       },
       "myPayments": "Mes paiements",
       "error": {
-        "title": "Impossible de charger vos expéditions",
+        "title": "Impossible de charger vos livraisons",
         "description": "Vérifiez votre connexion puis rechargez la page."
       }
     },
     "shipmentDetail": {
-      "notFound": "Expédition introuvable",
-      "goBack": "Retour",
-      "shipmentNumber": "Expédition #",
-      "shipmentDetails": "Détails de l'expédition",
+      "notFound": "Livraison introuvable",
+      "shipmentNumber": "Livraison n° ",
+      "shipmentDetails": "Détails de la livraison",
       "route": "Itinéraire",
       "pickup": "Retrait",
       "dropoff": "Livraison",
@@ -2116,15 +1916,15 @@
     "actions": {
       "actions": "Actions",
       "confirmPickup": "Confirmer le retrait",
-      "updating": "Mise à jour...",
-      "navigateToPickup": "Naviguer vers le retrait",
-      "navigateToDropoff": "Naviguer vers la livraison",
+      "updating": "Mise à jour…",
+      "navigateToPickup": "Itinéraire vers le retrait",
+      "navigateToDropoff": "Itinéraire vers la livraison",
       "inTransit": "En cours de livraison",
-      "inTransitDesc": "Le colis est en transit. Mettez à jour le statut une fois livré.",
+      "inTransitDesc": "Le chargement est en route. Mettez le statut à jour une fois la livraison faite.",
       "deliveryCompleted": "Livraison terminée",
-      "deliveryCompletedDesc": "Excellent travail ! Cette expédition a été livrée.",
+      "deliveryCompletedDesc": "Cette livraison est terminée. Vous n'avez plus rien à faire.",
       "pendingTitle": "En attente d'affectation",
-      "pendingDesc": "Cette course ne vous a pas encore été assignée.",
+      "pendingDesc": "Cette course ne vous a pas encore été attribuée.",
       "assignedTitle": "Prête pour le retrait",
       "assignedDesc": "Rendez-vous à l'adresse de retrait et confirmez une fois le chargement à bord.",
       "pickedUpTitle": "Chargement à bord",
@@ -2140,8 +1940,8 @@
         "notFound": "Livraison introuvable.",
         "generic": "Une erreur est survenue. Veuillez réessayer.",
         "notInFleet": "Vous n'êtes pas enregistré comme chauffeur de ce transporteur.",
-        "pickupPhotoRequired": "Prenez une photo du colis avant de confirmer le retrait.",
-        "deliveryPhotoRequired": "Prenez une photo du colis livré avant de confirmer la livraison.",
+        "pickupPhotoRequired": "Prenez une photo du chargement avant de confirmer le retrait.",
+        "deliveryPhotoRequired": "Prenez une photo du chargement livré avant de confirmer la livraison.",
         "withdrawAfterPickup": "La marchandise est déjà chargée — contactez le support",
         "driverCannotWithdraw": "Seul le transporteur titulaire de la course peut se désister",
         "requiresSupport": "La marchandise est déjà en route — contactez le support",
@@ -2149,20 +1949,14 @@
         "refresh": "Actualiser"
       },
       "unassignedTitle": "Mission remportée, non démarrée",
-      "unassignedDesc": "Cette course est la vôtre. Prenez-la en charge pour débloquer le retrait et la livraison.",
+      "unassignedDesc": "Cette mission est la vôtre. Prenez-la en charge pour débloquer le retrait et la livraison.",
       "startJob": "Démarrer cette mission",
-      "startingJob": "Démarrage...",
+      "startingJob": "Démarrage…",
       "startJobHint": "La course vous sera attribuée. Conduire soi-même est la norme ; un chauffeur de votre flotte pourra la reprendre ensuite.",
       "jobStarted": "Mission démarrée. Rendez-vous à l'adresse de retrait.",
       "withdraw": {
         "success": "Vous vous êtes désisté — la course repart sur le tableau"
       }
-    },
-    "apply": {
-      "title": "Devenir chauffeur",
-      "description": "Rejoignez notre réseau de transporteurs et commencez à gagner de l'argent.",
-      "requirements": "Prérequis",
-      "submit": "Soumettre ma candidature"
     },
     "status": {
       "PENDING": "En attente",
@@ -2174,7 +1968,7 @@
     },
     "help": {
       "title": "Assistance chauffeur",
-      "subtitle": "Ressources et assistance pour nos partenaires transporteurs.",
+      "subtitle": "Les réponses aux questions courantes, et comment joindre le support.",
       "operations": {
         "title": "Écrire au support",
         "description": "Un souci avec une course en cours, votre véhicule ou votre dossier ? Écrivez-nous : c'est la boîte que notre équipe lit."
@@ -2215,7 +2009,7 @@
     "markAllRead": "Tout marquer comme lu",
     "empty": {
       "title": "Aucune notification",
-      "description": "Vous êtes à jour !"
+      "description": "Nous vous préviendrons ici dès qu'il y aura du nouveau."
     },
     "types": {
       "message": "Message",
@@ -2225,7 +2019,7 @@
       "payment": "Paiement",
       "listing": "Demande",
       "listing_posted": "Demande publiée",
-      "shipment_assigned": "Livraison assignée",
+      "shipment_assigned": "Livraison attribuée",
       "shipment_cancelled": "Transport annulé",
       "shipment_withdrawn": "Transporteur désisté",
       "job_reopened": "Course de nouveau disponible",
@@ -2235,13 +2029,13 @@
       "offer_declined": "Offre refusée",
       "offer_invalidated": "Offre à refaire",
       "listing_expired": "Demande expirée",
-      "carrier_application": "Dossier transporteur",
+      "carrier_application": "Dossier chauffeur",
       "shipment_update": "Suivi du transport",
       "new_job": "Nouvelle mission",
       "carrier_route_match": "Mission sur votre trajet",
       "payout_scheduled": "Gains",
       "incident_reported": "Incident signalé",
-      "feedback_submitted": "Demande reçue",
+      "feedback_submitted": "Retour reçu",
       "carrier_documents_missing": "Documents à compléter",
       "account_onboarding": "Compte",
       "other": "Notification"
@@ -2288,7 +2082,8 @@
       "faq": "Questions fréquentes",
       "request": "Créer une demande",
       "help": "Aide",
-      "contact": "Contact"
+      "contact": "Contact",
+      "tour": "L'application"
     },
     "cta": {
       "title": "Quelque chose à faire transporter ?",
@@ -2303,10 +2098,10 @@
       "carriers": "Transporter",
       "howItWorks": "Comment ça marche",
       "verification": "Vérification",
-      "expedionBuyers": "Expedion — acheteurs",
-      "auctionHouses": "Maisons de ventes",
+      "expedionBuyers": "Expedion — acheteurs aux enchères",
+      "auctionHouses": "Maisons de vente",
       "contact": "Contact",
-      "terms": "CGV",
+      "terms": "CGU",
       "legalNotice": "Mentions légales",
       "privacy": "Politique de confidentialité",
       "copyright": "© 2026 Expeditop — Groupe Expedion",
@@ -2336,7 +2131,7 @@
     "verification": {
       "eyebrow": "VÉRIFICATION",
       "title": "Comment les transporteurs sont vérifiés",
-      "intro": "Chaque transporteur qui enchérit sur ce réseau est un professionnel indépendant validé. Rien n'est visible tant que cette validation n'est pas accordée. Voici exactement ce que nous demandons, ce que nous contrôlons, et ce que deviennent vos documents ensuite.",
+      "intro": "Chaque transporteur qui fait une offre sur ce réseau a été validé individuellement. Aucune offre n'est possible tant que cette validation n'est pas accordée. Voici exactement ce que nous demandons, ce que nous contrôlons, et ce que deviennent vos documents ensuite.",
       "requirements": {
         "title": "Ce qu'il faut pour candidater",
         "items": [
@@ -2354,7 +2149,7 @@
           },
           {
             "title": "Un véhicule",
-            "desc": "Immatriculation, capacité et type du véhicule que vous utiliserez. Un seul suffit : une offre désigne le véhicule qui fera la course, nous avons donc besoin de celui avec lequel vous enchérissez, pas d'une flotte."
+            "desc": "Immatriculation, capacité et type du véhicule que vous utiliserez. Un seul suffit : une offre désigne le véhicule qui fera la course, nous avons donc besoin de celui avec lequel vous faites vos offres, pas d'une flotte."
           }
         ]
       },
@@ -2371,7 +2166,7 @@
           },
           {
             "title": "Vous êtes validé",
-            "desc": "La validation ouvre l'accès aux courses. À partir de là, vous voyez les courses escaladées et vous enchérissez sur le prix, l'heure d'enlèvement et le véhicule."
+            "desc": "La validation ouvre l'accès aux offres. À partir de là, vous répondez aux demandes ouvertes et aux courses transmises par Expedion, en proposant un prix, des créneaux de retrait et un véhicule."
           },
           {
             "title": "Vous restez à jour",
@@ -2382,7 +2177,7 @@
       "privacy": {
         "title": "Ce que deviennent vos documents",
         "body": "Les pièces d'identité et les documents de conformité sont conservés dans un stockage privé. Ils ne sont jamais servis depuis une adresse publique, jamais rattachés à une course, et jamais montrés à un autre transporteur ni au client dont vous réalisez la livraison. Seuls les opérateurs qui instruisent votre dossier peuvent les ouvrir. Nous ne transmettons vos coordonnées bancaires à aucun prestataire de paiement : de l'IBAN et du BIC saisis, nous ne conservons que les quatre derniers caractères, pour que vous reconnaissiez votre propre compte, et votre RIB est conservé comme vos autres documents. Vos gains vous sont versés par virement d'Expeditop, quand vous en faites la demande.",
-        "expiry": "Si un document expire et n'est pas remplacé, le compte est suspendu plutôt que laissé libre d'enchérir avec une couverture qui n'existe plus. Le remplacement du document rétablit l'accès."
+        "expiry": "Si un document expire et n'est pas remplacé, le compte est suspendu plutôt que laissé libre de faire des offres avec une couverture qui n'existe plus. Le remplacement du document rétablit l'accès."
       },
       "cta": "Devenir transporteur",
       "ctaSecondary": "Poser une question d'abord"
@@ -2390,7 +2185,7 @@
     "auctionHouses": {
       "eyebrow": "MAISONS DE VENTE",
       "title": "Pour les maisons de vente et leurs acheteurs",
-      "intro": "Expeditop est le réseau de transporteurs derrière Expedion. Vous ne publiez rien ici et vous n'y gérez aucun transporteur : vous acceptez un devis dans Expedion, et ce réseau existe pour qu'une course que personne n'a prise soit malgré tout enlevée.",
+      "intro": "Expeditop est le réseau de transporteurs derrière Expedion. Avec Expedion, vous ne publiez rien ici et vous n'y gérez aucun transporteur : vous acceptez un devis dans Expedion, et ce réseau existe pour qu'une course que personne n'a prise soit malgré tout enlevée.",
       "flow": {
         "title": "Comment une livraison arrive sur ce réseau",
         "items": [
@@ -2400,7 +2195,7 @@
           },
           {
             "title": "Le délai court",
-            "desc": "Si aucun transporteur n'a pris la course sous 48 heures, elle est escaladée automatiquement. Rien à relancer, personne n'a besoin de s'en rendre compte."
+            "desc": "Si aucun transporteur n'a pris la course sous 48 heures, elle est transmise automatiquement au réseau. Rien à relancer, personne n'a besoin de s'en rendre compte."
           },
           {
             "title": "Les transporteurs font baisser le prix",
@@ -2417,15 +2212,15 @@
         "items": [
           {
             "title": "Le prix ne bouge pas",
-            "desc": "L'escalade ne demande jamais un centime de plus à l'acheteur. Le montant convenu dans Expedion est celui qu'il paie, quel que soit le mal qu'a eu la course à trouver preneur."
+            "desc": "La transmission au réseau ne demande jamais un centime de plus à l'acheteur. Le montant convenu dans Expedion est celui qu'il paie, quel que soit le mal qu'a eu la course à trouver preneur."
           },
           {
-            "title": "Personne ne quitte votre produit",
+            "title": "Votre acheteur reste dans Expedion",
             "desc": "Les statuts remontent vers Expedion — attribuée, enlevée, en transit, livrée. Votre acheteur suit la course là où il a commencé."
           },
           {
             "title": "Uniquement des transporteurs vérifiés",
-            "desc": "Chaque enchérisseur a passé les contrôles d'identité, de SIRET, d'assurance et de véhicule avant même de voir la course."
+            "desc": "Chaque transporteur a passé les contrôles d'identité, de SIRET, d'assurance et de véhicule avant de pouvoir faire une offre."
           },
           {
             "title": "Rien n'est dû au transporteur avant la livraison",
@@ -2435,7 +2230,7 @@
       },
       "notMarketplace": {
         "title": "Ce que ce n'est pas",
-        "body": "Ce n'est pas une place de marché où l'on fait ses courses de transport, et il n'y a ici aucune vente aux enchères de marchandises : la seule enchère est l'enchère inversée sur le prix, entre transporteurs. Il n'existe aucun formulaire de dépôt côté maison de vente, ni compte à ouvrir. Pour organiser un transport, cela se passe dans Expedion ; ce réseau est ce qui prend le relais quand une course reste sans preneur."
+        "body": "Il n'y a ici aucune vente aux enchères de marchandises : la seule enchère est l'enchère inversée sur le prix, entre transporteurs. Côté maison de vente, il n'y a ni formulaire à remplir ni compte à ouvrir : le transport d'un achat s'organise dans Expedion, et ce réseau prend le relais quand une course reste sans preneur. Chacun peut aussi publier directement une demande de transport sur Expeditop ; c'est un autre parcours."
       },
       "cta": "Aller sur Expedion",
       "ctaSecondary": "Nous écrire"
@@ -2443,7 +2238,7 @@
     "contact": {
       "eyebrow": "CONTACT",
       "title": "Nous écrire",
-      "intro": "Transporteurs, maisons de vente, acheteurs qui suivent une livraison, ou simple question sur le fonctionnement. Écrivez ci-dessous : votre message arrive au même bureau que le support dans l'application.",
+      "intro": "Transporteurs, clients qui suivent une livraison, maisons de vente, ou simple question sur le fonctionnement. Écrivez ci-dessous : votre message arrive au même bureau que le support dans l'application.",
       "form": {
         "name": "Votre nom",
         "email": "Adresse e-mail",
@@ -2464,6 +2259,13 @@
           "billing": "Facturation ou versements",
           "press": "Presse",
           "other": "Autre sujet"
+        },
+        "errors": {
+          "nameTooShort": "Votre nom est trop court.",
+          "emailInvalid": "Cette adresse e-mail n'est pas valide.",
+          "messageTooShort": "Votre message est trop court : écrivez au moins 20 caractères.",
+          "tooLong": "Ce texte est trop long.",
+          "invalid": "Vérifiez ce champ."
         }
       },
       "channels": {
@@ -2480,7 +2282,7 @@
     "legalNotice": {
       "eyebrow": "MENTIONS LÉGALES",
       "title": "Mentions légales",
-      "intro": "Informations relatives à l'édition et à l'hébergement de expeditop.fr, conformément à la loi française.",
+      "intro": "Informations relatives à l'édition et à l'hébergement d'expeditop.fr, conformément à la loi française.",
       "identityTitle": "Éditeur",
       "pendingNote": "Les valeurs affichées ci-dessus comme à compléter n'ont pas encore été fournies. Cette page n'est pas complète tant que chacune n'a pas été remplacée par les informations d'immatriculation réelles.",
       "lastUpdated": "DERNIÈRE MISE À JOUR — 22 AOÛT 2026",
@@ -2588,7 +2390,7 @@
           "title": "Droit applicable et médiation",
           "paragraphs": [
             "Les présentes mentions sont régies par le droit français. Tout litige relève des juridictions françaises compétentes.",
-            "Conformément au code de la consommation, un consommateur peut saisir gratuitement un médiateur de la consommation. Le médiateur désigné par l'éditeur est indiqué ci-après une fois désigné.",
+            "Conformément au code de la consommation, un consommateur peut saisir gratuitement un médiateur de la consommation. Le médiateur retenu par l'éditeur sera indiqué ci-après dès sa désignation.",
             "À COMPLÉTER — nom et adresse du médiateur."
           ]
         }
@@ -2597,7 +2399,7 @@
     "terms": {
       "eyebrow": "CONDITIONS",
       "title": "Conditions générales d'utilisation",
-      "intro": "Les règles qui encadrent l'utilisation de expeditop.fr par les transporteurs, les opérateurs et toute personne y accédant.",
+      "intro": "Les règles qui encadrent l'utilisation d'expeditop.fr par les transporteurs, les opérateurs et toute personne y accédant.",
       "lastUpdated": "DERNIÈRE MISE À JOUR — 22 AOÛT 2026",
       "sections": [
         {
@@ -2721,7 +2523,7 @@
             "Pour exploiter la plateforme et exécuter notre contrat avec vous — publier les courses, recevoir les offres, suivre les livraisons, payer les transporteurs",
             "Pour respecter nos obligations légales — vérifier qu'un transporteur peut légalement transporter pour autrui, et tenir la comptabilité",
             "Au titre de notre intérêt légitime à une plateforme sûre — prévenir la fraude et les abus, et instruire les incidents",
-            "Pour vous informer de votre propre activité. Les messages marketing, le cas échéant, supposent votre consentement et peuvent être retirés à tout moment"
+            "Pour vous informer de votre propre activité. Les messages marketing, le cas échéant, supposent votre consentement, que vous pouvez retirer à tout moment"
           ]
         },
         {
@@ -2752,7 +2554,7 @@
             "Enregistrements de livraison et de paiement — pendant la durée de conservation comptable imposée par la loi française",
             "Documents de conformité — tant que la validation est en vigueur, plus la durée de conservation exigée ensuite",
             "Messages — tant que le compte existe",
-            "Journaux techniques — sur une période glissante, volontairement courte et utilisée à des fins de sécurité uniquement"
+            "Journaux techniques — sur une période glissante, courte, et utilisés uniquement à des fins de sécurité"
           ]
         },
         {
@@ -2844,7 +2646,7 @@
       },
       "refund": {
         "title": "Remboursé en cas d'annulation",
-        "desc": "Une course annulée avant le retrait vous est remboursée."
+        "desc": "Un transport annulé avant le retrait vous est remboursé."
       },
       "eyebrow": "Nos engagements",
       "title": "Ce qui vaut pour chaque demande",
@@ -2899,7 +2701,7 @@
       "packing": "Une personne ferme un carton sur une table, du papier kraft à côté",
       "parcel": "Un carton d'expédition posé sur un sol en béton",
       "europe": "Une route qui serpente entre des champs de lave et une montagne dans la brume",
-      "closing": "Un van blanc sur une piste au coucher du soleil, dans un nuage de poussière"
+      "closing": "Un fourgon blanc sur une piste au coucher du soleil, dans un nuage de poussière"
     },
     "marquee": {
       "label": "Ce que l'on fait transporter avec Expeditop"
@@ -2924,7 +2726,7 @@
       "moving": {
         "tab": "Déménagement",
         "title": "Déménagement",
-        "desc": "Un studio ou une maison : donnez la superficie du logement ou le volume, ajoutez des photos des pièces. Des déménageurs vérifiés vous font leurs offres.",
+        "desc": "Un studio ou une maison : donnez la superficie du logement ou le volume, ajoutez des photos des pièces. Des transporteurs vérifiés vous font leurs offres.",
         "cta": "Demander un devis déménagement"
       },
       "abroad": {
@@ -2939,9 +2741,9 @@
       "title": "Des courses sur votre route",
       "intro": "Chauffeur ou transporteur professionnel : vous fixez votre prix sur les demandes ouvertes, près des trajets que vous faites déjà.",
       "point1": "Consultez les demandes ouvertes et proposez votre prix",
-      "point2": "Déclarez vos trajets pour retrouver les courses sur votre route",
+      "point2": "Déclarez vos trajets pour trouver les courses sur votre route",
       "point3": "Votre dossier est vérifié par Expeditop avant votre première offre",
-      "point4": "Une fois la livraison enregistrée, la course rejoint votre solde : vous demandez un retrait, versé par virement"
+      "point4": "Une fois la livraison enregistrée, le gain de la course rejoint votre solde : vous demandez un retrait, versé par virement"
     },
     "faq": {
       "eyebrow": "Questions fréquentes",
@@ -2953,26 +2755,75 @@
       },
       "carriers": {
         "question": "Qui sont les transporteurs ?",
-        "answer": "Des chauffeurs Expeditop et des transporteurs professionnels. Chaque dossier, documents et véhicule compris, est vérifié par notre équipe avant la première offre : l'approbation n'est jamais automatique."
+        "answer": "Des chauffeurs Expeditop et des transporteurs professionnels. Chaque dossier, documents et véhicule compris, est vérifié par notre équipe avant la première offre : la validation n'est jamais automatique."
       },
       "moreTitle": "Une autre question ?",
       "moreText": "Le centre d'aide répond sur les demandes, le paiement et le suivi. Sinon, écrivez-nous.",
       "help": "Centre d'aide",
       "contact": "Nous contacter"
+    },
+    "tour": {
+      "eyebrow": "Dans l'application",
+      "title": "Un transport, de la demande à la livraison",
+      "intro": "Ce que voient le demandeur, le transporteur et notre équipe à chaque étape. Ce sont les écrans de l'application.",
+      "tabsLabel": "Les étapes d'un transport",
+      "demoNote": "Captures prises sur un compte de démonstration : les noms, adresses et montants sont fictifs.",
+      "altDesktop": "Écran de l'application sur ordinateur : {step}",
+      "altPhone": "Le même écran sur téléphone : {step}",
+      "roles": {
+        "requester": "Demandeur",
+        "carrier": "Transporteur",
+        "both": "Demandeur et transporteur",
+        "staff": "Équipe Expeditop"
+      },
+      "steps": {
+        "request": {
+          "title": "Vous décrivez votre envoi",
+          "desc": "L'objet, sa taille, les dates et les deux adresses. Le formulaire propose des formats courants et accepte plusieurs photos."
+        },
+        "board": {
+          "title": "Les transporteurs voient votre demande",
+          "desc": "Elle rejoint les missions ouvertes, que chacun filtre par trajet et par date. Un transporteur vérifié propose son prix, ses créneaux et son véhicule."
+        },
+        "choose": {
+          "title": "Vous comparez et vous choisissez",
+          "desc": "Prix, créneaux et véhicule sont côte à côte. Vous pouvez proposer un autre prix. Vous payez en acceptant une offre, pas avant."
+        },
+        "messages": {
+          "title": "Vous échangez par message",
+          "desc": "Une question sur l'accès ou l'horaire se règle dans la conversation. Le transporteur peut y envoyer une offre de prix."
+        },
+        "run": {
+          "title": "Le retrait et la livraison sont photographiés",
+          "desc": "Le transporteur fait avancer le statut et prend une photo à chaque étape, avec le lieu et l'heure."
+        },
+        "track": {
+          "title": "Vous suivez et vous confirmez",
+          "desc": "Vous voyez le statut et les photos, puis vous confirmez le retrait et la livraison."
+        },
+        "money": {
+          "title": "Un reçu pour vous, des gains pour le transporteur",
+          "desc": "Votre reçu est disponible dès le paiement. Le transporteur voit ses gains, commission déduite, et demande un retrait versé par virement."
+        },
+        "team": {
+          "title": "Notre équipe vérifie et accompagne",
+          "desc": "Chaque dossier de transporteur est examiné avant sa première offre. L'équipe suit les transports et traite les incidents."
+        }
+      }
     }
   },
   "help": {
     "title": "Contact & Aide",
     "subtitle": "Trouvez des réponses aux questions courantes, écrivez-nous ou discutez avec notre équipe.",
     "emailSupport": {
-      "title": "Support par email",
+      "title": "Support par e-mail",
       "description": "Écrivez à notre équipe support. Nous répondons généralement sous 24 heures."
     },
     "faq": {
       "title": "Questions fréquentes",
       "q1": {
         "question": "Comment suivre mon transport ?",
-        "answer": "Ouvrez « Livraisons » dans le menu, puis le transport concerné. Vous y voyez son statut — en préparation, en retrait, en cours de livraison, livré — et les photos prises par le transporteur au retrait et à la livraison."
+        "answer": "Ouvrez « Suivi d'expédition » dans le menu (« Suivi » sur téléphone), puis le transport concerné. Vous y voyez son statut — en préparation, en retrait, en cours de livraison, livré — et les photos prises par le transporteur au retrait et à la livraison."
       },
       "q2": {
         "question": "Comment fonctionne une demande de transport ?",
@@ -2980,7 +2831,7 @@
       },
       "q3": {
         "question": "Puis-je annuler un envoi ?",
-        "answer": "Oui, tant que la marchandise n'a pas été chargée. Ouvrez la page de la livraison et choisissez « Annuler le transport » : votre paiement vous est intégralement remboursé, sans frais d'annulation. Une fois la marchandise récupérée, l'annulation passe par notre support. Si c'est votre transporteur qui se désiste, votre transport n'est pas annulé : la course repart auprès d'autres transporteurs et vous êtes prévenu."
+        "answer": "Oui, tant que la marchandise n'a pas été chargée. Ouvrez la page de la livraison et choisissez « Annuler le transport » : votre paiement vous est intégralement remboursé, sans frais d'annulation. Une fois la marchandise récupérée, l'annulation passe par notre support. Si c'est votre transporteur qui se désiste, votre transport n'est pas annulé : votre demande est reproposée à d'autres transporteurs et vous êtes prévenu."
       },
       "q4": {
         "question": "Comment contacter un transporteur ?",
@@ -2993,8 +2844,8 @@
     },
     "stillNeedHelp": {
       "title": "Besoin d'aide ?",
-      "description": "Notre équipe support est toujours prête à vous aider avec tout problème que vous pourriez rencontrer.",
-      "chatButton": "Discuter avec le Support",
+      "description": "Ouvrez une discussion avec notre équipe support et dites-nous ce qui ne va pas.",
+      "chatButton": "Discuter avec le support",
       "chatStarting": "Ouverture de la discussion…"
     },
     "chatFailed": "Impossible d'ouvrir la discussion. Veuillez réessayer."
@@ -3002,17 +2853,21 @@
   "admin": {
     "panelTitle": "Panneau d'administration",
     "navigation": {
-      "dashboard": "Tableau de bord",
       "users": "Utilisateurs",
       "listing": "Annonces",
       "driver": "Chauffeurs",
       "shipment": "Expéditions",
       "payments": "Paiements",
       "supportChats": "Chats de support",
-      "profile": "Profil",
       "expedion": "Passerelle Expedion",
       "awards": "File d'attribution",
-      "groups": { "operations": "Opérations", "people": "Personnes", "money": "Argent", "quality": "Qualité", "system": "Système" },
+      "groups": {
+        "operations": "Opérations",
+        "people": "Personnes",
+        "money": "Argent",
+        "quality": "Qualité",
+        "system": "Système"
+      },
       "withdrawals": "Retraits",
       "expedionClients": "Clients Expedion",
       "bordereaux": "Bordereaux",
@@ -3023,7 +2878,6 @@
       "bottomMenu": "Menu d'administration — faites défiler pour voir la suite"
     },
     "table": {
-      "rowsSelected": "{selected} sur {total} ligne(s) sélectionnée(s)",
       "total": "total",
       "rowsPerPage": "Lignes par page",
       "pageOf": "Page {current} sur {total}",
@@ -3031,7 +2885,7 @@
       "goToPrevious": "Aller à la page précédente",
       "goToNext": "Aller à la page suivante",
       "goToLast": "Aller à la dernière page",
-      "searchPlaceholder": "Rechercher...",
+      "searchPlaceholder": "Rechercher…",
       "clearFilters": "Effacer les filtres",
       "sortBy": "Trier par",
       "sortAscending": "Croissant",
@@ -3042,7 +2896,7 @@
       "title": "Utilisateurs",
       "subtitle": "Gérer tous les utilisateurs",
       "table": {
-        "searchPlaceholder": "Rechercher un utilisateur...",
+        "searchPlaceholder": "Rechercher un utilisateur…",
         "name": "Nom",
         "status": "Statut",
         "lastLogin": "Dernière connexion",
@@ -3068,7 +2922,7 @@
         "viewProfile": "Voir le profil",
         "copyId": "Copier l'identifiant",
         "impersonate": "Se connecter en tant que",
-        "passwordReset": "Envoyer une réinitialisation",
+        "passwordReset": "Envoyer un lien de réinitialisation",
         "revokeSessions": "Déconnecter partout",
         "removeDriver": "Retirer le statut chauffeur",
         "activate": "Réactiver",
@@ -3078,7 +2932,7 @@
       },
       "dialogs": {
         "cancel": "Annuler",
-        "processing": "Traitement...",
+        "processing": "Traitement…",
         "suspend": {
           "title": "Suspendre l'utilisateur",
           "description": "Suspendre {name} ? Il est déconnecté de tous ses appareils immédiatement et ne pourra plus se connecter jusqu'à réactivation.",
@@ -3100,7 +2954,7 @@
           "confirm": "Déconnecter"
         },
         "password_reset": {
-          "title": "Envoyer une réinitialisation",
+          "title": "Envoyer un lien de réinitialisation",
           "description": "Envoyer à {name} un lien pour définir un nouveau mot de passe ? Vous ne voyez ni ne définissez jamais le mot de passe.",
           "confirm": "Envoyer l'e-mail"
         },
@@ -3117,7 +2971,7 @@
         "prompt": "Saisissez {email} pour confirmer",
         "cancel": "Annuler",
         "confirm": "Supprimer définitivement",
-        "deleting": "Suppression..."
+        "deleting": "Suppression…"
       },
       "messages": {
         "suspended": "Utilisateur suspendu",
@@ -3125,8 +2979,8 @@
         "activated": "Utilisateur réactivé",
         "activatedDesc": "{name} peut de nouveau se connecter",
         "sessionsRevoked": "Déconnecté partout",
-        "sessionsRevokedDesc": "{count} session(s) fermée(s) pour {name}",
-        "resetSent": "E-mail envoyé",
+        "sessionsRevokedDesc": "{count, plural, one {# session fermée} other {# sessions fermées}} pour {name}",
+        "resetSent": "E-mail de réinitialisation envoyé",
         "resetSentDesc": "Un lien de réinitialisation part vers {email}",
         "deleted": "Compte supprimé",
         "deletedDesc": "{name} et toutes ses données ont été supprimés",
@@ -3144,19 +2998,20 @@
       "origin": {
         "expeditoo": "Expeditop",
         "expedion": "Expedion"
-      }
+      },
+      "noName": "Nom non renseigné"
     },
     "listings": {
       "title": "Annonces",
       "subtitle": "Gérer toutes les annonces",
       "table": {
-        "searchPlaceholder": "Rechercher des annonces...",
+        "searchPlaceholder": "Rechercher des annonces…",
         "title": "Titre",
         "seller": "Demandeur",
         "price": "Prix",
         "status": "Statut",
         "views": "Vues",
-        "created": "Créé",
+        "created": "Créée",
         "actions": "Actions",
         "viewDetails": "Voir les détails",
         "delete": "Supprimer",
@@ -3175,16 +3030,19 @@
         "deleteDescription": "Êtes-vous sûr de vouloir supprimer cette annonce ? Cette action est irréversible.",
         "cancel": "Annuler",
         "delete": "Supprimer",
-        "processing": "Suppression..."
+        "processing": "Suppression…"
       },
       "backToList": "Toutes les annonces",
       "toasts": {
         "deleted": "Annonce supprimée",
-        "deleteFailed": "Impossible de supprimer l'annonce : {message}"
+        "deleteFailed": "Impossible de supprimer l'annonce. Réessayez."
       }
     },
     "drivers": {
-      "tabs": { "list": "Chauffeurs", "applications": "Dossiers" },
+      "tabs": {
+        "list": "Chauffeurs",
+        "applications": "Candidatures"
+      },
       "title": "Chauffeurs",
       "subtitle": "Gérer les chauffeurs et les candidatures",
       "createDialog": {
@@ -3208,9 +3066,16 @@
         "cancel": "Annuler",
         "submit": "Ajouter le chauffeur",
         "toasts": {
-          "created": "Chauffeur ajouté. Il recevra un e-mail pour définir son mot de passe.",
           "converted": "{email} est désormais chauffeur interne.",
-          "invited": "Chauffeur ajouté. Une invitation a été envoyée à {email}."
+          "invited": "Chauffeur ajouté. Une invitation a été envoyée à {email}.",
+          "failed": "Le chauffeur n'a pas pu être ajouté. Vérifiez les champs et réessayez.",
+          "errors": {
+            "ACCOUNT_EXISTS": "Cet e-mail a déjà un compte : choisissez « Déjà inscrite ».",
+            "ACCOUNT_NOT_FOUND": "Aucun compte n'utilise cet e-mail.",
+            "ALREADY_DRIVER": "Ce compte est déjà chauffeur.",
+            "CARRIER_PROFILE_EXISTS": "Ce compte a déjà un dossier chauffeur. Consultez-le dans les candidatures.",
+            "SIRET_ALREADY_REGISTERED": "Ce SIRET est déjà enregistré sur un autre dossier."
+          }
         },
         "mode": {
           "legend": "Cette personne a-t-elle déjà un compte ?",
@@ -3229,7 +3094,7 @@
       "title": "Chats de support",
       "subtitle": "Gérer les conversations de support client",
       "refresh": "Actualiser",
-      "searchPlaceholder": "Rechercher par nom ou email...",
+      "searchPlaceholder": "Rechercher par nom ou e-mail…",
       "tabs": {
         "all": "Tous",
         "unread": "Non lus"
@@ -3250,17 +3115,14 @@
       }
     },
     "roles": {
-      "title": "Gérer le rôle de l'utilisateur",
+      "title": "Gérer les rôles",
       "description": "Attribuer un nouveau rôle à",
-      "currentRole": "Rôle actuel :",
       "currentRoles": "Rôles actuels",
       "noRoles": "Aucun rôle pour l'instant",
       "addRole": "Ajouter un rôle",
-      "selectPlaceholder": "Sélectionner un nouveau rôle",
+      "selectPlaceholder": "Choisir un rôle à ajouter",
       "admin": "Admin",
-      "note": "Note : Cela ajoutera le rôle sélectionné à l'utilisateur. Les utilisateurs peuvent avoir plusieurs rôles.",
       "cancel": "Annuler",
-      "assigning": "Attribution...",
       "assignRole": "Attribuer le rôle",
       "shipper": "Expéditeur",
       "carrier": "Transporteur",
@@ -3269,8 +3131,8 @@
       "support": "Support",
       "finance": "Finance",
       "openApplications": "Ouvrir les candidatures",
-      "inHouseHint": "Chauffeur interne Expeditop : crée (ou approuve) son dossier, il apparaît dans la liste des chauffeurs et reçoit les courses que vous lui attribuez. Il ne répond pas aux annonces et ne voit pas les prix. Complétez ensuite ses informations dans",
-      "carrierHint": "Transporteur externe : crée (ou approuve) son dossier, il apparaît dans la liste des chauffeurs et peut répondre aux annonces. Complétez ensuite ses informations dans"
+      "inHouseHint": "Chauffeur interne Expeditop : ce rôle crée (ou approuve) son dossier. Il apparaît dans la liste des chauffeurs et reçoit les courses que vous lui attribuez ; il ne répond pas aux demandes et ne voit pas les prix. Complétez ensuite ses informations dans",
+      "carrierHint": "Transporteur externe : ce rôle crée (ou approuve) son dossier. Il apparaît dans la liste des chauffeurs et peut répondre aux demandes. Complétez ensuite ses informations dans"
     },
     "payments": {
       "title": "Paiements",
@@ -3282,13 +3144,17 @@
         "status": "Statut",
         "date": "Date",
         "actions": "Actions",
-        "searchPlaceholder": "Rechercher par utilisateur..."
+        "searchPlaceholder": "Rechercher par utilisateur…"
       },
       "status": {
         "pending": "En attente",
         "succeeded": "Réussi",
         "failed": "Échoué",
-        "refunded": "Remboursé"
+        "refunded": "Remboursé",
+        "authorising": "Autorisation en cours",
+        "authorised": "Autorisé",
+        "captured": "Encaissé",
+        "released": "Libéré"
       },
       "actions": {
         "processRefund": "Traiter le remboursement",
@@ -3297,38 +3163,36 @@
       "refundDialog": {
         "title": "Traiter le remboursement",
         "description": "Cela remboursera le paiement et mettra à jour son statut. Cette action est irréversible.",
-        "reasonLabel": "Raison du remboursement",
+        "reasonLabel": "Motif du remboursement",
         "requestedByCustomer": "Demandé par le client",
         "duplicate": "Paiement en double",
         "fraudulent": "Frauduleux",
         "cancel": "Annuler",
-        "processing": "Traitement...",
+        "processing": "Traitement…",
         "confirm": "Confirmer le remboursement"
       },
       "toasts": {
         "refunded": "Remboursement effectué",
-        "refundFailed": "Le remboursement a échoué : {message}"
+        "refundFailed": "Le remboursement n'a pas abouti. Vérifiez le paiement dans Stripe avant de réessayer.",
+        "refundNotLocal": "Ce paiement a été encaissé dans Expedion : il se rembourse là-bas."
       }
     },
     "carriers": {
-      "title": "Chauffeurs",
-      "subtitle": "Examinez les candidatures et gérez tous les comptes chauffeurs",
       "table": {
         "company": "Entreprise",
         "applicant": "Candidat",
         "city": "Ville",
-        "fleet": "Flotte",
+        "fleet": "Véhicules",
         "vehicleCount": "{count, plural, =0 {Aucun véhicule} one {# véhicule} other {# véhicules}}",
         "documents": "Documents",
-        "documentCount": "{count, plural, =0 {Aucun document} one {# document} other {# documents}}",
         "date": "Date",
         "status": "Statut",
         "actions": "Actions",
-        "searchPlaceholder": "Rechercher par entreprise, SIRET ou candidat...",
+        "searchPlaceholder": "Rechercher par entreprise, SIRET ou candidat…",
         "empty": {
           "title": "Aucun chauffeur ici",
           "description": "Aucun chauffeur ne correspond à ces filtres.",
-          "descriptionAll": "Aucun chauffeur n'a encore candidaté."
+          "descriptionAll": "Aucun chauffeur n'a encore déposé de candidature."
         },
         "type": "Type",
         "contact": "Contact",
@@ -3373,7 +3237,7 @@
         "iban": "IBAN",
         "bic": "BIC",
         "notProvided": "Non renseigné",
-        "fleet": "Flotte",
+        "fleet": "Véhicules",
         "noVehicles": "Aucun véhicule déclaré",
         "inactive": "Inactif",
         "maxWeight": "{weight} kg max",
@@ -3395,9 +3259,9 @@
         "cancel": "Annuler",
         "confirmReject": "Confirmer le refus",
         "confirmSuspend": "Confirmer la suspension",
-        "rejectReasonLabel": "Motif du refus (transmis au transporteur)",
-        "suspendReasonLabel": "Motif de la suspension (transmis au transporteur)",
-        "reasonPlaceholder": "Expliquez la décision...",
+        "rejectReasonLabel": "Motif du refus (transmis au chauffeur)",
+        "suspendReasonLabel": "Motif de la suspension (transmis au chauffeur)",
+        "reasonPlaceholder": "Expliquez la décision…",
         "documentOpenFailed": "Impossible d'ouvrir le document",
         "absentUntil": "Absent jusqu'au {date}",
         "absentOpenEnded": "Absent jusqu'à nouvel ordre",
@@ -3410,7 +3274,7 @@
         "confirmAbsent": "Marquer absent",
         "confirmDeregister": "Confirmer la désinscription",
         "markAbsent": "Marquer absent",
-        "endAbsence": "Fin d'absence",
+        "endAbsence": "Mettre fin à l'absence",
         "deregister": "Désinscrire le chauffeur",
         "reinstate": "Réactiver",
         "kindLabel": "Type de chauffeur",
@@ -3420,7 +3284,7 @@
         "moreActions": "Plus d'actions",
         "approveAnyway": "Approuver quand même",
         "reactivateRemoved": "Réactiver le chauffeur",
-        "accessMissingTitle": "L'accès chauffeur est manquant",
+        "accessMissingTitle": "Accès chauffeur manquant",
         "accessMissingBody": "Ce chauffeur est approuvé, mais son compte n'a pas le rôle chauffeur : il ne voit et ne prend aucune course. La réparation le lui accorde, rien d'autre ne change.",
         "repairAccess": "Réparer l'accès",
         "completedRuns": "Courses terminées",
@@ -3439,7 +3303,7 @@
         "van": "Fourgon",
         "truck_20m3": "Camion 20 m³",
         "truck": "Camion",
-        "hayon_tailgate": "Camion hayon"
+        "hayon_tailgate": "Camion à hayon"
       },
       "documentKinds": {
         "cni_recto": "CNI (recto)",
@@ -3453,22 +3317,27 @@
       "toasts": {
         "approved": "Candidature approuvée",
         "rejected": "Candidature refusée",
-        "suspended": "Transporteur suspendu",
-        "approveFailed": "Échec de l'approbation : {message}",
-        "rejectFailed": "Échec du refus : {message}",
-        "suspendFailed": "Échec de la suspension : {message}",
+        "suspended": "Chauffeur suspendu",
         "markedAbsent": "Chauffeur marqué absent",
         "absenceEnded": "Absence terminée : le chauffeur est de nouveau actif",
-        "deregistered": "Chauffeur désinscrit, ses offres en cours retirées",
+        "deregistered": "Chauffeur désinscrit, ses offres en attente retirées",
         "reinstated": "Chauffeur réactivé",
         "hasLiveRuns": "Impossible : ce chauffeur a encore une course en cours. Elle doit être livrée ou annulée d'abord.",
-        "actionFailed": "Échec : {message}",
         "fileSaved": "Dossier enregistré",
-        "vehicleAdded": "Véhicule ajouté"
+        "vehicleAdded": "Véhicule ajouté",
+        "failed": "L'action n'a pas abouti. Réessayez.",
+        "errors": {
+          "CARRIER_NOT_FOUND": "Dossier chauffeur introuvable.",
+          "SIRET_ALREADY_REGISTERED": "Ce SIRET est déjà enregistré sur un autre dossier.",
+          "CARRIER_SUSPENDED": "Ce dossier est suspendu.",
+          "NOT_SUBMITTED": "Ce dossier n'a pas encore été soumis.",
+          "KIND_LOCKED": "Le type de chauffeur ne peut plus être modifié.",
+          "FORBIDDEN_ROLE": "Accès réservé aux administrateurs et aux opérateurs."
+        }
       },
       "editor": {
         "title": "Compléter le dossier",
-        "description": "Vous renseignez le dossier de {name} à sa place. Les documents et le RIB restent à la personne.",
+        "description": "Vous renseignez le dossier de {name} à sa place. Seule la personne peut fournir ses documents et son RIB.",
         "inHouseHelp": "Particulier (interne) : la personne conduit pour Expeditop — ni société, ni numéro d'entreprise, ni document. Professionnel : transporteur extérieur, dossier complet.",
         "kindLocked": "Le type ne peut plus changer une fois le dossier approuvé.",
         "companyName": "Raison sociale",
@@ -3518,7 +3387,7 @@
         "carriersHint": "{pending} en attente · {active} actifs",
         "deliveries": "Livraisons en cours",
         "deliveriesHint": "{count} clients actifs",
-        "reportedPayments": "*paiements déclarés, non constatés"
+        "reportedPayments": "*déclarés par Expedion, non constatés"
       },
       "funnel": {
         "title": "Entonnoir",
@@ -3549,7 +3418,7 @@
         "storageAtRiskEmptyBody": "Aucun gardiennage ne démarre dans les quatre prochains jours.",
         "escalationDue": "Escalade due",
         "escalationDueEmpty": "Aucune escalade en retard",
-        "escalationDueEmptyBody": "Le délai n'est dépassé pour aucune course non attribuée."
+        "escalationDueEmptyBody": "Aucune course sans chauffeur n'a dépassé son délai."
       },
       "table": {
         "reference": "Référence",
@@ -3563,7 +3432,6 @@
         "searchPlaceholder": "Référence, maison de ventes, ville, client…",
         "billed": "facturé",
         "ready": "prête",
-        "missingCoords": "coordonnées manquantes",
         "airtableImport": "import Airtable",
         "notEscalatable": "non prête",
         "airtableNumber": "Airtable {number}",
@@ -3602,12 +3470,12 @@
         "publishPrice": "Publier le prix",
         "assignTitle": "Attribuer un chauffeur",
         "assignBody": "{reference} → {city}. Le chauffeur reçoit la course immédiatement, le client en est informé, et le prix reste à {price}.",
-        "carrier": "Transporteur",
-        "chooseCarrier": "Choisir un transporteur",
+        "carrier": "Chauffeur",
+        "chooseCarrier": "Choisir un chauffeur",
         "loading": "Chargement…",
-        "noCarriers": "Aucun transporteur approuvé. Publiez la course sur Expeditop à la place.",
+        "noCarriers": "Aucun chauffeur approuvé. Publiez la course sur Expeditop à la place.",
         "escalateTitle": "Publier sur Expeditop ?",
-        "escalateBody": "{reference} sera publiée comme annonce et les transporteurs pourront enchérir immédiatement. La publication est définitive : il n'y a pas de retour en arrière.",
+        "escalateBody": "{reference} sera publié comme annonce et les transporteurs pourront faire une offre immédiatement. La publication est définitive : il n'y a pas de retour en arrière.",
         "repriced": "Devis mis à jour",
         "assigned": "Chauffeur attribué",
         "escalated": "Course publiée sur Expeditop",
@@ -3651,7 +3519,7 @@
         "waiting": "Reçu",
         "nextStep": "Prochaine étape",
         "new": "Nouveau",
-        "storageIn": "stockage J-{count}",
+        "storageIn": "gardiennage J-{count}",
         "tabs": {
           "todo": "À traiter",
           "all": "Récents"
@@ -3659,13 +3527,13 @@
         "todoEmpty": "Rien ne vous attend",
         "todoEmptyBody": "Chaque devis récent est chez le client ou déjà en route.",
         "empty": "Aucun devis",
-        "emptyBody": "Les demandes apparaîtront ici.",
+        "emptyBody": "Les devis apparaîtront ici.",
         "action": {
           "escalate": "Escalade due",
           "escalateBlocked": "Escalade bloquée",
           "assign": "Sans chauffeur",
           "price": "À chiffrer",
-          "storage": "Stockage bientôt facturé",
+          "storage": "Gardiennage bientôt facturé",
           "awaitingPayment": "Paiement en attente",
           "awaitingClient": "Chez le client",
           "inProgress": "En cours",
@@ -3674,14 +3542,14 @@
         },
         "button": {
           "reprice": "Chiffrer",
-          "assign": "Affecter un chauffeur",
+          "assign": "Attribuer un chauffeur",
           "escalate": "Publier",
           "fix": "Corriger",
           "storage": "Gardiennage"
         },
         "openHint": "cliquez sur une ligne pour le devis complet et son bordereau",
         "autoPublishIn": "publication auto dans {count} h",
-        "todoHint": "Tout ce qui attend une action, quel que soit l'âge du devis : à chiffrer, payé sans chauffeur, publication automatique dépassée, stockage bientôt facturé. Le plus ancien en premier, sauf si vous inversez l'ordre.",
+        "todoHint": "Tout ce qui attend une action, quel que soit l'âge du devis : à chiffrer, payé sans chauffeur, publication automatique dépassée, gardiennage bientôt facturé. Le plus ancien en premier, sauf si vous inversez l'ordre.",
         "allHint": "Tous les devis reçus, qu'il y ait quelque chose à faire ou non, sur la période choisie. Le plus récent en premier, sauf si vous inversez l'ordre.",
         "order": {
           "toggle": "Inverser l'ordre",
@@ -3710,8 +3578,8 @@
         "noDocuments": "Le client n'a téléversé aucun document.",
         "openDocument": "Ouvrir",
         "documentNotPreviewable": "Référence stockée — ce n'est pas un lien public, l'aperçu est impossible ici.",
-        "analyzeWithAi": "Recompléter avec l'extraction IA",
-        "analyzing": "Recomplétion…",
+        "analyzeWithAi": "Relire le document avec l'IA",
+        "analyzing": "Lecture en cours…",
         "noDocumentToAnalyze": "Aucun document téléversé à analyser",
         "reextractSuccess": "Document analysé — vérifiez les champs ci-dessous",
         "reextractFailed": "Analyse impossible — saisissez les champs manuellement",
@@ -3722,7 +3590,7 @@
         "saveAndPublish": "Enregistrer et publier",
         "fixNow": "Corriger maintenant",
         "readyToPublish": "Prêt à publier sur Expeditop",
-        "blockedBanner": "Bloqué pour la publication — manque :",
+        "blockedBanner": "Publication bloquée — il manque :",
         "maximize": "Agrandir",
         "restore": "Réduire",
         "close": "Fermer",
@@ -3759,18 +3627,26 @@
         "published": "Prix publié",
         "flow": "Avancement",
         "requestedAt": "Demandé le",
-        "assignedCarrier": "Transporteur affecté",
+        "assignedCarrier": "Chauffeur attribué",
         "listing": "Annonce",
-        "escalateAfter": "Escalade après",
+        "escalateAfter": "Publication automatique le",
         "escalatedAt": "Escaladé le",
-        "storageFreeUntil": "Stockage gratuit jusqu'au",
-        "storageFee": "Frais de stockage",
+        "storageFreeUntil": "Gardiennage gratuit jusqu'au",
+        "storageFee": "Frais de gardiennage",
         "perDay": "{value} par jour",
         "extraction": "Extraction",
         "confidence": "{percent} % de confiance ({model})",
         "comment": "Commentaire",
         "yes": "Oui",
-        "no": "Non"
+        "no": "Non",
+        "valueBracketPlaceholder": "Jusqu'à 150 €",
+        "paymentStatus": {
+          "unpaid": "Non payé",
+          "processing": "Paiement en cours",
+          "paid": "Payé",
+          "refunded": "Remboursé"
+        },
+        "errorStatus": "Devis indisponible (HTTP {status})"
       },
       "directRequests": {
         "title": "Demandes directes",
@@ -3786,16 +3662,30 @@
       "autoPublish": {
         "pause": "Suspendre la publication auto",
         "resume": "Reprendre (dans 48 h)",
-        "activeNote": "Publié automatiquement aux chauffeurs à la date ci-dessus.",
+        "activeNote": "Sera publié automatiquement auprès des chauffeurs à la date ci-dessus.",
         "parkedNote": "Publication automatique suspendue : ce devis ne sera publié qu'à la main.",
         "paused": "Publication automatique suspendue",
-        "resumed": "Publication automatique reprise dans 48 h",
+        "resumed": "Publication automatique réactivée : publication dans 48 h",
         "failed": "La modification a échoué."
+      },
+      "errors": {
+        "generic": "L'action n'a pas abouti. Réessayez.",
+        "QUOTE_NOT_PAID": "Un chauffeur ne peut être attribué qu'une fois le devis payé.",
+        "ALREADY_ESCALATED": "Ce devis est déjà sur Expeditop.",
+        "CARRIER_NOT_APPROVED": "Ce chauffeur n'est pas approuvé.",
+        "CARRIER_ABSENT": "Ce chauffeur est marqué absent.",
+        "CARRIER_HAS_NO_VEHICLE": "Ce chauffeur n'a aucun véhicule enregistré : une offre doit en nommer un.",
+        "ESCALATION_INCOMPLETE": "Il manque des informations pour publier ce devis. Complétez-le puis réessayez.",
+        "INVALID_TRANSITION": "Cette action n'est pas possible dans l'état actuel du devis.",
+        "PRICE_LOCKED": "Ce devis est payé : son prix ne peut plus être modifié. Utilisez « Annuler et recoter ».",
+        "NO_CATEGORY": "Aucune catégorie de transport n'est configurée.",
+        "QUOTE_NOT_FOUND": "Devis introuvable.",
+        "ALREADY_DISPATCHED": "Ce devis est déjà confié à un chauffeur ou publié : annulez-le plutôt."
       }
     },
     "awards": {
       "title": "File d'attribution",
-      "bidCount": "{count} offres",
+      "bidCount": "{count, plural, one {# offre} other {# offres}}",
       "clientPaid": "Payé par le client",
       "empty": {
         "title": "Rien en attente",
@@ -3805,11 +3695,11 @@
         "title": "Impossible de charger la file",
         "description": "Réessayez dans un instant."
       },
-      "intro": "Toutes les demandes ouvertes qui n'ont pas encore de chauffeur. En haut, celles que vous attribuez ; en dessous, celles que l'on suit.",
+      "intro": "Toutes les demandes ouvertes qui n'ont pas encore de chauffeur. En haut, celles que vous attribuez ; en dessous, celles à surveiller.",
       "toAward": {
         "title": "À attribuer ({count})",
-        "description": "Missions Expedion qui ont reçu au moins une offre : c'est vous qui choisissez le chauffeur, à la place du client.",
-        "empty": "Aucune mission Expedion n'attend votre choix."
+        "description": "Courses Expedion qui ont reçu au moins une offre : c'est vous qui choisissez le chauffeur, à la place du client.",
+        "empty": "Aucune course Expedion n'attend votre choix."
       },
       "waiting": {
         "title": "En attente d'un chauffeur ({count})",
@@ -3827,7 +3717,7 @@
     },
     "bordereaux": {
       "clearSearch": "Effacer la recherche",
-      "openBridge": "Ouvrir le pont Expedion",
+      "openBridge": "Ouvrir la passerelle Expedion",
       "title": "Bordereaux",
       "subtitle": "Chaque bordereau reçu : numéro, acheteur, contact, adresse de facturation, date de vente et description, avec le document. Exportable en CSV.",
       "searchPlaceholder": "N° de bordereau, nom, e-mail, téléphone, ville, description…",
@@ -3852,8 +3742,6 @@
       "documentsDialogHint": "Tous les documents de ce devis. Ouvrez-en un dans un nouvel onglet pour le télécharger.",
       "documentsFailed": "Les documents n'ont pas pu être chargés.",
       "retry": "Réessayer",
-      "openSlip": "Ouvrir",
-      "documentsCount": "{count, plural, one {# document} other {# documents}}",
       "count": "{total, plural, one {# bordereau} other {# bordereaux}}",
       "pageOf": "Page {page} sur {totalPages}",
       "previousPage": "Page précédente",
@@ -3885,7 +3773,7 @@
         "account": "Compte Expeditop"
       },
       "noName": "Nom non renseigné",
-      "paidOf": "{paid} payé(s)",
+      "paidOf": "{paid, plural, one {# payé} other {# payés}}",
       "openAccount": "Ouvrir le compte",
       "noAccount": "Aucun",
       "ownerIdCopied": "Identifiant client copié",
@@ -3918,7 +3806,7 @@
         "quoted": "Devis envoyé",
         "accepted": "Accepté",
         "paid": "Payé",
-        "assigned": "Chauffeur assigné",
+        "assigned": "Chauffeur attribué",
         "escalated": "Publié sur la marketplace",
         "picked_up": "Enlevé",
         "delivered": "Livré",
@@ -3994,61 +3882,38 @@
     }
   },
   "reviews": {
-    "title": "Avis",
-    "buyer": "Acheteur",
-    "seller": "Vendeur",
-    "helpful": "Utile",
-    "report": "Signaler",
     "modal": {
       "title": "Noter {name}",
-      "description": "Partagez votre expérience avec cet utilisateur. Vos commentaires aident à bâtir la confiance dans notre communauté.",
+      "description": "Dites comment le transport s'est passé avec cette personne. Les avis aident les autres à choisir.",
       "ratingLabel": "Note",
-      "commentLabel": "Commentaires supplémentaires (Optionnel)",
-      "commentPlaceholder": "Décrivez votre expérience...",
-      "submit": "Soumettre l'avis",
-      "submitting": "Envoi...",
+      "commentLabel": "Commentaire (facultatif)",
+      "commentPlaceholder": "Décrivez votre expérience…",
+      "submit": "Publier l'avis",
+      "submitting": "Envoi…",
       "cancel": "Annuler",
       "errors": {
-        "ratingRequired": "Veuillez sélectionner au moins 1 étoile",
-        "commentTooLong": "Le commentaire est trop long"
+        "ratingRequired": "Choisissez au moins une étoile.",
+        "commentTooLong": "Votre commentaire est trop long : 1000 caractères au maximum."
       }
     },
-    "posted": "Merci, votre avis a été publié."
+    "posted": "Merci, votre avis a été publié.",
+    "failed": "Votre avis n'a pas pu être publié. Réessayez."
   },
   "shipments": {
     "title": "Gestion des expéditions",
     "subtitle": "Les transports en cours, avec le chauffeur retenu pour chacun.",
     "table": {
       "title": "Titre",
-      "route": "Itinéraire",
       "status": "Statut",
       "price": "Prix",
-      "created": "Créé",
-      "searchPlaceholder": "Rechercher des expéditions...",
+      "created": "Créée le",
+      "searchPlaceholder": "Rechercher des expéditions…",
       "reference": "N°",
       "driver": "Chauffeur",
       "noDriver": "Pas encore de chauffeur",
       "departure": "Départ",
       "arrival": "Arrivée",
       "requester": "Demandeur"
-    },
-    "proposalsDialog": {
-      "title": "Propositions des chauffeurs",
-      "description": "Examiner les propositions des chauffeurs pour l'expédition #{id}",
-      "shipmentDetails": "Détails de l'expédition",
-      "titleLabel": "Titre",
-      "routeLabel": "Itinéraire",
-      "targetPrice": "Prix cible",
-      "proposalsCount": "Propositions ({count})",
-      "actionRequired": "Action requise",
-      "waitingProposals": "En attente de propositions",
-      "loadingProposals": "Chargement des propositions...",
-      "noProposals": "Aucune proposition",
-      "noProposalsDesc": "Attendez que les chauffeurs soumettent leurs propositions pour cette expédition.",
-      "vsTarget": "vs cible",
-      "cancel": "Annuler",
-      "assigning": "Attribution...",
-      "acceptAssign": "Accepter et assigner"
     },
     "stop": {
       "categoryLabel": "Motif",
@@ -4071,13 +3936,13 @@
       },
       "by": {
         "requester": "Annulée par le client",
-        "transporter": "Annulée par le transporteur",
+        "transporter": "Désistement du transporteur",
         "operator": "Annulée par Expeditop"
       },
       "categories": {
         "vehicle_breakdown": "Véhicule en panne",
         "driver_unavailable": "Chauffeur indisponible",
-        "cargo_mismatch": "Marchandise non conforme à l'annonce",
+        "cargo_mismatch": "Marchandise non conforme à la demande",
         "access_impossible": "Accès au retrait impossible",
         "no_longer_needed": "Transport plus nécessaire",
         "date_changed": "Les dates ont changé",
@@ -4093,7 +3958,7 @@
   "carrier": {
     "application": {
       "title": "Mon dossier",
-      "subtitle": "Complétez votre dossier pour commencer à répondre aux offres de transport.",
+      "subtitle": "Complétez votre dossier pour commencer à faire des offres sur les missions.",
       "withdraw": "Retirer et modifier",
       "withdrawing": "Retrait…",
       "manageFleet": "Mes véhicules",
@@ -4146,7 +4011,7 @@
         "reasonLabel": "Motif",
         "submitted": {
           "title": "Dossier envoyé",
-          "description": "Notre équipe examine votre dossier. Vous serez notifié de la décision."
+          "description": "Notre équipe examine votre dossier. Vous serez prévenu de la décision."
         },
         "under_review": {
           "title": "En cours d'examen",
@@ -4154,7 +4019,7 @@
         },
         "approved": {
           "title": "Vous êtes un chauffeur approuvé",
-          "description": "Vous pouvez répondre aux offres. Gardez vos documents à jour."
+          "description": "Vous pouvez faire des offres sur les missions. Gardez vos documents à jour."
         },
         "approvedInactive": {
           "title": "Dossier approuvé, mais accès chauffeur inactif",
@@ -4166,20 +4031,20 @@
         },
         "suspended": {
           "title": "Compte suspendu",
-          "description": "Les enchères sont suspendues. Contactez le support pour plus de détails."
+          "description": "Vous ne pouvez plus faire d'offres pour le moment. Contactez le support pour en savoir plus."
         },
         "deregistered": {
           "title": "Vous êtes désinscrit",
-          "description": "Votre compte chauffeur est fermé : vous ne recevez plus de missions. L'argent déjà gagné reste dû. Pour revenir, mettez votre dossier à jour et soumettez-le à nouveau."
+          "description": "Votre compte chauffeur est fermé : vous ne recevez plus de missions. L'argent déjà gagné reste dû. Pour revenir, mettez votre dossier à jour et envoyez-le à nouveau."
         },
         "inHouse": {
           "submitted": {
             "title": "Dossier envoyé — en attente de validation",
-            "description": "Expeditop valide chaque chauffeur interne à la main : c'est la seule étape qui reste, et vous n'avez rien d'autre à fournir. Vous recevrez un e-mail dès que votre dossier est validé."
+            "description": "Expeditop valide chaque chauffeur interne à la main : c'est la seule étape qui reste, et vous n'avez rien d'autre à fournir. Vous recevrez un e-mail dès que votre dossier sera validé."
           },
           "under_review": {
             "title": "Validation en cours",
-            "description": "Expeditop examine votre dossier de chauffeur interne. Vous recevrez un e-mail dès qu'il est validé."
+            "description": "Expeditop examine votre dossier de chauffeur interne. Vous recevrez un e-mail dès qu'il sera validé."
           },
           "approved": {
             "title": "Vous êtes chauffeur Expeditop",
@@ -4192,8 +4057,7 @@
         "siret": "SIRET",
         "phone": "Téléphone",
         "address": "Adresse",
-        "type": "Type",
-        "inHouse": "Chauffeur interne Expeditop"
+        "type": "Type"
       },
       "documents": {
         "title": "Justificatifs",
@@ -4207,7 +4071,7 @@
         "expiryLabel": "Date d'expiration",
         "expires": "Expire le {date}",
         "status": {
-          "pending": "En attente",
+          "pending": "En attente de vérification",
           "accepted": "Accepté",
           "rejected": "Refusé"
         },
@@ -4236,20 +4100,20 @@
         }
       },
       "checklist": {
-        "title": "À compléter avant de pouvoir enchérir",
-        "description": "Non requis pour soumettre — à compléter maintenant ou une fois votre dossier approuvé.",
+        "title": "À compléter avant de faire vos premières offres",
+        "description": "Facultatif pour envoyer votre dossier — à compléter maintenant ou une fois votre dossier approuvé.",
         "documents": "Tous les documents requis téléversés",
         "banking": "Coordonnées bancaires enregistrées",
         "vehicle": "Au moins un véhicule dans votre flotte",
         "goToFleet": "Gérer la flotte",
-        "submit": "Soumettre pour examen",
+        "submit": "Envoyer mon dossier",
         "submitting": "Envoi…",
         "inHouseTitle": "Avant d'envoyer votre dossier",
         "inHouseDescription": "Un véhicule suffit : il en faut un pour qu'Expeditop vous attribue une course. Une fois le dossier envoyé, Expeditop le valide à la main et vous prévient par e-mail."
       },
       "availability": {
         "title": "Disponibilité",
-        "active": "Vous êtes actif : les demandes vous sont proposées.",
+        "active": "Vous êtes actif : les missions vous sont proposées.",
         "absentUntil": "Vous êtes absent jusqu'au {date}. Aucune nouvelle mission ne vous est proposée d'ici là.",
         "absentOpenEnded": "Vous êtes absent jusqu'à nouvel ordre. Aucune nouvelle mission ne vous est proposée.",
         "goAway": "Je m'absente",
@@ -4274,7 +4138,7 @@
       "statusTitle": "Votre dossier chauffeur",
       "statusDescription": "Voici où il en est.",
       "draftBody": "Votre dossier est enregistré en brouillon. Terminez-le et envoyez-le pour que notre équipe l'examine.",
-      "start": "Commencer ma candidature",
+      "start": "Commencer mon dossier",
       "finish": "Terminer mon dossier",
       "open": "Ouvrir mon dossier",
       "later": "Plus tard",
@@ -4301,7 +4165,7 @@
     },
     "fleet": {
       "title": "Ma flotte",
-      "subtitle": "Les véhicules avec lesquels vous pouvez répondre aux offres.",
+      "subtitle": "Les véhicules avec lesquels vous pouvez faire des offres.",
       "addVehicle": "Ajouter un véhicule",
       "active": "Actif",
       "inactive": "Inactif",
@@ -4353,16 +4217,16 @@
         "van": "Fourgon",
         "truck_20m3": "Camion 20 m³",
         "truck": "Camion",
-        "hayon_tailgate": "Camion hayon"
+        "hayon_tailgate": "Camion à hayon"
       }
     },
     "toasts": {
       "saved": "Enregistré",
       "saveFailed": "Enregistrement impossible",
       "siretTaken": "Ce SIRET est déjà rattaché à un autre compte transporteur",
-      "submitted": "Candidature envoyée pour examen",
+      "submitted": "Dossier envoyé pour examen",
       "submitFailed": "Envoi impossible",
-      "withdrawn": "Candidature retirée — elle est de nouveau modifiable",
+      "withdrawn": "Dossier retiré — il est de nouveau modifiable",
       "withdrawFailed": "Retrait impossible",
       "bankingSaved": "Coordonnées bancaires enregistrées",
       "bankingInvalid": "Vérifiez le format de l'IBAN et du BIC",
@@ -4392,12 +4256,12 @@
     "trips": {
       "title": "Mes trajets",
       "pageSubtitle": "Vos trajets, vos offres en attente, vos courses en cours et celles que vous avez terminées.",
-      "subtitle": "Déclarez les trajets que vous faites déjà pour filtrer les annonces dessus.",
+      "subtitle": "Déclarez les trajets que vous faites déjà pour ne voir que les missions qui se trouvent sur votre route.",
       "add": "Ajouter un trajet",
       "edit": "Modifier",
       "delete": "Supprimer",
       "paused": "En pause",
-      "discoverable": "Trouvable",
+      "discoverable": "Visible",
       "notDiscoverable": "Privé",
       "toggleActive": "Activer ce trajet",
       "seeMatching": "Voir les courses correspondantes",
@@ -4406,7 +4270,7 @@
         "planned": "Prévus",
         "completed": "Terminés",
         "pending": "En attente de réponse",
-        "active": "En transit"
+        "active": "En cours"
       },
       "kinds": {
         "recurring": "Régulier",
@@ -4483,7 +4347,7 @@
         "capacityPlaceholder": "ex. 800",
         "notify": "M'alerter des courses correspondantes",
         "notifyHint": "Vous recevrez une notification quand une nouvelle course correspond à ce trajet.",
-        "discoverableLabel": "Être trouvable sur ce trajet",
+        "discoverableLabel": "Permettre aux demandeurs de me trouver sur ce trajet",
         "discoverableHint": "Les personnes dont la course se fait le long de ce trajet, et les opérateurs de la plateforme, voient que vous passez par là et peuvent vous contacter. Ils ne voient jamais votre adresse : seulement les deux villes et les prochaines dates.",
         "cancel": "Annuler",
         "create": "Ajouter le trajet",
@@ -4506,9 +4370,9 @@
           "DELIVERED": "Livré",
           "CANCELLED": "Annulé",
           "PENDING": "En attente",
-          "ASSIGNED": "Attribué",
-          "PICKED_UP": "Enlevé",
-          "IN_TRANSIT": "En transit"
+          "ASSIGNED": "En préparation",
+          "PICKED_UP": "En retrait",
+          "IN_TRANSIT": "En cours de livraison"
         },
         "payout": {
           "scheduled": "Crédité sur votre solde",
@@ -4539,7 +4403,7 @@
       "pending": {
         "intro": "Les offres que vous avez faites et auxquelles le demandeur ou un opérateur n'a pas encore répondu.",
         "yourPrice": "Votre prix",
-        "earliestPickup": "Enlèvement au plus tôt : {pickup}",
+        "earliestPickup": "Retrait au plus tôt : {pickup}",
         "view": "Voir la course",
         "withdraw": "Retirer l'offre",
         "confirm": {
@@ -4566,16 +4430,16 @@
       "active": {
         "intro": "Les courses qui vous ont été attribuées et qui ne sont pas encore livrées.",
         "agreedPrice": "Prix convenu",
-        "pickupOn": "Enlèvement prévu le {date}",
+        "pickupOn": "Retrait prévu le {date}",
         "empty": {
-          "title": "Aucune course en transit",
+          "title": "Aucune course en cours",
           "description": "Dès qu'une de vos offres est retenue, la course apparaît ici jusqu'à sa livraison."
         }
       }
     },
     "planner": {
       "title": "Planificateur de tournée",
-      "subtitle": "Choisissez un départ, vos missions et vos étapes, dans l'ordre où vous roulerez : le trajet est calculé par autoroute et sans autoroute.",
+      "subtitle": "Choisissez un départ, vos missions et vos étapes, dans l'ordre où vous roulerez : le temps de route est calculé avec et sans autoroute.",
       "departure": "Départ",
       "arrival": "Arrivée (facultatif)",
       "useMyPosition": "Partir de ma position",
@@ -4600,12 +4464,12 @@
       "withMotorway": "Par autoroute",
       "withoutMotorway": "Sans autoroute",
       "km": "{km} km",
-      "estimateNote": "Estimations hors trafic et hors pauses. En bleu par autoroute, en orange sans autoroute. Itinéraires calculés avec Valhalla sur les données © les contributeurs OpenStreetMap.",
+      "estimateNote": "Estimations hors trafic et hors pauses. En bleu par autoroute, en orange sans autoroute. Itinéraires calculés avec Valhalla sur les données © les contributeurs d'OpenStreetMap.",
       "errors": {
         "NO_ROUTE": "Aucune route ne relie ces étapes. Vérifiez qu'elles sont bien sur la terre ferme.",
         "ROUTER_UNREACHABLE": "Le calcul d'itinéraire ne répond pas. Réessayez dans un instant.",
         "ROUTER_FAILED": "Le calcul d'itinéraire a échoué. Réessayez dans un instant.",
-        "generic": "Le trajet n'a pas pu être calculé."
+        "generic": "L'itinéraire n'a pas pu être calculé."
       }
     }
   },
@@ -4613,7 +4477,7 @@
     "title": "Tableau de bord",
     "subtitle": "Votre situation, et ce qui vous attend.",
     "newJobs": {
-      "text": "{capped, select, yes {Plus de # nouvelles courses} other {{count, plural, one {# nouvelle course} other {# nouvelles courses}}}} dans les dernières 24 h",
+      "text": "{capped, select, yes {Plus de {count} nouvelles courses publiées} other {{count, plural, one {# nouvelle course publiée} other {# nouvelles courses publiées}}}} ces dernières 24 h",
       "action": "Voir les courses"
     },
     "switchToDriver": {
@@ -4622,7 +4486,7 @@
     },
     "getStarted": {
       "title": "Commencez à rouler avec EXPEDITOP",
-      "description": "Déposez votre dossier chauffeur pour répondre aux offres de transport.",
+      "description": "Déposez votre dossier chauffeur pour faire des offres sur les missions de transport.",
       "action": "Déposer mon dossier"
     },
     "currentRun": {
@@ -4653,9 +4517,9 @@
     "copyFailed": "Impossible de copier la référence"
   },
   "jobBoard": {
-    "title": "Voir les demandes",
+    "title": "Missions ouvertes",
     "loading": "Chargement…",
-    "count": "{count} missions ouvertes aux offres",
+    "count": "{count, plural, =0 {Aucune mission ouverte aux offres} one {# mission ouverte aux offres} other {# missions ouvertes aux offres}}",
     "countOne": "{count} mission ouverte aux offres",
     "clearSearch": "Effacer la recherche",
     "filters": "Filtres",
@@ -4668,7 +4532,7 @@
       "newest": "Plus récentes",
       "budgetDesc": "Budget le plus élevé",
       "budgetAsc": "Budget le plus bas",
-      "pickupAsc": "Enlèvement le plus proche",
+      "pickupAsc": "Retrait le plus tôt",
       "distanceAsc": "Les plus proches",
       "detourAsc": "Le moins de détour"
     },
@@ -4704,7 +4568,7 @@
       "submit": "Rechercher",
       "clear": "Effacer",
       "departureMissing": "Indiquez la ville de départ : une destination seule ne suffit pas à tracer un trajet.",
-      "hintAround": "Autour de votre ville de départ : les missions à enlever à proximité. Ajoutez une destination pour chercher sur votre trajet.",
+      "hintAround": "Autour de votre ville de départ : les missions dont le retrait est à proximité. Ajoutez une destination pour chercher sur votre trajet.",
       "hintRoute": "Sur votre trajet : les missions entre le départ et la destination, dans le même sens."
     },
     "availability": {
@@ -4729,11 +4593,11 @@
       "nearCity": "à {km} km de {city}",
       "dateOne": "Le {date}",
       "dateRange": "Entre le {from} et le {to}",
-      "offers": "{count} offres",
+      "offers": "{count, plural, =0 {Aucune offre} one {# offre} other {# offres}}",
       "offersOne": "{count} offre",
       "budget": "budget",
-      "youBid": "Vous avez enchéri",
-      "urgent": "CLÔTURE BIENTÔT",
+      "youBid": "Offre envoyée",
+      "urgent": "CLÔTURE PROCHE",
       "fragile": "Fragile",
       "needsHelp": "Aide au chargement",
       "needsProtection": "À protéger",
@@ -4744,7 +4608,7 @@
     },
     "map": {
       "openJob": "Ouvrir la mission « {title} »",
-      "empty": "Aucune mission sur cette zone"
+      "empty": "Aucune mission dans cette zone"
     },
     "paneLabel": "Affichage",
     "pane": {
@@ -4769,7 +4633,7 @@
     "requestCta": "Demander un retrait",
     "requesting": "Envoi…",
     "requested": "Demande de retrait envoyée",
-    "belowMinimum": "Un retrait démarre à {minimum}. Votre solde est conservé et augmente à la prochaine livraison.",
+    "belowMinimum": "Le retrait minimum est de {minimum}. Votre solde est conservé et augmente à la prochaine livraison.",
     "footnote": "Les paiements sont encaissés par Expeditop. Un retrait est une demande qu’un opérateur approuve puis vire manuellement — ce n’est pas immédiat.",
     "historyTitle": "Retraits passés",
     "status": {
@@ -4786,7 +4650,7 @@
     },
     "queueTitle": "Retraits",
     "queueSubtitle": "Les transporteurs demandent l’argent qu’ils ont gagné. Approuver ne le vire pas — enregistrez le virement une fois effectué.",
-    "queueEmpty": "Rien ici",
+    "queueEmpty": "Aucun retrait",
     "queueEmptyHint": "Aucun retrait n’a ce statut.",
     "all": "Tous",
     "approve": "Approuver",
@@ -4816,7 +4680,7 @@
     "retry": "Réessayer",
     "emptyTitle": "Aucun gain pour l’instant",
     "empty": {
-      "approved": "Vous gagnez en livrant. Faites une offre sur une mission ouverte : ce qui vous est payé apparaît ici une fois la livraison confirmée.",
+      "approved": "Vous gagnez en livrant. Faites une offre sur une mission ouverte : ce qui vous est payé apparaît ici une fois la livraison enregistrée.",
       "underReview": "Votre dossier de transporteur est en cours d’examen. Une fois approuvé, vous pourrez faire des offres et vos gains s’afficheront ici.",
       "draft": "Votre dossier de transporteur n’est pas terminé. Complétez-le pour commencer à faire des offres — les gains apparaissent ici après votre première livraison.",
       "blocked": "Vous ne pouvez pas prendre de mission pour le moment. Ouvrez votre dossier pour en connaître la raison et la marche à suivre.",
@@ -4827,7 +4691,7 @@
       "underReview": "Voir mon dossier",
       "draft": "Terminer mon dossier",
       "blocked": "Ouvrir mon dossier",
-      "none": "Devenir transporteur"
+      "none": "Devenir chauffeur"
     },
     "refuseApproved": {
       "title": "Refuser ce retrait approuvé ?",
@@ -4837,18 +4701,18 @@
     },
     "payTo": "Virement vers l’IBAN •••• {iban} · BIC •••• {bic} — vérifiez-le sur le RIB du dossier du chauffeur.",
     "payToMissing": "Aucun IBAN renseigné : demandez-le au chauffeur avant tout virement.",
-    "held": "{amount} en attente : un problème a été signalé sur {count, plural, one {# livraison} other {# livraisons}}. Ce montant sera disponible dès que le support l'aura résolu."
+    "held": "{amount} retenus : un problème a été signalé sur {count, plural, one {# livraison} other {# livraisons}}. Ce montant sera disponible dès que le support l'aura résolu."
   },
   "platformSettings": {
     "title": "Paramètres",
-    "subtitle": "Économie de la plateforme.",
+    "subtitle": "Frais de plateforme, informations de l'entreprise, Stripe et tâches planifiées.",
     "feeLabel": "Frais de plateforme",
     "feeHint": "Ajoutés au budget au moment de l'attribution — distincts de la commission du transporteur.",
     "save": "Enregistrer",
     "saving": "Enregistrement…",
     "saved": "Paramètres enregistrés",
     "saveFailed": "Impossible d'enregistrer. Veuillez réessayer.",
-    "lastChanged": "Dernière modification {date}",
+    "lastChanged": "Dernière modification le {date}",
     "loadFailed": "Impossible de charger les frais.",
     "retry": "Réessayer",
     "company": {
@@ -4863,7 +4727,7 @@
       "saving": "Enregistrement…",
       "saved": "Informations de l'entreprise enregistrées",
       "saveFailed": "Impossible d'enregistrer. Vérifiez les champs signalés.",
-      "lastChanged": "Dernière modification {date}",
+      "lastChanged": "Dernière modification le {date}",
       "loadFailed": "Impossible de charger les informations de l'entreprise.",
       "loadFailedHint": "Le serveur n’a pas répondu. Réessayez dans un instant.",
       "retry": "Réessayer",
@@ -4913,7 +4777,7 @@
         "billingEmail": {
           "label": "E-mail de facturation",
           "placeholder": "facturation@exemple.fr",
-          "hint": "Imprimé sur les reçus pour demander une facture."
+          "hint": "Imprimé sur les reçus pour qu'un client puisse demander une facture."
         },
         "publicationDirector": {
           "label": "Directeur de la publication",
@@ -4964,6 +4828,10 @@
         "title": "Autres webhooks sur ce compte Stripe",
         "hint": "Ils n’appartiennent pas à cette application, par ex. les automatisations n8n de l’application Expedion actuelle. Ne les désactivez pas tant qu’elle s’en sert.",
         "otherHost": "Le chemin de cette application sur une autre adresse : une ancienne URL ?"
+      },
+      "endpointStatus": {
+        "enabled": "Actif",
+        "disabled": "Désactivé"
       }
     },
     "cron": {
@@ -5033,7 +4901,7 @@
     "error": "La confirmation n'a pas pu être enregistrée. Réessayez dans un instant.",
     "disclaimer": "Confirmer n'engage aucun paiement et ne modifie pas votre transport.",
     "unavailable": {
-      "title": "Suivi indisponible",
+      "title": "Confirmation indisponible",
       "body": "Nous n'avons pas pu charger cette confirmation. Réessayez dans un instant ou contactez notre support."
     },
     "cancelled": {
@@ -5042,7 +4910,7 @@
     }
   },
   "shipmentPhotos": {
-    "sectionTitle": "Photos du colis",
+    "sectionTitle": "Photos du chargement",
     "pickupTitle": "Photos au retrait",
     "deliveryTitle": "Photos à la livraison",
     "noneAtPickup": "Aucune photo au retrait pour l'instant.",
@@ -5050,10 +4918,10 @@
     "added": "Photo envoyée",
     "locating": "Localisation en cours…",
     "sending": "Envoi de la photo…",
-    "takeFirst": "Prendre une photo du colis",
+    "takeFirst": "Prendre une photo du chargement",
     "takeAnother": "Prendre une autre photo",
     "locationHint": "Chaque photo enregistre le lieu et l'heure de la prise de vue.",
-    "required": "Prenez d'abord au moins une photo du colis.",
+    "required": "Prenez d'abord au moins une photo du chargement.",
     "errors": {
       "locationDenied": "La localisation est obligatoire pour les photos. Autorisez l'accès à votre position puis réessayez.",
       "locationUnavailable": "Impossible d'obtenir votre position. Déplacez-vous vers un endroit plus dégagé puis réessayez.",
@@ -5076,7 +4944,7 @@
       "title": "Signaler un incident",
       "description": "Dites-nous ce qui s'est passé. Un opérateur est prévenu immédiatement, et une conversation avec le support s'ouvre pour assurer le suivi.",
       "submit": "Envoyer le signalement",
-      "submitting": "Envoi...",
+      "submitting": "Envoi…",
       "cancel": "Annuler"
     },
     "fields": {
@@ -5220,7 +5088,7 @@
     },
     "success": {
       "title": "Merci !",
-      "message": "Votre retour est bien arrivé. Nous le lisons rapidement.",
+      "message": "Votre retour est bien arrivé. Nous le lirons rapidement.",
       "reference": "Référence : #{ref}"
     },
     "toast": {
@@ -5235,8 +5103,7 @@
       "emptyTitle": "Aucun retour pour l'instant",
       "emptyDescription": "Ce que vous nous enverrez apparaîtra ici, avec son statut.",
       "error": "Vos retours n'ont pas pu être chargés. Réessayez.",
-      "reference": "Réf.",
-      "sentOn": "Envoyé le {date}"
+      "reference": "Réf."
     },
     "console": {
       "title": "Retours",
@@ -5259,7 +5126,6 @@
       "reportedBy": "Envoyé par {name} ({role})",
       "deletedAccount": "compte supprimé",
       "viewScreenshot": "Voir la capture",
-      "devNote": "Note interne",
       "addDevNote": "Ajouter une note interne",
       "devNotePlaceholder": "Visible uniquement par l'équipe.",
       "saveNote": "Enregistrer",
@@ -5281,7 +5147,7 @@
   },
   "acceptPayment": {
     "title": "Accepter cette offre",
-    "descriptionCharge": "Le paiement est pris maintenant, au moment où vous choisissez ce transporteur. Si le transport est annulé, vous êtes remboursé.",
+    "descriptionCharge": "Vous payez maintenant, au moment où vous choisissez ce transporteur. Si le transport est annulé, vous êtes remboursé.",
     "descriptionFree": "Vérifiez le montant avant de confirmer.",
     "loading": "Calcul du montant…",
     "price": "Prix du transport",
@@ -5342,7 +5208,6 @@
   "listingUrgency": {
     "label": "Urgent",
     "hint": "Pas encore de chauffeur, et le retrait doit avoir lieu dans moins de {hours} h.",
-    "banner": "Demande urgente : le retrait doit avoir lieu dans moins de {hours} h et aucun chauffeur n'est encore retenu.",
     "immediate": "Immédiat",
     "immediateHint": "Pas encore de chauffeur, et la fenêtre de retrait est déjà ouverte : l'enlèvement peut se faire tout de suite."
   },

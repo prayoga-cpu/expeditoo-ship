@@ -28,8 +28,8 @@ import { cn } from "@/lib/utils";
  * the badge this replaces: an admin who forgot which access they are
  * browsing with is the whole reason this exists. */
 const MODE_TONE: Record<AccessMode, string> = {
-  admin: "bg-destructive/15 text-destructive border-destructive/30",
-  carrier: "bg-success/15 text-success border-success/30",
+  admin: "tone-danger",
+  carrier: "tone-success",
   user: "bg-muted text-muted-foreground border-border",
 };
 

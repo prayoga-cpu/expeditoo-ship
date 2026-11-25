@@ -19,10 +19,10 @@ import type { ReviewRow } from "../api/withdrawals.api";
 import { RefuseButton } from "./RefuseButton";
 
 const TONE: Record<ReviewRow["status"], string> = {
-  requested: "bg-warning/15 text-warning border-warning/30",
+  requested: "tone-warning",
   approved: "bg-primary/15 text-primary border-primary/30",
-  paid: "bg-success/15 text-success border-success/30",
-  rejected: "bg-destructive/15 text-destructive border-destructive/30",
+  paid: "tone-success",
+  rejected: "tone-danger",
 };
 
 /**

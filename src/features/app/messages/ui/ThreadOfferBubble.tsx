@@ -17,6 +17,7 @@ import type { ThreadOfferView } from "../types";
 import { useThreadOffer } from "../hooks/useThreadOffer";
 import { AcceptPaymentDialog } from "@/features/app/offers/ui/AcceptPaymentDialog";
 import { useAcceptReturn } from "@/features/app/offers/hooks/useAcceptReturn";
+import { useVehicleLabel } from "@/features/app/carrier/hooks/useVehicleLabel";
 
 /**
  * What the card actually shows.
@@ -33,10 +34,10 @@ const shownStatus = (offer: ThreadOfferView): Shown =>
 
 const BADGE: Record<Shown, string> = {
   pending: "bg-muted text-muted-foreground border-border",
-  accepted: "bg-success/15 text-success border-success/30",
-  declined: "bg-destructive/10 text-destructive border-destructive/30",
-  rejected: "bg-destructive/10 text-destructive border-destructive/30",
-  expired: "bg-destructive/10 text-destructive border-destructive/30",
+  accepted: "tone-success",
+  declined: "tone-danger",
+  rejected: "tone-danger",
+  expired: "tone-danger",
   withdrawn: "bg-muted text-muted-foreground border-border",
 };
 
@@ -112,6 +113,7 @@ export function ThreadOfferBubble({
   const tSlots = useTranslations("listing.bid.slots");
   const locale = useLocale();
   const dateLocale = locale === "fr" ? fr : enUS;
+  const vehicleLabel = useVehicleLabel();
   const { accept, decline, withdraw } = useThreadOffer(conversationId);
   // Back from PayPal on this offer: its dialog opens again to finish the award
   // (payment_alternatives_spec.md §3).
@@ -212,9 +214,7 @@ export function ThreadOfferBubble({
           {offer.vehicle && (
             <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Truck className="h-3.5 w-3.5 shrink-0" />
-              {[offer.vehicle.make, offer.vehicle.model]
-                .filter(Boolean)
-                .join(" ") || offer.vehicle.type.replace(/_/g, " ")}
+              {vehicleLabel(offer.vehicle)}
             </p>
           )}
 
@@ -342,7 +342,7 @@ export function ThreadOfferBubble({
           {isOwn && (
             <span className="text-muted-foreground">
               {readByOther ? (
-                <CheckCheck className="w-3.5 h-3.5 text-blue-500" />
+                <CheckCheck className="w-3.5 h-3.5 text-info-ink" />
               ) : (
                 <Check className="w-3.5 h-3.5" />
               )}

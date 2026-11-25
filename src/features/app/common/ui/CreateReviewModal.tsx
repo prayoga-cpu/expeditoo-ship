@@ -22,8 +22,10 @@ import { useTranslations } from "next-intl";
 
 // Schema for the review form
 const reviewFormSchema = z.object({
-    rating: z.number().min(1, "Please select at least 1 star").max(5),
-    comment: z.string().max(1000, "Comment is too long").optional(),
+    // Keys under `reviews.modal.errors`, not sentences: the modal prints them
+    // through `t`.
+    rating: z.number().min(1, "ratingRequired").max(5),
+    comment: z.string().max(1000, "commentTooLong").optional(),
 });
 
 type ReviewFormValues = z.infer<typeof reviewFormSchema>;
@@ -41,11 +43,12 @@ export function CreateReviewModal({
     isOpen,
     onClose,
     targetUserId,
-    targetUserName = "User",
+    targetUserName,
     listingId,
     shipmentId,
 }: CreateReviewModalProps) {
     const t = useTranslations("reviews.modal");
+    const tCommon = useTranslations("common");
     const [hoveredRating, setHoveredRating] = useState(0);
     const { mutate: createReview, isPending } = useCreateReview();
 
@@ -79,7 +82,7 @@ export function CreateReviewModal({
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                    <DialogTitle>{t("title", { name: targetUserName })}</DialogTitle>
+                    <DialogTitle>{t("title", { name: targetUserName || tCommon("unnamedUser") })}</DialogTitle>
                     <DialogDescription>
                         {t("description")}
                     </DialogDescription>
@@ -93,7 +96,7 @@ export function CreateReviewModal({
                                 <button
                                     key={star}
                                     type="button"
-                                    className="p-1 focus:outline-hidden transition-transform hover:scale-110"
+                                    className="p-1 focus:outline-hidden"
                                     onMouseEnter={() => setHoveredRating(star)}
                                     onMouseLeave={() => setHoveredRating(0)}
                                     onClick={() => form.setValue("rating", star)}
@@ -102,7 +105,7 @@ export function CreateReviewModal({
                                         className={cn(
                                             "w-8 h-8 transition-colors duration-200",
                                             (hoveredRating || rating) >= star
-                                                ? "fill-yellow-400 text-yellow-400 drop-shadow-sm"
+                                                ? "fill-warning text-warning drop-shadow-sm"
                                                 : "text-muted-foreground/30"
                                         )}
                                     />
@@ -111,7 +114,7 @@ export function CreateReviewModal({
                         </div>
                         {form.formState.errors.rating && (
                             <p className="text-sm text-destructive font-medium">
-                                {form.formState.errors.rating.message}
+                                {t("errors.ratingRequired")}
                             </p>
                         )}
                     </div>
@@ -127,6 +130,11 @@ export function CreateReviewModal({
                         <p className="text-xs text-muted-foreground text-right">
                             {form.watch("comment")?.length || 0}/1000
                         </p>
+                        {form.formState.errors.comment && (
+                            <p className="text-sm text-destructive font-medium">
+                                {t("errors.commentTooLong")}
+                            </p>
+                        )}
                     </div>
 
                     <DialogFooter>

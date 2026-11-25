@@ -225,7 +225,7 @@ without an `sk_live_` key, so an accept there takes real money.
 Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before shipping.
 
 **Gates — all green.** `npx tsc --noEmit` 0 errors · `pnpm lint` 0 errors ·
-4,841 unit tests pass (2.97.0) · `pnpm build` succeeds. The same gate runs inside
+4,848 unit tests pass (2.98.0) · `pnpm build` succeeds. The same gate runs inside
 every `dev` and production Vercel build before anything migrates (`AGENTS.md` §4a).
 
 **Done**
@@ -838,6 +838,18 @@ every `dev` and production Vercel build before anything migrates (`AGENTS.md` §
   migrates production and builds. The gate runs with the toolchain only in
   its environment (`gateEnv`), because a production build holds live keys.
 
+- **Every string read in both languages, the generated look removed, the app
+  shown on the home page** (2.98.0, `copy_and_design_audit_2026_11_spec.md`,
+  `landing_app_tour_spec.md`). 556 catalogue corrections and 217 dead keys
+  removed; server-written notifications are **French** (no account carries a
+  locale); the catalogues are canonical JSON. Status colour is five **tones**
+  (`src/lib/tone.ts`, `.tone-*` in `globals.css`) — gotcha 26. The six
+  signed-out screens share `AuthShell`. The site header keeps **two doors**.
+  `pnpm db:seed:demo` builds fictional accounts with four months of history
+  (local databases only); `scripts/capture-app-tour.mjs` takes the pictures
+  of `LandingAppTour` (« Dans l'application », `#app`) from them. **The legal
+  pages are stale in substance since `/create` returned** — STATUS 2.98.0.
+
 **Not done**
 - **`EXPEDION_APP_ORIGINS` is set in Vercel Production but not in `.env.local`**,
   so `user.origin` reads `expedion` on the deployment and never locally — an
@@ -1020,3 +1032,18 @@ every `dev` and production Vercel build before anything migrates (`AGENTS.md` §
    migration that removes, renames, retypes or tightens something is refused
    at build unless the `.sql` says `-- release:allow-destructive <reason>` —
    ship the add in one launch and the removal in a later one.
+26. **A status picks a tone, never a colour.** `tone-info | success | warning |
+   danger | neutral` (`src/lib/tone.ts`); no `bg-blue-100`, `text-amber-600` or
+   any raw palette step in a component. The `.tone-*` classes are unlayered on
+   purpose — inside `@layer utilities` they tie with a `Badge` variant's own
+   `text-foreground`. Text on `bg-warning` is `text-warning-foreground`. And no
+   gradient avatars, pulsing discs, hover-scale or sparkle icons: they were
+   removed in 2.98.0 as the things that made the app look generated.
+27. **`messages/*.json` are canonical JSON** (`indent=2`); apply copy as a
+   `{lang:{set,delete}}` patch and re-dump, never hand-indent. **No
+   non-breaking spaces before « ? ! : ; »**: Testing Library normalises the
+   DOM's whitespace and not the matcher's, so a test reading the catalogue
+   stops matching what it rendered. Text a service writes for a person
+   (notifications, event notes, chat lines) is French.
+28. **A picture published on the site comes from the demo seed, never from a
+   database with real people in it** (`landing_app_tour_spec.md` §3–4).

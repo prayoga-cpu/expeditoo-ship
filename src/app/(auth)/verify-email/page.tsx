@@ -4,13 +4,11 @@ import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, XCircle, Mail } from "lucide-react";
-import { BrandMark } from "@/components/ui/brand-mark";
 import { useAuthActions } from "@/features/auth/hooks/useAuthActions";
 import { signInAfterVerification } from "@/features/auth/hooks/useEmailCodeVerification";
-import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { InlineLoader } from "@/components/ui/page-loader";
-import { VerifyEmailActions } from "@/features/auth/ui";
+import { VerifyEmailActions, AuthNote, AuthShell } from "@/features/auth/ui";
 import { mailbox } from "@/lib/app-url";
 
 type VerificationState = "idle" | "verifying" | "success" | "error";
@@ -64,44 +62,34 @@ function VerifyEmailContent() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-primary/10 via-background to-background py-8 px-4 overflow-hidden relative">
-      {/* Animated gradient orbs */}
-      <div className="absolute top-20 left-10 w-72 h-72 bg-primary/20 rounded-full blur-3xl animate-pulse" />
-      <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse" />
-
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="relative z-10 w-full max-w-md"
-      >
-        {/* Logo */}
-        <div className="flex items-center justify-center gap-2 mb-8">
-          <BrandMark size={40} />
-          <span className="text-2xl font-bold text-foreground">EXPEDITOP</span>
-        </div>
-
-        {/* Verification Card */}
-        <div className="bg-card/50 backdrop-blur-sm rounded-2xl border border-border/50 p-8">
+    <AuthShell
+      below={
+        <p className="mt-8 text-sm text-muted-foreground">
+          {t("needHelp")}{" "}
+          <a
+            href={`mailto:${mailbox("support")}`}
+            className="text-primary hover:text-primary/80 font-medium"
+          >
+            {t("contactSupport")}
+          </a>
+        </p>
+      }
+    >
           {/* Idle State - No Token */}
           {state === "idle" && !token && (
             <>
-              <div className="flex justify-center mb-6">
-                <div
-                  className={`w-16 h-16 rounded-full flex items-center justify-center ${linkFailed ? "bg-destructive/20" : "bg-primary/20"}`}
-                >
-                  {linkFailed ? (
-                    <XCircle className="w-10 h-10 text-destructive" />
+              <div className="mb-5">
+                {linkFailed ? (
+                    <XCircle className="size-8 text-destructive" />
                   ) : (
-                    <Mail className="w-8 h-8 text-primary" />
+                    <Mail className="size-8 text-primary" />
                   )}
-                </div>
               </div>
 
-              <h1 className="text-2xl font-bold text-foreground mb-2 text-center">
+              <h1 className="text-2xl font-bold text-foreground mb-2">
                 {linkFailed ? t("failedTitle") : t("title")}
               </h1>
-              <p className="text-muted-foreground mb-6 text-center break-words">
+              <p className="text-muted-foreground mb-6 break-words">
                 {linkFailed
                   ? t("linkFailedBody")
                   : email
@@ -110,28 +98,23 @@ function VerifyEmailContent() {
               </p>
 
               {fromSignIn && !linkFailed && (
-                <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 mb-4">
-                  <p className="text-foreground text-sm">{t("fromSignIn")}</p>
-                </div>
+                <AuthNote className="mb-4">{t("fromSignIn")}</AuthNote>
               )}
 
               <div className="space-y-3">
                 <VerifyEmailActions initialEmail={email} callbackUrl={callbackUrl}>
                   {!linkFailed && (
-                    <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
-                      <p className="text-primary text-sm">
-                        <strong>{t("didntReceive")}</strong>
-                        <br />
-                        {t("checkSpam")}
-                      </p>
-                    </div>
+                    <AuthNote>
+                      <strong className="font-semibold text-foreground">{t("didntReceive")}</strong>{" "}
+                      {t("checkSpam")}
+                    </AuthNote>
                   )}
                 </VerifyEmailActions>
 
                 <Button
                   onClick={() => router.push("/signin")}
                   variant="ghost"
-                  className="w-full rounded-xl hover:bg-muted/50 text-foreground font-semibold transition-colors"
+                  className="h-11 w-full font-semibold"
                 >
                   {t("backToLogin")}
                 </Button>
@@ -142,15 +125,15 @@ function VerifyEmailContent() {
           {/* Verifying State */}
           {state === "verifying" && (
             <>
-              <div className="flex justify-center mb-6">
+              <div className="mb-5">
                 {/* Use a larger loader for the main verification state */}
                 <InlineLoader size="md" />
               </div>
 
-              <h1 className="text-2xl font-bold text-foreground mb-2 text-center">
+              <h1 className="text-2xl font-bold text-foreground mb-2">
                 {t("verifyingTitle")}
               </h1>
-              <p className="text-muted-foreground text-center">
+              <p className="text-muted-foreground">
                 {t("verifyingBody")}
               </p>
             </>
@@ -159,28 +142,22 @@ function VerifyEmailContent() {
           {/* Success State */}
           {state === "success" && (
             <>
-              <div className="flex justify-center mb-6">
-                <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center">
-                  <CheckCircle className="w-10 h-10 text-primary" />
-                </div>
+              <div className="mb-5">
+                <CheckCircle className="size-8 text-success" />
               </div>
 
-              <h1 className="text-2xl font-bold text-foreground mb-2 text-center">
+              <h1 className="text-2xl font-bold text-foreground mb-2">
                 {t("successTitle")}
               </h1>
-              <p className="text-muted-foreground mb-6 text-center">
+              <p className="text-muted-foreground mb-6">
                 {t("successBody")}
               </p>
 
-              <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 mb-6">
-                <p className="text-primary text-sm text-center">
-                  {t("redirecting")}
-                </p>
-              </div>
+              <AuthNote className="mb-6">{t("redirecting")}</AuthNote>
 
               <Button
                 onClick={() => router.push(signInAfterVerification(email, callbackUrl))}
-                className="w-full rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground py-6 font-semibold transition-colors"
+                className="h-11 w-full font-semibold"
               >
                 {t("continue")}
               </Button>
@@ -190,25 +167,19 @@ function VerifyEmailContent() {
           {/* Error State */}
           {state === "error" && (
             <>
-              <div className="flex justify-center mb-6">
-                <div className="w-16 h-16 rounded-full bg-destructive/20 flex items-center justify-center">
-                  <XCircle className="w-10 h-10 text-destructive" />
-                </div>
+              <div className="mb-5">
+                <XCircle className="size-8 text-destructive" />
               </div>
 
-              <h1 className="text-2xl font-bold text-foreground mb-2 text-center">
+              <h1 className="text-2xl font-bold text-foreground mb-2">
                 {t("failedTitle")}
               </h1>
-              <p className="text-muted-foreground mb-6 text-center">
+              <p className="text-muted-foreground mb-6">
                 {t("failedBody")}
               </p>
 
               {errorMessage && (
-                <div className="mb-6 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-                  <p className="text-destructive text-sm text-center">
-                    {errorMessage}
-                  </p>
-                </div>
+                <AuthNote tone="danger" className="mb-6">{errorMessage}</AuthNote>
               )}
 
               {/* Another code, not another account: the account exists, and
@@ -219,35 +190,20 @@ function VerifyEmailContent() {
                 <Button
                   onClick={() => router.push("/signin")}
                   variant="ghost"
-                  className="w-full rounded-xl hover:bg-muted/50 text-foreground font-semibold transition-colors"
+                  className="h-11 w-full font-semibold"
                 >
                   {t("backToLogin")}
                 </Button>
               </div>
             </>
           )}
-        </div>
-
-        {/* Help Text */}
-        <p className="text-center text-muted-foreground text-sm mt-6">
-          {t("needHelp")}{" "}
-          <a
-            href={`mailto:${mailbox("support")}`}
-            className="text-primary hover:text-primary/80 font-medium"
-          >
-            {t("contactSupport")}
-          </a>
-        </p>
-      </motion.div>
-    </div>
+    </AuthShell>
   );
 }
 
 export default function VerifyEmailPage() {
-  const t = useTranslations("auth.verifyEmail");
-
   return (
-    <Suspense fallback={<div>{t("loading")}</div>}>
+    <Suspense fallback={null}>
       <VerifyEmailContent />
     </Suspense>
   );

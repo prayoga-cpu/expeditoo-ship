@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/currency";
+import { useFormatRating } from "@/lib/hooks/useFormatRating";
 import type { DeliveredRequest } from "../hooks/useMyRequests";
 import { ListingReference } from "./ListingReference";
 
@@ -20,6 +21,7 @@ import { ListingReference } from "./ListingReference";
 export function DeliveredRequestCard({ job, delivery }: DeliveredRequest) {
   const t = useTranslations("myJobs.history");
   const format = useFormatter();
+  const formatRating = useFormatRating();
   const carrier = delivery.carrier;
 
   return (
@@ -46,7 +48,7 @@ export function DeliveredRequestCard({ job, delivery }: DeliveredRequest) {
           {carrier && carrier.rating > 0 && (
             <span className="flex shrink-0 items-center gap-1 text-sm text-muted-foreground">
               <Star className="h-3.5 w-3.5 fill-warning text-warning" />
-              <span className="font-mono">{carrier.rating.toFixed(1)}</span>
+              <span className="font-mono">{formatRating(carrier.rating)}</span>
             </span>
           )}
         </div>
@@ -93,7 +95,7 @@ export function DeliveredRequestCard({ job, delivery }: DeliveredRequest) {
           <div className="flex flex-wrap items-center gap-2 pt-1">
             <Badge
               variant="outline"
-              className="border-success/30 bg-success/10 text-success"
+              className="tone-success"
             >
               <FileCheck className="h-3.5 w-3.5" />
               {t("proof")}

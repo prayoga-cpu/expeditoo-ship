@@ -11,7 +11,7 @@ import { Headset, Search, MessageCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageLoader } from "@/components/ui/page-loader";
 import { useSupportChats } from "../hooks/useSupportChats";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 interface SupportChat {
     conversationId: string;
@@ -35,6 +35,7 @@ interface SupportChat {
 export function AdminSupportChats() {
     const router = useRouter();
     const t = useTranslations("admin.support");
+    const locale = useLocale();
     const [activeTab, setActiveTab] = useState<"all" | "unread">("all");
     const [searchQuery, setSearchQuery] = useState("");
     const { chats: rawChats, isLoading, refetch } = useSupportChats(activeTab);
@@ -62,7 +63,7 @@ export function AdminSupportChats() {
         if (diffDays === 1) return t("time.yesterday");
         if (diffDays < 7) return t("time.daysAgo", { count: diffDays });
 
-        return messageDate.toLocaleDateString();
+        return messageDate.toLocaleDateString(locale);
     };
 
     if (isLoading) {
@@ -137,7 +138,7 @@ export function AdminSupportChats() {
                                             {/* Avatar */}
                                             <Avatar className="w-12 h-12">
                                                 <AvatarImage src={chat.user.image || undefined} />
-                                                <AvatarFallback className="bg-gradient-to-br from-blue-400 to-blue-600 text-white">
+                                                <AvatarFallback className="bg-primary/10 text-primary">
                                                     {chat.user.name.charAt(0).toUpperCase()}
                                                 </AvatarFallback>
                                             </Avatar>

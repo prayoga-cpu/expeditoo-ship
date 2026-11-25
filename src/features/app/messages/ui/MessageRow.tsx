@@ -55,7 +55,7 @@ export function MessageRow({
             {" "}
             {/* Disable pointer events on avatar image to prevent drag */}
             <AvatarImage src={message.avatar} alt={message.name} />
-            <AvatarFallback className="bg-linear-to-b from-blue-400 to-blue-600 dark:from-blue-600 dark:to-blue-950 text-white text-sm font-semibold">
+            <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
               {message.initials ?? initialsOf({ name: message.name })}
             </AvatarFallback>
           </Avatar>
@@ -91,7 +91,7 @@ export function MessageRow({
                 {message.type === "SUPPORT" && (
                   <Badge
                     variant="secondary"
-                    className="shrink-0 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 text-xs px-2 py-0"
+                    className="shrink-0 tone-info text-xs px-2 py-0"
                   >
                     <Headset className="w-3 h-3 mr-1" />
                     {t("support")}

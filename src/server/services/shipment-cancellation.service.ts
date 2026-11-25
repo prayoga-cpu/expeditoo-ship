@@ -311,7 +311,7 @@ async function announceCancelled(
       userId,
       "shipment_cancelled",
       "Transport annulé",
-      `"${listing.title}" a été annulé.`,
+      `« ${listing.title} » a été annulé.`,
       isTransporter
         ? `/driver/shipments/${ownership.id}`
         : `/deliveries/${ownership.id}`,
@@ -340,7 +340,7 @@ async function announceWithdrawn(
         userId,
         "shipment_withdrawn",
         "Une course vous a été retirée",
-        `"${listing.title}" a été reprise et remise sur le tableau.`,
+        `« ${listing.title} » a été reprise et remise sur le tableau.`,
         `/driver/shipments/${ownership.id}`,
         data
       );
@@ -352,7 +352,7 @@ async function announceWithdrawn(
       ownership.shipperId,
       "shipment_withdrawn",
       "Votre transporteur s'est désisté",
-      `"${listing.title}" est de nouveau proposé à d'autres transporteurs.`,
+      `« ${listing.title} » est de nouveau proposé à d'autres transporteurs.`,
       `/listing/${listing.id}`,
       data
     );
@@ -365,7 +365,7 @@ async function announceWithdrawn(
       carrierId,
       "job_reopened",
       "Une course est de nouveau disponible",
-      `"${listing.title}" est revenu sur le tableau. Votre offre est réactivée.`,
+      `« ${listing.title} » est revenu sur le tableau. Votre offre est réactivée.`,
       `/listing/${listing.id}`,
       data
     );

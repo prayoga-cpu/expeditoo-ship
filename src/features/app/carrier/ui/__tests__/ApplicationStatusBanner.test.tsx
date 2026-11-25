@@ -88,7 +88,7 @@ describe("ApplicationStatusBanner — in-house driver", () => {
     expect(
       screen.getByText(/Expeditop valide chaque chauffeur interne à la main/)
     ).toBeInTheDocument();
-    expect(screen.getByText(/Vous recevrez un e-mail dès que votre dossier est validé/)).toBeInTheDocument();
+    expect(screen.getByText(/Vous recevrez un e-mail dès que votre dossier sera validé/)).toBeInTheDocument();
     expect(onError.mock.calls.map(([e]) => e.message)).toEqual([]);
   });
 
@@ -106,7 +106,7 @@ describe("ApplicationStatusBanner — in-house driver", () => {
 
     expect(screen.getByText("Vous êtes chauffeur Expeditop")).toBeInTheDocument();
     expect(screen.getByText(/Expeditop vous attribue vos courses/)).toBeInTheDocument();
-    expect(screen.queryByText(/répondre aux offres/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/faire des offres/)).not.toBeInTheDocument();
     expect(onError.mock.calls.map(([e]) => e.message)).toEqual([]);
   });
 

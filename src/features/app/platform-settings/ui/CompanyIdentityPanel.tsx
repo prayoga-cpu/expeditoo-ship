@@ -123,7 +123,7 @@ export function CompanyIdentityPanel() {
       : t("errors.invalid");
 
   return (
-    <Card className="space-y-5 p-5">
+    <Card className="gap-0 space-y-5 p-5">
       <div className="flex items-start gap-3">
         <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/15">
           <Building2 className="h-4 w-4 text-primary" />

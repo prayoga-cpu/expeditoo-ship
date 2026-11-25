@@ -31,7 +31,7 @@ export function RatingStars({
           disabled={!interactive}
           className={cn(
             "transition-all duration-200 ease-out",
-            interactive && "cursor-pointer hover:scale-110",
+            interactive && "cursor-pointer",
             !interactive && "cursor-default"
           )}
         >
@@ -39,7 +39,7 @@ export function RatingStars({
             className={cn(
               sizeMap[size],
               star <= rating
-                ? "fill-yellow-400 text-yellow-400"
+                ? "fill-warning text-warning"
                 : "text-muted-foreground"
             )}
           />

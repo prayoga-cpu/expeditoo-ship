@@ -143,7 +143,7 @@ export function RoutePlanner() {
 
   return (
     <div className="space-y-4">
-      <Card className="space-y-4 p-4 sm:p-5">
+      <Card className="gap-0 space-y-4 p-4 sm:p-5">
         <div className="flex items-center gap-2">
           <CityField
             id="plan-from"

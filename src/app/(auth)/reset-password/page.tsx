@@ -5,13 +5,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Eye, EyeOff, CheckCircle, XCircle } from "lucide-react";
-import { BrandMark } from "@/components/ui/brand-mark";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuthActions } from "@/features/auth/hooks/useAuthActions";
-import { AuthErrorNotice } from "@/features/auth/ui";
-import { motion } from "framer-motion";
+import { AuthErrorNotice, AuthNote, AuthShell } from "@/features/auth/ui";
 import { useTranslations } from "next-intl";
 
 // French first, like every other page a client reaches (client feedback
@@ -90,45 +88,37 @@ function ResetPasswordContent() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-primary/10 via-background to-background py-8 px-4 overflow-hidden relative">
-      {/* Animated gradient orbs */}
-      <div className="absolute top-20 left-10 w-72 h-72 bg-primary/20 rounded-full blur-3xl animate-pulse" />
-      <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse" />
-
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="relative z-10 w-full max-w-md"
-      >
-        {/* Logo */}
-        <div className="flex items-center justify-center gap-2 mb-8">
-          <BrandMark size={40} />
-          <span className="text-2xl font-bold text-foreground">EXPEDITOP</span>
-        </div>
-
-        {/* Reset Password Card */}
-        <div className="bg-card/50 backdrop-blur-sm rounded-2xl border border-border/50 p-8">
+    <AuthShell
+      below={
+        <p className="mt-8 text-sm text-muted-foreground">
+          {t("needHelp")}{" "}
+          <a
+            href="mailto:support@expeditop.fr"
+            className="text-primary hover:text-primary/80 font-medium"
+          >
+            {t("contactSupport")}
+          </a>
+        </p>
+      }
+    >
           {/* No Token State */}
           {resetState === "no-token" && (
             <>
-              <div className="flex justify-center mb-6">
-                <div className="w-16 h-16 rounded-full bg-destructive/20 flex items-center justify-center">
-                  <XCircle className="w-10 h-10 text-destructive" />
-                </div>
+              <div className="mb-5">
+                <XCircle className="size-8 text-destructive" />
               </div>
 
-              <h1 className="text-2xl font-bold text-foreground mb-2 text-center">
+              <h1 className="text-2xl font-bold text-foreground mb-2">
                 {t("invalidTitle")}
               </h1>
-              <p className="text-muted-foreground mb-6 text-center">
+              <p className="text-muted-foreground mb-6">
                 {t("invalidBody")}
               </p>
 
               <div className="space-y-3">
                 <Button
                   onClick={() => router.push("/forgot-password")}
-                  className="w-full rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground py-6 font-semibold transition-colors"
+                  className="h-11 w-full font-semibold"
                 >
                   {t("requestNew")}
                 </Button>
@@ -136,7 +126,7 @@ function ResetPasswordContent() {
                 <Button
                   onClick={() => router.push("/signin")}
                   variant="outline"
-                  className="w-full rounded-xl border-border/50 hover:bg-muted/50 text-foreground py-6 font-semibold transition-colors"
+                  className="h-11 w-full font-semibold"
                 >
                   {t("backToSignIn")}
                 </Button>
@@ -147,28 +137,22 @@ function ResetPasswordContent() {
           {/* Success State */}
           {resetState === "success" && (
             <>
-              <div className="flex justify-center mb-6">
-                <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center">
-                  <CheckCircle className="w-10 h-10 text-primary" />
-                </div>
+              <div className="mb-5">
+                <CheckCircle className="size-8 text-success" />
               </div>
 
-              <h1 className="text-2xl font-bold text-foreground mb-2 text-center">
+              <h1 className="text-2xl font-bold text-foreground mb-2">
                 {t("success")}
               </h1>
-              <p className="text-muted-foreground mb-6 text-center">
+              <p className="text-muted-foreground mb-6">
                 {t("successBody")}
               </p>
 
-              <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 mb-6">
-                <p className="text-primary text-sm text-center">
-                  {t("redirecting")}
-                </p>
-              </div>
+              <AuthNote className="mb-6">{t("redirecting")}</AuthNote>
 
               <Button
                 onClick={() => router.push("/signin")}
-                className="w-full rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground py-6 font-semibold transition-colors"
+                className="h-11 w-full font-semibold"
               >
                 {t("signInNow")}
               </Button>
@@ -178,31 +162,25 @@ function ResetPasswordContent() {
           {/* Error State */}
           {resetState === "error" && (
             <>
-              <div className="flex justify-center mb-6">
-                <div className="w-16 h-16 rounded-full bg-destructive/20 flex items-center justify-center">
-                  <XCircle className="w-10 h-10 text-destructive" />
-                </div>
+              <div className="mb-5">
+                <XCircle className="size-8 text-destructive" />
               </div>
 
-              <h1 className="text-2xl font-bold text-foreground mb-2 text-center">
+              <h1 className="text-2xl font-bold text-foreground mb-2">
                 {t("failedTitle")}
               </h1>
-              <p className="text-muted-foreground mb-6 text-center">
+              <p className="text-muted-foreground mb-6">
                 {t("failedBody")}
               </p>
 
               {serverError && (
-                <div className="mb-6 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-                  <p className="text-destructive text-sm text-center">
-                    {serverError}
-                  </p>
-                </div>
+                <AuthNote tone="danger" className="mb-6">{serverError}</AuthNote>
               )}
 
               <div className="space-y-3">
                 <Button
                   onClick={() => router.push("/forgot-password")}
-                  className="w-full rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground py-6 font-semibold transition-colors"
+                  className="h-11 w-full font-semibold"
                 >
                   {t("requestNew")}
                 </Button>
@@ -210,7 +188,7 @@ function ResetPasswordContent() {
                 <Button
                   onClick={() => router.push("/signin")}
                   variant="outline"
-                  className="w-full rounded-xl border-border/50 hover:bg-muted/50 text-foreground py-6 font-semibold transition-colors"
+                  className="h-11 w-full font-semibold"
                 >
                   {t("backToSignIn")}
                 </Button>
@@ -241,7 +219,7 @@ function ResetPasswordContent() {
                       type={showPassword ? "text" : "password"}
                       {...register("password")}
                       disabled={isLoading}
-                      className={`bg-background/50 border-border/50 pr-10 ${errors.password ? "border-destructive" : ""}`}
+                      className={`pr-10 ${errors.password ? "border-destructive" : ""}`}
                     />
                     <button
                       type="button"
@@ -275,7 +253,7 @@ function ResetPasswordContent() {
                       type={showConfirmPassword ? "text" : "password"}
                       {...register("confirmPassword")}
                       disabled={isLoading}
-                      className={`bg-background/50 border-border/50 pr-10 ${errors.confirmPassword ? "border-destructive" : ""}`}
+                      className={`pr-10 ${errors.confirmPassword ? "border-destructive" : ""}`}
                     />
                     <button
                       type="button"
@@ -302,7 +280,7 @@ function ResetPasswordContent() {
                 <Button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground py-6 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="h-11 w-full font-semibold"
                 >
                   {isLoading ? t("submitting") : t("submit")}
                 </Button>
@@ -311,26 +289,13 @@ function ResetPasswordContent() {
               <Button
                 onClick={() => router.push("/signin")}
                 variant="outline"
-                className="w-full mt-4 rounded-xl border-border/50 hover:bg-muted/50 text-foreground py-6 font-semibold transition-colors"
+                className="mt-3 h-11 w-full font-semibold"
               >
                 {t("backToSignIn")}
               </Button>
             </>
           )}
-        </div>
-
-        {/* Help Text */}
-        <p className="text-center text-muted-foreground text-sm mt-6">
-          {t("needHelp")}{" "}
-          <a
-            href="mailto:support@expeditop.fr"
-            className="text-primary hover:text-primary/80 font-medium"
-          >
-            {t("contactSupport")}
-          </a>
-        </p>
-      </motion.div>
-    </div>
+    </AuthShell>
   );
 }
 

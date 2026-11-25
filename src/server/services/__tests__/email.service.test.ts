@@ -30,10 +30,7 @@ vi.mock('@/server/emails/WelcomeEmail', () => ({ WelcomeEmail: vi.fn() }));
 vi.mock('@/server/emails/AuctionWinEmail', () => ({ AuctionWinEmail: vi.fn() }));
 vi.mock('@/server/emails/AuctionEndedSellerEmail', () => ({ AuctionEndedSellerEmail: vi.fn() }));
 vi.mock('@/server/emails/AuctionLostEmail', () => ({ AuctionLostEmail: vi.fn() }));
-vi.mock('@/server/emails/OrderConfirmationEmail', () => ({ OrderConfirmationEmail: vi.fn() }));
-vi.mock('@/server/emails/PaymentReceiptEmail', () => ({ PaymentReceiptEmail: vi.fn() }));
 vi.mock('@/server/emails/ItemPaidSellerEmail', () => ({ ItemPaidSellerEmail: vi.fn() }));
-vi.mock('@/server/emails/ShipmentAssignedEmail', () => ({ ShipmentAssignedEmail: vi.fn() }));
 vi.mock('@/server/emails/ShipmentUpdateEmail', () => ({ ShipmentUpdateEmail: vi.fn() }));
 vi.mock('@/server/emails/TransportRequestReceivedEmail', () => ({ TransportRequestReceivedEmail: vi.fn() }));
 

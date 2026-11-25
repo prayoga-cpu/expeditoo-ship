@@ -63,7 +63,7 @@ export function Notifications({
     <div>
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+          <div className="flex size-10 items-center justify-center rounded-md bg-muted">
             <Bell className="w-5 h-5 text-primary" />
           </div>
           <div>
@@ -82,7 +82,7 @@ export function Notifications({
             variant="ghost"
             size="sm"
             onClick={onMarkAllAsRead}
-            className="text-sm font-medium hover:bg-primary/10 hover:text-primary"
+            className="text-sm font-medium"
           >
             {t("markAllRead")}
           </Button>
@@ -94,7 +94,7 @@ export function Notifications({
           value={activeTab}
           onValueChange={onTabChange as (value: string) => void}
         >
-          <TabsList className="w-full justify-start bg-muted/50 p-1 h-auto gap-1 rounded-xl">
+          <TabsList className="w-full justify-start bg-muted/50 p-1 h-auto gap-1 rounded-lg">
             <TabsTrigger
               value="all"
               className="px-4 py-2 rounded-lg font-medium text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all"
@@ -152,7 +152,7 @@ export function Notifications({
           ))
         ) : (
           <div className="text-center py-20 px-4">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-muted/50 flex items-center justify-center">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-lg bg-muted flex items-center justify-center">
               <Bell className="w-8 h-8 text-muted-foreground/50" />
             </div>
             <h3 className="text-lg font-semibold text-foreground mb-2">

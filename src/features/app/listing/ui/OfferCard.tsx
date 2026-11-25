@@ -14,7 +14,9 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { addDays } from "@/lib/offer-slots";
 import { parseDayString } from "@/lib/availability-window";
 import { formatCurrency } from "@/lib/currency";
+import { useFormatRating } from "@/lib/hooks/useFormatRating";
 import { cn } from "@/lib/utils";
+import { useVehicleLabel } from "@/features/app/carrier/hooks/useVehicleLabel";
 import type { Offer, OfferSlot } from "../types";
 import { OfferNegotiation } from "./OfferNegotiation";
 
@@ -48,6 +50,8 @@ export function OfferCard({
   const tn = useTranslations("negotiation");
   const locale = useLocale();
   const dateLocale = locale === "fr" ? fr : enUS;
+  const formatRating = useFormatRating();
+  const vehicleLabel = useVehicleLabel();
 
   // A slot that has started cannot be booked (`SLOT_IN_PAST`). Since a flexible
   // request takes offers until its window ends (client_feedback_2026_10_spec.md
@@ -104,7 +108,7 @@ export function OfferCard({
             <div className="flex items-center gap-2 flex-wrap">
               <p className="font-semibold truncate">{offer.carrier.name}</p>
               {offer.status === "accepted" && (
-                <Badge className="bg-success/15 text-success border-success/30">
+                <Badge className="tone-success">
                   <BadgeCheck className="mr-1 h-3 w-3" />
                   {t("selected")}
                 </Badge>
@@ -122,17 +126,13 @@ export function OfferCard({
 
             <div className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
               <Star className="h-3.5 w-3.5 fill-warning text-warning" />
-              <span className="font-mono">{offer.carrier.rating.toFixed(1)}</span>
+              <span className="font-mono">{formatRating(offer.carrier.rating)}</span>
             </div>
 
             <dl className="mt-3 space-y-1.5 text-sm">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Truck className="h-4 w-4 shrink-0" />
-                <dd className="truncate">
-                  {[offer.vehicle.make, offer.vehicle.model]
-                    .filter(Boolean)
-                    .join(" ") || offer.vehicle.type.replace(/_/g, " ")}
-                </dd>
+                <dd className="truncate">{vehicleLabel(offer.vehicle)}</dd>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Clock className="h-4 w-4 shrink-0" />

@@ -96,7 +96,7 @@ describe("ActiveTripsPanel", () => {
     api.list.mockResolvedValue(page([]));
     renderPanel();
 
-    await screen.findByText("Aucune course en transit");
+    await screen.findByText("Aucune course en cours");
     expect(api.list).toHaveBeenCalledWith({
       status: "PENDING,ASSIGNED,PICKED_UP,IN_TRANSIT",
       limit: 50,
@@ -116,7 +116,7 @@ describe("ActiveTripsPanel", () => {
     expect(screen.getByText(euros(18_000))).toBeInTheDocument();
     expect(
       screen.getByText(
-        `Enlèvement prévu le ${format(new Date(PICKUP), "EEE d MMM, HH:mm", { locale: frLocale })}`
+        `Retrait prévu le ${format(new Date(PICKUP), "EEE d MMM, HH:mm", { locale: frLocale })}`
       )
     ).toBeInTheDocument();
     expect(title.closest("a")).toHaveAttribute("href", "/deliveries/shp_1");
@@ -183,7 +183,7 @@ describe("ActiveTripsPanel", () => {
     api.list.mockResolvedValue(page([]));
     renderPanel();
 
-    expect(await screen.findByText("Aucune course en transit")).toBeInTheDocument();
+    expect(await screen.findByText("Aucune course en cours")).toBeInTheDocument();
   });
 
   it("says the list failed, and tries again on « Réessayer »", async () => {
@@ -193,7 +193,7 @@ describe("ActiveTripsPanel", () => {
     renderPanel();
 
     expect(await screen.findByText("Impossible de charger cette liste")).toBeInTheDocument();
-    expect(screen.queryByText("Aucune course en transit")).not.toBeInTheDocument();
+    expect(screen.queryByText("Aucune course en cours")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Réessayer" }));
 
@@ -208,6 +208,6 @@ describe("ActiveTripsPanel", () => {
     renderPanel();
 
     expect(screen.getByTestId("loader")).toBeInTheDocument();
-    expect(screen.queryByText("Aucune course en transit")).not.toBeInTheDocument();
+    expect(screen.queryByText("Aucune course en cours")).not.toBeInTheDocument();
   });
 });

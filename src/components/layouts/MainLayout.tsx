@@ -82,7 +82,7 @@ const ACCENT_CLASSES: Record<NonNullable<NavItem["accent"]>, { active: string; i
   // Tinted rather than filled when active: dark mode's `--success` is a light
   // green and `--success-foreground` stays white, which does not read on it.
   success: {
-    active: "bg-success/20 text-success",
+    active: "tone-success",
     idle: "text-success hover:bg-success/10 hover:text-success",
   },
 };

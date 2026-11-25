@@ -21,15 +21,21 @@ export type StatementPeriod = z.infer<typeof statementPeriodSchema>;
 
 const iso = (date: Date) => date.toISOString().slice(0, 10);
 
+/**
+ * Paris, not the server's zone: the bounds are a French reader's local
+ * midnights sent as instants, and a UTC host printed the day before (the same
+ * reason `invoice-pdf-props.ts` pins the zone on the document's own dates).
+ */
+const day = (date: Date) =>
+  date.toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" });
+
 /** Human label for the PDF header. */
 export function periodLabel(period: StatementPeriod, allLabel: string): string {
   const { from, to } = period;
 
-  if (from && to) {
-    return `${from.toLocaleDateString("fr-FR")} — ${to.toLocaleDateString("fr-FR")}`;
-  }
-  if (from) return `Depuis le ${from.toLocaleDateString("fr-FR")}`;
-  if (to) return `Jusqu'au ${to.toLocaleDateString("fr-FR")}`;
+  if (from && to) return `${day(from)} — ${day(to)}`;
+  if (from) return `Depuis le ${day(from)}`;
+  if (to) return `Jusqu'au ${day(to)}`;
 
   return allLabel;
 }

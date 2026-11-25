@@ -263,7 +263,7 @@ function DraftBanner({ job }: { job: Job }) {
   const datesPassed = !scheduled && new Date(job.pickupUntil) < new Date();
 
   return (
-    <Card className="space-y-3 border-primary/30 bg-primary/5 p-4">
+    <Card className="gap-0 space-y-3 border-primary/30 bg-primary/5 p-4">
       <p className="text-sm">
         {scheduled && job.scheduledPublishAt
           ? t("bannerScheduled", {
@@ -429,7 +429,7 @@ function JobLoad({ job }: { job: Job }) {
 
   if (job.jobKind === "moving") {
     return (
-      <Card className="space-y-4 p-4 sm:p-5">
+      <Card className="gap-0 space-y-4 p-4 sm:p-5">
         <h2 className="flex items-center gap-2 font-semibold">
           <Truck className="h-4 w-4 text-muted-foreground" />
           {t("moving")}
@@ -456,7 +456,7 @@ function JobLoad({ job }: { job: Job }) {
   }
 
   return (
-    <Card className="space-y-4 p-4 sm:p-5">
+    <Card className="gap-0 space-y-4 p-4 sm:p-5">
       <h2 className="flex items-center gap-2 font-semibold">
         <Package className="h-4 w-4 text-muted-foreground" />
         {t("load")}
@@ -621,7 +621,7 @@ function JobRoute({ job, canEdit }: { job: Job; canEdit: boolean }) {
   const text = useEndpointText();
 
   return (
-    <Card className="space-y-4 p-4 sm:p-5">
+    <Card className="gap-0 space-y-4 p-4 sm:p-5">
       <h2 className="flex items-center gap-2 font-semibold">
         <MapPin className="h-4 w-4 text-muted-foreground" />
         {t("route")}

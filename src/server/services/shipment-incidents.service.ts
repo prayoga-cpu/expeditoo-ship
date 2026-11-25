@@ -51,6 +51,20 @@ const actorRoleFor = (party: Party): ActorRoleType =>
   party === "staff" ? "admin" : (party as ActorRoleType);
 
 /** Enough of the report to be readable on a timeline row. */
+/**
+ * The category as it reads at the head of the support-thread message. French,
+ * the wording of `incidents.categories`: the message is printed as stored.
+ */
+const CATEGORY_LABELS: Record<ShipmentIncident["category"], string> = {
+  damage: "Marchandise endommagée",
+  delay: "Retard",
+  access: "Accès au site impossible",
+  vehicle: "Problème de véhicule",
+  cargo_mismatch: "Marchandise non conforme",
+  safety: "Problème de sécurité",
+  other: "Autre chose",
+};
+
 const summarise = (description: string) =>
   description.length > 120 ? `${description.slice(0, 117)}...` : description;
 
@@ -152,7 +166,7 @@ export const shipmentIncidentsService = {
     // `sendMessageSchema` caps content at 2000 and a description may already
     // be 2000, so the prefix has to come out of that budget rather than be
     // added to it — otherwise the thread silently never opens.
-    const prefix = `[${incident.category}] `;
+    const prefix = `[${CATEGORY_LABELS[incident.category]}] `;
     const content = `${prefix}${incident.description}`.slice(0, 2000);
 
     await messagesService.sendMessage(reporterId, { conversationId, content });
@@ -183,7 +197,7 @@ export const shipmentIncidentsService = {
         notificationsService.createNotification({
           userId,
           type: "incident_reported",
-          title: "Incident reported",
+          title: "Incident signalé",
           message: summarise(incident.description),
           linkUrl: "/admin/incidents",
           data: {

@@ -1,4 +1,13 @@
+import type { Metadata } from "next";
+
 import { ConfirmMilestone } from "@/features/app/confirm";
+
+// A one-tap link out of a text message: named for what it asks, and kept out
+// of search results, since the token in the path is the whole authority.
+export const metadata: Metadata = {
+  title: "Confirmer votre transport",
+  robots: { index: false, follow: false },
+};
 
 /**
  * The public landing page for a client's one-tap confirmation link.

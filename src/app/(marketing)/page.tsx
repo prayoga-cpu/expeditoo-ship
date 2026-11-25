@@ -7,6 +7,7 @@ import {
   LandingServices,
   LandingHowItWorks,
   LandingPromises,
+  LandingAppTour,
   LandingCarriers,
   LandingFaq,
   LandingCTA,
@@ -34,7 +35,11 @@ import styles from "@/features/marketing/ui/landing.module.css";
  * footer carry `lp` on their own roots, as on every marketing page.
  */
 export const metadata: Metadata = {
-  title: "Expeditop — Faites transporter vos objets par des transporteurs vérifiés",
+  // `absolute`: the root layout's `%s · EXPEDITOP` template would name the
+  // brand twice.
+  title: {
+    absolute: "Expeditop — Faites transporter vos objets par des transporteurs vérifiés",
+  },
   description:
     "Dites ce que vous transportez et où : des transporteurs vérifiés vous envoient leurs offres. Vous choisissez, vous payez à l'acceptation. En France et à l'étranger.",
 };
@@ -50,6 +55,7 @@ export default function LandingPage() {
       <LandingServices />
       <LandingHowItWorks />
       <LandingPromises />
+      <LandingAppTour />
       <LandingCarriers />
       <LandingFaq />
       <LandingCTA />

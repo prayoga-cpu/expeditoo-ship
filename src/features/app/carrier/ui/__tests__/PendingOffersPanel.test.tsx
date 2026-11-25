@@ -130,7 +130,7 @@ describe("PendingOffersPanel", () => {
     expect(screen.getByText(euros(18_000))).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Enlèvement au plus tôt : jeu. 22 oct. — matin · +2 autres créneaux proposés"
+        "Retrait au plus tôt : jeu. 22 oct. — matin · +2 autres créneaux proposés"
       )
     ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Voir la course" })).toHaveAttribute(
@@ -146,7 +146,7 @@ describe("PendingOffersPanel", () => {
     renderPanel();
 
     expect(
-      await screen.findByText("Enlèvement au plus tôt : jeu. 22 oct. — matin")
+      await screen.findByText("Retrait au plus tôt : jeu. 22 oct. — matin")
     ).toBeInTheDocument();
   });
 

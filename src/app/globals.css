@@ -60,6 +60,23 @@
      browsers lack. Keep it in step with `--foreground` by hand. */
   --nav-active: oklch(0.15 0.02 250 / 0.08);
 
+  /* Status tones (2.98.0): the one palette every badge, note and status dot
+     draws from. Each tone is a ground, an ink dark enough to read on it at
+     12px (>= 4.5:1), and a hairline. Written as plain oklch() with an alpha,
+     not through color-mix(), so they hold on iOS 15-16.1 too. */
+  --tone-info-bg: oklch(0.55 0.2 258 / 0.1);
+  --tone-info-ink: oklch(0.45 0.19 258);
+  --tone-info-line: oklch(0.55 0.2 258 / 0.28);
+  --tone-success-bg: oklch(0.58 0.15 155 / 0.13);
+  --tone-success-ink: oklch(0.41 0.11 155);
+  --tone-success-line: oklch(0.58 0.15 155 / 0.34);
+  --tone-warning-bg: oklch(0.75 0.16 75 / 0.2);
+  --tone-warning-ink: oklch(0.44 0.1 62);
+  --tone-warning-line: oklch(0.62 0.16 70 / 0.42);
+  --tone-danger-bg: oklch(0.62 0.22 18 / 0.1);
+  --tone-danger-ink: oklch(0.49 0.2 20);
+  --tone-danger-line: oklch(0.62 0.22 18 / 0.3);
+
   --radius: 0.5rem;
   --sidebar: oklch(1 0 0);
   --sidebar-foreground: oklch(0.15 0.02 250);
@@ -88,10 +105,22 @@
   --sidebar-foreground: oklch(0.95 0.02 250);
   /* Lifted so the same utilities read on a near-black background. */
   --success: oklch(0.72 0.15 155);
-  --success-foreground: oklch(1 0 0);
+  --success-foreground: oklch(0.2 0.05 155);
   --warning: oklch(0.8 0.15 75);
   --warning-foreground: oklch(0.18 0.04 70);
   --nav-active: oklch(0.95 0.02 250 / 0.08);
+  --tone-info-bg: oklch(0.62 0.19 258 / 0.2);
+  --tone-info-ink: oklch(0.8 0.11 258);
+  --tone-info-line: oklch(0.62 0.19 258 / 0.42);
+  --tone-success-bg: oklch(0.72 0.15 155 / 0.15);
+  --tone-success-ink: oklch(0.82 0.14 155);
+  --tone-success-line: oklch(0.72 0.15 155 / 0.36);
+  --tone-warning-bg: oklch(0.8 0.15 75 / 0.15);
+  --tone-warning-ink: oklch(0.86 0.13 80);
+  --tone-warning-line: oklch(0.8 0.15 75 / 0.36);
+  --tone-danger-bg: oklch(0.62 0.22 18 / 0.2);
+  --tone-danger-ink: oklch(0.8 0.13 18);
+  --tone-danger-line: oklch(0.62 0.22 18 / 0.45);
 }
 
 /* ── Landing surface ────────────────────────────────────────────────────
@@ -209,6 +238,10 @@
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
   --color-nav-active: var(--nav-active);
+  --color-info-ink: var(--tone-info-ink);
+  --color-success-ink: var(--tone-success-ink);
+  --color-warning-ink: var(--tone-warning-ink);
+  --color-danger-ink: var(--tone-danger-ink);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-field-border: var(--field-border);
@@ -230,6 +263,44 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+}
+
+/* A tone sets ground, ink and hairline together; the element decides whether
+   it shows a border at all (`border`). See `src/lib/tone.ts`.
+
+   Unlayered on purpose. Inside `@layer utilities` a tone would tie with the
+   single-property utilities a `Badge` variant already carries
+   (`text-foreground`, `bg-secondary`), and which of the two wins would be
+   decided by Tailwind's sort order. Out here the tone always decides the three
+   colours it names, whatever else is on the element. */
+.tone-neutral {
+  background-color: var(--muted);
+  color: var(--muted-foreground);
+  border-color: var(--border);
+}
+/* In dark, `--muted-foreground` on `--muted` is 3.5:1 — too faint at 12px. */
+.dark .tone-neutral {
+  color: oklch(0.84 0.02 250);
+}
+.tone-info {
+  background-color: var(--tone-info-bg);
+  color: var(--tone-info-ink);
+  border-color: var(--tone-info-line);
+}
+.tone-success {
+  background-color: var(--tone-success-bg);
+  color: var(--tone-success-ink);
+  border-color: var(--tone-success-line);
+}
+.tone-warning {
+  background-color: var(--tone-warning-bg);
+  color: var(--tone-warning-ink);
+  border-color: var(--tone-warning-line);
+}
+.tone-danger {
+  background-color: var(--tone-danger-bg);
+  color: var(--tone-danger-ink);
+  border-color: var(--tone-danger-line);
 }
 
 @layer base {

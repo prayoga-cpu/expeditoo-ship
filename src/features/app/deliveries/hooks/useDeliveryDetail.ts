@@ -1,11 +1,12 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { format } from "date-fns";
+import { format, type Locale } from "date-fns";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { ApiError } from "@/lib/fetcher";
 import { useAuth } from "@/lib/auth-context";
+import { useDateLocale } from "@/lib/hooks/useDateLocale";
 import {
   deliveriesApi,
   type ConfirmableMilestone,
@@ -42,24 +43,27 @@ const REACHED_IN: Record<ConfirmableMilestone, ShipmentStatus[]> = {
 export function useDeliveryDetail(id: string) {
   const t = useTranslations("deliveries");
   const stop = useTranslations("shipments.stop");
+  const tLoad = useTranslations("common.loadError");
+  const locale = useDateLocale();
   const { user } = useAuth();
 
-  const { data, isLoading, isError, error, refetch } = useQuery({
+  const { data, isLoading, isError, error: failure, refetch } = useQuery({
     queryKey: deliveryKeys.detail(id),
     queryFn: () => deliveriesApi.getById(id),
     enabled: Boolean(id),
   });
 
   const delivery: DeliveryDetailView | null =
-    data && user ? toDetailView(data, user.id, t, stop) : null;
+    data && user ? toDetailView(data, user.id, t, stop, locale) : null;
 
   return {
     delivery,
     isLoading,
     isError,
-    error: error instanceof Error ? error.message : null,
+    // A sentence of ours, never the server's: that one is English or a code.
+    error: isError ? tLoad("description") : null,
     // A 404 or 403 is « introuvable »; anything else deserves a retry.
-    isGone: error instanceof ApiError && (error.status === 404 || error.status === 403),
+    isGone: failure instanceof ApiError && (failure.status === 404 || failure.status === 403),
     refetch,
   };
 }
@@ -85,7 +89,8 @@ function toDetailView(
   shipment: ShipmentWithEvents,
   viewerId: string,
   t: ReturnType<typeof useTranslations>,
-  stop: ReturnType<typeof useTranslations>
+  stop: ReturnType<typeof useTranslations>,
+  locale: Locale
 ): DeliveryDetailView {
   const role = roleFor(shipment, viewerId);
 
@@ -114,7 +119,7 @@ function toDetailView(
       role === "carrier" || role === "driver"
         ? shipment.shipper
         : shipment.carrier,
-    timeline: toTimeline(shipment, t, stop),
+    timeline: toTimeline(shipment, t, stop, locale),
     // Asked of the same module the service asks, rather than guessed here.
     // A transporter reaching this screen — a self-assigned carrier resolves to
     // `carrier`, and the driver dashboard links straight to it — gets nothing:
@@ -132,7 +137,8 @@ function toDetailView(
 function toTimeline(
   shipment: ShipmentWithEvents,
   t: ReturnType<typeof useTranslations>,
-  stop: ReturnType<typeof useTranslations>
+  stop: ReturnType<typeof useTranslations>,
+  locale: Locale
 ): TimelineStep[] {
   const events: ShipmentEvent[] = [...shipment.events].sort(
     (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
@@ -160,13 +166,13 @@ function toTimeline(
       event.status === "CANCELLED" && shipment.cancelledBySide
         ? stop(`by.${shipment.cancelledBySide}`)
         : t(`events.${event.status}`),
-    date: format(new Date(event.createdAt), "d MMM yyyy HH:mm"),
+    date: format(new Date(event.createdAt), "d MMM yyyy HH:mm", { locale }),
     note: event.note,
     step:
       index < events.length - 1 || terminal
         ? ("completed" as const)
         : ("active" as const),
-    confirmation: confirmationFor(shipment, event.status),
+    confirmation: confirmationFor(shipment, event.status, locale),
   }));
 }
 
@@ -178,7 +184,8 @@ function toTimeline(
  */
 function confirmationFor(
   shipment: ShipmentWithEvents,
-  status: ShipmentStatus
+  status: ShipmentStatus,
+  locale: Locale
 ): TimelineConfirmation | null {
   if (!(ATTESTABLE as readonly string[]).includes(status)) return null;
 
@@ -193,7 +200,7 @@ function confirmationFor(
     state: "confirmed",
     channel: match.channel,
     role: match.confirmedByRole ?? "client",
-    date: format(new Date(match.createdAt), "d MMM yyyy HH:mm"),
+    date: format(new Date(match.createdAt), "d MMM yyyy HH:mm", { locale }),
   };
 }
 
@@ -227,6 +234,7 @@ export interface MilestoneAttestation {
  */
 export function useShipmentAttestations(shipmentId: string) {
   const t = useTranslations("deliveries.confirmation");
+  const locale = useDateLocale();
   const queryClient = useQueryClient();
 
   const { data } = useQuery({
@@ -250,14 +258,17 @@ export function useShipmentAttestations(shipmentId: string) {
   });
 
   return {
-    milestones: data ? attestationsFor(data) : [],
+    milestones: data ? attestationsFor(data, locale) : [],
     confirm: mutation.mutate,
     /** The milestone currently being sent, so only its own button waits. */
     pendingMilestone: mutation.isPending ? (mutation.variables ?? null) : null,
   };
 }
 
-function attestationsFor(shipment: ShipmentWithEvents): MilestoneAttestation[] {
+function attestationsFor(
+  shipment: ShipmentWithEvents,
+  locale: Locale
+): MilestoneAttestation[] {
   // Nothing to sign for on a run that was called off. The service refuses it
   // too, with `SHIPMENT_CANCELLED`.
   if (shipment.status === "CANCELLED") return [];
@@ -273,7 +284,9 @@ function attestationsFor(shipment: ShipmentWithEvents): MilestoneAttestation[] {
       milestone,
       confirmed: Boolean(match),
       role: match?.confirmedByRole ?? null,
-      date: match ? format(new Date(match.createdAt), "d MMM yyyy HH:mm") : null,
+      date: match
+        ? format(new Date(match.createdAt), "d MMM yyyy HH:mm", { locale })
+        : null,
     };
   });
 }

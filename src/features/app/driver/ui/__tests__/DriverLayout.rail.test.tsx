@@ -55,7 +55,7 @@ describe("DriverLayout sidebar rail", () => {
       "/driver/messages",
       "/driver/profile",
     ]);
-    expect(within(aside).getByRole("button", { name: "Back to App" })).toBeInTheDocument();
+    expect(within(aside).getByRole("button", { name: "Back to the app" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Expand the menu" }));
 
@@ -74,7 +74,7 @@ describe("DriverLayout sidebar rail", () => {
 
   it("marks the current entry and keeps <main> relative", () => {
     const aside = renderLayout();
-    expect(within(aside).getByRole("link", { name: "Shipments" })).toHaveAttribute(
+    expect(within(aside).getByRole("link", { name: "Deliveries" })).toHaveAttribute(
       "aria-current",
       "page"
     );
@@ -86,10 +86,10 @@ describe("DriverLayout sidebar rail", () => {
   // release straddled one never fired.
   it("keeps the same link elements across a re-render", () => {
     const aside = renderLayout();
-    const before = within(aside).getByRole("link", { name: /Shipments/ });
+    const before = within(aside).getByRole("link", { name: /Deliveries/ });
 
     fireEvent.click(screen.getByRole("button", { name: "Expand the menu" }));
 
-    expect(within(aside).getByRole("link", { name: /Shipments/ })).toBe(before);
+    expect(within(aside).getByRole("link", { name: /Deliveries/ })).toBe(before);
   });
 });

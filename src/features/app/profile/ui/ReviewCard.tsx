@@ -41,7 +41,7 @@ export function ReviewCard({
       <div className="flex items-start gap-3 mb-3">
         <Avatar className="w-10 h-10 shrink-0">
           <AvatarImage src={authorImage || ""} />
-          <AvatarFallback className="bg-gradient-to-b from-blue-400 to-blue-600 dark:from-blue-600 dark:to-blue-950 text-white text-sm">
+          <AvatarFallback className="bg-primary/10 text-primary text-sm">
             {author.charAt(0)}
           </AvatarFallback>
         </Avatar>

@@ -13,9 +13,9 @@ import type { CompletedTrip } from "../hooks/useCarrierTrips";
 
 const STATUS_STYLES: Record<string, string> = {
   DELIVERED:
-    "bg-success/10 text-success border-success/20",
+    "tone-success",
   CANCELLED:
-    "bg-destructive/10 text-destructive border-destructive/20",
+    "tone-danger",
 };
 
 /**
