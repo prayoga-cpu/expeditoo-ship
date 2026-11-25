@@ -103,8 +103,10 @@ adversarial verification pass — treat their detail as slightly less certain.
 Work that needs a human hand outside the codebase. Add to this list rather
 than leaving it in a chat message.
 
-- [ ] **`VERCEL_TOKEN` (repo secret, a team-scoped read token) for the weekly env audit** (`env-audit.yml`).
-  Without it the audit fails on its first step every Monday.
+- [x] ~~(2.95.1) `VERCEL_TOKEN` (repo secret, a team-scoped read token) for the weekly env audit~~ — **done by the
+  owner 2026-11-25** (Vercel dashboard token, scope Epidom; the CLI's own login cannot mint one: 403). First green
+  run the same day, `45515203150`: « No production value is shared with Preview. » The token expires on the date
+  picked when it was made; when Monday's audit starts failing on a 401/403, mint a new one and replace the secret.
 - [x] ~~(2.95.1) Untick Preview on the `neon-crimson-car` connection~~ — **done by the owner 2026-11-24**; checked
   the same day: all 18 integration rows (`POSTGRES_*`, `PG*`, `DATABASE_URL*`, `NEON_*`, `VITE_NEON_AUTH_URL`)
   read `production` only. A preview from any branch but `dev` now has no `POSTGRES_URL` and fails at boot, by design.
@@ -794,8 +796,8 @@ found ». The workflow's Invoke step was parsed and run against a curl stub: `de
 error. No TypeScript changed here; `changelog:check` and `changelog.test.ts` (27) pass locally, and the full gate runs in this commit's dev build.
 
 **Known limits.** The owner then deleted `adventurous-radiance` (live), unticked Preview on the Neon connection
-(confirmed: every integration row is production-only) and chose the dev mail recipient — all the same day. Left:
-`VERCEL_TOKEN` for the weekly env audit. The flaky `location-picker-field.test.tsx` case (« going back to typing
+(confirmed: every integration row is production-only) and chose the dev mail recipient — all the same day.
+`VERCEL_TOKEN` followed on 2026-11-25, and the env audit has passed since (run `45515203150`). The flaky `location-picker-field.test.tsx` case (« going back to typing
 keeps the text… »), which failed once in the dev build of `9babbaf` and passed in the next build and 26 local runs,
 was fixed in 2.96.0's `0f3b881`: the test now waits for the reverse-geocoded text before switching modes.
 
