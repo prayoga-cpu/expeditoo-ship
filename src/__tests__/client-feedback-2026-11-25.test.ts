@@ -17,9 +17,9 @@ describe("the hero's words", () => {
     );
   });
 
-  it("adds « partagé » after « transporteur » in the headline, as the client asked", () => {
-    expect(fr.marketing.hero.title).toBe("Trouvez un transporteur partagé pour vos objets");
-    expect(en.marketing.hero.title).toBe("Find a shared carrier for the things you need moved");
+  it("adds « partagé » after « transport » in the headline, as the client asked", () => {
+    expect(fr.marketing.hero.title).toBe("Trouvez un transport partagé pour vos objets");
+    expect(en.marketing.hero.title).toBe("Find shared transport for the things you need moved");
   });
 
   it("says « Des transporteurs vous envoient leur prix », with no « vérifiés »", () => {

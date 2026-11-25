@@ -710,6 +710,16 @@ than leaving it in a chat message.
 
 ---
 
+## ✅ 2026-11-25 — The headline reads « transport partagé » (2.99.1)
+
+*« the headline should be: "Ajouter partagé après transport" · then directly push to main ».*
+
+The client's « partagé » follows « transport », not « transporteur »: 2.99.0 had it as « Trouvez un transporteur partagé »
+(read from the live page in the owner's screenshot). `marketing.hero.title` is now « Trouvez un transport partagé pour
+vos objets » / « Find shared transport for the things you need moved », asserted in `client-feedback-2026-11-25.test.ts`.
+No migration. « Directly to main » went through the one route `main` allows — PR `dev → main`, protection applies to
+admins (`AGENTS.md` §4a). Row 3 of the 2.99.0 monitor below is superseded by this.
+
 ## ✅ 2026-11-25 — The site opens in the device's language, the logo opens the website, the « Mes trajets » address fix, the client's copy (2.99.0)
 
 *« analyze all of these feedbacks … make sure detect the user device language before loaded on website, if not detected the
