@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Zap } from "lucide-react";
+import { CircleCheckBig } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -53,7 +53,7 @@ export function TakeJobPanel({ job }: TakeJobPanelProps) {
       <div className="flex flex-col gap-4">
         <div className="flex items-start gap-3">
           <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/15">
-            <Zap className="h-4 w-4 text-primary" />
+            <CircleCheckBig className="h-4 w-4 text-primary" />
           </div>
           <div className="min-w-0">
             <h3 className="font-semibold">{t("takeJobTitle")}</h3>

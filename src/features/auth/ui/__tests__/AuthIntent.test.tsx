@@ -41,7 +41,7 @@ describe("AuthIntentNote", () => {
   it("names the job when a real reference came with it", () => {
     renderNote("intent=bid&ref=EX-2481");
     expect(
-      screen.getByText("You were about to bid on EX-2481.")
+      screen.getByText("You were about to make an offer on EX-2481.")
     ).toBeInTheDocument();
   });
 
@@ -62,7 +62,7 @@ describe("AuthIntentNote", () => {
     );
 
     expect(
-      screen.getByText("You were about to place an offer.")
+      screen.getByText("You were about to make an offer.")
     ).toBeInTheDocument();
     expect(screen.queryByText(/555-0100/)).not.toBeInTheDocument();
   });
@@ -70,7 +70,7 @@ describe("AuthIntentNote", () => {
   it("drops an over-long reference", () => {
     renderNote(`intent=bid&ref=${"E".repeat(80)}`);
     expect(
-      screen.getByText("You were about to place an offer.")
+      screen.getByText("You were about to make an offer.")
     ).toBeInTheDocument();
   });
 });

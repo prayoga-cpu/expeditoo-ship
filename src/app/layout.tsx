@@ -25,8 +25,15 @@ const fontGeist = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "EXPEDITOP - Transport Marketplace",
-  description: "Post a transport job, compare carrier offers, track delivery",
+  // French: the server renders French first (`<html lang>` below), and a tab
+  // title is read before any toggle is. `template` is what a page's own
+  // `title` is set into; a page that wants the whole line uses `absolute`.
+  title: {
+    default: "EXPEDITOP — Faites transporter vos objets par des transporteurs vérifiés",
+    template: "%s · EXPEDITOP",
+  },
+  description:
+    "Publiez une demande de transport, comparez les offres des transporteurs vérifiés, choisissez et suivez la livraison.",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",

@@ -7,7 +7,7 @@ import {
   useStripe,
   useElements,
 } from "@stripe/react-stripe-js";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { getStripe } from "@/lib/stripe-client";
 import { getStripeAppearance } from "@/lib/stripe-appearance";
 import { Button } from "@/components/ui/button";
@@ -72,7 +72,7 @@ function StripeForm({ onSuccess }: { onSuccess: () => void }) {
       <PaymentElement options={{ wallets: SAVE_WALLETS }} />
       <p className="text-xs text-muted-foreground">{t("paypalHint")}</p>
       {errorMessage && (
-        <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md">
+        <div className="tone-danger text-sm p-3 rounded-md">
           {errorMessage}
         </div>
       )}
@@ -121,6 +121,7 @@ function useSetupIntent() {
 
 export function AddPaymentMethodForm() {
   const t = useTranslations("profile.paymentMethods.add");
+  const locale = useLocale();
   const { clientSecret, loading, retry } = useSetupIntent();
   const router = useRouter();
   const stripePromise = getStripe();
@@ -156,7 +157,7 @@ export function AddPaymentMethodForm() {
         </CardHeader>
         <CardContent>
           {!stripePromise ? (
-            <div className="p-4 text-destructive bg-destructive/10 rounded-md text-sm">
+            <div className="tone-danger p-4 rounded-md text-sm">
               {t("unavailable")}
             </div>
           ) : loading || !mounted ? (
@@ -169,6 +170,9 @@ export function AddPaymentMethodForm() {
               options={{
                 clientSecret,
                 appearance,
+                // The app's language, not the browser's: Stripe words its own
+                // fields and refusals, and they must follow the same toggle.
+                locale: locale === "fr" ? "fr" : "en",
               }}
             >
               <StripeForm

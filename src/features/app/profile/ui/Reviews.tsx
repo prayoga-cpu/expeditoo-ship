@@ -78,7 +78,7 @@ export function Reviews({ userId }: { userId?: string }) {
                 </span>
                 <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-yellow-400 transition-all duration-300"
+                    className="h-full bg-warning transition-all duration-300"
                     style={{
                       width: `${stats.total > 0 ? (stats.distribution[star as keyof typeof stats.distribution] / stats.total) * 100 : 0}%`,
                     }}

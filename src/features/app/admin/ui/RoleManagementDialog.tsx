@@ -58,6 +58,7 @@ export function RoleManagementDialog({
   const t = useTranslations("admin.roles");
   const tTable = useTranslations("admin.users.table");
   const { toast } = useToast();
+  const tMessages = useTranslations("admin.users.messages");
 
   const held = user ? chipsHeld(user.roles) : [];
   const addable = MANAGEABLE_ROLES.filter((role) => !held.includes(role));
@@ -87,14 +88,12 @@ export function RoleManagementDialog({
     setRemoving(role);
     try {
       const result = await onRemoveRole(user, role);
+      // The catalogue's sentence: `result.message` is the server's English.
       if (!result.success) {
-        toast({ description: result.message, variant: "destructive" });
+        toast({ description: tMessages("errorDesc"), variant: "destructive" });
       }
-    } catch (error) {
-      toast({
-        description: error instanceof Error ? error.message : String(error),
-        variant: "destructive",
-      });
+    } catch {
+      toast({ description: tMessages("errorDesc"), variant: "destructive" });
     } finally {
       setRemoving(null);
     }

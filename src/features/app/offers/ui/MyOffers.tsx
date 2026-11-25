@@ -20,10 +20,10 @@ const euros = formatCurrency;
 
 const STATUS_TONE: Record<OfferStatus, string> = {
   pending: "bg-primary/10 text-primary border-primary/30",
-  accepted: "bg-success/15 text-success border-success/30",
+  accepted: "tone-success",
   rejected: "bg-muted text-muted-foreground border-border",
   withdrawn: "bg-muted text-muted-foreground border-border",
-  expired: "bg-warning/15 text-warning border-warning/30",
+  expired: "tone-warning",
 };
 
 /**

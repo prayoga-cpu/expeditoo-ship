@@ -105,6 +105,7 @@ function RoleBadges({
 }) {
   const t = useTranslations("admin.roles");
   const tTable = useTranslations("admin.users.table");
+  const tMessages = useTranslations("admin.users.messages");
   const { toast } = useToast();
   const [removing, setRemoving] = useState<string | null>(null);
 
@@ -113,14 +114,13 @@ function RoleBadges({
     setRemoving(role);
     try {
       const result = await onRemoveRole(user, role);
+      // The catalogue's sentence: `result.message` and a thrown error's
+      // message are the server's English.
       if (!result.success) {
-        toast({ description: result.message, variant: "destructive" });
+        toast({ description: tMessages("errorDesc"), variant: "destructive" });
       }
-    } catch (error) {
-      toast({
-        description: error instanceof Error ? error.message : String(error),
-        variant: "destructive",
-      });
+    } catch {
+      toast({ description: tMessages("errorDesc"), variant: "destructive" });
     } finally {
       setRemoving(null);
     }
@@ -185,7 +185,7 @@ function ApplicationChip({ user }: { user: User }) {
         variant="outline"
         className={
           waiting
-            ? "border-orange-500/50 bg-orange-500/10 text-xs text-orange-700 hover:bg-orange-500/20 dark:text-orange-400"
+            ? "tone-warning text-xs"
             : "text-xs text-muted-foreground"
         }
       >
@@ -202,9 +202,9 @@ function StatusBadge({ status }: { status: User["status"] }) {
     <span
       className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
         status === "active"
-          ? "bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400"
+          ? "tone-success"
           : status === "suspended"
-            ? "bg-orange-100 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400"
+            ? "tone-warning"
             : "bg-muted text-muted-foreground"
       }`}
     >
@@ -226,9 +226,9 @@ function OriginBadge({ origin }: { origin: User["origin"] }) {
     <Badge
       variant="outline"
       className={
-        origin === "expedion"
-          ? "border-violet-500/40 text-violet-600 dark:text-violet-400"
-          : "border-primary/40 text-primary"
+        // Told apart by more than the label: Expedion wears the info tone,
+        // our own accounts stay a plain outline.
+        origin === "expedion" ? "tone-info" : "text-muted-foreground"
       }
     >
       {t(origin)}
@@ -387,7 +387,7 @@ function UserActions({
 
         {viewMode === "drivers" && (
           <DropdownMenuItem
-            className="text-red-600"
+            className="text-danger-ink"
             onClick={() => onRemoveDriverClick(user)}
           >
             <UserMinus className="w-4 h-4 mr-2" />
@@ -397,7 +397,7 @@ function UserActions({
 
         <BlockableItem
           blocked={user.suspendBlocked}
-          className={isSuspended ? "text-green-600" : "text-orange-600"}
+          className={isSuspended ? "text-success-ink" : "text-warning-ink"}
           onSelect={() =>
             onConfirmAction(user, isSuspended ? "activate" : "suspend")
           }
@@ -418,7 +418,7 @@ function UserActions({
         {viewMode === "users" && (
           <BlockableItem
             blocked={user.deleteBlocked}
-            className="text-red-600"
+            className="text-danger-ink"
             onSelect={() => onDeleteClick(user)}
           >
             <Trash2 className="w-4 h-4 mr-2" />
@@ -459,6 +459,7 @@ export function UsersTable({
   const tTable = useTranslations("admin.users.table");
   const tDialogs = useTranslations("admin.users.dialogs");
   const tMessages = useTranslations("admin.users.messages");
+  const tUsers = useTranslations("admin.users");
 
   const isPending =
     updateStatus.isPending ||
@@ -469,10 +470,11 @@ export function UsersTable({
   const closeConfirm = () =>
     setConfirmDialog({ open: false, user: null, action: "suspend" });
 
-  const notifyError = (error: Error) =>
+  // Never `error.message`: the API layer always supplies one, in English.
+  const notifyError = () =>
     toast({
       title: tMessages("error"),
-      description: error.message || tMessages("errorDesc"),
+      description: tMessages("errorDesc"),
       variant: "destructive",
     });
 
@@ -588,7 +590,13 @@ export function UsersTable({
           <div>
             <div className="flex items-center gap-2">
               <div>
-              <p className="font-medium text-foreground">{row.original.name}</p>
+              <p className="font-medium text-foreground">
+                {/* A nameless account carries its e-mail as its name
+                    (`mapApiUser`); the line below already prints that. */}
+                {row.original.name === row.original.email
+                  ? tUsers("noName")
+                  : row.original.name}
+              </p>
               {row.original.alias ? (
                 <p className="text-xs text-muted-foreground">@{row.original.alias}</p>
               ) : null}
@@ -723,8 +731,8 @@ export function UsersTable({
               disabled={isPending}
               className={
                 destructive
-                  ? "bg-red-600 hover:bg-red-700"
-                  : "bg-green-600 hover:bg-green-700"
+                  ? "bg-destructive hover:bg-destructive/90"
+                  : "bg-success hover:bg-success/90 text-success-foreground"
               }
             >
               {isPending ? (

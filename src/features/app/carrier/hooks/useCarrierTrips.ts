@@ -53,7 +53,6 @@ function describe(error: unknown, t: Translate, fallbackKey: string): string {
   };
 
   if (known[code]) return t(known[code]);
-  if (error instanceof Error && error.message) return error.message;
   return t(fallbackKey);
 }
 

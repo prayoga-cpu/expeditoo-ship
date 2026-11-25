@@ -17,11 +17,11 @@ import type { ActivityJobView } from "../../api/user-activity.api";
 /** Theme tokens, so a status reads in light and in dark. */
 const OFFER_TONE: Record<string, string> = {
   pending: "bg-primary/15 text-primary border-primary/30",
-  accepted: "bg-success/15 text-success border-success/30",
-  rejected: "bg-destructive/15 text-destructive border-destructive/30",
-  declined: "bg-destructive/15 text-destructive border-destructive/30",
+  accepted: "tone-success",
+  rejected: "tone-danger",
+  declined: "tone-danger",
   withdrawn: "bg-muted text-muted-foreground border-border",
-  expired: "bg-warning/15 text-warning border-warning/30",
+  expired: "tone-warning",
 };
 
 /** `d MMM yyyy`, or with the time, in the reader's language. */

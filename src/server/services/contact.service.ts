@@ -1,5 +1,6 @@
 import { render } from "@react-email/components";
 import {
+  CONTACT_SUBJECT_LABELS,
   contactSubmitSchema,
   type ContactSubmitInput,
   type ContactSubmitResult,
@@ -50,9 +51,11 @@ function threadUrl(conversationId: string): string | undefined {
  * messages and needs to know it arrived through the public form.
  */
 function threadBody(input: ContactSubmitInput): string {
-  const lines: string[] = [`[Contact form — ${input.subject}]`];
-  if (input.company) lines.push(`Company: ${input.company}`);
-  lines.push(`Reply-to: ${input.email}`, "", input.message);
+  const lines: string[] = [
+    `[Formulaire de contact — ${CONTACT_SUBJECT_LABELS[input.subject]}]`,
+  ];
+  if (input.company) lines.push(`Société : ${input.company}`);
+  lines.push(`Répondre à : ${input.email}`, "", input.message);
 
   return lines.join("\n");
 }
@@ -126,7 +129,7 @@ export const contactService = {
     try {
       await emailService.sendEmail({
         to: contactInbox(),
-        subject: `[Contact — ${validated.subject}] ${validated.name}`,
+        subject: `[Contact — ${CONTACT_SUBJECT_LABELS[validated.subject]}] ${validated.name}`,
         html,
         // So an operator hitting reply answers the visitor rather than the
         // platform's own sending address.

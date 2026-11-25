@@ -29,25 +29,25 @@ interface NotificationItemProps {
 }
 
 const typeColors: Record<NotificationType, string> = {
-  message: "bg-primary/10 text-primary",
-  offer_received: "bg-primary/10 text-primary",
-  offer_accepted: "bg-success/15 text-success",
-  offer_rejected: "bg-muted text-muted-foreground",
-  offer_declined: "bg-muted text-muted-foreground",
-  offer_invalidated: "bg-warning/15 text-warning",
-  listing_expired: "bg-warning/15 text-warning",
-  listing_posted: "bg-success/15 text-success",
-  listing: "bg-primary/10 text-primary",
-  delivery: "bg-success/15 text-success",
-  shipment_update: "bg-success/15 text-success",
-  shipment_assigned: "bg-primary/10 text-primary",
-  shipment_cancelled: "bg-destructive/15 text-destructive",
+  message: "tone-info",
+  offer_received: "tone-info",
+  offer_accepted: "tone-success",
+  offer_rejected: "tone-neutral",
+  offer_declined: "tone-neutral",
+  offer_invalidated: "tone-warning",
+  listing_expired: "tone-warning",
+  listing_posted: "tone-success",
+  listing: "tone-info",
+  delivery: "tone-success",
+  shipment_update: "tone-success",
+  shipment_assigned: "tone-info",
+  shipment_cancelled: "tone-danger",
   // The job is not off — it is back on the board — so this is not a red one.
-  shipment_withdrawn: "bg-warning/15 text-warning",
-  job_reopened: "bg-primary/10 text-primary",
-  carrier_application: "bg-warning/15 text-warning",
-  review: "bg-warning/15 text-warning",
-  payment: "bg-success/15 text-success",
+  shipment_withdrawn: "tone-warning",
+  job_reopened: "tone-info",
+  carrier_application: "tone-warning",
+  review: "tone-warning",
+  payment: "tone-success",
 };
 
 export function NotificationItem({
@@ -76,17 +76,15 @@ export function NotificationItem({
     <div
       onClick={handleClick}
       className={cn(
-        "group relative flex gap-4 p-4 rounded-xl border bg-card transition-all duration-200",
-        !read && "bg-primary/5 border-primary/20 shadow-sm",
-        read && "border-border hover:border-border/80",
-        link && "cursor-pointer hover:shadow-md hover:scale-[1.01]",
+        "group relative flex gap-4 rounded-lg border border-border bg-card p-4 transition-colors",
+                link && "cursor-pointer hover:bg-muted/40",
       )}
     >
       <div
         className={cn(
-          "shrink-0 w-11 h-11 rounded-xl flex items-center justify-center transition-colors",
+          "flex size-10 shrink-0 items-center justify-center rounded-md",
           !read
-            ? "bg-primary/10 text-primary"
+            ? "bg-muted text-foreground"
             : "bg-muted text-muted-foreground",
         )}
       >
@@ -159,7 +157,7 @@ export function NotificationItem({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 text-xs px-3 font-medium hover:bg-primary/10 hover:text-primary"
+                className="h-7 px-3 text-xs font-medium"
               >
                 {action.label}
               </Button>
@@ -169,7 +167,7 @@ export function NotificationItem({
       </div>
 
       {!read && (
-        <div className="absolute top-4 right-4 w-2 h-2 rounded-full bg-primary shadow-sm" />
+        <div className="absolute top-4 right-4 size-2 rounded-full bg-primary" />
       )}
     </div>
   );

@@ -108,7 +108,7 @@ describe("RoleManagementDialog", () => {
     // MULTI already holds "carrier" and "admin" — the add dropdown's
     // placeholder is still the only assignable-role text on screen, since
     // Radix only renders the option list once the select is opened.
-    expect(screen.getByText("Select new role to assign")).toBeInTheDocument();
+    expect(screen.getByText("Choose a role to add")).toBeInTheDocument();
   });
 
   it("shows nothing to add once every manageable role is held", () => {
@@ -119,7 +119,7 @@ describe("RoleManagementDialog", () => {
     renderDialog({ user: everyRole });
 
     expect(
-      screen.queryByText("Select new role to assign")
+      screen.queryByText("Choose a role to add")
     ).not.toBeInTheDocument();
   });
 
@@ -131,12 +131,12 @@ describe("RoleManagementDialog", () => {
     fireEvent.keyDown(screen.getByRole("combobox"), { key: "Enter" });
     fireEvent.click(await screen.findByRole("option", { name: "In-house driver" }));
 
-    expect(screen.getByText(/in-house driver: creates/i)).toBeInTheDocument();
+    expect(screen.getByText(/in-house Expeditop driver: this role creates/i)).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "Open applications" })
     ).toHaveAttribute("href", "/admin/drivers?tab=applications");
 
-    fireEvent.click(screen.getByRole("button", { name: "Assign Role" }));
+    fireEvent.click(screen.getByRole("button", { name: "Assign role" }));
     expect(onUpdateRole).toHaveBeenCalledWith("driver");
   });
 

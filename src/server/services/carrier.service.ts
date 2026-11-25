@@ -911,7 +911,7 @@ async function tellApplicantWhatIsMissing(carrier: Carrier) {
     notificationsService.createNotification({
       userId: carrier.userId,
       type: "carrier_documents_missing",
-      title: "Documents manquants · Documents missing",
+      title: "Il manque des documents à votre dossier",
       message: labels.map((l) => l.fr).join(", "),
       linkUrl: "/carrier/application",
     }),

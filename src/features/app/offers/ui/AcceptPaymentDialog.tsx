@@ -871,7 +871,7 @@ function RefusalStep({
 
 function ErrorLine({ message }: { message: string }) {
   return (
-    <p role="alert" className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+    <p role="alert" className="tone-danger rounded-md p-3 text-sm">
       {message}
     </p>
   );

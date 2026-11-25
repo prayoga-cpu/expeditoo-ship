@@ -114,7 +114,7 @@ export const carrierRouteAlertsService = {
           userId: carrier.userId,
           type: "carrier_route_match",
           title: "Une course correspond à votre trajet",
-          message: `"${listing.title}" : ${listing.pickupCity} → ${listing.dropoffCity}.`,
+          message: `« ${listing.title} » : ${listing.pickupCity} → ${listing.dropoffCity}.`,
           linkUrl: `/listing/${listing.id}`,
           data: {
             listingId: listing.id,

@@ -1,11 +1,7 @@
-import { appUrl } from "@/lib/app-url";
 import { resend, sendViaResend, EMAIL_FROM } from "@/lib/email";
 import { SendEmailSchema, type SendEmailInput } from "@/server/dto/email.dto";
 import { WelcomeEmail } from "@/server/emails/WelcomeEmail";
 import { MissingDocumentsEmail } from "@/server/emails/MissingDocumentsEmail";
-import { PaymentReceiptEmail } from "@/server/emails/PaymentReceiptEmail";
-import { ShipmentAssignedEmail } from "@/server/emails/ShipmentAssignedEmail";
-import { OrderConfirmationEmail } from "@/server/emails/OrderConfirmationEmail";
 import { ShipmentUpdateEmail } from "@/server/emails/ShipmentUpdateEmail";
 import { ConfirmationRequestEmail } from "@/server/emails/ConfirmationRequestEmail";
 import { TransportRequestReceivedEmail } from "@/server/emails/TransportRequestReceivedEmail";
@@ -81,107 +77,6 @@ export const emailService = {
     return this.sendEmail({
       to,
       subject: "Bienvenue sur EXPEDITOP",
-      html: emailHtml,
-    });
-  },
-
-  /**
-   * Send Order Confirmation Email to buyer
-   * Called when order is created (before payment)
-   */
-  async sendOrderConfirmationEmail(
-    to: string,
-    buyerName: string,
-    itemTitle: string,
-    itemPrice: number, // in cents
-    shippingPrice: number, // in cents
-    totalPrice: number, // in cents
-    orderId: string,
-    deliveryAddress: string
-  ) {
-    const paymentUrl = `${appUrl()}/deliveries/${orderId}`;
-
-    const emailHtml = await render(
-      OrderConfirmationEmail({
-        buyerName,
-        itemTitle,
-        itemPrice,
-        shippingPrice,
-        totalPrice,
-        orderId,
-        deliveryAddress,
-        paymentUrl,
-      })
-    );
-
-    return this.sendEmail({
-      to,
-      subject: `📦 Order Confirmed - #${orderId.slice(0, 8)}`,
-      html: emailHtml,
-    });
-  },
-
-  /**
-   * Send Payment Receipt Email to buyer
-   * Called when buyer confirms payment
-   */
-  async sendPaymentReceiptEmail(
-    to: string,
-    buyerName: string,
-    itemTitle: string,
-    itemPrice: number, // in cents
-    shippingPrice: number, // in cents
-    totalPrice: number, // in cents
-    orderId: string,
-    deliveryAddress: string
-  ) {
-    const emailHtml = await render(
-      PaymentReceiptEmail({
-        buyerName,
-        itemTitle,
-        itemPrice,
-        shippingPrice,
-        totalPrice,
-        orderId,
-        deliveryAddress,
-      })
-    );
-
-    return this.sendEmail({
-      to,
-      subject: `✅ Payment Confirmed - Order #${orderId.slice(0, 8)}`,
-      html: emailHtml,
-    });
-  },
-
-
-  /**
-   * Send Shipment Assigned Email to driver
-   * Called when payment is confirmed and driver has shipment
-   */
-  async sendShipmentAssignedEmail(
-    to: string,
-    driverName: string,
-    itemTitle: string,
-    pickupAddress: string,
-    deliveryAddress: string,
-    shipmentId: string,
-    earnings: number // in cents
-  ) {
-    const emailHtml = await render(
-      ShipmentAssignedEmail({
-        driverName,
-        itemTitle,
-        pickupAddress,
-        deliveryAddress,
-        shipmentId,
-        earnings,
-      })
-    );
-
-    return this.sendEmail({
-      to,
-      subject: `🚚 New Shipment Assigned - ${itemTitle}`,
       html: emailHtml,
     });
   },
@@ -310,7 +205,8 @@ export const emailService = {
 
     return this.sendEmail({
       to,
-      subject: "Il manque des documents à votre dossier chauffeur · Documents missing",
+      subject:
+        "Il manque des documents à votre dossier chauffeur · Documents missing from your driver file",
       html: emailHtml,
     });
   },

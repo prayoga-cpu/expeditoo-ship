@@ -128,7 +128,7 @@ describe("weight", () => {
   it("asks for the figure once the load is freight", () => {
     renderFields();
 
-    fireEvent.click(screen.getByRole("radio", { name: /Plus d'1 t/ }));
+    fireEvent.click(screen.getByRole("radio", { name: /Plus de 1 t/ }));
 
     expect(screen.getByLabelText(/^Poids exact(?!,)/)).toBeInTheDocument();
   });

@@ -2,9 +2,9 @@ import { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Expeditop - Transport Marketplace',
+    name: 'Expeditop — Transport',
     short_name: 'Expeditop',
-    description: 'Post a transport job, compare competing carrier offers, pick your carrier and track the delivery.',
+    description: 'Publiez une demande de transport, comparez les offres des transporteurs, choisissez et suivez la livraison.',
     start_url: '/?source=pwa',
     id: '/?source=pwa',
     display: 'standalone',
@@ -13,7 +13,7 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: '#0052FF',
     orientation: 'portrait',
     scope: '/',
-    lang: 'en',
+    lang: 'fr',
     categories: ['business', 'productivity', 'travel', 'finance'],
     icons: [
       {
@@ -65,23 +65,23 @@ export default function manifest(): MetadataRoute.Manifest {
     ],
     shortcuts: [
       {
-        name: 'Track Parcel',
-        short_name: 'Tracking',
-        description: 'Track your shipments',
+        name: 'Suivre un envoi',
+        short_name: 'Suivi',
+        description: 'Suivez vos livraisons',
         url: '/deliveries?source=pwa_shortcut',
         icons: [{ src: '/icons/icon-192x192.png', sizes: '192x192' }],
       },
       {
-        name: 'Find Jobs',
-        short_name: 'Jobs',
-        description: 'Browse transport jobs open for bids',
+        name: 'Trouver des missions',
+        short_name: 'Missions',
+        description: 'Parcourez les demandes de transport ouvertes aux offres',
         url: '/expedion?source=pwa_shortcut',
         icons: [{ src: '/icons/icon-192x192.png', sizes: '192x192' }],
       },
       {
-        name: 'My Messages',
-        short_name: 'Chat',
-        description: 'View your conversations',
+        name: 'Mes messages',
+        short_name: 'Messages',
+        description: 'Ouvrez vos conversations',
         url: '/messages?source=pwa_shortcut',
         icons: [{ src: '/icons/icon-192x192.png', sizes: '192x192' }],
       },

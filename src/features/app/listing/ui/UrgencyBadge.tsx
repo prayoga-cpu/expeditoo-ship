@@ -41,7 +41,7 @@ export function UrgencyBadge({
       {immediate && (
         <Badge
           className={cn(
-            "gap-1 border-transparent bg-amber-500 text-white dark:bg-amber-600",
+            "gap-1 border-transparent bg-warning text-warning-foreground",
             className
           )}
           title={t("immediateHint")}

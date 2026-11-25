@@ -154,7 +154,7 @@ function DocumentRow({
           }
           className={
             document.status === "accepted"
-              ? "bg-green-500 hover:bg-green-600 text-white"
+              ? "bg-success hover:bg-success/90 text-success-foreground"
               : ""
           }
         >
@@ -376,7 +376,7 @@ export function CarrierApplicationDetail({
         )}
 
         {absent && (
-          <div className="rounded-md border border-amber-500/50 bg-amber-500/10 p-3">
+          <div className="rounded-md border tone-warning p-3">
             <h4 className="text-sm font-medium mb-1">
               {application.absentUntil
                 ? t("absentUntil", {
@@ -394,7 +394,7 @@ export function CarrierApplicationDetail({
           </div>
         )}
         {needsRepair && (
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-amber-500/50 bg-amber-500/10 p-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border tone-warning p-3">
             <div className="min-w-0 space-y-0.5">
               <h4 className="text-sm font-medium">{t("accessMissingTitle")}</h4>
               <p className="text-muted-foreground text-xs">
@@ -612,7 +612,7 @@ export function CarrierApplicationDetail({
               {/* The service refuses this (CARRIER_HAS_LIVE_RUNS); say so
                   before the click rather than after it. */}
               {actionMode === "deregister" && (application.liveRuns ?? 0) > 0 && (
-                <p className="rounded-md border border-amber-500/50 bg-amber-500/10 p-2 text-xs">
+                <p className="rounded-md border tone-warning p-2 text-xs">
                   {t("liveRunsBlock", { count: application.liveRuns ?? 0 })}
                 </p>
               )}
@@ -714,7 +714,7 @@ export function CarrierApplicationDetail({
                     disabled={isUpdating}
                     className={
                       actions.primary === "approve"
-                        ? "bg-green-600 hover:bg-green-700 text-white"
+                        ? "bg-success hover:bg-success/90 text-success-foreground"
                         : undefined
                     }
                   >

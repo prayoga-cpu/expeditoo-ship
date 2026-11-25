@@ -109,9 +109,9 @@ export function ExpedionDashboard() {
     return (
       <div className="text-destructive flex items-center justify-center gap-2 p-10">
         <AlertCircle className="h-6 w-6" />
-        {/* `||`, not `??`: an Error carrying an empty message is still no
-            message, and nullish-coalescing would render an empty red box. */}
-        <span>{error?.message || t("error")}</span>
+        {/* The catalogue's sentence, never `error.message`: that is the
+            server's English line, or a fallback written in a hook. */}
+        <span>{t("error")}</span>
       </div>
     );
   }
@@ -518,7 +518,7 @@ function Row({
       </div>
       <div
         className={`shrink-0 font-mono ${
-          tone === "warning" ? "text-amber-600 dark:text-amber-500" : ""
+          tone === "warning" ? "text-warning-ink" : ""
         }`}
       >
         {value}

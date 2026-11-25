@@ -2,7 +2,7 @@
 
 import { LoadErrorState } from "@/components/ui/load-error-state";
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   Archive,
   CheckCircle2,
@@ -62,27 +62,27 @@ const STATUS_STYLE: Record<
   OPEN: {
     icon: Inbox,
     tone: "text-primary",
-    card: "border-l-4 border-l-primary bg-primary/[0.03]",
+    card: "",
   },
   IN_PROGRESS: {
     icon: Clock,
-    tone: "text-amber-600 dark:text-amber-400",
-    card: "border-l-4 border-l-amber-500 bg-amber-500/[0.04] dark:border-l-amber-400 dark:bg-amber-400/[0.06]",
+    tone: "text-warning-ink",
+    card: "",
   },
   NEEDS_REVIEW: {
     icon: Eye,
-    tone: "text-violet-600 dark:text-violet-400",
-    card: "border-l-4 border-l-violet-500 bg-violet-500/[0.04] dark:border-l-violet-400 dark:bg-violet-400/[0.06]",
+    tone: "text-info-ink",
+    card: "",
   },
   RESOLVED: {
     icon: CheckCircle2,
-    tone: "text-emerald-600 dark:text-emerald-400",
-    card: "border-l-4 border-l-emerald-500 bg-emerald-500/[0.04] dark:border-l-emerald-400 dark:bg-emerald-400/[0.06]",
+    tone: "text-success-ink",
+    card: "",
   },
   ARCHIVED: {
     icon: Archive,
     tone: "text-muted-foreground",
-    card: "border-l-4 border-l-muted-foreground/40",
+    card: "",
   },
 };
 
@@ -95,7 +95,7 @@ const TYPE_TONE: Record<
 
 const PRIORITY_TONE: Record<FeedbackPriorityValue, string> = {
   urgent: "text-destructive",
-  high: "text-amber-600 dark:text-amber-400",
+  high: "text-warning-ink",
   medium: "text-muted-foreground",
   low: "text-muted-foreground",
 };
@@ -317,6 +317,7 @@ export function FeedbackConsole() {
 
 function FeedbackRow({ item }: { item: AdminFeedbackView }) {
   const t = useTranslations("feedback");
+  const locale = useLocale();
   const triage = useTriageFeedback();
   const [expanded, setExpanded] = useState(false);
   const [editingNote, setEditingNote] = useState(false);
@@ -326,7 +327,7 @@ function FeedbackRow({ item }: { item: AdminFeedbackView }) {
   const isLong = item.description.length > DESCRIPTION_CLAMP;
 
   return (
-    <Card className={cn("space-y-3 p-4", STATUS_STYLE[item.status].card)}>
+    <Card className={cn("gap-0 space-y-3 p-4", STATUS_STYLE[item.status].card)}>
       <div className="flex flex-wrap items-center gap-2">
         <Badge variant={TYPE_TONE[item.type]}>{t(`types.${item.type}`)}</Badge>
         <span className={cn("text-xs font-medium", PRIORITY_TONE[item.priority])}>
@@ -344,7 +345,7 @@ function FeedbackRow({ item }: { item: AdminFeedbackView }) {
           {reference}
         </button>
         <span className="ml-auto text-xs text-muted-foreground">
-          {new Date(item.createdAt).toLocaleDateString()}
+          {new Date(item.createdAt).toLocaleDateString(locale)}
         </span>
       </div>
 
@@ -469,9 +470,9 @@ function FeedbackRow({ item }: { item: AdminFeedbackView }) {
         <button
           type="button"
           onClick={() => setEditingNote(true)}
-          className="flex w-full items-start gap-2 rounded-md border border-violet-500/20 bg-violet-500/10 p-2 text-left text-xs"
+          className="flex w-full items-start gap-2 rounded-md border tone-info p-2 text-left text-xs"
         >
-          <Eye className="mt-0.5 h-3.5 w-3.5 shrink-0 text-violet-600 dark:text-violet-400" />
+          <Eye className="mt-0.5 h-3.5 w-3.5 shrink-0 text-info-ink" />
           <span className="whitespace-pre-wrap">{item.devNote}</span>
         </button>
       ) : (

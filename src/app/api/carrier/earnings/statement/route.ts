@@ -36,7 +36,7 @@ export async function GET(req: Request) {
         companyName: carrier.companyName,
         siret: carrier.siret ?? "",
         periodLabel: periodLabel(period, "Toutes périodes"),
-        generatedAt: new Date().toLocaleDateString("fr-FR"),
+        generatedAt: new Date().toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" }),
         currency: "EUR",
         lines: items.map((item) => ({
           deliveredAt: item.deliveredAt,

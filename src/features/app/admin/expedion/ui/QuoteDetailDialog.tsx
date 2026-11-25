@@ -12,7 +12,7 @@ import {
   Minimize2,
   Pencil,
   Send,
-  Sparkles,
+  ScanText,
   X,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
@@ -56,6 +56,7 @@ import {
   expedionFileHref,
   expedionFileIdFromUrl,
 } from "@/lib/expedion-files";
+import { ApiError } from "@/lib/fetcher";
 import {
   centsToInput,
   numberToInput,
@@ -197,6 +198,7 @@ export function QuoteDetailDialog({
   const t = useTranslations("admin.expedion.detail");
   const tb = useTranslations("admin.expedion.blockers");
   const ta = useTranslations("admin.expedion.actions");
+  const tStatus = useTranslations("admin.expedionClients.quoteStatus");
   const locale = useLocale();
 
   const { data, isLoading, error } = useExpedionQuoteDetail(quoteId);
@@ -416,8 +418,18 @@ export function QuoteDetailDialog({
                   })}
                   {data ? (
                     <>
-                      <Badge variant="secondary">{data.status}</Badge>
-                      <Badge variant="outline">{data.paymentStatus}</Badge>
+                      <Badge variant="secondary">
+                        {tStatus.has(data.status)
+                          ? tStatus(data.status)
+                          : data.status}
+                      </Badge>
+                      {data.paymentStatus ? (
+                        <Badge variant="outline">
+                          {t.has(`paymentStatus.${data.paymentStatus}`)
+                            ? t(`paymentStatus.${data.paymentStatus}`)
+                            : data.paymentStatus}
+                        </Badge>
+                      ) : null}
                     </>
                   ) : null}
                 </DialogTitle>
@@ -544,7 +556,7 @@ export function QuoteDetailDialog({
           {showExtractionBanner && data ? (
             <div className="border-b bg-primary/5 flex flex-wrap items-center justify-between gap-3 px-6 py-3">
               <div className="flex items-center gap-2">
-                <Sparkles className="text-primary h-4 w-4 shrink-0" />
+                <ScanText className="text-primary h-4 w-4 shrink-0" />
                 <span className="text-xs font-medium">
                   {t("aiExtractedBanner", {
                     percent: Math.round((data.extractionConfidence ?? 0) * 100),
@@ -568,7 +580,9 @@ export function QuoteDetailDialog({
               </div>
             ) : error || !data ? (
               <p className="text-destructive py-16 text-center text-sm">
-                {error instanceof Error ? error.message : t("error")}
+                {error instanceof ApiError && error.status >= 400
+                  ? t("errorStatus", { status: error.status })
+                  : t("error")}
               </p>
             ) : (
               <div className="space-y-6">
@@ -585,7 +599,7 @@ export function QuoteDetailDialog({
                         {isAnalyzing ? (
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         ) : (
-                          <Sparkles className="mr-2 h-4 w-4" />
+                          <ScanText className="mr-2 h-4 w-4" />
                         )}
                         {isAnalyzing ? t("analyzing") : t("analyzeWithAi")}
                       </Button>
@@ -902,7 +916,7 @@ export function QuoteDetailDialog({
                         label={t("valueBracket")}
                         value={form.valueBracket ?? ""}
                         onChange={(v) => setField("valueBracket", v || null)}
-                        placeholder="Jusqu'à 150 €"
+                        placeholder={t("valueBracketPlaceholder")}
                       />
                     </>
                   ) : (

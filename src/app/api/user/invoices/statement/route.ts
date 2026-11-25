@@ -40,7 +40,7 @@ export async function GET(req: Request) {
           ...invoicePdfProps({ ...invoice, user: session.user }, undefined, issuer),
         })),
         periodLabel: periodLabel(period, "Toutes périodes"),
-        emptyLabel: "Aucune facture sur cette période.",
+        emptyLabel: "Aucun document sur cette période.",
       })
     );
 

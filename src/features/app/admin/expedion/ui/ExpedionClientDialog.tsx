@@ -26,12 +26,12 @@ const STATUS_TONE: Record<string, string> = {
   awaiting_confirmation: "bg-muted text-muted-foreground border-border",
   quoted: "bg-primary/15 text-primary border-primary/30",
   accepted: "bg-primary/15 text-primary border-primary/30",
-  paid: "bg-warning/15 text-warning border-warning/30",
-  assigned: "bg-warning/15 text-warning border-warning/30",
-  escalated: "bg-warning/15 text-warning border-warning/30",
-  picked_up: "bg-warning/15 text-warning border-warning/30",
-  delivered: "bg-success/15 text-success border-success/30",
-  cancelled: "bg-destructive/15 text-destructive border-destructive/30",
+  paid: "tone-warning",
+  assigned: "tone-warning",
+  escalated: "tone-warning",
+  picked_up: "tone-warning",
+  delivered: "tone-success",
+  cancelled: "tone-danger",
 };
 
 /**
@@ -103,7 +103,7 @@ export function ExpedionClientDialog({
                   {data.client.account.banned && (
                     <Badge
                       variant="outline"
-                      className="ml-2 border-destructive/30 bg-destructive/15 text-destructive"
+                      className="tone-danger ml-2"
                     >
                       {t("detail.accountSuspended")}
                     </Badge>

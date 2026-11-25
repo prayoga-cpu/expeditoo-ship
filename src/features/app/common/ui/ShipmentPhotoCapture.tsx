@@ -61,7 +61,7 @@ export function ShipmentPhotoCapture({
 
       <Button
         variant="outline"
-        className="w-full gap-2"
+        className="h-auto min-h-9 w-full gap-2 py-2 whitespace-normal"
         onClick={() => inputRef.current?.click()}
         disabled={isBusy || !capture.isSupported}
       >

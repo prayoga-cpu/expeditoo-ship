@@ -9,6 +9,7 @@ import type {
 } from "@/server/services/expedion-report.service";
 import { parseLocalISO } from "@/lib/utils/date-range";
 import type { ExpedionQuote } from "@/db/schema/expedion";
+import { ApiError } from "@/lib/fetcher";
 
 /**
  * Data and actions for the operator report.
@@ -35,9 +36,32 @@ interface Envelope<T> {
 async function unwrap<T>(response: Response): Promise<T> {
   const body = (await response.json()) as Envelope<T>;
   if (!response.ok || !body.success || body.data === undefined) {
-    throw new Error(body.error?.message ?? "Request failed");
+    // The code travels, the sentence does not: the service's message is an
+    // English developer line, and what an operator reads comes from the
+    // catalogue (`useExpedionErrorToast`).
+    throw new ApiError(
+      body.error?.code ?? "REQUEST_FAILED",
+      body.error?.message ?? "",
+      response.status
+    );
   }
   return body.data;
+}
+
+/**
+ * The toast for a refused Supervision action.
+ *
+ * A known code reads its own sentence under `admin.expedion.errors`; anything
+ * else reads the namespace's generic line. The server's `message` is never
+ * shown — it is written for a log, in English.
+ */
+export function useExpedionErrorToast() {
+  const t = useTranslations("admin.expedion.errors");
+
+  return (error: unknown) => {
+    const code = error instanceof ApiError ? error.code : null;
+    toast.error(code && t.has(code) ? t(code) : t("generic"));
+  };
 }
 
 /**
@@ -210,6 +234,7 @@ export interface QuoteAdminPatch {
 export function useExpedionQuoteAdmin() {
   const queryClient = useQueryClient();
   const t = useTranslations("admin.expedion.actions");
+  const onFailure = useExpedionErrorToast();
 
   return useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: QuoteAdminPatch }) =>
@@ -224,7 +249,7 @@ export function useExpedionQuoteAdmin() {
       queryClient.invalidateQueries({ queryKey: ["admin", "expedion"] });
       toast.success(t("repriced"));
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: onFailure,
   });
 }
 
@@ -278,16 +303,18 @@ export function useExpedionQuoteDetail(quoteId: string | null) {
         body = null;
       }
 
+      // The dialog prints the status, never a sentence written here or the
+      // server's: `ApiError` carries what it needs for that.
       if (!body) {
-        throw new Error(
-          response.ok
-            ? "The server sent something that is not a quote."
-            : `The server refused this quote (HTTP ${response.status}).`
-        );
+        throw new ApiError("UNREADABLE", "", response.status);
       }
 
       if (!response.ok || !body.success || !body.data) {
-        throw new Error(body.error?.message ?? "Quote unavailable");
+        throw new ApiError(
+          body.error?.code ?? "UNREADABLE",
+          body.error?.message ?? "",
+          response.status
+        );
       }
       return body.data;
     },
@@ -350,6 +377,7 @@ export function useExpedionPriceSuggestion() {
 export function useExpedionEscalate() {
   const queryClient = useQueryClient();
   const t = useTranslations("admin.expedion.actions");
+  const onFailure = useExpedionErrorToast();
 
   return useMutation({
     mutationFn: async (id: string) =>
@@ -360,10 +388,10 @@ export function useExpedionEscalate() {
       queryClient.invalidateQueries({ queryKey: ["admin", "expedion"] });
       toast.success(t("escalated"));
     },
-    // The common failure is a missing pickup coordinate, which
-    // `escalationBlockers` names — surface the server's message rather than a
-    // generic one, because it tells the operator what to fix.
-    onError: (error: Error) => toast.error(error.message),
+    // The common failure is a missing pickup coordinate, which the server
+    // answers as `ESCALATION_INCOMPLETE` — that code has its own sentence, and
+    // the dialog's own checklist names the field to fix.
+    onError: onFailure,
   });
 }
 
@@ -378,6 +406,7 @@ export function useExpedionEscalate() {
 export function useExpedionAssignDriver() {
   const queryClient = useQueryClient();
   const t = useTranslations("admin.expedion.actions");
+  const onFailure = useExpedionErrorToast();
 
   return useMutation({
     mutationFn: async ({
@@ -398,10 +427,10 @@ export function useExpedionAssignDriver() {
       queryClient.invalidateQueries({ queryKey: ["admin", "expedion"] });
       toast.success(t("assigned"));
     },
-    // The server names why — an unapproved driver, a missing vehicle, a job
-    // already published — and each of those tells the operator what to do
-    // next, which a generic failure does not.
-    onError: (error: Error) => toast.error(error.message),
+    // The server names why by code — an unapproved driver, a missing vehicle,
+    // a job already published — and each of those has its own sentence, which
+    // tells the operator what to do next.
+    onError: onFailure,
   });
 }
 
@@ -415,6 +444,7 @@ export function useExpedionAssignDriver() {
 export function useExpedionRequote() {
   const queryClient = useQueryClient();
   const t = useTranslations("admin.expedion.actions");
+  const onFailure = useExpedionErrorToast();
 
   return useMutation({
     mutationFn: async (id: string) =>
@@ -425,7 +455,7 @@ export function useExpedionRequote() {
       queryClient.invalidateQueries({ queryKey: ["admin", "expedion"] });
       toast.success(t("requoted"));
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: onFailure,
   });
 }
 

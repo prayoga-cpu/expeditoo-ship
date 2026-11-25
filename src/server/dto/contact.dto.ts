@@ -17,20 +17,40 @@ export const contactSubjects = [
 
 export type ContactSubject = (typeof contactSubjects)[number];
 
+/**
+ * The subject as staff read it, in the mail to the support desk and in the
+ * support thread. French, like the rest of the staff-facing mail; the visitor's
+ * own form reads `marketing.contact.form.subjects` in their language, and these
+ * are the same six labels.
+ */
+export const CONTACT_SUBJECT_LABELS: Record<ContactSubject, string> = {
+  carrier: "Devenir transporteur",
+  auctionHouse: "Partenariat maison de vente",
+  expedionQuote: "Une livraison ou un devis Expedion",
+  billing: "Facturation ou versements",
+  press: "Presse",
+  other: "Autre sujet",
+};
+
+/**
+ * Every message below is a key under `marketing.contact.form.errors`, never a
+ * sentence: the public form prints the issue beside its field, in the
+ * visitor's language (`ContactForm`'s `FieldError`).
+ */
 export const contactSubmitSchema = z.object({
-  name: z.string().trim().min(2, "Name is too short").max(80),
+  name: z.string().trim().min(2, "nameTooShort").max(80, "tooLong"),
   email: z
     .string()
     .trim()
     .toLowerCase()
-    .email("Invalid email address")
-    .max(160),
-  company: z.string().trim().max(120).optional(),
+    .email("emailInvalid")
+    .max(160, "tooLong"),
+  company: z.string().trim().max(120, "tooLong").optional(),
   subject: z.enum(contactSubjects),
   // Floored at 20 characters: an enquiry an operator can act on needs more
   // than a greeting, and the floor is the cheapest filter against drive-by
   // submissions on a form that is public by design.
-  message: z.string().trim().min(20, "Message is too short").max(2000),
+  message: z.string().trim().min(20, "messageTooShort").max(2000, "tooLong"),
 });
 
 export type ContactSubmitInput = z.infer<typeof contactSubmitSchema>;

@@ -22,7 +22,7 @@ export function BubbleAvatar({ name, initials, src }: BubbleAvatarProps) {
   return (
     <Avatar className="w-8 h-8 shrink-0 flex-none">
       <AvatarImage src={src} alt={name ?? ""} />
-      <AvatarFallback className="bg-linear-to-b from-blue-400 to-blue-600 dark:from-blue-600 dark:to-blue-950 text-white text-xs font-semibold">
+      <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
         {initial}
       </AvatarFallback>
     </Avatar>

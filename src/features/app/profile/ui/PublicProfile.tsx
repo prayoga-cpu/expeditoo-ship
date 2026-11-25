@@ -17,6 +17,8 @@ import { toast } from "sonner";
 import { PageLoader } from "@/components/ui/page-loader";
 import { LottieLoader } from "@/components/ui/lottie-loader";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/hooks/useDateLocale";
+import { useFormatRating } from "@/lib/hooks/useFormatRating";
 import { Reviews } from "./Reviews";
 import { startConversation } from "@/features/app/messages/api/conversations.api";
 import { StaffContactCard } from "./StaffContactCard";
@@ -100,6 +102,8 @@ export function PublicProfile({
 }) {
   const router = useRouter();
   const t = useTranslations("profile.public");
+  const dateLocale = useDateLocale();
+  const formatRating = useFormatRating();
   const { user: currentUser } = useAuth();
   const [isMessageLoading, setIsMessageLoading] = useState(false);
   // The thread renders in MainLayout, which bounces Admin mode back to the
@@ -140,7 +144,7 @@ export function PublicProfile({
       openOutsideAdmin(`/messages/${conversationId}`);
     } catch (error) {
       console.error("Message error:", error);
-      toast.error(error instanceof Error ? error.message : t("messageError"));
+      toast.error(t("messageError"));
     } finally {
       setIsMessageLoading(false);
     }
@@ -182,9 +186,9 @@ export function PublicProfile({
         <CardContent className="p-6 md:p-8">
           <div className="flex flex-col md:flex-row gap-6 items-center md:items-center">
             <div className="relative">
-              <Avatar className="w-24 h-24 md:w-32 md:h-32 border-4 border-background shadow-xl">
+              <Avatar className="w-24 h-24 md:w-32 md:h-32 border border-border">
                 <AvatarImage src={user.image || undefined} />
-                <AvatarFallback className="text-2xl font-bold bg-linear-to-br from-primary to-accent-pink text-white">
+                <AvatarFallback className="bg-primary/10 text-3xl font-semibold text-primary">
                   {user.name.charAt(0)}
                 </AvatarFallback>
               </Avatar>
@@ -196,10 +200,10 @@ export function PublicProfile({
               </h1>
 
               <div className="flex items-center gap-2 mb-4 justify-center md:justify-start mt-2">
-                <div className="flex items-center text-yellow-500">
+                <div className="flex items-center text-warning-ink">
                   <Star className="w-4 h-4 fill-current mr-1" />
                   <span className="font-medium text-foreground">
-                    {user.rating?.toFixed(1) || "0.0"}
+                    {formatRating(user.rating)}
                   </span>
                 </div>
                 <span className="text-muted-foreground">•</span>
@@ -213,7 +217,7 @@ export function PublicProfile({
                   <Calendar className="w-4 h-4" />
                   <span>
                     {t("joined", {
-                      date: format(new Date(user.createdAt), "MMMM yyyy"),
+                      date: format(new Date(user.createdAt), "MMMM yyyy", { locale: dateLocale }),
                     })}
                   </span>
                 </div>

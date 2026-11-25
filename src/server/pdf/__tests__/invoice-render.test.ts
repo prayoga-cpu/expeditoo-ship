@@ -108,7 +108,7 @@ describe("rendering the document", () => {
       InvoiceBatchPDF({
         invoices: [],
         periodLabel: "Toutes périodes",
-        emptyLabel: "Aucune facture sur cette période.",
+        emptyLabel: "Aucun document sur cette période.",
       })
     );
 
@@ -128,7 +128,7 @@ describe("rendering the document", () => {
           },
         ],
         periodLabel: "01/09/2026 — 30/09/2026",
-        emptyLabel: "Aucune facture sur cette période.",
+        emptyLabel: "Aucun document sur cette période.",
       })
     );
 

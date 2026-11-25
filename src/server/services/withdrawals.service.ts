@@ -474,25 +474,25 @@ async function notifyCarrier(updated: Withdrawal, outcome: CarrierNotice) {
 function carrierNotice(outcome: CarrierNotice) {
   return {
     approved: {
-      title: "Withdrawal approved",
-      message: "Your withdrawal was approved. The transfer is being made.",
+      title: "Retrait approuvé",
+      message: "Votre demande de retrait est approuvée. Le virement est en cours.",
     },
     paid: {
-      title: "Withdrawal paid",
-      message: "Your withdrawal has been transferred.",
+      title: "Retrait versé",
+      message: "Votre retrait a été viré sur votre compte.",
     },
     // Refused from `requested` — as far as `decide` read it. True from either
     // state, because an approval can land between that read and the refusal.
     rejected: {
-      title: "Withdrawal refused",
+      title: "Retrait refusé",
       message:
-        "Your withdrawal request was refused. What you are still owed is available again.",
+        "Votre demande de retrait a été refusée. Le montant qui vous est dû est de nouveau disponible.",
     },
     // Refused after the driver was told the transfer was being made.
     approvalCancelled: {
-      title: "Withdrawal cancelled",
+      title: "Retrait annulé",
       message:
-        "Your approved withdrawal was cancelled. What you are still owed is available again.",
+        "Votre retrait approuvé a été annulé. Le montant qui vous est dû est de nouveau disponible.",
     },
   }[outcome];
 }

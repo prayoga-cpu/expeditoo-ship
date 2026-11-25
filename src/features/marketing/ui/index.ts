@@ -11,6 +11,7 @@ export * from "./LandingSearchCard";
 export * from "./LandingRecentRequests";
 export * from "./LandingServices";
 export * from "./LandingPromises";
+export * from "./LandingAppTour";
 export * from "./LandingCarriers";
 export * from "./LandingFaq";
 export * from "./LandingCTA";

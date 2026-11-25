@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { CenteredEmptyState } from "@/components/ui/centered-empty-state";
 import { useVehicles } from "@/features/app/carrier/hooks/useCarrier";
+import { useVehicleLabel } from "@/features/app/carrier/hooks/useVehicleLabel";
 import { useSubmitOffer } from "../hooks/useCarrierOffers";
 import { OfferSlotsField } from "./OfferSlotsField";
 import { useAvailabilityText } from "@/features/app/listing/ui/AvailabilityLine";
@@ -50,6 +51,7 @@ const euros = formatCurrency;
 export function SubmitOfferForm({ job }: SubmitOfferFormProps) {
   const t = useTranslations("listing.bid.form");
   const locale = useLocale();
+  const vehicleLabel = useVehicleLabel();
   const { data: vehicles, isLoading } = useVehicles();
   const submitOffer = useSubmitOffer(job.id);
 
@@ -122,7 +124,7 @@ export function SubmitOfferForm({ job }: SubmitOfferFormProps) {
   const canSubmit = missing === null && !submitOffer.isPending;
 
   return (
-    <Card className="space-y-5 p-4 sm:p-6">
+    <Card className="gap-0 space-y-5 p-4 sm:p-6">
       <div>
         <h2 className="font-semibold">{t("title")}</h2>
         <p className="text-sm text-muted-foreground">
@@ -147,9 +149,7 @@ export function SubmitOfferForm({ job }: SubmitOfferFormProps) {
                   value={vehicle.id}
                   disabled={!suitable || !vehicle.isActive}
                 >
-                  {vehicle.plateNumber} ·{" "}
-                  {[vehicle.make, vehicle.model].filter(Boolean).join(" ") ||
-                    vehicle.type.replace(/_/g, " ")}
+                  {vehicle.plateNumber} · {vehicleLabel(vehicle)}
                   {!suitable && ` — ${t("vehicleTooSmall")}`}
                   {suitable && !vehicle.isActive && ` — ${t("vehicleInactive")}`}
                 </SelectItem>

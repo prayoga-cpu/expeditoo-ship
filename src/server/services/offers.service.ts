@@ -34,6 +34,7 @@ import {
   type PreparePaymentInput,
 } from "@/server/dto/offers.dto";
 import type { InsertListing, Listing } from "@/db/schema/listings";
+import { formatCurrency } from "@/lib/currency";
 import { offers, type Offer } from "@/db/schema/offers";
 import type { Vehicle } from "@/db/schema/carriers";
 
@@ -193,7 +194,7 @@ async function loadNegotiable(offerId: string) {
   return { offer, listing };
 }
 
-const euroLabel = (cents: number) => `${(cents / 100).toFixed(2)} €`;
+const euroLabel = (cents: number) => formatCurrency(cents);
 
 /** In-app only, best-effort: a failed notice never fails the negotiation. */
 async function notify(
@@ -484,8 +485,8 @@ export const offersService = {
       .createNotification({
         userId: listing.shipperId,
         type: "offer_received",
-        title: "New offer received",
-        message: `A carrier bid ${(data.priceCents / 100).toFixed(2)} € on "${listing.title}"`,
+        title: "Nouvelle offre reçue",
+        message: `Un transporteur propose ${euroLabel(data.priceCents)} pour « ${listing.title} ».`,
         linkUrl: `/listing/${listingId}`,
         data: { listingId, offerId: offer.id },
       })
@@ -611,8 +612,8 @@ export const offersService = {
     if (!proposed) throw err("OFFER_NOT_PENDING", 409);
 
     await notify(listing.shipperId, "offer_proposed", {
-      title: "Expeditop recommends a transporter",
-      message: `We picked an offer of ${euroLabel(offer.priceCents)} for "${listing.title}". Pay to confirm it.`,
+      title: "Expeditop vous recommande un transporteur",
+      message: `Nous avons retenu une offre de ${euroLabel(offer.priceCents)} pour « ${listing.title} ». Payez pour la confirmer.`,
       listingId: listing.id,
       offerId,
     });
@@ -652,8 +653,8 @@ export const offersService = {
     if (!updated) throw err("OFFER_NOT_PENDING", 409);
 
     await notify(offer.carrierId, "offer_countered", {
-      title: "The client sent you a price",
-      message: `${euroLabel(input.priceCents)} instead of ${euroLabel(offer.priceCents)} for "${listing.title}".`,
+      title: "Le client vous propose un prix",
+      message: `${euroLabel(input.priceCents)} au lieu de ${euroLabel(offer.priceCents)} pour « ${listing.title} ».`,
       listingId: listing.id,
       offerId,
     });
@@ -694,13 +695,13 @@ export const offersService = {
     if (!updated) throw err("OFFER_NOT_PENDING", 409);
 
     const said = {
-      accept: `accepted your price of ${euroLabel(priceCents)}`,
-      decline: `kept their price of ${euroLabel(priceCents)}`,
-      revise: `now offers ${euroLabel(priceCents)}`,
+      accept: `a accepté votre prix de ${euroLabel(priceCents)}`,
+      decline: `maintient son prix de ${euroLabel(priceCents)}`,
+      revise: `propose désormais ${euroLabel(priceCents)}`,
     }[input.action];
     await notify(listing.shipperId, "offer_counter_answered", {
-      title: "The transporter answered your price",
-      message: `The transporter ${said} for "${listing.title}".`,
+      title: "Le transporteur a répondu à votre prix",
+      message: `Le transporteur ${said} pour « ${listing.title} ».`,
       listingId: listing.id,
       offerId,
     });
@@ -1195,8 +1196,8 @@ async function notifyAwardOutcome(
       .createNotification({
         userId: winner.carrierId,
         type: "offer_accepted",
-        title: "Your offer was accepted",
-        message: `You won the job "${jobTitle}".`,
+        title: "Votre offre est acceptée",
+        message: `La mission « ${jobTitle} » est à vous.`,
         linkUrl: `/listing/${winner.listingId}`,
         data: { listingId: winner.listingId },
       })
@@ -1216,8 +1217,8 @@ async function notifyAwardOutcome(
         .createNotification({
           userId: offer.carrierId,
           type: "offer_rejected",
-          title: "Another carrier was selected",
-          message: `The shipper chose a different offer for "${jobTitle}".`,
+          title: "Un autre transporteur a été retenu",
+          message: `Le demandeur a choisi une autre offre pour « ${jobTitle} ».`,
           linkUrl: `/listing/${winner.listingId}`,
           data: { listingId: winner.listingId },
         })

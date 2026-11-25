@@ -4,7 +4,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Eye, EyeOff } from "lucide-react";
-import { BrandMark } from "@/components/ui/brand-mark";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -14,10 +13,10 @@ import {
   AuthErrorNotice,
   AuthIntentNote,
   AuthSwitchLink,
+  AuthShell,
 } from "@/features/auth/ui";
 import { useState, useEffect, Suspense } from "react";
 import { toast } from "sonner";
-import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 
 // The messages were English literals; `auth.login.errors.*` had been written
@@ -55,6 +54,7 @@ function SignInContent() {
   } = useAuthActions();
   const [showPassword, setShowPassword] = useState(false);
   const t = useTranslations("auth.login");
+  const tAuth = useTranslations("auth");
 
   // Check for email verification success
   useEffect(() => {
@@ -126,25 +126,7 @@ function SignInContent() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-primary/10 via-background to-background py-6 px-4 overflow-hidden relative">
-      {/* Animated gradient orbs */}
-      <div className="absolute top-20 left-10 w-72 h-72 bg-primary/20 rounded-full blur-3xl animate-pulse" />
-      <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse" />
-
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="relative z-10 w-full max-w-md"
-      >
-        {/* Logo */}
-        <div className="flex items-center justify-center gap-2 mb-6">
-          <BrandMark size={40} />
-          <span className="text-2xl font-bold text-foreground">EXPEDITOP</span>
-        </div>
-
-        {/* Login Card */}
-        <div className="bg-card/50 backdrop-blur-sm rounded-2xl border border-border/50 p-6 sm:p-8">
+    <AuthShell>
           <h1 className="text-2xl font-bold text-foreground mb-2">
             {t("title")}
           </h1>
@@ -173,10 +155,10 @@ function SignInContent() {
               </label>
               <Input
                 type="email"
-                placeholder="you@example.com"
+                placeholder={tAuth("emailPlaceholder")}
                 {...register("email")}
                 disabled={isLoading}
-                className={`bg-background/50 border-border/50 ${errors.email ? "border-destructive" : ""}`}
+                className={`${errors.email ? "border-destructive" : ""}`}
               />
               {errors.email && (
                 <p className="text-destructive text-sm mt-1">
@@ -203,7 +185,7 @@ function SignInContent() {
                   type={showPassword ? "text" : "password"}
                   {...register("password")}
                   disabled={isLoading}
-                  className={`bg-background/50 border-border/50 pr-10 ${errors.password ? "border-destructive" : ""}`}
+                  className={`pr-10 ${errors.password ? "border-destructive" : ""}`}
                 />
                 <button
                   type="button"
@@ -244,7 +226,7 @@ function SignInContent() {
             <Button
               type="submit"
               disabled={isLoading}
-              className="w-full rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground py-6 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="h-11 w-full font-semibold"
             >
               {isLoading ? t("loading") : t("submit")}
             </Button>
@@ -253,10 +235,10 @@ function SignInContent() {
           {/* Divider */}
           <div className="relative my-5">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-border/50"></div>
+              <div className="w-full border-t border-border"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-card/50 text-muted-foreground">
+              <span className="px-2 bg-background text-muted-foreground">
                 {t("orContinueWith")}
               </span>
             </div>
@@ -268,7 +250,7 @@ function SignInContent() {
             onClick={handleGoogleSignIn}
             disabled={isLoading}
             variant="outline"
-            className="w-full rounded-xl border-border/50 hover:bg-muted/50 text-foreground py-6 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="h-11 w-full font-semibold"
           >
             <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
               <path
@@ -290,15 +272,13 @@ function SignInContent() {
             </svg>
             {t("signInWithGoogle")}
           </Button>
-        </div>
-      </motion.div>
-    </div>
+    </AuthShell>
   );
 }
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div>{"Loading..."}</div>}>
+    <Suspense fallback={null}>
       <SignInContent />
     </Suspense>
   );

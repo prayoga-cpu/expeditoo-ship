@@ -41,8 +41,8 @@ export const payoutNoticesService = {
       notificationsService.createNotification({
         userId: carrierUserId,
         type: "payout_scheduled",
-        title: "Payment added to your balance",
-        message: `${formatCurrency(amountCents)} are owed to you for this delivery.`,
+        title: "Paiement ajouté à votre solde",
+        message: `${formatCurrency(amountCents)} vous sont dus pour cette livraison.`,
         linkUrl: "/carrier/withdrawals",
       }),
       send(carrierUserId, "earned", amountCents, { jobTitle }),

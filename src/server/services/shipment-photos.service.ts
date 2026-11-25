@@ -192,8 +192,8 @@ export const shipmentPhotosService = {
         actorRole: actorRoleFor(party),
         note:
           input.stage === "pickup"
-            ? "Pickup photo added"
-            : "Delivery photo added",
+            ? "Photo de retrait ajoutée"
+            : "Photo de livraison ajoutée",
         metadata: JSON.stringify({
           photoId: photo.id,
           stage: input.stage,
@@ -280,7 +280,7 @@ export const shipmentPhotosService = {
         previousStatus: null,
         actorId: viewer.userId,
         actorRole: "admin",
-        note: `${photo.stage === "pickup" ? "Pickup" : "Delivery"} photo removed: ${reason}`,
+        note: `Photo de ${photo.stage === "pickup" ? "retrait" : "livraison"} supprimée : ${reason}`,
         metadata: JSON.stringify({ photoId, stage: photo.stage }),
       })
       .catch((error) => console.error("photo removal event failed", error));

@@ -38,14 +38,13 @@ export function useCancelShipment() {
     },
     onError: (error) => {
       const code = error instanceof ApiError ? error.code : "";
-      toast.error(messageFor(code, error, t));
+      toast.error(messageFor(code, t));
     },
   });
 }
 
 function messageFor(
   code: string,
-  error: unknown,
   t: ReturnType<typeof useTranslations>
 ): string {
   switch (code) {
@@ -58,6 +57,6 @@ function messageFor(
     case "CATEGORY_NOT_FOR_SIDE":
       return t("badCategory");
     default:
-      return error instanceof Error ? error.message : t("failed");
+      return t("failed");
   }
 }

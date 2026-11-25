@@ -5,7 +5,7 @@ import { useRef, useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ChatBubble } from "./ChatBubble";
-import { Send, ArrowLeft, ArrowDown, ChevronRight } from "lucide-react";
+import { Send, ArrowLeft, ArrowDown, ChevronRight, Star } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -14,6 +14,7 @@ import { ThreadOfferAction, ThreadOfferNotice } from "./ThreadOfferAction";
 import { ThreadOfferBubble } from "./ThreadOfferBubble";
 import { ListingReference } from "@/features/app/listing/ui/ListingReference";
 import { useTranslations } from "next-intl";
+import { useFormatRating } from "@/lib/hooks/useFormatRating";
 import { jobLine } from "../lib/job-summary";
 import { initialsOf } from "../lib/initials";
 
@@ -61,6 +62,7 @@ export function MessageDetail({
   onRetry,
 }: MessageDetailProps) {
   const t = useTranslations("messages.detail");
+  const formatRating = useFormatRating();
   const router = useRouter();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -174,7 +176,7 @@ export function MessageDetail({
               src={conversation.recipient.avatar}
               alt={conversation.recipient.name}
             />
-            <AvatarFallback className="bg-linear-to-b from-blue-400 to-blue-600 dark:from-blue-600 dark:to-blue-950 text-white text-sm font-semibold">
+            <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
               {conversation.recipient.initials ??
                 initialsOf({ name: conversation.recipient.name })}
             </AvatarFallback>
@@ -193,10 +195,11 @@ export function MessageDetail({
                 </span>
               )}
             </h1>
-            <p className="text-xs text-muted-foreground truncate">
+            <p className="flex items-center gap-1 truncate text-xs text-muted-foreground">
               {conversation.recipient.rating !== undefined ? (
                 <>
-                  ⭐ {conversation.recipient.rating.toFixed(1)}/5 (
+                  <Star className="size-3 fill-warning text-warning" aria-hidden />
+                  {formatRating(conversation.recipient.rating)}/5 (
                   {conversation.recipient.reviewsCount || 0})
                 </>
               ) : (

@@ -1,6 +1,6 @@
 {
   "name": "expeditoo-ship",
-  "version": "2.97.0",
+  "version": "2.98.0",
   "packageManager": "pnpm@10.10.0",
   "private": true,
   "scripts": {
@@ -23,6 +23,7 @@
     "db:seed:expedion-demo": "tsx src/scripts/seed-expedion-demo.ts",
     "db:seed:approved-carrier": "tsx src/scripts/seed-approved-carrier.ts",
     "db:seed:beta": "tsx src/scripts/seed-beta-data.ts",
+    "db:seed:demo": "tsx src/scripts/seed-demo-data.ts",
     "env:list": "bash scripts/env-list.sh",
     "env:set": "bash scripts/env-set.sh",
     "env:pull:production": "vercel env pull .env.production.local --environment=production",

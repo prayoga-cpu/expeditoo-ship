@@ -19,6 +19,7 @@ import {
     type CarrierFileInput,
 } from "../api/carriers.api";
 import type { VehicleType } from "@/lib/carrier-constants";
+import { ApiError } from "@/lib/fetcher";
 
 export function useCarrierApplications(status: CarrierApplicationFilter) {
     const queryClient = useQueryClient();
@@ -37,15 +38,22 @@ export function useCarrierApplications(status: CarrierApplicationFilter) {
     const invalidate = () =>
         queryClient.invalidateQueries({ queryKey: ["carrier-applications"] });
 
+    // A refusal staff actually hit has its own sentence under `errors`; the
+    // rest read the generic line. The server's message is never interpolated.
+    const failed = (error: unknown) => {
+        const code = error instanceof ApiError ? error.code : null;
+        toast.error(
+            code && t.has(`errors.${code}`) ? t(`errors.${code}`) : t("failed"),
+        );
+    };
+
     const approveMutation = useMutation({
         mutationFn: (id: string) => approveCarrierApplication(id),
         onSuccess: () => {
             invalidate();
             toast.success(t("approved"));
         },
-        onError: (error) => {
-            toast.error(t("approveFailed", { message: error.message }));
-        },
+        onError: failed,
     });
 
     const rejectMutation = useMutation({
@@ -55,9 +63,7 @@ export function useCarrierApplications(status: CarrierApplicationFilter) {
             invalidate();
             toast.success(t("rejected"));
         },
-        onError: (error) => {
-            toast.error(t("rejectFailed", { message: error.message }));
-        },
+        onError: failed,
     });
 
     const suspendMutation = useMutation({
@@ -67,9 +73,7 @@ export function useCarrierApplications(status: CarrierApplicationFilter) {
             invalidate();
             toast.success(t("suspended"));
         },
-        onError: (error) => {
-            toast.error(t("suspendFailed", { message: error.message }));
-        },
+        onError: failed,
     });
 
     // Actif / Absent / Désinscrit (client_feedback_2026_10_29_spec.md §REQ-02).
@@ -78,9 +82,7 @@ export function useCarrierApplications(status: CarrierApplicationFilter) {
         mutationFn: ({ id, confirmed }: { id: string; confirmed: boolean }) =>
             setCarrierContactConfirmed(id, confirmed),
         onSuccess: () => invalidate(),
-        onError: (error) => {
-            toast.error(t("actionFailed", { message: error.message }));
-        },
+        onError: failed,
     });
 
     const availabilityMutation = useMutation({
@@ -95,9 +97,7 @@ export function useCarrierApplications(status: CarrierApplicationFilter) {
             invalidate();
             toast.success(t(input.absent ? "markedAbsent" : "absenceEnded"));
         },
-        onError: (error) => {
-            toast.error(t("actionFailed", { message: error.message }));
-        },
+        onError: failed,
     });
 
     const deregisterMutation = useMutation({
@@ -108,11 +108,11 @@ export function useCarrierApplications(status: CarrierApplicationFilter) {
             toast.success(t("deregistered"));
         },
         onError: (error) => {
-            toast.error(
-                error.message === "CARRIER_HAS_LIVE_RUNS"
-                    ? t("hasLiveRuns")
-                    : t("actionFailed", { message: error.message }),
-            );
+            if (error instanceof ApiError && error.code === "CARRIER_HAS_LIVE_RUNS") {
+                toast.error(t("hasLiveRuns"));
+                return;
+            }
+            failed(error);
         },
     });
 
@@ -122,9 +122,7 @@ export function useCarrierApplications(status: CarrierApplicationFilter) {
             invalidate();
             toast.success(t("reinstated"));
         },
-        onError: (error) => {
-            toast.error(t("actionFailed", { message: error.message }));
-        },
+        onError: failed,
     });
 
     // Staff finishing a file for the applicant (driver_types_spec.md §7).
@@ -135,9 +133,7 @@ export function useCarrierApplications(status: CarrierApplicationFilter) {
             invalidate();
             toast.success(t("fileSaved"));
         },
-        onError: (error) => {
-            toast.error(t("actionFailed", { message: error.message }));
-        },
+        onError: failed,
     });
 
     const vehicleMutation = useMutation({
@@ -152,9 +148,7 @@ export function useCarrierApplications(status: CarrierApplicationFilter) {
             invalidate();
             toast.success(t("vehicleAdded"));
         },
-        onError: (error) => {
-            toast.error(t("actionFailed", { message: error.message }));
-        },
+        onError: failed,
     });
 
     return {

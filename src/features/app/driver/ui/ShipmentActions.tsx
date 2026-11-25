@@ -297,13 +297,13 @@ function WithdrawAction({ shipmentId }: { shipmentId: string }) {
 // ---- Shared pieces ----
 
 const BANNER_TONES = {
-  info: "bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-900 text-blue-800 dark:text-blue-200",
+  info: "tone-info",
   progress:
-    "bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-900 text-purple-800 dark:text-purple-200",
+    "tone-info",
   success:
-    "bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-900 text-green-800 dark:text-green-200",
+    "tone-success",
   danger:
-    "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900 text-red-800 dark:text-red-200",
+    "tone-danger",
   muted: "bg-muted/50 border-border text-muted-foreground",
 } as const;
 

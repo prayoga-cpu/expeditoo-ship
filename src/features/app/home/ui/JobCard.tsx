@@ -263,7 +263,7 @@ export function JobCard({
             className="flex min-w-0 flex-auto flex-wrap items-center gap-2"
           >
             {job.hasBid && (
-              <Badge className="border-success/30 bg-success/15 text-success">
+              <Badge className="tone-success">
                 <CheckCircle2 className="mr-1 h-3 w-3" />
                 {t("youBid")}
               </Badge>
@@ -287,7 +287,7 @@ export function JobCard({
               </Badge>
             )}
             {closingSoon && (
-              <Badge className="border-warning/30 bg-warning/15 text-warning">
+              <Badge className="tone-warning">
                 <AlertTriangle className="mr-1 h-3 w-3" />
                 {t("urgent")}
               </Badge>

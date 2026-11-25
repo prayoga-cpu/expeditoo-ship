@@ -103,8 +103,10 @@ adversarial verification pass — treat their detail as slightly less certain.
 Work that needs a human hand outside the codebase. Add to this list rather
 than leaving it in a chat message.
 
-- [ ] **`VERCEL_TOKEN` (repo secret, a team-scoped read token) for the weekly env audit** (`env-audit.yml`).
-  Without it the audit fails on its first step every Monday.
+- [x] ~~(2.95.1) `VERCEL_TOKEN` (repo secret, a team-scoped read token) for the weekly env audit~~ — **done by the
+  owner 2026-11-25** (Vercel dashboard token, scope Epidom; the CLI's own login cannot mint one: 403). First green
+  run the same day, `45515203150`: « No production value is shared with Preview. » The token expires on the date
+  picked when it was made; when Monday's audit starts failing on a 401/403, mint a new one and replace the secret.
 - [x] ~~(2.95.1) Untick Preview on the `neon-crimson-car` connection~~ — **done by the owner 2026-11-24**; checked
   the same day: all 18 integration rows (`POSTGRES_*`, `PG*`, `DATABASE_URL*`, `NEON_*`, `VITE_NEON_AUTH_URL`)
   read `production` only. A preview from any branch but `dev` now has no `POSTGRES_URL` and fails at boot, by design.
@@ -708,6 +710,112 @@ than leaving it in a chat message.
 
 ---
 
+## ✅ 2026-11-25 — Every string read in both languages, the generated look removed, « Dans l'application » on the home page (2.98.0)
+
+*« audit all of the translations in the codebase for both language · redesign any section or component that AI generated
+look [both website and dashboard] · create a demo account with full mockup transactions history, then screenshot … for each
+role to add one more section on the website that describe how's the app inside by end to end · max 2 buttons on the navbar ·
+once everything is finished validate then push to main ».*
+
+Specs `copy_and_design_audit_2026_11_spec.md` and `landing_app_tour_spec.md`; plan `plan_copy_and_design_audit.md`.
+**No migration.** `main` is PR-only from `dev`, so « push to main » went dev → PR → merge.
+
+**Translations — how it was read.** Mechanically the catalogues were sound (4,009 leaves each side, no placeholder
+mismatch). The wording was not: all 4,009 pairs were read side by side in five chunks, plus a sixth pass over everything a
+person reads that is *not* in the catalogues. Applied: **556 corrections** (298 EN, 258 FR) and **217 dead keys removed**
+per language (`profile.myAuctions`, `profile.analytics`, `listing.buyNow/addToCart/contactSeller`,
+`shipments.proposalsDialog`, `common.categories/status/units`…), each checked against its consuming component, dynamic
+keys included. 3,835 leaves now. Recurring classes: « enchérir / Les enchères » for a downward auction → « faire une
+offre »; « répondre aux offres » inverted (the carrier *makes* the offer); EN "transporter" → "carrier"; `(s)` hacks and
+bare `{count}` → ICU plurals (`common.time.*` printed « il y a 1 jours »); one ICU bug (`dashboard.newJobs.text` FR
+printed a literal `#`); Title Case → sentence case; American spellings; « retrait » over « enlèvement » where a screen
+mixed both; false claims on the site (« Nothing is visible until approval », « Checked movers », "the job's amount joins
+your balance" — it is the price less 10 %).
+
+**Outside the catalogues.** Sixteen in-app notifications were stored in English whatever the reader's language
+(`offers`, `listings`, `shipment`, `withdrawals`, `payout-notices`, `shipment-incidents`, `feedback` services) — French
+now, « » round titles, amounts through `formatCurrency` (was `toFixed(2)` → « 45.00 € »). Three English goods-marketplace
+emails that nothing sent were deleted with their service methods. `ContactMessageEmail` and the contact thread text are
+French with the subject's label, not the raw enum. Root `metadata` was English under `<html lang="fr">`: French, with a
+`%s · EXPEDITOP` template and a title per marketing/auth route; the manifest is French; `src/app/not-found.tsx` exists
+(Next's English 404 before). date-fns and bare `toLocale*String()` calls take the app's locale (`useDateLocale`). The
+requester/driver hooks that fell back to `error.message` (a raw `SCREAMING_CODE` or an English sentence) now fall back to
+their namespace's translated generic. Zod messages on the contact form and the review modal go through the catalogue.
+
+**The catalogues are canonical JSON now** (`json.dumps(indent=2)`): eight hand-indented lines made every load/dump a
+diff. `~/.claude/…/tools/apply_i18n_canonical.py` applies `{lang:{set,delete}}` patches, prunes emptied parents and
+checks parity; `check_i18n_keys.py` resolves static `t()` calls.
+
+**Deliberately not applied — the owner's call.** (1) French non-breaking spaces before « ? ! : ; »: correct typography,
+applied, then reverted — Testing Library normalises only the DOM side of a comparison, so every test reading the
+catalogue broke, and would again for each future string. (2) « course » vs « mission » for the driver's job (40 vs 44
+strings): a patch exists (`tools/audit-i18n/patch-3-transport-optional-course-to-mission.json`), not applied. (3) The
+**legal pages are stale since `/create` came back**: terms still say « no client posts work here directly », name only
+the operator award, and say the payer is the Expedion client; privacy names Supabase (it is Neon) and omits OpenAI,
+Vercel and the geocoders as processors. EN and FR agree with each other and are both wrong — this needs the client's
+lawyer, not a translator. (4) `/create`'s subtitle and « Cliquez plutôt ici ! » are the client's own words, left.
+(5) Brand casing EXPEDITOP / Expeditop is mixed across mail and UI.
+
+**The generated look, and what replaced it.** Found by counting patterns over `src` and then looking at every major screen
+in Chromium. (a) Six auth pages each carried the same tinted gradient, two pulsing blurred discs and a translucent card →
+one `AuthShell`: form on the page under the wordmark, the home page's photograph beside it from `lg`, nothing animated,
+nothing translucent. (b) Status colour was chosen per file — 293 raw palette classes in 43 files, "delivered" in three
+greens, "in transit" purple here and blue there → five **tones** (`src/lib/tone.ts`, `.tone-*` and `--tone-*` in
+`globals.css`): ground + ink ≥ 4.5:1 + hairline, both themes, plain `oklch()` so iOS 15 holds. The classes are
+**unlayered on purpose**: inside `@layer utilities` they tie with a Badge variant's `text-foreground`. (c) Gradient
+avatars, a pink-to-blue profile avatar with `shadow-xl`, hover-scale on cards and stars, a bouncing map hint, tinted
+unread notification cards, `border-l-4` accent strips, `Sparkles` on every AI-assisted control, an emoji star and a `✓`
+glyph → flat equivalents and icons that name the action (`ScanText`, `Calculator`, `MessageSquareText`).
+(d) Found on the way: 19 `<Card className="space-y-4 p-4">` doubled the Card's own `gap-6`, which is the empty band
+under « Trajet » on the job and delivery pages (`gap-0` added); « Pickup / Dropoff » were hardcoded on the driver's map.
+
+**Header: two doors.** « Connexion » (link) and « Inscription » (the one filled button). « Devenir transporteur » is the
+third link of the bar for a visitor with no session, and stays in the menu and the carriers band.
+
+**Demo data and « Dans l'application ».** `pnpm db:seed:demo` (`src/scripts/seed-demo-data.ts`, local databases only,
+`MOCK_PAYMENTS=true`) builds 14 fictional accounts on `@demo.expeditop.test` and four months of history through the
+app's own services: 29 requests in every status, 56 offers, 20 runs, receipts and credit notes, payouts and withdrawals,
+22 reviews, 77 messages, incidents, a dozen Expedion quotes. Phones are in ARCEP's fiction range, SIRETs are Luhn-valid
+inventions. `scripts/capture-app-tour.mjs` signs in to those accounts and writes the 32 pictures of
+`public/images/landing/app/` (8 steps × desktop/phone × fr/en, 1.4 MB, two loaded at a time). `LandingAppTour` is a
+vertical tablist (arrow keys, Home/End) between the promises and the carriers band, anchor `#app`, in the menu.
+
+**What the seed found** (not fixed here): on a non-UTC local Postgres `defaultNow()` writes session-local time into
+`timestamp` columns read as UTC (8 h off on this laptop; set the database's timezone to UTC);
+`userContactService.updateOwn` throws under tsx (`libphonenumber-js/min` metadata); `carriersDal.listVehicles` has no
+`orderBy`, so `assignDirect` names an arbitrary vehicle for a carrier with two; a listing with a run in transit stays
+`awarded` although the enum has `in_progress`.
+
+**Second pass, before launch.** Five independent read-only sweeps (labels looked up from a value; text written in
+code in the app; on the site and in server-written text; regressions in this diff; a second opinion on every changed
+string), each finding re-checked by a sceptic: 36 confirmed, fixed in three disjoint groups, each group reviewed. The
+same root cause as the « admin.payments.status.captured » the owner screenshotted turned up as raw enums in the Expedion
+quote dialog (`awaiting_confirmation`, `unpaid`), raw vehicle types on an offer without make/model (« hayon tailgate »),
+Stripe's `enabled` badge, and staff toasts printing the server's English sentence (now a code → key map with a generic
+fallback, `admin.expedion.errors.*`, `admin.carriers.toasts.errors.*`). Also: the dialog/sheet close cross is named
+« Fermer » / "Close" from `<html lang>` (`use-close-label.ts`; `useTranslations` throws outside a provider), ratings
+print « 4,5 » (`useFormatRating`), photo-added event notes are French, receipt mail amounts read « 45,00 € », the
+relevé's dates are pinned to Europe/Paris, and dark `--success-foreground` is dark ink (white on the dark theme's light
+green was 2:1). Then a crawl: **312 screens** (six demo roles × both languages, every tab opened) for a raw key or a
+`MISSING_MESSAGE` — none, except a 2.62.0 changelog line that quotes a key on purpose.
+
+**Verified.** `tsc` 0 · `lint` 0 errors (73 warnings, one fewer than before) · **4,853 unit tests** pass ·
+`pnpm build` · `changelog:check`. In Chromium against the demo database: the six auth screens (light, dark, 390 px), the
+header, the tour on desktop / phone / dark with no page-level horizontal scroll, notifications, profile, the driver's
+deliveries, the job and delivery pages.
+
+**Not done / to check — one owner decision first.** **The refund action on Admin → Paiements has never worked**:
+`PaymentsTable` enables it only when `status === "succeeded"`, a value `paymentStatusEnum` does not have (`captured`
+is what a paid row holds), so every row shows « Remboursement impossible ». Pre-existing, found by the sweep, **left as
+it is on purpose**: fixing it switches on a live-money action in production that has never been exercised, and an
+escalated job's money cannot be refunded here at all (`REFUND_NOT_LOCAL`). Cancelling a job still refunds through
+`cancelJob`. Say the word and it is a two-line change plus a `source` column in the admin payments API.
+ The tour's screenshots are French and English, **light theme only**, and show `v2.97.0` in the
+app header (taken before the bump). The seed creates no shipment photos (private storage has no local object), so the
+« photographié » step shows the capture control, not a photo. The staff-only surfaces still print raw server messages.
+
+---
+
 ## ✅ 2026-11-25 — The home page rebuilt on the shipit.framer.ai patterns, in EXPEDITOP's identity (2.97.0)
 
 *« https://shipit.framer.ai/ take this page design from pictures, navbar style, footer, animations, contents, and hero
@@ -794,8 +902,8 @@ found ». The workflow's Invoke step was parsed and run against a curl stub: `de
 error. No TypeScript changed here; `changelog:check` and `changelog.test.ts` (27) pass locally, and the full gate runs in this commit's dev build.
 
 **Known limits.** The owner then deleted `adventurous-radiance` (live), unticked Preview on the Neon connection
-(confirmed: every integration row is production-only) and chose the dev mail recipient — all the same day. Left:
-`VERCEL_TOKEN` for the weekly env audit. The flaky `location-picker-field.test.tsx` case (« going back to typing
+(confirmed: every integration row is production-only) and chose the dev mail recipient — all the same day.
+`VERCEL_TOKEN` followed on 2026-11-25, and the env audit has passed since (run `45515203150`). The flaky `location-picker-field.test.tsx` case (« going back to typing
 keeps the text… »), which failed once in the dev build of `9babbaf` and passed in the next build and 26 local runs,
 was fixed in 2.96.0's `0f3b881`: the test now waits for the reverse-geocoded text before switching modes.
 

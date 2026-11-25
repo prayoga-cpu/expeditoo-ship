@@ -69,7 +69,7 @@ describe("contactService.submit", () => {
     expect(input.conversationId).toBe("conv_1");
     expect(input.content).toContain(VALID.message);
     // The operator reading the thread needs to know how it arrived.
-    expect(input.content).toContain("[Contact form — carrier]");
+    expect(input.content).toContain("[Formulaire de contact — Devenir transporteur]");
   });
 
   it("still delivers when the support thread cannot be opened", async () => {

@@ -11,13 +11,13 @@ import { jobKeys } from "./useJobDetail";
 type Translate = (key: string) => string;
 
 /**
- * The server's `code` decides the sentence; the raw message is the last resort.
- * Mirrors `describe` in `useCarrierTrips` so both surfaces read the same way.
+ * The server's `code` decides the sentence. Mirrors `describe` in
+ * `useCarrierTrips` so both surfaces read the same way.
  *
- * Every code `carrierDiscoveryService` can throw is named here. An unmapped one
- * falls through to `error.message`, and a `CarrierDiscoveryError` carries its
- * own code as its message — so a gap in this table puts the literal string
- * `CONTACT_FAILED` in front of a user.
+ * Every code `carrierDiscoveryService` can throw is named here. An unmapped
+ * one reads as the translated fallback, never as `error.message`: a
+ * `CarrierDiscoveryError` carries its own code as its message, which put the
+ * literal string `CONTACT_FAILED` in front of a user.
  */
 function describe(error: unknown, t: Translate, fallbackKey: string): string {
   const code = error instanceof ApiError ? error.code : "";
@@ -31,7 +31,6 @@ function describe(error: unknown, t: Translate, fallbackKey: string): string {
   };
 
   if (known[code]) return t(known[code]);
-  if (error instanceof Error && error.message) return error.message;
   return t(fallbackKey);
 }
 

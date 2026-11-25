@@ -50,9 +50,7 @@ export function useReportIncident(shipmentId: string) {
       toast.error(
         code === "INCIDENT_RUN_CLOSED"
           ? t("runClosed")
-          : error instanceof Error
-            ? error.message
-            : t("failed")
+          : t("failed")
       );
     },
   });
@@ -90,7 +88,6 @@ export function useUpdateIncident() {
       toast.success(t("updated"));
       queryClient.invalidateQueries({ queryKey: ["incident-queue"] });
     },
-    onError: (error) =>
-      toast.error(error instanceof Error ? error.message : t("failed")),
+    onError: () => toast.error(t("failed")),
   });
 }

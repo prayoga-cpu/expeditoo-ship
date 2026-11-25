@@ -74,9 +74,7 @@ export function useAcceptOffer(listingId: string) {
             ? t("paymentMethodRequired")
             : error instanceof ApiError && PAYMENT_FAILURES.includes(error.code)
               ? t("paymentFailed")
-              : error instanceof Error
-                ? error.message
-                : t("failed");
+              : t("failed");
       toast.error(message);
     },
   });

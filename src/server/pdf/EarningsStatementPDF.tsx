@@ -107,8 +107,13 @@ export interface EarningsStatementPDFProps {
   emptyLabel: string;
 }
 
+// Pinned to Europe/Paris, as `invoice-pdf-props.ts` does: the host runs in UTC,
+// and a delivery completed just after midnight in Paris would be dated the day
+// before.
 const day = (date: Date | null) =>
-  date ? new Date(date).toLocaleDateString("fr-FR") : "—";
+  date
+    ? new Date(date).toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" })
+    : "—";
 
 export const EarningsStatementPDF = ({
   companyName,

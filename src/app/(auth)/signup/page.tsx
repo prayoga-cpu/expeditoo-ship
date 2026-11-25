@@ -4,7 +4,6 @@ import { Suspense, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Eye, EyeOff } from "lucide-react";
-import { BrandMark } from "@/components/ui/brand-mark";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuthActions } from "@/features/auth/hooks/useAuthActions";
@@ -17,8 +16,8 @@ import {
   AuthErrorNotice,
   AuthIntentNote,
   AuthSwitchLink,
+  AuthShell,
 } from "@/features/auth/ui";
-import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 
 export default function SignupPage() {
@@ -61,25 +60,7 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-primary/10 via-background to-background py-8 px-4 overflow-hidden relative">
-      {/* Animated gradient orbs */}
-      <div className="absolute top-20 left-10 w-72 h-72 bg-primary/20 rounded-full blur-3xl animate-pulse" />
-      <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse" />
-
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="relative z-10 w-full max-w-md"
-      >
-        {/* Logo */}
-        <div className="flex items-center justify-center gap-2 mb-8">
-          <BrandMark size={40} />
-          <span className="text-2xl font-bold text-foreground">EXPEDITOP</span>
-        </div>
-
-        {/* Signup Card */}
-        <div className="bg-card/50 backdrop-blur-sm rounded-2xl border border-border/50 p-8">
+    <AuthShell>
           <h1 className="text-2xl font-bold text-foreground mb-2">
             {t("title")}
           </h1>
@@ -101,7 +82,7 @@ export default function SignupPage() {
           {/* What the account is for. Nothing is chosen here: every account
               can post a request, and driving is applied for from inside the
               app — a role is never something a sign-up form sets. */}
-          <p className="mb-5 rounded-lg border border-border/50 bg-muted/40 p-3 text-xs leading-relaxed text-muted-foreground">
+          <p className="mb-5 rounded-lg border border-border bg-muted/40 p-3 text-xs leading-relaxed text-muted-foreground">
             {t("accountNote")}
           </p>
 
@@ -128,7 +109,7 @@ export default function SignupPage() {
                   placeholder={t("placeholderFirstName")}
                   {...register("firstName")}
                   disabled={isLoading}
-                  className={`bg-background/50 border-border/50 ${errors.firstName ? "border-destructive" : ""}`}
+                  className={`${errors.firstName ? "border-destructive" : ""}`}
                 />
                 {errors.firstName && (
                   <p className="text-destructive text-sm mt-1">
@@ -150,7 +131,7 @@ export default function SignupPage() {
                   placeholder={t("placeholderLastName")}
                   {...register("lastName")}
                   disabled={isLoading}
-                  className={`bg-background/50 border-border/50 ${errors.lastName ? "border-destructive" : ""}`}
+                  className={`${errors.lastName ? "border-destructive" : ""}`}
                 />
                 {errors.lastName && (
                   <p className="text-destructive text-sm mt-1">
@@ -175,7 +156,7 @@ export default function SignupPage() {
                 {...register("alias")}
                 disabled={isLoading}
                 aria-describedby="signup-alias-hint"
-                className={`bg-background/50 border-border/50 ${errors.alias ? "border-destructive" : ""}`}
+                className={`${errors.alias ? "border-destructive" : ""}`}
               />
               <p id="signup-alias-hint" className="text-muted-foreground text-xs mt-1">
                 {t("aliasHint")}
@@ -196,7 +177,7 @@ export default function SignupPage() {
                 placeholder={t("placeholderEmail")}
                 {...register("email")}
                 disabled={isLoading}
-                className={`bg-background/50 border-border/50 ${errors.email ? "border-destructive" : ""}`}
+                className={`${errors.email ? "border-destructive" : ""}`}
               />
               {errors.email && (
                 <p className="text-destructive text-sm mt-1">
@@ -214,7 +195,7 @@ export default function SignupPage() {
                   type={showPassword ? "text" : "password"}
                   {...register("password")}
                   disabled={isLoading}
-                  className={`bg-background/50 border-border/50 pr-10 ${errors.password ? "border-destructive" : ""}`}
+                  className={`pr-10 ${errors.password ? "border-destructive" : ""}`}
                 />
                 <button
                   type="button"
@@ -248,7 +229,7 @@ export default function SignupPage() {
                   type={showConfirmPassword ? "text" : "password"}
                   {...register("confirmPassword")}
                   disabled={isLoading}
-                  className={`bg-background/50 border-border/50 pr-10 ${errors.confirmPassword ? "border-destructive" : ""}`}
+                  className={`pr-10 ${errors.confirmPassword ? "border-destructive" : ""}`}
                 />
                 <button
                   type="button"
@@ -273,7 +254,7 @@ export default function SignupPage() {
             <Button
               type="submit"
               disabled={isLoading}
-              className="w-full rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground py-6 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="h-11 w-full font-semibold"
             >
               {isLoading ? t("loading") : t("submit")}
             </Button>
@@ -282,10 +263,10 @@ export default function SignupPage() {
           {/* Divider */}
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-border/50"></div>
+              <div className="w-full border-t border-border"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-card/50 text-muted-foreground">
+              <span className="px-2 bg-background text-muted-foreground">
                 {t("orContinueWith")}
               </span>
             </div>
@@ -297,7 +278,7 @@ export default function SignupPage() {
             onClick={handleGoogleSignIn}
             disabled={isLoading}
             variant="outline"
-            className="w-full rounded-xl border-border/50 hover:bg-muted/50 text-foreground py-6 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="h-11 w-full font-semibold"
           >
             <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
               <path
@@ -320,7 +301,7 @@ export default function SignupPage() {
             {t("signUpWithGoogle")}
           </Button>
 
-          <p className="text-xs text-muted-foreground text-center mt-4">
+          <p className="mt-5 text-xs leading-relaxed text-muted-foreground">
             {t("terms")}{" "}
             <a href="/terms" className="text-primary hover:underline">
               {t("termsOfService")}
@@ -330,8 +311,6 @@ export default function SignupPage() {
               {t("privacyPolicy")}
             </a>
           </p>
-        </div>
-      </motion.div>
-    </div>
+    </AuthShell>
   );
 }

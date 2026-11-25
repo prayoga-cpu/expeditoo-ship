@@ -5,6 +5,7 @@ import { addressesDal } from "@/server/dal/addresses.dal";
 import { invoicesDal } from "@/server/dal/invoices.dal";
 import { paymentsDal } from "@/server/dal/payments.dal";
 import { getUserById } from "@/server/dal/users.dal";
+import { formatCurrency } from "@/lib/currency";
 import {
     userInvoiceListSchema,
     type InvoiceQuery,
@@ -170,14 +171,12 @@ export const invoicesService = {
         preferences?: { notifications?: { email?: { invoiceReady?: boolean } } } | null
     ) {
         const isCreditNote = invoice.kind === "credit_note";
-        const amount = Math.abs(invoice.amount) / 100;
-
         await notificationsService
             .createNotification({
                 userId: invoice.userId,
                 type: "payment",
                 title: isCreditNote ? "Avoir disponible" : "Votre reçu est disponible",
-                message: `${invoice.invoiceNumber} — ${amount.toFixed(2)} €`,
+                message: `${invoice.invoiceNumber} — ${formatCurrency(Math.abs(invoice.amount))}`,
                 linkUrl: "/profile/invoices",
                 data: { invoiceId: invoice.id, invoiceNumber: invoice.invoiceNumber },
             })

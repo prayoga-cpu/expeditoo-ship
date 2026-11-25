@@ -566,9 +566,9 @@ describe("withdrawalsService.decide — telling the driver about a refusal", () 
 
     expect(notice()).toMatchObject({
       userId: "carrier-1",
-      title: "Withdrawal refused",
+      title: "Retrait refusé",
       message:
-        "Your withdrawal request was refused. What you are still owed is available again.",
+        "Votre demande de retrait a été refusée. Le montant qui vous est dû est de nouveau disponible.",
     });
   });
 
@@ -582,9 +582,9 @@ describe("withdrawalsService.decide — telling the driver about a refusal", () 
 
     expect(notice()).toMatchObject({
       userId: "carrier-1",
-      title: "Withdrawal cancelled",
+      title: "Retrait annulé",
       message:
-        "Your approved withdrawal was cancelled. What you are still owed is available again.",
+        "Votre retrait approuvé a été annulé. Le montant qui vous est dû est de nouveau disponible.",
     });
     expect(notice()?.message).not.toMatch(/not approved/);
   });

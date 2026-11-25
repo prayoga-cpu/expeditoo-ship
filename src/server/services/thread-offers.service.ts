@@ -360,7 +360,7 @@ export const threadOffersService = {
     });
 
     const content =
-      offer.message?.trim() || `${formatCurrency(offer.priceCents)} · ${first.day}`;
+      offer.message?.trim() || `${formatCurrency(offer.priceCents)} · ${dayLabel(first.day)}`;
     const message = await messagesDAL.createMessage({
       id: nanoid(),
       conversationId,
@@ -661,6 +661,25 @@ function toJob(listing: ConversationRow["listing"]): ThreadOfferJob {
   };
 }
 
-/** A locale-neutral one-liner for the inbox snippet, never for the card. */
+const DAY_LABEL = new Intl.DateTimeFormat("fr-FR", {
+  day: "numeric",
+  month: "short",
+  timeZone: "UTC",
+});
+
+/**
+ * « 27 nov. » for a slot's `YYYY-MM-DD`. The day is already the sender's own
+ * calendar day, so it is read at UTC midnight and printed in UTC: converting
+ * it to a zone could only move it. A malformed day is printed as it came.
+ */
+function dayLabel(day: string): string {
+  const date = new Date(`${day}T00:00:00Z`);
+  return Number.isNaN(date.getTime()) ? day : DAY_LABEL.format(date);
+}
+
+/**
+ * A one-liner for the inbox snippet, never for the card. French, like every
+ * other text the server writes for a person: no account stores a locale.
+ */
 const summarise = (input: CreateThreadOfferInput) =>
-  `${formatCurrency(input.priceCents)} · ${input.pickupDay}`;
+  `${formatCurrency(input.priceCents)} · ${dayLabel(input.pickupDay)}`;

@@ -14,6 +14,37 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.98.0] - 2026-11-25 · ux
+
+A full read of every word in both languages, a calmer look across the site and the app, and a new section that shows the app from the inside.
+
+- **The wording was reviewed line by line, in French and in English.** More than
+  550 labels and sentences were corrected: mistranslations, auction words left
+  over from an older product (« enchérir », "Buy now"), plurals that read
+  « 1 offres » or "1 days ago", and places where the two languages did not say
+  the same thing. One thing now keeps one name from screen to screen.
+- **Notifications are in French throughout.** « New offer received »,
+  « Delivery in transit », withdrawal notices and a dozen others were written in
+  English whatever your language; they now read like the emails you already get.
+- **Dates follow the language you chose**, not your browser's, on deliveries,
+  messages, documents and incidents. An error now shows a sentence telling you
+  what to do, never a code.
+- **The sign-in, sign-up and password screens were redrawn**: one plain layout
+  with the form on the page and a photograph beside it, the same on all six.
+- **The site's header keeps two doors**, « Log in » and « Sign up ». « Become a
+  carrier » is now among the header's links and in the menu.
+- **A new section on the home page, « Inside the app »**, follows one transport
+  through eight steps — the request, the offers, the choice, the messages, the
+  photos, the tracking, the receipt and earnings, and our team's checks — on real
+  screens of the app, on a computer and on a phone. The names in them are fictional.
+- **One set of status colours everywhere.** « En attente », « En cours de
+  livraison », « Livrée », « Annulée » and every other status now wear the same
+  colour on every screen, readable in light and dark.
+- **Tidier pages**: the empty band under card titles on a request and on a
+  delivery is gone, notifications are plain cards, and every page of the site has
+  its own title in the browser tab — including a page for an address that does
+  not exist.
+
 ## [2.97.0] - 2026-11-25 · ux
 
 A new home page: the same search card, a calmer and richer page around it.

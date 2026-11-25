@@ -119,7 +119,11 @@ function OtherEndpoints({ status }: { status: StripeStatus }) {
       <ul className="space-y-1.5">
         {others.map((endpoint) => (
           <li key={endpoint.url} className="flex flex-wrap items-center gap-2 text-xs">
-            <Badge variant="outline">{endpoint.status}</Badge>
+            <Badge variant="outline">
+              {t.has(`endpointStatus.${endpoint.status}`)
+                ? t(`endpointStatus.${endpoint.status}`)
+                : endpoint.status}
+            </Badge>
             <span className="font-mono [overflow-wrap:anywhere]">{endpoint.url}</span>
             {endpoint.kind === "thisPathOtherHost" && (
               <span className="text-warning">{t("others.otherHost")}</span>
@@ -160,7 +164,7 @@ export function StripeStatusPanel() {
   }
 
   return (
-    <Card className="space-y-5 p-5">
+    <Card className="gap-0 space-y-5 p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-start gap-3">
           <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/15">

@@ -67,9 +67,6 @@ describe("LandingNavbar, signed out", () => {
     expect(
       screen.getByRole("link", { name: "Log in / Sign up" }).tagName
     ).toBe("A");
-    expect(
-      screen.getAllByRole("button", { name: "Become a carrier" })
-    ).toHaveLength(1);
   });
 
   it("separates the two doors from `sm` up, and hides them on a phone", () => {
@@ -84,11 +81,14 @@ describe("LandingNavbar, signed out", () => {
     expect(visibleFrom(signUp)).toEqual({ phone: false, desktop: true });
   });
 
-  it("keeps « Become a carrier » for `sm` and up only", () => {
+  it("offers two doors and no third button: « Become a carrier » is a link in the bar", () => {
     renderNavbar();
 
-    const carrier = screen.getByRole("button", { name: "Become a carrier" });
-    expect(visibleFrom(carrier)).toEqual({ phone: false, desktop: true });
+    expect(screen.queryByRole("button", { name: "Become a carrier" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Become a carrier" })).toHaveAttribute(
+      "href",
+      "/#carriers"
+    );
   });
 
   it("says it in French", () => {

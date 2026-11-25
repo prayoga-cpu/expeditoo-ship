@@ -44,7 +44,7 @@ export interface StatCardProps {
 
 const TONE: Record<NonNullable<StatCardProps["tone"]>, string> = {
   default: "",
-  warning: "text-amber-600 dark:text-amber-500",
+  warning: "text-warning-ink",
   danger: "text-destructive",
 };
 

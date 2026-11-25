@@ -71,7 +71,7 @@ describe("MyShipments", () => {
     ];
     renderList();
     expect(screen.getByText(/^Retiré /)).toBeInTheDocument();
-    expect(screen.getByText(/^Livré /)).toBeInTheDocument();
+    expect(screen.getByText(/^Livrée /)).toBeInTheDocument();
   });
 
   it("links a carrier to « Mes paiements » and keeps pay from a driver-only account", () => {

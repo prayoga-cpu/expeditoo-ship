@@ -265,7 +265,7 @@ describe("ExpedionDashboard", () => {
     // counts only settlements Expedion reported to us, while the commission
     // total is what MOCK_PAYMENTS inflates. They used to be the other way round.
     expect(
-      screen.getByText("*paiements déclarés, non constatés")
+      screen.getByText("*déclarés par Expedion, non constatés")
     ).toBeInTheDocument();
     expect(
       screen.getByText(/\*avant frais Stripe \*paiements simulés/)

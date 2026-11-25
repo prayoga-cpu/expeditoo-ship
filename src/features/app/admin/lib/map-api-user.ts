@@ -39,7 +39,10 @@ function status(user: ApiUser): User["status"] {
 export function mapApiUser(user: ApiUser): User {
   return {
     id: user.id,
-    name: user.name || "Unknown",
+    // A nameless account is named by its e-mail, which every sentence that
+    // interpolates `name` can carry; the table prints `admin.users.noName`
+    // in its place rather than the address twice.
+    name: user.name || user.email,
     email: user.email,
     // Shared with the sidebar switcher rather than ranked again here. The
     // local copy fell through to `roles[0]` for anything it did not name, and

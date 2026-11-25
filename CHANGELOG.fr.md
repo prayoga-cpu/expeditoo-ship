@@ -18,6 +18,42 @@ L'historique antérieur à la `2.0.0` appartient à la place de marché de biens
 la v1 et n'est pas conservé : la première version ci-dessous est le commit qui a
 lancé le virage vers le transport.
 
+## [2.98.0] - 2026-11-25 · ux
+
+Une relecture de chaque mot dans les deux langues, un aspect plus sobre sur le site comme dans l'application, et une nouvelle section qui montre l'application de l'intérieur.
+
+- **Les textes ont été relus ligne par ligne, en français et en anglais.** Plus de
+  550 libellés et phrases ont été corrigés : erreurs de traduction, vocabulaire
+  d'enchères hérité d'un ancien produit (« enchérir », « Buy now »), pluriels qui
+  donnaient « 1 offres » ou « 1 days ago », et passages où les deux langues ne
+  disaient pas la même chose. Une même chose porte désormais le même nom d'un
+  écran à l'autre.
+- **Les notifications sont en français partout.** « New offer received »,
+  « Delivery in transit », les avis de retrait et une douzaine d'autres étaient
+  écrits en anglais quelle que soit votre langue ; ils se lisent maintenant comme
+  les e-mails que vous recevez déjà.
+- **Les dates suivent la langue que vous avez choisie**, et non celle de votre
+  navigateur, sur les livraisons, les messages, les documents et les incidents.
+  Une erreur affiche désormais une phrase qui dit quoi faire, jamais un code.
+- **Les écrans de connexion, d'inscription et de mot de passe ont été
+  redessinés** : une seule mise en page simple, le formulaire sur la page et une
+  photographie à côté, identique sur les six écrans.
+- **L'en-tête du site garde deux portes**, « Connexion » et « Inscription ».
+  « Devenir transporteur » figure maintenant parmi les liens de l'en-tête et dans
+  le menu.
+- **Une nouvelle section sur la page d'accueil, « Dans l'application »**, suit un
+  transport en huit étapes — la demande, les offres, le choix, les messages, les
+  photos, le suivi, le reçu et les gains, et les vérifications de notre équipe —
+  sur de vrais écrans de l'application, sur ordinateur et sur téléphone. Les noms
+  qui y figurent sont fictifs.
+- **Un seul jeu de couleurs de statut partout.** « En attente », « En cours de
+  livraison », « Livrée », « Annulée » et tous les autres statuts portent
+  désormais la même couleur sur chaque écran, lisible en clair comme en sombre.
+- **Des pages plus nettes** : la bande vide sous les titres de carte d'une
+  demande et d'une livraison a disparu, les notifications sont de simples cartes,
+  et chaque page du site a son propre titre dans l'onglet du navigateur — y
+  compris une page pour une adresse qui n'existe pas.
+
 ## [2.97.0] - 2026-11-25 · ux
 
 Une nouvelle page d'accueil : la même carte de recherche, une page plus calme et plus complète autour.

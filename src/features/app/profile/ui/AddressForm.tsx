@@ -415,7 +415,7 @@ export function AddressForm({ addressId }: AddressFormProps) {
           )}
 
           {!marker && !locationError && (
-            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-background/90 backdrop-blur px-4 py-2 rounded-full shadow-lg border text-sm font-medium animate-bounce">
+            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-background/90 backdrop-blur px-4 py-2 rounded-full shadow-lg border text-sm font-medium">
               {t("map.clickToPin")}
             </div>
           )}

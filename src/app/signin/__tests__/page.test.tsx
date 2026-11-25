@@ -41,7 +41,7 @@ function renderPage(query = "") {
   return render(<LoginPage />);
 }
 
-const emailField = () => screen.getByPlaceholderText("you@example.com");
+const emailField = () => screen.getByPlaceholderText("emailPlaceholder");
 
 afterEach(() => vi.clearAllMocks());
 

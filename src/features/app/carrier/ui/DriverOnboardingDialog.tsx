@@ -64,7 +64,7 @@ export function DriverOnboardingDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <span className="mx-auto mb-1 flex h-11 w-11 items-center justify-center rounded-full bg-success/15 text-success sm:mx-0">
+          <span className="tone-success mx-auto mb-1 flex h-11 w-11 items-center justify-center rounded-full sm:mx-0">
             <Truck className="h-6 w-6" />
           </span>
           <DialogTitle>{application ? t("statusTitle") : t("title")}</DialogTitle>

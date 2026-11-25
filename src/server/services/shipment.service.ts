@@ -386,7 +386,7 @@ export const shipmentService = {
       "carrier"
     );
 
-    await notify(driverId, "shipment_assigned", "New delivery assigned", shipmentId);
+    await notify(driverId, "shipment_assigned", "Nouvelle livraison attribuée", shipmentId);
     reportToExpedion(ownership.listingId, "ASSIGNED", shipmentId);
 
     return updated;
@@ -502,6 +502,19 @@ async function notify(
 }
 
 /**
+ * What the requester reads in the bell. French, like the mail the same status
+ * change sends (`ShipmentUpdateEmail`); the notification is printed as stored.
+ */
+const SHIPMENT_UPDATE_TITLES: Record<ShipmentStatusType, string> = {
+  PENDING: "Livraison en préparation",
+  ASSIGNED: "Transporteur attribué",
+  PICKED_UP: "Colis récupéré",
+  IN_TRANSIT: "En cours de livraison",
+  DELIVERED: "Livré",
+  CANCELLED: "Livraison annulée",
+};
+
+/**
  * The push/in-app half of a shipment status change, gated by
  * `preferences.notifications.inApp.shipmentUpdates` (default true) —
  * the email half below has its own independent gate
@@ -527,7 +540,7 @@ async function notifyShipmentUpdate(
   await notify(
     shipperId,
     "shipment_update",
-    `Delivery ${next.toLowerCase().replace("_", " ")}`,
+    SHIPMENT_UPDATE_TITLES[next],
     shipmentId
   );
 }

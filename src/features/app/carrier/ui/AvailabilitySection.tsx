@@ -50,7 +50,7 @@ export function AvailabilitySection({
   };
 
   return (
-    <Card className="space-y-4 p-4 sm:p-6">
+    <Card className="gap-0 space-y-4 p-4 sm:p-6">
       <div>
         <h2 className="font-semibold">{t("title")}</h2>
         <p className="mt-1 text-sm text-muted-foreground">

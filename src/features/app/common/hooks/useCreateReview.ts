@@ -43,8 +43,10 @@ export function useCreateReview() {
 
             router.refresh();
         },
-        onError: (error: Error) => {
-            toast.error(error.message);
+        // Not `error.message`: a `ReviewError` carries its code as its
+        // message, and the fallback below it is English.
+        onError: () => {
+            toast.error(t("failed"));
         },
     });
 }

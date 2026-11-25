@@ -8,7 +8,6 @@ import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 import { BrandWordmark } from "@/components/ui/brand-mark";
 import { useMenuDialog } from "../hooks/useMenuDialog";
-import { LandingGatedButton } from "./LandingGatedButton";
 import { LandingLangToggle, LandingThemeToggle } from "./LandingControls";
 import { LandingMenu } from "./LandingMenu";
 import { LP_BTN_PRIMARY } from "./styles";
@@ -71,14 +70,18 @@ function BarLogo() {
   );
 }
 
-/** From `xl` only: below it the doors on the right need the room. */
-function BarLinks() {
+/**
+ * From `xl` only: below it the doors on the right need the room. The third
+ * link is where « Devenir transporteur » lives for a visitor with no session
+ * (2.98.0): it was a third button on the right, and the bar keeps two.
+ */
+function BarLinks({ signedIn }: { signedIn: boolean }) {
   const t = useTranslations("marketing.navbar");
   return (
     <nav className="hidden min-w-0 flex-auto items-center justify-center gap-6 xl:flex">
       {NAV_LINKS.map((link) => (
         <Link key={link.href} href={link.href} className="text-[14.5px] font-medium whitespace-nowrap text-[var(--lp-muted)]">
-          {t(link.key)}
+          {t(link.key === "carriers" && !signedIn ? "becomeCarrier" : link.key)}
         </Link>
       ))}
     </nav>
@@ -137,7 +140,7 @@ export function LandingNavbar({ overlay = false }: { overlay?: boolean }) {
     >
       <div data-solid={solid} className={cn(BAR, solid ? SOLID : GLASS)}>
         <BarLogo />
-        <BarLinks />
+        <BarLinks signedIn={isAuthenticated} />
         <div className="ml-auto flex items-center gap-1.5 whitespace-nowrap sm:gap-3">
           {/* The two preferences sit in the bar from `lg`; below it they are
               in the menu, which every width can open. */}
@@ -164,17 +167,15 @@ function SignedInAction() {
   );
 }
 
-const LINK_CLASS = "hidden text-[14.5px] font-medium text-[var(--lp-muted)] sm:block";
-
 /**
- * What the header offers somebody with no session.
+ * What the header offers somebody with no session: two doors, never more.
  *
  * Below `sm` there is room for one control, and the client asked it to say
  * what it does: « Connexion / Inscription », straight to `/signin` (which has
- * « S'inscrire » at its top) — not the carrier flow's animation, which is for
- * the hero. It is two lines on purpose: on one line the label is 130px and the
- * bar ran out of room (client photo, 19 Nov). From `sm` up the two doors are
- * separate links and « Devenir transporteur » keeps its flow.
+ * « S'inscrire » at its top). It is two lines on purpose: on one line the
+ * label is 130px and the bar ran out of room (client photo, 19 Nov). From
+ * `sm` up it is « Connexion » as a link and « Inscription » as the one filled
+ * button. « Devenir transporteur » is in the bar's links and in the menu.
  */
 function SignedOutActions() {
   const t = useTranslations("marketing.navbar");
@@ -187,17 +188,12 @@ function SignedOutActions() {
       >
         {t("loginOrSignUp")}
       </Link>
-      <Link href="/signin" className={LINK_CLASS}>
+      <Link href="/signin" className="hidden px-1 text-[14.5px] font-medium text-[var(--lp-muted)] sm:block">
         {t("login")}
       </Link>
-      <Link href="/signup" className={LINK_CLASS}>
+      <Link href="/signup" className={`${LP_BTN_PRIMARY} hidden px-4 py-[9px] text-[14.5px] sm:block`}>
         {t("signUp")}
       </Link>
-      <LandingGatedButton
-        intent="carrier"
-        label={t("becomeCarrier")}
-        className={`${LP_BTN_PRIMARY} hidden px-4 py-[9px] text-[14.5px] sm:block`}
-      />
     </>
   );
 }

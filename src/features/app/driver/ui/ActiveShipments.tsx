@@ -7,7 +7,7 @@ import Link from "next/link";
 import { routeTowns } from "@/lib/route-label";
 import { useDriverShipments } from "../hooks/useDriverShipments";
 import { ShipmentStatusBadge } from "./ShipmentStatusBadge";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 /**
  * PENDING belongs here: a job the carrier has just won lands unassigned, and
@@ -23,6 +23,7 @@ const ACTIVE_STATUSES = [
 export function ActiveShipments() {
   const t = useTranslations("driver.dashboard.activeDeliveries");
   const tCommon = useTranslations("common.buttons");
+  const locale = useLocale();
   const { shipments } = useDriverShipments();
 
   const activeShipments = shipments.filter((shipment) =>
@@ -73,7 +74,7 @@ export function ActiveShipments() {
                     <Calendar className="w-3 h-3" />
                     <span>
                       {shipment.scheduledPickup
-                        ? new Date(shipment.scheduledPickup).toLocaleDateString()
+                        ? new Date(shipment.scheduledPickup).toLocaleDateString(locale)
                         : t("flexible")}
                     </span>
                   </div>

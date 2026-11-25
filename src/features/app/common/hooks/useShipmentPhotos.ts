@@ -92,6 +92,6 @@ function messageFor(
     case "INVALID_FILE_TYPE":
       return t("errors.invalidType");
     default:
-      return error instanceof Error ? error.message : t("errors.generic");
+      return t("errors.generic");
   }
 }

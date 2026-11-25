@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+
 import { changelogService } from "@/server/services/changelog.service";
 
 import { ChangelogShell } from "./ChangelogShell";
@@ -14,6 +16,8 @@ import { ChangelogShell } from "./ChangelogShell";
  * `LocaleProvider` withholds the intl provider on the server.
  */
 export const dynamic = "force-static";
+
+export const metadata: Metadata = { title: "Ce qui a changé" };
 
 export default function ChangelogPage() {
   return <ChangelogShell releases={changelogService.getReleases()} />;

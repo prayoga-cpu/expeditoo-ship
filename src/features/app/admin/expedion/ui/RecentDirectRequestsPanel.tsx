@@ -86,6 +86,7 @@ export function RecentDirectRequestsPanel({
 function DirectRequestRow({ row }: { row: AdminListing }) {
   const t = useTranslations("admin.expedion.directRequests");
   const tStatus = useTranslations("myJobs.status");
+  const tUsers = useTranslations("admin.users");
   const format = useFormatter();
 
   return (
@@ -106,7 +107,10 @@ function DirectRequestRow({ row }: { row: AdminListing }) {
               <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden />
               {row.pickupCity} → {row.dropoffCity}
             </span>
-            <span>{t("requester", { name: row.shipper.name })}</span>
+            <span>{t("requester", {
+                name:
+                  row.shipper.name || row.shipper.email || tUsers("noName"),
+              })}</span>
             <span>
               {format.dateTime(new Date(row.createdAt), {
                 dateStyle: "medium",

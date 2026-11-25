@@ -82,10 +82,10 @@ const NOT_ACTIONABLE_TONE = "text-muted-foreground";
 const TONE: Record<QuoteActionKind, string> = {
   escalate: "bg-destructive text-white border-transparent",
   assign:
-    "bg-amber-500/15 text-amber-700 border-amber-500/30 dark:text-amber-400",
+    "tone-warning",
   price: "bg-primary/15 text-primary border-primary/30",
   storage:
-    "bg-amber-500/15 text-amber-700 border-amber-500/30 dark:text-amber-400",
+    "tone-warning",
   awaitingPayment: "bg-muted text-muted-foreground border-transparent",
   awaitingClient: "bg-muted text-muted-foreground border-transparent",
   inProgress: "bg-muted text-muted-foreground border-transparent",
@@ -323,7 +323,7 @@ export function RecentQuotesPanel({
               </div>
             ) : null}
             {row.original.owned ? null : (
-              <div className="text-xs text-amber-600 dark:text-amber-500">
+              <div className="text-xs text-warning-ink">
                 {t("table.airtableImport")}
               </div>
             )}
@@ -389,7 +389,7 @@ export function RecentQuotesPanel({
                   className={cn(
                     "text-[10px]",
                     hours <= 4
-                      ? "text-amber-600 dark:text-amber-500"
+                      ? "text-warning-ink"
                       : "text-muted-foreground"
                   )}
                   title={exact(row.original.escalateAfter, locale)}

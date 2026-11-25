@@ -85,8 +85,8 @@ export function useSettings() {
       queryClient.setQueryData(["preferences"], data);
       toast.success(t("updated"));
     },
-    onError: (error: Error) => {
-      toast.error(error.message || t("updateFailed"));
+    onError: () => {
+      toast.error(t("updateFailed"));
     },
   });
 

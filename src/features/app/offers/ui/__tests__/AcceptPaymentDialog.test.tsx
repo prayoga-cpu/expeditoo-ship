@@ -88,6 +88,16 @@ beforeEach(() => {
   });
 });
 
+
+/**
+ * The dialog's own « Fermer » button, not the cross in its corner: since
+ * 2.98.0 the cross carries a translated name too, so both answer to it.
+ */
+function footerClose() {
+  const named = screen.getAllByRole("button", { name: t.close });
+  return named.find((button) => button.getAttribute("data-slot") !== "dialog-close");
+}
+
 describe("AcceptPaymentDialog — a job that is paid here", () => {
   beforeEach(() => {
     vi.spyOn(offersApi, "paymentQuote").mockResolvedValue(quote());
@@ -171,7 +181,7 @@ describe("AcceptPaymentDialog — a job that is paid here", () => {
     // The card may have been debited: no second Pay, and the page behind is
     // refetched so the requester can see what actually happened.
     expect(screen.queryByRole("button", { name: /^Payer/ })).toBeNull();
-    expect(screen.getByRole("button", { name: t.close })).toBeTruthy();
+    expect(footerClose()).toBeTruthy();
     expect(invalidate).toHaveBeenCalled();
   });
 
@@ -248,7 +258,7 @@ describe("AcceptPaymentDialog — a quote that cannot be given", () => {
 
     expect(await screen.findByText(t.errors.COORDINATES_REQUIRED)).toBeTruthy();
     expect(screen.queryByRole("button", { name: /^Payer/ })).toBeNull();
-    expect(screen.getByRole("button", { name: t.close })).toBeTruthy();
+    expect(footerClose()).toBeTruthy();
     // No way to edit was handed in (the operator's queue): none is offered.
     expect(screen.queryByRole("button", { name: t.next.editRequest })).toBeNull();
   });

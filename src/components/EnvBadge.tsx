@@ -17,7 +17,7 @@ export function EnvBadge() {
     <div
       aria-hidden
       data-testid="env-badge"
-      className="pointer-events-none fixed left-1/2 top-[env(safe-area-inset-top)] z-[100] -translate-x-1/2 rounded-b-md bg-amber-400 px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-widest text-black shadow-sm"
+      className="pointer-events-none fixed left-1/2 top-[env(safe-area-inset-top)] z-[100] -translate-x-1/2 rounded-b-md bg-warning px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-widest text-black shadow-sm"
     >
       Dev
     </div>

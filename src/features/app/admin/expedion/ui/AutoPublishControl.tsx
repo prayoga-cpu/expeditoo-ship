@@ -6,6 +6,9 @@ import { toast } from "sonner";
 import { Pause, Play } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { ApiError } from "@/lib/fetcher";
+
+import { useExpedionErrorToast } from "../hooks/useExpedionReport";
 
 /** How long a resumed quote waits before publishing — the bridge's own window. */
 const RESUME_AFTER_MS = 48 * 3_600_000;
@@ -27,7 +30,9 @@ export function AutoPublishControl({
   escalateAfter: string | Date | null;
 }) {
   const t = useTranslations("admin.expedion.autoPublish");
+  const te = useTranslations("admin.expedion.errors");
   const queryClient = useQueryClient();
+  const onFailure = useExpedionErrorToast();
   const parked = !escalateAfter;
 
   const change = useMutation({
@@ -37,14 +42,21 @@ export function AutoPublishControl({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ escalateAfter: next ? next.toISOString() : null }),
       });
-      const body = (await res.json()) as { success: boolean; error?: { message?: string } };
-      if (!res.ok || !body.success) throw new Error(body.error?.message ?? t("failed"));
+      const body = (await res.json()) as { success: boolean; error?: { code?: string } };
+      if (!res.ok || !body.success) {
+        throw new ApiError(body.error?.code ?? "REQUEST_FAILED", "", res.status);
+      }
     },
     onSuccess: (_data, next) => {
       queryClient.invalidateQueries({ queryKey: ["admin", "expedion"] });
       toast.success(next ? t("resumed") : t("paused"));
     },
-    onError: (error: Error) => toast.error(error.message),
+    // A code staff actually hit reads its own sentence; anything else reads
+    // this control's own line rather than the page-wide generic.
+    onError: (error: Error) =>
+      error instanceof ApiError && te.has(error.code)
+        ? onFailure(error)
+        : toast.error(t("failed")),
   });
 
   return (

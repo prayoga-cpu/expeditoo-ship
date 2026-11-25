@@ -4,12 +4,12 @@ import type { ShipmentStatus } from "../api/deliveries.api";
 
 /** Theme-token tones so the badge reads correctly in light and dark. */
 const STATUS_TONE: Record<ShipmentStatus, string> = {
-  PENDING: "bg-warning/15 text-warning border-warning/30",
+  PENDING: "tone-warning",
   ASSIGNED: "bg-primary/15 text-primary border-primary/30",
   PICKED_UP: "bg-primary/15 text-primary border-primary/30",
   IN_TRANSIT: "bg-primary/15 text-primary border-primary/30",
-  DELIVERED: "bg-success/15 text-success border-success/30",
-  CANCELLED: "bg-destructive/15 text-destructive border-destructive/30",
+  DELIVERED: "tone-success",
+  CANCELLED: "tone-danger",
 };
 
 export function ShipmentStatusBadge({ status }: { status: ShipmentStatus }) {

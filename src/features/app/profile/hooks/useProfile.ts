@@ -65,11 +65,12 @@ export function useProfile() {
   // User data from auth context with real rating stats
   const user = useMemo(
     () => ({
-      name: userData?.name || "User",
+      // Empty when the account has none: the screen names it from the
+      // catalogue (`common.unnamedUser`), never from a word written here.
+      name: userData?.name || "",
       email: userData?.email || "",
       rating: stats?.average || 0,
       reviews: stats?.total || 0,
-      type: "Particulier",
       image: userData?.image,
       isVerified: userData?.isVerified ?? false,
     }),

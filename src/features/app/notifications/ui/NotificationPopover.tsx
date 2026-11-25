@@ -55,7 +55,7 @@ export function NotificationPopover({
             variant="ghost"
             size="sm"
             onClick={onMarkAllAsRead}
-            className="h-auto py-1 px-2 text-xs font-medium hover:bg-primary/10 hover:text-primary"
+            className="h-auto py-1 px-2 text-xs font-medium"
           >
             {t("markAllRead")}
           </Button>
@@ -65,8 +65,8 @@ export function NotificationPopover({
       {/* Unread Messages Banner */}
       {messageUnreadCount > 0 && (
         <Link href="/messages" onClick={onClose}>
-          <div className="flex items-center gap-3 px-4 py-3 bg-primary/5 border-b hover:bg-primary/10 transition-colors cursor-pointer">
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+          <div className="flex items-center gap-3 px-4 py-3 border-b hover:bg-muted/50 transition-colors cursor-pointer">
+            <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
               <MessageCircle className="w-5 h-5 text-primary" />
             </div>
             <div className="flex-1 min-w-0">
@@ -95,7 +95,7 @@ export function NotificationPopover({
         ) : messageUnreadCount === 0 ? (
           // Empty State - only show if no messages either
           <div className="text-center py-12 px-4">
-            <div className="w-12 h-12 mx-auto mb-3 rounded-2xl bg-muted/50 flex items-center justify-center">
+            <div className="w-12 h-12 mx-auto mb-3 rounded-lg bg-muted flex items-center justify-center">
               <Bell className="w-6 h-6 text-muted-foreground/50" />
             </div>
             <h4 className="text-base font-semibold text-foreground mb-1">
@@ -114,7 +114,7 @@ export function NotificationPopover({
           <Link href="/notifications" onClick={onClose}>
             <Button
               variant="ghost"
-              className="w-full text-sm font-medium hover:bg-primary/10 hover:text-primary"
+              className="w-full text-sm font-medium"
             >
               {t("popover.viewAll")}
             </Button>
