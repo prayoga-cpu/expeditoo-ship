@@ -111,6 +111,46 @@ const RELEASABLE_INTENT_STATUSES = new Set<Stripe.PaymentIntent.Status>([
   "requires_capture",
 ]);
 
+/** How far back in the customer's intents to look for leftovers of this offer. */
+const STALE_INTENT_LOOKBACK = 20;
+
+/**
+ * Cancels what earlier attempts on this offer left behind.
+ *
+ * Every press of Pay mints a fresh intent, so a declined card, or a 3-D Secure
+ * challenge that failed or was walked away from, leaves one at
+ * `requires_payment_method` and the next attempt leaves another. Nothing was
+ * ever authorised on them and nothing can capture them — they are only clutter
+ * in the Dashboard, where support reads them as failed payments
+ * (docs/specs/payment_polish_2_99_3_spec.md §2).
+ *
+ * Only that one status, and only this requester's intents for this offer: a
+ * card held (`requires_capture`), a challenge under way (`requires_action`) or
+ * a payment being processed is somebody's money and is never touched here.
+ * Contained — a cleanup that fails must not fail the payment it precedes.
+ */
+async function cancelStaleAcceptIntents(
+  customerId: string,
+  award: { offerId: string; shipperId: string }
+) {
+  try {
+    const recent = await stripe.paymentIntents.list({
+      customer: customerId,
+      limit: STALE_INTENT_LOOKBACK,
+    });
+    const stale = recent.data.filter(
+      (intent) =>
+        intent.status === "requires_payment_method" &&
+        intent.metadata?.purpose === ACCEPT_INTENT_PURPOSE &&
+        intent.metadata.offerId === award.offerId &&
+        intent.metadata.shipperId === award.shipperId
+    );
+    await Promise.all(stale.map((intent) => stripe.paymentIntents.cancel(intent.id)));
+  } catch (error) {
+    console.error(`Could not clear stale intents for offer ${award.offerId}`, error);
+  }
+}
+
 /** The card an off-session charge will be put on, or null if there is none. */
 async function firstSavedCard(customerId: string): Promise<string | null> {
   return (await firstSavedCardDetails(customerId))?.id ?? null;
@@ -741,6 +781,10 @@ export const paymentsService = {
     }
 
     const customerId = await params.resolveCustomer();
+    await cancelStaleAcceptIntents(customerId, {
+      offerId: params.offerId,
+      shipperId: params.shipperId,
+    });
     const feeBasisPoints = await platformSettingsService.getFeeBasisPoints();
     const platformFeeCents = platformFeeFor(params.amountCents, feeBasisPoints);
 

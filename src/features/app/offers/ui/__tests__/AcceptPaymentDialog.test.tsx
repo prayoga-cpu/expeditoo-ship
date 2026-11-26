@@ -23,10 +23,11 @@ globalThis.ResizeObserver ??= NoopResizeObserver as never;
 // and offers once the accept call has answered, or has not
 // (docs/specs/pay_at_accept_spec.md §3.5). The real form is verified in
 // Chromium against Stripe test mode.
+const stripeStub = vi.hoisted(() => ({ handleNextAction: vi.fn() }));
 vi.mock("@stripe/react-stripe-js", () => ({
   Elements: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   PaymentElement: () => <div data-testid="card-form" />,
-  useStripe: () => ({}),
+  useStripe: () => stripeStub,
   useElements: () => ({}),
 }));
 vi.mock("@/lib/stripe-client", () => ({ getStripe: () => Promise.resolve({}) }));
@@ -58,7 +59,7 @@ function renderDialog(
   });
   const invalidate = vi.spyOn(client, "invalidateQueries");
 
-  render(
+  const view = render(
     <QueryClientProvider client={client}>
       <NextIntlClientProvider locale="fr" messages={fr}>
         <AcceptPaymentDialog
@@ -72,7 +73,7 @@ function renderDialog(
       </NextIntlClientProvider>
     </QueryClientProvider>
   );
-  return { invalidate };
+  return { invalidate, unmount: view.unmount };
 }
 
 /** The Pay button of a quote that charges 198,00 €. */
@@ -293,7 +294,13 @@ describe("AcceptPaymentDialog — a quote that cannot be given", () => {
 // payment_alternatives_spec.md §3: PayPal approves the payment on its own
 // site and sends the requester back; the dialog then finishes the award once.
 describe("AcceptPaymentDialog — back from a method that left the page", () => {
-  const back = (failed = false) => ({ offerId: "offer-1", paymentIntentId: "pi_paypal", failed });
+  // One id per test: a return is finished once per page load, so a shared id
+  // would hand the second test the first one's answer (see `finishOnce`).
+  const back = (failed = false, paymentIntentId = "pi_paypal") => ({
+    offerId: "offer-1",
+    paymentIntentId,
+    failed,
+  });
 
   beforeEach(() => {
     vi.spyOn(offersApi, "paymentQuote").mockResolvedValue(quote());
@@ -301,11 +308,11 @@ describe("AcceptPaymentDialog — back from a method that left the page", () => 
 
   it("finishes the award with the payment approved there, once", async () => {
     const onConfirm = vi.fn().mockResolvedValue({});
-    renderDialog(onConfirm, undefined, back());
+    renderDialog(onConfirm, undefined, back(false, "pi_paypal_once"));
 
     await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
     expect(onConfirm).toHaveBeenCalledTimes(1);
-    expect(onConfirm).toHaveBeenCalledWith("pi_paypal");
+    expect(onConfirm).toHaveBeenCalledWith("pi_paypal_once");
     // Nothing is asked of the requester a second time.
     expect(offersApi.preparePayment).not.toHaveBeenCalled();
   });
@@ -325,10 +332,72 @@ describe("AcceptPaymentDialog — back from a method that left the page", () => 
     renderDialog(
       vi.fn().mockRejectedValue(new ApiError("PAYMENT_NOT_AUTHORISED", "", 402)),
       undefined,
-      back()
+      back(false, "pi_paypal_unapproved")
     );
 
     expect(await screen.findByText(t.errors.PAYMENT_NOT_AUTHORISED)).toBeTruthy();
     expect(screen.getByRole("button", { name: t.next.retry })).toBeTruthy();
+  });
+
+  // payment_polish_2_99_3_spec.md §1. Finishing the award re-reads the offers
+  // and the dialog behind it can be rebuilt while the return's parameters are
+  // still in the address: a second instance, the same approved payment.
+  it("calls accept once even when the dialog is rebuilt while the return is still in the address", async () => {
+    const onConfirm = vi.fn().mockResolvedValue({});
+    const first = renderDialog(onConfirm, undefined, back(false, "pi_paypal_rebuilt"));
+    await waitFor(() => expect(onConfirm).toHaveBeenCalledTimes(1));
+
+    first.unmount();
+    renderDialog(onConfirm, undefined, back(false, "pi_paypal_rebuilt"));
+    await waitFor(() => expect(onOpenChange.mock.calls.length).toBeGreaterThanOrEqual(2));
+
+    expect(onConfirm).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows the same refusal in the rebuilt dialog, without asking the server again", async () => {
+    const onConfirm = vi
+      .fn()
+      .mockRejectedValue(new ApiError("PAYMENT_NOT_AUTHORISED", "", 402));
+    const first = renderDialog(onConfirm, undefined, back(false, "pi_paypal_refused_twice"));
+    expect(await screen.findByText(t.errors.PAYMENT_NOT_AUTHORISED)).toBeTruthy();
+
+    first.unmount();
+    renderDialog(onConfirm, undefined, back(false, "pi_paypal_refused_twice"));
+
+    expect(await screen.findByText(t.errors.PAYMENT_NOT_AUTHORISED)).toBeTruthy();
+    expect(onConfirm).toHaveBeenCalledTimes(1);
+  });
+});
+
+// payment_polish_2_99_3_spec.md §3: Stripe says what went wrong with a card,
+// never what to do about it, so the dialog says that too.
+describe("AcceptPaymentDialog — a card Stripe refuses", () => {
+  const challenge = async (error: { type: string; message: string }) => {
+    vi.spyOn(offersApi, "paymentQuote").mockResolvedValue(quote());
+    vi.spyOn(offersApi, "preparePayment").mockResolvedValue({
+      paymentIntentId: "pi_3ds",
+      status: "requires_action",
+      clientSecret: "pi_3ds_secret",
+    });
+    stripeStub.handleNextAction.mockResolvedValue({ error });
+    renderDialog(vi.fn());
+    fireEvent.click(await payButton());
+  };
+
+  it("names another card or method as the next step after a card error", async () => {
+    await challenge({ type: "card_error", message: "Votre carte a été refusée." });
+
+    expect(
+      await screen.findByText(`Votre carte a été refusée. ${t.errors.cardNextStep}`)
+    ).toBeTruthy();
+    // The form is still there: the next step is something to do right here.
+    expect(await payButton()).toBeTruthy();
+  });
+
+  it("leaves a failure that is not the card's own as Stripe worded it", async () => {
+    await challenge({ type: "api_error", message: "Stripe is having trouble." });
+
+    expect(await screen.findByText("Stripe is having trouble.")).toBeTruthy();
+    expect(screen.queryByText(/autre carte ou un autre moyen/)).toBeNull();
   });
 });

@@ -14,6 +14,15 @@ The engineering half of each release lives in [`STATUS.md`](./STATUS.md).
 History before `2.0.0` belongs to the v1 goods marketplace and is not recorded:
 the first release below is the commit that began the transport pivot.
 
+## [2.99.3] - 2026-11-26 · fix
+
+Paying to accept an offer behaves better when a card is refused and when you come back from PayPal.
+
+- **A refused card tells you what to do next.** The payment window already said the card was declined; it now adds « Try another card or another payment method », and the form stays open so you can.
+- **Coming back from PayPal finishes the booking once.** The window could ask the server to confirm the same payment twice within a split second. Nothing was ever charged twice, but it now asks once.
+- **Failed attempts no longer pile up in the payment records.** Each declined try used to leave an unused payment attempt behind, which support could read as a failed payment. They are cleared when you try again.
+- **A driver finishing Stripe onboarding can no longer be sent to a developer address.** If the site's address setting were ever missing, they would have landed on a page that does not exist; they now land on the Expeditop site.
+
 ## [2.99.2] - 2026-11-25 · fix
 
 The home page headline says exactly what the client wrote.

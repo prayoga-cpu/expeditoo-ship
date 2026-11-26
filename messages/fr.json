@@ -5191,7 +5191,8 @@
       "FORBIDDEN_NOT_OPERATOR": "Seul un opérateur peut attribuer cette mission.",
       "CARRIER_ABSENT": "Ce transporteur s'est déclaré absent et ne peut pas être retenu pour le moment.",
       "PAYMENT_INTENT_MISMATCH": "Le prix de cette offre vient de changer. Fermez cette fenêtre et rouvrez l'offre pour payer le nouveau montant.",
-      "PAYMENT_NOT_AUTHORISED": "Le paiement n'a pas été confirmé. Réessayez, avec ce moyen de paiement ou un autre."
+      "PAYMENT_NOT_AUTHORISED": "Le paiement n'a pas été confirmé. Réessayez, avec ce moyen de paiement ou un autre.",
+      "cardNextStep": "Essayez une autre carte ou un autre moyen de paiement."
     },
     "notDebited": "Votre carte n'a pas été débitée.",
     "next": {

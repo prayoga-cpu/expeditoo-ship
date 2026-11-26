@@ -225,7 +225,7 @@ without an `sk_live_` key, so an accept there takes real money.
 Every mock carries a `TODO(EXPEDITOO-TESTING)` marker; `grep -rn` it before shipping.
 
 **Gates — all green.** `npx tsc --noEmit` 0 errors · `pnpm lint` 0 errors ·
-4,848 unit tests pass (2.98.0) · `pnpm build` succeeds. The same gate runs inside
+4,892 unit tests pass (2.99.3) · `pnpm build` succeeds. The same gate runs inside
 every `dev` and production Vercel build before anything migrates (`AGENTS.md` §4a).
 
 **Done**
@@ -865,13 +865,13 @@ every `dev` and production Vercel build before anything migrates (`AGENTS.md` §
   unaffected and every surface prints the same three lines as text beside the
   photo, so a fontless deployment loses the convenience, not the evidence.
   `TODO(EXPEDITOO-TESTING)` in `photo-stamp.service.ts`.
-- **Real Stripe charging is live in production and has never been exercised
-  there** — Admin → Paramètres → « Paiements Stripe » now says so from inside
-  production, and turns green after the first real charge. `MOCK_PAYMENTS` is unset in Vercel, so an accept takes real money
-  through the accept dialog — verified against Stripe **test** mode only (3-D
-  Secure included). As of 2026-10-01 production's only payment rows are
-  beta-seed mocks, so the first real accept is the first live charge (STATUS →
-  Operator to-do asks for one real accept-and-cancel). Locally the flag still
+- **Real Stripe charging is live in production and was exercised on
+  2026-11-26** (a €1.10 accept, refunded by cancelling, credit note raised;
+  the webhook reached `www.expeditop.fr` with a live event — STATUS 2.99.3).
+  Admin → Paramètres → « Paiements Stripe » reads the same from inside
+  production. `MOCK_PAYMENTS` is unset in Vercel, so an accept takes real money
+  through the accept dialog; production's `payments` rows are two real,
+  refunded charges (31 Oct and 26 Nov) and three beta-seed mocks. Locally the flag still
   short-circuits the charge, and a `pi_mock_` row is a captured payment with
   no money behind it (`docs/TESTING_MOCKS.md` §1).
 - **Driver pay on either lane.** Escalation hands the driver the full
