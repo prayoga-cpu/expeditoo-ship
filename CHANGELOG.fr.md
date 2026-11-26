@@ -18,6 +18,15 @@ L'historique antérieur à la `2.0.0` appartient à la place de marché de biens
 la v1 et n'est pas conservé : la première version ci-dessous est le commit qui a
 lancé le virage vers le transport.
 
+## [2.99.3] - 2026-11-26 · fix
+
+Payer pour accepter une offre se passe mieux quand une carte est refusée et quand on revient de PayPal.
+
+- **Une carte refusée dit quoi faire ensuite.** La fenêtre de paiement disait déjà que la carte était refusée ; elle ajoute maintenant « Essayez une autre carte ou un autre moyen de paiement », et le formulaire reste ouvert pour le faire.
+- **Le retour depuis PayPal termine la réservation une seule fois.** La fenêtre pouvait demander au serveur de confirmer le même paiement deux fois en une fraction de seconde. Rien n'a jamais été débité deux fois, mais elle ne le demande plus qu'une fois.
+- **Les tentatives échouées ne s'accumulent plus dans les enregistrements de paiement.** Chaque essai refusé laissait une tentative de paiement inutilisée, que le support pouvait lire comme un paiement échoué. Elles sont effacées quand vous réessayez.
+- **Un chauffeur qui termine son inscription Stripe ne peut plus être renvoyé vers une adresse de développeur.** Si le réglage d'adresse du site venait à manquer, il aurait atterri sur une page qui n'existe pas ; il arrive désormais sur le site Expeditop.
+
 ## [2.99.2] - 2026-11-25 · fix
 
 Le titre de la page d'accueil reprend exactement les mots du client.

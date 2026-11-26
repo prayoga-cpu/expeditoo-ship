@@ -3,8 +3,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { stripeService } from "@/server/services/stripe.service";
 import { isImpersonated } from "@/lib/impersonation-guard";
-
-const HOST_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+import { appUrl } from "@/lib/app-url";
 
 export async function GET() {
   const session = await auth.api.getSession({
@@ -23,5 +22,5 @@ export async function GET() {
 
   // On successful return, just redirect to profile
   // The check above should have updated the status if account is ready
-  return NextResponse.redirect(`${HOST_URL}/profile?stripe=success`);
+  return NextResponse.redirect(`${appUrl()}/profile?stripe=success`);
 }

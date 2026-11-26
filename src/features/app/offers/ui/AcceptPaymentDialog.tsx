@@ -151,8 +151,25 @@ const PAYMENT_WALLETS = {
   link: "auto",
 } as const;
 
-/** A refusal from Stripe.js, which already arrives in the viewer's language. */
-class StripeStepError extends Error {}
+/**
+ * A refusal from Stripe.js, which already arrives in the viewer's language.
+ *
+ * `cardRefused` marks the ones Stripe files as a card error — declined,
+ * expired, wrong code, a failed 3-D Secure challenge. Its sentence says what
+ * went wrong and never what to do about it, so the dialog adds the next step
+ * (payment_polish_2_99_3_spec.md §3).
+ */
+class StripeStepError extends Error {
+  constructor(
+    message?: string,
+    readonly cardRefused = false
+  ) {
+    super(message);
+  }
+}
+
+/** Stripe's own classification of a failure the card or the bank caused. */
+const isCardRefusal = (error: { type?: string }) => error.type === "card_error";
 
 /**
  * Accepting an offer, with the payment it takes.
@@ -628,7 +645,7 @@ async function authoriseSaved(stripe: Stripe, offerId: string, slotId?: string) 
     const { error, paymentIntent } = await stripe.handleNextAction({
       clientSecret: prepared.clientSecret,
     });
-    if (error) throw new StripeStepError(error.message);
+    if (error) throw new StripeStepError(error.message, isCardRefusal(error));
     if (paymentIntent?.status === "requires_capture") return paymentIntent.id;
   }
 
@@ -660,7 +677,7 @@ async function authoriseNew(
     // award, where `useAcceptReturn` finishes it (§3). A card stays in place.
     confirmParams: { return_url: acceptReturnUrl(input.offerId, input.slotId) },
   });
-  if (error) throw new StripeStepError(error.message);
+  if (error) throw new StripeStepError(error.message, isCardRefusal(error));
   if (paymentIntent?.status !== "requires_capture") throw new StripeStepError();
 
   return paymentIntent.id;
@@ -748,6 +765,28 @@ function CardChoice({
 }
 
 /**
+ * The accept call each approved payment has made, for the life of the page.
+ *
+ * A ref inside `ResumeStep` guards one instance, but finishing the award
+ * re-reads the offers, the card behind the dialog is rebuilt and a second
+ * instance mounts while the return parameters are still in the address — so it
+ * called accept again, 140 ms later. The server answered « already accepted »
+ * and nothing was charged twice, but a guard that does not hold is not a guard
+ * (payment_polish_2_99_3_spec.md §1). Keyed by the intent, so every instance
+ * attaches to the one call and shows its outcome; a reload starts afresh.
+ */
+const resumeCalls = new Map<string, Promise<unknown>>();
+
+function finishOnce(intentId: string, call: () => Promise<unknown>) {
+  let pending = resumeCalls.get(intentId);
+  if (!pending) {
+    pending = call();
+    resumeCalls.set(intentId, pending);
+  }
+  return pending;
+}
+
+/**
  * Back from PayPal: the award is finished with the payment the requester
  * approved there (payment_alternatives_spec.md §3), once — a reload or a
  * re-render must not try it twice. Cancelled at PayPal, it says so and goes
@@ -779,7 +818,7 @@ function ResumeStep({
     if (resume.failed || started.current) return;
     started.current = true;
     setBusy(true);
-    onConfirm(resume.paymentIntentId)
+    finishOnce(resume.paymentIntentId, () => onConfirm(resume.paymentIntentId))
       .then(() => onOpenChange(false))
       .catch(report)
       .finally(() => setBusy(false));
@@ -883,7 +922,8 @@ function useErrorMessage() {
 
   return (cause: unknown) => {
     if (cause instanceof StripeStepError) {
-      return cause.message || t("errors.notAuthorised");
+      const said = cause.message || t("errors.notAuthorised");
+      return cause.cardRefused ? `${said} ${t("errors.cardNextStep")}` : said;
     }
     if (cause instanceof ApiError && KNOWN_ERRORS.includes(cause.code)) {
       return t(`errors.${cause.code}`);

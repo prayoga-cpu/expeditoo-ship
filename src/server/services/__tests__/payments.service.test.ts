@@ -134,6 +134,7 @@ vi.mock("@/lib/stripe", () => ({
       retrieve: vi.fn(),
       capture: vi.fn(),
       cancel: vi.fn(),
+      list: vi.fn(),
     },
     paymentMethods: { list: vi.fn() },
     refunds: { create: vi.fn() },
@@ -1225,6 +1226,7 @@ describe("pay at accept", () => {
         status: "requires_capture",
         client_secret: "pi_new_secret",
       } as never);
+      vi.mocked(stripe.paymentIntents.list).mockResolvedValue({ data: [] } as never);
     });
 
     afterEach(() => {
@@ -1326,6 +1328,87 @@ describe("pay at accept", () => {
         metadata: { purpose: "offer_accept", offerId: "offer-1" },
       });
       expect(args).not.toHaveProperty("payment_method_types");
+    });
+
+    // payment_polish_2_99_3_spec.md §2: each Pay press mints an intent, so a
+    // declined card used to leave one per attempt at requires_payment_method.
+    describe("abandoned attempts on the same offer", () => {
+      const left = (over: Record<string, unknown> = {}) => ({
+        id: "pi_old_1",
+        status: "requires_payment_method",
+        metadata: { purpose: "offer_accept", offerId: "offer-1", shipperId: "shipper-1" },
+        ...over,
+      });
+      const listed = (...intents: unknown[]) =>
+        vi.mocked(stripe.paymentIntents.list).mockResolvedValue({ data: intents } as never);
+
+      it("cancels this requester's unused intents for this offer before minting a new one", async () => {
+        listed(left({ id: "pi_old_1" }), left({ id: "pi_old_2" }));
+
+        await paymentsService.authoriseForAccept(acceptParams({ method: "new" }));
+
+        expect(stripe.paymentIntents.list).toHaveBeenCalledWith(
+          expect.objectContaining({ customer: "cus_1" })
+        );
+        expect(stripe.paymentIntents.cancel).toHaveBeenCalledWith("pi_old_1");
+        expect(stripe.paymentIntents.cancel).toHaveBeenCalledWith("pi_old_2");
+        expect(stripe.paymentIntents.create).toHaveBeenCalledTimes(1);
+      });
+
+      it("also clears the one a declined saved card left", async () => {
+        listed(left());
+
+        await paymentsService.authoriseForAccept(acceptParams());
+
+        expect(stripe.paymentIntents.cancel).toHaveBeenCalledWith("pi_old_1");
+      });
+
+      it("never touches money held, a challenge under way, or a payment in flight", async () => {
+        listed(
+          left({ id: "pi_held", status: "requires_capture" }),
+          left({ id: "pi_3ds", status: "requires_action" }),
+          left({ id: "pi_busy", status: "processing" }),
+          left({ id: "pi_done", status: "succeeded" })
+        );
+
+        await paymentsService.authoriseForAccept(acceptParams({ method: "new" }));
+
+        expect(stripe.paymentIntents.cancel).not.toHaveBeenCalled();
+      });
+
+      it("leaves another offer's, another requester's and a foreign intent alone", async () => {
+        listed(
+          left({ id: "pi_other_offer", metadata: { purpose: "offer_accept", offerId: "offer-2", shipperId: "shipper-1" } }),
+          left({ id: "pi_other_payer", metadata: { purpose: "offer_accept", offerId: "offer-1", shipperId: "shipper-2" } }),
+          left({ id: "pi_checkout", metadata: { recordID: "q-1" } }),
+          left({ id: "pi_bare", metadata: undefined })
+        );
+
+        await paymentsService.authoriseForAccept(acceptParams({ method: "new" }));
+
+        expect(stripe.paymentIntents.cancel).not.toHaveBeenCalled();
+      });
+
+      it("does not let a failed cleanup stop the payment", async () => {
+        vi.mocked(stripe.paymentIntents.list).mockRejectedValue(new Error("stripe down"));
+        const quiet = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+        const result = await paymentsService.authoriseForAccept(acceptParams({ method: "new" }));
+
+        expect(result.paymentIntentId).toBe("pi_new");
+        quiet.mockRestore();
+      });
+
+      it("does not let one intent that refuses to cancel stop the payment", async () => {
+        listed(left());
+        vi.mocked(stripe.paymentIntents.cancel).mockRejectedValueOnce(new Error("already gone"));
+        const quiet = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+        const result = await paymentsService.authoriseForAccept(acceptParams({ method: "new" }));
+
+        expect(result.paymentIntentId).toBe("pi_new");
+        quiet.mockRestore();
+      });
     });
 
     it("authorises nothing, and creates no customer, in test mode", async () => {

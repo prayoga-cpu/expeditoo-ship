@@ -5191,7 +5191,8 @@
       "FORBIDDEN_NOT_OPERATOR": "Only an operator can award this job.",
       "CARRIER_ABSENT": "This carrier has said they are away and cannot be chosen for now.",
       "PAYMENT_INTENT_MISMATCH": "This offer's price has just changed. Close this window and open the offer again to pay the new amount.",
-      "PAYMENT_NOT_AUTHORISED": "The payment was not confirmed. Try again, with this payment method or another."
+      "PAYMENT_NOT_AUTHORISED": "The payment was not confirmed. Try again, with this payment method or another.",
+      "cardNextStep": "Try another card or another payment method."
     },
     "notDebited": "Your card has not been charged.",
     "next": {

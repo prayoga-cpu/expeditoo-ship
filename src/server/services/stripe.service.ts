@@ -4,10 +4,9 @@ import { expedionService } from "@/server/services/expedion.service";
 import { user } from "@/db/schema/users";
 import { stripe } from "@/lib/stripe";
 import { stripeWebhookHeartbeatDal } from "@/server/dal/stripe-webhook-heartbeat.dal";
+import { appUrl } from "@/lib/app-url";
 import { eq } from "drizzle-orm";
 import type { Stripe } from "stripe";
-
-const HOST_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
 // ========================================
 // Errors
@@ -190,8 +189,8 @@ export const stripeService = {
     const accountLink = await throughStripe("accountLinks.create", () =>
       stripe.accountLinks.create({
         account: accountId,
-        refresh_url: `${HOST_URL}/api/stripe/connect/refresh`,
-        return_url: `${HOST_URL}/api/stripe/connect/return`,
+        refresh_url: `${appUrl()}/api/stripe/connect/refresh`,
+        return_url: `${appUrl()}/api/stripe/connect/return`,
         type: "account_onboarding",
       })
     );

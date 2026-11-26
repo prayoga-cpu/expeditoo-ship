@@ -330,11 +330,11 @@ than leaving it in a chat message.
       mentions légales: share capital, publication director, host. Check the
       prefilled values against the Kbis and save once, so they live in the
       table rather than only in deployment variables.
-- [ ] **Read the Stripe card on production** (Admin → Paramètres). Expected
+- [x] ~~**Read the Stripe card on production** (Admin → Paramètres).~~ — **webhook and live keys verified 2026-11-26** (see 2.99.3: live payment, heartbeat, Dashboard destination on `www`). Original: (Admin → Paramètres). Expected
       green: live keys, real payments on, account can collect, webhook to this
       app. If « Événement Stripe reçu » is not green, send a test event from
       Stripe → Developers → Webhooks → the `expeditoo-ship-five` endpoint.
-- [ ] **Make the first real payment and refund it**: post a small direct
+- [x] ~~**Make the first real payment and refund it**~~ — **done 2026-11-26** (2.99.3): €1.10 taken, refunded, credit note raised; the 31 Oct €1 job refunded too. Original: **Make the first real payment and refund it**: post a small direct
       request from one account, bid from an approved driver, accept with a
       real card, then cancel the job (the refund is automatic and raises an
       avoir). « Premier paiement réel » turns green. This replaces the older
@@ -709,6 +709,54 @@ than leaving it in a chat message.
       Until then its application page says driver access is off.
 
 ---
+
+## ✅ 2026-11-26 — The first real payment, and the five findings it left (2.99.3)
+
+*« do the real €1 payment test on production, and finish up everything that still yellow » · « fix the five code findings ».*
+
+**The live check (no code).** On 2026-11-26 a real payment was taken on `www.expeditop.fr` through the accept dialog:
+`prayogadevelopment@gmail.com` posted « TEST paiement 1 € », `mrcaoevan@gmail.com` bid €1, the requester typed a real card
+(€1.00 + €0.10 fee = €1.10). Observed, read-only through `mirror_readonly` and Vercel: the `payments` row `captured` at
+03:14:00 UTC with a real `pi_`; `stripe_webhook_heartbeat` moved to 03:14:01.7 UTC, `payment_intent.succeeded`,
+`livemode = true` — Stripe reaches `www.expeditop.fr`, and the Dashboard shows the `expeditoo-vercel` destination Active on
+that URL with 0 % errors (owner's screenshot); the dialog closed on a clean `/listing/<id>` showing « Awarded »; invoice
+`INV-2026-0005`. Cancelling the shipment from the requester's account refunded it at 03:16:15 UTC and raised credit note
+`AV-2026-0001` (−€1.10). The 31 October €1 job « canapé » (owner `encheresservices`, still `awarded`/`PENDING`) was cancelled
+by an admin through `POST /api/shipments/:id/cancel` with `support_resolution`, refunded at 03:17:31 UTC, `AV-2026-0002`.
+Stripe's live mode is therefore verified end to end, and the two « never exercised » notes (CLAUDE.md « Not done », the two
+operator items below) are corrected. Left behind in production: the cancelled test job, `INV-2026-0004/0005`, the two
+credit notes, a bell notification the three outside drivers received (in-app only), and possibly a Stripe customer for the
+requester. The n8n destination, still active, may have received the live `payment_intent.succeeded`; not visible from here.
+
+**The five findings** (from a Playwright run of the whole accept flow against Stripe test mode on a local copy, same commit).
+Spec: `docs/specs/payment_polish_2_99_3_spec.md`; plan `docs/plans/plan_payment_polish.md`. No migration, endpoint or variable.
+1. **Accept called twice after a PayPal-style return.** `ResumeStep`'s `useRef` guard is per instance, and the dialog is rebuilt
+   when finishing the award re-reads the offers. `finishOnce` (module scope, keyed by intent) makes the call once per page load;
+   every instance attaches to it. Server unchanged (it already answered « already accepted »).
+2. **Abandoned intents.** Each Pay press mints an intent; a decline left one at `requires_payment_method`.
+   `cancelStaleAcceptIntents` runs first in `authoriseForAccept`: lists the customer's last 20 intents and cancels only
+   `requires_payment_method` + `purpose=offer_accept` + this offer + this requester. Contained.
+3. **Declined card gave no next step.** `StripeStepError.cardRefused` (Stripe's `card_error`) appends
+   `acceptPayment.errors.cardNextStep`. A non-card failure keeps Stripe's wording.
+4. **`transfer_group` — not changed, and not a bug.** The accept intent carries none **on purpose** (`captureAuthorised`'s
+   comment): the accept path captures synchronously, and a group would send `payment_intent.succeeded` into `captureByIntent`
+   beside it. Recorded in the spec §4 so nobody adds it. Payout groups come from the database row.
+5. **`localhost` fallback.** `stripe.service.ts` and `connect/return/route.ts` now use `appUrl()` at request time
+   (production origin fallback, slash stripped) instead of `NEXT_PUBLIC_APP_URL || "http://localhost:3000"` read at import.
+
+**Judgment calls.** Cleanup is a list-and-cancel, not a stored id: no column to add, it also clears what a closed tab left, and
+Stripe's `list` by customer is consistent (the `search` API lags). Two tabs paying one offer at once would cancel each other's
+unconfirmed intent — noted in the spec, not guarded. Other `localhost:3000` fallbacks (`auth.ts`, `auth-client.ts`,
+`expedion-files.ts`) are outside payments and untouched.
+
+**Verification.** `npx tsc --noEmit` 0 errors; `pnpm lint` 0 errors (73 warnings, none in the files touched);
+full `pnpm test` 366 files, 4,892 tests pass (4,848 + 44 new/changed across the dialog, payments service, stripe service and connect
+return route suites); `pnpm changelog:check` ok; `tsc` re-run after the last edit, exit 0.
+Not run: `pnpm build`, a browser pass of the new next-step line (covered by a unit test against the real catalogue only).
+
+**Known limits.** The last abandoned attempt of a closed dialog stays until that offer is paid again (one, not one per press).
+Still open from the owner's list: fill Admin → Paramètres → « Informations de l'entreprise » (`company_identity` has 0 rows —
+the document wording comes from environment variables); look at the two Connect accounts (1 of 2 `active`).
 
 ## ✅ 2026-11-25 — The headline is the client's words, exactly (2.99.2)
 
